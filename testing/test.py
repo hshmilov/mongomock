@@ -543,6 +543,39 @@ def main():
             if args.target in ['parallel', 'all']:
                 jobs.update(get_parallel_tests_jobs())
 
+            # Priority tests
+            priority_tests = [
+                'ui_test_devices_table_tags',
+                'ui_test_instances_upgrade',
+                'Unit Tests',
+                'ui_test_instances_after_join',
+                'ui_test_report_generation',
+                'ui_test_enforcement_actions',
+                'ui_test_instances_master_docker_restart',
+                'ui_test_instances_before_join',
+                'ui_test_tasks',
+                'ui_test_user_permissions',
+                'ui_test_devices_table_sanity',
+                'ui_test_report',
+                'ui_test_cyberark_vault_integration',
+                'ui_test_users_table',
+                'ui_test_report_special_cases',
+                'ui_test_saved_query',
+                'ui_test_session',
+                'integ_test_system'
+            ]
+
+            test_code_name = [x for x in jobs.keys() if 'test_code_' in x]
+            if test_code_name:
+                # test_code == pylint test.
+                priority_tests.append(test_code_name[0])
+
+            for priority_test in priority_tests:
+                try:
+                    jobs.move_to_end(priority_test, last=False)
+                except Exception as e:
+                    print(f'Warning: Could not find priority test {priority_test}: {str(e)}')
+
             with TC.block(f'Jobs for target {args.target}'):
                 for job_name, job_value in jobs.items():
                     print(f'{job_name}: {job_value}')

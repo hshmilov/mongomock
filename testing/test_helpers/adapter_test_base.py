@@ -128,9 +128,11 @@ class AdapterTestBase:
         self.adapter_service.add_client(self.some_client_details)
         self.axonius_system.assert_user_aggregated(self.adapter_service, [(self.some_client_id, user_id)])
 
+    @pytest.mark.skip(f'Takes too much time')
     def test_devices_cleaning(self):
         return self.do_test_entity_cleaning(EntityType.Devices)
 
+    @pytest.mark.skip(f'Takes too much time')
     def test_users_cleaning(self):
         return self.do_test_entity_cleaning(EntityType.Users)
 
@@ -284,6 +286,7 @@ class AdapterTestBase:
         service.take_process_ownership()
         self.axonius_system.restart_plugin(service)
 
+    @pytest.mark.skip(f'Takes too much time')
     def test_removing_adapter_creds_with_devices(self):
         """
         This tests the feature that allows the user to delete a set of credentials from an adapter
@@ -359,6 +362,7 @@ class AdapterTestBase:
         assert len(res) == 0
         self.adapter_service.trigger_clean_db()
 
+    @pytest.mark.skip(f'Takes too much time')
     def test_removing_adapter_creds_with_users(self):
         """
         This tests the feature that allows the user to delete a set of credentials from an adapter

@@ -212,7 +212,7 @@ class NexposeV3Client(NexposeClient):
             vuln_details = requests.get(f'https://{self.host}:{self.port}/api/3/vulnerabilities/{vuln_id}',
                                         auth=(self.username, self.password),
                                         verify=self.verify_ssl,
-                                        timeout=(5, 300),
+                                        timeout=(30, 300),
                                         headers=headers)
             self.vuln_ids_dict[vuln_id] = vuln_details.json()
             return self.vuln_ids_dict[vuln_id]
@@ -230,7 +230,7 @@ class NexposeV3Client(NexposeClient):
                                            params={'size': 500},
                                            auth=(self.username, self.password),
                                            verify=self.verify_ssl,
-                                           timeout=(5, 300),
+                                           timeout=(30, 300),
                                            headers=headers)
             vulnerabilities = vulnerabilities.json()
             for vuln in vulnerabilities.get('resources') or []:
@@ -261,7 +261,7 @@ class NexposeV3Client(NexposeClient):
                 headers = {'Token': self._token}
             response = requests.get(_parse_dedicated_url(resource), params=params,
                                     auth=(self.username, self.password), verify=self.verify_ssl,
-                                    timeout=(5, 300), headers=headers)
+                                    timeout=(10, 300), headers=headers)
             response.raise_for_status()
             response = response.json()
         except requests.HTTPError as e:

@@ -21,6 +21,10 @@ class TestCiscoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @pytest.mark.skip('Skip Cisco')
+    def test_fetch_devices(self):
+        pass
+
     @pytest.mark.skip("No reachability test")
     def test_check_reachability(self):
         pass
