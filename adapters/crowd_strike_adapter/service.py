@@ -284,7 +284,8 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     hostname = device_raw.get('hostname')
                     domain = device_raw.get('machine_domain')
                     if isinstance(self.__machine_domain_whitelist, list) \
-                            and self.__machine_domain_whitelist and domain not in self.__machine_domain_whitelist:
+                            and self.__machine_domain_whitelist and \
+                            str(domain).lower() not in self.__machine_domain_whitelist.lower():
                         continue
                     if not is_domain_valid(domain):
                         domain = None

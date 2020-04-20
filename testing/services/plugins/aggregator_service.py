@@ -93,8 +93,10 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self._update_schema_version_29()
         if self.db_schema_version < 30:
             self._update_schema_version_30()
+        if self.db_schema_version < 31:
+            self._update_schema_version_31()
 
-        if self.db_schema_version != 30:
+        if self.db_schema_version != 31:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1398,6 +1400,73 @@ class AggregatorService(PluginService, UpdatablePluginMixin):
             self.db_schema_version = 29
         except Exception as e:
             print(f'Exception while upgrading aggregator db to version 29. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_31(self):
+        print('Update to schema 31 - migrate cherwell id')
+        try:
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            # Get all devices which have cherwell adapter
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': 'cherwell_adapter'}, projection={
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+                f'adapters.data.bus_ob_id': 1,
+                f'adapters.data.bus_ob_rec_id': 1,
+                f'adapters.data.device_serial': 1
+            }):
+                # Then go on all cherwell device-adapters on each device
+                all_cherwell = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'cherwell_adapter']
+                for cherwell_adapter in all_cherwell:
+                    cherwell_data = cherwell_adapter['data']
+                    cherwell_bus_ob_id = cherwell_data.get('bus_ob_id') or ''
+                    cherwell_bus_ob_rec_id = cherwell_data.get('bus_ob_rec_id') or ''
+                    cherwell_device_serial = cherwell_data.get('device_serial')
+
+                    cherwell_current_id = cherwell_data.get('id')
+                    if not cherwell_current_id:
+                        continue
+
+                    # Calculate new id
+                    cherwell_new_id = cherwell_bus_ob_id + '_' + cherwell_bus_ob_rec_id
+                    if cherwell_device_serial:
+                        cherwell_new_id += '_' + cherwell_device_serial
+
+                    # If this has been already migrated, move on
+                    if cherwell_current_id == cherwell_new_id:
+                        continue
+
+                    # Else, add to the list of fixes
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.quick_id': get_preferred_quick_adapter_id(
+                            cherwell_adapter[PLUGIN_UNIQUE_NAME], cherwell_current_id
+                        )
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': cherwell_new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                cherwell_adapter[PLUGIN_UNIQUE_NAME], cherwell_new_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading Cherwell ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Cherwell ID upgrade: Nothing to fix. Moving on')
+            self.db_schema_version = 31
+        except BulkWriteError as e:
+            print(f'BulkWriteError: {e.details}')
+            raise
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 31. Details: {e}')
             traceback.print_exc()
             raise
 
