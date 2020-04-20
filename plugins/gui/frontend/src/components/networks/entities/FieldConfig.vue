@@ -284,8 +284,6 @@ export default {
   .x-field-config {
 
     .modal-container {
-      height: 500px;
-
       .modal-body {
         height: calc(100% - 40px);
         display: flex;
