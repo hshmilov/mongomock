@@ -14,8 +14,8 @@ export const pluginMeta = {
         description: 'Microsoft Azure Stack Hub approved modified description: Microsoft Azure Stack Hub is an extension of Azure that provides a way to run applications and Azure services for on-premise environments.'
     },
     sevone_adapter: {
-        title: 'SevOne',
-        description: 'SevOne Data Platform is a network and infrastructure management platform.',
+        title: 'SevOne Data Platform',
+        description: 'SevOne Data Platform is a network and infrastructure management platform that provides monitoring and analytics.',
         link: 'https://docs.axonius.com/docs/sevone'
     },
     redhat_satellite_adapter: {
@@ -849,7 +849,7 @@ export const pluginMeta = {
     pivotal_cloud_foundry_adapter: {
         title: 'Pivotal Cloud Foundry',
         link: 'https://docs.axonius.com/docs/pivotal-cloud-foundry',
-        description: 'Pivotal Cloud is an app development and deployment platform for public and private clouds.'
+        description: 'Pivotal Cloud Foundry is an app development and deployment platform for public and private clouds.'
     },
     active_directory_adapter: {
         title: 'Microsoft Active Directory (AD)',
