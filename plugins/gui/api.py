@@ -714,7 +714,7 @@ class APIMixin:
 
         data, cursor_id = get_entities(0, 0, mongo_filter, mongo_sort,
                                        mongo_projection,
-                                       EntityType.Devices,
+                                       EntityType.Users,
                                        default_sort=self._system_settings['defaultSort'], cursor_id=cursor_id,
                                        use_cursor=True)
         assets = [asset for asset in islice(data, limit)]
