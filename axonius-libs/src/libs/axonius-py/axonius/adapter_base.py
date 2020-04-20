@@ -595,6 +595,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                      headers={'Content-Type': 'application/json',
                                                               'Accept': 'application/json'},
                                                      verify=False)
+                            resposne.raise_for_status()
                         except Exception:
                             logger.exception(f'Problem sending webhook error error')
                     try:

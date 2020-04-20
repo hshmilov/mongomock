@@ -64,6 +64,12 @@ class BigfixAdapter(AdapterBase):
         try:
             client_data.connect()
             try:
+                linux_installed_software_dict = client_data.get_query_data_per_device_list('Packages Installed '
+                                                                                           '- Linux')
+            except Exception:
+                linux_installed_software_dict = dict()
+                logger.exception(f'Failed getting linux installed software list, continuing')
+            try:
                 installed_software_dict = client_data.get_query_data_per_device_list('Installed Applications')
             except Exception:
                 installed_software_dict = dict()
@@ -87,7 +93,8 @@ class BigfixAdapter(AdapterBase):
                 logger.exception(f'Failed getting model_dict, continuing')
 
             for device_raw in client_data.get_device_list():
-                yield device_raw, installed_software_dict, identify_dict, manufacturer_dict, model_dict
+                yield device_raw, installed_software_dict, identify_dict, \
+                    manufacturer_dict, model_dict, linux_installed_software_dict
         finally:
             client_data.close()
 
@@ -142,7 +149,8 @@ class BigfixAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw_xml, computer_id_to_installed_software, identify_dict, manufacturer_dict, model_dict in \
+        for device_raw_xml, computer_id_to_installed_software, identify_dict,\
+            manufacturer_dict, model_dict, linux_installed_software_dict in \
                 devices_raw_data:
             try:
                 device_raw = dict()
@@ -247,6 +255,22 @@ class BigfixAdapter(AdapterBase):
                         device.device_model = model_list[0]
                 except Exception:
                     logger.exception(f'Problem with model for {device_raw}')
+
+                try:
+                    linux_list = linux_installed_software_dict.get(str(device_id))
+                    if isinstance(linux_list, list):
+                        for linux_str in linux_list:
+                            try:
+                                name, version = linux_str.split('|')
+                            except ValueError:
+                                name = linux_str
+                                version = ''
+                            device.add_installed_software(
+                                name=name.strip(),
+                                version=version.strip()
+                            )
+                except Exception:
+                    logger.exception(f'Problem with linux sw for {device_raw}')
 
                 try:
                     identify_list = identify_dict.get(str(device_id))

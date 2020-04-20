@@ -1,3 +1,4 @@
+import datetime
 import logging
 import math
 
@@ -5,16 +6,31 @@ import aiohttp
 import requests
 import urllib3
 
+from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import (ClientConnectionException,
                                         GetDevicesError)
 from axonius.async.utils import async_request
 from axonius.utils.json import from_json
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_cloud
+from axonius.fields import Field
+
 from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(f'axonius.{__name__}')
 MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
+
+
+class ScanData(SmartJsonClass):
+    engine_name = Field(str, 'Engine Name')
+    duration = Field(str, 'Duration')
+    status = Field(str, 'Scan Status')
+    site_name = Field(str, 'Site Name')
+    start_time = Field(datetime.datetime, 'Start Time')
+    scan_type = Field(str, 'Scan Type')
+    scan_name = Field(str, 'Scan Name')
+    end_time = Field(datetime.datetime, 'End Time')
 
 
 class NexposeV3Client(NexposeClient):
@@ -93,9 +109,41 @@ class NexposeV3Client(NexposeClient):
                     msg = f'Error while parsing request {request_id_absolute} - {raw_answer}, continuing'
                     logger.exception(msg)
 
+    def _get_scans(self):
+        scans_dict = dict()
+        try:
+            num_of_scans_pages = 1
+            current_page_num = -1
+
+            # for current_page_num in range(1, num_of_asset_pages):
+            while current_page_num < num_of_scans_pages:
+                try:
+                    current_page_num += 1
+                    current_page_response_as_json = self._send_get_request(
+                        'scans', {'page': current_page_num, 'size': self.num_of_simultaneous_devices})
+                    scans = current_page_response_as_json.get('resources', [])
+                    num_of_scans_pages = current_page_response_as_json.get('page', {}).get('totalPages')
+                    for scan_raw in scans:
+                        if scan_raw.get('id'):
+                            scans_dict[scan_raw['id']] = scan_raw
+
+                except Exception:
+                    logger.exception(f'Got exception while fetching page {current_page_num+1} '
+                                     f'(api page {current_page_num}).')
+                    continue
+                if current_page_num % (max(1, round(num_of_scans_pages / 100))) == 0:
+                    logger.info(
+                        f'Got {current_page_num} out of {num_of_scans_pages} pages. '
+                        f'({(current_page_num / max(num_of_scans_pages, 1)) * 100}% of scans pages).')
+
+        except Exception as err:
+            logger.exception('Error getting the nexpose scans.')
+        return scans_dict
+
     # pylint: disable=arguments-differ
     def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False):
         logger.info(f'Stating to fetch devices on V3 for nexpose')
+        scans_dict = self._get_scans()
         self.vuln_ids_dict = {}
         try:
             num_of_asset_pages = 1
@@ -112,6 +160,15 @@ class NexposeV3Client(NexposeClient):
                     for item in devices:
                         item.update({'API': '3'})
                         item['vulnerability_details_full'] = []
+                        item['scans_raw'] = []
+                        try:
+                            for scan_item in item['history']:
+                                if scan_item.get('scanId'):
+                                    scan_id = scan_item.get('scanId')
+                                    if scans_dict.get(scan_id):
+                                        item['scans_raw'].append(scans_dict.get(scan_id))
+                        except Exception:
+                            logger.exception(f'Problem parsing history')
                     if fetch_vulnerabilities:
                         self._get_async_data(devices, 'vulnerabilities')
                         for item in devices:
@@ -248,6 +305,20 @@ class NexposeV3Client(NexposeClient):
             return None
         device.hostname = device_raw.get('hostName')
         device.nexpose_type = device_raw.get('type')
+        scans_raw = device_raw.get('scans_raw')
+        for scan_raw in scans_raw:
+            try:
+                device.scans_data.append(ScanData(engine_name=scan_raw.get('engineName'),
+                                                  duration=scan_raw.get('duration'),
+                                                  status=scan_raw.get('status'),
+                                                  site_name=scan_raw.get('siteName'),
+                                                  scan_type=scan_raw.get('scanType'),
+                                                  scan_name=scan_raw.get('scanName'),
+                                                  start_time=parse_date(scan_raw.get('startTime')),
+                                                  end_time=parse_date(scan_raw.get('endTime'))
+                                                  ))
+            except Exception:
+                logger.exception(f'Problem with scan raw {scan_raw}')
         device.assessed_for_policies = device_raw.get('assessedForPolicies') \
             if isinstance(device_raw.get('assessedForPolicies'), bool) else None
         device.assessed_for_vulnerabilities = device_raw.get('assessedForVulnerabilities') \

@@ -13,6 +13,7 @@ from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
 import nexpose_adapter.clients as nexpose_clients
+from nexpose_adapter.clients.nexpose_v3_client import ScanData
 from axonius.clients.rest.connection import RESTConnection
 
 PASSWORD = 'password'
@@ -72,6 +73,7 @@ class NexposeAdapter(ScannerAdapterBase, Configurable):
         nexpose_type = Field(str, 'Nexpose Device Type')
         assessed_for_policies = Field(bool, 'Assessed For Policies')
         assessed_for_vulnerabilities = Field(bool, 'Assessed For Vulnerabilities')
+        scans_data = ListField(ScanData, 'Scans Data')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

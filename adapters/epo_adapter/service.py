@@ -245,6 +245,21 @@ class EpoAdapter(AdapterBase, Configurable):
                 device.set_raw(device_raw)
             yield device
 
+    def _search_computer_name(self, client_data, device_id):
+        mc = client(parse_url(client_data[EPO_HOST]).host, client_data[EPO_PORT],
+                    client_data[USER], client_data[PASS])
+        raw = []
+        systems = mc.system.find(device_id)
+        if systems:
+            for system in systems:
+                if system.get('EPOComputerProperties.ComputerName') == device_id:
+                    raw.append(system)
+        return json.dumps(raw), client_data[EPO_HOST]
+
+    def _refetch_device(self, client_id, client_data, device_id):
+        for device in self._parse_raw_data(self._search_computer_name(client_data, device_id)):
+            return device
+
     def _query_devices_by_client(self, client_name, client_data):
         mc = client(parse_url(client_data[EPO_HOST]).host, client_data[EPO_PORT],
                     client_data[USER], client_data[PASS])
