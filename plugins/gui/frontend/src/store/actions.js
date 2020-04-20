@@ -158,15 +158,15 @@ const createPostContentRequest = (state, payload) => {
   if (payload.limit !== undefined) {
     params.limit = payload.limit;
   }
-  if (view.fields && view.fields.length) {
+  if (_get(view, 'fields', []).length) {
     // fields is array, we want to format it as string
     // so we are using ${}
     params.fields = `${view.fields}`;
   }
-  if (view.schema_fields && view.schema_fields.length) {
+  if (_get(view, 'schema_fields', []).length) {
     params.schema_fields = view.schema_fields;
   }
-  if (view.query) {
+  if (_get(view, 'query')) {
     if (view.query.filter) {
       params.filter = view.query.filter;
     }
@@ -174,10 +174,10 @@ const createPostContentRequest = (state, payload) => {
       params.search = view.query.search;
     }
   }
-  if (view.historical) {
+  if (view && view.historical) {
     params.history = view.historical;
   }
-  if (view.colFilters) {
+  if (view && view.colFilters) {
     params.field_filters = view.colFilters;
   }
   // TODO: Not passing expressions because it might reach max URL size
@@ -185,7 +185,7 @@ const createPostContentRequest = (state, payload) => {
   // 	params.push(`expressions=${encodeURI(JSON.stringify(view.query.expressions))}`)
   // }
 
-  if (view.sort && view.sort.field) {
+  if (_get(view, 'sort.field')) {
     params.sort = view.sort.field;
     params.desc = view.sort.desc ? '1' : '0';
   }
@@ -210,12 +210,15 @@ export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT';
 export const fetchDataContent = ({ state, dispatch }, payload) => {
   const module = getModule(state, payload);
   const path = payload.endpoint || payload.module;
-  if (!module) return;
-  const { view } = module;
+  if (!module) return Promise.reject(new Error('module is required'));
 
-  if (!payload.skip && module.count !== undefined && !payload.isCounted) {
+  const getCount = !(payload.getCount === false);
+
+  if (!payload.skip && module.count !== undefined && getCount) {
     dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI });
   }
+
+  const { view } = module;
 
   if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
     return dispatch(REQUEST_API, {
@@ -227,7 +230,7 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
 
   if (!view) {
     return dispatch(REQUEST_API, {
-      rule: path,
+      rule: `${path}?${createContentRequest(state, payload)}`,
       type: UPDATE_DATA_CONTENT,
       payload,
     });

@@ -143,7 +143,8 @@
     mounted() {
       if (!this.enforcementRestricted && !this.enforcementOptions.length) {
         this.fetchContent({
-          module: 'enforcements'
+          module: 'enforcements',
+          getCount: false,
         })
       }
     },

@@ -113,6 +113,7 @@ import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
 
 import _snakeCase from 'lodash/snakeCase';
+import _size from 'lodash/size';
 import XDropdown from '@axons/popover/Dropdown.vue';
 import XSearchInput from '@neurons/inputs/SearchInput.vue';
 import XMenu from '@axons/menus/Menu.vue';
@@ -270,6 +271,16 @@ export default {
     },
   },
   created() {
+    if (this.entityList.includes('devices') && !_size(this.templateViews) && this.module === 'devices') {
+      const module = 'devices/views/template';
+      this.updateDataView({
+        module,
+        view: {
+          query: { filter: '', expressions: [] },
+        },
+      });
+      this.fetchViews({ module, getCount: false });
+    }
     if (this.querySearch) {
       this.searchValue = this.querySearch;
     } else {

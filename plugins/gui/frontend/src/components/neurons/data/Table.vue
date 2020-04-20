@@ -455,7 +455,7 @@ export default {
     ...mapActions({
       fetchContent: FETCH_DATA_CONTENT,
     }),
-    fetchContentPages(loading, isCounted, isRefresh) {
+    fetchContentPages(loading, getCount, isRefresh) {
       if (!isRefresh) {
         this.resetScrollPosition();
       }
@@ -468,22 +468,22 @@ export default {
       }
       if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
         // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
-        return this.fetchContentSegment(0, this.pageSize * 5, isCounted, isRefresh);
+        return this.fetchContentSegment(0, this.pageSize * 5, getCount, isRefresh);
       }
       return this.fetchContentSegment(
         this.pageLinkNumbers[0] * this.pageSize,
         this.pageLinkNumbers.length * this.pageSize,
-        isCounted,
+        getCount,
         isRefresh,
       );
     },
-    fetchContentSegment(skip, limit, isCounted, isRefresh) {
+    fetchContentSegment(skip, limit, getCount, isRefresh) {
       return this.fetchContent({
         module: this.module,
         endpoint: this.endpoint,
         skip,
         limit,
-        isCounted,
+        getCount,
         isRefresh,
         isExpermentalAPI: this.isExpermentalAPI,
       }).then(() => {
@@ -495,14 +495,14 @@ export default {
     onClickSize(size) {
       if (size === this.pageSize) return;
       this.updateModuleView({ pageSize: size, page: 0 });
-      this.fetchContentPages(false, true);
+      this.fetchContentPages(false, false);
     },
     onClickPage(page) {
       if ((page === this.page) || (page < 0 || page > this.pageCount)) {
         return;
       }
       this.updateModuleView({ page });
-      this.fetchContentPages(false, true);
+      this.fetchContentPages(false, false);
     },
     onClickSort(fieldName) {
       const { field, desc } = this.view.sort;
@@ -515,7 +515,7 @@ export default {
         }
       }
       this.updateModuleView({ sort, page: 0 });
-      this.fetchContentPages(true, true);
+      this.fetchContentPages(true, false);
     },
     updateModuleView(view) {
       this.updateView({ module: this.module, view });
@@ -525,7 +525,7 @@ export default {
         return;
       }
       const fetchAuto = () => {
-        this.fetchContentPages(false, false, true).then(() => {
+        this.fetchContentPages(false, true, true).then(() => {
           if (this._isDestroyed) return;
           this.timer = setTimeout(fetchAuto, this.refresh * 1000);
         });

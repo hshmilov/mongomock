@@ -217,7 +217,7 @@ import XForm from '@neurons/schema/Form.vue';
 
 import {
   ARCHIVE_CLIENT,
-  FETCH_ADAPTERS,
+  LAZY_FETCH_ADAPTERS,
   HINT_ADAPTER_UP,
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
@@ -328,13 +328,20 @@ export default {
     },
     instances() {
       const instancesIds = _get(this.currentAdapter, 'instances', []);
-      return instancesIds.map((instance) => {
+      const res = instancesIds.map((instance) => {
         const i = this.getInstancesMap.get(instance);
         return {
           name: i.node_id,
           title: i.node_name,
         };
       });
+
+      return res;
+    },
+    instanceDefaultName() {
+      if (!this.instances.length) return '';
+      const instance = this.instances.find((i) => i.title === 'Master') || this.instances[0];
+      return instance.name;
     },
     adapterSchema() {
       const currentSchema = _get(this.currentAdapter, 'schema', null);
@@ -367,18 +374,24 @@ export default {
       return `adapters/${this.adapterId}/${this.serverModal.instanceName}`;
     },
   },
-  created() {
+  watch: {
+    instanceDefaultName() {
+      /**
+       * Set the watch to be invoked after adapters have been loaded.
+       * That has been set for when the user navigates directly to the adapter page.
+       */
+      this.setDefaultInstance();
+    },
+  },
+  async created() {
     this.fetchConfig();
     this.hintAdapterUp(this.adapterId);
-    if (_isEmpty(this.currentAdapter)) {
-      this.fetchAdapters().then(this.setDefaultInstance);
-    } else {
-      this.setDefaultInstance();
-    }
+    await this.lazyFetchAdapters();
+    this.setDefaultInstance();
   },
   methods: {
     ...mapActions({
-      fetchAdapters: FETCH_ADAPTERS,
+      lazyFetchAdapters: LAZY_FETCH_ADAPTERS,
       updateServer: SAVE_ADAPTER_CLIENT,
       testAdapter: TEST_ADAPTER_SERVER,
       archiveServer: ARCHIVE_CLIENT,
@@ -539,8 +552,7 @@ export default {
       }
     },
     setDefaultInstance() {
-      const instance = this.instances.find((i) => i.title === 'Master') || this.instances[0];
-      this.serverModal.instanceName = instance.name;
+      this.serverModal.instanceName = this.instanceDefaultName;
     },
   },
 };

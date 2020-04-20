@@ -17,11 +17,6 @@ export const updateData = (state, payload) => {
   }
 };
 
-export const UPDATE_WINDOW_WIDTH = 'UPDATE_WINDOW_WIDTH';
-export const updateWindowWidth = (state) => {
-  state.interaction.windowWidth = document.documentElement.clientWidth;
-};
-
 export const UPDATE_LANGUAGE = 'UPDATE_LANGUAGE';
 export const updateLanguage = (state, payload) => {
   state.interaction.language = payload;
@@ -33,9 +28,10 @@ export const updateBranch = (state, payload) => {
 };
 
 function clearUrlFromQuick(url) {
-  return url.replace('&quick=True', '').replace('&quick=False', '')
-    .replace('quick=True', '').replace('quick=False', '');
+  const regex = /&?quick=(False|True)/gi;
+  return url.replace(regex, '');
 }
+
 export const UPDATE_DATA_COUNT_QUICK = 'UPDATE_DATA_COUNT_QUICK';
 export const updateDataCountQuick = (state, payload) => {
   const module = getModule(state, payload);
@@ -77,7 +73,7 @@ export const updateDataCount = (state, payload) => {
         count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
         count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
         return;
-    }
+  }
   if (payload.data !== undefined) {
     count.data = payload.data;
     count.data_to_show = payload.data;

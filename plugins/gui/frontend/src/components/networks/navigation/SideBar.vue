@@ -72,20 +72,23 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import _invert from  'lodash/invert';
+import _invert from 'lodash/invert';
+import _get from 'lodash/get';
 import xNav from '../../axons/menus/Nav.vue';
 import xNavItem from '../../axons/menus/NavItem.vue';
 import xNestedNav from '../../axons/menus/NestedNav.vue';
 import { LOGOUT } from '../../../store/modules/auth';
-import featureFlagsMixin from '../../../mixins/feature_flags';
 
 
 export default {
   name: 'XSideBar',
   components: { xNav, xNavItem, xNestedNav },
-  mixins: [featureFlagsMixin],
   computed: {
     ...mapState({
+      featureFlags(state) {
+        const featureFlasConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
+        return featureFlasConfigs;
+      },
       userDetails(state) {
         return {
           name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,

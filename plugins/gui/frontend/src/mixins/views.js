@@ -37,9 +37,9 @@ export default {
       fetchViews: FETCH_DATA_CONTENT,
     }),
     fetchViewsHistory() {
-      this.entityList.forEach((entity) => {
-        this.fetchViews({ module: `${entity}/views/history` });
-      });
+      if (this.entityList.includes(this.module)) {
+        this.fetchViews({ module: `${this.module}/views/history`, getCount: false, limit: 5 });
+      }
     },
     viewsCallback() {},
   },
@@ -54,18 +54,8 @@ export default {
           query: { filter: '', expressions: [] },
         },
       });
-      promises.push(this.fetchViews({ module }));
+      promises.push(this.fetchViews({ module, getCount: false }));
     });
-    if (this.entityList.includes('devices')) {
-      const module = 'devices/views/template';
-      this.updateDataView({
-        module,
-        view: {
-          query: { filter: '', expressions: [] },
-        },
-      });
-      promises.push(this.fetchViews({ module }));
-    }
     Promise.all(promises).then(this.viewsCallback);
   },
 };

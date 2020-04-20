@@ -21,8 +21,6 @@ import XEmptySystem from '../networks/onboard/EmptySystem.vue';
 import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
 import XSpaces from '../networks/dashboard/Spaces.vue';
 
-import viewsMixin from '../../mixins/views';
-
 import {
   FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE, GET_PANEL_MAP,
 } from '../../store/modules/dashboard';
@@ -34,7 +32,6 @@ export default {
   components: {
     XPage, XEmptySystem, XSearchInsights, XSpaces,
   },
-  mixins: [viewsMixin],
   computed: {
     ...mapState({
       dashboard(state) {
@@ -49,12 +46,6 @@ export default {
           ...space,
           panels: getCurrentSpacePanels(space),
         }));
-      },
-      devicesView(state) {
-        return state.devices.view;
-      },
-      devicesViewsList(state) {
-        return state.devices.views.saved.content.data;
       },
       dashboardFirstUse(state) {
         return state.dashboard.firstUse.data;
@@ -88,6 +79,9 @@ export default {
       this.getDashboardData();
     }
   },
+  mounted() {
+    this.getDashboardData();
+  },
   beforeDestroy() {
     clearTimeout(this.timer);
   },
@@ -110,9 +104,6 @@ export default {
         if (this._isDestroyed) return;
         this.timer = setTimeout(this.getDashboardData, 30000);
       });
-    },
-    viewsCallback() {
-      this.getDashboardData();
     },
   },
 };

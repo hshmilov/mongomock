@@ -18,9 +18,9 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
+import _get from 'lodash/get';
 import XBanner from '../../axons/popover/Banner.vue';
-import featureFlagsMixin from '../../../mixins/feature_flags';
 
 import { IS_EXPIRED } from '../../../store/getters';
 
@@ -29,8 +29,13 @@ export default {
   components: {
     XBanner,
   },
-  mixins: [featureFlagsMixin],
   computed: {
+    ...mapState({
+      featureFlags(state) {
+        const featureFlasConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
+        return featureFlasConfigs;
+      },
+    }),
     ...mapGetters({
       isExpired: IS_EXPIRED,
     }),

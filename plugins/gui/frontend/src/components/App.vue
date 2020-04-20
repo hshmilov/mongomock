@@ -56,6 +56,8 @@ import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
 import _get from 'lodash/get';
+import { FETCH_FETURE_FLAGS } from '@store/modules/settings';
+import { SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import XTopBar from './networks/navigation/TopBar.vue';
 import XBottomBar from './networks/navigation/BottomBar.vue';
 import XSideBar from './networks/navigation/SideBar.vue';
@@ -66,6 +68,7 @@ import sessionTimeoutMixin from '../mixins/session_timeout';
 
 import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
+
 import {
   FETCH_DATA_FIELDS,
   FETCH_SYSTEM_CONFIG,
@@ -76,7 +79,6 @@ import {
   FETCH_FIRST_HISTORICAL_DATE,
   FETCH_ALLOWED_DATES,
 } from '../store/modules/constants';
-import { UPDATE_WINDOW_WIDTH, SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import { GET_GETTING_STARTED_DATA } from '../store/modules/onboarding';
 
 import { entities } from '../constants/entities';
@@ -84,8 +86,6 @@ import { entities } from '../constants/entities';
 import XGettingStarted from './networks/getting-started/GettingStarted.vue';
 
 import './axons/icons';
-import { FETCH_ADAPTERS } from '../store/modules/adapters';
-import { FETCH_ADAPTERS_CLIENT_LABELS } from '../store/modules/adapters';
 
 export const GettingStartedPubSub = new Vue();
 
@@ -180,7 +180,6 @@ export default {
   },
   methods: {
     ...mapMutations({
-      updateWindowWidth: UPDATE_WINDOW_WIDTH,
       showToasterMessage: SHOW_TOASTER_MESSAGE,
     }),
     ...mapActions({
@@ -192,19 +191,16 @@ export default {
       fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
       fetchAllowedDates: FETCH_ALLOWED_DATES,
       fetchDataFields: FETCH_DATA_FIELDS,
-      fetchAdapters: FETCH_ADAPTERS,
-      fetchAdaptersClientLables: FETCH_ADAPTERS_CLIENT_LABELS,
+      featchFeatureFlags: FETCH_FETURE_FLAGS,
     }),
     changeChecklistOpenState() {
       this.open = !this.open;
     },
     fetchGlobalData() {
+      this.featchFeatureFlags();
       this.fetchConstants();
+
       if (!this.isExpired) {
-        if (this.$can(this.$permissionConsts.categories.Adapters,
-          this.$permissionConsts.actions.View)) {
-          this.fetchAdapters();
-        }
         entities.forEach((entity) => {
           if (this.$cannot(entity.permissionCategory, this.$permissionConsts.actions.View)) return;
           this.fetchDataFields({ module: entity.name });
@@ -212,7 +208,6 @@ export default {
         this.fetchConfig();
         this.fetchFirstHistoricalDate();
         this.fetchAllowedDates();
-        this.fetchAdaptersClientLables();
         if (this.$isAdmin()) {
           this.fetchGettingStartedData().then(() => {
             if (this.justLoggedIn) {
@@ -249,12 +244,6 @@ export default {
     );
     this.handleExpiration();
     this.getUser();
-
-    this.$nextTick(function registerWindowResizeListener() {
-      window.addEventListener('resize', this.updateWindowWidth);
-      // Init
-      this.updateWindowWidth();
-    });
   },
 };
 </script>

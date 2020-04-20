@@ -2,12 +2,15 @@ import {REQUEST_API} from '../actions'
 import {pluginMeta} from '../../constants/plugin_meta.js'
 import shortid from 'shortid'
 import _omit from 'lodash/omit'
+import _size from 'lodash/size'
+import _get from 'lodash/get'
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
-export const INSERT_ADAPTERS = 'INSERT_ADAPTERS'
+export const LAZY_FETCH_ADAPTERS = 'LAZY_FETCH_ADAPTERS';
+export const SET_ADAPTERS = 'SET_ADAPTERS'
 export const FETCH_ADAPTERS_CLIENT_LABELS = 'FETCH_ADAPTERS_CLIENT_LABELS'
-export const INSERT_ADAPTERS_CLIENT_LABELS = 'INSERT_ADAPTERS_CLIENT_LABELS'
+export const SET_ADAPTERS_CLIENT_LABELS = 'SET_ADAPTERS_CLIENT_LABELS'
 export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT'
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER'
 export const UPDATE_ADAPTER_CLIENT = 'UPDATE_ADAPTER_CLIENT'
@@ -33,7 +36,7 @@ export const adapters = {
 		connectionLabels: [],
 	},
 	mutations: {
-		[INSERT_ADAPTERS](state, payload) {
+		[SET_ADAPTERS](state, payload) {
 
 			/*
 				Called first before API request for adapters, in order to update state to fetching
@@ -230,7 +233,7 @@ export const adapters = {
 				}
 			})
 		},
-		[INSERT_ADAPTERS_CLIENT_LABELS] (state,payload){
+		[SET_ADAPTERS_CLIENT_LABELS] (state,payload){
 			const { data } = payload
 			if (data) {
 					state.connectionLabels = data;
@@ -248,8 +251,13 @@ export const adapters = {
 			}
 			return dispatch(REQUEST_API, {
 				rule: `adapters${param}`,
-				type: INSERT_ADAPTERS
+				type: SET_ADAPTERS
 			})
+		},
+		[LAZY_FETCH_ADAPTERS]({ dispatch, state }) {
+			const adapters = _get(state, 'adapters.data', []);
+			if (_size(adapters)) return Promise.resolve();
+			dispatch(FETCH_ADAPTERS);
 		},
 		[SAVE_ADAPTER_CLIENT]({ dispatch, commit, getters }, payload) {
 			/*
@@ -360,7 +368,7 @@ export const adapters = {
 		[FETCH_ADAPTERS_CLIENT_LABELS]({ dispatch, commit}) {
 			return dispatch(REQUEST_API, {
 				rule: 'adapters/clients/labels',
-				type: INSERT_ADAPTERS_CLIENT_LABELS
+				type: SET_ADAPTERS_CLIENT_LABELS
 			})
 		},
 	},

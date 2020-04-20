@@ -117,14 +117,19 @@ export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
 
 export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL';
-export const getConnectionLabel = (state) => (clientId, plugin_name, plugin_unique_name) => {
+export const getConnectionLabel = (state) => (clientId, pluginName, pluginUniqueName) => {
   if (!clientId) return '';
-  const adaptersConnectionLabels = state.adapters.connectionLabels;
+  const NameTypeEnum = {
+    pluginName: 'plugin_name',
+    pluginUniqueName: 'plugin_unique_name',
+  };
+  const adaptersConnectionLabels = _get(state, 'adapters.connectionLabels', []);
+
   let foundLabel = null;
-  if (plugin_unique_name) {
-    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label.plugin_unique_name === plugin_unique_name);
-  } else if (plugin_name) {
-    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label.plugin_name === plugin_name);
+  if (pluginUniqueName) {
+    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label[NameTypeEnum.pluginUniqueName] === pluginUniqueName);
+  } else if (pluginName) {
+    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label[NameTypeEnum.pluginName] === pluginName);
   }
   return (foundLabel ? foundLabel.label : '');
 };

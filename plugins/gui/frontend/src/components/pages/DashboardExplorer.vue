@@ -34,13 +34,12 @@
   import xTable from '../neurons/data/Table.vue'
   import xButton from '../axons/inputs/Button.vue'
   import { entities } from '../../constants/entities'
-  import featureFlagsMixin from '../../mixins/feature_flags'
-  import { mapMutations } from 'vuex'
+  import { mapMutations, mapState } from 'vuex'
+  import _get from 'lodash/get';
   import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
   export default {
     name: 'XDashboardExplorer',
-    mixins: [featureFlagsMixin],
     components: {
       xPage, xSearchInsights, xTable, xButton
     },
@@ -50,6 +49,12 @@
       }
     },
     computed: {
+      ...mapState({
+        featureFlags(state) {
+          const featureFlasConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
+          return featureFlasConfigs;
+        },
+      }),
       entities () {
         return entities
       },
@@ -86,7 +91,7 @@
         })
       },
       updateEntities () {
-        this.$refs.table.forEach(ref => ref.fetchContentPages(true, false, false))
+        this.$refs.table.forEach(ref => ref.fetchContentPages(true, true, false))
       }
     }
   }

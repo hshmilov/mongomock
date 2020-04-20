@@ -8,6 +8,7 @@ export const SHOULD_SHOW_CLOUD_COMPLIANCE = 'SHOULD_SHOW_CLOUD_COMPLIANCE';
 export const SAVE_PLUGIN_CONFIG = 'SAVE_PLUGIN_CONFIG';
 export const LOAD_PLUGIN_CONFIG = 'LOAD_PLUGIN_CONFIG';
 export const CHANGE_PLUGIN_CONFIG = 'CHANGE_PLUGIN_CONFIG';
+export const FETCH_FETURE_FLAGS = 'FETCH_FETURE_FLAGS';
 
 export const FETCH_MAINTENANCE_CONFIG = 'FETCH_MAINTENANCE_CONFIG';
 export const UPDATE_MAINTENANCE_CONFIG = 'UPDATE_MAINTENANCE_CONFIG';
@@ -86,6 +87,13 @@ export const settings = {
     },
   },
   actions: {
+    [FETCH_FETURE_FLAGS]({ dispatch }) {
+      const guiPluginFeatureFlagsConfig = {
+        pluginId: 'gui',
+        configName: 'FeatureFlags',
+      };
+      dispatch(LOAD_PLUGIN_CONFIG, guiPluginFeatureFlagsConfig);
+    },
     [SAVE_PLUGIN_CONFIG]({ dispatch, commit }, payload) {
       /*
           Call API to save given config to adapters by the given adapters unique name
