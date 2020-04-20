@@ -7,8 +7,7 @@ import paramiko
 from pymongo import MongoClient
 from pymongo.encryption import ClientEncryption
 from axonius.consts.plugin_consts import KEYS_COLLECTION
-from axonius.utils.encryption import mongo_encrypt
-from axonius.utils.encryption.mongo_encrypt import db_decrypt
+from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
 
 
 DEFAULT_SSH_PATH = '/home/ubuntu/cortex/.axonius_settings/.db_key'
@@ -131,7 +130,7 @@ def main():
 
     # Connect to mongodb.
     mongo_client = MongoClient(args.db_host, username=args.db_user, password=args.db_password, port=args.db_port)
-    enc = mongo_encrypt.get_db_encryption(mongo_client, KEYS_COLLECTION, db_key)
+    enc = MongoEncrypt.get_db_encryption(mongo_client, KEYS_COLLECTION, db_key)
 
     # Decrypt clients data
     if args.action:

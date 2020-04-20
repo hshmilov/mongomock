@@ -124,7 +124,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
-from axonius.utils.encryption import mongo_encrypt
+from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict, get_preferred_quick_adapter_id
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
@@ -3914,9 +3914,9 @@ class PluginBase(Configurable, Feature, ABC):
        :param data_to_encrypt: data to encrypt
        :return: encrypted data
        """
-        enc = mongo_encrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, self.get_db_encryption_key())
+        enc = MongoEncrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, self.get_db_encryption_key())
         # encrypt data by creating a unique key for the plugin_unique_name (if not exists)
-        encrypted = mongo_encrypt.db_encrypt(enc, self.plugin_unique_name, data_to_encrypt)
+        encrypted = MongoEncrypt.db_encrypt(enc, self.plugin_unique_name, data_to_encrypt)
         return encrypted
 
     def db_decrypt(self, data_to_decrypt: Any) -> Any:
@@ -3926,8 +3926,8 @@ class PluginBase(Configurable, Feature, ABC):
         :return: Decrypted data
         """
         enc_key = self.get_db_encryption_key()
-        enc = mongo_encrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, enc_key)
-        decrypted = mongo_encrypt.db_decrypt(enc, data_to_decrypt)
+        enc = MongoEncrypt.get_db_encryption(self._get_db_connection(), KEYS_COLLECTION, enc_key)
+        decrypted = MongoEncrypt.db_decrypt(enc, data_to_decrypt)
         return decrypted
 
     def _encrypt_client_config(self, client_config: dict):

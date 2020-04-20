@@ -27,7 +27,7 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH, DB_KEY_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
-from axonius.utils.encryption import mongo_encrypt
+from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
 from axonius.utils.threading import singlethreaded
@@ -422,9 +422,9 @@ class PluginService(WeaveService):
         :param data_to_encrypt: data to encrypt
         :return: encrypted data
         """
-        enc = mongo_encrypt.get_db_encryption(
+        enc = MongoEncrypt.get_db_encryption(
             self.db.client, KEYS_COLLECTION, self.get_db_encryption_key())
-        encrypted = mongo_encrypt.db_encrypt(enc, plugin_unique_name, data_to_encrypt)
+        encrypted = MongoEncrypt.db_encrypt(enc, plugin_unique_name, data_to_encrypt)
         return encrypted
 
     def db_decrypt(self, data_to_decrypt: Any) -> Any:
@@ -434,8 +434,8 @@ class PluginService(WeaveService):
         :return: Decrypted data
         """
         enc_key = self.get_db_encryption_key()
-        enc = mongo_encrypt.get_db_encryption(self.db.client, KEYS_COLLECTION, enc_key)
-        decrypted = mongo_encrypt.db_decrypt(enc, data_to_decrypt)
+        enc = MongoEncrypt.get_db_encryption(self.db.client, KEYS_COLLECTION, enc_key)
+        decrypted = MongoEncrypt.db_decrypt(enc, data_to_decrypt)
         return decrypted
 
     def encrypt_dict(self, plugin_unique_name: str, data: dict):

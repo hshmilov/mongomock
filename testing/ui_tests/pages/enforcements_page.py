@@ -183,7 +183,7 @@ class EnforcementsPage(EntitiesPage):
     def wait_for_action_library(self):
         self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
         # Appearance animation time
-        time.sleep(1)
+        time.sleep(2)
 
     def wait_for_action_config(self):
         self.wait_for_element_present_by_css(self.ACTION_CONF_CONTAINER_CSS)

@@ -136,7 +136,7 @@ class RESTExample:
                               cls.add_and_delete_devices_labels,
                               cls.add_and_delete_users_labels,
                               cls.get_adapters,
-                              # cls.check_connectivity, # AX-6934
+                              cls.check_connectivity,
                               cls.add_and_delete_client,
                               cls.get_devices_fields,
                               cls.get_users_fields,
@@ -145,8 +145,6 @@ class RESTExample:
         examples_functions = {function.__name__ for function in examples_functions}
         all_examples_functions = set(filter(lambda x: 'get_examples' not in x and not x.startswith('__'),
                                             dir(cls)))
-
-        all_examples_functions.remove('check_connectivity')  # AX-6934
 
         # just validate that we didn't forget any example
         assert all_examples_functions == examples_functions, all_examples_functions - examples_functions

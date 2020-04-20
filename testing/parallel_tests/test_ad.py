@@ -117,7 +117,7 @@ class TestAdAdapter(AdapterTestBase):
                                 }
                         }
                 }
-            )) == 1,  f'Did not find user {user_id} with sid {user_sid}'
+            )) == 1, f'Did not find user {user_id} with sid {user_sid}'
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
@@ -131,7 +131,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
-    @pytest.mark.skip("AX-6934")
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)
 
