@@ -1,13 +1,11 @@
 import random
 import math
 from datetime import datetime
-from uuid import uuid4
 from dateutil.relativedelta import relativedelta
+
 import pytest
-from pytest import raises
 from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
-from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from json_file_adapter.service import DEVICES_DATA, FILE_NAME
 from test_helpers.file_mock_credentials import FileForCredentialsMock
@@ -49,32 +47,14 @@ from devops.scripts.automate_dev import credentials_inputer
 
 
 # pylint: disable=C0302
-class TestDevicesQuery(TestBase):
-    SEARCH_TEXT_WINDOWS = 'Windows'
-    SEARCH_TEXT_CB_FIRST = 'CB First'
-    SEARCH_TEXT_TESTDOMAIN = 'TestDomain'
+class TestDevicesQueryAdvancedCases(TestBase):
     ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
-    CUSTOM_QUERY = 'Clear_query_test'
-    CISCO_PLUGIN_NAME = 'cisco_adapter'
     CISCO_PRETTY_NAME = 'Cisco'
-    ESX_PLUGIN_NAME = 'esx_adapter'
+    CISCO_PLUGIN_NAME = 'cisco_adapter'
     ESX_PRETTY_NAME = 'VMware ESXi'
+    ESX_PLUGIN_NAME = 'esx_adapter'
     CYCLANCE_PLUGIN_NAME = 'cylance_adapter'
     CYCLANCE_PRETTY_NAME = 'CylancePROTECT'
-
-    QUERY_WIZARD_DATE_PICKER_VALUE = '2019-01-02 02:13:24.485Z'
-
-    def test_bad_subnet(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_query_wizard()
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET)
-        self.devices_page.fill_query_string_value('1.1.1.1')
-        self.devices_page.wait_for_element_present_by_text('Specify <address>/<CIDR> to filter IP by subnet')
-        self.devices_page.click_search()
 
     def test_in_query(self):
         self.dashboard_page.switch_to_page()
@@ -144,100 +124,6 @@ class TestDevicesQuery(TestBase):
             else:
                 assert adapters_values in adapters
 
-    def test_in_with_delimiter_query(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-
-        self.devices_page.click_row_checkbox()
-
-        special_tag = 'a\\,b'
-
-        self.devices_page.add_new_tags(['a\\,b'])
-
-        self.devices_page.click_query_wizard()
-        self.devices_page.select_query_field(self.devices_page.FIELD_TAGS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
-        self.devices_page.fill_query_string_value(special_tag)
-        self.devices_page.wait_for_table_to_be_responsive()
-
-        self.devices_page.click_search()
-
-        assert self.devices_page.count_entities() == 1
-
-    def test_devices_query_wizard_default_operators(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_query_wizard()
-        self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
-        assert self.devices_page.get_query_field() == self.devices_page.ID_FIELD
-        assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
-
-    def test_devices_query_wizard_list_field(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_query_wizard()
-        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_USED_USERS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_STARTS)
-        self.devices_page.fill_query_string_value('test')
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert self.devices_page.count_entities() == 1
-        self.devices_page.fill_query_string_value('test 3')
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert self.devices_page.count_entities() == 0
-
-    def _check_search_text_result(self, text):
-        self.devices_page.wait_for_table_to_load()
-        all_data = self.devices_page.get_all_data()
-        assert len(all_data)
-        assert any(text in x for x in all_data)
-
-    def test_search_everywhere_exact_search_off(self):
-        self.settings_page.set_exact_search(False)
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
-        self.devices_page.enter_search()
-        self._check_search_text_result(self.SEARCH_TEXT_WINDOWS)
-        # check contains works when exact search is off
-        self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
-        self.devices_page.open_search_list()
-        self.devices_page.select_search_everywhere()
-        self._check_search_text_result(self.SEARCH_TEXT_TESTDOMAIN)
-
-        # contains won't work when exact search is on
-        self.devices_page.fill_filter('Dom')
-        self.devices_page.enter_search()
-        self._check_search_text_result('Dom')
-
-    def test_search_everywhere_exact_search_on(self):
-        self.settings_page.set_exact_search(True)
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.fill_filter(self.SEARCH_TEXT_WINDOWS)
-        self.devices_page.enter_search()
-        self._check_search_text_result(self.SEARCH_TEXT_WINDOWS)
-        self.devices_page.fill_filter(self.SEARCH_TEXT_CB_FIRST)
-        self.devices_page.open_search_list()
-        self.devices_page.select_search_everywhere()
-        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
-        self.devices_page.click_query_wizard()
-        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
-        self.devices_page.fill_filter(self.SEARCH_TEXT_CB_FIRST.lower())
-        self.devices_page.enter_search()
-        self._check_search_text_result(self.SEARCH_TEXT_CB_FIRST)
-
-        # contains won't work when exact search is on
-        self.devices_page.fill_filter('dom')
-        self.devices_page.enter_search()
-        with raises(AssertionError):
-            self._check_search_text_result('dom')
-
     def _test_comp_op_change(self):
         """
         Testing that change of the comparison function resets the value, since its type may be different to previous
@@ -279,76 +165,6 @@ class TestDevicesQuery(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
-
-    def check_all_columns_exist(self, columns_list):
-        assert all(column in self.devices_page.get_columns_header_text() for column in columns_list)
-
-    def check_no_columns_exist(self, columns_list):
-        assert not any(column in self.devices_page.get_columns_header_text() for column in columns_list)
-
-    def edit_columns(self, column_list):
-        self.devices_page.edit_columns(add_col_names=column_list,
-                                       adapter_title=self.devices_page.VALUE_ADAPTERS_GENERAL)
-
-    def _create_query(self):
-        self.devices_page.click_query_wizard()
-        self.users_page.add_query_expression()
-        self.users_page.add_query_expression()
-
-        expressions = self.devices_page.find_expressions()
-        self.devices_page.toggle_not(expressions[0])
-        self.devices_page.select_query_field(self.devices_page.FIELD_OS_MAJOR, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
-
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
-        self.devices_page.select_query_field(self.devices_page.FIELD_OS_BUILD, parent=expressions[1])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[1])
-
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[2])
-        self.devices_page.select_query_field(self.devices_page.FIELD_PART_OF_DOMAIN, parent=expressions[2])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_TRUE, parent=expressions[2])
-        self.devices_page.click_search()
-
-    def test_clear_query_wizard(self):
-        columns_list = [self.devices_page.FIELD_OS_MAJOR, self.devices_page.FIELD_OS_BUILD,
-                        self.devices_page.FIELD_PART_OF_DOMAIN]
-        self.devices_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.check_no_columns_exist(columns_list)
-        self.edit_columns(columns_list)
-        self.check_all_columns_exist(columns_list)
-        self._create_query()
-        self.devices_page.wait_for_table_to_be_responsive()
-        self.check_all_columns_exist(columns_list)
-        self.devices_page.save_query_as(self.CUSTOM_QUERY)
-        assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY
-        self.devices_page.click_query_wizard()
-        self.devices_page.clear_query_wizard()
-        select = self.driver.find_element_by_css_selector(self.devices_page.QUERY_FIELD_VALUE)
-        assert select.text == self.devices_page.CHART_QUERY_FIELD_DEFAULT
-        self.devices_page.click_search()
-        self.devices_page.wait_for_table_to_be_responsive()
-        self.check_all_columns_exist(columns_list)
-        assert self.devices_page.find_query_title_text() == 'New Query'
-
-    def test_change_comp_op_with_different_value_schema(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-        expressions = self.devices_page.find_expressions()
-        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
-        self.devices_page.select_query_comp_op('>', parent=expressions[0])
-        self.devices_page.fill_query_wizard_date_picker(self.QUERY_WIZARD_DATE_PICKER_VALUE, parent=expressions[0])
-        self.devices_page.close_datepicker()
-        self.devices_page.wait_for_table_to_be_responsive()
-        query_filter = self.devices_page.find_search_value()
-        results_count = len(self.devices_page.get_all_data())
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, parent=expressions[0])
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert len(self.devices_page.get_all_data()) == results_count
-        assert self.devices_page.find_search_value() == query_filter
-        assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
 
     def test_host_name_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
@@ -395,24 +211,6 @@ class TestDevicesQuery(TestBase):
 
         self.devices_page.click_query_wizard()
         assert self.devices_page.is_filtered_adapter_icon_exists()
-
-    def test_obj_network_and_adapter_filters_query(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 1
-        self.devices_page.select_context_obj(expressions[0])
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES, parent=expressions[0])
-        conditions = self.devices_page.find_conditions(expressions[0])
-        assert len(conditions) == 1
-        self.devices_page.select_query_field(self.devices_page.FIELD_IPS, conditions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, conditions[0])
-        self.devices_page.wait_for_table_to_be_responsive()
-        results_count = self.devices_page.count_entities()
-        self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
-        assert results_count > self.devices_page.count_entities()
 
     def _test_last_seen_query(self, query_comp_days=EntitiesPage.QUERY_COMP_DAYS):
         self.devices_page.add_query_expression()
@@ -960,167 +758,6 @@ class TestDevicesQuery(TestBase):
         fields = list(self.devices_page.get_all_fields_in_field_selection())
         assert 'AD Use DES Key Only' in fields
 
-    def test_save_query(self):
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-        self.devices_page.add_query_expression()
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 2
-        self.devices_page.toggle_left_bracket(expressions[0])
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
-        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
-        self.devices_page.fill_query_string_value(DEVICE_MAC, expressions[1])
-        self.devices_page.toggle_right_bracket(expressions[1])
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert not self.devices_page.is_query_save_as_disabled()
-        self.devices_page.toggle_right_bracket(expressions[1])
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert self.devices_page.is_query_save_as_disabled()
-        self.devices_page.toggle_right_bracket(expressions[1])
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert not self.devices_page.is_query_save_as_disabled()
-
-    def test_quick_count(self):
-        """
-        Tests that before calculating the whole count of the query, a quick >1000 is shown
-        """
-        devices_count = 100 * 1000  # 100k
-        db = self.axonius_system.get_devices_db()
-
-        def generate_fake_device(id_):
-            data_id_ = f'yay-{id_}'
-            return {
-                'internal_axon_id': uuid4().hex,
-                'accurate_for_datetime': datetime.now(),
-                'adapters': [
-                    {
-                        'client_used': 'yes',
-                        'plugin_type': 'Adapter',
-                        'plugin_name': 'stresstest_adapter',
-                        'plugin_unique_name': 'stresstest_adapter_0',
-                        'type': 'entitydata',
-                        'accurate_for_datetime': datetime.now(),
-                        'quick_id': get_preferred_quick_adapter_id(data_id_, 'stresstest_adapter_0'),
-                        'data': {
-                            'random_text_for_love_and_prosperity': '19',
-                            'id': data_id_,
-                            'pretty_id': f'AX-{id_}'
-                        }
-                    }
-                ],
-                'tags': [],
-                'adapter_list_length': 1
-            }
-
-        # inserting a lot of devices
-        db.insert_many(generate_fake_device(x)
-                       for x
-                       in range(devices_count))
-
-        # carefully chosen to be damn slow
-        slow_query = ' and '.join(f'adapters_data.stresstest_adapter.random_text_for_love_and_prosperity != "{x}"'
-                                  for x
-                                  in range(10))
-
-        self.devices_page.switch_to_page()
-        self.devices_page.fill_filter(slow_query)
-        self.devices_page.enter_search()
-        wait_until(lambda: '> 1000' in self.devices_page.get_raw_count_entities())
-        assert self.devices_page.count_entities() == devices_count
-
-    def test_adapters_filter_all_vs_clear_selection(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 1
-        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
-        self.devices_page.wait_for_table_to_be_responsive()
-        results_count = self.devices_page.count_entities()
-        self.devices_page.click_on_clear_all_filter_adapters(parent=expressions[0])
-        self.devices_page.wait_for_table_to_be_responsive()
-        query = self.devices_page.find_query_search_input()
-        assert results_count == self.devices_page.count_entities()
-        self.devices_page.click_on_select_all_filter_adapters(parent=expressions[0])
-        self.devices_page.wait_for_table_to_be_responsive()
-        assert results_count == self.devices_page.count_entities()
-        assert query == self.devices_page.find_query_search_input()
-
-    def test_exclude_entities_with_no_query(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_be_responsive()
-
-        self._text_exclude_entities_on_current_data()
-
-    def test_exclude_with_or_query(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_query_wizard()
-        self.devices_page.add_query_expression()
-        self.devices_page.add_query_expression()
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 3
-        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
-        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
-        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
-        self.devices_page.select_query_comp_op('exists', parent=expressions[2])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
-        self.devices_page.click_search()
-        self.devices_page.wait_for_table_to_be_responsive()
-        self._text_exclude_entities_on_current_data()
-
-    def test_exclude_clear_query(self):
-        self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_be_responsive()
-        self.devices_page.click_query_wizard()
-        self.devices_page.add_query_expression()
-        self.devices_page.add_query_expression()
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 3
-        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
-        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
-        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
-        self.devices_page.select_query_comp_op('exists', parent=expressions[2])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
-        self.devices_page.click_search()
-        self.devices_page.wait_for_table_to_be_responsive()
-        filtered_out_indices = self._text_exclude_entities_on_current_data()
-        self.devices_page.click_query_wizard()
-        self.devices_page.click_filter_out_clear()
-        self.devices_page.wait_for_table_to_be_responsive()
-
-        self.devices_page.count_selected_entities()
-        for index in filtered_out_indices:
-            assert self.devices_page.is_toggle_selected(self.devices_page.get_row_checkbox(index))
-
-    def _text_exclude_entities_on_current_data(self):
-        real_devices_count = self.devices_page.count_entities()
-        devices_count = real_devices_count
-        # limit the number of devices to sample to the first page
-        devices_count = devices_count if devices_count <= 20 else 20
-        indices = random.sample(range(1, devices_count), math.ceil(devices_count / 3))
-        for index in indices:
-            self.devices_page.click_row_checkbox(index)
-        self.devices_page.open_filter_out_dialog()
-        self.devices_page.confirm_filter_out()
-        self.devices_page.wait_for_table_to_load()
-        assert self.devices_page.count_entities() == (real_devices_count - len(indices))
-        return indices
-
     def test_change_field_with_different_value_schema(self):
         with AwsService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
@@ -1150,75 +787,46 @@ class TestDevicesQuery(TestBase):
     def test_in_enum_query(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
-        try:
-            with stress.contextmanager(take_ownership=True), \
-                    stress_scanner.contextmanager(take_ownership=True):
-                device_dict = {'device_count': 10, 'name': 'blah'}
-                stress.add_client(device_dict)
-                stress_scanner.add_client(device_dict)
+        with stress.contextmanager(take_ownership=True), \
+                stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
 
-                self.base_page.run_discovery()
-                self.base_page.run_discovery()
-                self.devices_page.switch_to_page()
-                self.devices_page.wait_for_table_to_be_responsive()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_be_responsive()
 
-                self.devices_page.select_page_size(50)
+            self.devices_page.select_page_size(50)
 
-                all_os_types = set(self.devices_page.
-                                   get_column_data_inline_with_remainder(self.devices_page.FIELD_OS_TYPE))
+            all_os_types = set(self.devices_page.
+                               get_column_data_inline_with_remainder(self.devices_page.FIELD_OS_TYPE))
 
-                os_types = random.sample(all_os_types, math.ceil(len(all_os_types) / 2))
+            os_types = random.sample(all_os_types, math.ceil(len(all_os_types) / 2))
 
-                self.devices_page.click_query_wizard()
-                self.devices_page.select_query_field(self.devices_page.FIELD_OS_TYPE)
-                self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
-                self.devices_page.fill_query_string_value(','.join(set(os_types)))
-                self.devices_page.wait_for_table_to_be_responsive()
+            self.devices_page.click_query_wizard()
+            self.devices_page.select_query_field(self.devices_page.FIELD_OS_TYPE)
+            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+            self.devices_page.fill_query_string_value(','.join(set(os_types)))
+            self.devices_page.wait_for_table_to_be_responsive()
 
-                self.devices_page.click_search()
+            self.devices_page.click_search()
 
-                new_os_types = set(self.devices_page.get_column_data_inline_with_remainder(
-                    self.devices_page.FIELD_OS_TYPE))
+            new_os_types = set(self.devices_page.get_column_data_inline_with_remainder(
+                self.devices_page.FIELD_OS_TYPE))
 
-                assert len([os_type for os_type in new_os_types if os_type.strip() == '']) == 0
+            assert len([os_type for os_type in new_os_types if os_type.strip() == '']) == 0
 
-                assert set(os_types).issubset(new_os_types)
+            assert set(os_types).issubset(new_os_types)
 
-                for os_types_values in self.devices_page.get_column_cells_data_inline_with_remainder(
-                        self.devices_page.FIELD_OS_TYPE):
-                    if isinstance(os_types_values, list):
-                        assert len(set(os_types_values).intersection(set(os_types))) > 0
-                    else:
-                        assert os_types_values in os_types
-
-        finally:
-            self.wait_for_adapter_down(STRESSTEST_ADAPTER)
-            self.wait_for_adapter_down(STRESSTEST_SCANNER_ADAPTER)
-
-    def test_saved_query_with_empty_expression(self):
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-
-        expressions = self.devices_page.find_expressions()
-        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
-        self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
-        self.devices_page.click_search()
-        self.devices_page.wait_for_table_to_load()
-        query = self.devices_page.find_search_value()
-        self.devices_page.click_query_wizard()
-        self.devices_page.clear_query_wizard()
-
-        self.devices_page.run_filter_query(query)
-        self.devices_page.click_search()
-        self.devices_page.save_query('test')
-
-        self.devices_queries_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.wait_for_spinner_to_end()
-
-        self.devices_queries_page.find_query_row_by_name('test').click()
-        self.devices_queries_page.verify_no_query_defined()
+            for os_types_values in self.devices_page.get_column_cells_data_inline_with_remainder(
+                    self.devices_page.FIELD_OS_TYPE):
+                if isinstance(os_types_values, list):
+                    assert len(set(os_types_values).intersection(set(os_types))) > 0
+                else:
+                    assert os_types_values in os_types
+        self.wait_for_adapter_down(STRESSTEST_ADAPTER)
+        self.wait_for_adapter_down(STRESSTEST_SCANNER_ADAPTER)
 
     # pylint: disable=R0915
     def test_connection_label_query(self):
