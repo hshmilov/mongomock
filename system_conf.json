@@ -18,8 +18,7 @@
       "bandicoot",
       "postgres",
       "infinite_sleep",
-      "mysql_special",
-      "azure_stack_hub"
+      "mysql_special"
     ],
     "remove-from-exclude": []
   }

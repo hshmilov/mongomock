@@ -8,11 +8,6 @@ export const pluginMeta = {
         title: 'Axonius Users',
         description: 'The Axonius Users adapter fetches users with Axonius credentials and their permissions using our API client.'
     },
-    azure_stack_hub_adapter: {
-        title: 'Microsoft Azure Stack Hub',
-        link: 'https://docs.axonius.com/docs/microsoft-azure-stack-hub',
-        description: 'Microsoft Azure Stack Hub approved modified description: Microsoft Azure Stack Hub is an extension of Azure that provides a way to run applications and Azure services for on-premise environments.'
-    },
     sevone_adapter: {
         title: 'SevOne Data Platform',
         description: 'SevOne Data Platform is a network and infrastructure management platform that provides monitoring and analytics.',
