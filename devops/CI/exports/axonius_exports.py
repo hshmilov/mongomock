@@ -186,7 +186,7 @@ def cloud(args, notify):
                         build["artifact_id"]) for build in manifest['builds']}
 
                 for (k, v) in artifacts.items():
-                    print(f"##teamcity[setParameter name='packer.artifact.{k}.id' value='{v}']")
+                    print(f"##teamcity[setParameter name='packer.{k}.id' value='{v}']")
 
                 notify({'name': args.name, 'subcommand': 'cloud', **artifacts})
     notify({'name': args.name, 'subcommand': 'cloud', 'step': 'finished'})
