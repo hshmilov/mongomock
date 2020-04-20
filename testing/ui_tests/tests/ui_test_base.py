@@ -340,6 +340,12 @@ class TestBase:
 
     def teardown_method(self, method):
         logger.info(f'starting teardown_method {method.__name__}')
+
+        devices = self.axonius_system.db.get_entity_db(EntityType.Devices).count_documents({})
+        users = self.axonius_system.db.get_entity_db(EntityType.Users).count_documents({})
+        logger.info(f'number of devices: {devices}')
+        logger.info(f'number of users: {users}')
+
         self._save_screenshot(text='before_teardown')
         self._save_js_logs()
         if not pytest.config.option.teardown_keep_db:
