@@ -1,6 +1,6 @@
 {
   "variables": {
-    "image_name": "teamcity-exports-agent-v2"
+    "image_name": "teamcity-exports-agent-v3"
   },
   "builders": [
     {
@@ -11,7 +11,7 @@
       "zone": "us-east1-b",
       "image_name": "{{user `image_name`}}",
       "omit_external_ip": true,
-      "disk_size": "50",
+      "disk_size": "500",
       "use_internal_ip": true,
       "project_id": "axonius-office",
       "machine_type": "n1-standard-1",

@@ -66,7 +66,7 @@ SuccessExitStatus=0 143
 [Install]
 WantedBy=default.target" | sudo tee /etc/systemd/system/teamcityagent.service
 
-wget https://releases.hashicorp.com/packer/1.4.5/packer_1.4.5_linux_amd64.zip -O packer.zip
+wget https://releases.hashicorp.com/packer/1.5.5/packer_1.5.5_linux_amd64.zip -O packer.zip
 unzip packer.zip
 sudo mv packer /usr/local/bin/packer
 
