@@ -63,7 +63,7 @@
       "iso_checksum_url": "http://cloud-images.ubuntu.com/releases/xenial/release/SHA256SUMS",
       "iso_checksum_type": "sha256",
       "disk_image": true,
-      "disk_size": "512000",
+      "disk_size": "{{user `disk_size`}}G",
       "accelerator": "kvm",
       "memory": 8192,
       "output_directory": "{{user `qemu_output_directory`}}",
