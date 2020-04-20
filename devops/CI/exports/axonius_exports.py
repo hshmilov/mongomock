@@ -172,18 +172,23 @@ def cloud(args, notify):
             if args.force:
                 subprocess_arguments.append('-force')
             subprocess_arguments.append(cloud_packer_file)
-            subprocess.run(subprocess_arguments, check=True, cwd=_SCRIPT_FOLDER)
-            with manifest_path.open() as manifest_file:
-                manifest = json.load(manifest_file)
+            try:
+                subprocess.run(subprocess_arguments, check=True, cwd=_SCRIPT_FOLDER)
+            finally:
+                with manifest_path.open() as manifest_file:
+                    manifest = json.load(manifest_file)
 
-                # A bit of a hack, for GCE `artificat_id` is just the image name (which may not contain ':'), and for
-                # AWS, it is in the format `region`:`ami_id`, so we want to take the last part only.
-                def extract_id(s): return s.split(':')[-1]
+                    # A bit of a hack, for GCE `artificat_id` is just the image name (which may not contain ':'), and for
+                    # AWS, it is in the format `region`:`ami_id`, so we want to take the last part only.
+                    def extract_id(s): return s.split(':')[-1]
 
-                artifacts = {f'artifact.{build["builder_type"]}': extract_id(
-                    build["artifact_id"]) for build in manifest['builds']}
+                    artifacts = {f'artifact.{build["builder_type"]}': extract_id(
+                        build["artifact_id"]) for build in manifest['builds']}
 
-            notify({'name': args.name, 'subcommand': 'cloud', **artifacts})
+                for (k, v) in artifacts.items():
+                    print(f"##teamcity[setParameter name='packer.artifact.{k}.id' value='{v}']")
+
+                notify({'name': args.name, 'subcommand': 'cloud', **artifacts})
     notify({'name': args.name, 'subcommand': 'cloud', 'step': 'finished'})
 
 

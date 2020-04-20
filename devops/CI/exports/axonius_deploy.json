@@ -208,7 +208,6 @@
     }
   ],
   "post-processors": [
-    "teamcity",
     {
       "type": "manifest",
       "output": "{{user `manifest_file`}}"
