@@ -80,7 +80,7 @@ export const getModule = (state, payload) => {
 };
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT';
-export const fetchDataCount = ({ state, dispatch }, payload) => {
+export const fetchDataCount = async ({ state, dispatch }, payload) => {
   const path = payload.endpoint || payload.module;
   const module = getModule(state, payload);
   if (!module) return;
@@ -95,10 +95,9 @@ export const fetchDataCount = ({ state, dispatch }, payload) => {
       payload,
     });
   }
-
   // For now we support only /users and /devices 'big queries'
   if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
-    dispatch(REQUEST_API, {
+    await dispatch(REQUEST_API, {
       rule: `${path}/count`,
       type: UPDATE_DATA_COUNT,
       method: 'POST',
@@ -109,7 +108,7 @@ export const fetchDataCount = ({ state, dispatch }, payload) => {
       payload,
     });
 
-    dispatch(REQUEST_API, {
+    await dispatch(REQUEST_API, {
       rule: `${path}/count`,
       type: UPDATE_DATA_COUNT_QUICK,
       method: 'POST',
@@ -207,7 +206,7 @@ const createContentRequest = (state, payload) => {
 };
 
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT';
-export const fetchDataContent = ({ state, dispatch }, payload) => {
+export const fetchDataContent = async ({ state, dispatch }, payload) => {
   const module = getModule(state, payload);
   const path = payload.endpoint || payload.module;
   if (!module) return Promise.reject(new Error('module is required'));
@@ -215,7 +214,7 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
   const getCount = !(payload.getCount === false);
 
   if (!payload.skip && module.count !== undefined && getCount) {
-    dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI });
+    await dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI });
   }
 
   const { view } = module;
@@ -229,7 +228,7 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
   }
 
   if (!view) {
-    return dispatch(REQUEST_API, {
+    return await dispatch(REQUEST_API, {
       rule: `${path}?${createContentRequest(state, payload)}`,
       type: UPDATE_DATA_CONTENT,
       payload,
@@ -237,7 +236,7 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
   }
 
   if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
-    return dispatch(REQUEST_API, {
+    return await dispatch(REQUEST_API, {
       rule: path,
       type: UPDATE_DATA_CONTENT,
       method: 'POST',
@@ -246,7 +245,7 @@ export const fetchDataContent = ({ state, dispatch }, payload) => {
     });
   }
 
-  return dispatch(REQUEST_API, {
+  return await dispatch(REQUEST_API, {
     rule: `${path}?${createContentRequest(state, payload)}`,
     type: UPDATE_DATA_CONTENT,
     payload,

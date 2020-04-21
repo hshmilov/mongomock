@@ -100,7 +100,7 @@ export const updateDataContent = (state, payload) => {
 	}
   if (!payload.skip) {
     content.data = payload_data;
-    if (module.count.data > content.data.length) {
+    if (module.count !== undefined && module.count.data > content.data.length) {
       content.data[module.count.data - 1] = null;
     }
   } else if (payload_data.length) {
