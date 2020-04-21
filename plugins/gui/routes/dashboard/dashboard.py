@@ -267,6 +267,11 @@ class Dashboard(Notifications):
             generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
         else:
             generated_dashboard = generate_dashboard(panel_id)
+
+        error = generated_dashboard.get('error', None)
+        if error is not None:
+            return return_error(error, 400)
+
         dashboard_data = generated_dashboard.get('data', [])
         if search:
             dashboard_data = [data for data in dashboard_data

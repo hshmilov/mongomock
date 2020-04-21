@@ -1098,11 +1098,16 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
 
     try:
         dashboard_metric = ChartMetrics[dashboard['metric']]
+
+        if dashboard_metric == ChartMetrics.timeline:
+            dashboard['error'] = 'Historical data generation for timeline chart is not supported'
+            return beautify_db_entry(dashboard)
+
         handler_by_metric = {
             ChartMetrics.compare: fetch_chart_compare_historical,
             ChartMetrics.intersect: fetch_chart_intersect_historical,
             ChartMetrics.segment: fetch_chart_segment_historical,
-            ChartMetrics.abstract: fetch_chart_abstract_historical
+            ChartMetrics.abstract: fetch_chart_abstract_historical,
         }
         dashboard['data'] = handler_by_metric[dashboard_metric](dashboard, from_date, to_date)
         if dashboard['data'] is None:
