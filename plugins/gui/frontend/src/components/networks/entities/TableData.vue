@@ -157,7 +157,7 @@ export default {
     },
     showExpand() {
       return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
-                && !_isEmpty(this.data[this.fieldName]);
+      && !this.fieldName.includes('_preferred') && !_isEmpty(this.data[this.fieldName]);
     },
     adaptersList() {
       return this.data[this.adaptersFieldName].concat().map((adapter) => [adapter]).sort();
@@ -172,7 +172,12 @@ export default {
       if (this.isAdaptersField) {
         return this.adaptersList;
       }
-      return this.data[`${this.fieldName}_details`];
+      // auto generated fields that are not saved in the db (Like _preferred fields) dont have _details
+      if (this.data[`${this.fieldName}_details`] !== undefined) {
+        return this.data[`${this.fieldName}_details`];
+      }
+      // If you just want the aggregated value to be on top when expanding, return a list with '' the size of adapters list
+      return this.data.adapter_list_length_details;
     },
     detailsTable() {
       const baseTable = {
@@ -222,8 +227,8 @@ export default {
           if (connectionLabel !== '') {
             connectionLabel = ` - ${connectionLabel}`;
           }
-          const name = (pluginMeta[adapter.pluginName[0]] ? pluginMeta[adapter.pluginName[0]].title :
-            adapter.pluginName[0]) + connectionLabel;
+          const name = (pluginMeta[adapter.pluginName[0]] ? pluginMeta[adapter.pluginName[0]].title
+            : adapter.pluginName[0]) + connectionLabel;
           return {
             [this.fieldName]: adapter.pluginName,
             name,
