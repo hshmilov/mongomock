@@ -7,6 +7,7 @@ class TestUserUpdate(TestBase):
     def test_user_update_new_password(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
+        self.settings_page.wait_for_table_to_be_responsive()
         self.settings_page.create_new_user(ui_consts.UPDATE_USERNAME,
                                            ui_consts.NEW_PASSWORD,
                                            ui_consts.FIRST_NAME,

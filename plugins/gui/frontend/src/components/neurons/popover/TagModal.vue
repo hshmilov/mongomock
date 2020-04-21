@@ -155,13 +155,16 @@ export default {
 
 <style lang="scss">
 .x-tag-modal {
-  .modal-container.w-xl {
-    height: 600px;
-  }
   .modal-container .modal-body {
     padding: 0;
     margin-bottom: 24px;
     height: 90%;
+
+    .row {
+      /* fix content overflow x caused by vuetify .row default side margins */
+      margin-left: 0px;
+      margin-right: 0px;
+    }
   }
 
   .tag-modal-info {
