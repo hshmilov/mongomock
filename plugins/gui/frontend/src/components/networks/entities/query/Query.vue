@@ -34,6 +34,8 @@
 
 <script>
 import { mapState, mapGetters, mapMutations } from 'vuex';
+import _isEqual from 'lodash/isEqual';
+import _cloneDeep from 'lodash/cloneDeep';
 import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/getters';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import XButton from '@axons/inputs/Button.vue';
@@ -65,6 +67,8 @@ export default {
     return {
       filterValid: true,
       error: '',
+      prevExpressions: {},
+      recompiledFilter: '',
     };
   },
   computed: {
@@ -121,6 +125,15 @@ export default {
       return this.getModuleSchemaWithConnectionLabel(this.module);
     },
   },
+  mounted() {
+    const { selectedQueryId } = this.$route.query;
+    // If we navigated to this page with a new query (selected from the queries page)
+    // We need to set the new expression and filter
+    if (selectedQueryId) {
+      this.prevExpressions = this.query.expressions;
+      this.recompiledFilter = this.query.filter;
+    }
+  },
   methods: {
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW,
@@ -130,6 +143,12 @@ export default {
     },
     onValid() {
       this.filterValid = true;
+      // If the user selected a query from the dropdown list (not manually entering it)
+      // Set the new expression and filter
+      if (!_isEqual(this.prevExpressions, this.query.expressions)) {
+        this.prevExpressions = this.query.expressions;
+        this.recompiledFilter = this.query.filter;
+      }
       this.$emit('done');
     },
     onError(error) {
@@ -163,7 +182,15 @@ export default {
         enforcementFilter: this.enforcementFilter,
         searchTemplate: undefined,
       };
-      const filterShouldRecompile = force || this.autoQuery;
+
+      // There are two cases in which we need to recompile the filter:
+      // 1) The force parameter was sent
+      // 2) The auto query configuration is turned on and the expression / filter have changed
+      const filterShouldRecompile = force
+                                    || (this.autoQuery
+                                        && ((!_isEqual(this.prevExpressions, query.expressions))
+                                            || this.recompiledFilter !== prevFilter));
+
       let filter;
       // Check if the calculation is forced
       // (using the search button) or the autoQuery value is chosen
@@ -196,8 +223,12 @@ export default {
         },
       });
 
+      // Save the newly entered expression as a previous expression for the next comparison
+      this.prevExpressions = _cloneDeep(query.expressions);
+
       // Fetch the entities only if the filter has changed
       if (prevFilter !== filter && filter) {
+        this.recompiledFilter = filter;
         this.$emit('done', true, selectIds);
       }
     },
