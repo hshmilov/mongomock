@@ -1,8 +1,15 @@
 .role-panel {
+    &.with-footer {
+        .v-navigation-drawer__content {
+            .x-side-panel__content {
+                height: calc(100% - 150px);
+            }
+        }
+    }
     .v-navigation-drawer__content {
         overflow-y: unset;
         .x-side-panel__content {
-            height: calc(100% - 150px);
+            height: 100%;
             padding-bottom: 30px;
             overflow-y: auto;
             bottom: 0;
@@ -41,8 +48,9 @@
                     flex-wrap: wrap;
                     margin-bottom: 10px;
                     .v-expansion-panel-header {
-                        padding: 8px 8px 8px 8px;
+                        padding: 8px 8px 8px 10px;
                         cursor: default;
+                        font-size: 14px;
                         .theme--light.v-label {
                             color: unset;
                         }
@@ -51,6 +59,9 @@
                             .v-messages {
                                 min-height: 0px;
                             }
+                        }
+                        .x-checkbox {
+                            display: inline-block;
                         }
                     }
 
@@ -75,10 +86,7 @@
         .x-side-panel__footer {
             > div {
                 display: flex;
-
-                .left-buttons {
-                    flex: 50%;
-                }
+                flex-direction: row-reverse;
 
                 .buttons {
                     display: flex;

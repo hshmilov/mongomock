@@ -30,7 +30,7 @@
           >$vuetify.icons.cardSearch</VIcon>
         </span>
         <ADropdown
-          v-if="draggable"
+          v-if="showMenu"
           class="actions__menu"
           :trigger="['click']"
           placement="bottomRight"
@@ -52,38 +52,34 @@
               id="edit_chart"
               key="0"
               @click="$emit('edit')"
-            >
-              Edit Chart
+            >Edit Chart
             </AMenuItem>
             <AMenuItem
               v-if="removable"
               id="remove_chart"
               key="1"
               @click="$emit('remove')"
-            >
-              Remove Chart
+            >Remove Chart
             </AMenuItem>
             <AMenuItem
               v-if="exportable"
               id="export_chart"
               key="2"
               @click="$emit('export')"
-            >
-              Export to CSV
+            >Export to CSV
             </AMenuItem>
             <AMenuItem
+              v-if="draggable"
               id="move_or_copy_chart"
               key="3"
               @click="$emit('moveOrCopy')"
-            >
-              Move or Copy
+            >Move or Copy
             </AMenuItem>
             <AMenuItem
               id="refresh_chart"
               key="4"
               @click="$emit('refresh')"
-            >
-              Refresh
+            >Refresh
             </AMenuItem>
           </AMenu>
         </ADropdown>
@@ -134,11 +130,11 @@ export default {
     },
     draggable: {
       type: Boolean,
-      default: false
+      default: false,
     },
     showMenu: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     isChartFilterable: {
       type: Boolean,

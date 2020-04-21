@@ -4,15 +4,13 @@
       <XSearchInput
         v-model="searchValue"
         placeholder="Search by Host Name, User Name, Manufacturer Serial, MAC or IP..."
-        :disabled="entitiesRestricted"
+        :disabled="!canViewAnyEntity"
         @keydown.enter.native="onClick"
-        @click.native="notifyAccess"
       />
       <XButton
         right
-        :disabled="entitiesRestricted"
+        :disabled="!canViewAnyEntity"
         @click="onClick"
-        @access="notifyAccess"
       >Search</XButton>
     </div>
     <XAccessModal v-model="blockedComponent" />
@@ -37,15 +35,13 @@ export default {
       entitiesView(state) {
         return entities.reduce((map, { name }) => ({ ...map, [name]: state[name].view }), {});
       },
-      entitiesRestricted(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Devices === 'Restricted' || user.permissions.Users === 'Restricted';
-      },
     }),
     ...mapGetters({
       exactSearch: EXACT_SEARCH,
     }),
+    canViewAnyEntity() {
+      return entities.filter((entity) => this.$canViewEntity(entity.name)).length > 0;
+    },
     searchValue: {
       get() {
         return this.entitiesView[entities[0].name].query.search || '';
@@ -83,10 +79,6 @@ export default {
     ...mapMutations({
       updateDataView: UPDATE_DATA_VIEW,
     }),
-    notifyAccess() {
-      if (!this.entitiesRestricted) return;
-      this.blockedComponent = 'Devices and Users Search';
-    },
     updateSearchValue(search) {
       entities.forEach((entity) => {
         this.updateDataView({

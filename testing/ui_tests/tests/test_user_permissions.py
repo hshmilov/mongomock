@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
@@ -5,11 +7,12 @@ from axonius.consts.gui_consts import DASHBOARD_SPACE_PERSONAL
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_service, stresstest_scanner_service
 from services.standalone_services.smtp_service import SmtpService, generate_random_valid_email
-from test_credentials.test_gui_credentials import AXONIUS_RO_USER
+from test_credentials.test_gui_credentials import AXONIUS_RO_USER, AXONIUS_USER
 from ui_tests.pages.reports_page import ReportFrequency, ReportConfig
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, MANAGED_DEVICES_QUERY_NAME, EmailSettings
+from ui_tests.tests.ui_test_base import TestBase
+
 
 # pylint: disable=no-member,too-many-lines
 
@@ -42,6 +45,8 @@ class TestUserPermissions(TestBase):
     CUSTOM_USERS_QUERY_SAVE_NAME = 'custom users query'
     CUSTOM_NEW_USERS_SAVE_NAME = 'custom new users query'
 
+    RUN_TAG_ENFORCEMENT_NAME = 'Run Tag'
+
     def test_new_user_is_restricted(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
@@ -56,16 +61,17 @@ class TestUserPermissions(TestBase):
         self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()
+            self.login_page.assert_screen_url_is_restricted(screen)
 
         self.settings_page.assert_screen_is_restricted()
+        self.login_page.assert_screen_url_is_restricted(self.settings_page)
 
     def test_axonius_ro_user(self):
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_RO_USER['user_name'], password=AXONIUS_RO_USER['password'])
         for screen in self.get_all_screens():
-            with pytest.raises(NoSuchElementException):
-                screen.assert_screen_is_restricted()
+            assert not screen.is_switch_button_disabled()
 
     def test_new_read_only_user(self):
         self.settings_page.switch_to_page()
@@ -86,8 +92,8 @@ class TestUserPermissions(TestBase):
         self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
 
         for screen in self.get_all_screens():
-            with pytest.raises(NoSuchElementException):
-                screen.assert_screen_is_restricted()
+            assert not screen.is_switch_button_disabled()
+            screen.switch_to_page()
 
         self.adapters_page.switch_to_page()
         self.adapters_page.click_adapter(ui_consts.AD_ADAPTER_NAME)
@@ -302,7 +308,6 @@ class TestUserPermissions(TestBase):
                                            self.settings_page.RESTRICTED_ROLE)
         self.settings_page.wait_for_user_created_toaster()
 
-    @pytest.mark.skip('AX-6970')
     def test_new_user_with_role(self):
         self._enter_user_management_and_create_restricted_user()
         user_data = self.settings_page.get_user_data_by_user_name(ui_consts.RESTRICTED_USERNAME)
@@ -416,7 +421,6 @@ class TestUserPermissions(TestBase):
                                                      ui_consts.RESTRICTED_USERNAME,
                                                      ui_consts.NEW_PASSWORD)
         self.dashboard_page.switch_to_page()
-        assert not self.settings_page.assert_screen_is_restricted()
         self.settings_page.switch_to_page()
         assert not self.settings_page.is_users_and_roles_enabled()
 
@@ -575,7 +579,7 @@ class TestUserPermissions(TestBase):
         self.settings_page.click_role_by_name(new_role_name)
         assert self.settings_page.get_role_duplicate_panel_action()
         self.settings_page.assert_role_remove_button_missing()
-        self.settings_page.get_cancel_button().click()
+        self.settings_page.close_role_panel()
         return new_role_name
 
     def _test_settings_roles_with_edit_permission(self, user_role):
@@ -591,6 +595,7 @@ class TestUserPermissions(TestBase):
         self.settings_page.get_role_edit_panel_action().click()
         self.settings_page.click_save_button()
         self.settings_page.safeguard_click_confirm('Yes')
+        self.login()
 
     def test_settings_general_permissions(self):
         self.settings_page.switch_to_page()
@@ -678,7 +683,6 @@ class TestUserPermissions(TestBase):
         settings_permissions = {
             'dashboard': [],
             'devices_assets': [
-                'View devices',
                 'Run saved queries',
                 'Create saved query',
             ]
@@ -687,8 +691,39 @@ class TestUserPermissions(TestBase):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_new_chart_card_missing()
+        with pytest.raises(NoSuchElementException):
+            self.dashboard_page.find_search_insights()
+
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'devices_assets',
+                                                     'View devices',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        assert self.dashboard_page.find_search_insights()
+        self.dashboard_page.fill_query_value('cb')
+        self.dashboard_page.enter_search()
+        self.dashboard_page.wait_for_table_to_load()
+        assert len(self.dashboard_page.get_search_insights_tables()) == 1
+        self.dashboard_page.assert_device_explorer_results_exists()
+
         self._test_chart_permissions(settings_permissions, user_role)
         self._test_spaces_permissions(settings_permissions, user_role)
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'users_assets',
+                                                     'View users',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        assert self.dashboard_page.find_search_insights()
+        self.dashboard_page.fill_query_value('cb')
+        self.dashboard_page.enter_search()
+        self.dashboard_page.wait_for_table_to_load()
+        assert len(self.dashboard_page.get_search_insights_tables()) == 2
+        self.dashboard_page.assert_device_explorer_results_exists()
+        self.dashboard_page.assert_users_explorer_results_exists()
 
     def _test_chart_permissions(self, settings_permissions, user_role):
         self._add_action_to_role_and_login_with_user(settings_permissions,
@@ -800,10 +835,12 @@ class TestUserPermissions(TestBase):
                                                      ui_consts.NEW_PASSWORD)
         self._test_entities_with_edit_permission(self.devices_page)
 
-    @pytest.mark.skip('AX-6987')
     def test_devices_saved_queries(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
+        self._create_enforcement_with_create_tag_and_run_it()
+        enforcement_set_id = self._find_enforcement_task_id()
+
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
 
@@ -816,11 +853,13 @@ class TestUserPermissions(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(self.CUSTOM_DEVICES_QUERY_SAVE_NAME,
                                               self.devices_page.JSON_ADAPTER_FILTER)
-
         self.settings_page.switch_to_page()
         settings_permissions = {
             'devices_assets': [
                 'View devices'
+            ],
+            'enforcements': [
+                'View Enforcement Center'
             ]
         }
         self.settings_page.update_role(user_role, settings_permissions, True)
@@ -841,6 +880,17 @@ class TestUserPermissions(TestBase):
                                                      self.devices_queries_page,
                                                      self.CUSTOM_DEVICES_QUERY_SAVE_NAME)
 
+        self._test_enforcements_without_view_tasks_permissions(enforcement_set_id)
+
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'enforcements',
+                                                     'View Enforcement Tasks',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+
+        self._test_enforcements_with_view_tasks_permissions(enforcement_set_id)
+
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'devices_assets',
                                                      'Edit saved queries',
@@ -860,6 +910,16 @@ class TestUserPermissions(TestBase):
                                                      ui_consts.NEW_PASSWORD)
 
         self._test_saved_queries_with_create_permission(self.devices_page, self.CUSTOM_DEVICES_NEW_QUERY_SAVE_NAME)
+
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'enforcements',
+                                                     'Add Enforcement',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+
+        self._test_saved_queries_with_add_enforcement(self.devices_page, self.devices_queries_page,
+                                                      self.CUSTOM_DEVICES_NEW_QUERY_SAVE_NAME)
 
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'devices_assets',
@@ -899,6 +959,9 @@ class TestUserPermissions(TestBase):
         settings_permissions = {
             'users_assets': [
                 'View users'
+            ],
+            'enforcements': [
+                'View Enforcement Center'
             ]
         }
         self._test_entities_with_only_view_permission(settings_permissions, user_role, self.users_page)
@@ -931,6 +994,9 @@ class TestUserPermissions(TestBase):
         settings_permissions = {
             'users_assets': [
                 'View users'
+            ],
+            'enforcements': [
+                'View Enforcement Center'
             ]
         }
 
@@ -971,6 +1037,16 @@ class TestUserPermissions(TestBase):
                                                      ui_consts.NEW_PASSWORD)
 
         self._test_saved_queries_with_create_permission(self.users_page, self.CUSTOM_NEW_USERS_SAVE_NAME)
+
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'enforcements',
+                                                     'Add Enforcement',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+
+        self._test_saved_queries_with_add_enforcement(self.users_page, self.users_queries_page,
+                                                      self.CUSTOM_NEW_USERS_SAVE_NAME)
 
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'users_assets',
@@ -1027,9 +1103,10 @@ class TestUserPermissions(TestBase):
         entities_page.wait_for_table_to_load()
 
         entities_page.check_search_list_for_absent_names([query_name])
+        entities_page.reset_query()
         entities_page.fill_filter('cb')
         entities_page.enter_search()
-        assert entities_page.is_query_save_disabled()
+        assert entities_page.is_query_save_as_disabled()
         queries_page.switch_to_page()
         queries_page.is_row_checkbox_absent()
         queries_page.click_query_row_by_name(query_name)
@@ -1076,6 +1153,9 @@ class TestUserPermissions(TestBase):
         queries_page.click_save_changes()
         with pytest.raises(TimeoutException):
             queries_page.get_remove_panel_action()
+        # test the enforce button is missing without an Add Enforcement permission
+        with pytest.raises(TimeoutException):
+            queries_page.get_enforce_panel_action()
         queries_page.run_query()
 
     def _test_saved_queries_with_create_permission(self, entities_page, query_name):
@@ -1097,6 +1177,18 @@ class TestUserPermissions(TestBase):
         queries_page.click_query_row_by_name(new_query_name)
         queries_page.get_remove_panel_action().click()
         queries_page.safeguard_click_confirm('Remove Saved Query')
+
+    def _test_saved_queries_with_add_enforcement(self, entities_page, queries_page, query_name):
+        entities_page.switch_to_page()
+        entities_page.wait_for_table_to_load()
+
+        queries_page.switch_to_page()
+        queries_page.click_query_row_by_name(query_name)
+        queries_page.wait_for_side_panel()
+        queries_page.get_enforce_panel_action().click()
+
+        self.enforcements_page.select_trigger()
+        assert self.enforcements_page.get_selected_saved_view_name() == query_name
 
     def test_instances_permissions(self):
         self.settings_page.switch_to_page()
@@ -1221,7 +1313,6 @@ class TestUserPermissions(TestBase):
         wait_until(lambda: not self.adapters_page.is_save_button_disabled())
         self.adapters_page.click_save()
 
-    @pytest.mark.skip('AX-7052')
     def test_report_permissions(self):
         self.reports_page.switch_to_page()
         self.settings_page.switch_to_page()
@@ -1533,3 +1624,114 @@ class TestUserPermissions(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_select_enforcement(2)
         self.enforcements_page.remove_selected_enforcements(True)
+
+    def _find_enforcement_task_id(self):
+        self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).click()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_enforcement_tasks_tab()
+        table_data = self.devices_page.get_field_table_data_with_ids()
+        assert len(table_data) == 1
+        enforcement_set_id, enforcement_set_name, action_name, is_success, output = table_data[0]
+        return enforcement_set_id
+
+    def _test_enforcements_without_view_tasks_permissions(self, enforcement_set_id):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_enforcement_tasks_tab()
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id)
+        assert self.devices_page.get_enforcement_tasks_count() == 1
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id + '1')
+        assert self.devices_page.get_enforcement_tasks_count() == 0
+        self.devices_page.search_enforcement_tasks_search_input('')
+        self.devices_page.wait_for_table_to_load()
+        with pytest.raises(NoSuchElementException):
+            self.devices_page.click_task_name(enforcement_set_id)
+
+    def _test_enforcements_with_view_tasks_permissions(self, enforcement_set_id):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_enforcement_tasks_tab()
+        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 1'
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id)
+        assert self.devices_page.get_enforcement_tasks_count() == 1
+        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id + '1')
+        assert self.devices_page.get_enforcement_tasks_count() == 0
+        self.devices_page.search_enforcement_tasks_search_input('')
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_task_name(enforcement_set_id)
+        self.enforcements_page.wait_for_action_result()
+        assert self.enforcements_page.get_task_name() == enforcement_set_id
+
+    def _create_enforcement_with_create_tag_and_run_it(self):
+        custom_unmanaged_devices = 'custom unmanaged devices'
+        self.devices_page.create_saved_query(self.devices_page.UNMANAGED_QUERY, custom_unmanaged_devices)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, custom_unmanaged_devices,
+                                                      'tag search test', 'tag search test')
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.execute_saved_query(custom_unmanaged_devices)
+        self.devices_page.wait_for_table_to_load()
+        entity_count = self.devices_page.get_table_count()
+        self.enforcements_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_row()
+
+        def _check_task_finished():
+            self.driver.refresh()
+            time.sleep(3)
+            try:
+                assert self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).text \
+                    == str(entity_count)
+                return True
+            except Exception:
+                return False
+
+        wait_until(_check_task_finished, check_return_value=True, total_timeout=60 * 3, interval=5)
+
+    def test_cloud_compliance_permissions(self):
+        self.devices_page.switch_to_page()
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+        self.settings_page.switch_to_page()
+        self.settings_page.click_feature_flags()
+        cloud_visible_toggle = self.settings_page.find_checkbox_by_label('Cloud Visible')
+        self.settings_page.click_toggle_button(cloud_visible_toggle, make_yes=True)
+        cloud_enabled_toggle = self.settings_page.find_checkbox_by_label('Cloud Enabled')
+        self.settings_page.click_toggle_button(cloud_enabled_toggle, make_yes=True)
+        self.settings_page.save_and_wait_for_toaster()
+        self.settings_page.click_manage_users_settings()
+        self.compliance_page.switch_to_page()
+        self.compliance_page.wait_for_table_to_load()
+        self.compliance_page.assert_default_compliance_roles()
+
+        # Create user with Restricted role and check permissions correct also after refresh
+        user_role = self.settings_page.add_user_with_duplicated_role(ui_consts.RESTRICTED_USERNAME,
+                                                                     ui_consts.NEW_PASSWORD,
+                                                                     ui_consts.FIRST_NAME,
+                                                                     ui_consts.LAST_NAME,
+                                                                     self.settings_page.RESTRICTED_ROLE)
+
+        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
+        self.dashboard_page.switch_to_page()
+        self.compliance_page.assert_screen_is_restricted()
+        settings_permissions = {}
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'compliance',
+                                                     'View Cloud Asset Compliance',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+        self.compliance_page.switch_to_page()
+        self.compliance_page.wait_for_table_to_load()
+        self.compliance_page.assert_default_compliance_roles()

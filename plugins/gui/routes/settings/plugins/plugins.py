@@ -87,16 +87,21 @@ class Plugins:
         """
         Get a specific config on a specific plugin
         """
+        config, schema = self._get_plugin_configs(config_name, plugin_name)
+
+        return jsonify({
+            'config': config,
+            'schema': schema
+        })
+
+    def _get_plugin_configs(self, config_name, plugin_name):
         db_connection = self._get_db_connection()
         config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
         schema_collection = db_connection[plugin_name]['config_schemas']
         schema = schema_collection.find_one({'config_name': config_name})['schema']
         config = clear_passwords_fields(config_collection.find_one({'config_name': config_name})['config'],
                                         schema)
-        return jsonify({
-            'config': config,
-            'schema': schema
-        })
+        return config, schema
 
     @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False)
     def update_plugin_configs(self, plugin_name, config_name):

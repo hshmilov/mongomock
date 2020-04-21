@@ -15,7 +15,6 @@
     <template v-if="userName && isSessionCookieValid()">
       <XSideBar
         class="print-exclude"
-        @access-violation="notifyAccess"
       />
       <XFabTransition>
         <div

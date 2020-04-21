@@ -5,14 +5,16 @@ import secrets
 import subprocess
 import time
 import configparser
+from typing import List
 from pathlib import Path
+from bson import ObjectId
+from bson.json_util import dumps
 
 import pymongo
 import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from flask import (session)
-from bson.json_util import dumps
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
@@ -41,7 +43,8 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_PLUGIN_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
-                                          CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME)
+                                          CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME,
+                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
@@ -55,7 +58,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (get_entities_count)
-from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions, deserialize_db_permissions,
+from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
                                               get_restricted_permissions, is_role_admin, is_axonius_role,
                                               PermissionCategory, PermissionAction)
 from axonius.utils.proxy_utils import to_proxy_string
@@ -115,13 +118,20 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     def __add_defaults(self):
         self._add_default_roles()
-        if self._users_config_collection.find_one({}) is None:
-            restricted_role = self._roles_collection.find_one({
-                'name': PREDEFINED_ROLE_RESTRICTED
-            })
-            self._users_config_collection.insert_one({
-                'external_default_role': restricted_role.get('_id')
-            })
+        restricted_role_id = self.get_default_external_role_id(self._roles_collection)
+        config, schema = self._get_plugin_configs(self.__class__.__name__, GUI_PLUGIN_NAME)
+        okta = config['okta_login_settings']
+        saml_login = config['saml_login_settings']
+        ldap_login = config['ldap_login_settings']
+        update_external_login_config = False
+        for external_service in [okta, saml_login, ldap_login]:
+            if not external_service[DEFAULT_ROLE_ID]:
+                external_service[DEFAULT_ROLE_ID] = restricted_role_id
+                update_external_login_config = True
+        if update_external_login_config:
+            config_collection = self._get_db_connection()[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
+            config_collection.replace_one(filter={'config_name': self.__class__.__name__}, replacement={
+                'config_name': self.__class__.__name__, 'config': config})
 
         current_user = self._users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
@@ -713,7 +723,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         },
                         {
                             'name': 'default_role_id',
-                            'title': 'Choose a default role for Okta login',
+                            'title': 'Default role for Okta login',
                             'type': 'string',
                             'enum': [],
                             'source': {
@@ -724,7 +734,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             }
                         }
                     ],
-                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url'],
+                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url', 'default_role_id'],
                     'name': 'okta_login_settings',
                     'title': 'Okta Login Settings',
                     'type': 'array'
@@ -761,9 +771,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'title': 'LDAP group hierarchy cache refresh rate (hours)',
                             'type': 'integer'
                         },
+                        *COMMON_SSL_CONFIG_SCHEMA,
                         {
                             'name': 'default_role_id',
-                            'title': 'Choose a default role for LDAP login',
+                            'title': 'Default role for LDAP login',
                             'type': 'string',
                             'enum': [],
                             'source': {
@@ -773,9 +784,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                                 }
                             }
                         },
-                        *COMMON_SSL_CONFIG_SCHEMA
                     ],
-                    'required': ['enabled', 'dc_address', 'use_group_dn', 'cache_time_in_hours'],
+                    'required': ['enabled', 'dc_address', 'use_group_dn', 'cache_time_in_hours', 'default_role_id'],
                     'name': 'ldap_login_settings',
                     'title': 'LDAP Login Settings',
                     'type': 'array'
@@ -832,7 +842,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         },
                         {
                             'name': 'default_role_id',
-                            'title': 'Choose a default role for SAML login',
+                            'title': 'Default role for SAML login',
                             'type': 'string',
                             'enum': [],
                             'source': {
@@ -843,7 +853,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             }
                         },
                     ],
-                    'required': ['enabled', 'idp_name'],
+                    'required': ['enabled', 'idp_name', 'default_role_id'],
                     'name': 'saml_login_settings',
                     'title': 'SAML-Based Login Settings',
                     'type': 'array'
@@ -878,6 +888,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     @classmethod
     def _db_config_default(cls):
+        # pylint: disable=protected-access
+        roles_collection = PluginBase.Instance._get_collection('roles', GUI_PLUGIN_NAME)
+        restricted_role_id = cls.get_default_external_role_id(roles_collection)
         return {
             'okta_login_settings': {
                 'enabled': False,
@@ -885,7 +898,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'client_secret': '',
                 'url': 'https://yourname.okta.com',
                 'gui2_url': 'https://127.0.0.1',
-                'default_role_id': None
+                'default_role_id': restricted_role_id
             },
             'ldap_login_settings': {
                 'enabled': False,
@@ -894,7 +907,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'group_cn': '',
                 'use_group_dn': False,
                 'cache_time_in_hours': 720,
-                'default_role_id': None,
+                'default_role_id': restricted_role_id,
                 **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
             },
             'saml_login_settings': {
@@ -908,7 +921,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'configure_authncc': {
                     'dont_send_authncc': False,
                 },
-                'default_role_id': None,
+                'default_role_id': restricted_role_id,
             },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
@@ -940,6 +953,13 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             }
         }
 
+    @classmethod
+    def get_default_external_role_id(cls, roles_collection):
+        restricted_role = roles_collection.find_one({
+            'name': PREDEFINED_ROLE_RESTRICTED
+        })
+        return str(restricted_role.get('_id')) if restricted_role else None
+
     def _get_entity_count(self, entity, mongo_filter, history, quick):
         col, is_date_filter_required = self.get_appropriate_view(history, entity)
         return str(get_entities_count(
@@ -964,10 +984,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             return self.generate_new_reports_offline()
         raise RuntimeError(f'GUI was called with a wrong job name {job_name}')
 
-    def _invalidate_sessions(self, user_id: str = None):
+    def _invalidate_sessions(self, user_ids: List[str] = None):
         """
         Invalidate all sessions for this user except the current one
         """
+        user_ids_set = set(user_ids) if user_ids else {}
         for k, v in self.__all_sessions.items():
             # Pylint is angry because it thinks session is a dict, which is true for HOT=True
             # pylint: disable=no-member
@@ -978,32 +999,22 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             if not d:
                 continue
             user = d.get('user')
-            if user and (not user_id or str(d['user'].get('_id')) == str(user_id)):
+            if user and (not user_ids or str(d['user'].get('_id')) in user_ids_set):
                 d['user'] = None
 
-    def update_sessions_permissions(self):
+    def _invalidate_sessions_for_role(self, role_id: str = None):
+        """
+        Invalidate all sessions for all the users with this role
+        """
+        users = self._users_collection.find({'role_id': ObjectId(role_id)})
+        user_ids = {user.get('_id') for user in users}
         for k, v in self.__all_sessions.items():
-            if k == session.sid:
-                continue
             d = v.get('d')
             if not d:
                 continue
             user = d.get('user')
-            if not user:
-                continue
-            user_id = user['_id']
-            user_from_db = self._users_collection.find_one({
-                '_id': user_id
-            })
-            if not user_from_db:
+            if user and (not role_id or d['user'].get('_id') in user_ids):
                 d['user'] = None
-            else:
-                user_role = self._roles_collection.find_one({
-                    '_id': user_from_db['role_id']
-                })
-                user['permissions'] = deserialize_db_permissions(user_role['permissions'])
-                user['role_name'] = user_role['name']
-                d['user'] = user
 
     @property
     def get_session(self):

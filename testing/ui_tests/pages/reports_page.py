@@ -183,11 +183,6 @@ class ReportsPage(EntitiesPage):
     def click_send_email(self):
         self.click_button(self.SEND_EMAIL_BUTTON_TEXT)
 
-    def assert_screen_is_restricted(self):
-        self.switch_to_page_allowing_failure()
-        self.find_element_by_text('You do not have permission to access the Reports screen')
-        self.click_ok_button()
-
     def select_frequency(self, period):
         self.driver.find_element_by_id(period).click()
 

@@ -56,7 +56,7 @@
         },
       }),
       entities () {
-        return entities
+        return entities.filter((entity) => this.$canViewEntity(entity.name));
       },
       isExperimentalAPI () {
         if (!this.featureFlags || !this.featureFlags.experimental_api)  {

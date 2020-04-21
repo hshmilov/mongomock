@@ -557,6 +557,9 @@ class EnforcementsPage(EntitiesPage):
                            text,
                            partial_text=False)
 
+    def get_selected_saved_view_name(self):
+        return self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_CSS).text
+
     def save_action(self):
         self.click_button(
             self.SAVE_BUTTON,
@@ -621,11 +624,6 @@ class EnforcementsPage(EntitiesPage):
 
     def get_saved_query_text(self):
         return self.driver.find_element_by_css_selector(self.SELECT_SAVED_VIEW_TEXT_CSS).get_attribute('title')
-
-    def assert_screen_is_restricted(self):
-        self.switch_to_page_allowing_failure()
-        self.find_element_by_text('You do not have permission to access the Enforcements screen')
-        self.click_ok_button()
 
     def create_basic_empty_enforcement(self, enforcement_name):
         self.switch_to_page()

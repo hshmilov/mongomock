@@ -49,7 +49,7 @@
     },
     computed: {
       actionFields() {
-        return {
+        const actionsFields = {
             'name': 'enforcement_task',
             'title': 'Enforcement tasks actions',
             'items': [
@@ -80,7 +80,11 @@
                 'type': 'string'
               }
             ]
+        };
+        if (this.cannotViewEnforcementTasks) {
+          delete actionsFields.items[0].link;
         }
+        return actionsFields;
       },
       processedTasks () {
         return this.tasks.map(task => {
@@ -92,6 +96,11 @@
             action_type: actionsMeta[task.action_type].title
           }
         })
+      },
+      cannotViewEnforcementTasks() {
+        return this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.View,
+          this.$permissionConsts.categories.Tasks);
       }
     },
     methods: {

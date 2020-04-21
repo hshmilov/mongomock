@@ -17,7 +17,7 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_VIEWER, PREDEFINED_ROLE_OWNER, FEATURE_FLAGS_CONFIG, Signup,
                                        EXEC_REPORT_TITLE, LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD, IS_AXONIUS_ROLE)
+                                       PREDEFINED_FIELD, IS_AXONIUS_ROLE, PREDEFINED_ROLE_RESTRICTED_USER)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -1505,11 +1505,12 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 role['permissions'] = get_viewer_permissions()
             else:
                 role['permissions'] = self._map_old_permissions_to_new_permissions(permissions)
-        elif role.get('name') == PREDEFINED_ROLE_RESTRICTED:
+        elif role.get('name') == PREDEFINED_ROLE_RESTRICTED_USER:
             permissions = old_deserialize_db_permissions(role.get('permissions'))
             if all([level == PermissionLevel.Restricted or (
                     level == PermissionLevel.ReadOnly and t == PermissionType.Dashboard) for t, level in
                     permissions.items()]):
+                role['name'] = PREDEFINED_ROLE_RESTRICTED
                 role['permissions'] = get_restricted_permissions()
             else:
                 role['permissions'] = self._map_old_permissions_to_new_permissions(permissions)

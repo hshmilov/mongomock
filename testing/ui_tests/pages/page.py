@@ -24,6 +24,8 @@ from ui_tests.tests.ui_consts import TEMP_FILE_PREFIX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=too-many-lines
+
 # arguments[0] is the argument being passed by execute_script of selenium's driver
 SCROLL_TO_TOP = '''
 var containerElement = window;
@@ -257,12 +259,22 @@ class Page:
                 return
         logger.info(f'Finished switching to {self.root_page_css} successfully')
 
+    def is_switch_button_disabled(self):
+        switch_button = self.wait_for_element_present_by_css(self.root_page_css,
+                                                             retries=200,
+                                                             interval=0.3
+                                                             )
+        if self.is_element_has_disabled_class(switch_button):
+            return True
+        return False
+
     def switch_to_page_allowing_failure(self):
+        switch_button = self.wait_for_element_present_by_css(self.root_page_css,
+                                                             retries=200,
+                                                             interval=0.3
+                                                             )
         logger.info(f'Switching to {self.root_page_css}')
-        self.wait_for_element_present_by_css(self.root_page_css,
-                                             retries=200,
-                                             interval=0.3
-                                             ).click()
+        switch_button.click()
 
     def scroll_to_top(self):
         self.driver.execute_script('window.scrollTo(0, 0)')
@@ -558,6 +570,11 @@ class Page:
         if '"' in text:
             return element.find_element_by_xpath(f'//*[contains(text(), \'{text}\')]/following::div')
         return element.find_element_by_xpath(f'//*[contains(text(), "{text}")]/following::div')
+
+    def find_elements_by_css(self, css, element=None):
+        if not element:
+            element = self.driver
+        return element.find_elements(by=By.CSS_SELECTOR, value=css)
 
     def find_elements_by_xpath(self, xpath, element=None):
         if not element:
@@ -858,6 +875,13 @@ class Page:
     def is_element_disabled_by_id(self, single_id):
         element = self.driver.find_element_by_id(single_id)
         return self.is_element_disabled(element)
+
+    def is_element_clickable(self, element):
+        if self.is_element_disabled(element) or self.is_element_has_disabled_class(element):
+            return False
+        if not element.is_enabled() or not element.is_displayed():
+            return False
+        return True
 
     @staticmethod
     def is_input_error(input_element):
@@ -1191,3 +1215,6 @@ class Page:
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_XPATH)
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
+
+    def assert_screen_is_restricted(self):
+        assert self.is_switch_button_disabled()

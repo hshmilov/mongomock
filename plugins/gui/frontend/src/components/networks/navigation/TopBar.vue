@@ -247,7 +247,6 @@ export default {
     },
     navigateSettings() {
       if (this.cannotViewSettings) {
-        this.$emit('access-violation', 'settings');
         return;
       }
       if (this.anyEmptySettings) {

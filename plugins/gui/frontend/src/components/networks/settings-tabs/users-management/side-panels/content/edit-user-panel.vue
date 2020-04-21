@@ -3,29 +3,29 @@
     <div class="edit-user__form">
       <!-- first name -->
       <div class="item form__first-name">
-        <h5>First Name</h5> (Optional)
+        <h5>First Name</h5> (optional)
         <input
           v-model="firstName"
           placeholder="Enter First Name"
           class="first-name__input"
-          :disabled="isExternalUser || isSystemAminPanel"
+          :disabled="isExternalUser || isSystemAdminPanel"
         >
       </div>
 
       <!-- last name -->
       <div class="item form__last-name">
-        <h5>Last Name</h5> (Optional)
+        <h5>Last Name</h5> (optional)
         <input
           v-model="lastName"
           placeholder="Enter Last Name"
           class="last-name__input"
-          :disabled="isExternalUser || isSystemAminPanel"
+          :disabled="isExternalUser || isSystemAdminPanel"
         >
       </div>
 
       <!-- email -->
       <div class="item form__email">
-        <h5>Email</h5> (Optional)
+        <h5>Email</h5> (optional)
         <input
           v-model="$v.email.$model"
           placeholder="Enter Email"
@@ -43,26 +43,25 @@
       <!-- role -->
       <div class="item form__role">
         <h5>Role</h5>
-        <div v-if="!isSystemAminPanel">
-          <VSelect
-            v-model="$v.role.$model"
-            :items="rolesOptions"
-            height="20"
-            width="180"
-            dense
-            placeholder="Select Role"
-            outlined
-          />
-          <p
-            v-if="$v.role.$error"
-            class="error-input indicator-error--text"
+        <ASelect
+          v-model="$v.role.$model"
+          placeholder="Select Role"
+          :disabled="isSystemAdminPanel"
+        >
+          <ASelectOption
+            v-for="selectRole in rolesOptions"
+            :key="selectRole.value"
           >
-            Please enter a valid email address to use for your Axonius system
-          </p>
-        </div>
-        <p v-else>Owner</p>
+            {{ selectRole.text }}
+          </ASelectOption>
+        </ASelect>
+        <p
+          v-if="$v.role.$error"
+          class="error-input indicator-error--text"
+        >
+          Please enter a valid email address to use for your Axonius system
+        </p>
       </div>
-
       <!-- password -->
       <div
         v-if="isInternalUser"
@@ -167,7 +166,7 @@ export default {
       }
       return userInfo;
     },
-    isSystemAminPanel() {
+    isSystemAdminPanel() {
       return this.systemAdminUuid === this.uuid;
     },
   },
@@ -196,38 +195,75 @@ export default {
 </script>
 
 <style lang="scss">
-.edit-user {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+.user-panel {
+  .edit-user {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
 
-  .edit-user__form {
-    width: 390px;
+    .edit-user__form {
+      width: 390px;
 
-    h5 {
-      display: inline;
-      font-size: 16px;
-      font-weight: 400;
-      color: $theme-black;
-      margin: 0 0 3px 0;
-    }
-    input {
-      display: block;
-      width: 100%;
-      height: 30px;
-      padding: 4px;
-    }
-    .item {
-      margin: 0 0 16px 0;
+      h5 {
+        display: inline;
+        font-size: 16px;
+        font-weight: 400;
+        color: $theme-black;
+        margin: 0 0 3px 0;
+      }
+
+      input {
+        display: block;
+        width: 100%;
+        height: 30px;
+        padding: 4px;
+      }
+
+      .ant-select {
+        display: block;
+        width: 100%;
+        height: 30px;
+        padding-bottom: 4px;
+
+        &.ant-select-disabled {
+          .ant-select-selection {
+            background-color: $grey-2;
+            border-color: $grey-3;
+            border-width: 1px;
+            border-style: solid;
+            opacity: 0.6;
+          }
+        }
+      }
+
+      .item {
+        margin: 0 0 16px 0;
+      }
+
+      .v-select.v-text-field input {
+        border-style: none;
+        visibility: hidden;
+      }
     }
 
-    .v-select.v-text-field input {
-      border-style: none;
-      visibility: hidden;
+    .v-text-field__details {
+      display: none !important;
     }
   }
-  .v-text-field__details {
-    display: none !important;
+  .x-side-panel__footer {
+    > div {
+      display: flex;
+      flex-direction: column;
+      .indicator-error--text {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .buttons {
+        display: flex;
+        flex: 50%;
+        justify-content: flex-end;
+      }
+    }
   }
 }
 </style>

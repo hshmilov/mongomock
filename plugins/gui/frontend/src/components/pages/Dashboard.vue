@@ -1,11 +1,14 @@
 <template>
   <XPage title="axonius dashboard">
-    <template v-if="isEmptySystem === null && canViewDevicesAndUsers" />
+    <template v-if="isEmptySystem === null" />
     <template v-else-if="isEmptySystem">
       <XEmptySystem />
     </template>
     <template v-else>
-      <XSearchInsights @click="onClickInsights" />
+      <XSearchInsights
+        v-if="canViewAnyEntity"
+        @click="onClickInsights"
+      />
       <XSpaces :spaces="spaces" />
     </template>
   </XPage>
@@ -16,6 +19,7 @@
 import {
   mapState, mapGetters, mapActions,
 } from 'vuex';
+import { entities } from '@constants/entities';
 import XPage from '../axons/layout/Page.vue';
 import XEmptySystem from '../networks/onboard/EmptySystem.vue';
 import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
@@ -66,11 +70,8 @@ export default {
 
       return (!this.seenDevices && this.dashboardFirstUse);
     },
-    canViewDevicesAndUsers() {
-      return this.$can(this.$permissionConsts.categories.DevicesAssets,
-        this.$permissionConsts.actions.View)
-        && this.$can(this.$permissionConsts.categories.UsersAssets,
-          this.$permissionConsts.actions.View);
+    canViewAnyEntity() {
+      return entities.find((entity) => this.$canViewEntity(entity.name));
     },
   },
   created() {

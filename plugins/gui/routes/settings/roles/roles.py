@@ -5,7 +5,8 @@ from bson import ObjectId
 
 from axonius.plugin_base import return_error
 from axonius.consts.gui_consts import PREDEFINED_FIELD, IS_AXONIUS_ROLE
-from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue, \
+    get_permissions_structure, serialize_db_permissions
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
@@ -77,6 +78,8 @@ class Roles:
         if existing_role:
             logger.error(f'Role by the name {role_data["name"]} already exists')
             return return_error(f'Role by the name {role_data["name"]} already exists', 400)
+        self.fill_all_permission_actions(role_data.get('permissions'),
+                                         serialize_db_permissions(get_permissions_structure(False)))
 
         result = self._roles_collection.replace_one(match_role, role_data, upsert=True)
         new_role_match = {
@@ -87,6 +90,16 @@ class Roles:
         new_role = self._roles_collection.find_one(filter_archived(new_role_match))
 
         return jsonify(beautify_db_entry(new_role))
+
+    @staticmethod
+    def fill_all_permission_actions(role_permissions, default_permission_structure):
+        for category_name in default_permission_structure:
+            default_category = default_permission_structure[category_name]
+            role_category = role_permissions.get(category_name)
+            if not role_category:
+                role_permissions[category_name] = default_category
+            elif PermissionCategory.has_value(category_name):
+                Roles.fill_all_permission_actions(role_category, default_category)
 
     @gui_route_logged_in('<role_id>', methods=['POST'])
     def update_role(self, role_id):
@@ -118,9 +131,10 @@ class Roles:
         if existing_role.get(PREDEFINED_FIELD):
             logger.error(f'Cannot edit {role_data["name"]} role')
             return return_error(f'Cannot edit {role_data["name"]} role', 400)
-
+        self.fill_all_permission_actions(role_data.get('permissions'),
+                                         serialize_db_permissions(get_permissions_structure(False)))
         self._roles_collection.replace_one({'_id': ObjectId(role_id)}, role_data, upsert=True)
-        self.update_sessions_permissions()
+        self._invalidate_sessions_for_role(role_id)
         role_data['_id'] = ObjectId(role_id)
         del role_data['uuid']
         return jsonify(beautify_db_entry(role_data))

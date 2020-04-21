@@ -56,6 +56,7 @@ export default {
     return {
       isFormInvalid: false,
       userInfo: null,
+      serverError: null,
     };
   },
   computed: {
@@ -151,9 +152,9 @@ export default {
           }
         } catch (ex) {
           if (ex.response.status < 500) {
-            this.showSnackbar({ message: ex.response.data.message });
+            this.serverError = ex.response.data.message;
           } else {
-            this.showSnackbar({ message: errorMessage });
+            this.serverError = errorMessage;
           }
         }
       }
@@ -163,6 +164,7 @@ export default {
     },
     onCancel() {
       this.isFormInvalid = false;
+      this.serverError = null;
       this.$emit('close');
     },
   },
@@ -187,9 +189,15 @@ export default {
           }
         </div>
         <div slot="panelFooter">
+          {
+            this.serverError ? (
+              <p
+                class="error-input indicator-error--text"
+              >{this.serverError}</p>
+            ) : null
+          }
           <div class="buttons">
             <XButton onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
-            <XButton onClick={this.onCancel} link>Cancel</XButton>
           </div>
         </div>
       </XSidePanel>

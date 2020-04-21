@@ -15,7 +15,7 @@ from axonius.consts.plugin_consts import PASSWORD_LENGTH_SETTING, PASSWORD_MIN_L
     PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES
 from axonius.plugin_base import (return_error, EntityType,
                                  LIMITER_SCOPE, route_limiter_key_func)
-from axonius.utils.gui_helpers import (paginated)
+from axonius.utils.gui_helpers import (paginated, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
 from gui.logic.db_helpers import translate_user_id_to_details
@@ -32,18 +32,20 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class Users:
 
     @paginated()
+    @sorted_endpoint()
     @gui_route_logged_in(methods=['GET'],
                          required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
                                                                          PermissionCategory.Settings)})
-    def get_users(self, limit, skip):
+    def get_users(self, limit, skip, mongo_sort):
         """
         GET Returns all users of the system
 
         :param limit: limit for pagination
         :param skip: start index for pagination
+        :param mongo_sort: sort the users by a field and a sort order
         :return:
         """
-        return self._get_user_pages(limit=limit, skip=skip)
+        return self._get_user_pages(limit=limit, skip=skip, sort=mongo_sort)
 
     @gui_route_logged_in('count', methods=['GET'],
                          required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
@@ -56,7 +58,7 @@ class Users:
         users_collection = self._users_collection
         return jsonify(users_collection.count_documents(filter_archived({
             'role_id': {
-                'in': role_ids_to_display
+                '$in': role_ids_to_display
             }
         })))
 
@@ -151,7 +153,8 @@ class Users:
                 'password': password,
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe(),
-                'email': email
+                'email': email,
+                'last_updated': datetime.now()
             }
             if role_id:
                 # Take the permissions set from the defined role
@@ -197,7 +200,10 @@ class Users:
             IS_AXONIUS_ROLE: {'$ne': True}
         }))]
 
-    def _get_user_pages(self, limit, skip):
+    def _get_user_pages(self, limit, skip, sort=None):
+        find_sort = [('_id', pymongo.ASCENDING)]
+        if sort:
+            find_sort = list(sort.items())
         role_ids_to_display = self._get_system_users_role_ids()
         return jsonify(beautify_user_entry(n) for n in
                        self._users_collection.find(filter_archived(
@@ -205,7 +211,7 @@ class Users:
                                'role_id': {
                                    '$in': role_ids_to_display
                                }
-                           })).sort([('_id', pymongo.ASCENDING)])
+                           })).sort(find_sort)
                        .skip(skip)
                        .limit(limit))
 
@@ -241,26 +247,27 @@ class Users:
             return return_error('role id is required', 400)
 
         # if include value is False, all users should be updated (beside admin, _axonius and _axonius_ro)
+        find_query = {}
         if not include:
-            result = users_collection.update_many(filter_archived({
+            find_query = filter_archived({
                 '_id': {'$nin': [ObjectId(user_id) for user_id in ids]},
                 'user_name': {'$nin': PREDEFINED_USER_NAMES},
-            }), {
-                '$set': {'role_id': ObjectId(role_id), 'last_updated': datetime.now()}
             })
-
         else:
-            result = users_collection.update_many(filter_archived({
+            find_query = filter_archived({
                 '_id': {'$in': [ObjectId(user_id) for user_id in ids]},
                 'user_name': {'$nin': PREDEFINED_USER_NAMES},
-            }), {
-                '$set': {'role_id': ObjectId(role_id), 'last_updated': datetime.now()}
             })
+
+        result = users_collection.update_many(find_query, {
+            '$set': {'role_id': ObjectId(role_id), 'last_updated': datetime.now()}
+        })
 
         if result.modified_count < 1:
             logger.info('operation failed, could not update users\' role')
             return return_error('operation failed, could not update users\' role', 500)
-        self.update_sessions_permissions()
+        user_ids = [str(user_id.get('_id')) for user_id in users_collection.find(find_query, {'_id': 1})]
+        self._invalidate_sessions(user_ids)
         if result.matched_count != result.modified_count:
             logger.info(f'Bulk assign role modified {result.modified_count} out of {result.matched_count}')
             return '', 202
@@ -313,7 +320,7 @@ class Users:
         if not updated_user:
             return '', 400
         translate_user_id_to_details.clean_cache()
-        self.update_sessions_permissions()
+        self._invalidate_sessions([user_id])
         return jsonify({'user': beautify_user_entry(updated_user), 'uuid': user_id}), 200
 
     @gui_route_logged_in('<user_id>', methods=['DELETE'])
@@ -323,7 +330,7 @@ class Users:
         """
         self._users_collection.update_one({'_id': ObjectId(user_id)},
                                           {'$set': {'archived': True}})
-        self._invalidate_sessions(user_id)
+        self._invalidate_sessions([user_id])
 
         translate_user_id_to_details.clean_cache()
         return '', 200
@@ -380,7 +387,7 @@ class Users:
                 logger.info(f'User with id {user_id} does not exists')
                 partial_success = True
             deletion_success = True
-            self._invalidate_sessions(user_id)
+            self._invalidate_sessions([user_id])
             name = existed_user['user_name']
             logger.info(f'Users {name} with id {user_id} has been archive')
 
@@ -415,7 +422,7 @@ class Users:
 
         self._users_collection.update_one({'_id': user['_id']},
                                           {'$set': {'password': bcrypt.hash(post_data['new'])}})
-        self._invalidate_sessions(user['_id'])
+        self._invalidate_sessions([str(user['_id'])])
         return '', 200
 
     @gui_route_logged_in('self/preferences', methods=['GET'], enforce_permissions=False)

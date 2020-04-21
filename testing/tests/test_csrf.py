@@ -2,6 +2,8 @@ import re
 import json
 import requests
 
+from axonius.consts.gui_consts import PREDEFINED_ROLE_RESTRICTED
+
 
 def test_csrf_header_exists():
     resp = requests.post('https://127.0.0.1/api/login',
@@ -11,7 +13,7 @@ def test_csrf_header_exists():
     resp = requests.get('https://127.0.0.1/api/settings/roles/assignable_roles',
                         headers={'Cookie': 'session=' + session}, verify=False)
     assert resp.status_code == 200
-    role_id = [x['value'] for x in json.loads(resp.content) if x['text'] == 'Restricted User'][0]
+    role_id = [x['value'] for x in json.loads(resp.content) if x['text'] == PREDEFINED_ROLE_RESTRICTED][0]
     resp.close()
     resp = requests.put('https://127.0.0.1/api/settings/users',
                         data='{"user_name":"aaa","password":"aaa","first_name":"aaa",'

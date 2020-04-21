@@ -28,6 +28,7 @@ from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.pages.base_page import BasePage
+from ui_tests.pages.compliance_page import CompliancePage
 from ui_tests.pages.dashboard_page import DashboardPage
 from ui_tests.pages.devices_page import DevicesPage
 from ui_tests.pages.devices_queries_page import DevicesQueriesPage
@@ -372,6 +373,7 @@ class TestBase:
         self.account_page = AccountPage(**params)
         self.instances_page = InstancesPage(**params)
         self.signup_page = SignupPage(**params)
+        self.compliance_page = CompliancePage(**params)
 
     def register_components(self):
         params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)

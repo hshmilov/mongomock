@@ -1,6 +1,3 @@
-import pytest
-from selenium.common.exceptions import NoSuchElementException
-
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.tests import ui_consts
@@ -31,8 +28,7 @@ class TestUsers(TestBase):
             screen.assert_screen_is_restricted()
 
         # check readonly screen
-        with pytest.raises(NoSuchElementException):
-            self.adapters_page.assert_screen_is_restricted()
+        assert not self.adapters_page.is_switch_button_disabled()
 
         # assert it's readonly
         self.adapters_page.switch_to_page()

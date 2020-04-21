@@ -83,14 +83,14 @@ class SettingsPage(Page):
     SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER = 'User permissions saved.'
     BAD_PROXY_TOASTER = PROXY_ERROR_MESSAGE
     SELECT_ROLE_DIV_CSS = 'div.item.form__role'
-    SELECT_ROLE_CSS = 'div.item.form__role .v-select'
-    SELECT_ROLE_LIST_BOX_CSS = '.v-select-list'
+    SELECT_ROLE_CSS = 'div.item.form__role .ant-select'
+    SELECT_ROLE_LIST_BOX_CSS = '.ant-select-dropdown-menu'
     SELECT_USER_ROLE_CSS = '.user-permissions .user-role .x-select'
     SELECT_OPTION_CSS = 'div.x-select-option'
     ADMIN_ROLE = 'Admin'
     READ_ONLY_ROLE = 'Read Only User'
     VIEWER_ROLE = 'Viewer'
-    RESTRICTED_ROLE = 'Restricted User'
+    RESTRICTED_ROLE = 'Restricted'
     USE_PROXY = 'Proxy enabled'
     USE_AMAZON = 'Enable Amazon S3 integration'
     USE_GUI_SSL = 'Configure custom SSL certificate'
@@ -173,10 +173,14 @@ class SettingsPage(Page):
     ROLE_ROW_BY_NAME_XPATH = '//tr[child::td[.//text()=\'{role_name}\']]'
     USERNAME_ROW_BY_NAME_XPATH = '//tr[child::td[.//text()=\'{username}\']]'
     TABLE_ACTION_ITEM_XPATH = \
-        '//div[@class=\'v-list-item__title\' and contains(text(),\'{action}\')]'
+        '//li[@class=\'ant-dropdown-menu-item\' and contains(text(),\'{action}\')]'
 
     ADD_USER_BUTTON_TEXT = 'Add User'
     ADD_ROLE_BUTTON_TEXT = 'Add Role'
+
+    FOOTER_ERROR_CSS = '.x-side-panel__footer .indicator-error--text'
+
+    EXPANSION_HEADER_ICON_CSS = '.v-expansion-panel-header__icon'
 
     RESTRICTED_PERMISSIONS = {
         'dashboard': [
@@ -249,6 +253,8 @@ class SettingsPage(Page):
 
     def click_new_user(self):
         self.get_enabled_button(self.ADD_USER_BUTTON_TEXT).click()
+        # wait for the panel animation
+        time.sleep(2)
 
     def wait_for_new_user_panel(self):
         self.wait_for_element_present_by_css('.x-side-panel.user-panel.v-navigation-drawer--open',
@@ -256,6 +262,8 @@ class SettingsPage(Page):
 
     def click_new_role(self):
         self.get_enabled_button(self.ADD_ROLE_BUTTON_TEXT).click()
+        # wait for the panel animation
+        time.sleep(2)
 
     def assert_new_user_disabled(self):
         assert self.wait_for_element_present_by_xpath(
@@ -270,6 +278,8 @@ class SettingsPage(Page):
 
     def click_edit_user(self, user_name):
         self.find_username_row_by_username(user_name).click()
+        # wait for the panel animation
+        time.sleep(2)
 
     def fill_first_name(self, first_name):
         self.fill_text_field_by_css_selector('.first-name__input', first_name)
@@ -349,7 +359,9 @@ class SettingsPage(Page):
 
     def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
                         wait_for_toaster=True):
+        self.wait_for_table_to_load()
         self.click_new_user()
+        self.wait_for_new_user_panel()
         self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name)
         self.click_create_user()
         if wait_for_toaster:
@@ -381,16 +393,20 @@ class SettingsPage(Page):
     def select_permissions(self, permissions):
         for permissionCategory in permissions:
             categoryPanel = self.wait_for_element_present_by_css(f'.v-expansion-panel.{permissionCategory}')
-            self.scroll_into_view(categoryPanel.find_element_by_css_selector('.v-expansion-panel-header__icon'),
-                                  self.ROLE_PANEL_CONTENT)
-            categoryPanel.find_element_by_css_selector('.v-expansion-panel-header__icon').click()
+            categoryIcon = categoryPanel.find_element_by_css_selector(self.EXPANSION_HEADER_ICON_CSS)
+            if not self.is_element_clickable(categoryIcon):
+                self.scroll_into_view(categoryIcon, self.ROLE_PANEL_CONTENT)
+            if len(categoryPanel.find_elements_by_css_selector('.v-expansion-panel-header--active')) == 0:
+                categoryPanel.find_element_by_css_selector(self.EXPANSION_HEADER_ICON_CSS).click()
             self.wait_for_element_present_by_css('.v-expansion-panel-header--active')
             permissionValues = permissions[permissionCategory]
             if permissionValues == 'all':
-                categoryPanel.find_element_by_css_selector('.v-input__control').click()
+                categoryPanel.find_element_by_css_selector('.v-expansion-panel-header--active .x-checkbox').click()
             else:
+                category_checkboxes = categoryPanel.find_elements_by_css_selector('.x-checkbox')
+                category_checkboxes_by_text = {checkbox.text: checkbox for checkbox in category_checkboxes}
                 for permissionValue in permissionValues:
-                    self.click_toggle_button(self.find_checkbox_with_label_by_label(permissionValue, categoryPanel),
+                    self.click_toggle_button(category_checkboxes_by_text[permissionValue],
                                              make_yes=True,
                                              window=self.ROLE_PANEL_CONTENT)
 
@@ -418,7 +434,7 @@ class SettingsPage(Page):
         self.wait_for_role_successfully_saved_toaster()
 
     def wait_for_role_panel_present(self):
-        self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT)
+        self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
     def wait_for_role_panel_absent(self):
         self.wait_for_element_absent_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
@@ -437,7 +453,8 @@ class SettingsPage(Page):
             for permissionCategoryName in permissions:
                 if permissionCategoryName in categoryPanel.get_attribute('class'):
                     currentPermissionCategory = permissionCategoryName
-            currentSelectedActions = categoryPanel.find_elements_by_css_selector('.x-checkbox.checked')
+            currentSelectedActions = categoryPanel.\
+                find_elements_by_css_selector('.v-expansion-panel-content .x-checkbox.checked')
             if not currentPermissionCategory:
                 continue
             if not currentSelectedActions or len(currentSelectedActions) != len(permissions[currentPermissionCategory]):
@@ -461,6 +478,8 @@ class SettingsPage(Page):
 
     def click_role_by_name(self, name):
         self.find_role_row_by_name(name).click()
+        # wait for the panel animation
+        time.sleep(2)
         self.wait_for_role_panel_present()
 
     def remove_role(self, name):
@@ -505,7 +524,9 @@ class SettingsPage(Page):
 
     def remove_user_by_user_name_with_selection(self, user_name):
         self.select_user_by_user_name(user_name)
-        self.click_button(self.ACTIONS_BUTTON, should_scroll_into_view=False)
+        self.click_button(self.ACTIONS_BUTTON,
+                          button_class='user-management_actions__menu',
+                          should_scroll_into_view=False)
         self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Delete Users')).click()
         self.safeguard_click_confirm('Yes, Delete')
 
@@ -514,6 +535,7 @@ class SettingsPage(Page):
         self.wait_for_new_user_panel()
         self.get_user_remove_panel_action().click()
         self.safeguard_click_confirm('Yes, Delete')
+        self.wait_for_user_removed_toaster()
 
     def change_disable_remember_me_toggle(self, make_yes):
         self.click_toggle_button(self.find_session_timeout_toggle(), make_yes=True, window=TAB_BODY)
@@ -851,7 +873,7 @@ class SettingsPage(Page):
         self.wait_for_saved_successfully_toaster()
 
     def assert_screen_is_restricted(self):
-        return len(self.driver.find_elements_by_css_selector('li.nav-item.disabled #settings')) == 1
+        assert len(self.driver.find_elements_by_css_selector('li.nav-item.disabled #settings')) == 1
 
     def get_permissions_text(self, label_text):
         return self.driver.find_element_by_xpath(
@@ -904,7 +926,7 @@ class SettingsPage(Page):
         self.click_button('Remove User')
 
     def wait_for_user_removed_toaster(self):
-        self.wait_for_toaster('User removed.')
+        self.wait_for_toaster('Users removed.')
 
     def remove_user(self):
         self.click_remove_user()
@@ -918,7 +940,7 @@ class SettingsPage(Page):
         return self.driver.find_element_by_css_selector('div.roles-default')
 
     def assert_default_role_is_restricted(self):
-        self.find_default_role().find_element_by_css_selector('div[title="Restricted User"]')
+        self.find_default_role().find_element_by_css_selector('div[title="Restricted"]')
 
     def find_role_item(self):
         return self.driver.find_element_by_css_selector('.form__role')
@@ -931,8 +953,7 @@ class SettingsPage(Page):
 
     def select_role(self, role_text):
         self.driver.find_element_by_css_selector(self.SELECT_ROLE_CSS).click()
-        roles_list_div = self.driver.find_element_by_css_selector(self.SELECT_ROLE_DIV_CSS)
-        self.wait_for_element_present_by_css('.v-select--is-menu-active', roles_list_div)
+        self.wait_for_element_present_by_css(self.SELECT_ROLE_LIST_BOX_CSS, is_displayed=True)
         roles_list_box = self.driver.find_element_by_css_selector(self.SELECT_ROLE_LIST_BOX_CSS)
         self.find_element_by_text(role_text, roles_list_box).click()
 
@@ -1271,6 +1292,9 @@ class SettingsPage(Page):
 
     def find_discovery_mode_options(self):
         return self.driver.find_elements_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_OPTIONS)
+
+    def assert_server_error(self, error):
+        assert self.wait_for_element_present_by_css(self.FOOTER_ERROR_CSS).text == error
 
     def wait_for_system_research_interval(self):
         self.wait_for_element_present_by_css(self.SCHEDULE_RATE_CSS)

@@ -19,7 +19,7 @@
 
     <!-- first name -->
     <div class="item form__first-name">
-      <h5>First Name</h5> (Optional)
+      <h5>First Name</h5> (optional)
       <input
         v-model="firstName"
         placeholder="Enter First Name"
@@ -29,7 +29,7 @@
 
     <!-- last name -->
     <div class="item form__last-name">
-      <h5>Last Name</h5> (Optional)
+      <h5>Last Name</h5> (optional)
       <input
         v-model="lastName"
         placeholder="Enter Last Name"
@@ -39,7 +39,7 @@
 
     <!-- email -->
     <div class="item form__email">
-      <h5>Email</h5> (Optional)
+      <h5>Email</h5> (optional)
       <input
         v-model="$v.email.$model"
         placeholder="Enter Email"
@@ -54,15 +54,17 @@
     <!-- role -->
     <div class="item form__role">
       <h5>Role</h5>
-      <VSelect
+      <ASelect
         v-model="$v.role.$model"
-        :items="rolesOptions"
-        height="20"
-        width="180"
-        dense
         placeholder="Select Role"
-        outlined
-      />
+      >
+        <ASelectOption
+          v-for="selectRole in rolesOptions"
+          :key="selectRole.value"
+        >
+          {{ selectRole.text }}
+        </ASelectOption>
+      </ASelect>
       <p
         v-if="$v.role.$error"
         class="error-input indicator-error--text"
@@ -183,32 +185,54 @@ export default {
 </script>
 
 <style lang="scss">
-.new-user__form {
-  width: 390px;
-  h5 {
-    display: inline;
-    font-size: 16px;
-    font-weight: 400;
-    color: $theme-black;
-    margin: 0 0 3px 0;
-  }
-  input {
-    display: block;
-    width: 100%;
-    height: 30px;
-    padding: 4px;
+.user-panel {
+  .new-user__form {
+    width: 390px;
+    h5 {
+      display: inline;
+      font-size: 16px;
+      font-weight: 400;
+      color: $theme-black;
+      margin: 0 0 3px 0;
+    }
+    input {
+      display: block;
+      width: 100%;
+      height: 30px;
+      padding: 4px;
+    }
+    .ant-select {
+      display: block;
+      width: 100%;
+      height: 30px;
+      padding-bottom: 4px;
+    }
+    .item {
+      margin: 0 0 16px 0;
+    }
 
+    .v-select.v-text-field input {
+      border-style: none;
+      visibility: hidden;
+    }
+    .v-text-field__details {
+      display: none !important;
+    }
   }
-  .item {
-    margin: 0 0 16px 0;
-  }
-
-  .v-select.v-text-field input {
-    border-style: none;
-    visibility: hidden;
-  }
-  .v-text-field__details {
-    display: none !important;
+  .x-side-panel__footer {
+    > div {
+      display: flex;
+      flex-direction: column;
+      .indicator-error--text {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .buttons {
+        display: flex;
+        flex: 50%;
+        justify-content: flex-end;
+      }
+    }
   }
 }
 </style>

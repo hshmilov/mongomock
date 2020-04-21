@@ -135,3 +135,11 @@ class LoginPage(Page):
 
     def get_error_msg(self):
         return self.driver.find_element_by_css_selector('.x-login .form-error').text
+
+    def assert_screen_url_is_restricted(self, screen):
+        current_url = self.current_url
+        screen.refresh()
+        self.assert_not_logged_in()
+        self.wait_for_login_page_to_load()
+        assert self.get_error_msg() == 'You are lacking some permissions for this request'
+        self.change_current_tab_url(current_url)

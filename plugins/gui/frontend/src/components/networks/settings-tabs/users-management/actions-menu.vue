@@ -5,34 +5,30 @@
       :permission-section="$permissionConsts.categories.Users"
     >
       <template slot-scope="{ canUpdate, canDelete }">
-        <VMenu offset-y>
-          <template v-slot:activator="{ on }">
-            <XButton
-              :disabled="disabled || (!canDelete && !canUpdate)"
-              link
-              v-on="on"
-            >Actions
-            </XButton>
-          </template>
-          <VList class="x-users-management-actions-menu__list">
-            <VListItem
+        <ADropdown
+          class="user-management_actions__menu"
+          :disabled="disabled || (!canDelete && !canUpdate)"
+          :trigger="['click']"
+          placement="bottomCenter"
+        >
+          <AButton type="link">Actions</AButton>
+          <AMenu
+            slot="overlay"
+          >
+            <AMenuItem
               v-if="canDelete"
               @click="callDeleteUsers"
-            >
-              <VListItemTitle>
-                Delete Users
-              </VListItemTitle>
-            </VListItem>
-            <VListItem
+              id="delete_users"
+              key="0"
+            >Delete Users</AMenuItem>
+            <AMenuItem
               v-if="canUpdate"
               @click="callAssignRole"
-            >
-              <VListItemTitle>
-                Assign Role
-              </VListItemTitle>
-            </VListItem>
-          </VList>
-        </VMenu>
+              id="assign_role"
+              key="1"
+            >Assign Role</AMenuItem>
+          </AMenu>
+        </ADropdown>
       </template>
     </XRoleGateway>
   </div>

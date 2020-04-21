@@ -7,7 +7,7 @@
       @input="$emit('input', $event)"
       @validate="updateValidity"
     ></x-form>
-    <div class="place-right">
+    <div class="place-left">
       <x-button
         id="feature-flags-save"
         :disabled="!isValid"

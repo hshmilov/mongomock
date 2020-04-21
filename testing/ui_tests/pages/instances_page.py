@@ -1,7 +1,6 @@
 import re
 
-from selenium.common.exceptions import (ElementClickInterceptedException,
-                                        NoSuchElementException,
+from selenium.common.exceptions import (NoSuchElementException,
                                         StaleElementReferenceException)
 
 from axonius.utils.wait import wait_until
@@ -32,13 +31,6 @@ class InstancesPage(EntitiesPage):
     @property
     def root_page_css(self):
         return self.ROOT_PAGE_CSS
-
-    def assert_screen_is_restricted(self):
-        wait_until(self.switch_to_page_allowing_failure,
-                   tolerated_exceptions_list=[ElementClickInterceptedException],
-                   check_return_value=False)
-        self.find_element_by_text('You do not have permission to access the Instances screen')
-        self.click_ok_button()
 
     def click_connect_node(self):
         wait_until(lambda: self.click_button_by_id(self.CONNECT_NODE_ID),

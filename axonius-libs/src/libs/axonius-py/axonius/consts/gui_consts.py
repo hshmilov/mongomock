@@ -109,8 +109,11 @@ PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_OWNER = 'Owner'
 PREDEFINED_ROLE_OWNER_RO = 'OwnerReadOnly'
 PREDEFINED_ROLE_VIEWER = 'Viewer'
+# Old viewer role name
 PREDEFINED_ROLE_READONLY = 'Read Only User'
-PREDEFINED_ROLE_RESTRICTED = 'Restricted User'
+# Old restricted role name
+PREDEFINED_ROLE_RESTRICTED_USER = 'Restricted User'
+PREDEFINED_ROLE_RESTRICTED = 'Restricted'
 IS_AXONIUS_ROLE = 'is_axonius_role'
 
 ####################

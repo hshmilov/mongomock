@@ -53,11 +53,10 @@ import {
   GET_SYSTEM_USERS_MAP,
   GET_SYSTEM_ROLES_MAP,
   GET_ADMIN_USER_ID,
-  GET_CURRENT_USER_ID,
   UPDATE_USERS_ROLE,
   GET_ALL_ROLES,
 } from '@store/modules/auth';
-import { mapActions, mapGetters } from 'vuex';
+import { mapActions, mapGetters, mapMutations } from 'vuex';
 
 import capitalize from 'lodash/capitalize';
 
@@ -66,6 +65,7 @@ import XButton from '@axons/inputs/Button.vue';
 import XUsersPanel from './side-panels/user-panel.vue';
 import XActionsMenu from './actions-menu.vue';
 import XModalAssignRole from './modal-assign-role.vue';
+import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export default {
   name: 'XUsersManagement',
@@ -116,7 +116,6 @@ export default {
       usersMap: GET_SYSTEM_USERS_MAP,
       rolesMap: GET_SYSTEM_ROLES_MAP,
       adminUserUuid: GET_ADMIN_USER_ID,
-      currentUserUuid: GET_CURRENT_USER_ID,
     }),
     editUserId() {
       return this.isPanelOpen ? this.selectedRows.ids[0] : undefined;
@@ -136,7 +135,7 @@ export default {
     },
     readOnlyRows() {
       // only admin user that was created by the system can open it's own panels
-      return this.currentUserUuid === this.adminUserUuid ? [] : [this.adminUserUuid];
+      return this.$isAdmin() ? [] : [this.adminUserUuid];
     },
   },
   created() {
@@ -144,6 +143,9 @@ export default {
     this.fetchAllRoles();
   },
   methods: {
+    ...mapMutations({
+      showSnackbar: SHOW_TOASTER_MESSAGE,
+    }),
     ...mapActions({
       fetchAllUsers: GET_ALL_USERS,
       fetchAllRoles: GET_ALL_ROLES,
@@ -174,8 +176,9 @@ export default {
           ? `The ${this.selectedRowsCount} users will be deleted from the Axonius system`
           : 'The user will be deleted from the Axonius system',
         confirmText: 'Yes, Delete',
-        onConfirm: () => {
-          this.removerUsers(this.selectedRows);
+        onConfirm: async () => {
+          await this.removerUsers(this.selectedRows);
+          this.showSnackbar({ message: 'Users removed.' });
           this.selectedRows = { ids: [], include: true };
         },
       });

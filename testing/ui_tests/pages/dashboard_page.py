@@ -23,6 +23,7 @@ class DashboardPage(Page):
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
+    SEARCH_INSIGHTS_CSS = '.x-search-insights'
     CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard .x-date-edit.labeled:nth-of-type({child_index}) input'
     CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .md-switch-container + label'
     PIE_SLICE_CSS = 'g[class^="slice-"]'
@@ -107,6 +108,7 @@ class DashboardPage(Page):
     COLOR_INFO = '#3498DB'
 
     NEW_CARD_CHART_CSS = '.x-tab.active .x-card.chart-new'
+    EXPLORER_RESULTS_CSS = '.explorer-results'
 
     @property
     def root_page_css(self):
@@ -484,6 +486,9 @@ class DashboardPage(Page):
 
     def toggle_move_or_copy_checkbox(self):
         return self.driver.find_element_by_id('create_panel_copy').click()
+
+    def find_search_insights(self):
+        return self.driver.find_element_by_css_selector(self.SEARCH_INSIGHTS_CSS)
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
@@ -984,3 +989,14 @@ class DashboardPage(Page):
 
     def get_card_search_input_text(self, card):
         return card.find_element_by_css_selector(self.CARD_SEARCH_INPUT_CSS).text
+
+    def get_search_insights_tables(self):
+        return self.find_elements_by_css(self.TABLE_CONTAINER_CSS)
+
+    def assert_device_explorer_results_exists(self):
+        assert self.find_element_by_text('Devices',
+                                         self.driver.find_element_by_css_selector(self.EXPLORER_RESULTS_CSS))
+
+    def assert_users_explorer_results_exists(self):
+        assert self.find_element_by_text('Users',
+                                         self.driver.find_element_by_css_selector(self.EXPLORER_RESULTS_CSS))

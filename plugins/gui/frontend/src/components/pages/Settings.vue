@@ -22,7 +22,7 @@
               @select=""
             />
 
-            <div class="place-right">
+            <div class="place-left">
               <XButton
                 id="research-settings-save"
                 :disabled="isResearchDisabled"
@@ -53,7 +53,8 @@
               />
               <XButton
                 id="global-settings-save"
-                :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy || !validPasswordProtection"
+                :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy
+                  || !validPasswordProtection"
                 @click="saveGlobalSettings"
               >Save</XButton>
             </div>
@@ -73,7 +74,7 @@
               api-upload="settings/plugins/gui"
               @validate="updateGuiValidity"
             />
-            <div class="place-right">
+            <div class="place-left">
               <XButton
                 id="gui-settings-save"
                 :disabled="!guiComplete || !canUpdateSettings"
@@ -440,6 +441,7 @@ export default {
     .global-settings-tab {
       .footer {
         display: flex;
+        flex-direction: column;
         align-items: flex-start;
 
         .md-card {

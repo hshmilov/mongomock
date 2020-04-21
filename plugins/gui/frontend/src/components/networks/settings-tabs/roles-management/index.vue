@@ -45,7 +45,6 @@ import XTable from '@axons/tables/Table.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XButton from '@axons/inputs/Button.vue';
 import _find from 'lodash/find';
-import _keys from 'lodash/keys';
 import _cloneDeep from 'lodash/cloneDeep';
 import {
   GET_ALL_ROLES,
@@ -162,7 +161,7 @@ export default {
     handleAddRole() {
       const restrictedPermissions = this.baseRolePermissions;
       this.currentRole = {
-        name: this.getNewRoleName('New Role', false),
+        name: '',
         permissions: _cloneDeep(restrictedPermissions),
       };
       this.isPanelOpen = true;
@@ -190,10 +189,10 @@ export default {
       this.isPanelOpen = false;
     },
     formatRole(role) {
-      const { permissions } = role;
       const formattedPermissions = {};
-      _keys(permissions).forEach((category) => {
-        formattedPermissions[category] = getPermissionState(this.getLabels, category, role);
+      this.getPermissionsStructure.forEach((category) => {
+        formattedPermissions[category.name] = getPermissionState(this.getLabels,
+          category.name, role);
       });
       return formattedPermissions;
     },

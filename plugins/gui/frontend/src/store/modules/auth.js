@@ -48,7 +48,6 @@ export const GET_DEFAULT_ROLE = 'GET_DEFAULT_ROLE';
 export const SET_DEFAULT_ROLE = 'SET_DEFAULT_ROLE';
 export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE';
 export const GET_ADMIN_USER_ID = 'GET_ADMIN_USER_ID';
-export const GET_CURRENT_USER_ID = 'GET_CURRENT_USER_ID';
 
 export const IS_USER_ADMIN = 'IS_USER_ADMIN';
 export const IS_AXONIUS_USER = 'IS_AXONIUS_USER';
@@ -64,7 +63,13 @@ export const auth = {
     allUsers: {
       content: { data: [], fetching: false, error: '' },
 
-      count: { data: 0, fetching: false, error: '' },
+      count: {
+        data: 0,
+        fetching:
+          false,
+        error: '',
+        data_to_show: 0,
+      },
 
       view: {
         page: 0,
@@ -111,9 +116,6 @@ export const auth = {
       const users = _get(state, 'allUsers.content.data', []);
       const admin = users.find((user) => user.user_name === 'admin') || {};
       return admin.uuid;
-    },
-    [GET_CURRENT_USER_ID](state) {
-      return _get(state, 'currentUser.data.uuid');
     },
     [GET_PERMISSION_STRUCTURE](state, getters) {
       return getPermissionsStructure(getters[SHOULD_SHOW_CLOUD_COMPLIANCE]);
@@ -184,11 +186,10 @@ export const auth = {
     [ADD_NEW_USER](state, payload) {
       const { error, fetching, data } = payload;
       state.allUsers.content.fetching = fetching;
-      if (error) {
-        state.allUsers.content.error = error;
-      } else if (data) {
+      if (!error && data) {
         state.allUsers.content.data.push(data);
         state.allUsers.count.data = state.allUsers.content.data.length;
+        state.allUsers.count.data_to_show = state.allUsers.content.data.length;
       }
     },
     [UPDATE_EXISTING_USER](state, payload) {
@@ -214,6 +215,8 @@ export const auth = {
         state.allUsers.content.data = currentUsersState.filter((u) => !ids.includes(u.uuid));
       }
       state.allUsers.count.data = state.allUsers.content.data.length;
+      state.allUsers.count.data_to_show = state.allUsers.content.data.length;
+
     },
     [UPDATE_USERS_ROLE](state, { roleId, ids, include }) {
       const currentUsersState = _get(state, 'allUsers.content.data', []);

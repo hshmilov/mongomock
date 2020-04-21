@@ -69,6 +69,8 @@ class DevicesPage(EntitiesPage):
     MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
     FILTER_OS = 'specific_data.data.os.type == "{os}"'
+    UNMANAGED_QUERY = 'not (specific_data.data.adapter_properties == \"Agent\") ' \
+                      'and not (specific_data.data.adapter_properties == \"Manager\")'
     FILTER_OS_WINDOWS = FILTER_OS.format(os='Windows')
     FILTER_OS_LINUX = FILTER_OS.format(os='Linux')
     ENFORCEMENT_DIALOG_DROPDOWN_CSS = 'div.x-select-trigger'
@@ -122,11 +124,6 @@ class DevicesPage(EntitiesPage):
         )
         self.click_button('Run')
         time.sleep(1.5)  # wait for run to fade away
-
-    def assert_screen_is_restricted(self):
-        self.switch_to_page_allowing_failure()
-        self.find_element_by_text('You do not have permission to access the Devices screen')
-        self.click_ok_button()
 
     def query_hostname_contains(self, string):
         self.run_filter_query(self.FILTER_HOSTNAME.format(filter_value=string))

@@ -31,7 +31,7 @@ class Labels:
             'permissions.dashboard.spaces.put': 'Add space',
             'permissions.dashboard.spaces.delete': 'Delete space',
 
-            'permissions.devices_assets': 'Devices Assets',
+            'permissions.devices_assets': 'Device Assets',
             'permissions.devices_assets.get': 'View devices',
             'permissions.devices_assets.post': 'Edit devices',
             'permissions.devices_assets.saved_queries.run': 'Run saved queries',

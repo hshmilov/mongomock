@@ -150,9 +150,7 @@ export default {
   watch: {
     role(newRole) {
       this.$v.$reset();
-      this.name = newRole.name;
-      this.permissions = _cloneDeep(newRole.permissions);
-      this.expandedCategories = [];
+      this.resetRole(newRole);
       this.mode = newRole.uuid ? FormMode.ViewRole : FormMode.CreateRole;
       this.inSaveMode = false;
     },
@@ -169,13 +167,17 @@ export default {
     ...mapMutations({
       showToasterMessage: SHOW_TOASTER_MESSAGE,
     }),
+    resetRole(fromRole) {
+      this.name = fromRole.name;
+      this.permissions = _cloneDeep(fromRole.permissions);
+      this.expandedCategories = [];
+    },
     validate() {
       this.$v.$touch();
     },
     onChangeCategoryCheckbox(event, categoryName, prevState) {
       const nextState = prevState !== PermissionCategoryState.full;
       this.updatePermissionCategory(categoryName, nextState);
-      event.stopPropagation();
     },
     renderPermissionCategory(permissionCategory, index) {
       if (!this.permissions || !this.getLabels) {
@@ -188,18 +190,19 @@ export default {
       const categoryState = this.getCategoriesStates[index];
       return (
           <v-expansion-panel class={categoryName}>
-            <v-expansion-panel-header
-            >
-              <v-checkbox
-              input-value={categoryState === PermissionCategoryState.full}
-              indeterminate={categoryState === PermissionCategoryState.partial}
-              label={this.getLabels[categoryLabelKey]}
-              disabled={this.isPredefined || this.mode === FormMode.ViewRole}
-              color="#1D222C"
-              onClick={(event) => {
-                this.onChangeCategoryCheckbox(event, categoryName, categoryState);
-              }}
-              />
+            <v-expansion-panel-header>
+              <div>
+                <XCheckbox
+                data={categoryState === PermissionCategoryState.full}
+                value={categoryName}
+                indeterminate={categoryState === PermissionCategoryState.partial}
+                label={this.getLabels[categoryLabelKey]}
+                read-only={this.isPredefined || this.mode === FormMode.ViewRole}
+                onChange={(event) => {
+                  this.onChangeCategoryCheckbox(event, categoryName, categoryState);
+                }}
+                />
+              </div>
           </v-expansion-panel-header>
             {
               categoryActions.map((valueLabelKey) => {
@@ -207,7 +210,7 @@ export default {
                 const currentPermission = _get(userCategoryPermissions, permissionKey, false);
                 if (currentPermission !== undefined) {
                   return (
-                    <v-expansion-panel-content>
+                    <v-expansion-panel-content eager={true}>
                       <XCheckbox
                         data={currentPermission}
                         value={permissionKey}
@@ -322,8 +325,11 @@ export default {
       this.name = e.target.value;
       this.$v.name.$touch();
     },
-    toggleEditNameMode() {
-      this.mode = FormMode.EditRole;
+    toggleEditMode() {
+      this.mode = this.mode === FormMode.ViewRole ? FormMode.EditRole : FormMode.ViewRole;
+      if (this.mode === FormMode.ViewRole) {
+        this.resetRole(this.role);
+      }
     },
     genNameMarkup() {
       const nameError = this.$v.name.$error;
@@ -336,6 +342,7 @@ export default {
             <input
               value={this.name}
               onInput={this.setNameField}
+              placeholder="New Role"
               class="name_input"
               maxLength={30}
             />
@@ -349,7 +356,7 @@ export default {
         actions.push(<x-action-item
           class="action-edit"
           title="Edit"
-          onClick={this.toggleEditNameMode}
+          onClick={this.toggleEditMode}
           size="20"
           color="#fff"
           icon={mdiPencil}
@@ -390,7 +397,7 @@ export default {
     return (
         <XSidePanel
             value={this.value}
-            panelClass="role-panel"
+            panelClass={`role-panel ${this.mode !== FormMode.ViewRole ? 'with-footer' : ''}`}
             title={this.name}
             onInput={(value) => this.$emit('input', value)}
             temporary={!this.inSaveMode && this.value}
@@ -424,24 +431,27 @@ export default {
                 )}
               </v-expansion-panels>
             </div>
-            <div slot="panelFooter">
-              <div class="left-buttons">
-                <XButton
-                link
-                onClick={this.closePanel}>Cancel</XButton>
-              </div>
-                <div class="buttons">
-                  {
-                    (!this.isPredefined && this.mode !== FormMode.ViewRole
-                      && ((this.userCanEditRoles && this.roleId)
-                        || (this.userCanAddRole && !this.roleId)))
-                      ? (<XButton
-                        onClick={this.saveRole}
-                        disabled={this.isFormInvalid}
-                        >Save</XButton>) : null
-                  }
-                </div>
-            </div>
+          {
+            (!this.isPredefined && this.mode !== FormMode.ViewRole
+              && ((this.userCanEditRoles && this.roleId)
+                || (this.userCanAddRole && !this.roleId)))
+              ? (
+                <div slot="panelFooter">
+                  <div className="buttons">
+                    {
+                      this.mode === FormMode.EditRole ? (
+                        <XButton
+                          link
+                          onClick={this.toggleEditMode}>Cancel</XButton>
+                      ) : null
+                    }
+                    <XButton
+                      onClick={this.saveRole}
+                      disabled={this.isFormInvalid}
+                    >Save</XButton>
+                  </div>
+                </div>) : null
+          }
         </XSidePanel>
     );
   },

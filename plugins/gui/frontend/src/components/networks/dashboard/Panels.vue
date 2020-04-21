@@ -25,6 +25,7 @@
       v-if="$can($permissionConsts.categories.Dashboard,
                  $permissionConsts.actions.Add,
                  $permissionConsts.categories.Charts)"
+      :show-menu="false"
       :key="9999"
       title="New Chart"
       class="chart-new print-exclude"

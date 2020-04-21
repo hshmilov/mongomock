@@ -60,6 +60,7 @@ NODE_USE_AS_ENV_NAME = 'use_as_environment_name'
 NODE_IP_LIST = 'ips'
 NODE_ID_ENV_VAR_NAME = 'NODE_ID'
 DB_KEY_ENV_VAR_NAME = 'DB_KEY'
+DEFAULT_ROLE_ID = 'default_role_id'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'

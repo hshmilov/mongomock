@@ -71,9 +71,10 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions, mapMutations } from 'vuex';
 import _invert from 'lodash/invert';
 import _get from 'lodash/get';
+import { REMOVE_TOASTER } from '@store/mutations';
 import xNav from '../../axons/menus/Nav.vue';
 import xNavItem from '../../axons/menus/NavItem.vue';
 import xNestedNav from '../../axons/menus/NestedNav.vue';
@@ -110,8 +111,6 @@ export default {
     },
     isComplianceVisible() {
       return this.featureFlags && this.featureFlags.cloud_compliance
-        && this.$can(this.$permissionConsts.categories.Compliance,
-          this.$permissionConsts.actions.View)
         ? this.featureFlags.cloud_compliance.enabled : false;
     },
     logoSize: {
@@ -123,6 +122,9 @@ export default {
   methods: {
     ...mapActions({
       logout: LOGOUT,
+    }),
+    ...mapMutations({
+      removeToaster: REMOVE_TOASTER,
     }),
     navigationProps(name, id, title, permissionCategory) {
       let currentPermissionCategory = permissionCategory;
@@ -144,6 +146,7 @@ export default {
       this.$emit('access-violation', name);
     },
     onLogout() {
+      this.removeToaster();
       this.logout().then(() => {
         this.$router.push('/');
       });

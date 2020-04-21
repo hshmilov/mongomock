@@ -31,7 +31,10 @@
     <section class="x-side-panel__content">
       <slot name="panelContent" />
     </section>
-    <footer class="x-side-panel__footer">
+    <footer
+      v-if="$slots.panelFooter"
+      class="x-side-panel__footer"
+    >
       <slot name="panelFooter" />
     </footer>
   </v-navigation-drawer>
@@ -122,7 +125,7 @@ export default {
     }
 
     &__content {
-        padding: 28px 28px 84px 28px;
+        padding: 28px 28px 110px 28px;
         position: relative;
         top: 64px;
     }

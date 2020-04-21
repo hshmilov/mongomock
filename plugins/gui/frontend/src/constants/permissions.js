@@ -4,7 +4,7 @@ import _keys from 'lodash/keys';
 import _includes from 'lodash/includes';
 import _get from 'lodash/get';
 
-export const RESTRICTED_ROLE_NAME = 'Restricted User';
+export const RESTRICTED_ROLE_NAME = 'Restricted';
 
 export const PermissionCategory = {
   Settings: 'settings',
@@ -53,8 +53,8 @@ export const PermissionsStructure = [
       'permissions.settings.get_users_and_roles',
       'permissions.settings.users.put',
       'permissions.settings.users.post',
-      'permissions.settings.roles.put',
       'permissions.settings.users.delete',
+      'permissions.settings.roles.put',
       'permissions.settings.roles.post',
       'permissions.settings.roles.delete',
       'permissions.settings.reset_api_key',
@@ -68,9 +68,9 @@ export const PermissionsStructure = [
     category: 'permissions.dashboard',
     actions: [
       'permissions.dashboard.get',
-      'permissions.dashboard.charts.delete',
       'permissions.dashboard.charts.put',
       'permissions.dashboard.charts.post',
+      'permissions.dashboard.charts.delete',
       'permissions.dashboard.spaces.put',
       'permissions.dashboard.spaces.delete',
     ],
@@ -82,9 +82,9 @@ export const PermissionsStructure = [
       'permissions.devices_assets.get',
       'permissions.devices_assets.post',
       'permissions.devices_assets.saved_queries.run',
+      'permissions.devices_assets.saved_queries.put',
       'permissions.devices_assets.saved_queries.post',
       'permissions.devices_assets.saved_queries.delete',
-      'permissions.devices_assets.saved_queries.put',
     ],
   },
   {
@@ -94,9 +94,9 @@ export const PermissionsStructure = [
       'permissions.users_assets.get',
       'permissions.users_assets.post',
       'permissions.users_assets.saved_queries.run',
+      'permissions.users_assets.saved_queries.put',
       'permissions.users_assets.saved_queries.post',
       'permissions.users_assets.saved_queries.delete',
-      'permissions.users_assets.saved_queries.put',
     ],
   },
   {
@@ -122,9 +122,9 @@ export const PermissionsStructure = [
     category: 'permissions.adapters',
     actions: [
       'permissions.adapters.get',
+      'permissions.adapters.post',
       'permissions.adapters.connections.put',
       'permissions.adapters.connections.post',
-      'permissions.adapters.post',
       'permissions.adapters.connections.delete',
     ],
   },
@@ -133,11 +133,11 @@ export const PermissionsStructure = [
     category: 'permissions.enforcements',
     actions: [
       'permissions.enforcements.get',
-      'permissions.enforcements.post',
       'permissions.enforcements.put',
-      'permissions.enforcements.tasks.get',
+      'permissions.enforcements.post',
       'permissions.enforcements.delete',
       'permissions.enforcements.run',
+      'permissions.enforcements.tasks.get',
     ],
   },
   {
@@ -168,7 +168,7 @@ const getAccessMsg = (actionsNumber, permittedActions) => {
 };
 
 export const getPermissionState = (labels, category, role) => {
-  if (!role.permissions) {
+  if (!role.permissions || !role.permissions[category]) {
     return PermissionCategoryState.none;
   }
   // extract category related actions

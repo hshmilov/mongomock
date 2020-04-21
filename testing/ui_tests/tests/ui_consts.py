@@ -69,6 +69,7 @@ WINDOWS_QUERY_NAME = 'Windows Operating System'
 LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
 MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
+UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
 
 HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
 HOSTNAME_DC_QUERY_NAME = 'DC Devices'

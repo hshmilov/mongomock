@@ -156,11 +156,6 @@ class AdaptersPage(EntitiesPage):
     def check_rt_adapter(self):
         self.driver.find_element_by_css_selector(self.RT_CHECKBOX_CSS).click()
 
-    def assert_screen_is_restricted(self):
-        self.switch_to_page_allowing_failure()
-        self.find_element_by_text('You do not have permission to access the Adapters screen')
-        self.click_ok_button()
-
     def select_all_servers(self):
         self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
