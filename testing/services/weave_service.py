@@ -9,6 +9,7 @@ from retrying import retry
 
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_NETWORK, WEAVE_PATH)
+from axonius.consts.plugin_consts import UWSGI_RECOVER_SCRIPT_PATH
 from axonius.utils.debug import COLOR
 from services.axon_service import TimeoutException
 from services.docker_service import DockerService, retry_if_timeout
@@ -52,6 +53,7 @@ class WeaveService(DockerService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__(container_name, service_dir)
         self._number_of_tries = 0
+        self.tried_signal_uwsgi = False
 
     @property
     def docker_network(self):
@@ -171,6 +173,7 @@ class WeaveService(DockerService):
         if timeout > 3:
             try:
                 super().wait_for_service(timeout=5)
+                self.tried_signal_uwsgi = False
             except TimeoutException:
                 try:
                     if subprocess.check_output(['docker', 'exec', '-it',
@@ -181,7 +184,15 @@ class WeaveService(DockerService):
             timeout -= 3
         try:
             super().wait_for_service(timeout=timeout)
+            self.tried_signal_uwsgi = False
         except TimeoutException:
-            print('Restarting container due to wait TimeoutException on wait.')
-            self.restart()
+            # Sometimes uwsgi hangs at system startup, signaling it solves the problem
+            # https://github.com/enowars/enochecker/pull/22
+            if not self.tried_signal_uwsgi:
+                print('Signaling uwsgi to wakeup!!!')
+                super().run_command_in_container(f'python3 {UWSGI_RECOVER_SCRIPT_PATH}')
+                self.tried_signal_uwsgi = True
+            else:
+                print('Restarting container due to wait TimeoutException on wait.')
+                self.restart()
             raise

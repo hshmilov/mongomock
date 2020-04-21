@@ -173,6 +173,7 @@ threads = {self.get_max_uwsgi_threads}
 processes = {self.get_max_uwsgi_processes}
 
 socket = /tmp/openresty-uwsgi.sock
+safe-pidfile = /tmp/uwsgi.pid
 chmod-socket = 666
 vacuum = true
 

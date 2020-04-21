@@ -3,6 +3,7 @@ from pathlib import Path
 # PATHS #
 
 VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
+UWSGI_RECOVER_SCRIPT_PATH = '/home/axonius/hacks/recover_uwsgi.py'
 SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
 SHARED_READONLY_FULL_PATH = Path('/home/axonius') / SHARED_READONLY_DIR_NAME
 AXONIUS_SETTINGS_DIR_NAME = '.axonius_settings'
