@@ -12,7 +12,7 @@ trap finish EXIT
 PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step ova_vhd --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" --s3-bucket $S3_BUCKET s3 upload --ova output.ova --vhdx output.vhdx --export-name $NAME
 
 
-curl -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POST \
+curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POST \
   $TEAMCITY_SERVERURL/httpAuth/app/rest/buildQueue \
   -H 'Accept: application/json' \
   -H 'Content-Type: application/xml' \
