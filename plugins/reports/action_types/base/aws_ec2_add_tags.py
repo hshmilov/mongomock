@@ -71,7 +71,10 @@ class AwsEc2AddTagsAction(ActionTypeBase):
         tag_value = client_config.get(TAG_VALUE, None)
         tags = [{'Key': tag_key, 'Value': tag_value or ''}]
 
-        valid_instance_collection = ec2_resource.instances
+        instance_ids = [instance.id for instance in instance_group.instance_list]
+        logger.debug(f'tags to be added: {tags}, to machine ids {instance_ids}')
+
+        valid_instance_collection = ec2_resource.instances.filter(InstanceIds=instance_ids)
         valid_instance_obj_list = instance_group.instance_list
         logger.debug(f'Adding tags to instances {valid_instance_obj_list}')
         _ = valid_instance_collection.create_tags(Tags=tags)
