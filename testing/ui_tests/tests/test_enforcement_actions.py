@@ -49,9 +49,19 @@ AD_ONLY_QUERY = '(adapters == "active_directory_adapter") and not (adapters == "
 JSON_ONLY_QUERY = 'adapters == "json_file_adapter"'
 
 CUSTOM_TAG = 'superTag'
+FIRST_TAG = 'First Tag'
+SECOND_TAG = 'Second Tag'
 TAG_ALL_COMMENT = 'tag all'
 UNTAG_UNQUERIED = 'tag untag'
 TAG_NEW_COMMENT = 'tag new'
+
+ACTION_TAG_ADD = 'add_tag_entities'
+ACTION_TAG_REMOVE = 'remove_tag_entities'
+ACTION_TAG_SELECT = 'select_tag_entities'
+
+FIRST_PUSH = 'First Push'
+SECOND_PUSH = 'Second Push'
+THIRD_PUSH = 'Third Push'
 
 JSON_ADAPTER_NAME = 'JSON File'
 AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
@@ -403,31 +413,19 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.base_page.run_discovery()
         # create new task to add custom tag to all windows based devices
-        self.enforcements_page.click_new_enforcement()
-        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_1)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
-        self.enforcements_page.save_trigger()
-        self.enforcements_page.add_push_system_notification(name='first push')
-        self.enforcements_page.add_tag_entities(ENFORCEMENT_TEST_NAME_1, CUSTOM_TAG,
-                                                self.enforcements_page.POST_ACTIONS_TEXT)
-        self.enforcements_page.click_run_button()
-        self.enforcements_page.wait_for_task_in_progress_toaster()
+        self.create_and_run_tagging_enforcement(ENFORCEMENT_TEST_NAME_1,
+                                                Enforcements.enforcement_query_1,
+                                                CUSTOM_TAG,
+                                                FIRST_PUSH,
+                                                ACTION_TAG_ADD)
         self.check_tag_added(Enforcements.enforcement_query_1, CUSTOM_TAG)
         self.devices_page.refresh()
         # create new task to remove custom tag to all windows based devices
-        self.enforcements_page.switch_to_page()
-        self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.click_new_enforcement()
-        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_2)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
-        self.enforcements_page.save_trigger()
-        self.enforcements_page.add_push_system_notification(name='second push')
-        self.enforcements_page.remove_tag_entities(ENFORCEMENT_TEST_NAME_2, CUSTOM_TAG,
-                                                   self.enforcements_page.POST_ACTIONS_TEXT)
-        self.enforcements_page.click_run_button()
-        self.enforcements_page.wait_for_task_in_progress_toaster()
+        self.create_and_run_tagging_enforcement(ENFORCEMENT_TEST_NAME_2,
+                                                Enforcements.enforcement_query_1,
+                                                CUSTOM_TAG,
+                                                SECOND_PUSH,
+                                                ACTION_TAG_REMOVE)
         # go to device page and check if the tag removed
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
@@ -448,16 +446,11 @@ class TestEnforcementActions(TestBase):
         assert current_selected_tag == CUSTOM_TAG
         self.enforcements_page.click_save_button()
         # create new task to add new custom tag to all windows based devices
-        self.enforcements_page.click_new_enforcement()
-        self.enforcements_page.fill_enforcement_name(ENFORCEMENT_TEST_NAME_3)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(Enforcements.enforcement_query_1)
-        self.enforcements_page.save_trigger()
-        self.enforcements_page.add_push_system_notification(name='third push')
-        self.enforcements_page.select_tag_entities(ENFORCEMENT_TEST_NAME_3, TAG_ALL_COMMENT,
-                                                   self.enforcements_page.POST_ACTIONS_TEXT)
-        self.enforcements_page.click_run_button()
-        self.enforcements_page.wait_for_task_in_progress_toaster()
+        self.create_and_run_tagging_enforcement(ENFORCEMENT_TEST_NAME_3,
+                                                Enforcements.enforcement_query_1,
+                                                TAG_ALL_COMMENT,
+                                                THIRD_PUSH,
+                                                ACTION_TAG_SELECT)
         self.check_tag_added(Enforcements.enforcement_query_1, TAG_ALL_COMMENT)
 
     def check_tag_added(self, query, tag):
@@ -634,3 +627,50 @@ class TestEnforcementActions(TestBase):
 
         self.notification_page.click_notification_link()
         assert unquote_plus(self.notification_page.current_url) == unquote_plus(notification_link_value)
+
+    def test_tag_entities_with_existing_tag(self):
+        """
+        This test checks that if an entity with an existing tag gets tagged again,
+        The new tag is added and not overriding the existing tag.
+        Course of actions:
+        - Creating first enforcement to tag all windows devices with tag 'firstTag'
+        - Creating second enforcement to tag all windows devices with tag 'secondTag'
+        - Getting all devices with tag 'firstTag' and all devices with tag 'secondTag'
+          And checking that they are the same.
+        """
+        self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, Enforcements.enforcement_query_1)
+        self.base_page.run_discovery()
+
+        # Create and run first enforcement
+        self.create_and_run_tagging_enforcement(ENFORCEMENT_TEST_NAME_1,
+                                                Enforcements.enforcement_query_1,
+                                                FIRST_TAG,
+                                                FIRST_PUSH,
+                                                ACTION_TAG_ADD)
+        self.check_tag_added(Enforcements.enforcement_query_1, FIRST_TAG)
+
+        # Create and run second enforcement
+        self.create_and_run_tagging_enforcement(ENFORCEMENT_TEST_NAME_2,
+                                                Enforcements.enforcement_query_1,
+                                                SECOND_TAG,
+                                                SECOND_PUSH,
+                                                ACTION_TAG_ADD)
+        self.check_tag_added(Enforcements.enforcement_query_1, SECOND_TAG)
+
+        cell_index = self.devices_page.count_sort_column(self.devices_page.FIELD_TAGS)
+        tags = self.devices_page.get_row_cell_text(1, cell_index)
+        assert tags.splitlines() == [FIRST_TAG, SECOND_TAG]
+
+    def create_and_run_tagging_enforcement(self, enforcement_name, query, tag, push_name, tag_action):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(enforcement_name)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(query)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.add_push_system_notification(name=push_name)
+        getattr(self.enforcements_page, tag_action)(enforcement_name, tag,
+                                                    self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
