@@ -62,6 +62,7 @@ class TestUserPreferences(TestBase):
 
     def test_save_default_view(self):
         self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(READ_ONLY_USERNAME, NEW_PASSWORD,
                                            FIRST_NAME, LAST_NAME, self.settings_page.VIEWER_ROLE)

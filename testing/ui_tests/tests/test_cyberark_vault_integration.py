@@ -81,6 +81,8 @@ class TestCyberarkIntegration(TestBase):
             # Check successful device fetch.
             self.adapters_page.click_save()
             self.adapters_page.wait_for_spinner_to_end()
+            self.adapters_page.wait_for_data_collection_toaster_start()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
             print('Running discovery.')
             self.base_page.run_discovery()
             print('Waiting for devices to appear.')

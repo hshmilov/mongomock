@@ -2,7 +2,8 @@ import time
 from datetime import datetime
 
 import pytest
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import (NoSuchElementException,
+                                        StaleElementReferenceException)
 
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -11,8 +12,8 @@ from services.adapters.carbonblack_response_service import \
 from services.plugins.device_control_service import DeviceControlService
 from testing.test_credentials.test_ad_credentials import (NONEXISTEN_AD_DEVICE_IP,
                                                           WMI_QUERIES_DEVICE)
-from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import Enforcements
+from ui_tests.tests.ui_test_base import TestBase
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 ENFORCEMENT_QUERY = 'Run WMI task'
@@ -225,8 +226,9 @@ class TestTasks(TestBase):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, query_name)
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
+        self.base_page.run_discovery()
 
-        # create new task to add custom tag to all windows bafsed devices
+        # create new task to add custom tag to all windows based devices
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.fill_enforcement_name(enforcement_name)
         self.enforcements_page.select_trigger()
@@ -237,7 +239,6 @@ class TestTasks(TestBase):
                                                 self.enforcements_page.POST_ACTIONS_TEXT)
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_task_in_progress_toaster()
-
         self.enforcements_page.switch_to_page()
         self.enforcements_page.fill_enter_table_search(enforcement_name)
         self.enforcements_page.wait_for_table_to_load()
