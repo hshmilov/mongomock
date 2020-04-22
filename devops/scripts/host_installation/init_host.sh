@@ -137,7 +137,6 @@ pip3 install virtualenv
 pip2 install --upgrade setuptools
 pip3 install --upgrade setuptools
 pip3 install ipython
-pip3 install PyYaml
 pip3 install netifaces==0.10.9
 pip3 install python-crontab==2.4.0
 echo "Installing golang"
@@ -145,8 +144,7 @@ add-apt-repository ppa:longsleep/golang-backports
 _wait_for_apt update
 _wait_for_apt install -yq golang-go
 echo "Installing docker-ce..."
-_wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial
-_wait_for_apt install -yq --allow-downgrades containerd.io=1.2.10-3
+_wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial containerd.io=1.2.10-3
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu

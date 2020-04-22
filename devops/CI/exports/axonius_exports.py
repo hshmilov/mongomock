@@ -76,6 +76,7 @@ def main():
     cloud_parser.add_argument('--except', type=str, default='', dest='except_')
     cloud_parser.add_argument('--only', type=str, default='')
     cloud_parser.add_argument('--ami-regions', type=str, default='')
+    cloud_parser.add_argument('--os', type=str, choices=['centos', 'ubuntu'], default='ubuntu')
     cloud_parser.add_argument('--qcow-output', type=pathlib.Path, default=None)
     cloud_parser.add_argument('--force', default=False, action='store_true')
     cloud_parser.add_argument('--disk-size', default=500, type=int)
@@ -163,6 +164,7 @@ def cloud(args, notify):
                                     '-var', f'manifest_file={manifest_path}',
                                     '-var', f'disk_size={args.disk_size}',
                                     '-var', f'ami_regions={args.ami_regions}',
+                                    f'-var-file=packer_var_files/{args.os}.json',
                                     *qemu_args]
             print(' '.join(subprocess_arguments))
             if args.except_:

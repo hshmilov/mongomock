@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -o xtrace
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 function _wait_for_yum {
     i=0
 
@@ -64,18 +68,9 @@ echo "hostname: $(hostname)"
 echo "CONTAINERIZED: $CONTAINERIZED"
 echo ""
 
-# adding ubuntu user
-if [ $(cat /etc/passwd | grep ubuntu | wc -l) -ne 0 ]; then
-    echo "User ubuntu exists or doesn't need to be"
-else
-    echo "Setting ubuntu user"
-    useradd ubuntu
-    mkdir -p /home/ubuntu
-    chown ubuntu:ubuntu /home/ubuntu
-    /usr/sbin/usermod -s /bin/bash ubuntu
-    /usr/sbin/usermod -aG wheel ubuntu
-    echo ubuntu:bringorder | /usr/sbin/chpasswd
-fi
+sed -i '/PasswordAuthentication/ d' /etc/ssh/sshd_config
+sed -i -e '$a\' /etc/ssh/sshd_config
+echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
 
 if [ $(cat /etc/environment | grep LC_ALL | wc -l) -ne 0 ]; then
     echo "Locale settings exist"
@@ -98,6 +93,8 @@ export LC_CTYPE="en_US.UTF-8"
 #sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 #export DEBIAN_FRONTEND=noninteractive
 #dpkg --add-architecture i386
+echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
+
 _wait_for_yum -y update
 echo "Upgrading..."
 _wait_for_yum upgrade -yq
@@ -112,29 +109,23 @@ _wait_for_yum install -y python36 python-pip python-devel python3-devel
 echo "Setting python3.6 as the default python and upgrading pip..."
 ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
+cp ./uploads/pip.conf /etc/pip.conf
 python2 -m pip install --upgrade pip
 pip2 install --upgrade wheel
 python3 -m pip install --upgrade pip
 echo "Installing virtualenv and setuptools..."
-python3 -m pip uninstall pip
-_wait_for_yum reinstall -y python3-pip
 pip2 install virtualenv
-pip3 install virtualenv
-pip2 install --upgrade wheel
+python3 -m pip install virtualenv
 pip2 install --upgrade setuptools
-pip3 install --upgrade setuptools
-pip3 install --upgrade wheel
-pip3 install ipython
-pip3 install netifaces==0.10.9
-pip3 install urllib3==1.13.1
-pip2 install urllib3==1.13.1
-pip3 install requests==2.22.0
-pip2 install requests==2.22.0
-pip3 install distro==1.4.0
+python3 -m pip install --upgrade setuptools
+python3 -m pip install ipython urllib3 requests
+python3 -m pip install netifaces==0.10.9
+python3 -m pip install python-crontab==2.4.0
 pip2 install distro==1.4.0
 
-#_wait_for_apt upgrade -yq -f linux-generic
 echo "Done upgrading"
+
+
 #_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
 #curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 #retry timeout 20 add-apt-repository \
@@ -146,6 +137,8 @@ echo "Installing various dependencies..."
 #_wait_for_apt install -yq moreutils gparted sysstat net-tools iputils-ping libpq-dev tmux screen nano vim curl libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev git libpango1.0-0 libcairo2 software-properties-common ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386
 echo "Installing docker-ce..."
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+mkdir -p /etc/docker
+cp ./uploads/daemon.json /etc/docker/daemon.json
 _wait_for_yum install -y docker-ce
 systemctl start docker
 systemctl enable docker
@@ -154,24 +147,15 @@ usermod -aG docker $USER
 usermod -aG docker ubuntu
 echo "Installing weave"
 cd "$(dirname "$0")"
-cp ./weave-2.6.0 /usr/local/bin/weave
+cp ./uploads/weave-2.6.0 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
-echo "Setting firewall exceptions"
-firewall-cmd --zone=internal --add-interface=docker0 --permanent
-firewall-cmd --zone=internal --add-interface=weave --permanent
-firewall-cmd --zone=internal --add-service=dns --permanent
-firewall-cmd --reload
-systemctl restart docker
-
-systemctl stop firewalld
-systemctl disable firewalld
 
 # Timezone settings should be set on the host of containerized systems (It automatically sets the container clock as well).
 echo "Setting system-wide settings and htp"
 curl http://rpmfind.net/linux/dag/redhat/el7/en/x86_64/dag/RPMS/htpdate-1.1.0-1.el7.rf.x86_64.rpm -o htpdate-1.1.0-1.el7.rf.x86_64.rpm
 rpm -Uvh htpdate-1.1.0-1.el7.rf.x86_64.rpm
 yum install -y htpdate
-sudo systemctl enable htpdate
+systemctl enable htpdate
 rm -f htpdate-1.1.0-1.el7.rf.x86_64.rpm
 timedatectl set-timezone UTC
 
@@ -184,8 +168,8 @@ else
     chown netconfig /home/netconfig
     usermod -s /home/netconfig/login netconfig
     echo netconfig:netconfig | /usr/sbin/chpasswd
-    cp ./ip_wizard/login.c /home/netconfig/login.c
-    cp ./ip_wizard/login.py /home/netconfig/login.py
+    cp ./uploads/ip_wizard/login.c /home/netconfig/login.c
+    cp ./uploads/ip_wizard/login.py /home/netconfig/login.py
     cd /home/netconfig
     gcc login.c -o login && chown root:root /home/netconfig/login && chmod 4555 /home/netconfig/login
     chown root:root /home/netconfig/login.py
@@ -208,6 +192,32 @@ else
     echo customer:customer | /usr/sbin/chpasswd
 fi
 
+
+DECRYPT_USER=decrypt
+if [ $(cat /etc/passwd | grep $DECRYPT_USER | wc -l) -ne 0 ]; then
+    echo "User $DECRYPT_USER exists"
+else
+    cd $SCRIPT_DIR
+    echo "Setting $DECRYPT_USER user"
+    useradd $DECRYPT_USER
+    mkdir -p /home/$DECRYPT_USER
+    chown decrypt /home/$DECRYPT_USER
+    usermod -s /home/$DECRYPT_USER/decrypt_user.py decrypt
+    usermod -aG wheel $DECRYPT_USER
+    echo $DECRYPT_USER:decrypt | /usr/sbin/chpasswd
+    cp ./uploads/decrypt_wizard/decrypt_user.py /home/$DECRYPT_USER/decrypt_user.py
+    cp ./uploads/decrypt_wizard/first_install.py /home/$DECRYPT_USER/first_install.py
+    cp ./uploads/decrypt_wizard/install_and_run.sh /home/$DECRYPT_USER/install_and_run.sh
+    chmod +x /home/$DECRYPT_USER/install_and_run.sh
+    chown -R $DECRYPT_USER:$DECRYPT_USER /home/$DECRYPT_USER/
+    chmod 0744 /home/$DECRYPT_USER/*.py
+    echo "decrypt ALL=(ALL) NOPASSWD: /home/$DECRYPT_USER/first_install.py" > /etc/sudoers.d/90-decrypt
+    echo "Done setting user $DECRYPT_USER"
+fi
+
+echo "making ubuntu passwordless sudo"
+echo "ubuntu ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-ubuntu
+
 echo "Installing swap"
 # On containerized system the swap should be configured on the host.
 if [ $(cat /etc/fstab | grep swapfile | wc -l) -ne 0 ]; then
@@ -216,7 +226,10 @@ else
     if [[ $* == *--no-swap* ]]; then
         echo "--no-swap was requested, not allocating swap"
     else
-        dd if=/dev/zero of=/swapfile count=65 bs=1G
+        dd if=/dev/zero of=/swapfile count=16384 bs=1MiB status=progress
+        dd if=/dev/zero count=16384 bs=1MiB status=progress >> /swapfile
+        dd if=/dev/zero count=16384 bs=1MiB status=progress >> /swapfile
+        dd if=/dev/zero count=16384 bs=1MiB status=progress >> /swapfile
         chmod 600 /swapfile
         mkswap /swapfile
         swapon /swapfile
@@ -262,6 +275,7 @@ else
     _wait_for_yum install -y --nogpgcheck scalyr-repo-bootstrap-1.2.2-1.noarch.rpm
     _wait_for_yum install -y scalyr-repo
     _wait_for_yum install -y scalyr-agent-2
+    rm scalyr-repo-bootstrap-1.2.2-1.noarch.rpm
 fi
 
 if [[ $(/bin/systemctl is-enabled tmp.mount) == "enabled" ]]; then

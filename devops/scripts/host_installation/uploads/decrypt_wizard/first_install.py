@@ -25,6 +25,10 @@ def wait_until_machine_is_ready():
 
 
 def main():
+    if os.getuid() != 0:
+        print('Must run as root, exiting')
+        return
+
     decryption_key = sys.argv[1]
 
     if AXONIUS_DECRYPTED_FILE.is_file():
@@ -37,7 +41,7 @@ def main():
             return
 
         print(f'Testing decryption key ...')
-        run_command_with_messages(f'sudo gpg --no-use-agent -dq -o /dev/null --passphrase {decryption_key} version.zip',
+        run_command_with_messages(f'gpg --batch --no-use-agent -dq -o /dev/null --passphrase {decryption_key} version.zip',
                                   ok_msg=f'Decryption key is correct',
                                   err_msg='Invalid decryption key',
                                   cwd=str(INSTALL_HOME),
@@ -51,7 +55,7 @@ def main():
         os.chdir(INSTALL_HOME)
         # this command should run after this user terminates ssh
         os.system(
-            f'sudo /usr/bin/nohup '
+            f'/usr/bin/nohup '
             f'/home/decrypt/install_and_run.sh {decryption_key} >> /var/log/machine_boot.log 2>&1 &')
 
     except Exception as e:

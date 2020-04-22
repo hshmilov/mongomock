@@ -11,8 +11,8 @@
   "builders": [
     {
       "type": "googlecompute",
-      "source_image_project_id": "ubuntu-os-cloud",
-      "source_image_family": "ubuntu-1604-lts",
+      "source_image_project_id": "{{user `source_image_project_id`}}",
+      "source_image_family": "{{user `source_image_family`}}",
       "zone": "us-east1-b",
       "image_name": "{{user `image_name` | clean_resource_name}}",
       "omit_external_ip": true,
@@ -31,11 +31,11 @@
       "source_ami_filter": {
         "filters": {
           "virtualization-type": "hvm",
-          "name": "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*",
+          "name": "{{user `source_ami_filter_name`}}",
           "root-device-type": "ebs"
         },
         "owners": [
-          "099720109477"
+          "{{user `source_ami_owner`}}"
         ],
         "most_recent": true
       },
@@ -52,23 +52,27 @@
         }
       ],
       "ami_name": "{{user `image_name`}}",
+      "user_data_file": "./set_ubuntu_user.sh",
       "vpc_id": "vpc-12290d7b",
       "subnet_id": "subnet-843a4cff",
       "ssh_username": "ubuntu",
+      "ssh_password": "bringorder",
       "ami_regions": "{{user `ami_regions`}}"
     },
     {
       "type": "qemu",
-      "iso_url": "http://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img",
-      "iso_checksum_url": "http://cloud-images.ubuntu.com/releases/xenial/release/SHA256SUMS",
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum_url": "{{user `iso_checksum_url`}}",
       "iso_checksum_type": "sha256",
       "disk_image": true,
       "disk_size": "{{user `disk_size`}}G",
+      "cpus": 8,
       "accelerator": "kvm",
-      "memory": 8192,
+      "memory": 32768,
       "output_directory": "{{user `qemu_output_directory`}}",
       "disk_interface": "virtio-scsi",
       "disk_discard": "unmap",
+      "disk_detect_zeroes": "on",
       "ssh_username": "ubuntu",
       "ssh_password": "bringorder",
       "vm_name": "axonius",
@@ -79,8 +83,7 @@
         ["-netdev", "user,id=user.0,net=10.0.2.0/26,hostfwd=tcp::{{ .SSHHostPort }}-:22"],
         ["-device", "virtio-net,netdev=user.0"],
         ["-device", "virtio-scsi-pci,id=scsi0"],
-        ["-device", "scsi-hd,bus=scsi0.0,drive=drive0"],
-        ["-smp", "cpus=8"]
+        ["-device", "scsi-hd,bus=scsi0.0,drive=drive0"]
       ]
     }
   ],
@@ -134,8 +137,9 @@
     },
     {
       "type": "shell",
-      "script": "{{user `host_installation`}}init_host.sh",
+      "script": "{{user `host_installation`}}{{user `init_host_filename`}}",
       "remote_folder": "/home/ubuntu/",
+      "expect_disconnect": true,
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {

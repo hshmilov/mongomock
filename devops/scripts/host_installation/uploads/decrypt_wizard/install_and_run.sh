@@ -20,7 +20,7 @@ touch $INSTALL_LOCK
 DECRYPTION_KEY=$1
 INSTALLER_NAME=axonius_install.py
 
-sudo gpg --no-use-agent -dq -o "${INSTALLER_NAME}" --passphrase "${DECRYPTION_KEY}" version.zip
+gpg --batch --no-use-agent -dq -o "${INSTALLER_NAME}" --passphrase "${DECRYPTION_KEY}" version.zip
 ls -la axonius_install.py
 
 cd /home/ubuntu

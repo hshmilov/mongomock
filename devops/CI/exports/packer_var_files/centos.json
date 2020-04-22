@@ -1,0 +1,9 @@
+{
+    "init_host_filename": "init_host_centos.sh",
+    "source_image_project_id": "centos-cloud",
+    "source_image_family": "centos-7",
+    "source_ami_filter_name": "CentOS Linux 7 x86_64 HVM EBS ENA 2002_01-b7ee8a69-ee97-4a49-9e68-afaee216db2e-ami-0042af67f8e4dcc20.4",
+    "source_ami_owner": "679593333241",
+    "iso_url": "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1907.qcow2",
+    "iso_checksum_url": "https://cloud.centos.org/centos/7/images/sha256sum.txt"
+}
