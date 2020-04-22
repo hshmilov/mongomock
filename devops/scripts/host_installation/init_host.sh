@@ -86,14 +86,14 @@ export LC_CTYPE="en_US.UTF-8"
 
 echo "Updating the sources..."
 if [ -e /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list ]; then
-    sudo mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
+    mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
 fi
 if [ -e /var/lib/dpkg/info/oracle-java8-installer.postinst ]; then
-    sudo mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
+    mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
 fi
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 export DEBIAN_FRONTEND=noninteractive
-sudo dpkg --add-architecture i386
+dpkg --add-architecture i386
 _wait_for_apt update
 echo "Upgrading..."
 _wait_for_apt upgrade -yq -f
@@ -101,15 +101,15 @@ echo "Done upgrading"
 
 echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 _wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
 
-curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | sudo apt-key add -
+curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add -
 source /etc/lsb-release
-sudo add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
 cd $SCRIPT_DIR
 cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update
@@ -141,8 +141,8 @@ pip3 install PyYaml
 pip3 install netifaces==0.10.9
 pip3 install python-crontab==2.4.0
 echo "Installing golang"
-sudo add-apt-repository ppa:longsleep/golang-backports
-sudo apt update
+add-apt-repository ppa:longsleep/golang-backports
+_wait_for_apt update
 _wait_for_apt install -yq golang-go
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial
@@ -167,7 +167,7 @@ systemctl restart docker
 chmod a+x /usr/local/bin/weave
 
 echo "Setting system-wide settings"
-sudo timedatectl set-timezone UTC
+timedatectl set-timezone UTC
 
 if [ $(cat /etc/passwd | grep netconfig | wc -l) -ne 0 ]; then
     echo "User netconfig exists"
@@ -277,13 +277,13 @@ if [[ -d "/etc/scalyr-agent-2" ]]; then
 else
     echo "install scalyr agent"
     wget -q https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.1_all.deb
-    sudo dpkg -r scalyr-repo scalyr-repo-bootstrap  # Remove any previous repository definitions, if any.
-    sudo dpkg -i scalyr-repo-bootstrap_1.2.1_all.deb
+    dpkg -r scalyr-repo scalyr-repo-bootstrap  # Remove any previous repository definitions, if any.
+    dpkg -i scalyr-repo-bootstrap_1.2.1_all.deb
     set +e
-    sudo apt-get update
+    _wait_for_apt update
     set -e
-    sudo apt-get install scalyr-repo -y
-    sudo apt-get install scalyr-agent-2 -y
+    _wait_for_apt install scalyr-repo -y
+    _wait_for_apt install scalyr-agent-2 -y
     rm scalyr-repo-bootstrap_1.2.1_all.deb
     _wait_for_apt install -yq scalyr-agent-2 # upgrade to latest
 fi
