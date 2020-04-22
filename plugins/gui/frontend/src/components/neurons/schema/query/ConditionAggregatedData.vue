@@ -107,7 +107,7 @@ export default {
         filteredAdapters,
         value,
       };
-      if (field.endsWith('.id')) {
+      if (field.endsWith('.id') && !this.condition.compOp) {
         update.compOp = 'exists';
       }
       this.$emit('update', update);

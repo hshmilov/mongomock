@@ -981,3 +981,13 @@ class TestDevicesQueryAdvancedCases(TestBase):
             self.devices_page.click_search()
             updated_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
             assert all_tanium_count - tanium_discovery_count == updated_tanium_count
+
+    def test_devices_id_contains_query(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.build_query_field_contains_with_adapter(self.devices_page.ID_FIELD, 'a',
+                                                                  AD_ADAPTER_NAME)
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_CONTAINS
