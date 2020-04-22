@@ -6,23 +6,22 @@ from ui_tests.tests.ui_consts import (GUI_LOG_PATH,
                                       READ_ONLY_USERNAME,
                                       NEW_PASSWORD,
                                       FIRST_NAME,
-                                      LAST_NAME)
+                                      LAST_NAME,
+                                      STRESSTEST_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.pages import page
 from ui_tests.pages.reports_page import ReportConfig
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import GUI_PLUGIN_NAME
-from services.adapters.gotoassist_service import GotoassistService
+from services.adapters.stresstest_service import StresstestService
 from services.axon_service import TimeoutException
 from services.axonius_service import get_service
-from test_credentials.test_gotoassist_credentials import client_details
 
 
 class TestGettingStarted(TestBase):
     LOGGED_IN_MARKER_PATH = '/home/ubuntu/cortex/.axonius_settings/.logged_in'
     ENFORCEMENT_NAME = 'Test Milestone Completion'
     SAVED_QUERY = 'Getting Started Query'
-    GOTOASSIST_NAME = 'RescueAssist (GoToAssist)'
 
     log_tester = LogTester(GUI_LOG_PATH)
 
@@ -67,10 +66,11 @@ class TestGettingStarted(TestBase):
 
         # 1) connect 3rd adapter and check designated milestone has been completed
         self.adapters_page.switch_to_page()
-        with GotoassistService().contextmanager(take_ownership=True):
+        with StresstestService().contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'stress_test'}
             self.adapters_page.connect_adapter(
-                adapter_name=self.GOTOASSIST_NAME,
-                server_details=client_details)
+                adapter_name=STRESSTEST_ADAPTER_NAME,
+                server_details=device_dict)
             self.base_page.assert_milestone_completed(page.Milestones.connect_adapters.name)
 
         # 2) examine a device and check designated milestone has been completed
