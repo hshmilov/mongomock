@@ -65,7 +65,7 @@ export default {
     },
     schema: {
       type: Object,
-      default: () => {},
+      default: () => ({}),
     },
   },
   data() {
@@ -77,10 +77,6 @@ export default {
   computed: {
     formattedTime() {
       return dayjs(this.value, 'HH:mm').format('h:mma');
-    },
-    timePickerActive() {
-      if (!this.$refs.time) return false;
-      return this.$refs.time.showDialog;
     },
     timePickerError() {
       return Boolean(this.error);
