@@ -1,6 +1,10 @@
 import logging
 from typing import List
 
+import boto3
+from botocore.waiter import WaiterModel, Waiter, WaiterError
+from botocore.waiter import create_waiter_with_client
+
 from aws_adapter.connection.structures import AWSS3PolicyStatement, AWSDeviceAdapter, AWSIPRule
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -194,3 +198,68 @@ def describe_images_from_client_by_id(ec2_client, amis):
             described_images[image['ImageId']] = image
 
     return described_images
+
+
+def create_custom_waiter(boto_client: boto3.session.Session.client, name: str,
+                         operation: str, argument: str, delay: int = 60,
+                         max_attempts: int = 8) -> Waiter:
+    """Here we will attempt to configure a custom waiter and return it to
+    the caller.
+
+    :param boto_client: A boto3 client object used to interact with AWS.
+    :type boto_client: boto3.session.Session.client
+    :param name: The name to use for this waiter.
+    :type name: str
+    :param operation: The name of the operation to wait for.
+    :type operation: str
+    :param argument: The name of the waiter argument to wait for (it will report COMPLETED, IN_PROGRESS or FAILED)
+    :type argument: str
+    :param delay: The amount of time, in seconds, to wait for the *argument to report its status.
+    :type delay: int
+    :param max_attempts: The maximum number of times to wait before failing. Each wait is equal to *delay.
+    :type max_attempts: int
+    :returns custom_waiter: The waiter object that can be used in all AWS operations that have a delay.
+    :type custom_waiter: botocore.waiter.Waiter
+    """
+    waiter_config = {
+        'version': 2,
+        'waiters': {
+            name: {
+                'operation': operation,
+                'delay': delay,
+                'maxAttempts': max_attempts,
+                'acceptors': [
+                    {
+                        'matcher': 'path',
+                        'expected': 'COMPLETED',
+                        'argument': argument,
+                        'state': 'success'
+                    },
+                    {
+                        'matcher': 'path',
+                        'expected': 'IN_PROGRESS',
+                        'argument': argument,
+                        'state': 'retry'
+                    },
+                    {
+                        'matcher': 'path',
+                        'expected': 'FAILED',
+                        'argument': argument,
+                        'state': 'failure'
+                    },
+
+                ]
+            }
+        }
+    }
+    waiter_model = WaiterModel(waiter_config)
+    try:
+        custom_waiter = create_waiter_with_client(waiter_name=name,
+                                                  waiter_model=waiter_model,
+                                                  client=boto_client)
+    except WaiterError as err:
+        logger.warning(f'Waiter creation failed: {err}')
+        raise
+        # push this up the stack and surface in aws_users
+
+    return custom_waiter

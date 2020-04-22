@@ -5,9 +5,12 @@ import time
 from enum import Enum, auto
 from typing import Dict, Tuple
 
-from aws_adapter.connection.structures import AWSMFADevice, AWSIAMAccessKey, AWSTagKeyValue, \
-    AWSIAMPolicy, AWSUserAdapter
-from aws_adapter.connection.utils import get_paginated_marker_api
+import boto3
+
+from aws_adapter.connection.structures import AWSMFADevice, AWSIAMAccessKey, \
+    AWSTagKeyValue, AWSIAMPolicy, AWSUserAdapter, AWSUserService
+from aws_adapter.connection.utils import get_paginated_marker_api, \
+    create_custom_waiter
 from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -18,7 +21,7 @@ class AwsUserType(Enum):
     Root = auto()
 
 
-# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements, too-many-locals
+# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements, too-many-locals, logging-format-interpolation
 def query_users_by_client_for_all_sources(client_data):
     iam_client = client_data.get('iam')
     if not iam_client:
@@ -143,6 +146,18 @@ def query_users_by_client_for_all_sources(client_data):
                     logger.exception(f'Problem with list_mfa_devices')
                     error_logs_triggered.append('list_mfa_devices')
 
+            if user.get('Arn'):
+                try:
+                    user['accessed_services'] = get_last_accessed_services(client=iam_client,
+                                                                           arn=user['Arn'])
+                except Exception:
+                    if 'get_last_accessed_services' not in error_logs_triggered:
+                        logger.exception(f'Unable to fetch the last accessed services for {user}')
+                        error_logs_triggered.append('get_last_accessed_services')
+                    # fallthrough to continue discovery tasks, it's not critical data
+            else:
+                logger.warning(f'No Arn found for user: {user}')
+
             yield user, AwsUserType.Regular
 
     try:
@@ -216,7 +231,26 @@ def parse_root_user(user: AWSUserAdapter, root_user: dict):
 
             if root_user.get('uses_virtual_mfa') is not None:
                 user.uses_virtual_mfa = root_user.get('uses_virtual_mfa')
+
+            if root_user.get('accessed_services') is not None:
+                all_services = list()
+                for service in root_user.get('accessed_services'):
+                    try:
+                        svc = AWSUserService(name=service.get('ServiceName'),
+                                             namespace=service.get('ServiceNamespace'),
+                                             authd_entities=service.get('TotalAuthenticatedEntities'),
+                                             last_authenticated=parse_date(service.get('LastAuthenticated')),
+                                             last_authenticated_entity=service.get('LastAuthenticatedEntity'))
+
+                        all_services.append(svc)
+                    except Exception:
+                        logger.exception(f'Problem creating services list: {root_user}')
+                        # fallthrough here to continue with other services
+
+                user.accessed_services = all_services
+
             user.set_raw(root_user)
+
             return user
     except Exception:
         logger.exception(f'Failed parsing root user')
@@ -230,7 +264,7 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
             return parse_root_user(user, user_raw)
 
         # Else, this is a regular user
-        if user_type == AwsUserType.Regular:
+        if user_type == AwsUserType.Regular and user_raw.get('Arn'):
             if not user_raw.get('UserId'):
                 logger.warning(f'Bad user {user_raw}')
                 return None
@@ -247,50 +281,54 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
             )
             user.has_administrator_access = user_raw.get('has_administrator_access') or False
 
-            try:
-                tags_dict = {i['Key']: i['Value'] for i in (user_raw.get('Tags') or [])}
-                for key, value in tags_dict.items():
+            tags_dict = {i['Key']: (i.get('Value') or '') for i in (user_raw.get('Tags') or [])
+                         if (isinstance(i, dict) and i.get('Key') and i.get('Value'))}
+
+            for key, value in tags_dict.items():
+                try:
                     user.aws_tags.append(AWSTagKeyValue(key=key, value=value))
-            except Exception:
-                logger.exception(f'Problem adding tags')
+                except Exception:
+                    logger.exception(f'Problem adding tags: {user_raw}')
 
             try:
                 user_groups = user_raw.get('groups')
                 if isinstance(user_groups, list):
                     user.groups = user_groups
             except Exception:
-                logger.exception(f'Problem adding user groups')
+                logger.exception(f'Problem adding user groups: {user_raw}')
 
-            try:
-                policies = user_raw.get('attached_policies') or []
-                for policy in policies:
+            policies = user_raw.get('attached_policies') or []
+            for policy in policies:
+                try:
                     user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Managed'))
                     if policy == 'AdministratorAccess':
                         user.has_administrator_access = True
-            except Exception:
-                logger.exception(f'Problem adding user managed policies')
+                except Exception:
+                    logger.exception(f'Problem adding user managed policies: {user_raw}')
 
-            try:
-                policies = user_raw.get('inline_policies') or []
-                for policy in policies:
+            policies = user_raw.get('inline_policies') or []
+            for policy in policies:
+                try:
                     user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Inline'))
                     if policy == 'AdministratorAccess':
                         user.has_administrator_access = True
-            except Exception:
-                logger.exception(f'Problem adding user inline policies')
+                except Exception:
+                    logger.exception(f'Problem adding user inline policies: {user_raw}')
 
-            try:
-                policies = user_raw.get('group_attached_policies') or []
-                for policy in policies:
-                    user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy, policy_type='Group Managed'))
+            policies = user_raw.get('group_attached_policies') or []
+            for policy in policies:
+                try:
+                    user.user_attached_policies.append(AWSIAMPolicy(policy_name=policy,
+                                                                    policy_type='Group Managed'))
                     if policy == 'AdministratorAccess':
                         user.has_administrator_access = True
-            except Exception:
-                logger.exception(f'Problem adding user group managed policies')
+                except Exception:
+                    logger.exception(f'Problem adding user group managed '
+                                     f'policies: {user_raw}')
 
-            try:
-                access_keys = user_raw.get('access_keys') or []
-                for access_key_raw in access_keys:
+            access_keys = user_raw.get('access_keys') or []
+            for access_key_raw in access_keys:
+                try:
                     access_key_status = access_key_raw.get('Status')
                     access_key_last_used = access_key_raw.get('AccessKeyLastUsed') or {}
                     user.user_attached_keys.append(
@@ -303,21 +341,39 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
                             last_used_region=access_key_last_used.get('Region')
                         )
                     )
-            except Exception:
-                logger.exception(f'Problem adding user access keys')
+                except Exception:
+                    logger.exception(f'Problem adding user access keys: {user_raw}')
 
-            try:
-                associated_mfa_devices = user_raw.get('mfa_devices') or []
-                for associated_mfa_device_raw in associated_mfa_devices:
+            associated_mfa_devices = user_raw.get('mfa_devices') or []
+            for associated_mfa_device_raw in associated_mfa_devices:
+                try:
                     user.user_associated_mfa_devices.append(
                         AWSMFADevice(
                             serial_number=associated_mfa_device_raw.get('SerialNumber'),
                             enable_date=associated_mfa_device_raw.get('EnableDate')
                         )
                     )
-                user.has_associated_mfa_devices = bool(associated_mfa_devices)
-            except Exception:
-                logger.exception(f'Problem parsing mfa devices')
+                except Exception:
+                    logger.exception(f'Problem parsing MFA device: {user_raw}')
+
+            user.has_associated_mfa_devices = bool(associated_mfa_devices)
+
+            if user_raw.get('accessed_services') is not None:
+                all_services = list()
+                for service in user_raw.get('accessed_services'):
+                    try:
+                        svc = AWSUserService(name=service.get('ServiceName'),
+                                             namespace=service.get('ServiceNamespace'),
+                                             authd_entities=service.get('TotalAuthenticatedEntities'),
+                                             last_authenticated=parse_date(service.get('LastAuthenticated')),
+                                             last_authenticated_entity=service.get('LastAuthenticatedEntity'))
+
+                        all_services.append(svc)
+                    except Exception:
+                        logger.exception(f'Problem creating services list: {user_raw}')
+                        # fallthrough here to continue with other services
+
+                user.accessed_services = all_services
 
             user.set_raw(user_raw)
             return user
@@ -325,5 +381,49 @@ def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, 
         logger.error(f'Error - Type {user_type} does not exist')
         return None
     except Exception:
-        logger.exception(f'Problem parsing user, continuing')
+        logger.exception(f'Problem parsing user, continuing: {user_raw}')
     return None
+
+
+def get_last_accessed_services(client: boto3.session.Session.client,
+                               arn: str) -> list:
+    """ This function takes the passed boto3 client object, configured
+    for IAM, creates a job to pull the last accessed AWS services,
+    waits for that job to finish, then builds a list of dictionary
+    objects that are returned to the caller.
+
+    :param client: A boto3 client object that is used to connect to the
+    AWS IAM service.
+    :param arn: The AWS Resource Name for an individual IAM user, role
+    or group.
+    :returns all_accessed_services: This is a list of all of the
+    AWSUserService objects that describe the services that were consumed
+    by the arn.
+    """
+    try:
+        job_id = client.generate_service_last_accessed_details(Arn=arn).get('JobId')
+    except Exception as err:
+        logger.exception(f'Failed to get a JobId for {arn}')
+        return []
+
+    try:
+        job_id_waiter = create_custom_waiter(boto_client=client,
+                                             name='JobId',
+                                             operation='GetServiceLastAccessedDetails',
+                                             argument='JobStatus')
+        job_id_waiter.wait(JobId=job_id)
+    except Exception as err:
+        logger.exception(f'Waiter failed: {err}')
+        # bail out... we can't do anything more and should continue discovery tasks
+        return []
+
+    all_accessed_services = list()
+    try:
+        for services_page in get_paginated_marker_api(functools.partial(
+                client.get_service_last_accessed_details, JobId=job_id)):
+            for service in services_page.get('ServicesLastAccessed') or []:
+                all_accessed_services.append(service)
+    except Exception:
+        logger.exception(f'Error in paginated handling.')
+        # fallthrough to continue with other discovery tasks
+    return all_accessed_services

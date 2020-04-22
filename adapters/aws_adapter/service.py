@@ -633,6 +633,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__verify_primary_account = config.get('verify_primary_account') or False
         self.__drop_turned_off_machines = config.get('drop_turned_off_machines') or False
         self.__parallel_count = config.get('parallel_count') or DEFAULT_PARALLEL_COUNT
+        self.__accessed_services = config.get('accessed_services') or False
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -733,6 +734,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'name': 'parallel_count',
                     'title': 'Number of accounts to fetch in parallel',
                     'type': 'integer'
+                },
+                {
+                    'name': 'accessed_services',
+                    'title': 'Fetch IAM Users\' AWS Services',
+                    'type': 'bool'
                 }
             ],
             'required': [
@@ -753,7 +759,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 'verify_all_roles',
                 'verify_primary_account',
                 'drop_turned_off_machines',
-                'parallel_count'
+                'parallel_count',
+                'accessed_services'
             ],
             'pretty_name': 'AWS Configuration',
             'type': 'array'
@@ -780,7 +787,8 @@ class AwsAdapter(AdapterBase, Configurable):
             'verify_all_roles': True,
             'verify_primary_account': True,
             'drop_turned_off_machines': False,
-            'parallel_count': DEFAULT_PARALLEL_COUNT
+            'parallel_count': DEFAULT_PARALLEL_COUNT,
+            'accessed_services': False
         }
 
     @classmethod

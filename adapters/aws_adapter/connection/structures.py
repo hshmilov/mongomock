@@ -386,6 +386,14 @@ class AWSAdapter:
             logger.debug(f'Could not add AWS CIS rule: {str(e)}')
 
 
+class AWSUserService(SmartJsonClass):
+    name = Field(str, 'Service Name')
+    namespace = Field(str, 'Service Namespace')
+    authd_entities = Field(int, 'Total Authenticated Entities')
+    last_authenticated = Field(datetime.datetime, 'Last Authenticated')
+    last_authenticated_entity = Field(str, 'Last Authenticated Entity')
+
+
 class AWSUserAdapter(UserAdapter, AWSAdapter):
     user_path = Field(str, 'User Path')
     user_arn = Field(str, 'User Arn')
@@ -401,6 +409,7 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     has_associated_mfa_devices = Field(bool, 'Has Associated MFA Devices')
     user_is_password_enabled = Field(bool, 'User Is Password Enabled')
     uses_virtual_mfa = Field(bool, 'Uses Virtual MFA')
+    accessed_services = ListField(AWSUserService, 'Services Accessed By User')
 
 
 class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
