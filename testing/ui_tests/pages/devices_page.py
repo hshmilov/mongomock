@@ -111,7 +111,7 @@ class DevicesPage(EntitiesPage):
             self.driver.find_element_by_css_selector('#specific')
 
     def open_enforce_dialog(self):
-        self.click_button('Actions', should_scroll_into_view=False)
+        self.open_actions_menu()
         self.click_actions_enforce_button()
 
     def enforce_action_on_query(self, query, action):

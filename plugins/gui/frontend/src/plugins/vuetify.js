@@ -8,8 +8,10 @@ import DraggableCustomIcon from '../components/axons/icons/axoniusIcons/draggabl
 import VerticaldotsCustomIcon from '../components/axons/icons/axoniusIcons/verticaldots.vue';
 import CardDraggable from '../components/axons/icons/axoniusIcons/cardDraggable.vue';
 import CardSearch from '../components/axons/icons/axoniusIcons/cardSearch.vue';
+import EntityAction from '../components/axons/icons/axoniusIcons/entityAction.vue';
+import EntityColumn from '../components/axons/icons/axoniusIcons/entityColumn.vue';
+import EntityExport from '../components/axons/icons/axoniusIcons/entityExport.vue';
 import Toggle from '../components/axons/icons/axoniusIcons/toggle.vue';
-
 import defaultTheme from '../assets/themes/default.json';
 
 const axoniusIcons = {
@@ -32,6 +34,15 @@ const axoniusIcons = {
   },
   cardSearch: {
     component: CardSearch,
+  },
+  entityAction: {
+    component: EntityAction,
+  },
+  entityColumn: {
+    component: EntityColumn,
+  },
+  entityExport: {
+    component: EntityExport,
   },
   legendOpen: {
     component: Toggle,

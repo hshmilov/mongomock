@@ -26,10 +26,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class EntitiesPage(Page):
-    EXPORT_CSV_LOADING_XPATH = '//div[contains(@class, \'.v-list-item--disabled\' ' \
-                               'and .//text()[contains(., \'Exporting...\')]'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
-
+    EXPORT_CSV_LOADING_TEXT = 'Exporting...'
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
     EDIT_COLUMNS_SELECT_XPATH = '//div[@class=\'field-list {list_type}\']' \
                                 '//div[@class=\'x-checkbox\' and .//text()=\'{col_title}\']'
@@ -115,9 +113,13 @@ class EntitiesPage(Page):
     TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
 
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
-    TABLE_ACTIONS_TAG_CSS = 'div.content.w-sm > div > div:nth-child(1) > div.item-content'
-    TABLE_ACTIONS_DELETE_CSS = 'div.content.w-sm > div > div:nth-child(2) > div.item-content'
-    TABLE_ACTIONS_ENFORCE_CSS = 'div.content.w-sm > div > div:nth-child(5) > div.item-content'
+    TABLE_ACTIONS_DELETE = 'Delete'
+    TABLE_ACTIONS_LINK_DEVICES = 'Link devices'
+    TABLE_ACTIONS_UNLINK_DEVICES = 'Unlink devices'
+    TABLE_ACTIONS_CUSTOM_DATA = 'Add custom data'
+    TABLE_ACTIONS_TAG = 'Tag'
+    TABLE_ACTIONS_ENFORCE = 'Enforce'
+    TABLE_ACTIONS_FILTER_OUT = 'Filter out from query results'
     TABLE_ACTION_ITEM_XPATH = \
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
     TABLE_EDIT_COLUMN_MODAL = 'div.x-modal.x-field-config'
@@ -198,9 +200,9 @@ class EntitiesPage(Page):
 
     QUERY_MODAL_OVERLAY = '.v-overlay'
 
-    EDIT_COLUMNS_TEXT = 'Edit Columns'
-    RESET_COLS_SYSTEM_DEFAULT_TEXT = 'Reset Columns to System Default'
-    RESET_COLS_USER_DEFAULT_TEXT = 'Reset Columns to User Default'
+    EDIT_COLUMN_BUTTON_ID = 'edit_columns'
+    RESET_COLS_SYSTEM_BUTTON_ID = 'reset_system_default'
+    RESET_COLS_USER_BUTTON_ID = 'reset_user_default'
     ADD_NOTES_BUTTON_TEXT = 'Add Note'
     EDIT_NOTES_TEXTBOX_CSS = '.text-input'
 
@@ -775,16 +777,8 @@ class EntitiesPage(Page):
     def is_text_in_coloumn(self, col_name, text):
         return any(text in item for item in self.get_column_data_slicer(col_name))
 
-    def open_table_options(self):
-        self.driver.find_element_by_css_selector('.x-option-menu').click()
-        # Wait for animation
-        time.sleep(0.4)
-
     def find_table_option_by_title(self, option_title):
         return self.driver.find_element_by_xpath(self.TABLE_OPTIONS_ITEM_XPATH.format(option_title=option_title))
-
-    def select_table_option(self, option_title):
-        self.find_table_option_by_title(option_title).click()
 
     def close_table_options(self):
         self.driver.find_elements_by_css_selector('.v-application--wrap').click()
@@ -793,8 +787,8 @@ class EntitiesPage(Page):
         return self.driver.find_elements_by_css_selector('.x-option-menu__content .menuable__content__active')
 
     def open_edit_columns(self):
-        self.open_table_options()
-        self.select_table_option(self.EDIT_COLUMNS_TEXT)
+        self.open_columns_menu()
+        self.driver.find_element_by_id(self.EDIT_COLUMN_BUTTON_ID).click()
         self.wait_for_element_present_by_css('.x-field-config')
 
     def select_column_adapter(self, adapter_title):
@@ -847,12 +841,12 @@ class EntitiesPage(Page):
             self.EDIT_COLUMNS_SELECT_XPATH.format(list_type=col_type, col_title=col_title)).click()
 
     def reset_columns_system_default(self):
-        self.open_table_options()
-        self.select_table_option(self.RESET_COLS_SYSTEM_DEFAULT_TEXT)
+        self.open_columns_menu()
+        self.driver.find_element_by_id(self.RESET_COLS_SYSTEM_BUTTON_ID).click()
 
     def reset_columns_user_default(self):
-        self.open_table_options()
-        self.select_table_option(self.RESET_COLS_USER_DEFAULT_TEXT)
+        self.open_columns_menu()
+        self.driver.find_element_by_id(self.RESET_COLS_USER_BUTTON_ID).click()
 
     def is_query_error(self, text=None):
         if not text:
@@ -877,10 +871,10 @@ class EntitiesPage(Page):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_DESCRIPTION_SELECTOR, description)
 
     def click_actions_tag_button(self):
-        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_TAG_CSS).click()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_TAG).click()
 
     def click_actions_enforce_button(self):
-        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_ENFORCE_CSS).click()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE).click()
 
     def open_edit_tags(self):
         self.click_button(self.EDIT_TAGS_BUTTON_TEXT)
@@ -1041,11 +1035,10 @@ class EntitiesPage(Page):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
     def click_export_csv(self):
-        self.open_table_options()
-        self.select_table_option(self.EXPORT_CSV_BUTTON_TEXT)
+        self.click_button(self.EXPORT_CSV_BUTTON_TEXT)
 
     def wait_for_csv_loading_absent(self):
-        self.wait_for_element_absent_by_css(self.EXPORT_CSV_LOADING_XPATH, retries=450)
+        self.wait_for_element_absent_by_text(self.EXPORT_CSV_LOADING_TEXT, retries=450)
 
     def get_csrf_token(self) -> str:
         session = requests.Session()
@@ -1169,26 +1162,31 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
         self.wait_for_spinner_to_end()
 
-    def is_actions_button_absent(self):
-        return self.is_button_absent(self.ACTIONS_BUTTON)
-
     def is_actions_button_disable(self):
-        return self.is_element_disabled(self.get_button(self.ACTIONS_BUTTON))
+        return self.has_class(self.get_button(self.ACTIONS_BUTTON), self.ACTIONS_BUTTON_DISABLED_CLASS)
+
+    def open_actions_menu(self):
+        self.click_button(self.ACTIONS_BUTTON)
+        time.sleep(0.1)  # wait for menu to open
+
+    def open_columns_menu(self):
+        self.click_button(self.EDIT_COLUMNS_BUTTON)
+        time.sleep(0.1)  # wait for menu to open
 
     def open_delete_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON)
-        self.driver.find_element_by_css_selector(self.TABLE_ACTIONS_DELETE_CSS).click()
+        self.open_actions_menu()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_DELETE).click()
 
     def open_link_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Link devices')).click()
+        self.open_actions_menu()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_LINK_DEVICES).click()
 
     def confirm_link(self):
         self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
 
     def open_unlink_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Unlink devices')).click()
+        self.open_actions_menu()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_UNLINK_DEVICES).click()
 
     def read_delete_dialog(self):
         return self.wait_for_element_present_by_css('.actions .modal-body .warn-delete').text
@@ -1318,8 +1316,8 @@ class EntitiesPage(Page):
         return error_text == self.driver.find_element_by_css_selector(self.CUSTOM_DATA_ERROR_CSS).text
 
     def open_custom_data_bulk(self):
-        self.click_button('Actions', should_scroll_into_view=False)
-        self.driver.find_element_by_xpath(self.TABLE_ACTION_ITEM_XPATH.format(action='Add custom data')).click()
+        self.open_actions_menu()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_CUSTOM_DATA).click()
 
     def is_enforcement_results_header(self, enforcement_name, action_name):
         header_text = self.driver.find_element_by_css_selector('.x-query-state .header').text
@@ -1424,9 +1422,8 @@ class EntitiesPage(Page):
         self.click_save_query_save_button(query_name=query_name)
 
     def open_filter_out_dialog(self):
-        self.click_button(self.ACTIONS_BUTTON)
-        self.driver.find_element_by_xpath(
-            self.TABLE_ACTION_ITEM_XPATH.format(action='Filter out from query results')).click()
+        self.open_actions_menu()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_FILTER_OUT).click()
 
     def confirm_filter_out(self):
         self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
@@ -1476,7 +1473,7 @@ class EntitiesPage(Page):
         self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
 
     def open_tag_dialog(self):
-        self.click_button('Actions', should_scroll_into_view=False)
+        self.open_actions_menu()
         self.click_actions_tag_button()
 
     def add_new_tags(self, tags, number=1):

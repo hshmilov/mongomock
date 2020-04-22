@@ -127,6 +127,8 @@ class Page:
     DEACTIVATE_BUTTON = 'Deactivate'
     REACTIVATE_BUTTON = 'Reactivate'
     ACTIONS_BUTTON = 'Actions'
+    ACTIONS_BUTTON_DISABLED_CLASS = 'entityMenuInactive'
+    EDIT_COLUMNS_BUTTON = 'Edit Columns'
     CONFIRM_BUTTON = 'Confirm'
     CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
     DISABLED_BUTTON_XPATH = './/button[contains(@class, \'x-button\') and @disabled' \

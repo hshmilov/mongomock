@@ -1,50 +1,68 @@
 <template>
   <div class="x-option-menu">
-    <VMenu
-      bottom
-      left
-      origin="top"
-      class="x-option-menu"
-      content-class="x-option-menu__content"
+    <ADropdown
+      :trigger="['click']"
+      placement="bottomRight"
+      @visibleChange="openCloseMenu"
     >
-      <template v-slot:activator="{ on }">
-        <VBtn
-          icon
-          v-on="on"
-        >
-          <VIcon color="black">
-            {{ dotsIcon }}
-          </VIcon>
-        </VBtn>
-      </template>
-      <VList
-        ref="list"
-        dense
+      <XButton
+        class="entityMenu"
+        :class="columnButtonClass"
+        link
       >
-        <VListItem @click="openColumnEditor">
-          <VListItemTitle>Edit Columns</VListItemTitle>
-        </VListItem>
-        <VListItem @click="resetColumnsToUserDefault">
-          <VListItemTitle>{{ resetToUserDefaultMenuTitle }}</VListItemTitle>
-        </VListItem>
-        <VListItem @click="resetColumnsToSystemDefault">
-          <VListItemTitle>{{ resetToSystemDefaultMenuTitle }}</VListItemTitle>
-        </VListItem>
-        <VListItem
-          :disabled="disableExportCsv || exportInProgress"
-          @click.stop.prevent="exportTableToCSV"
+        <VIcon
+          size="18"
+          class="entityColumn-expression-handle"
+        >$vuetify.icons.entityColumn</VIcon>
+        Edit Columns</XButton>
+      <AMenu
+        slot="overlay"
+      >
+        <AMenuItem
+          id="edit_columns"
+          key="0"
+          @click="openColumnEditor"
         >
-          <VListItemTitle v-if="exportInProgress">
-            <VProgressCircular
-              indeterminate
-              color="primary"
-              :width="2"
-              :size="16"
-            />Exporting...</VListItemTitle>
-          <VListItemTitle v-else>Export CSV</VListItemTitle>
-        </VListItem>
-      </VList>
-    </VMenu>
+          Edit Columns
+        </AMenuItem>
+        <AMenuItem
+          id="reset_user_default"
+          key="1"
+          @click="resetColumnsToUserDefault"
+        >
+          {{ resetToUserDefaultMenuTitle }}
+        </AMenuItem>
+        <AMenuItem
+          id="reset_system_default"
+          key="2"
+          @click="resetColumnsToSystemDefault"
+        >
+          {{ resetToSystemDefaultMenuTitle }}
+        </AMenuItem>
+      </AMenu>
+    </ADropdown>
+    <XButton
+      link
+      class="entityMenu"
+      :disabled="disableExportCsv || exportInProgress"
+      @click.stop.prevent="exportTableToCSV"
+    >
+      <div v-if="exportInProgress">
+        <VProgressCircular
+          indeterminate
+          color="primary"
+          :width="2"
+          :size="16"
+        />
+        Exporting...
+      </div>
+      <div v-else>
+        <VIcon
+          size="18"
+          class="entityExport-expression-handle"
+        >$vuetify.icons.entityExport</VIcon>
+        Export CSV</div>
+    </XButton>
     <XFieldConfig
       v-if="showColumnEditor"
       :module="module"
@@ -62,18 +80,24 @@ import { mdiDotsHorizontal } from '@mdi/js';
 import {
   mapMutations, mapActions, mapState, mapGetters,
 } from 'vuex';
+import { Dropdown, Menu } from 'ant-design-vue';
 import _get from 'lodash/get';
 import _snakeCase from 'lodash/snakeCase';
 import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '@store/mutations';
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { defaultFields } from '@constants/entities';
 import { FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES } from '@store/getters';
+import XButton from '../../axons/inputs/Button.vue';
 import XFieldConfig from './FieldConfig.vue';
 
 export default {
   name: 'XOptionMenu',
   components: {
     XFieldConfig,
+    XButton,
+    ADropdown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
   },
   props: {
     module: {
@@ -93,6 +117,7 @@ export default {
     return {
       exportInProgress: false,
       showColumnEditor: false,
+      dropDownOpened: false,
     };
   },
   computed: {
@@ -124,6 +149,11 @@ export default {
     resetToSystemDefaultMenuTitle() {
       return this.querySearchTemplate ? 'Reset Columns to System Search Default' : 'Reset Columns to System Default';
     },
+    columnButtonClass() {
+      return {
+        menuOpened: this.dropDownOpened,
+      };
+    },
   },
   methods: {
     ...mapMutations({
@@ -134,6 +164,7 @@ export default {
       fetchContentCSV: FETCH_DATA_CONTENT_CSV,
     }),
     openColumnEditor() {
+      this.dropDownOpened = false;
       this.showColumnEditor = true;
     },
     closeColumnEditor() {
@@ -171,10 +202,13 @@ export default {
         module: this.module,
       }).then(() => {
         this.exportInProgress = false;
-        this.$refs.list.$el.click();
       });
     },
+    openCloseMenu(visible) {
+      this.dropDownOpened = visible;
+    },
     done() {
+      this.dropDownOpened = false;
       this.$emit('done');
     },
   },
@@ -183,22 +217,13 @@ export default {
 
 <style lang="scss">
 .x-option-menu {
-  .v-btn {
-    width: 24px;
-    height: 24px;
-
-    &:hover .v-icon {
-      fill: $theme-orange;
-    }
+  .v-progress-circular {
+    margin-right: 4px;
   }
 
   &__content {
     .v-list--dense .v-list-item__title {
       font-weight: 300;
-
-      .v-progress-circular {
-        margin-right: 4px;
-      }
     }
   }
 }

@@ -1,158 +1,234 @@
 <template>
   <div>
-    <x-dropdown
-      ref="dropdown"
-      size="sm"
-      align="right"
-      :arrow="false"
+    <ADropdown
+      :trigger="disabled?['']:['click']"
+      placement="bottomRight"
+      @visibleChange="openCloseMenu"
     >
-      <x-button
-        slot="trigger"
+      <XButton
+        class="action"
+        :class="actionButtonClass"
         link
-      >Actions</x-button>
-      <x-menu slot="content">
-        <x-menu-item
-          v-for="item in $children"
-          v-if="item.title"
+      >
+        <VIcon
+          size="18"
+          class="entityAction-expression-handle"
+        >$vuetify.icons.entityAction</VIcon>
+        Actions</XButton>
+      <AMenu
+        v-if="selectionCount"
+        slot="overlay"
+      >
+        <AMenuItem
+          v-for="item in menuChildren"
+          :id="item.title"
           :key="item.title"
-          :title="item.title"
           :disabled="item.disableLink"
-          :disabled-description="item.disabledDescription"
           @click="activate(item)"
-        />
-      </x-menu>
-    </x-dropdown>
-    <x-tag-modal
+        >
+          {{ item.title }}
+          <ATooltip
+            v-if="item.disableLink"
+            :title="item.disabledDescription"
+            placement="bottom"
+          >
+            <AIcon
+              type="info-circle"
+              theme="twoTone"
+            />
+          </ATooltip>
+        </AMenuItem>
+      </AMenu>
+      <AMenu
+        v-else
+        slot="overlay"
+      >
+        <AMenuItem
+          class="disabledMenuItem"
+          disabled
+        >
+          {{ disabledMenuItemDescription }}
+        </AMenuItem>
+      </AMenu>
+    </ADropdown>
+    <XTagModal
       title="Tag"
       :module="module"
       :entities="entities"
       :entities-meta="entitiesMeta"
       @done="() => $emit('done', false)"
     />
-    <x-action-menu-item
+    <XActionMenuItem
       title="Delete"
       :handle-save="deleteEntities"
       :message="`Deleted ${module}`"
       action-text="Delete"
     >
-      <div class="warn-delete">You are about to delete {{ selectionCount }} {{ module }}.</div>
-      <div>These {{ module }} could reappear in further scans if they are not removed or detached.</div>
+      <div class="warn-delete">
+        You are about to delete {{ selectionCount }} {{ module }}.
+      </div>
+      <div>These {{ module }} could reappear in further scans
+        if they are not removed or detached.</div>
       <div>Are you sure you want to delete these {{ module }}?</div>
-    </x-action-menu-item>
+    </XActionMenuItem>
     <slot />
-    <x-action-menu-item
+    <XActionMenuItem
       :title="`Add custom data`"
       :handle-save="saveFields"
       :handle-close="initCustomFields"
       :message="`Custom data saved`"
       action-text="Save"
     >
-      <x-custom-fields
+      <XCustomFields
         v-model="customAdapterData"
         :module="module"
         :fields="fields"
       />
-    </x-action-menu-item>
-
+    </XActionMenuItem>
   </div>
 </template>
 
 <script>
-  import xDropdown from '../../axons/popover/Dropdown.vue'
-  import xMenu from '../../axons/menus/Menu.vue'
-  import xMenuItem from '../../axons/menus/MenuItem.vue'
-  import xActionMenuItem from './ActionMenuItem.vue'
-  import xCustomFields from '../../networks/entities/view/CustomFields.vue'
-  import xTagModal from '../popover/TagModal.vue'
-  import xButton from '../../axons/inputs/Button.vue'
+import { mapState, mapActions, mapMutations } from 'vuex';
+import { Icon, Tooltip, Dropdown, Menu } from 'ant-design-vue';
+import XActionMenuItem from './ActionMenuItem.vue';
+import XCustomFields from '../../networks/entities/view/CustomFields.vue';
+import XTagModal from '../popover/TagModal.vue';
+import XButton from '../../axons/inputs/Button.vue';
 
-  import { mapState, mapActions, mapMutations } from 'vuex'
-  import { DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../store/actions'
-  import { UPDATE_DATA_VIEW } from '../../../store/mutations'
+import {
+  DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS,
+} from '../../../store/actions';
+import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 
-  export default {
-    name: 'XActionMenu',
-    components: {
-      xDropdown, 'x-menu': xMenu, 'x-menu-item': xMenuItem,
-      xActionMenuItem, xTagModal, xCustomFields, xButton
+export default {
+  name: 'XActionMenu',
+  components: {
+    XActionMenuItem,
+    XTagModal,
+    XCustomFields,
+    XButton,
+    AIcon: Icon,
+    ATooltip: Tooltip,
+    ADropdown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      entities: {
-        type: Object,
-        required: true
-      },
-      entitiesMeta: {
-        type: Object,
-        default: () => {}
-      },
-
+    entities: {
+      type: Object,
+      required: true,
     },
-    data () {
+    entitiesMeta: {
+      type: Object,
+      default: () => {},
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      customAdapterData: [],
+      dropDownOpened: false,
+    };
+  },
+  computed: {
+    ...mapState({
+      dataCount(state) {
+        return state[this.module].count.data;
+      },
+      fields(state) {
+        const fields = state[this.module].fields.data;
+        if (!fields) return [];
+        if (!fields.specific) return fields.generic;
+        return fields.specific.gui || fields.generic;
+      },
+    }),
+    selectionCount() {
+      if (this.entities.include === undefined || this.entities.include) {
+        return this.entities.ids.length;
+      }
+      return this.dataCount - this.entities.ids.length;
+    },
+    disabledMenuItemDescription() {
+      return `Select ${this.module} to see more actions`;
+    },
+    actionButtonClass() {
       return {
-        customAdapterData: []
-      }
+        entityMenuInactive: this.disabled,
+        entityMenu: !this.disabled,
+        menuOpened: this.dropDownOpened,
+      };
     },
-    computed: {
-      ...mapState({
-        dataCount (state) {
-          return state[this.module].count.data
-        },
-        fields (state) {
-          let fields = state[this.module].fields.data
-          if (!fields) return []
-          if (!fields.specific) return fields.generic
-          return fields.specific.gui || fields.generic
-        }
-      }),
-      selectionCount () {
-        if (this.entities.include === undefined || this.entities.include) {
-          return this.entities.ids.length
-        }
-        return this.dataCount - this.entities.ids.length
-      }
+    menuChildren() {
+      return this.$children.filter((item) => item.title);
     },
-    methods: {
-      ...mapActions({
-        disableData: DISABLE_DATA,
-        deleteData: DELETE_DATA,
-        saveCustomData: SAVE_CUSTOM_DATA,
-        fetchDataFields: FETCH_DATA_FIELDS
-      }),
-      ...mapMutations({
-          updateView: UPDATE_DATA_VIEW
-      }),
-      activate (item) {
-        if (!item || !item.activate) return
-        item.activate()
-        this.$el.click()
-        this.$refs.dropdown.close()
-      },
-      deleteEntities () {
-        return this.deleteData({
-          module: this.module, selection: this.entities
-        }).then(() => this.$emit('done'))
-      },
-      saveFields () {
-        return this.saveCustomData({
-          module: this.module,
-          selection: this.entities,
-          data: this.customAdapterData
-        }).then(() => {
-          this.fetchDataFields({module: this.module})
-          this.initCustomFields()
-        })
-      },
-      initCustomFields () {
-        this.customAdapterData = []
-      }
-    }
-  }
+  },
+  methods: {
+    ...mapActions({
+      disableData: DISABLE_DATA,
+      deleteData: DELETE_DATA,
+      saveCustomData: SAVE_CUSTOM_DATA,
+      fetchDataFields: FETCH_DATA_FIELDS,
+    }),
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
+    openCloseMenu(visible) {
+      this.dropDownOpened = visible;
+    },
+    activate(item) {
+      if (!item || !item.activate) return;
+      this.dropDownOpened = false;
+      item.activate();
+    },
+    deleteEntities() {
+      return this.deleteData({
+        module: this.module, selection: this.entities,
+      }).then(() => this.$emit('done'));
+    },
+    saveFields() {
+      return this.saveCustomData({
+        module: this.module,
+        selection: this.entities,
+        data: this.customAdapterData,
+      }).then(() => {
+        this.fetchDataFields({ module: this.module });
+        this.initCustomFields();
+      });
+    },
+    initCustomFields() {
+      this.customAdapterData = [];
+    },
+  },
+};
 </script>
 
 <style lang="scss">
+  /* If the ant menu item is disabled,
+     We still want to make it appear in the same color as a regular ant menu item.
+     So basically we are overriding the "disabled" behavior with the normal menu item color.
+   */
+  $ant-menu-item-color: #000000a6;
 
+  .disabledMenuItem {
+    color: $ant-menu-item-color;
+  }
+  .disabledMenuItem:hover {
+    color: $ant-menu-item-color;
+  }
+  .ant-tooltip-inner {
+    font-weight: bolder;
+  }
+  .ant-dropdown-menu-item {
+    svg {
+      margin-left: 4px;
+    }
+  }
 </style>

@@ -22,7 +22,7 @@
         >
           <template #actions>
             <XActionMenu
-              v-show="hasSelection"
+              :disabled="!canUpdate"
               :module="module"
               :entities="selection"
               :entities-meta="selectionLabels"
@@ -52,8 +52,8 @@ import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
 import { getUserTableColumnGroups } from '@api/user-preferences';
+import _isEmpty from 'lodash/isEmpty';
 import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
-
 import XQuery from './query/Query.vue';
 import XTable from '../../neurons/data/Table.vue';
 import XTableData from './TableData.vue';
@@ -106,7 +106,7 @@ export default {
       return getEntityPermissionCategory(this.module);
     },
     hasSelection() {
-      return (this.selection.ids && this.selection.ids.length) || this.selection.include === false;
+      return !_isEmpty(this.selection.ids) || this.selection.include === false;
     },
     ...mapGetters({
       getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME,
@@ -200,6 +200,37 @@ export default {
             width: 120px;
           }
         }
+        .ant-btn.x-button {
+          &.entityMenu:not([disabled]) {
+            width: 128px;
+            color: $theme-black;
+            svg {
+              stroke: $theme-black;
+            }
+            &.menuOpened {
+              color: $theme-blue;
+              svg {
+                stroke: $theme-blue;
+              }
+            }
+            &.action {
+              width: auto;
+            }
+          }
+          &.entityMenu:not([disabled]):hover {
+            color: $theme-blue;
+            svg {
+              stroke: $theme-blue;
+            }
+          }
+          &.entityMenuInactive {
+            cursor: initial;
+            width: auto;
+            color: #00000040;
+            svg {
+              stroke: #00000040;
+            }
+          }
+        }
     }
-
 </style>
