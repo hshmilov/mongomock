@@ -1,13 +1,11 @@
 import time
-from pathlib import Path
 
+from axonius.utils.host_utils import check_installer_locks
 from scripts.watchdog.watchdog_task import WatchdogTask
 import subprocess
 import shlex
 
 SLEEP_SECONDS = 60 * 60 * 12  # that is 12 hrs
-
-UPGRADE_LOCK = Path('/tmp/upgrade.lock')
 
 
 def is_endpoint_false(endpoint):
@@ -26,7 +24,7 @@ class ChefClientTask(WatchdogTask):
     def run(self):
 
         while True:
-            if UPGRADE_LOCK.is_file():
+            if check_installer_locks():
                 self.report_info('upgrade lock existed. skipping restart')
                 time.sleep(60 * 60)  # wait until upgrade is complete
                 continue

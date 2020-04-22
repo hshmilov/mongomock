@@ -1,6 +1,5 @@
 import datetime
 import time
-from pathlib import Path
 import subprocess
 
 import dateutil.parser
@@ -8,13 +7,13 @@ import pymongo
 import pytz
 
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
+from axonius.utils.host_utils import check_installer_locks
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
 
 SLEEP_SECONDS = 5
 NODE_MSG = 'this watchdog will not run on node'
 MONGO_IS_DOWN = 'MONGO IS DOWN'
-LOCKFILE = Path('/tmp/upgrade.lock')
 
 GUI_IS_DEAD_THRESH = 3 * 60 * 60
 
@@ -40,7 +39,7 @@ class MongoAliveTask(WatchdogTask):
                     self.report_info(NODE_MSG)
                     continue
 
-                if LOCKFILE.is_file():
+                if check_installer_locks():
                     self.report_info('upgrade is in progress...')
                     continue
 

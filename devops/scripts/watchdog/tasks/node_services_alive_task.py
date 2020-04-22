@@ -7,13 +7,13 @@ import requests
 
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from axonius.consts.system_consts import NODE_MARKER_PATH
+from axonius.utils.host_utils import check_installer_locks
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.ports import DOCKER_PORTS
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 
 SLEEP_SECONDS = 60 * 1
-LOCKFILE = Path('/tmp/upgrade.lock')
 URL_TO_CHECK = 'https://manage.chef.io'
 
 
@@ -78,7 +78,7 @@ class NodeServicesAliveTask(WatchdogTask):
                 time.sleep(SLEEP_SECONDS)
 
                 if NODE_MARKER_PATH.is_file():
-                    if LOCKFILE.is_file():
+                    if check_installer_locks():
                         self.report_info('upgrade is in progress...')
                         continue
 

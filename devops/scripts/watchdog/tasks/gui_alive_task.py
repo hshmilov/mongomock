@@ -1,11 +1,11 @@
 import time
 import requests
 import urllib3
-from pathlib import Path
 import os
 import subprocess
 
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
+from axonius.utils.host_utils import check_installer_locks
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
 
@@ -15,7 +15,7 @@ NODE_MSG = 'this watchdog will not run on node'
 SHUTTING_DOWN_THE_SYSTEM_MGS = 'Gui is dead, shutting down'
 RE_RAISING_MSG = 're_raising_axonius'
 REBOOTING_MSG = 'rebooting_now'
-LOCKFILE = Path('/tmp/upgrade.lock')
+
 INTERNAL_PORT = 4433  # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
 
 GUI_IS_DEAD_THRESH = 3 * 60 * 60
@@ -47,7 +47,7 @@ class GuiAliveTask(WatchdogTask):
                 self.report_info(NODE_MSG)
                 continue
 
-            if LOCKFILE.is_file():
+            if check_installer_locks():
                 self.report_info('upgrade is in progress...')
                 continue
 
