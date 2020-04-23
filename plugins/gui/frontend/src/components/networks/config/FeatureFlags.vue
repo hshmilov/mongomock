@@ -68,8 +68,8 @@
     methods: {
       updateValidity(valid) {
         // Check that there is only one input to expiry or contract date - or none of them
-        let valid_dates =   (this.value.expiry_date === '' ^ this.value.trial_end === '') ||
-                        (this.value.expiry_date === '' && this.value.trial_end === '')
+        let valid_dates =   (!this.value.expiry_date ^ !this.value.trial_end) ||
+                            (!this.value.expiry_date && !this.value.trial_end)
         this.isValid =  valid && valid_dates;
       }
     }
