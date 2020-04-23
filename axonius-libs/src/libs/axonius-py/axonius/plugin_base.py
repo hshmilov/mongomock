@@ -1084,7 +1084,7 @@ class PluginBase(Configurable, Feature, ABC):
             del kwargs['headers']
 
         if has_request_context():
-            user = session.get('user', {}).get('user_name')
+            user = session.get('user', {}).get('user_name', '').encode('utf-8')
             user_source = session.get('user', {}).get('source')
             headers[X_UI_USER] = user
             headers[X_UI_USER_SOURCE] = user_source
