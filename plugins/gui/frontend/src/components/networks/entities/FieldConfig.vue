@@ -149,7 +149,8 @@ export default {
       }
       const fieldDisplayed = (field) => this.viewFields.includes(field.name);
       const fieldSearched = (field) => this.isFieldInSearch(field, this.search.stock);
-      const fieldExcluded = (field) => this.excludedFields.includes(field.name);
+      // adapter_count (Distinct Adapter Connections Count) is a dynamic field per device, therefore we dont allow it as column
+      const fieldExcluded = (field) => this.excludedFields.includes(field.name) || field.name.endsWith('adapter_count');
       return fieldSchema.fields.filter((field) => !fieldDisplayed(field) && fieldSearched(field) && !fieldExcluded(field));
     },
     viewFieldsSchema() {
