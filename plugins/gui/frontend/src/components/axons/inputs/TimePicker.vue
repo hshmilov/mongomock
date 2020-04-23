@@ -112,12 +112,6 @@ export default {
 
 <style lang="scss">
   .time-picker-text {
-    .x-button.link {
-      margin-left: -10px;
-      margin-bottom: 0;
-      z-index: 100;
-    }
-
     input {
       font-size: 14px;
       padding-left: 3px;

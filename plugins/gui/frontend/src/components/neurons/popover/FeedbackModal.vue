@@ -42,10 +42,11 @@
           class="text"
         >{{ note }}</div>
         <x-button
-          link
+          type="link"
           @click="handleClose"
         >Cancel</x-button>
         <x-button
+          type="primary"
           :id="approveId"
           :disabled="disabled"
           @click="handleConfirm"

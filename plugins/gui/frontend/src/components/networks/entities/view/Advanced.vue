@@ -1,13 +1,13 @@
 <template>
   <div class="x-entity-advanced">
-    <template  v-if="loading">
-      <div class="v-spinner-bg"/>
-      <pulse-loader
+    <template v-if="loading">
+      <div class="v-spinner-bg" />
+      <PulseLoader
         :loading="loading"
         color="#FF7D46"
       />
     </template>
-    <x-table
+    <XTable
       v-if="getMergedData().length > 0"
       :title="schema.title"
       :module="stateLocation"
@@ -16,13 +16,13 @@
       :searchable="true"
     >
       <template slot="actions">
-        <x-button
-          link
+        <XButton
+          type="link"
           @click="exportCSV"
         >Export CSV
-        </x-button>
+        </XButton>
       </template>
-    </x-table>
+    </XTable>
   </div>
 </template>
 
@@ -37,14 +37,14 @@ import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { SET_MERGED_DATA_BY_ID } from '@store/modules/devices';
-import xTable from '../../../neurons/data/Table.vue';
-import xButton from '../../../axons/inputs/Button.vue';
+import XTable from '../../../neurons/data/Table.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 import mergedData from '../../../../logic/mergeData';
 
 export default {
   name: 'XEntityAdvanced',
   components: {
-    xTable, xButton, PulseLoader,
+    XTable, XButton, PulseLoader,
   },
   props: {
     index: {

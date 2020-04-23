@@ -19,6 +19,7 @@
         >{{ error }}</div>
         <div class="place-right">
           <XButton
+            type="primary"
             :disabled="!passwordFormComplete"
             @click="savePassword"
           >
@@ -33,6 +34,7 @@
       >
         <XButton
           v-if="$can($permissionConsts.categories.Settings, $permissionConsts.actions.ResetApiKey)"
+          type="primary"
           @click="openResetKeyModal"
         >
           Reset Key
@@ -57,7 +59,7 @@
               disabled
             >
 
-            <AButton
+            <XButton
               v-if="isKeyVisible"
               class="hide-key-icon"
               title="Hide API Secret"
@@ -65,7 +67,7 @@
               icon="eye-invisible"
               @click="toggleVisibility"
             />
-            <AButton
+            <XButton
               v-else
               class="show-key-icon"
               title="Show API Secret"
@@ -73,7 +75,7 @@
               icon="eye"
               @click="toggleVisibility"
             />
-            <AButton
+            <XButton
               class="copy-to-clipboard-icon"
               title="Copy API Secret"
               shape="circle"

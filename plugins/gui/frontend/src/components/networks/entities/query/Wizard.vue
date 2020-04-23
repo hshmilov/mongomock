@@ -1,5 +1,5 @@
 <template>
-  <x-dropdown
+  <XDropdown
     ref="wizard"
     class="x-query-wizard"
     align="right"
@@ -9,12 +9,13 @@
     :arrow="false"
     @activated="$emit('activated')"
   >
-    <x-button
+    <XButton
       id="query_wizard"
       slot="trigger"
-    >Query Wizard</x-button>
+      type="primary"
+    >Query Wizard</XButton>
     <div slot="content">
-      <x-filter
+      <XFilter
         ref="filter"
         v-model="queryExpressions"
         :module="module"
@@ -27,45 +28,46 @@
         v-if="!filterOutExpression.showIds && filterOutIdCount > 0"
         class="filter-out-ids"
       >Filtered out from query results ({{ filterOutIdCount }})
-        <x-button
+        <XButton
           key="remove-filter-out"
-          link
+          type="link"
           class="remove-filter-out"
           @click="removeFilterOutExpression"
-        >Clear</x-button>
+        >Clear</XButton>
       </div>
-      <md-switch
+      <MdSwitch
         v-if="module === 'not_entities'"
         v-model="isUniqueAdapters"
         :disabled="!value.filter"
-      >Include outdated Adapter {{ prettyModule }} in query</md-switch>
+      >Include outdated Adapter {{ prettyModule }} in query</MdSwitch>
       <div class="place-right">
-        <x-button
-          link
+        <XButton
+          type="link"
           @click="clearFilter"
           @keyup.enter.native="clearFilter"
-        >Clear</x-button>
-        <x-button
+        >Clear</XButton>
+        <XButton
+          type="primary"
           @click="compileFilter"
           @keyup.enter.native="compileFilter"
-        >Search</x-button>
+        >Search</XButton>
       </div>
     </div>
-  </x-dropdown>
+  </XDropdown>
 </template>
 
 <script>
 import { mapState } from 'vuex';
 import _debounce from 'lodash/debounce';
 
-import xDropdown from '../../../axons/popover/Dropdown.vue';
-import xButton from '../../../axons/inputs/Button.vue';
-import xFilter from '../../../neurons/schema/query/Filter.vue';
+import XDropdown from '../../../axons/popover/Dropdown.vue';
+import XButton from '../../../axons/inputs/Button.vue';
+import XFilter from '../../../neurons/schema/query/Filter.vue';
 
 export default {
   name: 'XQueryWizard',
   components: {
-    xDropdown, xButton, xFilter,
+    XDropdown, XButton, XFilter,
   },
   props: {
     module: {
@@ -165,7 +167,7 @@ export default {
           .filter-out-ids {
             display: block;
             padding-top: 16px;
-            .link {
+            .ant-btn-link {
               padding-left: 4px;
             }
           }

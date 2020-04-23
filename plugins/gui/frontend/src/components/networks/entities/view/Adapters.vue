@@ -1,7 +1,7 @@
 <template>
   <div class="x-entity-adapters">
-    <x-tabs :vertical="true">
-      <x-tab
+    <XTabs :vertical="true">
+      <XTab
         v-for="(item, i) in sortedSpecificData"
         :id="item.id"
         :key="i"
@@ -16,18 +16,19 @@
               <strong>Data From: </strong>{{ item.connectionLabel || item.client_used }}
             </template>
           </div>
-          <x-button
+          <XButton
+            type="primary"
             v-if="isGuiAdapterData(item)"
             :disabled="userCannotEditDevices"
             @click="editFields"
-          >Edit Fields</x-button>
-          <x-button
+          >Edit Fields</XButton>
+          <XButton
             v-else
-            link
+            type="link"
             @click="toggleView"
-          >View {{ viewBasic? 'Advanced': 'Basic' }}</x-button>
+          >View {{ viewBasic? 'Advanced': 'Basic' }}</XButton>
         </div>
-        <x-list
+        <XList
           v-if="viewBasic || isGuiAdapterData(item)"
           :data="item"
           :schema="adapterSchema(item.plugin_name)"
@@ -38,16 +39,16 @@
           root-key="raw"
           :max-depth="6"
         />
-      </x-tab>
-    </x-tabs>
-    <x-modal
+      </XTab>
+    </XTabs>
+    <XModal
       v-if="fieldsEditor.active"
       :disabled="!fieldsEditor.valid"
       approve-text="Save"
       @confirm="saveFieldsEditor"
       @close="closeFieldsEditor"
     >
-      <x-custom-fields
+      <XCustomFields
         slot="body"
         v-model="fieldsEditor.data"
         :module="module"
@@ -55,8 +56,8 @@
         :external-error="error"
         @validate="validateFieldsEditor"
       />
-    </x-modal>
-    <x-toast
+    </XModal>
+    <XToast
       v-if="toastMessage"
       v-model="toastMessage"
     />
@@ -68,13 +69,13 @@ import { JSONView } from 'vue-json-component';
 import {
   mapState, mapActions, mapGetters,
 } from 'vuex';
-import xTabs from '../../../axons/tabs/Tabs.vue';
-import xTab from '../../../axons/tabs/Tab.vue';
-import xList from '../../../neurons/schema/List.vue';
-import xButton from '../../../axons/inputs/Button.vue';
-import xModal from '../../../axons/popover/Modal/index.vue';
-import xCustomFields from './CustomFields.vue';
-import xToast from '../../../axons/popover/Toast.vue';
+import XTabs from '../../../axons/tabs/Tabs.vue';
+import XTab from '../../../axons/tabs/Tab.vue';
+import XList from '../../../neurons/schema/List.vue';
+import XButton from '../../../axons/inputs/Button.vue';
+import XModal from '../../../axons/popover/Modal/index.vue';
+import XCustomFields from './CustomFields.vue';
+import XToast from '../../../axons/popover/Toast.vue';
 
 import { SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../../store/actions';
 
@@ -90,13 +91,13 @@ const lastSeenByModule = {
 export default {
   name: 'XEntityAdapters',
   components: {
-    xTabs,
-    xTab,
-    xList,
-    xButton,
-    xModal,
-    xCustomFields,
-    xToast,
+    XTabs,
+    XTab,
+    XList,
+    XButton,
+    XModal,
+    XCustomFields,
+    XToast,
     'json-view': JSONView,
   },
   props: {
@@ -158,8 +159,8 @@ export default {
         item.id = `${item.plugin_unique_name}_${item.data.id}`;
         let connectionLabel = this.getConnectionLabel(item.client_used, undefined, item.plugin_unique_name);
         item.connectionLabel = connectionLabel || item.client_used;
-        if ( connectionLabel !== '') {
-             connectionLabel = ` - ${connectionLabel}`;
+        if (connectionLabel !== '') {
+          connectionLabel = ` - ${connectionLabel}`;
         }
         if (pluginMeta[item.plugin_name]) {
           item.pretty_name = pluginMeta[item.plugin_name].title + connectionLabel;

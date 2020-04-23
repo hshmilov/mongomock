@@ -29,6 +29,7 @@
             <MdIcon v-else>keyboard_arrow_down</MdIcon>
           </span>
           <XButton
+            type="primary"
             v-if="interactive"
             tabindex="-1"
             class="x-milestone_action"
@@ -45,7 +46,7 @@
           <XButton
             v-if="link"
             tabindex="-1"
-            link
+            type="link"
             @click="goToDocsPage"
           >
             Learn more

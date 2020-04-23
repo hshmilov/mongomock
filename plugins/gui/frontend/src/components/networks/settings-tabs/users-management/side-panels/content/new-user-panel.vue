@@ -88,6 +88,7 @@
 </template>
 
 <script>
+import { Select } from 'ant-design-vue';
 import { mapState, mapActions } from 'vuex';
 import { required, email } from 'vuelidate/lib/validators';
 import { fetchAssignableRolesList } from '@api/roles';
@@ -110,6 +111,10 @@ function uniqueUsername(value) {
 
 export default {
   name: 'XNewUserPanelContent',
+  components: {
+    ASelect: Select,
+    ASelectOption: Select.Option,
+  },
   props: {
     valid: {
       type: Boolean,

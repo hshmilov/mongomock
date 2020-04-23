@@ -10,17 +10,18 @@
       <template slot="actions">
         <XButton
           id="get-connection-string"
+          type="primary"
           :disabled="!canEditInstances"
           @click="connecting= !connecting"
         >Connect Node</XButton>
         <XButton
           v-if="showActivationOption === 'Activated'"
-          link
+          type="link"
           @click="deactivateServers"
         >Deactivate</XButton>
         <XButton
           v-if="showActivationOption === 'Deactivated'"
-          link
+          type="link"
           @click="reactivateServers"
         >Reactivate</XButton>
       </template>
@@ -62,7 +63,10 @@
         &lt;User-Nickname&gt;
       </div>
       <div slot="footer">
-        <XButton @click="connecting= !connecting">
+        <XButton
+          type="primary"
+          @click="connecting= !connecting"
+        >
           OK
         </XButton>
       </div>

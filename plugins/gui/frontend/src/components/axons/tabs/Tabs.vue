@@ -24,7 +24,7 @@
         >{{ tab.title }}</div>
         <XButton
           v-if="tab.removable"
-          link
+          type="link"
           @click.stop="removeTab(tab)"
         >x</XButton>
       </li>

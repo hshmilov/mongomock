@@ -25,15 +25,17 @@
       </div>
       <div class="actions">
         <XButton
+          type="primary"
           :disabled="!isStockSelected"
           @click="addFields"
         >Add &gt;&gt;</XButton>
         <XButton
+          type="primary"
           :disabled="!isViewSelected"
           @click="removeFields"
         >&lt;&lt; Remove</XButton>
         <XButton
-          link
+          type="link"
           :disabled="isDefaultViewFields"
           class="actions__reset"
           @click="reset"
@@ -64,16 +66,17 @@
     <template slot="footer">
       <div class="modal-footer__save-default">
         <XButton
-          link
+          type="link"
           :disabled="isViewFieldsEmpty"
           @click="saveUserDefault"
         >{{ saveButtonText }}</XButton>
       </div>
       <XButton
-        link
+        type="link"
         @click="closeModal"
       >Cancel</XButton>
       <XButton
+        type="primary"
         @click="onClickDone"
       >Done</XButton>
     </template>

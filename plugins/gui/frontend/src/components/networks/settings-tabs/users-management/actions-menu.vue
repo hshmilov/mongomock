@@ -11,7 +11,7 @@
           :trigger="['click']"
           placement="bottomCenter"
         >
-          <AButton type="link">Actions</AButton>
+          <XButton type="link">Actions</XButton>
           <AMenu
             slot="overlay"
           >
@@ -36,10 +36,16 @@
 
 <script>
 import XButton from '@axons/inputs/Button.vue';
+import { Menu, Dropdown } from 'ant-design-vue';
 
 export default {
   name: 'XActionsMenu',
-  components: { XButton },
+  components: {
+    XButton,
+    ADropdown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
+  },
   props: {
     disabled: {
       type: Boolean,

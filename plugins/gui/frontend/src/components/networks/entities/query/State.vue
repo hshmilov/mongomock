@@ -17,7 +17,7 @@
           <XButton
             v-else-if="selectedView && canUpdate"
             :disabled="selectedView.predefined"
-            link
+            type="link"
             class="query-title"
             @click="openEditCurrentQueryModal"
           >{{ selectedView.name }}</XButton>
@@ -39,37 +39,37 @@
         </div>
         <XButton
           v-if="enforcement"
-          link
+          type="link"
           @click="navigateFilteredTask"
         >Go to Task</XButton>
         <XButton
           v-else-if="!selectedView || !isEdited"
           id="query_save"
-          link
+          type="link"
           :disabled="disabled || !canAdd"
           @click="openSaveView"
         >Save As</XButton>
         <XDropdown v-else>
           <XButton
             slot="trigger"
-            link
+            type="link"
             :disabled="disabled || selectedView.predefined || !canUpdate"
             @click.stop="saveSelectedView"
           >Save</XButton>
           <div slot="content">
             <XButton
-              link
+              type="link"
               :disabled="disabled || !canAdd"
               @click="openSaveView"
             >Save As</XButton>
             <XButton
-              link
+              type="link"
               @click="reloadSelectedView"
             >Discard Changes</XButton>
           </div>
         </XDropdown>
         <XButton
-          link
+          type="link"
           @click="resetQuery"
         >Reset</XButton>
         <XHistoricalDate

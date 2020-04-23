@@ -1,5 +1,5 @@
 <template>
-  <component
+  <Component
     :is="conditionType"
     class="x-condition"
     :module="module"
@@ -9,20 +9,20 @@
     @change-child="onChangeChild"
     @remove-child="onRemoveChild"
   >
-    <x-button
+    <XButton
       v-if="children.length && !readOnly"
-      link
+      type="link"
       class="expression-nest"
       @click="onAddChild"
-    >+</x-button>
-  </component>
+    >+</XButton>
+  </Component>
 </template>
 
 <script>
 import ALL from './ConditionAggregatedData.vue';
 import OBJ from './ConditionComplexField.vue';
 import ENT from './ConditionAssetEntity.vue';
-import xButton from '../../../axons/inputs/Button.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 
 import { calcMaxIndex } from '../../../../constants/utils';
 import { childExpression } from '../../../../constants/filter';
@@ -33,7 +33,7 @@ export default {
     ALL,
     OBJ,
     ENT,
-    xButton,
+    XButton,
   },
   model: {
     prop: 'condition',

@@ -136,7 +136,7 @@ class SettingsPage(Page):
 
     CA_CERTIFICATE_ENABLED = '//*[contains(text(),\'CA certificate\')]'
 
-    CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.light'
+    CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.ant-btn-light'
     CA_ADD_CERT_BUTTON_CSS = 'div.x-array-edit > div:nth-child(2) > div > div > div:nth-child(3) > div > div > button'
 
     CA_CERTS_FILES = 'div.x-array-edit > div:nth-child(2) > div > div >' \

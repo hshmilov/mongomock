@@ -7,7 +7,7 @@
     @keyup.enter="selectActive"
     @keyup.esc="close"
   >
-    <x-search-input
+    <XSearchInput
       v-if="searchable"
       ref="searchInput"
       v-model="searchValue"
@@ -32,7 +32,7 @@
           @click="() => selectOption(currentOption.name)"
           @keyup.enter.stop.prevent="selectOption(currentOption.name)"
         >
-          <x-checkbox
+          <XCheckbox
             v-if="multiSelect"
             :data="getAdapterValue(currentOption.name)"
             @change="(value) => selectOption(currentOption.name, value)"
@@ -41,7 +41,7 @@
             {{ currentOption.title }}
           </slot>
         </div>
-        <x-select-content
+        <XSelectContent
           v-if="currentOption.plugins !== undefined"
           slot="content"
           :key="currentOption.name"
@@ -54,7 +54,7 @@
             slot-scope="{ option }"
             :option="option"
           />
-        </x-select-content>
+        </XSelectContent>
       </template>
     </div>
     <template v-for="(extraOption, index) in extraOptions">
@@ -75,15 +75,15 @@
       class="all-buttons"
     >
       <div class="select-all">
-        <x-button
-          link
+        <XButton
+          type="link"
           @click="selectAllData"
-        >Select all</x-button>
+        >Select all</XButton>
       </div>
-      <x-button
+      <XButton
         link
         @click="clearAllData"
-      >Clear all</x-button>
+      >Clear all</XButton>
     </div>
   </div>
 </template>
@@ -91,14 +91,14 @@
 <script>
 import _some from 'lodash/some';
 import _head from 'lodash/head';
-import xSearchInput from '../../../neurons/inputs/SearchInput.vue';
+import XSearchInput from '../../../neurons/inputs/SearchInput.vue';
 import XCheckbox from '../Checkbox.vue';
 import XButton from '../Button.vue';
 
 
 export default {
   name: 'XSelectContent',
-  components: { XCheckbox, XButton, xSearchInput },
+  components: { XCheckbox, XButton, XSearchInput },
   props: {
     multiSelect: {
       type: Boolean,

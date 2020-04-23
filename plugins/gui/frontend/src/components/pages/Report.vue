@@ -105,7 +105,7 @@
                     @input="onQueryNameChange($event, i)"
                   />
                   <XButton
-                    link
+                    type="link"
                     class="query-remove"
                     :disabled="cannotEditReport"
                     @click="() => removeQuery(i)"
@@ -113,7 +113,7 @@
                 </div>
               </div>
               <XButton
-                light
+                type="light"
                 class="query-add"
                 :disabled="cannotEditReport"
                 @click="addQuery"
@@ -135,7 +135,9 @@
               @click="toggleScheduling"
             >Email Configuration</h5>
           </div>
-          <div class="email-description">Scheduled email with the report attached will be sent</div>
+          <div class="email-description">
+            Scheduled email with the report attached will be sent
+          </div>
           <div class="inner-content schedule">
             <XArrayEdit
               v-if="report.add_scheduling"
@@ -149,7 +151,9 @@
               v-if="report.add_scheduling"
               id="report_frequency"
             >
-              <h4 class="email-title">Email Recurrence</h4>
+              <h4 class="email-title">
+                Email Recurrence
+              </h4>
               <XRecurrence
                 v-model="report"
                 :read-only="cannotEditReport"
@@ -168,21 +172,22 @@
           <XButton
             v-if="!hideTestNow"
             id="test-report"
-            inverse
+            type="inverse"
             @click="runNow"
           >Send Email</XButton>
           <XButton
             v-if="!hideDownloadNow"
             id="reports_download"
-            inverse-emphasize
+            type="inverse-emphasize"
             :disabled="disableDownloadReport"
             @click="startDownload"
+            :loading="downloading"
           >
-            <template v-if="downloading">DOWNLOADING...</template>
-            <template v-else>Download Report</template>
+              Download Report
           </XButton>
           <XButton
             id="report_save"
+            type="primary"
             :disabled="!valid"
             @click="saveExit"
           >Save</XButton>

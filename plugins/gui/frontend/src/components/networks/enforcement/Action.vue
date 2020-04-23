@@ -1,56 +1,72 @@
 <template>
-    <div class="x-action" @click="$emit('click')" :class="actionClass">
-        <x-text-box v-bind="{id, text, selected, removable}" @remove="onRemove">
-            <template slot="logo">
-                <img v-if="name" :src="require(`Logos/actions/${name}.png`)" class="md-image logo" />
-                <div v-else class="logo placeholder">+</div>
-            </template>
-        </x-text-box>
-    </div>
+  <div
+    class="x-action"
+    :class="actionClass"
+    @click="$emit('click')"
+  >
+    <XTextBox
+      v-bind="{id, text, selected, removable}"
+      @remove="onRemove"
+    >
+      <template slot="logo">
+        <img
+          v-if="name"
+          :src="require(`Logos/actions/${name}.png`)"
+          class="md-image logo"
+        >
+        <div
+          v-else
+          class="logo placeholder"
+        >
+          +
+        </div>
+      </template>
+    </XTextBox>
+  </div>
 </template>
 
 <script>
-    import xTextBox from '../../axons/layout/TextBox.vue'
+import XTextBox from '../../axons/layout/TextBox.vue';
 
-    export default {
-        name: 'x-action',
-        components: {
-            xTextBox
-        },
-        props: {
-            id: String,
-            name: String,
-            title: String,
-            titlePrefix: {
-                default: 'actions'
-            },
-            condition: String,
-            readOnly: Boolean,
-            selected: Boolean,
-            status: String
-        },
-        computed: {
-            text() {
-                if (this.title) return this.title
+export default {
+  name: 'XAction',
+  components: {
+    XTextBox,
+  },
+  props: {
+    id: String,
+    name: String,
+    title: String,
+    titlePrefix: {
+      default: 'actions',
+    },
+    condition: String,
+    readOnly: Boolean,
+    selected: Boolean,
+    status: String,
+  },
+  computed: {
+    text() {
+      if (this.title) return this.title;
 
-                return `${this.condition} ${this.titlePrefix} ...`
-            },
-            removable() {
-                return !this.readOnly && Boolean(this.title)
-            },
-            actionClass() {
-                if(this.status){
-                    return 'action-' + this.status
-                }
-                return ''
-            }
-        },
-        methods: {
-            onRemove() {
-                this.$emit('remove')
-            }
-        }
-    }
+      return `${this.condition} ${this.titlePrefix} ...`;
+    },
+    removable() {
+      return !this.readOnly && Boolean(this.title);
+    },
+    actionClass() {
+      if (this.status) {
+        return `action-${this.status}`;
+      }
+      return '';
+    },
+  },
+  methods: {
+    onRemove() {
+      this.$emit('remove');
+    },
+  },
+};
 </script>
 
 <style lang="scss">

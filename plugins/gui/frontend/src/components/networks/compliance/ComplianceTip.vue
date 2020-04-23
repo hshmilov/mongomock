@@ -1,5 +1,5 @@
 <template>
-  <x-modal
+  <XModal
     size="s"
     class="x-compliance-tip"
     @close="$emit('close')"
@@ -9,38 +9,37 @@
       class="body"
     >
       <div class="content">
-        <svg-icon
+        <SvgIcon
           name="navigation/compliance"
           :original="true"
           height="49px"
-        >
-        </svg-icon>
+        />
         <div class="compliance-title">
           <span>Ready to see how your cloud assets comply with standards and benchmarks?</span>
         </div>
         <div class="compliance-note">
           <span>The new
-            <x-button
-              link
+            <XButton
+              type="link"
               class="cis-link"
               @click="openCISLink"
-            >Cloud Asset Compliance Center</x-button>
+            >Cloud Asset Compliance Center</XButton>
             shows how cloud instances and accounts adhere to compliance standards
           </span>
         </div>
       </div>
     </div>
     <div slot="footer">
-      <x-button
-        link
+      <XButton
+        type="link"
         @click="openMail"
-      >Upgrade<v-icon
+      >Upgrade<VIcon
         size="20px"
         color="white"
-      >{{ arrowIcon }}</v-icon>
-      </x-button>
+      >{{ arrowIcon }}</VIcon>
+      </XButton>
     </div>
-  </x-modal>
+  </XModal>
 </template>
 
 <script>
@@ -93,7 +92,7 @@ export default {
           line-height: 60px;
           border-bottom-left-radius: 10px;
           border-bottom-right-radius: 10px;
-          .link {
+          .ant-btn-link {
             color: $theme-white;
           }
           background-color: $theme-orange;

@@ -8,7 +8,7 @@
       <XButton
         class="action"
         :class="actionButtonClass"
-        link
+        type="link"
       >
         <VIcon
           size="18"

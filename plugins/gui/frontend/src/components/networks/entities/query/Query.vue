@@ -17,7 +17,7 @@
         @done="$emit('done')"
       />
       <XButton
-        link
+        type="link"
         @click="navigateSavedQueries"
       >Saved Queries</XButton>
       <XQueryWizard

@@ -1,107 +1,153 @@
 <template>
-    <x-dropdown size="lg" align="right" :align-space="-4" :arrow="false" class="x-notification-peek" ref="notifications"
-                @click.native="clearNotifications">
-        <div slot="trigger">
-            <svg-icon name="navigation/notifications" :original="true" height="20"/>
-            <div class="notification-badge" v-if="notificationUnseenCount">{{ notificationUnseenCount }}</div>
+  <XDropdown
+    ref="notifications"
+    size="lg"
+    align="right"
+    :align-space="-4"
+    :arrow="false"
+    class="x-notification-peek"
+    @click.native="clearNotifications"
+  >
+    <div slot="trigger">
+      <SvgIcon
+        name="navigation/notifications"
+        :original="true"
+        height="20"
+      />
+      <div
+        v-if="notificationUnseenCount"
+        class="notification-badge"
+      >
+        {{ notificationUnseenCount }}
+      </div>
+    </div>
+    <div slot="content">
+      <h5 class="mb-8">
+        Notifications
+      </h5>
+      <div
+        v-for="notification in notificationAggregatedList"
+        class="notification"
+        :class="{ bold: !notification.seen }"
+        @click="navigateNotification(notification.uuid)"
+      >
+        <div class="status">
+          <SvgIcon
+            :name="`symbol/${notification.severity}`"
+            :original="true"
+            height="16"
+          />
         </div>
-        <div slot="content">
-            <h5 class="mb-8">Notifications</h5>
-            <div v-for="notification in notificationAggregatedList"
-                 @click="navigateNotification(notification.uuid)"
-                 class="notification" v-bind:class="{ bold: !notification.seen }">
-                <div class="status">
-                    <svg-icon :name="`symbol/${notification.severity}`" :original="true" height="16"/>
-                </div>
-                <div class="content">
-                    <div class="d-flex">
-                        <div class="notification-title">{{ notification.title }}</div>
-                        <div v-if="notification.count" class="c-grey-3">({{notification.count}})</div>
-                    </div>
-                    <div class="c-grey-4">{{ relativeDate(notification.date_fetched) }}</div>
-                </div>
-                <div><!-- Place for Delete --></div>
+        <div class="content">
+          <div class="d-flex">
+            <div class="notification-title">
+              {{ notification.title }}
             </div>
-            <div v-if="!notificationAggregatedList.length" class="t-center">
-                <svg-icon name="symbol/success" :original="true" height="20px"></svg-icon>
+            <div
+              v-if="notification.count"
+              class="c-grey-3"
+            >
+              ({{ notification.count }})
             </div>
-            <x-button link @click="navigateNotifications">View All</x-button>
+          </div>
+          <div class="c-grey-4">
+            {{ relativeDate(notification.date_fetched) }}
+          </div>
         </div>
-    </x-dropdown>
+        <div><!-- Place for Delete --></div>
+      </div>
+      <div
+        v-if="!notificationAggregatedList.length"
+        class="t-center"
+      >
+        <SvgIcon
+          name="symbol/success"
+          :original="true"
+          height="20px"
+        />
+      </div>
+      <XButton
+        type="link"
+        @click="navigateNotifications"
+      >
+        View All
+      </XButton>
+    </div>
+  </XDropdown>
 </template>
 
 <script>
-    import xButton from '../axons/inputs/Button.vue'
-    import xDropdown from '../axons/popover/Dropdown.vue'
+import { mapState, mapActions } from 'vuex';
+import XButton from '../axons/inputs/Button.vue';
+import XDropdown from '../axons/popover/Dropdown.vue';
 
-    import {mapState, mapActions} from 'vuex'
-    import {
-        FETCH_NOTIFICATIONS_UNSEEN_COUNT, FETCH_AGGREGATE_NOTIFICATIONS, UPDATE_NOTIFICATIONS_SEEN, FETCH_NOTIFICATION
-    } from '../../store/modules/notifications'
+import {
+  FETCH_NOTIFICATIONS_UNSEEN_COUNT, FETCH_AGGREGATE_NOTIFICATIONS, UPDATE_NOTIFICATIONS_SEEN, FETCH_NOTIFICATION,
+} from '../../store/modules/notifications';
 
-    export default {
-        name: 'x-notification-peek',
-        components: {xButton, xDropdown},
-        computed: {
-            ...mapState({
-                notificationUnseenCount(state) {
-                    return state.notifications.unseenCount.data
-                },
-                notificationAggregatedList(state) {
-                    return state.notifications.aggregatedList.data
-                },
-                isReadOnly(state) {
-                    let user = state.auth.currentUser.data
-                    if (!user || !user.permissions) return true
-                    return user.permissions.Dashboard === 'ReadOnly'
-                }
-            })
-        },
-        methods: {
-            ...mapActions({
-                fetchNotification: FETCH_NOTIFICATION,
-                fetchAggregateNotifications: FETCH_AGGREGATE_NOTIFICATIONS,
-                updateNotificationsSeen: UPDATE_NOTIFICATIONS_SEEN,
-                fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT
-            }),
-            relativeDate(timestamp) {
-                let date = new Date(timestamp)
-                let now = Date.now()
-                if (now - date.getTime() < 24 * 60 * 60 * 1000) {
-                    return date.toLocaleTimeString()
-                } else if (now - date.getTime() < 48 * 60 * 60 * 1000) {
-                    return 'Yesterday'
-                }
-                return date.toLocaleDateString()
-            },
-            navigateNotification(notificationId) {
-                this.fetchNotification(notificationId)
-                this.$refs.notifications.close()
-                this.$router.push({path: `/notifications/${notificationId}`})
-            },
-            clearNotifications() {
-                if (this.isReadOnly) return
-                this.updateNotificationsSeen([])
-            },
-            navigateNotifications() {
-                this.$refs.notifications.close()
-                this.$router.push({name: 'Notifications'})
-            }
-        },
-        created() {
-            const loadNotifications = () => {
-                Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
-                    .then(() => {
-                        if (this._isDestroyed) return
-                        this.timer = setTimeout(loadNotifications, 9000)
-                    })
-            }
-            loadNotifications()
-        },
-        beforeDestroy() {
-            clearTimeout(this.timer)
-        }
-    }
+export default {
+  name: 'XNotificationPeek',
+  components: { XButton, XDropdown },
+  computed: {
+    ...mapState({
+      notificationUnseenCount(state) {
+        return state.notifications.unseenCount.data;
+      },
+      notificationAggregatedList(state) {
+        return state.notifications.aggregatedList.data;
+      },
+      isReadOnly(state) {
+        const user = state.auth.currentUser.data;
+        if (!user || !user.permissions) return true;
+        return user.permissions.Dashboard === 'ReadOnly';
+      },
+    }),
+  },
+  methods: {
+    ...mapActions({
+      fetchNotification: FETCH_NOTIFICATION,
+      fetchAggregateNotifications: FETCH_AGGREGATE_NOTIFICATIONS,
+      updateNotificationsSeen: UPDATE_NOTIFICATIONS_SEEN,
+      fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
+    }),
+    relativeDate(timestamp) {
+      const date = new Date(timestamp);
+      const now = Date.now();
+      if (now - date.getTime() < 24 * 60 * 60 * 1000) {
+        return date.toLocaleTimeString();
+      } if (now - date.getTime() < 48 * 60 * 60 * 1000) {
+        return 'Yesterday';
+      }
+      return date.toLocaleDateString();
+    },
+    navigateNotification(notificationId) {
+      this.fetchNotification(notificationId);
+      this.$refs.notifications.close();
+      this.$router.push({ path: `/notifications/${notificationId}` });
+    },
+    clearNotifications() {
+      if (this.isReadOnly) return;
+      this.updateNotificationsSeen([]);
+    },
+    navigateNotifications() {
+      this.$refs.notifications.close();
+      this.$router.push({ name: 'Notifications' });
+    },
+  },
+  created() {
+    const loadNotifications = () => {
+      Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
+        .then(() => {
+          if (this._isDestroyed) return;
+          this.timer = setTimeout(loadNotifications, 9000);
+        });
+    };
+    loadNotifications();
+  },
+  beforeDestroy() {
+    clearTimeout(this.timer);
+  },
+};
 </script>
 
 <style lang="scss">

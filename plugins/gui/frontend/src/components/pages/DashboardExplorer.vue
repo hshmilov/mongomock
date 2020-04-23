@@ -18,7 +18,7 @@
       >
         <template slot="actions">
           <x-button
-            link
+            type="link"
             @click="viewEntities(entity.name)"
           >View in {{ entity.title }}</x-button>
         </template>

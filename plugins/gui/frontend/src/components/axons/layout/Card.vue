@@ -4,7 +4,7 @@
       <div class="header__title">
         <XButton
           v-if="reversible"
-          link
+          type="link"
           class="back"
           @click="$emit('back')"
         >&lt;</XButton>
@@ -12,84 +12,10 @@
           v-if="logo"
           :logo="logo"
         >{{ title }} </XTitle>
-        <div
-          v-else
-          class="card-title"
-          :title="title"
-        >{{ title }}</div>
-      </div>
-      <div class="actions">
-        <span
-          v-if="isChartFilterable"
-          class="actions__search"
-          @click="$emit('toggleShowSearch')"
-        >
-          <VIcon
-            size="15"
-            class="cardSearch-expression-handle"
-          >$vuetify.icons.cardSearch</VIcon>
-        </span>
-        <ADropdown
-          v-if="showMenu"
-          class="actions__menu"
-          :trigger="['click']"
-          placement="bottomRight"
-        >
-          <span
-            class="ant-dropdown-link card_menu"
-            href="#"
-          >
-            <VIcon
-              size="15"
-              class="verticaldots-expression-handle"
-            >$vuetify.icons.verticaldots</VIcon>
-          </span>
-          <AMenu
-            slot="overlay"
-          >
-            <AMenuItem
-              v-if="editable"
-              id="edit_chart"
-              key="0"
-              @click="$emit('edit')"
-            >Edit Chart
-            </AMenuItem>
-            <AMenuItem
-              v-if="removable"
-              id="remove_chart"
-              key="1"
-              @click="$emit('remove')"
-            >Remove Chart
-            </AMenuItem>
-            <AMenuItem
-              v-if="exportable"
-              id="export_chart"
-              key="2"
-              @click="$emit('export')"
-            >Export to CSV
-            </AMenuItem>
-            <AMenuItem
-              v-if="draggable"
-              id="move_or_copy_chart"
-              key="3"
-              @click="$emit('moveOrCopy')"
-            >Move or Copy
-            </AMenuItem>
-            <AMenuItem
-              id="refresh_chart"
-              key="4"
-              @click="$emit('refresh')"
-            >Refresh
-            </AMenuItem>
-          </AMenu>
-        </ADropdown>
       </div>
     </div>
     <div class="body">
       <slot />
-    </div>
-    <div class="footer">
-      <slot name="footer" />
     </div>
   </div>
 </template>
@@ -112,31 +38,7 @@ export default {
       type: String,
       default: '',
     },
-    editable: {
-      type: Boolean,
-      default: false,
-    },
-    removable: {
-      type: Boolean,
-      default: false,
-    },
-    exportable: {
-      type: Boolean,
-      default: false,
-    },
     reversible: {
-      type: Boolean,
-      default: false,
-    },
-    draggable: {
-      type: Boolean,
-      default: false,
-    },
-    showMenu: {
-      type: Boolean,
-      default: true,
-    },
-    isChartFilterable: {
       type: Boolean,
       default: false,
     },
@@ -210,27 +112,10 @@ export default {
 
         }
 
-        .actions {
-          &__menu {
-            cursor: pointer;
-            padding: 8px 0;
-          }
-
-          .actions__search {
-            cursor: pointer;
-            margin-right: 8px;
-          }
-        }
-
         > .body {
           padding: 12px;
           height: calc(100% - 72px);
         }
 
-      .footer {
-        width: 100%;
-        display: flex;
-        margin: -2px;
-      }
     }
 </style>

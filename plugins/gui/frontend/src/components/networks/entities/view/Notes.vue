@@ -1,24 +1,25 @@
 <template>
   <div class="x-entity-notes">
     <div class="header">
-      <x-search-input
+      <XSearchInput
         id="search-notes"
         v-model="searchValue"
         placeholder="Search notes..."
       />
       <div class="actions">
-        <x-button
+        <XButton
           v-if="selectedNotes && selectedNotes.length"
-          link
+          type="link"
           @click="confirmRemoveNotes"
-        >Remove</x-button>
-        <x-button
+        >Remove</XButton>
+        <XButton
+          type="primary"
           :disabled="userCannotEditDevices"
           @click="createNote"
-        >Add Note</x-button>
+        >Add Note</XButton>
       </div>
     </div>
-    <x-table
+    <XTable
       v-model="userCannotEditDevices? undefined : selectedNotes"
       :data="noteData"
       :fields="noteFields"
@@ -27,15 +28,17 @@
       :on-click-col="sortNotes"
       :read-only="readOnlyNotes"
     />
-    <x-modal
+    <XModal
       v-if="removeNoteModal.active"
       approve-text="Delete"
       @confirm="removeNotes"
       @close="closeRemoveNotesModal"
     >
-      <div slot="body">You are about to remove {{ selectedNotes.length }} notes. Are you sure?</div>
-    </x-modal>
-    <x-modal
+      <div slot="body">
+        You are about to remove {{ selectedNotes.length }} notes. Are you sure?
+      </div>
+    </XModal>
+    <XModal
       v-if="configNoteModal.active"
       approve-text="Save"
       :title="noteModalTitle"
@@ -50,8 +53,8 @@
           placeholder="Enter your note..."
         />
       </template>
-    </x-modal>
-    <x-toast
+    </XModal>
+    <XToast
       v-if="toastMessage"
       v-model="toastMessage"
     />
@@ -59,188 +62,191 @@
 </template>
 
 <script>
-  import xSearchInput from '../../../neurons/inputs/SearchInput.vue'
-  import xTable from '../../../axons/tables/Table.vue'
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xModal from '../../../axons/popover/Modal/index.vue'
-  import xToast from '../../../axons/popover/Toast.vue'
+import { mapState, mapActions } from 'vuex';
+import { getEntityPermissionCategory } from '@constants/entities';
+import XSearchInput from '../../../neurons/inputs/SearchInput.vue';
+import XTable from '../../../axons/tables/Table.vue';
+import XButton from '../../../axons/inputs/Button.vue';
+import XModal from '../../../axons/popover/Modal/index.vue';
+import XToast from '../../../axons/popover/Toast.vue';
 
-  import { mapState, mapActions } from 'vuex'
-  import { SAVE_DATA_NOTE, REMOVE_DATA_NOTE } from '../../../../store/actions'
-  import { getEntityPermissionCategory } from '@constants/entities';
+import { SAVE_DATA_NOTE, REMOVE_DATA_NOTE } from '../../../../store/actions';
 
-  export default {
-    name: 'XEntityNotes',
-    components: { xSearchInput, xTable, xButton, xModal, xToast },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      entityId: {
-        type: String,
-        required: true
-      },
-      notes: {
-        type: Array,
-        required: true
-      },
-      readOnly: {
-        type: Boolean,
-        default: false
-      },
+export default {
+  name: 'XEntityNotes',
+  components: {
+    XSearchInput, XTable, XButton, XModal, XToast,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    computed: {
-      ...mapState({
-        currentUser (state) {
-          return {
-            uuid: state.auth.currentUser.data.uuid,
-            admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin'
+    entityId: {
+      type: String,
+      required: true,
+    },
+    notes: {
+      type: Array,
+      required: true,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  computed: {
+    ...mapState({
+      currentUser(state) {
+        return {
+          uuid: state.auth.currentUser.data.uuid,
+          admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin',
+        };
+      },
+      userCannotEditDevices() {
+        return this.readOnly || this.$cannot(getEntityPermissionCategory(this.module),
+          this.$permissionConsts.actions.Update);
+      },
+    }),
+    noteData() {
+      return this.notes.filter((item) => {
+        if (!this.searchValue) return true;
+        const lowerSearchValue = this.searchValue.toLowerCase();
+        return this.noteFields.find((field) => {
+          if (field.type === 'string' && field.format === 'date-time') {
+            return new Date(item[field.name]).toISOString().replace(/(T|Z)/g, ' ').includes(lowerSearchValue);
           }
-        },
-        userCannotEditDevices() {
-          return this.readOnly || this.$cannot(getEntityPermissionCategory(this.module),
-            this.$permissionConsts.actions.Update);
-        },
-      }),
-      noteData () {
-        return this.notes.filter(item => {
-          if (!this.searchValue) return true
-          let lowerSearchValue = this.searchValue.toLowerCase()
-          return this.noteFields.find(field => {
-            if (field.type === 'string' && field.format === 'date-time') {
-              return new Date(item[field.name]).toISOString().replace(/(T|Z)/g, ' ').includes(lowerSearchValue)
-            }
-            return item[field.name].toLowerCase().includes(lowerSearchValue)
-          })
-        }).sort((a, b) => {
-          if (!this.sort.field) return 0
+          return item[field.name].toLowerCase().includes(lowerSearchValue);
+        });
+      }).sort((a, b) => {
+        if (!this.sort.field) return 0;
 
-          let valA = a[this.sort.field].toUpperCase()
-          let valB = b[this.sort.field].toUpperCase()
-          if (valA < valB) {
-            return this.sort.desc ? -1 : 1
-          }
-          if (valA > valB) {
-            return this.sort.desc ? 1 : -1
-          }
-          return 0
-        })
-      },
-      noteById () {
-        return this.noteData.reduce((map, item) => {
-          map[item.uuid] = item
-          return map
-        }, {})
-      },
-      noteFields () {
-        return [
-          { name: 'note', title: 'Note', type: 'string' },
-          { name: 'user_name', title: 'User Name', type: 'string' },
-          { name: 'accurate_for_datetime', title: 'Last Updated', type: 'string', format: 'date-time' }
-        ]
-      },
-      noteModalTitle () {
-        if (this.configNoteModal.id) {
-          return 'Edit note'
-        } else {
-          return 'Add New Note'
+        const valA = a[this.sort.field].toUpperCase();
+        const valB = b[this.sort.field].toUpperCase();
+        if (valA < valB) {
+          return this.sort.desc ? -1 : 1;
         }
-      },
-      readOnlyNotes () {
-        if (this.$isAdmin()) return []
-        return this.noteData
-          .filter(note => note['user_id'] !== this.currentUser.uuid)
-          .map(note => note.uuid)
-      }
-    },
-    data () {
-      return {
-        searchValue: '',
-        sort: {
-          field: 'accurate_for_datetime',
-          desc: false
-        },
-        selectedNotes: [],
-        configNoteModal: {
-          active: false,
-          id: '',
-          note: ''
-        },
-        removeNoteModal: {
-          active: false
-        },
-        toastMessage: ''
-      }
-    },
-    methods: {
-      ...mapActions({ saveDataNote: SAVE_DATA_NOTE, removeDataNote: REMOVE_DATA_NOTE }),
-      createNote () {
-        this.configNoteModal.active = true
-      },
-      editNote (noteId) {
-        if (this.selectedNotes.length) return
-        this.configNoteModal.active = true
-        this.configNoteModal.id = noteId
-        this.configNoteModal.note = this.noteById[noteId].note
-      },
-      confirmRemoveNotes () {
-        this.removeNoteModal.active = true
-      },
-      closeRemoveNotesModal () {
-        this.removeNoteModal.active = false
-      },
-      removeNotes () {
-        this.responseWrapper(this.removeDataNote({
-          module: this.module,
-          entityId: this.entityId,
-          noteIdList: this.selectedNotes
-        }).then(() => {
-          this.toastMessage = 'Notes were removed'
-          this.selectedNotes = []
-          this.closeRemoveNotesModal()
-        }))
-      },
-      saveNote () {
-        this.responseWrapper(this.saveDataNote({
-          module: this.module,
-          entityId: this.entityId,
-          noteId: this.configNoteModal.id,
-          note: this.configNoteModal.note
-        }).then(() => {
-          this.toastMessage = (this.configNoteModal.id ? 'Existing note was edited' : 'New note was created')
-          this.closeConfigNoteModal()
-        }))
-      },
-      closeConfigNoteModal () {
-        this.configNoteModal.active = false
-        this.configNoteModal.id = ''
-        this.configNoteModal.note = ''
-      },
-      responseWrapper (promise) {
-        promise.catch(response => {
-          if (response.status === 400 && response.data) {
-            // Some problem with the operation - usually permissions issue
-            this.toastMessage = response.data.message
-          } else {
-            // Last resort - should not happen to user!
-            this.toastMessage = 'Operation could not be performed. Check your logs.'
-          }
-        })
-      },
-      sortNotes (fieldName) {
-        if (this.sort.field !== fieldName) {
-          this.sort.desc = true
-          this.sort.field = fieldName
-        } else if (this.sort.desc) {
-          this.sort.desc = false
-        } else {
-          this.sort.desc = true
-          this.sort.field = ''
+        if (valA > valB) {
+          return this.sort.desc ? 1 : -1;
         }
+        return 0;
+      });
+    },
+    noteById() {
+      return this.noteData.reduce((map, item) => {
+        map[item.uuid] = item;
+        return map;
+      }, {});
+    },
+    noteFields() {
+      return [
+        { name: 'note', title: 'Note', type: 'string' },
+        { name: 'user_name', title: 'User Name', type: 'string' },
+        {
+          name: 'accurate_for_datetime', title: 'Last Updated', type: 'string', format: 'date-time',
+        },
+      ];
+    },
+    noteModalTitle() {
+      if (this.configNoteModal.id) {
+        return 'Edit note';
       }
-    }
-  }
+      return 'Add New Note';
+    },
+    readOnlyNotes() {
+      if (this.$isAdmin()) return [];
+      return this.noteData
+        .filter((note) => note.user_id !== this.currentUser.uuid)
+        .map((note) => note.uuid);
+    },
+  },
+  data() {
+    return {
+      searchValue: '',
+      sort: {
+        field: 'accurate_for_datetime',
+        desc: false,
+      },
+      selectedNotes: [],
+      configNoteModal: {
+        active: false,
+        id: '',
+        note: '',
+      },
+      removeNoteModal: {
+        active: false,
+      },
+      toastMessage: '',
+    };
+  },
+  methods: {
+    ...mapActions({ saveDataNote: SAVE_DATA_NOTE, removeDataNote: REMOVE_DATA_NOTE }),
+    createNote() {
+      this.configNoteModal.active = true;
+    },
+    editNote(noteId) {
+      if (this.selectedNotes.length) return;
+      this.configNoteModal.active = true;
+      this.configNoteModal.id = noteId;
+      this.configNoteModal.note = this.noteById[noteId].note;
+    },
+    confirmRemoveNotes() {
+      this.removeNoteModal.active = true;
+    },
+    closeRemoveNotesModal() {
+      this.removeNoteModal.active = false;
+    },
+    removeNotes() {
+      this.responseWrapper(this.removeDataNote({
+        module: this.module,
+        entityId: this.entityId,
+        noteIdList: this.selectedNotes,
+      }).then(() => {
+        this.toastMessage = 'Notes were removed';
+        this.selectedNotes = [];
+        this.closeRemoveNotesModal();
+      }));
+    },
+    saveNote() {
+      this.responseWrapper(this.saveDataNote({
+        module: this.module,
+        entityId: this.entityId,
+        noteId: this.configNoteModal.id,
+        note: this.configNoteModal.note,
+      }).then(() => {
+        this.toastMessage = (this.configNoteModal.id ? 'Existing note was edited' : 'New note was created');
+        this.closeConfigNoteModal();
+      }));
+    },
+    closeConfigNoteModal() {
+      this.configNoteModal.active = false;
+      this.configNoteModal.id = '';
+      this.configNoteModal.note = '';
+    },
+    responseWrapper(promise) {
+      promise.catch((response) => {
+        if (response.status === 400 && response.data) {
+          // Some problem with the operation - usually permissions issue
+          this.toastMessage = response.data.message;
+        } else {
+          // Last resort - should not happen to user!
+          this.toastMessage = 'Operation could not be performed. Check your logs.';
+        }
+      });
+    },
+    sortNotes(fieldName) {
+      if (this.sort.field !== fieldName) {
+        this.sort.desc = true;
+        this.sort.field = fieldName;
+      } else if (this.sort.desc) {
+        this.sort.desc = false;
+      } else {
+        this.sort.desc = true;
+        this.sort.field = '';
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">

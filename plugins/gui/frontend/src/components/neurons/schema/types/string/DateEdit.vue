@@ -23,7 +23,7 @@
     </MdDatepicker>
     <XButton
       v-if="value && clearable"
-      link
+      type="link"
       @click="onClear"
     >X</XButton>
   </div>
@@ -110,7 +110,7 @@ export default {
             min-height: auto;
             margin-bottom: 0;
         }
-        .x-button.link {
+        .x-button.ant-btn-link {
             margin-left: -16px;
             margin-bottom: 0;
             z-index: 100;

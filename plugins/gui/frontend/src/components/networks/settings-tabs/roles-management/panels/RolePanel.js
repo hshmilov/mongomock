@@ -412,11 +412,11 @@ export default {
               {this.genNameMarkup()}
               <div class="collapse-expand-buttons">
                 <XButton
-                  link
+                  type="link"
                   onClick={this.expandAll}
                 >Expand All</XButton>
                 <XButton
-                  link
+                  type="link"
                   onClick={this.collapseAll}
                 >Collapse All</XButton>
               </div>
@@ -441,11 +441,12 @@ export default {
                     {
                       this.mode === FormMode.EditRole ? (
                         <XButton
-                          link
+                          type="link"
                           onClick={this.toggleEditMode}>Cancel</XButton>
                       ) : null
                     }
                     <XButton
+                      type="primary"
                       onClick={this.saveRole}
                       disabled={this.isFormInvalid}
                     >Save</XButton>

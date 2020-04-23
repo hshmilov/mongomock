@@ -34,13 +34,13 @@
         </x-type-wrap>
         <x-button
           v-if="!isOrderedObject"
-          link
+          type="link"
           @click.prevent="removeItem(index)"
         >x</x-button>
       </div>
       <x-button
         v-if="!isOrderedObject"
-        light
+        type="light"
         @click.prevent="addNewItem"
       >+</x-button>
     </template>
@@ -293,10 +293,10 @@
       }
 
       .x-button {
-        &.link {
+        &.ant-btn-link {
           text-align: right;
         }
-        &.light {
+        &.ant-btn-light {
           margin-top: 8px;
           display: block;
         }

@@ -81,10 +81,10 @@ class DashboardPage(Page):
     PAGINATOR_LIMIT = '.num-of-items'
     PAGINATOR_TO = ' .to-item'
     PAGINATOR_BUTTON = f'{PAGINATOR_CLASS} .x-button'
-    PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.first'
-    PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.previous'
-    PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.next'
-    PAGINATOR_LAST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.link.last'
+    PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.first'
+    PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.previous'
+    PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.next'
+    PAGINATOR_LAST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.last'
     HISTOGRAM_ITEMS = '.histogram-container .histogram-item'
     PAGINATOR_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} {PAGINATOR_LIMIT}'
     PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .total-num-of-items'
@@ -720,8 +720,8 @@ class DashboardPage(Page):
     @staticmethod
     def assert_cycle_start_and_finish_dates(card):
         dates = card.find_elements_by_css_selector('.cycle-date')
-        date_start = datetime.datetime.strptime(dates[0].text, '%Y-%m-%d %H:%M:%S')
-        date_finish = datetime.datetime.strptime(dates[1].text, '%Y-%m-%d %H:%M:%S')
+        date_start = datetime.datetime.strptime(dates[0].text.strip(), '%Y-%m-%d %H:%M:%S')
+        date_finish = datetime.datetime.strptime(dates[1].text.strip(), '%Y-%m-%d %H:%M:%S')
         assert date_finish > date_start
 
     @staticmethod
@@ -731,11 +731,11 @@ class DashboardPage(Page):
 
     @staticmethod
     def assert_plus_button_in_card(card):
-        assert card.find_element_by_css_selector('.x-button.link').text == '+'
+        assert card.find_element_by_css_selector('.x-button.ant-btn-link').text == '+'
 
     @staticmethod
     def assert_plus_button_disabled_in_card(card):
-        assert card.find_element_by_css_selector('.x-button.link.disabled').text == '+'
+        assert card.find_element_by_css_selector('.x-button.ant-btn-link.disabled').text == '+'
 
     @staticmethod
     def find_adapter_in_card(card, adapter):
@@ -840,14 +840,14 @@ class DashboardPage(Page):
     def is_missing_remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable
         space_header = self.find_space_header(index)
-        return len(space_header.find_elements_by_css_selector('.x-button.link')) == 0
+        return len(space_header.find_elements_by_css_selector('.x-button.ant-btn-link')) == 0
 
     def remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable
         space_header = self.find_space_header(index)
         space_header_text = space_header.text
         ActionChains(self.driver).move_to_element(space_header).perform()
-        space_header.find_element_by_css_selector('.x-button.link').click()
+        space_header.find_element_by_css_selector('.x-button.ant-btn-link').click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.click_button('Remove Space')
         self.wait_for_element_absent_by_text(space_header_text)

@@ -1,7 +1,7 @@
 <template>
   <div class="x-chart-metric">
     <label>Module for chart:</label>
-    <x-select-symbol
+    <XSelectSymbol
       id="module"
       :value="entity"
       :options="entities"
@@ -12,7 +12,7 @@
     />
 
     <label>Base query:</label>
-    <x-select
+    <XSelect
       id="baseQuery"
       v-model="base"
       :options="views[entity]"
@@ -22,7 +22,7 @@
     />
 
     <label>Intersecting query:</label>
-    <x-select
+    <XSelect
       id="intersectingFirst"
       :value="intersecting[0]"
       :options="views[entity]"
@@ -33,7 +33,7 @@
     />
     <template v-if="intersecting.length > 1">
       <label>Intersecting query:</label>
-      <x-select
+      <XSelect
         id="intersectingSecond"
         :value="intersecting[1]"
         :options="views[entity]"
@@ -41,103 +41,103 @@
         placeholder="query..."
         @input="(view) => updateIntersecting(1, view)"
       />
-      <x-button
-        link
+      <XButton
+        type="link"
         @click="removeIntersecting(1)"
-      >x</x-button>
+      >x</XButton>
     </template>
-    <x-button
-      light
+    <XButton
+      type="light"
       :disabled="hasMaxViews"
       class="grid-span3"
       :title="addBtnTitle"
       @click="addIntersecting"
-    >+</x-button>
+    >+</XButton>
   </div>
 </template>
 
 <script>
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xSelect from '../../../axons/inputs/select/Select.vue'
-  import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue'
-  import chartMixin from './chart'
+import XButton from '../../../axons/inputs/Button.vue';
+import XSelect from '../../../axons/inputs/select/Select.vue';
+import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
+import chartMixin from './chart';
 
-  export default {
-    name: 'XChartIntersect',
-    components: { xButton, xSelect, xSelectSymbol },
-    mixins: [chartMixin],
-    data () {
+export default {
+  name: 'XChartIntersect',
+  components: { XButton, XSelect, XSelectSymbol },
+  mixins: [chartMixin],
+  data() {
+    return {
+      max: 2,
+    };
+  },
+  computed: {
+    initConfig() {
       return {
-        max: 2
-      }
+        entity: '', base: '', intersecting: ['', ''],
+      };
     },
-    computed: {
-      initConfig () {
-        return {
-          entity: '', base: '', intersecting: ['', '']
-        }
+    entity: {
+      get() {
+        return this.config.entity;
       },
-      entity: {
-        get () {
-          return this.config.entity
-        },
-        set (entity) {
-          this.config = { ...this.config, entity}
-        }
-      },
-      base: {
-        get () {
-          return this.config.base
-        },
-        set (base) {
-          this.config = { ...this.config, base }
-        }
-      },
-      intersecting: {
-        get () {
-          return this.config.intersecting
-        },
-        set (intersecting) {
-          this.config = { ...this.config, intersecting: [...intersecting]}
-        }
-      },
-      hasMaxViews () {
-        if (!this.max) return false
-        return this.intersecting.length === this.max
-      },
-      addBtnTitle() {
-        return this.hasMaxViews? `Limited to ${this.max} intersecting queries` : ''
+      set(entity) {
+        this.config = { ...this.config, entity };
       },
     },
-    methods: {
-      updateEntity (entity) {
-        if (entity === this.entity) return
-        this.config = {
-          entity,
-          base: '',
-          intersecting: ['', '']
-        }
-        this.$emit('state')
+    base: {
+      get() {
+        return this.config.base;
       },
-      removeIntersecting (index) {
-        this.intersecting.splice(index, 1)
-        this.intersecting = [...this.intersecting]
+      set(base) {
+        this.config = { ...this.config, base };
       },
-      addIntersecting () {
-        this.intersecting = [...this.intersecting, '']
+    },
+    intersecting: {
+      get() {
+        return this.config.intersecting;
       },
-      updateIntersecting(index, view) {
-        this.intersecting = this.intersecting.map((item, ind) => {
-          if (ind === index) return view
-          return item
-        })
-        this.$emit('state')
+      set(intersecting) {
+        this.config = { ...this.config, intersecting: [...intersecting] };
       },
-      validate () {
-        this.$emit('validate', !this.intersecting.filter(view => view === '').length)
-      }
-    }
-  }
+    },
+    hasMaxViews() {
+      if (!this.max) return false;
+      return this.intersecting.length === this.max;
+    },
+    addBtnTitle() {
+      return this.hasMaxViews ? `Limited to ${this.max} intersecting queries` : '';
+    },
+  },
+  methods: {
+    updateEntity(entity) {
+      if (entity === this.entity) return;
+      this.config = {
+        entity,
+        base: '',
+        intersecting: ['', ''],
+      };
+      this.$emit('state');
+    },
+    removeIntersecting(index) {
+      this.intersecting.splice(index, 1);
+      this.intersecting = [...this.intersecting];
+    },
+    addIntersecting() {
+      this.intersecting = [...this.intersecting, ''];
+    },
+    updateIntersecting(index, view) {
+      this.intersecting = this.intersecting.map((item, ind) => {
+        if (ind === index) return view;
+        return item;
+      });
+      this.$emit('state');
+    },
+    validate() {
+      this.$emit('validate', !this.intersecting.filter((view) => view === '').length);
+    },
+  },
+};
 </script>
 
 <style lang="scss">

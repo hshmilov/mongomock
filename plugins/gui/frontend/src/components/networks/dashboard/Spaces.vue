@@ -79,12 +79,15 @@
       :panel="wizard.panel"
       @close="closeWizard"
     />
-    <MoveOrCopy v-if="moveOrCopyActive" />
+    <MoveOrCopy
+      v-if="moveOrCopyActive"
+    />
   </div>
 </template>
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
+import _get from 'lodash/get';
 import XTabs from '../../axons/tabs/Tabs.vue';
 import XTab from '../../axons/tabs/Tab.vue';
 import XDefaultSpace from './DefaultSpace.vue';
@@ -117,7 +120,6 @@ export default {
       processing: false,
       editCustomSpace: false,
       moveOrCopy: {
-        active: false,
         space: '',
       },
 
@@ -129,7 +131,7 @@ export default {
         return state.dashboard.moveOrCopyActive;
       },
       currentSpace(state) {
-        return state.dashboard.currentSpace || (this.defaultSpace && this.defaultSpace.uuid);
+        return state.dashboard.currentSpace || _get(this.defaultSpace, 'uuid');
       },
     }),
     defaultSpace() {

@@ -230,7 +230,8 @@ class TestDashboardActions(TestBase):
         if do_remove:
             self.dashboard_page.remove_chart_segment_filter(filter_position)
 
-    def assert_current_page_and_total_items_histogram_chart(self, histogram_chart, assert_data, first=True):
+    def assert_current_page_and_total_items_histogram_chart(self, card, assert_data, first=True):
+        histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
         total_items = self.dashboard_page.get_paginator_total_num_of_items(histogram_chart)
         if first:
             current_page_number = self.dashboard_page.get_paginator_num_of_items(histogram_chart)
@@ -263,36 +264,31 @@ class TestDashboardActions(TestBase):
                                                       field=ASSET_NAME_FIELD_NAME,
                                                       title=self.TEST_EDIT_CARD_TITLE)
             card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
             self.toggle_card_search(card)
             self.fill_card_search(card, '10')
 
             # check search worked
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['5', '16'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '16'])
             self.fill_card_search(card, 'avigdor')
 
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '600'])
             histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['5', '600'])
             for _ in range(12):
                 self.dashboard_page.click_to_next_page(histogram_chart)
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
             # check for total number wont change after fetch more data
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['61-65', '600'], False)
+            self.assert_current_page_and_total_items_histogram_chart(card, ['61-65', '600'], False)
             self.fill_card_search(card, '')
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
             # check if get back to page one
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
             self.fill_card_search(card, '100')
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['1', '1'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '1'])
             self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
             self.dashboard_page.click_card_save()
             # wait for animation to finish
             time.sleep(1)
             # check if filter reset
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-            self.assert_current_page_and_total_items_histogram_chart(histogram_chart, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
             assert self.dashboard_page.get_card_search_input_text(card) == ''
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
             self.wait_for_adapter_down(STRESSTEST_ADAPTER)

@@ -17,27 +17,36 @@
       :draggable="true"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
-      @export="() => exportCSV(chart.uuid, chart.name, chart.historical)"
     />
     <slot name="pre" />
     <slot name="post" />
-    <XCard
+    <div
       v-if="$can($permissionConsts.categories.Dashboard,
                  $permissionConsts.actions.Add,
                  $permissionConsts.categories.Charts)"
       :show-menu="false"
       :key="9999"
-      title="New Chart"
-      class="chart-new print-exclude"
+      class="x-card chart-new print-exclude"
     >
-      <XButton
-        :id="newId"
-        link
-        @click="addNewPanel"
-      >
-        +
-      </XButton>
-    </XCard>
+      <div class="header">
+        <div class="header__title">
+          <div
+            class="card-title"
+            title="New Chart"
+          >New Chart</div>
+        </div>
+      </div>
+      <div class="body">
+        <XButton
+          :id="newId"
+          type="link"
+          :disabled="isReadOnly"
+          @click="addNewPanel"
+        >
+          +
+        </XButton>
+      </div>
+    </div>
     <XToast
       v-if="message"
       v-model="message"
@@ -64,9 +73,8 @@ import Draggable from 'vuedraggable';
 import {
   mapState, mapMutations, mapActions,
 } from 'vuex';
-import XCard from '../../axons/layout/Card.vue';
 import XButton from '../../axons/inputs/Button.vue';
-import xToast from '../../axons/popover/Toast.vue';
+import XToast from '../../axons/popover/Toast.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 import XPanel from './Panel.vue';
 
@@ -78,7 +86,7 @@ import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 export default {
   name: 'XPanels',
   components: {
-    XCard, XButton, xToast, XModal, Draggable, XPanel,
+    XButton, XToast, XModal, Draggable, XPanel,
   },
   props: {
     panels: {
@@ -184,13 +192,6 @@ export default {
         },
       });
     },
-    exportCSV(uuid, name, historical) {
-      this.fetchChartSegmentsCSV({
-        uuid,
-        name,
-        historical,
-      });
-    },
     cancelRemovePanel() {
       this.removed = null;
     },
@@ -276,7 +277,7 @@ export default {
             }
         }
         .chart-new {
-            .x-button.link {
+            .x-button.ant-btn-link {
                 font-size: 144px;
                 text-align: center;
                 width: 100%;

@@ -32,6 +32,7 @@
         {{ nameError || formError }}
       </div>
       <XButton
+        type="primary"
         v-if="!readOnly"
         :disabled="disableConfirm"
         @click="confirmAction"

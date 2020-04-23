@@ -2,12 +2,12 @@
   <div class="x-condition-asset-entity-child x-condition__child">
     <div class="child-field">
       <div class="child-field__type">
-        <x-string-view
+        <XStringView
           :value="parentField"
           :schema="{format: 'logo'}"
         />
       </div>
-      <x-select
+      <XSelect
         v-model="field"
         :options="schema"
         searchable
@@ -15,19 +15,19 @@
         class="field-select"
       />
     </div>
-    <x-condition-function
+    <XConditionFunction
       :schema="fieldSchema"
       :operator="condition.compOp"
       :argument="condition.value"
       :read-only="readOnly"
       @update="onUpdateConditionFunction"
     />
-    <x-button
+    <XButton
       v-if="!readOnly"
-      link
+      type="link"
       class="child-remove"
       @click="$emit('remove')"
-    >x</x-button>
+    >x</XButton>
   </div>
 </template>
 

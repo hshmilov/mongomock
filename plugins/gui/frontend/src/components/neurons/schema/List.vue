@@ -1,16 +1,16 @@
 <template>
   <div class="x-list">
     <div class="list-actions">
-      <x-button
-        link
+      <XButton
+        type="link"
         @click="expandAll"
-      >+ Expand All</x-button>
-      <x-button
-        link
+      >+ Expand All</XButton>
+      <XButton
+        type="link"
         @click="collapseAll"
-      >- Collapse All</x-button>
+      >- Collapse All</XButton>
     </div>
-    <x-array-view
+    <XArrayView
       ref="arrayView"
       :value="data"
       :schema="schema"
@@ -19,34 +19,34 @@
 </template>
 
 <script>
-  import xArrayView from './types/array/ArrayView.vue'
-  import xButton from '../../axons/inputs/Button.vue'
+import XArrayView from './types/array/ArrayView.vue';
+import XButton from '../../axons/inputs/Button.vue';
 
-  /*
+/*
       Dynamically built list of nested data, structured according to given schema, filled with given value.
       Schema is expected to be of type array (can be tuple). Data is expected to comply to given schema's definition.
       If limit is on, only data included in 'required' will be presented.
    */
-  export default {
-    name: 'XList',
-    components: { xArrayView, xButton },
-    props: {
-      data: {
-        required: true
-      },
-      schema: {
-        required: true
-      }
+export default {
+  name: 'XList',
+  components: { XArrayView, XButton },
+  props: {
+    data: {
+      required: true,
     },
-    methods: {
-      expandAll () {
-        this.$refs.arrayView.collapseRecurse(false)
-      },
-      collapseAll () {
-        this.$refs.arrayView.collapseRecurse(true)
-      }
-    }
-  }
+    schema: {
+      required: true,
+    },
+  },
+  methods: {
+    expandAll() {
+      this.$refs.arrayView.collapseRecurse(false);
+    },
+    collapseAll() {
+      this.$refs.arrayView.collapseRecurse(true);
+    },
+  },
+};
 </script>
 
 <style lang="scss">

@@ -197,7 +197,7 @@ export default {
             ) : null
           }
           <div class="buttons">
-            <XButton onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
+            <XButton type="primary" onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
           </div>
         </div>
       </XSidePanel>

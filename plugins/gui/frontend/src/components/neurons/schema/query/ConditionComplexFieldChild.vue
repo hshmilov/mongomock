@@ -1,40 +1,40 @@
 <template>
   <div class="x-condition-complex-field-child x-condition__child">
-    <x-select
+    <XSelect
       v-model="field"
       :options="schema"
       searchable
       :read-only="readOnly"
       class="field-select"
     />
-    <x-condition-function
+    <XConditionFunction
       :schema="fieldSchema"
       :operator="condition.compOp"
       :argument="condition.value"
       :read-only="readOnly"
       @update="onUpdateConditionFunction"
     />
-    <x-button
+    <XButton
       v-if="!readOnly"
-      link
+      type="link"
       class="child-remove"
       @click="$emit('remove')"
-    >x</x-button>
+    >x</XButton>
   </div>
 </template>
 
 <script>
 import _keyBy from 'lodash/keyBy';
-import xSelect from '../../../axons/inputs/select/Select.vue';
-import xConditionFunction from './ConditionFunction.vue';
-import xButton from '../../../axons/inputs/Button.vue';
+import XSelect from '../../../axons/inputs/select/Select.vue';
+import XConditionFunction from './ConditionFunction.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 
 export default {
   name: 'XConditionComplexFieldChild',
   components: {
-    xSelect, xConditionFunction, xButton,
+    XSelect, XConditionFunction, XButton,
   },
   model: {
     prop: 'condition',

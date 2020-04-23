@@ -28,6 +28,7 @@
               @assign="openModalAssignRole"
             />
             <XButton
+              type="primary"
               :disabled="!canAdd"
               @click="onCareateNewUser"
             >Add User</XButton>

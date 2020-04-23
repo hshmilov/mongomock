@@ -9,7 +9,7 @@
         <div class="config-base">
           <label>Saved Query:</label>
           <div class="base-query">
-            <x-select-symbol
+            <XSelectSymbol
               v-model="config.view.entity"
               :options="entityOptions"
               type="icon"
@@ -17,7 +17,7 @@
               :read-only="readOnly"
               minimal
             />
-            <x-select
+            <XSelect
               v-model="config.view.name"
               :options="viewOptions"
               searchable
@@ -27,7 +27,7 @@
             />
           </div>
         </div>
-        <x-checkbox
+        <XCheckbox
           v-model="config.run_on"
           value="AddedEntities"
           :read-only="readOnly"
@@ -36,7 +36,7 @@
       </div>
       <div class="section">
         <div class="header">
-          <x-checkbox
+          <XCheckbox
             v-model="showScheduling"
             :read-only="readOnly"
           />
@@ -72,7 +72,7 @@
             </div>
           </div>
           <div class="header">
-            <x-checkbox
+            <XCheckbox
               v-model="showConditions"
               :read-only="readOnly"
             />
@@ -86,18 +86,18 @@
             v-if="showConditions"
             class="config"
           >
-            <x-checkbox
+            <XCheckbox
               v-model="conditions.new_entities"
               label="New entities were added to results"
               :read-only="readOnly"
             />
-            <x-checkbox
+            <XCheckbox
               v-model="conditions.previous_entities"
               label="Previous entities were subtracted from results"
               :read-only="readOnly"
             />
             <div class="config-item">
-              <x-checkbox
+              <XCheckbox
                 v-model="showAbove"
                 label="The number of results is above..."
                 :read-only="readOnly"
@@ -112,7 +112,7 @@
               >
             </div>
             <div class="config-item">
-              <x-checkbox
+              <XCheckbox
                 v-model="showBelow"
                 label="The number of results is below..."
                 :read-only="readOnly"
@@ -131,173 +131,169 @@
       </div>
     </div>
     <div class="footer">
-      <x-button
+      <XButton
         v-if="!readOnly"
+        type="primary"
         :disabled="disableConfirm"
         @click="confirmTrigger"
-      >Save</x-button>
+      >Save</XButton>
     </div>
   </div>
 </template>
 
 <script>
-    import xSelect from '../../axons/inputs/select/Select.vue'
-    import xButton from '../../axons/inputs/Button.vue'
-    import xCheckbox from '../../axons/inputs/Checkbox.vue'
-    import xSelectSymbol from '../../neurons/inputs/SelectSymbol.vue'
+import { mapState } from 'vuex';
+import XSelect from '../../axons/inputs/select/Select.vue';
+import XButton from '../../axons/inputs/Button.vue';
+import XCheckbox from '../../axons/inputs/Checkbox.vue';
+import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
 
-    import viewsMixin from '../../../mixins/views'
-    import {validateInteger} from '../../../constants/validations'
-    import {mapState} from 'vuex'
+import viewsMixin from '../../../mixins/views';
+import { validateInteger } from '../../../constants/validations';
 
-    export default {
-        name: 'XTriggerConfig',
-        components: {
-            xSelect, xButton, xCheckbox, xSelectSymbol
-        },
-        mixins: [viewsMixin],
-        props: {
-            value: {
-                type: Object,
-                default: () => {}
-            },
-            readOnly: Boolean
-        },
-        computed: {
-            ...mapState({
-                triggerPeriods(state) {
-                    return state.constants.constants.trigger_periods
-                }
-            }),
-            config: {
-                get() {
-                    if (!this.value) return {}
-                    return this.value
-                },
-                set(config) {
-                    this.$emit('input', config)
-                }
-            },
-            viewEntity() {
-              return this.config.view.entity
-            },
-            periodOptions() {
-                return this.triggerPeriods.map((x) => {
-                    return Object.entries(x).map(([name, title]) => {
-                        return {name, title, id: `${name}_period`}
-                    })
-                }).map((x) => x[0])
-
-            },
-            conditions() {
-                return this.config.conditions
-            },
-            disableConfirm() {
-                return Boolean(!(this.config.view.name && this.config.view.entity))
-            },
-            runOn() {
-                return this.config.run_on
-            },
-            viewOptions() {
-                if (!this.views || !this.config.view.entity) return
-                let views = this.views[this.config.view.entity]
-                if (this.config.view.name && !views.some(view => view.name === this.config.view.name)) {
-                    views.push({
-                        name: this.config.view.name, title: `${this.config.view.name} (deleted)`
-                    })
-                }
-                return views
-            },
-            showScheduling: {
-                get() {
-                    return this.config.period !== 'never'
-                },
-                set(show) {
-                    this.config.period = show? 'all': 'never'
-                }
-            },
-            anyConditions() {
-                if (!this.conditions) return false
-                // the reason for the '!!' is that these conditions might be integers
-                return (!!this.conditions.new_entities) || (!!this.conditions.previous_entities)
-                        || (!!this.conditions.above) || (!!this.conditions.below)
-            },
-            showAbove: {
-                get() {
-                    return Boolean(this.config.conditions.above)
-                },
-                set(show) {
-                    this.config.conditions.above = show? 1: null
-                }
-            },
-            showBelow: {
-                get() {
-                    return Boolean(this.config.conditions.below)
-                },
-                set(show) {
-                    this.config.conditions.below = show? 1: null
-                }
-            },
-            above: {
-                get() {
-                    return this.conditions.above
-                },
-                set(value) {
-                  if (!value) return
-                  this.conditions.above = parseInt(value) > 0 ? parseInt(value) : 0
-                }
-            },
-            below: {
-                get() {
-                    return this.conditions.below
-                },
-                set(value) {
-                  if (!value) return
-                  this.conditions.below = parseInt(value) > 0 ? parseInt(value) : 0
-                }
-            }
-        },
-        data() {
-            return {
-              showConditions: false
-            }
-        },
-        watch: {
-            runOn() {
-                if (!this.runOn) {
-                    this.config.run_on = 'AllEntities'
-                }
-            },
-            viewEntity(newEntity, oldEntity) {
-                if (newEntity !== oldEntity) {
-                  this.config.view.name = ''
-                }
-            }
-        },
-        mounted() {
-            this.showConditions = this.anyConditions
-        },
-        methods: {
-            validateInteger,
-            confirmTrigger() {
-                this.$emit('confirm')
-            },
-            toggleScheduling() {
-                this.showScheduling = !this.showScheduling
-            },
-            toggleConditions() {
-                this.showConditions = !this.showConditions
-                if (!this.showConditions) {
-                  this.config.conditions = {
-                    new_entities: false,
-                    previous_entities: false,
-                    above: null,
-                    below: null
-                  }
-                }
-            }
-        }
-    }
+export default {
+  name: 'XTriggerConfig',
+  components: {
+    XSelect, XButton, XCheckbox, XSelectSymbol,
+  },
+  mixins: [viewsMixin],
+  props: {
+    value: {
+      type: Object,
+      default: () => {},
+    },
+    readOnly: Boolean,
+  },
+  computed: {
+    ...mapState({
+      triggerPeriods(state) {
+        return state.constants.constants.trigger_periods;
+      },
+    }),
+    config: {
+      get() {
+        if (!this.value) return {};
+        return this.value;
+      },
+      set(config) {
+        this.$emit('input', config);
+      },
+    },
+    viewEntity() {
+      return this.config.view.entity;
+    },
+    periodOptions() {
+      return this.triggerPeriods.map((x) => Object.entries(x).map(([name, title]) => ({ name, title, id: `${name}_period` }))).map((x) => x[0]);
+    },
+    conditions() {
+      return this.config.conditions;
+    },
+    disableConfirm() {
+      return Boolean(!(this.config.view.name && this.config.view.entity));
+    },
+    runOn() {
+      return this.config.run_on;
+    },
+    viewOptions() {
+      if (!this.views || !this.config.view.entity) return;
+      const views = this.views[this.config.view.entity];
+      if (this.config.view.name && !views.some((view) => view.name === this.config.view.name)) {
+        views.push({
+          name: this.config.view.name, title: `${this.config.view.name} (deleted)`,
+        });
+      }
+      return views;
+    },
+    showScheduling: {
+      get() {
+        return this.config.period !== 'never';
+      },
+      set(show) {
+        this.config.period = show ? 'all' : 'never';
+      },
+    },
+    anyConditions() {
+      if (!this.conditions) return false;
+      // the reason for the '!!' is that these conditions might be integers
+      return (!!this.conditions.new_entities) || (!!this.conditions.previous_entities)
+                        || (!!this.conditions.above) || (!!this.conditions.below);
+    },
+    showAbove: {
+      get() {
+        return Boolean(this.config.conditions.above);
+      },
+      set(show) {
+        this.config.conditions.above = show ? 1 : null;
+      },
+    },
+    showBelow: {
+      get() {
+        return Boolean(this.config.conditions.below);
+      },
+      set(show) {
+        this.config.conditions.below = show ? 1 : null;
+      },
+    },
+    above: {
+      get() {
+        return this.conditions.above;
+      },
+      set(value) {
+        if (!value) return;
+        this.conditions.above = parseInt(value) > 0 ? parseInt(value) : 0;
+      },
+    },
+    below: {
+      get() {
+        return this.conditions.below;
+      },
+      set(value) {
+        if (!value) return;
+        this.conditions.below = parseInt(value) > 0 ? parseInt(value) : 0;
+      },
+    },
+  },
+  data() {
+    return {
+      showConditions: false,
+    };
+  },
+  watch: {
+    runOn() {
+      if (!this.runOn) {
+        this.config.run_on = 'AllEntities';
+      }
+    },
+    viewEntity(newEntity, oldEntity) {
+      if (newEntity !== oldEntity) {
+        this.config.view.name = '';
+      }
+    },
+  },
+  mounted() {
+    this.showConditions = this.anyConditions;
+  },
+  methods: {
+    validateInteger,
+    confirmTrigger() {
+      this.$emit('confirm');
+    },
+    toggleScheduling() {
+      this.showScheduling = !this.showScheduling;
+    },
+    toggleConditions() {
+      this.showConditions = !this.showConditions;
+      if (!this.showConditions) {
+        this.config.conditions = {
+          new_entities: false,
+          previous_entities: false,
+          above: null,
+          below: null,
+        };
+      }
+    },
+  },
+};
 </script>
 
 <style lang="scss">

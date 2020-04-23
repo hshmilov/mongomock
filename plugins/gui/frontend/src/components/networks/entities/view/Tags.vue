@@ -1,26 +1,28 @@
 <template>
   <div class="x-entity-tags">
     <div class="tag-edit">
-      <x-button
-        link
+      <XButton
+        type="link"
         :disabled="userCannotEditDevices"
         @click="activateTag"
-      >Edit Tags</x-button>
+      >Edit Tags</XButton>
     </div>
     <div class="tag-list w-lg">
       <template v-for="(tag, i) in tags">
         <div :key="i">
-          <v-chip class="tag">{{ tag }}</v-chip>
+          <VChip class="tag">
+            {{ tag }}
+          </VChip>
         </div>
-        <x-button
+        <XButton
           :key="tag"
-          link
+          type="link"
           :disabled="userCannotEditDevices"
           @click="removeTag(tag)"
-        >Remove</x-button>
+        >Remove</XButton>
       </template>
     </div>
-    <x-tag-modal
+    <XTagModal
       ref="tagModal"
       :module="module"
       :entities="entitySelection"
@@ -30,52 +32,52 @@
 </template>
 
 <script>
-  import xButton from '../../../axons/inputs/Button.vue'
-  import xTagModal from '../../../neurons/popover/TagModal.vue'
-  import { getEntityPermissionCategory } from '@constants/entities';
+import { getEntityPermissionCategory } from '@constants/entities';
+import XButton from '../../../axons/inputs/Button.vue';
+import XTagModal from '../../../neurons/popover/TagModal.vue';
 
-  export default {
-    name: 'XEntityTags',
-    components: {
-      xButton, xTagModal
+export default {
+  name: 'XEntityTags',
+  components: {
+    XButton, XTagModal,
+  },
+  props: {
+    module: {
+      type: String,
+      required: true,
     },
-    props: {
-      module: {
-        type: String,
-        required: true
-      },
-      entityId: {
-        type: String,
-        required: true
-      },
-      tags: {
-        type: Array,
-        required: true
-      },
+    entityId: {
+      type: String,
+      required: true,
     },
-    computed: {
-      entitySelection () {
-        return {
-          ids: [this.entityId],
-          include: true
-        }
-      },
-      userCannotEditDevices() {
-        return this.$cannot(getEntityPermissionCategory(this.module),
-          this.$permissionConsts.actions.Update);
-      },
+    tags: {
+      type: Array,
+      required: true,
     },
-    methods: {
-      removeTag (tag) {
-        if (!this.$refs || !this.$refs.tagModal) return
-        this.$refs.tagModal.removeEntitiesLabels([tag])
-      },
-      activateTag () {
-        if (!this.$refs || !this.$refs.tagModal) return
-        this.$refs.tagModal.activate()
-      }
-    }
-  }
+  },
+  computed: {
+    entitySelection() {
+      return {
+        ids: [this.entityId],
+        include: true,
+      };
+    },
+    userCannotEditDevices() {
+      return this.$cannot(getEntityPermissionCategory(this.module),
+        this.$permissionConsts.actions.Update);
+    },
+  },
+  methods: {
+    removeTag(tag) {
+      if (!this.$refs || !this.$refs.tagModal) return;
+      this.$refs.tagModal.removeEntitiesLabels([tag]);
+    },
+    activateTag() {
+      if (!this.$refs || !this.$refs.tagModal) return;
+      this.$refs.tagModal.activate();
+    },
+  },
+};
 </script>
 
 <style lang="scss">

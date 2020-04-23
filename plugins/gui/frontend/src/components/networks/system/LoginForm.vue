@@ -11,6 +11,7 @@
       @submit="onLogin"
     />
     <XButton
+      type="primary"
       :disabled="invalidForm"
       @click="onLogin"
     >Login</XButton>

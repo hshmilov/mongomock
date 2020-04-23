@@ -5,7 +5,7 @@
       class="filter-title"
     >Show only data:</div>
     <template v-if="disabled">
-      <x-expression
+      <XExpression
         v-for="(expression, i) in expressions"
         :key="expression.i"
         ref="expression"
@@ -17,7 +17,7 @@
         @remove="() => removeExpression(i)"
       />
     </template>
-    <draggable
+    <Draggable
       v-else
       v-model="expressions"
       tag="ul"
@@ -29,12 +29,12 @@
         :key="expression.i"
         :class="expressionContainerCSSClass"
       >
-        <v-icon
+        <VIcon
           v-if="expressions.length > 1"
           size="15"
           class="draggable-expression-handle"
-        >$vuetify.icons.draggable</v-icon>
-        <x-expression
+        >$vuetify.icons.draggable</VIcon>
+        <XExpression
           ref="expression"
           v-model="expressions[i]"
           :disabled="disabled"
@@ -44,15 +44,15 @@
           @remove="() => removeExpression(i)"
         />
       </li>
-    </draggable>
+    </Draggable>
     <div
       v-if="!disabled"
       class="footer"
     >
-      <x-button
-        light
+      <XButton
+        type="light"
         @click="addEmptyExpression"
-      >+</x-button>
+      >+</XButton>
       <div
         v-if="error"
         class="error-text"
@@ -62,16 +62,16 @@
 </template>
 
 <script>
-import xButton from '@axons/inputs/Button.vue';
+import XButton from '@axons/inputs/Button.vue';
 import { calcMaxIndex } from '@constants/utils';
 import { expression } from '@constants/filter';
-import draggable from 'vuedraggable';
+import Draggable from 'vuedraggable';
 import { mdiDrag } from '@mdi/js';
-import xExpression from './Expression.vue';
+import XExpression from './Expression.vue';
 
 export default {
   name: 'XFilter',
-  components: { xExpression, xButton, draggable },
+  components: { XExpression, XButton, Draggable },
   props: {
     module: {
       type: String,
@@ -160,7 +160,7 @@ export default {
             grid-template-columns: auto 20px;
             grid-column-gap: 4px;
 
-            .link {
+            .ant-btn-link {
                 text-align: center;
             }
         }

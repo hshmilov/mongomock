@@ -9,14 +9,14 @@
         :key="index"
         class="view"
       >
-        <x-select-symbol
+        <XSelectSymbol
           :value="view.entity"
           :options="entities"
           type="icon"
           placeholder="Module..."
           @input="updateEntity(index, $event)"
         />
-        <x-select
+        <XSelect
           :value="view.name"
           :options="views[view.entity]"
           :searchable="true"
@@ -24,109 +24,109 @@
           class="view-name"
           @input="updateName(index, $event)"
         />
-        <x-button
+        <XButton
           v-if="isItemDeletable(index)"
-          link
+          type="link"
           class="add_query"
           @click="removeView(index)"
-        >x</x-button>
+        >x</XButton>
         <div
           v-else
         />
       </div>
     </div>
-    <x-button
+    <XButton
       id="add_view"
-      light
+      type="light"
       :disabled="hasMaxViews"
       :title="addBtnTitle"
       @click="addView"
-    >+</x-button>
+    >+</XButton>
   </div>
 </template>
 
 <script>
-  import xSelectSymbol from './SelectSymbol.vue'
-  import xSelect from '../../axons/inputs/select/Select.vue'
-  import xButton from '../../axons/inputs/Button.vue'
+import XSelectSymbol from './SelectSymbol.vue';
+import XSelect from '../../axons/inputs/select/Select.vue';
+import XButton from '../../axons/inputs/Button.vue';
 
-  const dashboardView = { name: '', entity: '' }
-  export default {
-    name: 'XSelectViews',
-    components: {
-      xSelectSymbol, xSelect, xButton
+const dashboardView = { name: '', entity: '' };
+export default {
+  name: 'XSelectViews',
+  components: {
+    XSelectSymbol, XSelect, XButton,
+  },
+  props: {
+    value: {
+      type: Array,
+      default: () => ([]),
     },
-    props: {
-      value: {
-        type: Array,
-        default: () => []
-      },
-      entities: {
-        type: Array,
-        required: true
-      },
-      views: {
-        type: Object,
-        default: () => {}
-      },
-      max: {
-        type: Number,
-        default: 0
-      },
-      min: {
-        type: Number,
-        default: 0
-      }
+    entities: {
+      type: Array,
+      required: true,
     },
-    computed: {
-      selected: {
-        get () {
-          return this.value
-        },
-        set (selected) {
-          this.$emit('input', selected)
+    views: {
+      type: Object,
+      default: () => ({}),
+    },
+    max: {
+      type: Number,
+      default: 0,
+    },
+    min: {
+      type: Number,
+      default: 0,
+    },
+  },
+  computed: {
+    selected: {
+      get() {
+        return this.value;
+      },
+      set(selected) {
+        this.$emit('input', selected);
+      },
+    },
+    addBtnTitle() {
+      return this.hasMaxViews ? `Limited to ${this.max} queries` : '';
+    },
+    hasMaxViews() {
+      if (!this.max || !this.selected) return false;
+      return this.selected.length === this.max;
+    },
+  },
+  methods: {
+    updateName(index, name) {
+      this.selected = this.selected.map((item, i) => {
+        if (i === index) {
+          item.name = name;
         }
-      },
-      addBtnTitle() {
-        return this.hasMaxViews? `Limited to ${this.max} queries` : ''
-      },
-      hasMaxViews() {
-        if (!this.max || !this.selected) return false
-        return this.selected.length === this.max
-      }
+        return item;
+      });
     },
-    methods: {
-      updateName (index, name) {
-        this.selected = this.selected.map((item, i) => {
-          if (i === index) {
-            item.name = name
-          }
-          return item
-        })
-      },
-      updateEntity (index, entity) {
-        this.selected = this.selected.map((item, i) => {
-          if (i !== index) return item
-          return {
-            entity, name: ''
-          }
-        })
-      },
-      removeView (index) {
-        this.selected = this.selected.filter((_, i) => i !== index)
-      },
-      addView () {
-        this.selected = [...this.selected, { ...dashboardView }]
-        this.$nextTick(() => {
-          const ref = this.$refs.queries
-          ref.scrollTop = ref.scrollHeight
-        })
-      },
-      isItemDeletable(index) {
-        return index >= this.min
-      }
-    }
-  }
+    updateEntity(index, entity) {
+      this.selected = this.selected.map((item, i) => {
+        if (i !== index) return item;
+        return {
+          entity, name: '',
+        };
+      });
+    },
+    removeView(index) {
+      this.selected = this.selected.filter((_, i) => i !== index);
+    },
+    addView() {
+      this.selected = [...this.selected, { ...dashboardView }];
+      this.$nextTick(() => {
+        const ref = this.$refs.queries;
+        ref.scrollTop = ref.scrollHeight;
+      });
+    },
+    isItemDeletable(index) {
+      return index >= this.min;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

@@ -1,18 +1,20 @@
 <template>
-    <div class="x-tip-info">
-        <div class="content">{{content}}</div>
-        <x-button-dismiss @click.native="$emit('dismiss')"/>
+  <div class="x-tip-info">
+    <div class="content">
+      {{ content }}
     </div>
+    <XButtonDismiss @click.native="$emit('dismiss')" />
+  </div>
 </template>
 
 <script>
-    import xButtonDismiss from './ButtonDismiss.vue'
+import XButtonDismiss from './ButtonDismiss.vue';
 
-    export default {
-        name: 'x-tip-info',
-        components: {xButtonDismiss},
-        props: {content: {required: true}}
-    }
+export default {
+  name: 'XTipInfo',
+  components: { XButtonDismiss },
+  props: { content: { required: true } },
+};
 </script>
 
 <style lang="scss">
@@ -53,7 +55,7 @@
             white-space: pre-wrap;
         }
 
-        .link {
+        .ant-btn-link {
             text-align: right;
         }
     }

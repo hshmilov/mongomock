@@ -252,7 +252,7 @@
             align-items: center;
         }
 
-        .link {
+        .ant-btn-link {
             margin: auto;
         }
     }

@@ -16,73 +16,86 @@
           @on-item-click="onLegendItemClick"
         />
       </XCard>
-      <XCard
-        class="card__item"
-        :title="chart.name"
-        :removable="$can($permissionConsts.categories.Dashboard,
-                         $permissionConsts.actions.Delete,
-                         $permissionConsts.categories.Charts)"
-        :editable="canUserUpdatePanels && chart.user_id !== '*'"
-        :exportable="chart.metric==='segment'"
-        :draggable="draggable && canUserUpdatePanels"
-        :is-chart-filterable="isChartFilterable"
-        v-on="$listeners"
-        @edit="editPanel"
-        @refresh="fetchMorePanel(chart.uuid, 0, chart.historical, true)"
-        @moveOrCopy="openMoveOrCopy"
-        @toggleShowSearch="toggleShowSearch"
-      >
-        <div
-          v-if="chart.metric !== 'timeline'"
-          class="card-history"
-        >
-          <div class="x-card-header">
-            <XHistoricalDate
-              :value="chart.historical"
-              :allowed-dates="allowedDates"
-              :class="{hidden: !showHistory && !chart.historical}"
-              @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
-            />
-            <XSearchInput
-              v-if="isChartFilterable && showSearch"
-              v-model="dataFilter"
-              :auto-focus="false"
-            />
 
+      <div
+        class="x-card card__item"
+        :class="{'custom-card': draggable}"
+      >
+
+        <div class="header">
+          <div class="header__title">
+            <div
+              class="card-title"
+              :title="chart.name"
+            >{{ chart.name }}</div>
           </div>
-        </div>
-        <Component
-          :is="`x-${chart.view}`"
-          v-if="!isChartEmpty(chart)"
-          :data="chart.data"
-          @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
-          @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
-          @legend-data-modified="onlegendDataModified"
-        />
-        <div
-          v-else-if="chart.loading"
-          class="chart-spinner"
-        >
-          <MdProgressSpinner
-            class="progress-spinner"
-            md-mode="indeterminate"
-            :md-stroke="3"
-            :md-diameter="25"
+          <PanelActions
+            :chart="chart"
+            :editable="canUserUpdatePanels && chart.user_id !== '*'"
+            :has-drop-down-menu="draggable && canUserUpdatePanels"
+            :is-chart-filterable="isChartFilterable"
+            v-on="$listeners"
+            @edit="editPanel"
+            @toggleShowSearch="toggleShowSearch"
           />
-          <span>Fetching data...</span>
+
         </div>
-        <div
-          v-else
-          class="no-data-found"
-        >
-          <SvgIcon
-            name="illustration/binocular"
-            :original="true"
-            height="50"
+
+        <div class="body">
+          <div
+            v-if="chart.metric !== 'timeline'"
+            class="card-history"
+          >
+            <div class="x-card-header">
+              <XHistoricalDate
+                :value="chart.historical"
+                :allowed-dates="allowedDates"
+                :class="{hidden: !showHistory && !chart.historical}"
+                @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
+              />
+              <XSearchInput
+                v-if="isChartFilterable && showSearch"
+                v-model="dataFilter"
+                :auto-focus="false"
+              />
+
+            </div>
+          </div>
+          <div
+            v-if="chart.loading"
+            class="chart-spinner"
+          >
+            <MdProgressSpinner
+              class="progress-spinner"
+              md-mode="indeterminate"
+              :md-stroke="3"
+              :md-diameter="25"
+            />
+            <span>Fetching data...</span>
+          </div>
+          <Component
+            :is="`x-${chart.view}`"
+            v-else-if="!isChartEmpty(chart)"
+            :data="chart.data"
+            @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
+            @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
+            @legend-data-modified="onlegendDataModified"
           />
-          <div>No data found</div>
+          <div
+            v-else
+            class="no-data-found"
+          >
+            <SvgIcon
+              name="illustration/binocular"
+              :original="true"
+              height="50"
+            />
+            <div>No data found</div>
+          </div>
+
         </div>
-        <template #footer>
+
+        <div class="footer">
           <div
             v-if="chart.view === 'pie' && !isChartEmpty(chart)"
             class="toggle-legend"
@@ -99,10 +112,12 @@
             v-if="draggable"
             class="drag-handle"
           >
-            <VIcon size="15">$vuetify.icons.cardDraggable</VIcon>
+            <VIcon size="15">
+              $vuetify.icons.cardDraggable
+            </VIcon>
           </div>
-        </template>
-      </XCard>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -124,6 +139,7 @@ import XSummary from '../../axons/charts/Summary.vue';
 import XLine from '../../axons/charts/Line.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XChartLegend from '../../axons/charts/ChartLegend.vue';
+import PanelActions from './PanelActions.vue';
 
 export default {
   name: 'XPanel',
@@ -136,6 +152,7 @@ export default {
     XLine,
     XSearchInput,
     XChartLegend,
+    PanelActions,
   },
   props: {
     chart: {
@@ -318,6 +335,9 @@ export default {
     display: block;
     padding: 4px;
     cursor: move;
+    :hover g {
+      fill: #949494;
+    }
   }
 
   .toggle-legend {
@@ -363,4 +383,27 @@ export default {
       }
     }
   }
+
+  .x-card-header {
+    display: flex;
+    &.hidden {
+      display: none;
+    }
+    > div {
+      height: 30px;
+      width: 158px;
+      &.x-historical-date {
+        margin-right: 5px;
+      }
+    }
+  }
+
+  .x-panels {
+    .footer {
+      width: 100%;
+      display: flex;
+      margin: -2px;
+    }
+  }
+
 </style>

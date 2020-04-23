@@ -79,7 +79,7 @@ class EntitiesPage(Page):
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
     TABLE_CLASS = '.table'
     TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
-    TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.link'
+    TABLE_SELECT_ALL_CSS = 'div.selection > .x-button.ant-btn-link'
     TABLE_SELECTED_COUNT_CSS = '.table-header > .table-title > .selection > div'
     TABLE_SELECT_ALL_BUTTON_CSS = '.table-header > .table-title > .selection > button'
     TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
@@ -157,7 +157,7 @@ class EntitiesPage(Page):
     NOTES_SEARCH_INUPUT_CSS = '#search-notes .input-value'
     NOTES_SEARCH_BY_TEXT_XPATH = '//div[text()=\'{note_text}\']'
 
-    CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.header>button.link'
+    CONFIG_ADVANCED_TEXT_CSS = '.x-entity-adapters>div.x-tabs>div.body>div.active>div.header>button.ant-btn-link'
     ADVANCED_VIEW_RAW_FIELD = 'raw:'
     CONFIG_BASIC_TEXT = 'View Basic'
 

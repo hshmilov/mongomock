@@ -15,7 +15,7 @@
           </div>
           <XButton
             v-if="dismissable"
-            link
+            type="link"
             @click="$emit('close')"
           >
             x
@@ -32,12 +32,13 @@
         <div class="modal-footer">
           <slot name="footer">
             <XButton
-              link
+              type="link"
               @click.prevent.stop="$emit('close')"
             >
               {{ dismissText }}
             </XButton>
             <XButton
+              type="primary"
               :id="approveId"
               :disabled="disabled"
               @click.prevent.stop="onApprove"

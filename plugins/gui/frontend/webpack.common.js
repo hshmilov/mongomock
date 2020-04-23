@@ -29,24 +29,7 @@ module.exports = (env) => ({
         options: {
           name: '[name].[ext]',
         },
-      },
-      {
-        test: /\.less$/,
-        use: [{
-          loader: 'style-loader',
-        }, {
-          loader: 'css-loader',
-        }, {
-          loader: 'less-loader',
-          options: {
-            modifyVars: {
-              'primary-color': '#0076FF',
-              'btn-height-base': '30px',
-            },
-            javascriptEnabled: true,
-          },
-        }],
-      },
+      }
     ],
   },
   resolve: {
@@ -66,7 +49,6 @@ module.exports = (env) => ({
     },
   },
   plugins: [
-    new webpack.IgnorePlugin(/node_modules\/ant-design-vue\/lib\/style\/core\/base\.less/),
     // new AntdDayjsWebpackPlugin(),
     new VueLoaderPlugin(),
     new CleanWebpackPlugin(['dist']),

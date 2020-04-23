@@ -5,7 +5,7 @@
         <XButton
           id="maintenance_settings"
           class="x-button"
-          link
+          type="link"
           :disabled="readOnly"
         >
           ADVANCED SETTINGS

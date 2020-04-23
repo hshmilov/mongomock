@@ -1,25 +1,25 @@
 <template>
   <div class="x-paginator">
-    <x-button
+    <XButton
       v-if="count > limit"
-      link
+      type="link"
       class="first"
       :disabled="isBackDisabled"
       @click="onClickPage(1)"
       @keyup.enter="onClickPage(1)"
     >
       &lt;&lt;
-    </x-button>
-    <x-button
+    </XButton>
+    <XButton
       v-if="count > limit"
-      link
+      type="link"
       class="previous"
       :disabled="isBackDisabled"
       @click="onClickPage(page-1)"
       @keyup.enter="onClickPage(page-1)"
     >
       &lt;
-    </x-button>
+    </XButton>
     <div class="paginator-text">
       <template v-if="showTop && page === 1">
         Top <strong class="num-of-items"> {{ to }}</strong>
@@ -30,34 +30,34 @@
       </template>
       of <strong class="total-num-of-items"> {{ count }}</strong>
     </div>
-    <x-button
+    <XButton
       v-if="count > limit"
-      link
+      type="link"
       class="next"
       :disabled="isNextDisabled"
       @click="onClickPage(page+1)"
       @keyup.enter="onClickPage(page+1)"
     >
       &gt;
-    </x-button>
-    <x-button
+    </XButton>
+    <XButton
       v-if="count > limit"
-      link
+      type="link"
       class="last"
       :disabled="isNextDisabled"
       @click="onClickPage(pageCount)"
       @keyup.enter="onClickPage(pageCount)"
     >
       &gt;&gt;
-    </x-button>
+    </XButton>
   </div>
 </template>
 <script>
-import xButton from '../inputs/Button.vue';
+import XButton from '../inputs/Button.vue';
 
 export default {
   name: 'XPaginator',
-  components: { xButton },
+  components: { XButton },
   props: {
     limit: {
       type: Number,

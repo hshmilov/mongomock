@@ -3,7 +3,7 @@
     class="x-data-table"
     :class="{ multiline, searchable }"
   >
-    <x-table-wrapper
+    <XTableWrapper
       :title="tableTitle"
       :count="count.data_to_show"
       :loading="loading || fetching"
@@ -14,7 +14,7 @@
         slot="search"
         class="header"
       >
-        <x-search-input
+        <XSearchInput
           :value="searchValue"
           :placeholder="`Search ${tableTitle}...`"
           @input="onInput"
@@ -26,23 +26,23 @@
         class="selection"
       >
         <div>[ {{ selectionCount }} selected.</div>
-        <x-button
+        <XButton
           v-if="enableSelectAll && !allSelected"
-          link
+          type="link"
           @click="selectAllData"
-        >Select all</x-button>
-        <x-button
+        >Select all</XButton>
+        <XButton
           v-else-if="allSelected"
-          link
+          type="link"
           @click="clearAllData"
-        >Clear all</x-button>
+        >Clear all</XButton>
         <div>]</div>
       </div>
       <slot
         slot="actions"
         name="actions"
       />
-      <x-table
+      <XTable
         slot="table"
         ref="table"
         v-model="pageSelection"
@@ -64,14 +64,14 @@
       >
         <template #default="slotProps">
           <slot v-bind="slotProps">
-            <x-table-data
+            <XTableData
               v-if="!$scopedSlots.default"
               v-bind="slotProps"
             />
           </slot>
         </template>
-      </x-table>
-    </x-table-wrapper>
+      </XTable>
+    </XTableWrapper>
     <div class="x-pagination">
       <div class="x-sizes">
         <div class="number-of-results-title">
@@ -126,11 +126,11 @@ import {
 } from 'vuex';
 import _orderBy from 'lodash/orderBy';
 import _isEmpty from 'lodash/isEmpty';
-import xSearchInput from '../inputs/SearchInput.vue';
+import XSearchInput from '../inputs/SearchInput.vue';
 import XTableWrapper from '../../axons/tables/TableWrapper.vue';
-import xTable from '../../axons/tables/Table.vue';
-import xTableData from './TableData.js';
-import xButton from '../../axons/inputs/Button.vue';
+import XTable from '../../axons/tables/Table.vue';
+import XTableData from './TableData';
+import XButton from '../../axons/inputs/Button.vue';
 
 import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
 import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations';
@@ -139,7 +139,7 @@ import { FETCH_DATA_CONTENT } from '../../../store/actions';
 export default {
   name: 'XDataTable',
   components: {
-    XTableWrapper, xTable, xTableData, xButton, xSearchInput,
+    XTableWrapper, XTable, XTableData, XButton, XSearchInput,
   },
   props: {
     module: {

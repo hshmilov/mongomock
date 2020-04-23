@@ -2,14 +2,14 @@
   <div class="x-queries-table">
     <section class="queries-table-header">
       <div class="queries-table-header__search">
-        <x-search
+        <XSearch
           v-model="searchValue"
           class="search__input"
           placeholder="Search Queries..."
           @keyup.enter.native="applySearchAndFilter"
         />
         <div class="tags-filter">
-          <x-combobox
+          <XCombobox
             v-if="entityTags.length"
             v-model="filterTags"
             height="30"
@@ -24,22 +24,19 @@
             @change="applySearchAndFilter"
           />
         </div>
-        <x-button
+        <XButton
           class="search__reset"
-          link
+          type="link"
           @click="resetSearchAndFilters"
-        >Reset</x-button>
+        >Reset</XButton>
       </div>
-      <x-button
-        link
+      <XButton
+        type="link"
+        icon="question-circle"
         @click="openAxoniusDocs"
-      >
-        <v-icon
-          small
-          color="secondary"
-        >{{ helpIconSvgPath }}</v-icon>Learn about Axonius use cases</x-button>
+      >Learn about Axonius use cases</XButton>
     </section>
-    <x-saved-queries-panel
+    <XSavedQueriesPanel
       v-model="isPanelOpen"
       :namespace="namespace"
       @input="panelStateChanged"
@@ -49,7 +46,7 @@
       @close="closeQuerySidePanel"
       @new-enforcement="createEnforcement"
     />
-    <x-table
+    <XTable
       ref="table"
       v-model="queriesRowsSelections"
       :module="pathToSavedQueryInState"
@@ -58,30 +55,28 @@
       :on-click-row="openQuerySidePanel"
     >
       <template slot="actions">
-        <x-button
+        <XButton
           v-if="hasSelection"
           id="remove-queries-btn"
+          type="link"
           :disabled="userCannotDeleteSavedQueries"
-          link
           @click="handleSelectedQueriesDeletion"
-        >Remove</x-button>
+        >Remove</XButton>
       </template>
-    </x-table>
+    </XTable>
   </div>
 </template>
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
-import { mdiHelpCircleOutline, mdiFilter } from '@mdi/js';
+import { mdiFilter } from '@mdi/js';
 import _get from 'lodash/get';
 import _debounce from 'lodash/debounce';
-import xSearch from '@neurons/inputs/SearchInput.vue';
-import xTable from '@neurons/data/Table.vue';
-import xButton from '@axons/inputs/Button.vue';
-import xSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
-import xCombobox from '@axons/inputs/combobox/index.vue';
-import _find from 'lodash/find';
-import _matchesProperty from 'lodash/matchesProperty';
+import XSearch from '@neurons/inputs/SearchInput.vue';
+import XTable from '@neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
+import XCombobox from '@axons/inputs/combobox/index.vue';
 
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
@@ -94,7 +89,7 @@ import { getEntityPermissionCategory } from '@constants/entities';
 export default {
   name: 'XQueriesTable',
   components: {
-    xSearch, xTable, xButton, xSavedQueriesPanel, xCombobox,
+    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox,
   },
   props: {
     namespace: {
@@ -107,7 +102,6 @@ export default {
       isPanelOpen: false,
       selection: { ids: [], include: true },
       searchValue: '',
-      helpIconSvgPath: mdiHelpCircleOutline,
       entityTags: [],
       filterTags: [],
     };

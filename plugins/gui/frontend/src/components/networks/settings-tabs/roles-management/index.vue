@@ -12,6 +12,7 @@
           <template slot="actions">
             <XButton
               id="add-role-btn"
+              type="primary"
               :disabled="!canAdd"
               @click="handleAddRole"
             >Add Role</XButton>
@@ -24,8 +25,7 @@
               :data="formattedRoles"
               :fields="rolesTableFieldsSchema"
               :multiple-row-selection="false"
-            >
-            </XTable>
+            />
           </template>
         </XTableWrapper>
       </div>

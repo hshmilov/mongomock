@@ -15,13 +15,14 @@
 
         <XButton
           id="safeguard-cancel-btn"
-          link
+          type="link"
           @click="onCancel"
         >
           {{ params.cancelText }}
         </XButton>
         <XButton
           id="safeguard-save-btn"
+          type="primary"
           @click="onConfirm"
         >
           {{ params.confirmText }}

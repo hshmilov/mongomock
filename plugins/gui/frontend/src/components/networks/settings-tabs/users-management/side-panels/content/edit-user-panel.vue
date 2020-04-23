@@ -99,6 +99,7 @@
 </template>
 
 <script>
+import { Select } from 'ant-design-vue';
 import { mapActions, mapGetters } from 'vuex';
 import { required, email } from 'vuelidate/lib/validators';
 import { GET_ALL_ROLES, GET_ADMIN_USER_ID } from '@store/modules/auth';
@@ -106,6 +107,10 @@ import { fetchAssignableRolesList } from '@api/roles';
 
 export default {
   name: 'XEditUserForm',
+  components: {
+    ASelect: Select,
+    ASelectOption: Select.Option,
+  },
   props: {
     valid: {
       type: Boolean,

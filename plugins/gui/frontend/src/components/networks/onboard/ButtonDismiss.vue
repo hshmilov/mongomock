@@ -1,14 +1,16 @@
 <template>
-    <x-button link>GOT IT</x-button>
+  <XButton type="link">
+    GOT IT
+  </XButton>
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
+import XButton from '../../axons/inputs/Button.vue';
 
-    export default {
-        name: 'x-button-dismiss',
-        components: { xButton }
-    }
+export default {
+  name: 'XButtonDismiss',
+  components: { XButton },
+};
 </script>
 
 <style lang="scss">

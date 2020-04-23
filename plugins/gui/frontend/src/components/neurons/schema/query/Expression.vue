@@ -13,14 +13,14 @@
     <!-- Option to add '(', to negate expression and choice of field to filter -->
     <x-button
       :disabled="disabled"
-      light
+      type="light"
       class="checkbox-label expression-bracket-left"
       :active="expression.leftBracket"
       @click="toggleLeftBracket"
     >(</x-button>
     <x-button
       :disabled="disabled"
-      light
+      type="light"
       class="checkbox-label expression-not"
       :active="expression.not"
       @click="toggleNot"
@@ -44,14 +44,14 @@
     <!-- Option to add ')' and to remove the expression -->
     <x-button
       :disabled="disabled"
-      light
+      type="light"
       class="checkbox-label expression-bracket-right"
       :active="expression.rightBracket"
       @click="toggleRightBracket"
     >)</x-button>
     <x-button
       v-if="!disabled"
-      link
+      type="link"
       class="expression-remove"
       @click="$emit('remove')"
     >x</x-button>
@@ -204,7 +204,7 @@ export default {
       }
     }
 
-    .x-button.light {
+    .x-button.ant-btn-light {
       input {
         display: none;
       }

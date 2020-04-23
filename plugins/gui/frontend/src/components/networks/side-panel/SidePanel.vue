@@ -1,5 +1,5 @@
 <template>
-  <v-navigation-drawer
+  <VNavigationDrawer
     :class="['x-side-panel', panelClass]"
     :value="value"
     absolute
@@ -19,12 +19,12 @@
           class="action-close"
           title="Close"
         >
-          <v-icon
+          <VIcon
             size="20"
             color="#fff"
             @click="closePanel"
           >{{ closeSvgIconPath }}
-          </v-icon>
+          </VIcon>
         </span>
       </div>
     </header>
@@ -37,7 +37,7 @@
     >
       <slot name="panelFooter" />
     </footer>
-  </v-navigation-drawer>
+  </VNavigationDrawer>
 </template>
 
 <script>

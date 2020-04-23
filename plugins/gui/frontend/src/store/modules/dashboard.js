@@ -1,5 +1,5 @@
-import { REQUEST_API, downloadFile } from '../actions';
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
+import { REQUEST_API, downloadFile } from '../actions';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';
@@ -37,7 +37,9 @@ export const FETCH_CHART_SEGMENTS_CSV = 'FETCH_CHART_SEGMENTS_CSV';
 
 export const SET_CURRENT_SPACE = 'SET_CURRENT_SPACE';
 export const GET_PANEL_MAP = 'GET_PANEL_MAP';
-
+export const MOVE_OR_COPY_TOGGLE = 'MOVE_OR_COPY_TOGGLE';
+export const MOVE_PANEL = 'MOVE_PANEL';
+export const COPY_PANEL = 'COPY_PANEL';
 export const RESET_DASHBOARD_STATE = 'RESET_DASHBOARD_STATE';
 
 export const dashboard = {
@@ -167,6 +169,8 @@ export const dashboard = {
       if (!panel) {
         return;
       }
+      panel.loading = payload.fetching;
+      if (panel.loading) return;
 
       // Set the panel loading indicator to true if payload is loading or fetching
       panel.loading = payload.loading || payload.fetching || false;
@@ -230,7 +234,7 @@ export const dashboard = {
       const space = state.spaces.data.find((item) => item.uuid === payload.spaceId);
       space.panels_order = payload.panels_order;
     },
-    moveOrCopyToggle(state, payload) {
+    [MOVE_OR_COPY_TOGGLE](state, payload) {
       state.currentPanel = payload.currentPanel;
       state.moveOrCopyActive = payload.active;
     },
@@ -453,38 +457,35 @@ export const dashboard = {
         downloadFile('csv', response, name);
       });
     },
-    async moveOrCopy({ dispatch, commit, state }, payload) {
-      if (payload.copy) {
-        dispatch(SAVE_DASHBOARD_PANEL, {
-          data: {
-            ...state.currentPanel,
-            name: `Copy - ${state.currentPanel.name}`,
-          },
-          space: payload.space,
-        });
-      } else {
-        // no need to move panel to the same space
-        if (state.currentSpace === payload.space) return;
-        const currentPanelUuid = state.currentPanel.uuid;
-        await dispatch(REQUEST_API, {
-          rule: `dashboard/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
-          method: 'PUT',
-          data: { destinationSpace: payload.space },
-        });
-        await commit(CHANGE_PANEL_SPACE, {
-          panelUuid: currentPanelUuid,
-          sourceSpaceUuid: state.currentSpace,
-          destinationSpaceUuid: payload.space,
-        });
-      }
+    async [MOVE_PANEL]({ dispatch, commit, state }, payload) {
+      // no need to move panel to the same space
+      if (state.currentSpace === payload.space) return;
+      const currentPanelUuid = state.currentPanel.uuid;
+      await dispatch(REQUEST_API, {
+        rule: `dashboard/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
+        method: 'PUT',
+        data: { destinationSpace: payload.space },
+      });
+      await commit(CHANGE_PANEL_SPACE, {
+        panelUuid: currentPanelUuid,
+        sourceSpaceUuid: state.currentSpace,
+        destinationSpaceUuid: payload.space,
+      });
+    },
+    [COPY_PANEL]({ dispatch, state }, payload) {
+      dispatch(SAVE_DASHBOARD_PANEL, {
+        data: {
+          ...state.currentPanel,
+          name: `Copy - ${state.currentPanel.name}`,
+        },
+        space: payload.space,
+      });
     },
   },
   getters: {
-    [GET_PANEL_MAP]: (state) => {
-      return state.panels.data.reduce((map, panel) => {
-        map[panel.uuid] = panel;
-        return map;
-      },{});
-    },
+    [GET_PANEL_MAP]: (state) => state.panels.data.reduce((map, panel) => {
+      map[panel.uuid] = panel;
+      return map;
+    }, {}),
   },
 };

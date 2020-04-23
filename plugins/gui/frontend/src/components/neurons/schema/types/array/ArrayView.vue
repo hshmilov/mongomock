@@ -7,11 +7,11 @@
 &nbsp;
     </div>
     <template v-else-if="schema.title && dataSchemaItems.length">
-      <x-button
-        link
+      <XButton
+        type="link"
         class="expander"
         @click="toggleCollapsed"
-      >{{ collapsed? '+': '-' }}</x-button>
+      >{{ collapsed? '+': '-' }}</XButton>
       <label
         :title="schema.description || ''"
         class="label"
@@ -41,35 +41,35 @@
           >
             {{ schema.name + 1 }}.
           </div>
-          <x-type-wrap
+          <XTypeWrap
             v-bind="schema"
             :required="true"
           >
-            <x-slice
+            <XSlice
               v-if="isMergedValue(data, schema)"
               :schema="schema"
               :value="data"
             >
-              <x-array-table-view
+              <XArrayTableView
                 slot-scope="{ sliced }"
                 :schema="schema"
                 :value="sliced"
               />
-            </x-slice>
-            <array
+            </XSlice>
+            <Array
               v-else-if="schema.type === 'array'"
               ref="array"
               :schema="schema"
               :value="data"
             />
-            <x-table-data
+            <XTableData
               v-else
               :ref="schema.type"
               :schema="schema"
               :data="data"
               :hyperlinks="hyperlinks"
             />
-          </x-type-wrap>
+          </XTypeWrap>
         </div>
       </div>
     </div>
@@ -84,22 +84,22 @@
 </template>
 
 <script>
-import xButton from '../../../../axons/inputs/Button.vue';
-import xTypeWrap from './TypeWrap.vue';
-import xSlice from '../../Slice.vue';
-import xTableData from '../../../../axons/tables/TableData';
-import xArrayTableView from './ArrayTableView.vue';
+import XButton from '../../../../axons/inputs/Button.vue';
+import XTypeWrap from './TypeWrap.vue';
+import XSlice from '../../Slice.vue';
+import XTableData from '../../../../axons/tables/TableData';
+import XArrayTableView from './ArrayTableView.vue';
 
 import arrayMixin from '../../../../../mixins/array';
 
 export default {
   name: 'Array',
   components: {
-    xButton,
-    xTypeWrap,
-    xSlice,
-    xTableData,
-    xArrayTableView,
+    XButton,
+    XTypeWrap,
+    XSlice,
+    XTableData,
+    XArrayTableView,
   },
   mixins: [arrayMixin],
   props: {

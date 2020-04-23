@@ -4,11 +4,11 @@
       v-if="loading"
       class="v-spinner-bg"
     />
-    <pulse-loader
+    <PulseLoader
       :loading="loading"
       color="#FF7D46"
     />
-    <x-table
+    <XTable
       slot="table"
       v-model="selectedRules"
       title="Rules"
@@ -24,14 +24,14 @@
       id-field="id"
     >
       <template slot="actions">
-        <x-button
-          link
+        <XButton
+          type="link"
           @click="exportCSV"
         >Export CSV
-        </x-button>
+        </XButton>
       </template>
-    </x-table>
-    <x-compliance-panel
+    </XTable>
+    <XCompliancePanel
       :data="currentRule"
       :fields="fields"
       @close="closeSidePanel"
@@ -43,9 +43,9 @@ import { mapActions, mapState } from 'vuex';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
-import xTable from '@components/neurons/data/Table.vue';
-import xButton from '@axons/inputs/Button.vue';
-import xCompliancePanel from './CompliancePanel';
+import XTable from '@components/neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XCompliancePanel from './CompliancePanel';
 
 const tableFields = [{
   name: 'status', title: '', type: 'string', format: 'status',
@@ -68,9 +68,9 @@ const tableFields = [{
 export default {
   name: 'XComplianceTable',
   components: {
-    xCompliancePanel,
-    xTable,
-    xButton,
+    XCompliancePanel,
+    XTable,
+    XButton,
     PulseLoader,
   },
   props: {

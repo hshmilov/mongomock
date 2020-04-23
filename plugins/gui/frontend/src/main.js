@@ -4,18 +4,6 @@ import VueWorker from 'vue-worker';
 import VueCookies from 'vue-cookies';
 import Vuelidate from 'vuelidate';
 import VueAnalytics from 'vue-analytics';
-
-import { Modal, Button, Menu, Dropdown, Checkbox, Select, Icon } from 'ant-design-vue';
-
-Vue.use(Modal);
-Vue.use(Button);
-Vue.use(Menu);
-Vue.use(Dropdown);
-Vue.use(Checkbox);
-Vue.use(Select);
-Vue.use(Icon);
-
-
 import {
   MdSwitch,
   MdDatepicker,

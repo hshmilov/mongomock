@@ -1,26 +1,36 @@
 <template>
-    <x-modal v-if="value" @close="dismissAccessMessage">
-        <div slot="body">You do not have permission to access the {{ value }} screen</div>
-        <div slot="footer">
-            <x-button @click="dismissAccessMessage">OK</x-button>
-        </div>
-    </x-modal>
+  <XModal
+    v-if="value"
+    @close="dismissAccessMessage"
+  >
+    <div slot="body">
+      You do not have permission to access the {{ value }} screen
+    </div>
+    <div slot="footer">
+      <XButton
+        type="primary"
+        @click="dismissAccessMessage"
+      >
+        OK
+      </XButton>
+    </div>
+  </XModal>
 </template>
 
 <script>
-    import xButton from '../../axons/inputs/Button.vue'
-    import xModal from '../../axons/popover/Modal/index.vue'
+import XButton from '../../axons/inputs/Button.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
 
-    export default {
-        name: 'x-access-modal',
-        components: {xButton, xModal},
-        props: {value: {}},
-        methods: {
-            dismissAccessMessage() {
-                this.$emit('input', '')
-            }
-        }
-    }
+export default {
+  name: 'XAccessModal',
+  components: { XButton, XModal },
+  props: { value: {} },
+  methods: {
+    dismissAccessMessage() {
+      this.$emit('input', '');
+    },
+  },
+};
 </script>
 
 <style lang="scss">

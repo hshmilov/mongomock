@@ -1,5 +1,5 @@
 <template>
-  <x-table
+  <XTable
     :title="actionFields.title"
     :module="module"
     :static-fields="actionFields.items"
@@ -8,111 +8,111 @@
     id-field="action_id"
   >
     <template slot="actions">
-      <x-button
-        link
+      <XButton
+        type="link"
         @click="exportCSV"
-      >Export CSV</x-button>
+      >Export CSV</XButton>
     </template>
-  </x-table>
+  </XTable>
 </template>
 
 <script>
-  import xTable from '../../../neurons/data/Table.vue'
-  import xButton from '../../../axons/inputs/Button.vue'
+import { mapActions } from 'vuex';
+import XTable from '../../../neurons/data/Table.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 
-  import {actionsMeta} from '../../../../constants/enforcement'
-  import { mapActions } from 'vuex'
-  import { FETCH_DATA_CONTENT_CSV } from '../../../../store/actions'
+import { actionsMeta } from '../../../../constants/enforcement';
+import { FETCH_DATA_CONTENT_CSV } from '../../../../store/actions';
 
-  export default {
-    name: 'XEntityTasks',
-    components: {
-      xTable, xButton
+export default {
+  name: 'XEntityTasks',
+  components: {
+    XTable, XButton,
+  },
+  props: {
+    entityType: {
+      type: String,
+      required: true,
     },
-    props: {
-      entityType: {
-          type: String,
-          required: true
-      },
-      entityId: {
-          type: String,
-          required: true
-      },
-      tasks: {
-        type: Array,
-        required: true
-      },
-      module: {
-          type: String,
-          required: true
+    entityId: {
+      type: String,
+      required: true,
+    },
+    tasks: {
+      type: Array,
+      required: true,
+    },
+    module: {
+      type: String,
+      required: true,
+    },
+  },
+  computed: {
+    actionFields() {
+      const actionsFields = {
+        name: 'enforcement_task',
+        title: 'Enforcement tasks actions',
+        items: [
+          {
+            name: 'recipe_name',
+            title: 'Task Name',
+            type: 'string',
+            link: '/tasks/{{uuid}}',
+          },
+          {
+            name: 'action_name',
+            title: 'Action Name',
+            type: 'string',
+          },
+          {
+            name: 'action_type',
+            title: 'Action Type',
+            type: 'string',
+          },
+          {
+            name: 'success',
+            title: 'Success',
+            type: 'bool',
+          },
+          {
+            name: 'additional_info',
+            title: 'Additional Info',
+            type: 'string',
+          },
+        ],
+      };
+      if (this.cannotViewEnforcementTasks) {
+        delete actionsFields.items[0].link;
       }
+      return actionsFields;
     },
-    computed: {
-      actionFields() {
-        const actionsFields = {
-            'name': 'enforcement_task',
-            'title': 'Enforcement tasks actions',
-            'items': [
-              {
-                  'name': 'recipe_name',
-                  'title': 'Task Name',
-                  'type': 'string',
-                  'link': '/tasks/{{uuid}}'
-              },
-              {
-                'name': 'action_name',
-                'title': 'Action Name',
-                'type': 'string'
-              },
-              {
-                'name': 'action_type',
-                'title': 'Action Type',
-                'type': 'string'
-              },
-              {
-                'name': 'success',
-                'title': 'Success',
-                'type': 'bool'
-              },
-              {
-                'name': 'additional_info',
-                'title': 'Additional Info',
-                'type': 'string'
-              }
-            ]
-        };
-        if (this.cannotViewEnforcementTasks) {
-          delete actionsFields.items[0].link;
+    processedTasks() {
+      return this.tasks.map((task) => {
+        if (!actionsMeta[task.action_type]) {
+          return task;
         }
-        return actionsFields;
-      },
-      processedTasks () {
-        return this.tasks.map(task => {
-          if (!actionsMeta[task.action_type]) {
-            return task
-          }
-          return {
-            ...task,
-            action_type: actionsMeta[task.action_type].title
-          }
-        })
-      },
-      cannotViewEnforcementTasks() {
-        return this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.View,
-          this.$permissionConsts.categories.Tasks);
-      }
+        return {
+          ...task,
+          action_type: actionsMeta[task.action_type].title,
+        };
+      });
     },
-    methods: {
-      ...mapActions({
-          fetchDataCSV: FETCH_DATA_CONTENT_CSV
-      }),
-      exportCSV () {
-          this.fetchDataCSV({
-              module: this.module,
-              endpoint: `${this.entityType}/${this.entityId}/tasks`
-          })
-      }
-    }
-  }
+    cannotViewEnforcementTasks() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.View,
+        this.$permissionConsts.categories.Tasks);
+    },
+  },
+  methods: {
+    ...mapActions({
+      fetchDataCSV: FETCH_DATA_CONTENT_CSV,
+    }),
+    exportCSV() {
+      this.fetchDataCSV({
+        module: this.module,
+        endpoint: `${this.entityType}/${this.entityId}/tasks`,
+      });
+    },
+  },
+};
 </script>

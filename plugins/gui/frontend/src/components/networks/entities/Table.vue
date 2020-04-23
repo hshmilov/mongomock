@@ -196,7 +196,7 @@ export default {
           grid-gap: 0;
           align-items: center;
 
-          > .x-button.link {
+          > .x-button.ant-btn-link {
             width: 120px;
           }
         }

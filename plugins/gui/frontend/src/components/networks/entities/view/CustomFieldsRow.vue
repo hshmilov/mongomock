@@ -47,7 +47,7 @@
       </template>
       <XButton
         v-if="field.new"
-        link
+        type="link"
         @click="$emit('remove')"
       >X</XButton>
       <div v-else />
@@ -188,7 +188,7 @@ export default {
               }
             }
 
-            .x-button.link {
+            .x-button.ant-btn-link {
                 line-height: 30px;
                 padding: 0;
             }

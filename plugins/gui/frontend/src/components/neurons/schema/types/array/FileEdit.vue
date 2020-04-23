@@ -9,7 +9,7 @@
         <template v-else>
             <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" :id="schema.name" />
             <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
-            <x-button link :disabled="readOnly" @click="selectFile">Choose file</x-button>
+            <x-button type="link" :disabled="readOnly" @click="selectFile">Choose file</x-button>
         </template>
     </div>
 </template>
@@ -88,7 +88,7 @@
             top: 0;
             z-index: 0;
         }
-        .x-button.link {
+        .x-button.ant-btn-link {
             color: $theme-black;
             font-size: 12px;
             font-weight: 200;

@@ -24,6 +24,7 @@
 
             <div class="place-left">
               <XButton
+                type="primary"
                 id="research-settings-save"
                 :disabled="isResearchDisabled"
                 @click="saveSchedulerSettings"
@@ -52,6 +53,7 @@
                 :read-only="!canUpdateSettings"
               />
               <XButton
+                type="primary"
                 id="global-settings-save"
                 :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy
                   || !validPasswordProtection"
@@ -76,6 +78,7 @@
             />
             <div class="place-left">
               <XButton
+                type="primary"
                 id="gui-settings-save"
                 :disabled="!guiComplete || !canUpdateSettings"
                 @click="saveGuiSettings"

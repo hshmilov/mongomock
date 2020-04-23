@@ -451,13 +451,15 @@ export default {
                         // conditionally render action button in footer
                         this.editingMode
                           ? [
-                                <x-button link onClick={this.discardChanges}>Discard Changes</x-button>,
+                                <x-button tpye="link" onClick={this.discardChanges}>Discard Changes</x-button>,
                                 <x-button
+                                  tpye="primary"
                                   onClick={this.saveChanges}
                                   disabled={this.$v.$error
                                   || this.userCannotEditSavedQueries}>Save Changes</x-button>,
                           ]
                           : <x-button onClick={this.runQuery}
+                                      tpye="primary"
                                       disabled={this.isQueryContainsUnsupportedFields()
                           || this.userCannotRunSavedQueries}>Run Query</x-button>
                     }

@@ -1,11 +1,11 @@
 <template>
-  <x-page
+  <XPage
     class="x-enforcement"
     :breadcrumbs="[
       { title: 'enforcement center', path: { name: 'Enforcements'}},
       { title: name }]"
   >
-    <x-split-box>
+    <XSplitBox>
       <template slot="main">
         <div class="header">
           <label>Enforcement Set Name</label>
@@ -24,14 +24,14 @@
         </div>
         <div class="body">
           <div class="body-flow">
-            <x-action
+            <XAction
               id="main_action"
               v-bind="mainAction"
               :read-only="userCannotChangeThisEnforcement"
               @click="selectActionMain"
               @remove="removeActionMain"
             />
-            <x-action-group
+            <XActionGroup
               v-for="item in successiveActions"
               :key="item.condition"
               v-bind="item"
@@ -39,7 +39,7 @@
               @select="selectAction"
               @remove="removeAction"
             />
-            <x-trigger
+            <XTrigger
               id="trigger"
               :title="trigger.name"
               :selected="trigger.selected"
@@ -53,54 +53,56 @@
             {{ error }}
           </div>
           <div>
-            <x-button
+            <XButton
               v-if="saved"
               id="view_tasks"
-              emphasize
+              type="emphasize"
               :disabled="userCannotViewEnforcementsTasks"
               @click="viewTasks"
             >
               View Tasks
-            </x-button>
-            <x-button
+            </XButton>
+            <XButton
               v-if="userCannotChangeThisEnforcement"
+              type="primary"
               @click="exit"
             >
               Exit
-            </x-button>
+            </XButton>
             <template v-else>
-              <x-button
-                emphasize
+              <XButton
+                type="emphasize"
                 :disabled="disableRun"
                 @click="saveRun"
               >
                 Save & Run
-              </x-button>
-              <x-button
+              </XButton>
+              <XButton
                 id="enforcement_save"
+                type="primary"
                 :disabled="disableSave"
                 @click="saveExit"
               >
                 Save & Exit
-              </x-button>
+              </XButton>
             </template>
           </div>
         </div>
       </template>
-      <x-card
+      <XCard
         v-if="trigger.selected"
         slot="details"
         key="triggerConf"
         title="Trigger Configuration"
         logo="adapters/axonius"
       >
-        <x-trigger-config
+        <XTriggerConfig
           v-model="triggerInProcess.definition"
           :read-only="userCannotChangeThisEnforcement"
           @confirm="saveTrigger"
         />
-      </x-card>
-      <x-card
+      </XCard>
+      <XCard
         v-else-if="currentActionName"
         slot="details"
         key="actionConf"
@@ -109,47 +111,47 @@
         :reversible="currentActionReversible"
         @back="restartAction"
       >
-        <x-action-config
+        <XActionConfig
           v-model="actionInProcess.definition"
           :exclude="excludedNames"
           :include="allowedActionNames"
           :read-only="userCannotChangeThisEnforcement"
           @confirm="saveAction"
         />
-      </x-card>
-      <x-card
+      </XCard>
+      <XCard
         v-else-if="actionInProcess.position"
         slot="details"
         key="actionLib"
         title="Action Library"
         logo="adapters/axonius"
       >
-        <x-action-library
+        <XActionLibrary
           :categories="actionCategories"
           @select="selectActionType"
         />
-      </x-card>
-    </x-split-box>
-    <x-toast
+      </XCard>
+    </XSplitBox>
+    <XToast
       v-if="message"
       v-model="message"
     />
-  </x-page>
+  </XPage>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import xPage from '../axons/layout/Page.vue';
-import xSplitBox from '../axons/layout/SplitBox.vue';
-import xCard from '../axons/layout/Card.vue';
-import xButton from '../axons/inputs/Button.vue';
-import xTrigger from '../networks/enforcement/Trigger.vue';
-import xTriggerConfig from '../networks/enforcement/TriggerConfig.vue';
-import xAction from '../networks/enforcement/Action.vue';
-import xActionGroup from '../networks/enforcement/ActionGroup.vue';
-import xActionConfig from '../networks/enforcement/ActionConfig.vue';
-import xActionLibrary from '../networks/enforcement/ActionLibrary.vue';
-import xToast from '../axons/popover/Toast.vue';
+import XPage from '../axons/layout/Page.vue';
+import XSplitBox from '../axons/layout/SplitBox.vue';
+import XCard from '../axons/layout/Card.vue';
+import XButton from '../axons/inputs/Button.vue';
+import XTrigger from '../networks/enforcement/Trigger.vue';
+import XTriggerConfig from '../networks/enforcement/TriggerConfig.vue';
+import XAction from '../networks/enforcement/Action.vue';
+import XActionGroup from '../networks/enforcement/ActionGroup.vue';
+import XActionConfig from '../networks/enforcement/ActionConfig.vue';
+import XActionLibrary from '../networks/enforcement/ActionLibrary.vue';
+import XToast from '../axons/popover/Toast.vue';
 
 import {
   initRecipe, initAction, initTrigger,
@@ -166,17 +168,17 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/on
 export default {
   name: 'XEnforcement',
   components: {
-    xPage,
-    xSplitBox,
-    xCard,
-    xButton,
-    xTrigger,
-    xTriggerConfig,
-    xAction,
-    xActionGroup,
-    xActionConfig,
-    xActionLibrary,
-    xToast,
+    XPage,
+    XSplitBox,
+    XCard,
+    XButton,
+    XTrigger,
+    XTriggerConfig,
+    XAction,
+    XActionGroup,
+    XActionConfig,
+    XActionLibrary,
+    XToast,
   },
   data() {
     return {

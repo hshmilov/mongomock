@@ -1,6 +1,6 @@
 <template>
   <div class="x-filter-expression-contains">
-    <x-select
+    <XSelect
       v-model="fieldName"
       :options="options"
       placeholder="Field"
@@ -9,63 +9,63 @@
       v-model="fieldValue"
       placeholder="Segment by..."
     >
-    <x-button
-      link
+    <XButton
+      type="link"
       @click="removeFilter"
-    >x</x-button>
+    >x</XButton>
   </div>
 </template>
 
 <script>
-    import xSelect from '../../../axons/inputs/select/Select.vue'
-    import xButton from '../../../axons/inputs/Button.vue'
+import XSelect from '../../../axons/inputs/select/Select.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 
-    export default {
-        name: 'XFilterExpressionContains',
-        components: {
-            xSelect, xButton
-        },
-        props: {
-            value: {
-                type: Object,
-                default: () => {}
-            },
-            options: {
-                type: Array,
-                default: () => []
-            }
-        },
-        computed: {
-            fieldName: {
-                get () {
-                    return this.value.name
-                },
-                set (name) {
-                    this.updateFilter(name, 'name')
-                }
-            },
-            fieldValue: {
-                get () {
-                    return this.value.value
-                },
-                set (value) {
-                    this.updateFilter(value, 'value')
-                }
-            },
-        },
-        methods: {
-            updateFilter (value, key) {
-                const filter = {
-                    ...this.value,
-                    [key]: value
-                }
-                this.$emit('input', filter)
-            },
-            removeFilter () {
-                this.$emit('remove-filter')
-            }
-        }
-    }
+export default {
+  name: 'XFilterExpressionContains',
+  components: {
+    XSelect, XButton,
+  },
+  props: {
+    value: {
+      type: Object,
+      default: () => ({}),
+    },
+    options: {
+      type: Array,
+      default: () => ([]),
+    },
+  },
+  computed: {
+    fieldName: {
+      get() {
+        return this.value.name;
+      },
+      set(name) {
+        this.updateFilter(name, 'name');
+      },
+    },
+    fieldValue: {
+      get() {
+        return this.value.value;
+      },
+      set(value) {
+        this.updateFilter(value, 'value');
+      },
+    },
+  },
+  methods: {
+    updateFilter(value, key) {
+      const filter = {
+        ...this.value,
+        [key]: value,
+      };
+      this.$emit('input', filter);
+    },
+    removeFilter() {
+      this.$emit('remove-filter');
+    },
+  },
+};
 </script>
 
 <style lang="scss">

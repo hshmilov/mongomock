@@ -18,11 +18,12 @@
           <template slot="actions">
             <XButton
               v-if="canDelete && selectedServers && selectedServers.length"
-              link
+              type="link"
               @click="removeConnection"
             >Remove</XButton>
             <XButton
               id="new_connection"
+              type="primary"
               :disabled="!canAdd"
               @click="configConnection('new')"
             >Add Connection</XButton>
@@ -38,7 +39,7 @@
         </XTableWrapper>
         <div class="config-settings">
           <XButton
-            link
+            type="link"
             class="header"
             :disabled="cannotOpenAdvancesSettings"
             @click="toggleSettings"
@@ -70,6 +71,7 @@
                     @validate="validateConfig"
                   />
                   <XButton
+                    type="primary"
                     tabindex="1"
                     :disabled="!configValid"
                     @click="saveConfig(configName, config.config)"
@@ -95,7 +97,7 @@
                 v-if="adapterLink"
                 slot="actions"
                 header
-                link
+                type="link"
                 class="help-link"
                 title="More information about connecting this adapter"
                 @click="openHelpLink"
@@ -153,16 +155,18 @@
           </div>
           <template slot="footer">
             <XButton
-              link
+              type="link"
               @click="toggleServerModal"
             >Cancel</XButton>
             <XButton
               id="test_reachability"
+              type="primary"
               :disabled="!serverModal.valid || !connectionLabelValid"
               @click="testServer"
             >Test Reachability</XButton>
             <XButton
               id="save_server"
+              type="link"
               :disabled="!serverModal.valid || !connectionLabelValid"
               @click="saveServer"
             >Save and Connect</XButton>
@@ -214,6 +218,7 @@ import XToast from '@axons/popover/Toast.vue';
 import { parseVaultError } from '@constants/utils';
 import { FETCH_SYSTEM_CONFIG } from '@store/actions';
 import XForm from '@neurons/schema/Form.vue';
+import { Icon } from 'ant-design-vue';
 
 import {
   ARCHIVE_CLIENT,
@@ -240,6 +245,7 @@ export default {
     XTitle,
     XToast,
     XInstancesSelect,
+    AIcon: Icon,
   },
   data() {
     return {
@@ -438,7 +444,7 @@ export default {
       this.deleting = true;
     },
     async doRemoveServers() {
-      for (const serverId of this.selectedServers){
+      for (const serverId of this.selectedServers) {
         await this.archiveServer({
           nodeId: this.adapterClients.find((client) => (client.uuid === serverId)).node_id,
           adapterId: this.adapterId,
