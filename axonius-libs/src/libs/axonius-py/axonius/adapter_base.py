@@ -524,7 +524,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                              {'$set': {'status': status, 'error': error_msg}})
             else:
                 result = self._clients_collection.update_one({'client_id': client_id},
-                                                             {'$set': {'status': status}})
+                                                             {'$set': {'status': status, 'error': ''}})
 
             if not result or result.matched_count != 1:
                 raise adapter_exceptions.CredentialErrorException(

@@ -128,6 +128,12 @@ class InstanceControlService(Triggerable, PluginBase):
                                                coalesce=True)
         self.send_instance_data_thread.start()
 
+    def trigger_execute_shell(self, post_json: dict):
+        logger.info(f'Got execute shell triggerable with post_json: {str(post_json)}')
+        if 'cmd' not in post_json:
+            raise RuntimeError(f'Malformed post_json dict')
+        return self.__exec_command_verbose(post_json['cmd'], environment=post_json.get('environment'))
+
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """
         start:<plugin_name> or stop:<plugin_name>
@@ -136,6 +142,9 @@ class InstanceControlService(Triggerable, PluginBase):
         """
         if self.upgrading_cluster_in_prog:
             raise RuntimeError('Upgrade in progress')
+
+        if job_name == 'execute_shell':
+            return self.trigger_execute_shell(post_json)
 
         parsed_path = job_name.split(':')
         if len(parsed_path) != 2:
@@ -323,28 +332,30 @@ class InstanceControlService(Triggerable, PluginBase):
     @retry(wait_fixed=10000,
            stop_max_delay=120000,
            retry_on_exception=retry_if_parallelism_maxed)
-    def __exec_command(self, cmd: str) -> paramiko.ChannelFile:
+    def __exec_command(self, cmd: str, environment: dict = None) -> paramiko.ChannelFile:
         """
         Executes a command on the host using ssh
         :param cmd: command to execute
         :return: stdout
         """
-        _, stdout, _ = self.__host_ssh.exec_command(cmd)
+        _, stdout, _ = self.__host_ssh.exec_command(cmd, environment=environment)
         return stdout
 
     @retry(wait_fixed=10000,
            stop_max_delay=120000,
            retry_on_exception=retry_if_parallelism_maxed)
-    def __exec_command_verbose(self, cmd: str) -> paramiko.ChannelFile:
+    def __exec_command_verbose(self, cmd: str, environment: dict = None) -> paramiko.ChannelFile:
         """
         Executes a command on the host using ssh and log stdout and stderr streams .
         command doesn't return stdout .
         :param cmd: command to execute
         """
-        _, stdout, stderr = self.__host_ssh.exec_command(cmd)
+        _, stdout, stderr = self.__host_ssh.exec_command(cmd, environment=environment)
         err = stderr.read().decode('utf-8').strip()
         out = stdout.read().decode('utf-8').strip()
         logger.debug(f'[ExecCmd] {err} ; {out} ')
+
+        return out
 
     def start_adapter(self, adapter_name: str):
         """
