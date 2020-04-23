@@ -1,7 +1,5 @@
 import json
 import os
-import time
-
 import pwd
 import shutil
 import subprocess
@@ -23,12 +21,11 @@ from install import (TEMPORAL_PATH,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
                      DEPLOYMENT_FOLDER_PATH,
                      chown_folder,
-                     set_special_permissions, WAIT_FOR_RETRY_DURATION, MAX_RETRIES)
+                     set_special_permissions)
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME
 from scripts.instances.network_utils import get_weave_subnet_ip_range
-from services.axon_service import TimeoutException
 from sysctl_editor import set_sysctl_value
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    print_state,
@@ -274,17 +271,5 @@ def run_discovery():
 def start_axonius():
     print_state('Starting up axonius system')
     from devops.axonius_system import main as system_main
-    retries_count = 0
-    while retries_count < MAX_RETRIES:
-        try:
-            system_main('system up --all --prod --restart'.split())
-            break
-        except TimeoutException:
-            print(f'An exception occurred while trying to start axonius, '
-                  f'Probably weave freezed, waiting {WAIT_FOR_RETRY_DURATION} seconds for '
-                  f'the watchdog to fix that and then try again')
-            retries_count += 1
-            time.sleep(WAIT_FOR_RETRY_DURATION)
-            print('Trying again to start axonius system')
-
+    system_main('system up --all --prod --restart'.split())
     print_state('System is up')
