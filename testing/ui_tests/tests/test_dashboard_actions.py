@@ -263,6 +263,7 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.add_segmentation_card(module=DEVICES_MODULE,
                                                       field=ASSET_NAME_FIELD_NAME,
                                                       title=self.TEST_EDIT_CARD_TITLE)
+            self.dashboard_page.wait_for_spinner_to_end()
             card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
             self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
             self.toggle_card_search(card)
@@ -291,7 +292,7 @@ class TestDashboardActions(TestBase):
             self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
             assert self.dashboard_page.get_card_search_input_text(card) == ''
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
-            self.wait_for_adapter_down(STRESSTEST_ADAPTER)
+        self.wait_for_adapter_down(STRESSTEST_ADAPTER)
 
     def _add_tags_to_list_of_row_numbers(self, row_numbers, tags):
         """
