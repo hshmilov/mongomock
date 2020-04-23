@@ -1,5 +1,4 @@
 import logging
-import secrets
 import requests
 
 from flask import (has_request_context, jsonify,
@@ -10,8 +9,7 @@ from axonius.consts import gui_consts
 from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME, CSRF_TOKEN_LENGTH,
                                        SIGNUP_TEST_CREDS, FeatureFlagsNames)
 from axonius.types.enforcement_classes import TriggerPeriod
-from axonius.utils.gui_helpers import (get_connected_user_id,
-                                       add_rule_unauth)
+from axonius.utils.gui_helpers import (add_rule_unauth)
 from axonius.utils.permissions_helper import is_axonius_role
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.adapters.adapters import Adapters
@@ -20,8 +18,9 @@ from gui.routes.dashboard.dashboard import Dashboard
 from gui.routes.enforcements.enforcements import Enforcements
 from gui.routes.entities.entities import Entities
 from gui.routes.instances.instances import Instances
-from gui.routes.login.login import Login
-from gui.routes.login.signup import Signup
+from gui.routes.account.account import Account
+from gui.routes.account.login import Login
+from gui.routes.account.signup import Signup
 from gui.routes.reports.reports import Reports
 from gui.routes.settings.settings import Settings
 from gui.routes.password_vault import PasswordVault
@@ -35,6 +34,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_category_add_rules()
 class AppRoutes(Signup,
                 Login,
+                Account,
                 Settings,
                 Dashboard,
                 Entities,
@@ -74,33 +74,6 @@ class AppRoutes(Signup,
         if feature_flags_config.get(FeatureFlagsNames.ExpiryDate):
             return jsonify(self.contract_expired())
         return jsonify(False)
-
-    @gui_route_logged_in('api_key', methods=['GET', 'POST'], enforce_permissions=False)
-    def api_creds(self):
-        """
-        Get or change the API key
-        """
-        if request.method == 'POST':
-            new_token = secrets.token_urlsafe()
-            new_api_key = secrets.token_urlsafe()
-            self._users_collection.update_one(
-                {
-                    '_id': get_connected_user_id(),
-                },
-                {
-                    '$set': {
-                        'api_key': new_api_key,
-                        'api_secret': new_token
-                    }
-                }
-            )
-        api_data = self._users_collection.find_one({
-            '_id': get_connected_user_id()
-        })
-        return jsonify({
-            'api_key': api_data['api_key'],
-            'api_secret': api_data['api_secret']
-        })
 
     @gui_route_logged_in('google_analytics/collect', methods=['GET', 'POST'], enforce_permissions=False)
     def google_analytics_proxy(self):

@@ -134,13 +134,13 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         """
         Trigger selected Enforcement with a static list of entities, as selected by user
         """
-        post_data = request.get_json()
+        post_data = self.get_request_data_as_object()
         self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', blocking=False, data={
-            'report_name': post_data['enforcement'],
+            'report_name': post_data.pop('name', ''),
             'input': {
                 'entity': entity_type.name,
                 'filter': escape_dict(mongo_filter),
-                'selection': post_data['entities']
+                'selection': post_data
             }
         })
         return '', 200
@@ -156,7 +156,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                 for entry
                 in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
 
-    def _update_entity_views(self, entity_type: EntityType, query_type='saved'):
+    def _add_entity_view(self, entity_type: EntityType):
         """
         Save or fetch views over the entities db
         :return:
@@ -173,7 +173,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             'name': view_data['name'],
             'description': view_data.get('description', ''),
             'view': view_data['view'],
-            'query_type': query_type,
+            'query_type': 'saved',
             'tags': tags,
             'archived': False,
         }
@@ -208,7 +208,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         })
         return ''
 
-    def _entity_views_update(self, entity_type: EntityType, query_id):
+    def _update_entity_views(self, entity_type: EntityType, query_id):
         view_data = self.get_request_data_as_object()
         if not view_data.get('name'):
             return return_error(f'Name is required in order to save a view', 400)
@@ -528,9 +528,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                                 f'Attempt to run action {action_type} caused exception.', 400)
 
     @filtered()
-    @gui_route_logged_in('actions/<action_type>', methods=['POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.DevicesAssets)})
+    @gui_route_logged_in('actions/<action_type>', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.DevicesAssets))
     def actions_run(self, action_type, mongo_filter):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type

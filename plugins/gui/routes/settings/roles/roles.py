@@ -18,9 +18,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_section_add_rules('roles')
 class Roles:
 
-    @gui_route_logged_in(methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_roles(self):
         roles = [beautify_db_entry(entry) for entry in self._roles_collection.find(filter_archived({
             IS_AXONIUS_ROLE: {'$ne': True}
@@ -31,9 +30,8 @@ class Roles:
                     del role.get('permissions')[PermissionCategory.Compliance.value]
         return jsonify(roles)
 
-    @gui_route_logged_in('assignable_roles', methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('assignable_roles', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_assignable_roles(self):
         """
         Designated endpoint for getting only assignable roles list
@@ -47,10 +45,8 @@ class Roles:
                 projection={'name': 1}
             )])
 
-    @gui_route_logged_in('<role_id>/assignees', methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Settings,
-                                                                         PermissionCategory.Roles)})
+    @gui_route_logged_in('<role_id>/assignees', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles))
     def get_role_assignees(self, role_id):
         match_users = {
             'role_id': ObjectId(role_id)
@@ -168,9 +164,8 @@ class Roles:
         })
         return ''
 
-    @gui_route_logged_in('default', methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('default', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_roles_default(self):
         """
         Get the default roles

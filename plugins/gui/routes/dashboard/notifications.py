@@ -20,9 +20,8 @@ class Notifications:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_route_logged_in(methods=['POST', 'GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                         PermissionCategory.Dashboard)})
+    @gui_route_logged_in(methods=['POST', 'GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Dashboard))
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications

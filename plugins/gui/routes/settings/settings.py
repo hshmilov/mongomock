@@ -1,5 +1,6 @@
 import logging
 import shutil
+import secrets
 
 from flask import (jsonify,
                    request)
@@ -8,6 +9,7 @@ from axonius.consts.gui_consts import (TEMP_MAINTENANCE_THREAD_ID)
 from axonius.consts.plugin_consts import (SYSTEM_SCHEDULER_PLUGIN_NAME)
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.datetime import time_from_now
+from axonius.utils.gui_helpers import get_connected_user_id
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
@@ -78,9 +80,8 @@ class Settings(Plugins, GettingStarted, Users, Roles, Configuration):
 
         return jsonify(self.system_collection.find_one(match_maintenance))
 
-    @gui_route_logged_in('maintenance', methods=['POST', 'PUT', 'DELETE'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('maintenance', methods=['POST', 'PUT', 'DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings))
     def update_maintenance(self):
         """
         Manage the maintenance features which can be customly set by user or switched all on for a limited time.
@@ -199,9 +200,7 @@ class Settings(Plugins, GettingStarted, Users, Roles, Configuration):
         """
         return jsonify(self.metadata)
 
-    @gui_route_logged_in('research_phase', methods=['POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.RunManualDiscovery,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('run_manual_discovery', methods=['POST'])
     def schedule_research_phase(self):
         """
         Schedules or initiates research phase.
@@ -217,9 +216,8 @@ class Settings(Plugins, GettingStarted, Users, Roles, Configuration):
         self._lifecycle.clean_cache()
         return ''
 
-    @gui_route_logged_in('stop_research_phase', methods=['POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.RunManualDiscovery,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('stop_research_phase', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.RunManualDiscovery, PermissionCategory.Settings))
     def stop_research_phase(self):
         """
         Stops currently running research phase.
@@ -241,3 +239,37 @@ class Settings(Plugins, GettingStarted, Users, Roles, Configuration):
 
         self._lifecycle.clean_cache()
         return ''
+
+    @staticmethod
+    def _jsonify_api_data(api_key, api_secret):
+        return jsonify({
+            'api_key': api_key,
+            'api_secret': api_secret
+        })
+
+    @gui_route_logged_in('api_key', methods=['GET'], enforce_permissions=False)
+    def get_api_key(self):
+        api_data = self._users_collection.find_one({
+            '_id': get_connected_user_id()
+        })
+        return self._jsonify_api_data(api_data['api_key'], api_data['api_secret'])
+
+    @gui_route_logged_in('reset_api_key', methods=['POST'])
+    def update_api_key(self):
+        """
+        Get or change the API key
+        """
+        new_token = secrets.token_urlsafe()
+        new_api_key = secrets.token_urlsafe()
+        self._users_collection.update_one(
+            {
+                '_id': get_connected_user_id(),
+            },
+            {
+                '$set': {
+                    'api_key': new_api_key,
+                    'api_secret': new_token
+                }
+            }
+        )
+        return self._jsonify_api_data(new_api_key, new_token)

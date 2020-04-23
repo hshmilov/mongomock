@@ -125,6 +125,88 @@ def add_rule_unauth(rule, *args, **kwargs):
     return add_rule_custom_authentication(rule, None, *args, **kwargs)
 
 
+def log_activity_rule(rule: str,
+                      activity_category: str,
+                      activity_param_names: List[str]):
+    """
+    Decorator for generically logging the activity made by user in the wrapped endpoint.
+    Runs the endpoint and checks the response - if not valid or not successful, returns without logging.
+
+    Action for the activity will be:
+    - The rule clean from parameters, if it has one part
+    - The request's method otherwise
+
+    Param values for the activity will be, for each of activity_param_names:
+    - Value from the endpoint's response
+    - Or value from the endpoint's data
+    - Or value from the endpoint's path parameters
+
+    :param rule: Endpoint's rule to be used as an action, if singular
+    :param activity_category: Type of the activity to log
+    :param activity_param_names: Parameters to be extracted from the endpoint's data
+    :return:
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            response = func(self, *args, **kwargs)
+            if request.method == 'GET':
+                return response
+
+            is_response_tuple = isinstance(response, tuple)
+            if not is_response_tuple or response[1] < 200 or response[1] > 204:
+                return response
+
+            activity_action = get_clean_rule(rule) or request.method.lower()
+            activity_data = {**kwargs, **self.get_request_data_as_object()}
+            if is_response_tuple and response[0]:
+                try:
+                    activity_data.update(json.loads(response[0]))
+                except (ValueError, TypeError):
+                    # Cannot parse json from response - no helpful data
+                    pass
+            activity_params = get_activity_params(activity_param_names, activity_data)
+            try:
+                self.log_activity_user_default(activity_category, activity_action, activity_params)
+            except Exception:
+                logger.info(f'Failed to log activity: {activity_category} - {activity_action}, {activity_params}')
+            return response
+        return actual_wrapper
+
+    return wrap
+
+
+def get_clean_rule(rule: str):
+    """
+    Remove the parameter parts from the rule path, i.e. <param_name> and check if one part left or more
+
+    :param rule: For accessing an endpoint, of the form "path/to/endpoint/"
+    :return: The only part of the path with no parameter, or None if there are more
+    """
+    clean_rule_parts = [part for part in rule.split('/') if not re.match(r'<.+>', part)]
+    return clean_rule_parts[0] if len(clean_rule_parts) == 1 else None
+
+
+def get_activity_params(param_names: List[str], activity_data: dict) -> dict:
+    """
+    Find values for each of given param_names in given activity_data
+
+    :param param_names: List of parameters expected somewhere in the data
+    :param activity_data: Aggregated data sent to or returned from the endpoint
+    :return: Each name found and its value
+    """
+    if not param_names:
+        param_names = ['name', 'ids']
+
+    param_values = {}
+    for param_name in param_names:
+        param_value = activity_data.get(param_name)
+        if not param_value:
+            continue
+        param_values[param_name] = len(param_value) if isinstance(param_value, list) else param_value
+    return param_values
+
+
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """

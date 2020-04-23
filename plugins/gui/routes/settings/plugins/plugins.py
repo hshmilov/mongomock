@@ -4,8 +4,7 @@ import urllib.parse
 import OpenSSL
 import pymongo
 import requests
-from flask import (jsonify,
-                   request)
+from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -103,8 +102,12 @@ class Plugins:
                                         schema)
         return config, schema
 
-    @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False)
+    @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False,
+                         activity_params=['config_name'])
     def update_plugin_configs(self, plugin_name, config_name):
+        return self._save_plugin_config(plugin_name, config_name)
+
+    def _save_plugin_config(self, plugin_name, config_name):
         """
         Set a specific config on a specific plugin
         """

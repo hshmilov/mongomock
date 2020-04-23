@@ -53,6 +53,7 @@ from retrying import retry
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
+from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_exceptions import SessionInvalid, PluginNotFoundException
 from axonius.adapter_exceptions import TagDeviceError, AdapterException
@@ -104,7 +105,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS,
                                           PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
                                           PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
-                                          PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME)
+                                          PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME,
+                                          AUDIT_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -3970,3 +3972,40 @@ class PluginBase(Configurable, Feature, ABC):
             if client_id and conn_label:
                 clients_label[conn_label].append((client_id, plugin_unique_name))
         return clients_label
+
+    def log_activity(self, category: AuditCategory, action: AuditAction, params: Dict[str, str] = None,
+                     activity_type: AuditType = AuditType.Info, user_id: ObjectId = None):
+        """
+        Create an activity log of a predefined Category and Action
+
+        :param category: Classifying the area of the activity
+        :param action: Leading to the activity
+        :param params: Specifying subjects of the activity
+        :param activity_type: Indicating the source of the activity
+        :param user_id: The user performing the activity - leave empty for system activity
+        """
+        self.log_activity_default(category.value, action.value, params, activity_type, user_id)
+
+    def log_activity_default(self, category: str, action: str, params: Dict[str, str],
+                             activity_type: AuditType, user_id: ObjectId = None):
+        """
+        Creates a new document in the 'activity_logs' collection, with given properties,
+        along with current time for the date the activity happened.
+
+        :param category: String representation of the category
+        :param action: String representation of the action
+        :param params: Specifying subject of the activity
+        :param activity_type: Indicating the source of the activity
+        :param user_id: The user performing the activity - leave empty for system activity
+        """
+        new_activity_log = dict(category=category,
+                                action=action,
+                                params=params,
+                                timestamp=datetime.now(),
+                                user=user_id,
+                                type=activity_type.value)
+        self._audit_collection.insert_one(new_activity_log)
+
+    @property
+    def _audit_collection(self):
+        return self._get_collection(AUDIT_COLLECTION, CORE_UNIQUE_NAME)

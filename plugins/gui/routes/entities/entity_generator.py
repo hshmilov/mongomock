@@ -38,9 +38,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @sorted_endpoint()
         @projected()
-        @gui_route_logged_in(methods=['GET', 'POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                             permission_category)})
+        @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category))
         def get(self, limit, skip, mongo_filter, mongo_sort,
                 mongo_projection, history: datetime):
             # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
@@ -61,9 +60,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             return iterator_jsonify(iterable)
 
         @filtered_entities()
-        @gui_route_logged_in(methods=['DELETE'],
-                             required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                             permission_category)})
+        @gui_route_logged_in(methods=['DELETE'], required_permission=PermissionValue.get(
+            PermissionAction.Update, permission_category))
         def delete_entities(self, mongo_filter):
             return self._delete_entities_by_internal_axon_id(
                 self.entity_type, self.get_request_data_as_object(), mongo_filter)
@@ -73,9 +71,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @sorted_endpoint()
         @projected()
         @filtered_fields()
-        @gui_route_logged_in('csv', methods=['POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                             permission_category)})
+        @gui_route_logged_in('csv', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category))
         def get_csv(self, mongo_filter, mongo_sort,
                     mongo_projection, history: datetime, field_filters):
 
@@ -94,9 +91,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
 
         @filtered_entities()
         @historical()
-        @gui_route_logged_in('count', methods=['GET', 'POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                             permission_category)})
+        @gui_route_logged_in('count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category))
         def get_count(self, mongo_filter, history: datetime):
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
@@ -117,9 +113,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 db, namespace, mongo_filter)
 
         @filtered_entities()
-        @gui_route_logged_in('labels', methods=['POST', 'DELETE'],
-                             required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                             permission_category)})
+        @gui_route_logged_in('labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
+            PermissionAction.Update, permission_category))
         def update_entity_labels(self, mongo_filter):
             db, namespace = (self.devices_db, self.devices) if self.entity_type == EntityType.Devices else \
                 (self.users_db, self.users)
@@ -178,18 +173,16 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         def entity_tasks(self, entity_id):
             return jsonify(entity_tasks_actions(entity_id))
 
-        @gui_route_logged_in('<entity_id>/notes', methods=['PUT', 'DELETE'],
-                             required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                             permission_category)})
+        @gui_route_logged_in('<entity_id>/notes', methods=['PUT', 'DELETE'], required_permission=PermissionValue.get(
+            PermissionAction.Update, permission_category))
         def entity_notes(self, entity_id):
             return entity_notes(self.entity_type, entity_id,
                                 self.get_request_data_as_object())
 
         @schema()
         @sorted_endpoint()
-        @gui_route_logged_in('<entity_id>/tasks/csv', methods=['POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                             permission_category)})
+        @gui_route_logged_in('<entity_id>/tasks/csv', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category))
         def entity_tasks_csv(self, entity_id, mongo_sort, schema_fields):
             """
             Create a csv file for a enforcement tasks of a specific entity
@@ -208,17 +201,15 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             output.headers['Content-type'] = 'text/csv'
             return output
 
-        @gui_route_logged_in('<entity_id>/notes/<note_id>', methods=['POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                             permission_category)})
+        @gui_route_logged_in('<entity_id>/notes/<note_id>', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.Update, permission_category))
         def entity_notes_update(self, entity_id, note_id):
             return entity_notes_update(self.entity_type, entity_id, note_id,
                                        self.get_request_data_as_object()['note'])
 
         @filtered_entities()
-        @gui_route_logged_in('custom', methods=['POST'],
-                             required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                             permission_category)})
+        @gui_route_logged_in('custom', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.Update, permission_category))
         def entities_custom_data(self, mongo_filter):
             """
             See self._entity_custom_data

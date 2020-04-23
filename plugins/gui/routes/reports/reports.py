@@ -27,6 +27,7 @@ from axonius.consts.plugin_consts import (GUI_PLUGIN_NAME)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD)
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.datetime import next_weekday
@@ -315,11 +316,14 @@ class Reports:
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_name, report_data, attachments_data = self._get_existing_executive_report_and_attachments(report_id)
+        report_name, report_data, attachments_data = self._get_executive_report_and_attachments(report_id)
         response = Response(report_data, mimetype='application/pdf', direct_passthrough=True)
+        self.log_activity_user(AuditCategory.Reports, AuditAction.Download, {
+            'name': report_name
+        })
         return response
 
-    def _get_existing_executive_report_and_attachments(self, report_id) -> Tuple[str, object, List[object]]:
+    def _get_executive_report_and_attachments(self, report_id) -> Tuple[str, object, List[object]]:
         """
         Opens the report pdf and attachment csv's from the db,
         save them in a temp files and return their path
@@ -355,7 +359,7 @@ class Reports:
                 except Exception:
                     logger.error(f'failed to retrieve attachment {attachment_uuid}')
         report_data = gridfs_connection.get(ObjectId(uuid))
-        return report_path, report_data, attachments_data
+        return name, report_data, attachments_data
 
     def generate_report(self, generated_date, report):
         """
@@ -521,7 +525,7 @@ class Reports:
 
         # If job doesn't exist generate it
         if exec_report_job is None:
-            self._job_scheduler.add_job(func=self._send_report_thread,
+            self._job_scheduler.add_job(func=self._send_report_thread_logged,
                                         kwargs={'report': exec_report_data},
                                         trigger=new_interval_triggger,
                                         next_run_time=next_run_time,
@@ -529,13 +533,19 @@ class Reports:
                                         id=exec_report_thread_id,
                                         max_instances=1)
         else:
-            exec_report_job.modify(func=self._send_report_thread,
+            exec_report_job.modify(func=self._send_report_thread_logged,
                                    kwargs={'report': exec_report_data},
                                    next_run_time=next_run_time)
             self._job_scheduler.reschedule_job(exec_report_thread_id, trigger=new_interval_triggger)
 
         logger.info(f'Scheduling an exec_report sending for {next_run_time} and period of {time_period}.')
         return 'Scheduled next run.'
+
+    def _send_report_thread_logged(self, report):
+        self._send_report_thread(report)
+        self.log_activity(AuditCategory.Reports, AuditAction.Trigger, {
+            'name': report.get('name', '')
+        })
 
     def _upsert_report_config(self, name, report_data, clear_generated_report) -> ObjectId:
         if clear_generated_report:
@@ -590,8 +600,7 @@ class Reports:
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
-            report_path, report_data, attachments_data = self._get_existing_executive_report_and_attachments(
-                report['uuid'])
+            _, report_data, attachments_data = self._get_executive_report_and_attachments(report['uuid'])
             if self.mail_sender:
                 try:
                     mail_properties = report['mail_properties']

@@ -43,6 +43,11 @@ class PermissionAction(Enum):
     RunManualDiscovery = 'run_manual_discovery'
     Run = 'run'
 
+    @classmethod
+    def has_value(cls, value):
+        # pylint: disable=no-member
+        return value in cls._value2member_map_
+
 
 # Represent a permission in the system
 class PermissionValue(NamedTuple):

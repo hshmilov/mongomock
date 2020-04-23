@@ -16,14 +16,14 @@ class ResearchPhases(Enum):
     """
     Possible sub-phases of the Research phase, representing stages system goes through before completing the research.
     """
-    Fetch_Devices = auto()
-    Fetch_Scanners = auto()
-    Clean_Devices = auto()
-    Pre_Correlation = auto()
-    Run_Correlations = auto()
-    Post_Correlation = auto()
-    Run_Queries = auto()
-    Save_Historical = auto()
+    Fetch_Devices = 'Fetch Devices'
+    Fetch_Scanners = 'Fetch Scanners'
+    Clean_Devices = 'Clean Devices'
+    Pre_Correlation = 'Prepare Correlations'
+    Run_Correlations = 'Run Correlations'
+    Post_Correlation = 'Process Correlations'
+    Run_Queries = 'Run Queries'
+    Save_Historical = 'Save History'
 
 
 SchedulerState = namedlist('SchedulerState',

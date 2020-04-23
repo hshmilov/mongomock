@@ -15,9 +15,8 @@ class PasswordVault:
     # Vault Service #
     #################
 
-    @gui_route_logged_in('password_vault', methods=['POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Adapters)})
+    @gui_route_logged_in('password_vault', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Adapters))
     def check_password_vault_query(self):
         """
         Checks if the query successfully fetches data from requested vault

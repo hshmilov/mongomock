@@ -146,7 +146,7 @@
               </div>
               <XInstancesSelect
                 id="serverInstance"
-                v-model="serverModal.instanceName"
+                v-model="serverModal.instanceId"
                 :render-label="true"
                 render-label-text="Choose Instance"
                 :hide-in-one-option="true"
@@ -227,7 +227,7 @@ import {
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
 } from '../../store/modules/adapters';
-import { REQUIRE_CONNECTION_LABEL } from '../../store/getters';
+import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters'
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
 
@@ -252,7 +252,7 @@ export default {
       serverModal: {
         open: false,
         serverData: {},
-        instanceName: '',
+        instanceId: '',
         connectionLabel: '',
         error: '',
         serverName: 'New Server',
@@ -277,6 +277,7 @@ export default {
       getClientsMap: 'getClientsMap',
       getInstancesMap: 'getInstancesMap',
       requireConnectionLabel: REQUIRE_CONNECTION_LABEL,
+      getConnectionLabel: GET_CONNECTION_LABEL
     }),
     ...mapState({
       loading(state) {
@@ -329,6 +330,9 @@ export default {
           ...client,
           ...client.client_config,
           node_name: instance.node_name,
+          connection_label: this.getConnectionLabel(client.client_id, {
+            plugin_name: this.adapterId, node_id,
+          }),
         };
       });
     },
@@ -377,7 +381,7 @@ export default {
       ];
     },
     uploadFileEndpoint() {
-      return `adapters/${this.adapterId}/${this.serverModal.instanceName}`;
+      return `adapters/${this.adapterId}/${this.serverModal.instanceId}`;
     },
   },
   watch: {
@@ -424,10 +428,11 @@ export default {
         const client = this.adapterClients.find((c) => c.uuid === clientId);
         this.serverModal = {
           ...this.serverModal,
-          serverData: { ...client.client_config, oldInstanceName: client.node_id },
-          instanceName: client.node_id,
+          serverData: { ...client.client_config },
+          instanceIdPrev: client.node_id,
+          instanceId: client.node_id,
           serverName: client.client_id,
-          connectionLabel: client.client_config.connection_label,
+          connectionLabel: client.connection_label,
           uuid: client.uuid,
           error: client.error,
           valid: true,
@@ -480,12 +485,11 @@ export default {
       this.message = 'Connecting to Server...';
       this.updateServer({
         adapterId: this.adapterId,
-        client_id: this.serverModal.serverName,
-        serverData: {
-          ...this.serverModal.serverData,
-          instanceName: this.serverModal.instanceName,
-          connection_label: this.serverModal.connectionLabel,
-        },
+        clientId: this.serverModal.serverName,
+        serverData: this.serverModal.serverData,
+        connectionLabel: this.serverModal.connectionLabel,
+        instanceId: this.serverModal.instanceId,
+        instanceIdPrev: this.serverModal.instanceIdPrev,
         uuid: this.serverModal.uuid,
       }).then((updateRes) => {
         if (this.selectedServers.includes('')) {
@@ -506,7 +510,8 @@ export default {
       this.message = 'Testing server connection...';
       this.testAdapter({
         adapterId: this.adapterId,
-        serverData: { ...this.serverModal.serverData, instanceName: this.serverModal.instanceName },
+        serverData: this.serverModal.serverData,
+        instanceId: this.serverModal.instanceId,
         uuid: this.serverModal.uuid,
       }).then((updateRes) => {
         if (updateRes.data.status === 'error') {
@@ -541,6 +546,7 @@ export default {
     },
     saveConfig(configName, config) {
       this.updatePluginConfig({
+        prefix: 'adapters',
         pluginId: this.adapterId,
         configName,
         config,
@@ -558,7 +564,7 @@ export default {
       }
     },
     setDefaultInstance() {
-      this.serverModal.instanceName = this.instanceDefaultName;
+      this.serverModal.instanceId = this.instanceDefaultName;
     },
   },
 };

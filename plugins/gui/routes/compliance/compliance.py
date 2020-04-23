@@ -25,9 +25,8 @@ SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__)
 class Compliance:
 
     @accounts_filter()
-    @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                         PermissionCategory.Compliance)})
+    @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Compliance))
     def compliance(self, name, method, accounts):
         return self._get_compliance(name, method, accounts)
 
@@ -42,9 +41,8 @@ class Compliance:
 
     @accounts_filter()
     @schema()
-    @gui_route_logged_in('<name>/csv', methods=['POST'],
-                         required_permission_values={PermissionValue.get(PermissionAction.View,
-                                                                         PermissionCategory.Compliance)})
+    @gui_route_logged_in('<name>/csv', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Compliance))
     def compliance_csv(self, name, schema_fields, accounts):
         return self._post_compliance_csv(name, schema_fields, accounts)
 

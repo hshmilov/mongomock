@@ -218,7 +218,7 @@ export default {
     },
     getApiKey() {
       this.fetchData({
-        rule: 'api_key',
+        rule: 'settings/api_key',
       }).then((response) => {
         if (response.status === 200 && response.data) {
           this.apiKey = response.data;
@@ -228,7 +228,7 @@ export default {
     resetKey() {
       this.closeResetKeyModal();
       this.fetchData({
-        rule: 'api_key',
+        rule: 'settings/reset_api_key',
         method: 'POST',
       }).then((response) => {
         if (response.status === 200 && response.data) {

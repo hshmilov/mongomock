@@ -2,7 +2,7 @@ import _get from 'lodash/get';
 import createRequest from './create-request';
 
 export const saveUserTableColumnGroup = async (entity, fields, columnGroupName = 'default') => {
-  const uri = '/settings/users/self/preferences';
+  const uri = 'self/preferences';
   const request = createRequest(uri);
   const requestOptions = {
     method: 'POST',
@@ -19,7 +19,7 @@ export const saveUserTableColumnGroup = async (entity, fields, columnGroupName =
 };
 
 export const getUserTableColumnGroups = async (entity) => {
-  const uri = '/settings/users/self/preferences';
+  const uri = 'self/preferences';
   const request = createRequest(uri);
   const { data } = await request({});
   return _get(data, `${entity}.table_columns`, {});

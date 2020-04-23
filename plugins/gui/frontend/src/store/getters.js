@@ -117,21 +117,17 @@ export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
 
 export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL';
-export const getConnectionLabel = (state) => (clientId, pluginName, pluginUniqueName) => {
-  if (!clientId) return '';
-  const NameTypeEnum = {
-    pluginName: 'plugin_name',
-    pluginUniqueName: 'plugin_unique_name',
-  };
-  const adaptersConnectionLabels = _get(state, 'adapters.connectionLabels', []);
-
-  let foundLabel = null;
-  if (pluginUniqueName) {
-    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label[NameTypeEnum.pluginUniqueName] === pluginUniqueName);
-  } else if (pluginName) {
-    foundLabel = adaptersConnectionLabels.find((label) => label.client_id === clientId && label[NameTypeEnum.pluginName] === pluginName);
+export const getConnectionLabel = (state) => (clientId, adapterProps) => {
+  if (!clientId) {
+    return '';
   }
-  return (foundLabel ? foundLabel.label : '');
+  const matchClient = (label) => label.client_id === clientId;
+  const matchAdapterProps = (label) => Object.keys(adapterProps).reduce((matches, prop) => (
+    matches && label[prop] === adapterProps[prop]), true);
+  const connectionLabels = _get(state, 'adapters.connectionLabels', []);
+  const matchLabel = (label) => matchClient(label) && matchAdapterProps(label)
+  const foundLabel = connectionLabels.find(matchLabel);
+  return foundLabel ? foundLabel.label : '';
 };
 
 const savedQueries = (state, namespace) => {

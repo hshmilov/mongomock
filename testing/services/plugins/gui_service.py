@@ -1276,8 +1276,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.get('devices/{0}'.format(id_), session=self._session, *vargs, **kwargs)
 
     def delete_client(self, adapter_unique_name, client_id, *vargs, **kwargs):
-        return self.delete(f'adapters/{adapter_unique_name}/clients/{client_id}', session=self._session,
-                           *vargs, **kwargs)
+        data = json.dumps({
+            'adapter': adapter_unique_name
+        })
+        return self.delete(f'adapters/connections/{client_id}', data=data, session=self._session, *vargs, **kwargs)
 
     def get_all_tags(self, *vargs, **kwargs):
         return self.get('tags', session=self._session, *vargs, **kwargs)
@@ -1296,10 +1298,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
 
     def get_api_key(self):
-        return self.get('api_key', session=self._session).json()
+        return self.get('settings/api_key', session=self._session).json()
 
     def renew_api_key(self):
-        return self.post('api_key', session=self._session).json()
+        return self.post('settings/reset_api_key', session=self._session).json()
 
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)

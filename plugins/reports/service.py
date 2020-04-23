@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from axonius.consts import plugin_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_name
@@ -174,8 +175,9 @@ class ReportsService(Triggerable, PluginBase):
             return ''
 
         if job_name == 'run':
+            enforcement_name = post_json['report_name']
             report = self.__reports_collection.find_one({
-                'name': post_json['report_name']
+                'name': enforcement_name
             })
             if not report:
                 raise LookupError('Can not find such a report')
@@ -188,7 +190,7 @@ class ReportsService(Triggerable, PluginBase):
                                                           run_identifier, post_json.get('manual', False))
             elif post_json.get('input'):
                 result = self.__process_run_configuration(report, Trigger(
-                    name=post_json['report_name'],
+                    name=enforcement_name,
                     view=TriggerView(name=CUSTOM_SELECTION_TRIGGER, entity=EntityType[post_json['input']['entity']]),
                     conditions=TriggerConditions(new_entities=False, previous_entities=False, above=-1, below=-1),
                     period=TriggerPeriod.never,
@@ -204,6 +206,7 @@ class ReportsService(Triggerable, PluginBase):
                 return NOT_RAN_STATE
 
             result = json.loads(result.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
+            result['name'] = enforcement_name
             return result
 
         raise NotImplementedError('No such job')
@@ -614,6 +617,13 @@ class ReportsService(Triggerable, PluginBase):
             run_id.update_status(json.loads(recipe.to_json(
                 default=self.__default_for_trigger), object_hook=json_util.object_hook))
 
+            def _log_activity_trigger(action: AuditAction):
+                self.log_activity(AuditCategory.Enforcements, action, {
+                    'enforcement': report.get('name', ''),
+                    'task': str(recipe.metadata.pretty_id)
+                })
+            _log_activity_trigger(AuditAction.Start)
+
             result = self._call_actions(report, recipe, triggered_reason, trigger,
                                         query_difference.added
                                         if trigger.run_on == RunOnEntities.AddedEntities
@@ -631,6 +641,7 @@ class ReportsService(Triggerable, PluginBase):
                     f'{TRIGGERS_FIELD}.$[i].{TIMES_TRIGGERED_FIELD}': 1
                 }
             })
+            _log_activity_trigger(AuditAction.Complete)
         return result
 
     @property

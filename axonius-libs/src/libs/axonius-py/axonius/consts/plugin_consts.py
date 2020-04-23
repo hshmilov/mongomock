@@ -112,6 +112,7 @@ PASSWORD_PROTECTION_BY_USERNAME = 'password_protection_by_username'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
+AUDIT_COLLECTION = 'audit'
 REPORTS_CONFIG_COLLECTION = 'reports_config'
 VERSION_COLLECTION = 'version'
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'

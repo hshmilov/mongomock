@@ -609,9 +609,10 @@ class AdapterService(PluginService):
         if not client_data:
             response = self.post('clients', headers={API_KEY_HEADER: self.api_key})
         else:
-            client_data = self._process_clients_for_adapter(client_data)
-            response = self.put('clients', headers={API_KEY_HEADER: self.api_key},
-                                json=client_data)
+            clients_data = {
+                'connection': self._process_clients_for_adapter(client_data)
+            }
+            response = self.put('clients', headers={API_KEY_HEADER: self.api_key}, json=clients_data)
         assert response.status_code == 200, str(response)
         return response.json()
 

@@ -307,7 +307,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
   }
   if (uuid) {
     return dispatch(REQUEST_API, {
-      rule: `${module}/views/saved/${uuid}`,
+      rule: `${module}/views/${uuid}`,
       method: 'POST',
       data,
     }).then(() => {
@@ -315,7 +315,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
     });
   }
   return dispatch(REQUEST_API, {
-    rule: `${module}/views/saved`,
+    rule: `${module}/views`,
     method: 'PUT',
     data,
   }).then((response) => {
@@ -366,7 +366,7 @@ export const fetchDataHyperlinks = ({ state, dispatch }, payload) => {
 
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE';
 export const startResearch = ({ dispatch }) => dispatch(REQUEST_API, {
-  rule: 'settings/research_phase',
+  rule: 'settings/run_manual_discovery',
   method: 'POST',
 });
 

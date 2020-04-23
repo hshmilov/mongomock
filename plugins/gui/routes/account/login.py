@@ -23,6 +23,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           GUI_PLUGIN_NAME)
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
@@ -100,7 +101,7 @@ class Login:
         password = log_in_data.get('password')
         remember_me = log_in_data.get('remember_me', False)
         if not isinstance(remember_me, bool):
-            return return_error('Illegal input', 401)
+            return return_error('Illegal input', 400)
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'disable_remember_me'):
             remember_me = False
@@ -111,11 +112,13 @@ class Login:
         if user_from_db is None:
             logger.info(f'Unknown user {user_name} tried logging in')
             self.send_external_info_log(f'Unknown user {user_name} tried logging in')
+            self._log_activity_login_failure()
             return return_error('Wrong user name or password', 401)
 
         if not bcrypt.verify(password, user_from_db['password']):
             self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
+            self._log_activity_login_failure()
             return return_error('Wrong user name or password', 401)
         role = self._roles_collection.find_one({'_id': user_from_db.get('role_id')})
         if request and request.referrer and 'localhost' not in request.referrer \
@@ -131,6 +134,19 @@ class Login:
         response = Response('')
         self._add_expiration_timeout_cookie(response)
         return response
+
+    def _log_activity_login_failure(self):
+        if request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
+                                             or 'diag-l.axonius.com' in request.referrer):
+            return
+        self.log_activity(AuditCategory.UserSession, AuditAction.Login, {
+            'status': 'failure'
+        })
+
+    def _log_activity_login(self):
+        self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {
+            'status': 'successful'
+        })
 
     def _update_user_last_login(self, user):
         user_id = user.get('_id')
@@ -158,6 +174,7 @@ class Login:
         self.get_session['user'] = user
         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
         self.get_session.permanent = remember_me
+        self._log_activity_login()
 
     def __exteranl_login_successful(self, source: str,
                                     username: str,
@@ -220,6 +237,8 @@ class Login:
                 oidc.claims.get('family_name', ''),
                 oidc.claims['email']
             )
+        else:
+            self._log_activity_login_failure()
 
         redirect_response = redirect('/', code=302)
         self._add_expiration_timeout_cookie(redirect_response)
@@ -267,6 +286,11 @@ class Login:
             ldap_login = self._ldap_login
             if not ldap_login['enabled']:
                 return return_error('LDAP login is disabled', 400)
+
+            def _log_return_error(message):
+                self._log_activity_login_failure()
+                return return_error(message)
+
             try:
                 dc_address, use_ssl = self.__get_dc(ldap_login)
                 conn = LdapConnection(dc_address, f'{domain}\\{user_name}', password,
@@ -279,17 +303,17 @@ class Login:
                                           ldap_login['ca_file']) if ldap_login['ca_file'] else None)
             except RESTException:
                 logger.exception(f'Failed to connect to any of the following DCs: {ldap_login.get("dc_address")}')
-                return return_error('Failed logging into AD: Connection to DC failed.')
+                return _log_return_error('Failed logging into AD: Connection to DC failed.')
             except LdapException:
                 logger.exception('Failed login')
-                return return_error('Failed logging into AD')
+                return _log_return_error('Failed logging into AD')
             except Exception:
                 logger.exception('Unexpected exception')
-                return return_error('Failed logging into AD')
+                return _log_return_error('Failed logging into AD')
 
             result = conn.get_user(user_name)
             if not result:
-                return return_error('Failed login')
+                return _log_return_error('Failed login')
             user, groups, groups_dn = result
 
             needed_group = ldap_login['group_cn']
@@ -298,10 +322,10 @@ class Login:
             if needed_group:
                 if not use_group_dn:
                     if needed_group.split('.')[0] not in groups_prefix:
-                        return return_error(f'The provided user is not in the group {needed_group}')
+                        return _log_return_error(f'The provided user is not in the group {needed_group}')
                 else:
                     if needed_group not in groups_dn:
-                        return return_error(f'The provided user is not in the group {needed_group}')
+                        return _log_return_error(f'The provided user is not in the group {needed_group}')
             image = None
             try:
                 thumbnail_photo = user.get('thumbnailPhoto') or \
@@ -506,6 +530,7 @@ class Login:
         source = user.get('source')
         first_name = user.get('first_name')
         logger.info(f'User {username}, {source}, {first_name} has logged out')
+        self.log_activity_user(AuditCategory.UserSession, AuditAction.Logout)
         self.get_session['user'] = None
         self.get_session['csrf-token'] = None
         self.get_session.clear()

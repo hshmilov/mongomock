@@ -5,6 +5,7 @@ import pymongo
 from flask import (jsonify)
 
 from axonius.consts.metric_consts import GettingStartedMetric
+from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.utils.gui_helpers import get_connected_user_id
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
@@ -51,6 +52,15 @@ class GettingStarted:
                    metric_value=milestone_name,
                    details=details,
                    progress=progress_formatted_str)
+
+        completed_milestone = next(milestone for milestone in result['milestones']
+                                   if milestone.get('name', '') == milestone_name)
+        if completed_milestone:
+            self.log_activity_user(AuditCategory.GettingStarted, AuditAction.CompletePhase, {
+                'phase': completed_milestone.get('title')
+            })
+        if milestones_len == progress:
+            self.log_activity_user(AuditCategory.GettingStarted, AuditAction.Complete)
         return ''
 
     @gui_route_logged_in(methods=['POST'])

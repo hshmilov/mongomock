@@ -5,7 +5,7 @@ import secrets
 import subprocess
 import time
 import configparser
-from typing import List
+from typing import (List, Dict)
 from pathlib import Path
 from bson import ObjectId
 from bson.json_util import dumps
@@ -18,6 +18,7 @@ from flask import (session)
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
+from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
@@ -57,7 +58,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.gui_helpers import (get_entities_count)
+from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id)
 from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
                                               get_restricted_permissions, is_role_admin, is_axonius_role,
                                               PermissionCategory, PermissionAction)
@@ -1037,3 +1038,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     def _get_environment_name(self):
         instance = self._nodes_metadata_collection.find_one({NODE_USE_AS_ENV_NAME: True})
         return instance.get(NODE_NAME, '') if instance is not None else ''
+
+    def log_activity_user(self, category: AuditCategory, action: AuditAction, params: Dict[str, str]=None):
+        self.log_activity_user_default(category.value, action.value, params)
+
+    def log_activity_user_default(self, category: str, action: str, params: Dict[str, str]=None):
+        if self.is_axonius_user():
+            return
+        super().log_activity_default(category, action, params, AuditType.User, get_connected_user_id())

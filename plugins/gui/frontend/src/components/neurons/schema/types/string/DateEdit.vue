@@ -30,7 +30,9 @@
 </template>
 
 <script>
+import dayjs from 'dayjs';
 import XButton from '../../../../axons/inputs/Button.vue';
+
 
 export default {
   name: 'XDateEdit',
@@ -72,8 +74,9 @@ export default {
       set(value) {
         let selectedDate = value;
         if (selectedDate && typeof selectedDate !== 'string') {
-          selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset());
-          selectedDate = selectedDate.toISOString().substring(0, 10);
+          // selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset());
+          // selectedDate = selectedDate.toISOString().substring(0, 10);
+          selectedDate = dayjs(selectedDate).format('YYYY-MM-DD');
         } else if (!selectedDate) {
           this.$refs.date.modelDate = '';
         }

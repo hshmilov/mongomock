@@ -12,9 +12,8 @@ from gui.routes.graphql import graphql
 @gui_category_add_rules('graphql')
 class GraphQLAPI:
     @gui_helpers.paginated()
-    @gui_route_logged_in('search/devices', methods=['GET'],
-                         required_permission_values={
-                             PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
+    @gui_route_logged_in('search/devices', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def search_devices(self, limit, skip):
         response = graphql.search_devices(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:
@@ -24,9 +23,8 @@ class GraphQLAPI:
         return response.text
 
     @gui_helpers.paginated()
-    @gui_route_logged_in('search/users', methods=['GET'],
-                         required_permission_values={
-                             PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)})
+    @gui_route_logged_in('search/users', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.UsersAssets))
     def search_users(self, limit, skip):
         response = graphql.search_users(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:

@@ -157,7 +157,9 @@ export default {
         return new Date(secondSeen) - new Date(firstSeen);
       }).map((item) => {
         item.id = `${item.plugin_unique_name}_${item.data.id}`;
-        let connectionLabel = this.getConnectionLabel(item.client_used, undefined, item.plugin_unique_name);
+        let connectionLabel = this.getConnectionLabel(item.client_used, {
+          plugin_unique_name: item.plugin_unique_name
+        });
         item.connectionLabel = connectionLabel || item.client_used;
         if (connectionLabel !== '') {
           connectionLabel = ` - ${connectionLabel}`;

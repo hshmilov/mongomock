@@ -45,7 +45,7 @@ class Instances:
             else:
                 logger.error(f'{attribute} is null - wrong parameters. ')
 
-    @gui_route_logged_in(methods=['POST'])
+    @gui_route_logged_in(methods=['POST'], activity_params=['node_name'])
     def update_instances(self):
         data = self.get_request_data_as_object()
 
@@ -60,14 +60,13 @@ class Instances:
                 if self._update_hostname_on_node(instance_data=data):
                     self.update_instance(instance_data=data, attributes=[NODE_HOSTNAME])
                 else:
-                    return return_error(f'Failed to change hostname', 500)
+                    return return_error(f'Failed to change hostname', 400)
             else:
                 return return_error(f'Illegal hostname value entered', 400)
         return ''
 
     @gui_route_logged_in(methods=['DELETE'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Instances)})
+                         required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances))
     def delete_instances(self):
         data = self.get_request_data_as_object()
         node_ids = data[NODE_DATA_INSTANCE_ID]
@@ -119,7 +118,12 @@ class Instances:
         new_hostname = str(instance_data.get(NODE_HOSTNAME))
 
         url = f'find_plugin_unique_name/nodes/{node_id}/plugins/instance_control'
-        node_unique_name = self.request_remote_plugin(url).json().get('plugin_unique_name')
+        node_unique_name_response = self.request_remote_plugin(url)
+        if not node_unique_name_response.text:
+            logger.error(f'Unable to retrieve plugin_unique_name for id {node_id}')
+            return False
+
+        node_unique_name = node_unique_name_response.json().get('plugin_unique_name')
 
         if node_unique_name is None:
             logger.error(f'unable to allocate target instance control plugin_unique_name with id  {node_id}')
@@ -145,9 +149,8 @@ class Instances:
         self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='POST', json={'tags': data['tags']})
         return ''
 
-    @gui_route_logged_in('tags', methods=['DELETE'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Instances)})
+    @gui_route_logged_in('tags', methods=['DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Instances))
     def delete_instances_tags(self):
         data = self.get_request_data_as_object()
         self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='DELETE', json={'tags': data['tags']})

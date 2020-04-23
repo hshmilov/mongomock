@@ -223,12 +223,15 @@ export default {
             name: 'name', title: 'Name', type: 'string',
           }],
         data: _orderBy(this.adaptersDetailsWithClientIdList.map((adapter) => {
-          let connectionLabel = this.getConnectionLabel(adapter.clientId, adapter.pluginName[0], undefined);
+          const connectionLabel = this.getConnectionLabel(adapter.clientId, {
+            plugin_name: adapter.pluginName[0],
+          });
+          let name = pluginMeta[adapter.pluginName[0]]
+            ? pluginMeta[adapter.pluginName[0]].title
+            : adapter.pluginName[0];
           if (connectionLabel !== '') {
-            connectionLabel = ` - ${connectionLabel}`;
+            name = `${name} - ${connectionLabel}`;
           }
-          const name = (pluginMeta[adapter.pluginName[0]] ? pluginMeta[adapter.pluginName[0]].title
-            : adapter.pluginName[0]) + connectionLabel;
           return {
             [this.fieldName]: adapter.pluginName,
             name,

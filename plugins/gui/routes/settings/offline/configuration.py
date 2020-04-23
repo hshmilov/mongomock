@@ -40,9 +40,8 @@ class Configuration:
         logger.info(f'upload_file: request register id:{file_id}')
         return make_response((file_id, 200))
 
-    @gui_route_logged_in('upload_file', methods=['PATCH'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('upload_file', methods=['PATCH'], enforce_trial=False, required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings))
     def upload_file(self):
         """
         Fetch the Getting Started checklist state from db
@@ -74,8 +73,8 @@ class Configuration:
         return make_response((file_id, 200))
 
     @gui_route_logged_in('upload_file', methods=['DELETE'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Settings)})
+                         required_permission=PermissionValue.get(PermissionAction.Update,
+                                                                 PermissionCategory.Settings))
     def delete_uploaded_file(self):
         file_id = request.data.decode()
         if not file_id:

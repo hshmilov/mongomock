@@ -6,7 +6,7 @@ from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Set
+from typing import Set, Dict
 import requests
 
 import pytz
@@ -33,6 +33,7 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           STATIC_CORRELATOR_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SchedulerState
+from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable, RunIdentifier
@@ -480,21 +481,36 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Manages a research phase and it's sub phases.
         :return:
         """
+        def _log_activity_research(action: AuditAction, params: Dict[str, str] = None):
+            self.log_activity(AuditCategory.Discovery, action, params)
 
-        def _change_subphase(subphase: scheduler_consts.ResearchPhases):
+        def _log_activity_phase(action: AuditAction):
+            _log_activity_research(action, {
+                'phase': self.state.SubPhase.value
+            })
+
+        def _start_subphase(subphase: scheduler_consts.ResearchPhases):
             with self.__realtime_lock:
                 self.state.SubPhase = subphase
-
             logger.info(f'Started Subphase {subphase}')
+            _log_activity_phase(AuditAction.StartPhase)
             if self._notify_on_adapters is True:
                 logger.debug(f'Creating notification for subphase {subphase}')
                 self.create_notification(f'Started Subphase {subphase}')
             logger.debug(f'Trying to send syslog for subphase {subphase}')
             self.send_external_info_log(f'Started Subphase {subphase}')
 
+        def _complete_subphase():
+            _log_activity_phase(AuditAction.CompletePhase)
+
+        def _change_subphase(subphase: scheduler_consts.ResearchPhases):
+            _complete_subphase()
+            _start_subphase(subphase)
+
         with self._start_research():
             self.state.Phase = scheduler_consts.Phases.Research
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+            _log_activity_research(AuditAction.Start)
+            _start_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
             time.sleep(5)  # for too-quick-cycles
 
             if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
@@ -632,6 +648,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.exception(f'Could not restart heavy-lifting')
 
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+            _complete_subphase()
+            _log_activity_research(AuditAction.Complete)
             if self._notify_on_adapters is True:
                 self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')

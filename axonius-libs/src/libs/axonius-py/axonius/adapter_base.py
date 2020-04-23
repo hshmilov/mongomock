@@ -24,6 +24,7 @@ from pymongo import ReturnDocument
 
 from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL, CLIENT_ID
 from axonius.consts.metric_consts import Adapters
+from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.metric_helper import log_metric
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -373,6 +374,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if self._notify_on_adapters is True and (devices_cleaned or users_cleaned):
             self.create_notification(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
         logger.info(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
+        self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
+            'adapter': self.plugin_name,
+            'count': devices_cleaned + users_cleaned
+        })
         return {
             EntityType.Devices.value: devices_cleaned,
             EntityType.Users.value: users_cleaned
@@ -559,9 +564,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             devices_count = 0
             users_count = 0
             try:
-                devices_count = self._save_data_from_plugin(
+                devices_count = self._save_data_from_plugin_logged(
                     client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
-                users_count = self._save_data_from_plugin(
+                users_count = self._save_data_from_plugin_logged(
                     client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
             except Exception as e:
                 with self._clients_lock:
@@ -583,6 +588,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         f' to server with the ID {client_name}. Error is {str(e2)}'
                     self.create_notification(error_msg)
                     self.send_external_info_log(error_msg)
+                    self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {
+                        'adapter': self.plugin_name,
+                        'client_id': client_name,
+                        'error': str(e2)
+                    }, AuditType.Error)
                     if self.mail_sender and self._adapter_errors_mail_address:
                         email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
                                                            self._adapter_errors_mail_address.split(','))
@@ -615,11 +625,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             self._update_client_status(client_name, 'success')
         else:
             devices_count = sum(
-                self._save_data_from_plugin(*data, EntityType.Devices)
+                self._save_data_from_plugin_logged(*data, EntityType.Devices)
                 for data
                 in self._query_data(EntityType.Devices))
             users_count = sum(
-                self._save_data_from_plugin(*data, EntityType.Users)
+                self._save_data_from_plugin_logged(*data, EntityType.Users)
                 for data
                 in self._query_data(EntityType.Users))
 
@@ -659,6 +669,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                          'parsed': parsed_data}
 
             return data_list
+
+    def _save_data_from_plugin_logged(self, client_name: str, client_data: dict, entity_type: EntityType):
+        data_count = self._save_data_from_plugin(client_name, client_data, entity_type)
+        self.log_activity(AuditCategory.Adapters, AuditAction.Fetch, {
+            'asset': entity_type.value,
+            'adapter': self.plugin_name,
+            'client_id': client_name,
+            'count': data_count
+        })
+        return data_count
 
     def _route_test_reachability(self, *args, **kwargs):
         if self.is_in_mock_mode:
@@ -707,7 +727,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if self.get_method() == 'PUT':
                 self.__has_a_reason_to_live = True
 
-                client_config = request.get_json(silent=True)
+                request_data = self.get_request_data_as_object()
+                client_config = request_data['connection']
                 if not client_config:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, metric_value='invalid client')
                     return return_error('Invalid client')
@@ -719,7 +740,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                metric_value=f'{err_msg} - {e if os.environ.get("PROD") == "false" else ""}')
                     logger.warning(f'{err_msg}', exc_info=True)
                     return return_error(err_msg)
-                add_client_result = self._add_client(client_config)
+                add_client_result = self._add_client(client_config, connection_label=request_data.get(CONNECTION_LABEL))
                 if not add_client_result:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                metric_value=f'_add_client failed for {client_id}')
@@ -778,7 +799,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                         upsert=upsert)
         return None
 
-    def _add_client(self, client_config: dict, object_id=None, new_client=True):
+    def _add_client(self, client_config: dict, object_id=None, new_client=True, connection_label=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
@@ -803,8 +824,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
             # add/update clients connection labels
-            if client_config.get(CONNECTION_LABEL):
-                self._write_client_connection_label(client_id, client_config)
+            if connection_label:
+                self._write_client_connection_label(client_id, connection_label)
 
             status = 'error'  # Default is error
             self._clients[client_id] = self.__connect_client_facade(client_config)
@@ -839,37 +860,38 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         return None
 
-    def _write_client_connection_label(self, client_id: str, client_config: dict):
+    def _write_client_connection_label(self, client_id: str, connection_label: str):
         """
-           update client connection label mapping entry.
-           DB aggregator, collection: adapters_client_labels
+        update client connection label mapping entry.
+        DB aggregator, collection: adapters_client_labels
 
-           :param client_id: adapter client ID ( a.k.a client_used )
-           :param client_config: the client connection data set , include connection label
+        :param client_id: adapter client ID ( a.k.a client_used )
+        :param client_config: the client connection data set , include connection label
         """
-        resp = self.adapter_client_labels_db.replace_one({CLIENT_ID: client_id,
-                                                          NODE_ID: self.node_id,
-                                                          PLUGIN_UNIQUE_NAME: self.plugin_unique_name},
-                                                         {CLIENT_ID: client_id,
-                                                          CONNECTION_LABEL: client_config.get(CONNECTION_LABEL),
-                                                          PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                                                          PLUGIN_NAME: self.plugin_name,
-                                                          NODE_ID: self.node_id},
-                                                         upsert=True)
+        resp = self.adapter_client_labels_db.replace_one({
+            CLIENT_ID: client_id,
+            NODE_ID: self.node_id,
+            PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+        }, {
+            CLIENT_ID: client_id,
+            CONNECTION_LABEL: connection_label,
+            PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+            PLUGIN_NAME: self.plugin_name,
+            NODE_ID: self.node_id
+        }, upsert=True)
 
         if not resp.acknowledged:
-            logger.warning(f'failure to write connection label {client_config.get(CONNECTION_LABEL)} '
-                           f'from client {client_id}  on node {self.node_id}')
+            logger.info(
+                f'Failed to save connection label {connection_label} for client {client_id} on node {self.node_id}')
 
     def _delete_client_connection_label(self, client_config: dict):
         '''
-            remove client connection label mapping entry.
-            DB aggregator, collection: adapters_client_labels
-            :param client_config: the client connection data set , include connection label
+        remove client connection label mapping entry.
+        DB aggregator, collection: adapters_client_labels
+
+        :param client_config: the client connection data set, include connection label
         '''
-
         if CLIENT_ID in client_config:
-
             resp = self.adapter_client_labels_db.delete_one({CLIENT_ID: client_config.get(CLIENT_ID),
                                                              NODE_ID: self.node_id})
 

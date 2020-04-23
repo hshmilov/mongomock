@@ -8,13 +8,13 @@ from bson import ObjectId
 from flask import (jsonify)
 from passlib.hash import bcrypt
 
-from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED, UNCHANGED_MAGIC_FOR_GUI,
-                                       USERS_PREFERENCES_COLUMNS_FIELD, IS_AXONIUS_ROLE)
+from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED, UNCHANGED_MAGIC_FOR_GUI, IS_AXONIUS_ROLE)
 
-from axonius.consts.plugin_consts import PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, \
-    PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES
-from axonius.plugin_base import (return_error, EntityType,
-                                 LIMITER_SCOPE, route_limiter_key_func)
+from axonius.consts.plugin_consts import (PASSWORD_LENGTH_SETTING,
+                                          PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE,
+                                          PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
+                                          PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES)
+from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (paginated, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
@@ -33,9 +33,8 @@ class Users:
 
     @paginated()
     @sorted_endpoint()
-    @gui_route_logged_in(methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_users(self, limit, skip, mongo_sort):
         """
         GET Returns all users of the system
@@ -47,9 +46,8 @@ class Users:
         """
         return self._get_user_pages(limit=limit, skip=skip, sort=mongo_sort)
 
-    @gui_route_logged_in('count', methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('count', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def system_users_count(self):
         """
         :return: filtered users collection size (without axonius users)
@@ -62,9 +60,8 @@ class Users:
             }
         })))
 
-    @gui_route_logged_in('username_list', methods=['GET'],
-                         required_permission_values={PermissionValue.get(PermissionAction.GetUsersAndRoles,
-                                                                         PermissionCategory.Settings)})
+    @gui_route_logged_in('username_list', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_username_list(self):
         """
         Designated endpoint for getting all used user names
@@ -76,7 +73,7 @@ class Users:
         )
         return jsonify([user.get('user_name', '') for user in users])
 
-    @gui_route_logged_in(methods=['PUT'])
+    @gui_route_logged_in(methods=['PUT'], activity_params=['user_name'])
     def add_users(self):
         """
         PUT Create a new user
@@ -275,7 +272,7 @@ class Users:
         logger.info(f'Bulk assign role modified succeeded')
         return '', 200
 
-    @gui_route_logged_in('<user_id>', methods=['POST'])
+    @gui_route_logged_in('<user_id>', methods=['POST'], activity_params=['user_name'])
     def update_user(self, user_id):
         """
             Updates user info
@@ -400,74 +397,4 @@ class Users:
             logger.info('Deletion partially succeeded')
             return '', 202
         logger.info(f'Bulk deletion users succeeded')
-        return '', 200
-
-    @gui_route_logged_in('self/password', methods=['POST'], enforce_permissions=False,
-                         limiter_key_func=route_limiter_key_func, shared_limit_scope=LIMITER_SCOPE)
-    def system_users_password(self):
-        """
-        Change a password for a specific user. It must be the same user as currently logged in to the system.
-        Post data is expected to have the old password, matching the one in the DB
-
-        :param user_id:
-        :return:
-        """
-        post_data = self.get_request_data_as_object()
-        user = self.get_session['user']
-        if not bcrypt.verify(post_data['old'], user['password']):
-            return return_error('Given password is wrong')
-
-        if not self._check_password_validity(post_data['new']):
-            return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
-
-        self._users_collection.update_one({'_id': user['_id']},
-                                          {'$set': {'password': bcrypt.hash(post_data['new'])}})
-        self._invalidate_sessions([str(user['_id'])])
-        return '', 200
-
-    @gui_route_logged_in('self/preferences', methods=['GET'], enforce_permissions=False)
-    def get_system_users_preferences(self):
-        """
-        Fetch the default view of devices table, for current user
-        """
-        return self._system_users_preferences_get()
-
-    @gui_route_logged_in('self/preferences', methods=['POST'], enforce_permissions=False)
-    def update_system_users_preferences(self):
-        """
-        Save the default view of devices table, for current user
-        """
-        return self._system_users_preferences_post()
-
-    def _system_users_preferences_get(self):
-        """
-        Search for current user's preferences and it
-        :return: List of saved fields or error if none found
-        """
-        user_preferences = self._users_preferences_collection.find_one({
-            'user_id': self.get_session['user']['_id']
-        })
-        if not user_preferences:
-            return jsonify({}), 200
-        return jsonify(user_preferences), 200
-
-    def _system_users_preferences_post(self):
-        """
-        Save a default view for given entity_type, in current user's preferences
-        :param entity_type: devices | users
-        :return: Error if could not save
-        """
-        post_data = self.get_request_data_as_object()
-        set_object = {}
-        for entity_type in EntityType:
-            entity_value = entity_type.value
-            if entity_value in post_data:
-                table_columns_preferences = post_data[entity_value].get(USERS_PREFERENCES_COLUMNS_FIELD, {})
-                for (view_type, columns) in table_columns_preferences.items():
-                    set_object[f'{entity_value}.{USERS_PREFERENCES_COLUMNS_FIELD}.{view_type}'] = columns
-        self._users_preferences_collection.update_one({
-            'user_id': self.get_session['user']['_id']
-        }, {
-            '$set': set_object
-        }, upsert=True)
         return '', 200

@@ -101,7 +101,8 @@ export const settings = {
       if (!payload || !payload.pluginId || !payload.configName) {
         return null;
       }
-      const rule = `settings/plugins/${payload.pluginId}/${payload.configName}`;
+      const rulePrefix = payload.prefix || 'settings/plugins';
+      const rule = `${rulePrefix}/${payload.pluginId}/${payload.configName}`;
       return dispatch(REQUEST_API, {
         rule,
         method: 'POST',

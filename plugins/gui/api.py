@@ -1,7 +1,7 @@
 import logging
 import math
 from itertools import islice
-from typing import Iterable
+from typing import List
 
 from flask import jsonify, request, has_request_context, g
 from passlib.hash import bcrypt
@@ -18,7 +18,7 @@ from axonius.utils.gui_helpers import (accounts as accounts_filter,
                                        sorted_endpoint, projected, filtered,
                                        add_rule_custom_authentication,
                                        get_entities_count, add_rule_unauth,
-                                       entity_fields, PAGINATION_LIMIT_MAX)
+                                       entity_fields, PAGINATION_LIMIT_MAX, log_activity_rule)
 from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction,
                                               PermissionValue, deserialize_db_permissions, is_axonius_role)
 from axonius.utils.metric import remove_ids
@@ -35,7 +35,7 @@ API_VERSION = '1'
 # Caution! These decorators must come BEFORE @add_rule
 
 
-def basic_authentication(func, required_permission_values: Iterable[PermissionValue] = None):
+def basic_authentication(func, required_permission: PermissionValue = None):
     """
     Decorator stating that the view requires the user to be connected
     """
@@ -63,8 +63,7 @@ def basic_authentication(func, required_permission_values: Iterable[PermissionVa
             if user_from_db.get('name') == 'admin':
                 return user_from_db
             if not check_permissions(deserialize_db_permissions(role['permissions']),
-                                     required_permission_values,
-                                     request.method):
+                                     required_permission):
                 return None
             return user_from_db
 
@@ -87,8 +86,7 @@ def basic_authentication(func, required_permission_values: Iterable[PermissionVa
                 return user_from_db
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
             if not check_permissions(deserialize_db_permissions(role['permissions']),
-                                     required_permission_values,
-                                     request.method):
+                                     required_permission):
                 return None
             return user_from_db
 
@@ -112,17 +110,23 @@ def basic_authentication(func, required_permission_values: Iterable[PermissionVa
     return wrapper
 
 
-def api_add_rule(rule, *args,
-                 required_permission_values: Iterable[PermissionValue] = None, **kwargs):
+def api_add_rule(rule, *args, required_permission: PermissionValue = None, activity_params: List[str] = None, **kwargs):
     """
     A URL mapping for API endpoints that use the API method to log in (either user and pass or API key)
     """
+    def wrapper(func):
+        def basic_authentication_permissions(*args, **kwargs):
+            return basic_authentication(*args, **kwargs, required_permission=required_permission)
 
-    def basic_authentication_permissions(*args, **kwargs):
-        return basic_authentication(*args, **kwargs,
-                                    required_permission_values=required_permission_values)
+        authenticated_rule = add_rule_custom_authentication(f'V{API_VERSION}/{rule}',
+                                                            basic_authentication_permissions,
+                                                            *args, **kwargs)
+        activity_category = required_permission.Category.value
+        if required_permission.Section:
+            activity_category = f'{activity_category}.{required_permission.Section.value}'
+        return log_activity_rule(rule, activity_category, activity_params)(authenticated_rule(func))
 
-    return add_rule_custom_authentication(f'V{API_VERSION}/{rule}', basic_authentication_permissions, *args, **kwargs)
+    return wrapper
 
 
 def get_page_metadata(skip, limit, number_of_assets):
@@ -143,13 +147,8 @@ class APIMixin:
     # SYSTEM #
     ##########
 
-    @api_add_rule(
-        'system/settings/lifecycle',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/lifecycle', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Settings))
     def get_api_settings_lifecycle(self):
         """Get or set System Settings > Lifecycle settings tab.
 
@@ -161,13 +160,8 @@ class APIMixin:
             plugin_name='system_scheduler', config_name='SystemSchedulerService'
         )
 
-    @api_add_rule(
-        'system/settings/lifecycle',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/lifecycle', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings))
     def update_api_settings_lifecycle(self):
         """Get or set System Settings > Lifecycle settings tab.
 
@@ -179,13 +173,8 @@ class APIMixin:
             plugin_name='system_scheduler', config_name='SystemSchedulerService'
         )
 
-    @api_add_rule(
-        'system/settings/gui',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/gui', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Settings))
     def get_api_settings_gui(self):
         """Get or set System Settings > GUI settings tab.
 
@@ -197,13 +186,8 @@ class APIMixin:
             plugin_name='gui', config_name='GuiService'
         )
 
-    @api_add_rule(
-        'system/settings/gui',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/gui', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings))
     def update_api_settings_gui(self):
         """Get or set System Settings > GUI settings tab.
 
@@ -215,13 +199,8 @@ class APIMixin:
             plugin_name='gui', config_name='GuiService'
         )
 
-    @api_add_rule(
-        'system/settings/core',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/core', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Settings))
     def get_api_settings_core(self):
         """Get or set System Settings > Global settings tab.
 
@@ -233,13 +212,8 @@ class APIMixin:
             plugin_name='core', config_name='CoreService'
         )
 
-    @api_add_rule(
-        'system/settings/core',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/settings/core', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings))
     def update_api_settings_core(self):
         """Get or set System Settings > Global settings tab.
 
@@ -251,13 +225,8 @@ class APIMixin:
             plugin_name='core', config_name='CoreService'
         )
 
-    @api_add_rule(
-        'system/meta/historical_sizes',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/meta/historical_sizes', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Settings))
     def api_get_historical_size_stats(self):
         """Get disk free, disk usage, and historical data set sizes for Users and Devices.
 
@@ -272,13 +241,8 @@ class APIMixin:
         """
         return self._get_historical_size_stats()
 
-    @api_add_rule(
-        'system/meta/about',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/meta/about', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Settings))
     def api_get_metadata(self):
         """Get the System Settings > About tab.
 
@@ -292,13 +256,8 @@ class APIMixin:
         """
         return jsonify(self.metadata)
 
-    @api_add_rule(
-        'system/instances',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Instances)
-        },
-    )
+    @api_add_rule('system/instances', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Instances))
     def get_api_instances(self):
         """Get instances.
 
@@ -308,13 +267,8 @@ class APIMixin:
         """
         return self.get_instances()
 
-    @api_add_rule(
-        'system/instances',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances)
-        },
-    )
+    @api_add_rule('system/instances', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Instances))
     def update_api_instances(self):
         """createinstances.
 
@@ -324,13 +278,8 @@ class APIMixin:
         """
         return self.update_instances()
 
-    @api_add_rule(
-        'system/instances',
-        methods=['DELETE'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances)
-        },
-    )
+    @api_add_rule('system/instances', methods=['DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Instances))
     def delete_api_instances(self):
         """delete instances.
 
@@ -340,13 +289,8 @@ class APIMixin:
         """
         return self.delete_instances()
 
-    @api_add_rule(
-        'system/discover/lifecycle',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Dashboard)
-        },
-    )
+    @api_add_rule('system/discover/lifecycle', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Dashboard))
     def api_get_system_lifecycle(self):
         """Get current status of the system's lifecycle.
 
@@ -360,13 +304,8 @@ class APIMixin:
         """
         return jsonify(self._get_system_lifecycle())
 
-    @api_add_rule(
-        f'system/discover/start',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.RunManualDiscovery, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/discover/start', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.RunManualDiscovery, PermissionCategory.Settings))
     def api_schedule_research_phase(self):
         """Start a discover.
 
@@ -376,13 +315,8 @@ class APIMixin:
         """
         return self._schedule_research_phase()
 
-    @api_add_rule(
-        'system/discover/stop',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.RunManualDiscovery, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/discover/stop', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.RunManualDiscovery, PermissionCategory.Settings))
     def api_stop_research_phase(self):
         """Stop a discover.
 
@@ -393,13 +327,8 @@ class APIMixin:
         return self._stop_research_phase()
 
     @paginated()
-    @api_add_rule(
-        'system/users',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.GetUsersAndRoles, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/users', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_api_system_users(self, limit, skip):
         """Get users
 
@@ -411,13 +340,8 @@ class APIMixin:
         """
         return self._get_user_pages(limit=limit, skip=skip)
 
-    @api_add_rule(
-        'system/users',
-        methods=['PUT'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Users)
-        },
-    )
+    @api_add_rule('system/users', methods=['PUT'], required_permission=PermissionValue.get(
+        PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Users), activity_params=['user_name'])
     def update_api_system_users(self):
         """Add user.
 
@@ -433,13 +357,8 @@ class APIMixin:
         """
         return self._add_user_wrap()
 
-    @api_add_rule(
-        'system/users/<user_id>',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users)
-        },
-    )
+    @api_add_rule('system/users/<user_id>', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users), activity_params=['user_name'])
     def api_update_user(self, user_id):
         """Get users or add user.
 
@@ -453,13 +372,8 @@ class APIMixin:
         """
         return self.update_user(user_id=user_id)
 
-    @api_add_rule(
-        'system/users/<user_id>',
-        methods=['DELETE'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Users)
-        },
-    )
+    @api_add_rule('system/users/<user_id>', methods=['DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Users))
     def api_delete_user(self, user_id):
         """Delete user.
 
@@ -470,13 +384,8 @@ class APIMixin:
         """
         return self.delete_user(user_id=user_id)
 
-    @api_add_rule(
-        'system/roles/default',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users)
-        },
-    )
+    @api_add_rule('system/roles/default', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users))
     def update_api_roles_default(self):
         """Set the default role for externally created users.
 
@@ -487,13 +396,8 @@ class APIMixin:
         """
         return self.update_roles_default()
 
-    @api_add_rule(
-        'system/roles',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.GetUsersAndRoles, PermissionCategory.Settings)
-        },
-    )
+    @api_add_rule('system/roles', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_api_roles(self):
         """Get, add, update, or delete roles.
 
@@ -503,13 +407,8 @@ class APIMixin:
         """
         return self.get_roles()
 
-    @api_add_rule(
-        'system/roles',
-        methods=['PUT'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Roles)
-        },
-    )
+    @api_add_rule('system/roles', methods=['PUT'], required_permission=PermissionValue.get(
+        PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Roles))
     def add_api_roles(self):
         """
         add roles
@@ -531,13 +430,8 @@ class APIMixin:
         """
         return self.add_role()
 
-    @api_add_rule(
-        'system/roles/<role_id>',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles)
-        },
-    )
+    @api_add_rule('system/roles/<role_id>', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles))
     def update_api_roles(self, role_id):
         """add, update, or delete roles.
 
@@ -557,20 +451,15 @@ class APIMixin:
         """
         return self.update_role(role_id)
 
-    @api_add_rule(
-        'system/roles/<role_id>',
-        methods=['DELETE'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Roles)
-        },
-    )
+    @api_add_rule('system/roles/<role_id>', methods=['DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Roles))
     def delete_api_roles(self, role_id):
         return self.delete_roles(role_id)
 
     ###########
     # DEVICES #
     ###########
-    @add_rule_unauth(f'api')
+    @add_rule_unauth('api')
     def api_description(self):
         return API_VERSION
 
@@ -578,9 +467,8 @@ class APIMixin:
     @filtered_entities()
     @sorted_endpoint()
     @projected()
-    @api_add_rule(f'devices', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.DevicesAssets))
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         devices_collection = self._entity_db_map[EntityType.Devices]
         self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -598,9 +486,8 @@ class APIMixin:
     @filtered_entities()
     @sorted_endpoint()
     @projected()
-    @api_add_rule(f'devices/cached', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/cached', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def api_cached_devices(self, mongo_filter, mongo_sort, mongo_projection):
         content = self.get_request_data_as_object() if request.method == 'POST' else request.args
         assets_count = None
@@ -633,37 +520,30 @@ class APIMixin:
         return jsonify(return_doc)
 
     @filtered_entities()
-    @api_add_rule(f'devices/count', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.DevicesAssets))
     def api_devices_count(self, mongo_filter):
         return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
 
-    @api_add_rule(
-        f'devices/fields',
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)
-        })
+    @api_add_rule('devices/fields', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def api_devices_fields(self):
         return jsonify(entity_fields(EntityType.Devices))
 
-    @api_add_rule(f'devices/<device_id>',
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/<device_id>', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def api_device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id)
 
     @filtered_entities()
-    @api_add_rule('devices/labels', methods=['GET'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/labels', methods=['GET'], required_permission=PermissionValue.get(
+        None, PermissionCategory.DevicesAssets))
     def api_get_device_labels(self, mongo_filter):
         return self._entity_labels(self.devices_db, self.devices, mongo_filter)
 
     @filtered_entities()
-    @api_add_rule('devices/labels', methods=['POST', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.Update, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.DevicesAssets))
     def api_update_device_labels(self, mongo_filter):
         return self._entity_labels(self.devices_db, self.devices, mongo_filter)
 
@@ -675,9 +555,8 @@ class APIMixin:
     @filtered_entities()
     @sorted_endpoint()
     @projected()
-    @api_add_rule(f'users', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.UsersAssets)})
+    @api_add_rule('users', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.UsersAssets))
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         users_collection = self._entity_db_map[EntityType.Users]
         self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
@@ -694,9 +573,8 @@ class APIMixin:
     @filtered_entities()
     @sorted_endpoint()
     @projected()
-    @api_add_rule(f'users/cached', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/cached', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.UsersAssets))
     def api_cached_users(self, mongo_filter, mongo_sort, mongo_projection):
         content = self.get_request_data_as_object() if request.method == 'POST' else request.args
         assets_count = None
@@ -729,23 +607,18 @@ class APIMixin:
         return jsonify(return_doc)
 
     @filtered_entities()
-    @api_add_rule(f'users/count', methods=['GET', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.UsersAssets))
     def api_users_count(self, mongo_filter):
         return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
 
-    @api_add_rule(
-        f'users/fields',
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/fields', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.UsersAssets))
     def api_users_fields(self):
         return jsonify(entity_fields(EntityType.Users))
 
-    @api_add_rule(f'users/<user_id>',
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)
-                  })
+    @api_add_rule('users/<user_id>', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.UsersAssets))
     def api_user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id)
 
@@ -771,16 +644,14 @@ class APIMixin:
         })
 
     @filtered_entities()
-    @api_add_rule('users/labels', methods=['GET'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/labels', methods=['GET'], required_permission=PermissionValue.get(
+        None, PermissionCategory.UsersAssets))
     def api_get_user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
     @filtered_entities()
-    @api_add_rule('users/labels', methods=['POST', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.Update, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.UsersAssets))
     def api_update_user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
@@ -791,9 +662,8 @@ class APIMixin:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @api_add_rule(f'alerts', methods=['GET', 'PUT', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.Enforcements)})
+    @api_add_rule('alerts', methods=['GET', 'PUT', 'DELETE'], required_permission=PermissionValue.get(
+        None, PermissionCategory.Enforcements))
     def api_alerts(self, limit, skip, mongo_filter, mongo_sort):
         if request.method == 'GET':
             enforcements = self._get_enforcements(limit, mongo_filter, mongo_sort, skip)
@@ -830,7 +700,7 @@ class APIMixin:
 
     def update_query_views(self, mongo_filter, entity_type):
         if request.method == 'POST':
-            return_doc = self._update_entity_views(entity_type)
+            return_doc = self._add_entity_view(entity_type)
         else:
             return_doc = self._delete_entity_views(entity_type, mongo_filter)
 
@@ -839,9 +709,8 @@ class APIMixin:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @api_add_rule(f'devices/views', methods=['GET'],
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
+    @api_add_rule('devices/views', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def api_get_device_views(self, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the devices db
@@ -850,9 +719,8 @@ class APIMixin:
         return self.get_query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Devices)
 
     @filtered()
-    @api_add_rule(f'devices/views', methods=['POST', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.DevicesAssets, PermissionCategory.SavedQueries)})
+    @api_add_rule('devices/views', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
+        None, PermissionCategory.DevicesAssets, PermissionCategory.SavedQueries))
     def api_update_device_views(self, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -863,9 +731,8 @@ class APIMixin:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @api_add_rule(f'users/views', methods=['GET'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.UsersAssets)})
+    @api_add_rule('users/views', methods=['GET'], required_permission=PermissionValue.get(
+        None, PermissionCategory.UsersAssets))
     def api_get_users_views(self, limit, skip, mongo_filter, mongo_sort):
         """
         Save or fetch views over the users db
@@ -874,9 +741,8 @@ class APIMixin:
         return self.get_query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Users)
 
     @filtered()
-    @api_add_rule(f'users/views', methods=['POST', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.UsersAssets, PermissionCategory.SavedQueries)})
+    @api_add_rule('users/views', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
+        None, PermissionCategory.UsersAssets, PermissionCategory.SavedQueries))
     def api_update_users_views(self, mongo_filter):
         """
         Save or fetch views over the users db
@@ -889,9 +755,8 @@ class APIMixin:
     ###########
 
     @filtered()
-    @api_add_rule(f'actions/<action_type>', methods=['POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.DevicesAssets)})
+    @api_add_rule('actions/<action_type>', methods=['POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.DevicesAssets))
     def api_run_actions(self, action_type, mongo_filter):
         """
         Executes a run shell command on devices.
@@ -910,9 +775,8 @@ class APIMixin:
         }
         return self.run_actions(action_data, mongo_filter)
 
-    @api_add_rule(f'actions',
-                  required_permission_values={
-                      PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)})
+    @api_add_rule('actions', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
     def api_get_actions(self):
         """
         Executes a run shell command on devices.
@@ -927,11 +791,8 @@ class APIMixin:
     ############
 
     # jim:3.0
-    @api_add_rule(
-        'adapters/<plugin_name>/config/<config_name>',
-        methods=['GET'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)})
+    @api_add_rule('adapters/<plugin_name>/config/<config_name>', methods=['GET'],
+                  required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings))
     def api_get_adapter_config(self, plugin_name, config_name):
         """Get a specific config on a specific adapter.
 
@@ -941,11 +802,8 @@ class APIMixin:
             plugin_name=plugin_name, config_name=config_name
         )
 
-    @api_add_rule(
-        'adapters/<plugin_name>/config/<config_name>',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)})
+    @api_add_rule('adapters/<plugin_name>/config/<config_name>', methods=['POST'],
+                  required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings))
     def api_update_adapter_config(self, plugin_name, config_name):
         """Set a specific config on a specific adapter.
 
@@ -955,17 +813,22 @@ class APIMixin:
             plugin_name=plugin_name, config_name=config_name
         )
 
-    @api_add_rule(f'adapters/<adapter_name>/clients', methods=['PUT', 'POST'],
-                  required_permission_values={
-                      PermissionValue.get(None,
-                                          PermissionCategory.Adapters,
-                                          PermissionCategory.Connections)})
+    @api_add_rule('adapters/<adapter_name>/clients', methods=['PUT', 'POST'], required_permission=PermissionValue.get(
+        None, PermissionCategory.Adapters, PermissionCategory.Connections))
     def api_adapters_clients(self, adapter_name):
-        return self._adapters_clients(adapter_name)
+        request_data = self.get_request_data_as_object()
+        instance_id = request_data.pop('instanceName', self.node_id)
+        connection_label = request_data.pop('connection_label', None)
+        connection_data = {
+            'connection': request_data,
+            'connection_label': connection_label
+        }
+        if request.method == 'PUT':
+            return self._add_connection(adapter_name, instance_id, connection_data)
+        return self._test_connection(adapter_name, instance_id, request_data)
 
     @api_add_rule('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.Adapters)})
+                  required_permission=PermissionValue.get(None, PermissionCategory.Adapters))
     def api_adapter_upload_file(self, adapter_name, node_id):
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
@@ -974,39 +837,39 @@ class APIMixin:
         ret = self._upload_file(adapter_unique_name)
         return ret
 
-    @api_add_rule('adapters', methods=['GET'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.Adapters)})
+    @api_add_rule('adapters', methods=['GET'], required_permission=PermissionValue.get(
+        None, PermissionCategory.Adapters))
     def api_adapters(self):
         return jsonify(self._adapters())
 
     @api_add_rule('adapters/<adapter_name>/clients/<client_id>', methods=['PUT', 'DELETE'],
-                  required_permission_values={
-                      PermissionValue.get(None, PermissionCategory.Adapters, PermissionCategory.Connections)})
+                  required_permission=PermissionValue.get(None,
+                                                          PermissionCategory.Adapters,
+                                                          PermissionCategory.Connections))
     def api_adapters_clients_update(self, adapter_name, client_id=None):
-        return self._adapters_clients_update(adapter_name, client_id)
+        request_data = self.get_request_data_as_object()
+        instance_id = request_data.pop('instanceName', self.node_id)
+        prev_instance_id = request_data.pop('oldInstanceName', None)
+        connection_label = request_data.pop('connection_label', None)
+        connection_data = {
+            'connection': request_data,
+            'connection_label': connection_label
+        }
+        return self._update_connection(client_id, adapter_name, instance_id, prev_instance_id, connection_data)
 
     ##############
     # COMPLIANCE #
     ##############
 
     @accounts_filter()
-    @api_add_rule(
-        'compliance/<compliance_name>/<method>',
-        methods=['GET', 'POST'],
-        required_permission_values={
-            PermissionValue.get(None, PermissionCategory.Compliance)}
-    )
+    @api_add_rule('compliance/<compliance_name>/<method>', methods=['GET', 'POST'],
+                  required_permission=PermissionValue.get(None, PermissionCategory.Compliance))
     def api_get_compliance(self, compliance_name, method, accounts):
         return self._get_compliance(compliance_name, method, accounts)
 
     @accounts_filter()
     @schema()
-    @api_add_rule(
-        'compliance/<compliance_name>/csv',
-        methods=['POST'],
-        required_permission_values={
-            PermissionValue.get(PermissionAction.Update, PermissionCategory.Compliance)}
-    )
+    @api_add_rule('compliance/<compliance_name>/csv', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Compliance))
     def api_post_compliance_csv(self, compliance_name, schema_fields, accounts):
         return self._post_compliance_csv(compliance_name, schema_fields, accounts)

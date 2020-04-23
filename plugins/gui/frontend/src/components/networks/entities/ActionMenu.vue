@@ -192,7 +192,7 @@ export default {
       return this.enforceData({
         module: this.module,
         data: {
-          entities: this.entities, enforcement: this.selectedEnforcement,
+          name: this.selectedEnforcement, ...this.entities,
         },
       });
     },

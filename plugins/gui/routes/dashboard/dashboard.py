@@ -98,10 +98,8 @@ class Dashboard(Notifications):
             'panels': panels
         })
 
-    @gui_route_logged_in(methods=['POST'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Add,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Spaces)})
+    @gui_route_logged_in(methods=['POST'], enforce_trial=False, required_permission=PermissionValue.get(
+        PermissionAction.Add, PermissionCategory.Dashboard, PermissionCategory.Spaces))
     def update_dashboards(self):
         """
         POST a new space that will have the type 'custom'
@@ -115,10 +113,8 @@ class Dashboard(Notifications):
             return return_error(f'Could not create a new space named {space_data["name"]}')
         return str(insert_result.inserted_id)
 
-    @gui_route_logged_in('<space_id>', methods=['PUT'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Add,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Spaces)})
+    @gui_route_logged_in('<space_id>', methods=['PUT'], enforce_trial=False, required_permission=PermissionValue.get(
+        PermissionAction.Add, PermissionCategory.Dashboard, PermissionCategory.Spaces))
     def update_dashboard_space(self, space_id):
         """
         PUT an updated name for an existing Dashboard Space
@@ -134,10 +130,8 @@ class Dashboard(Notifications):
         })
         return ''
 
-    @gui_route_logged_in('<space_id>', methods=['DELETE'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Delete,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Spaces)})
+    @gui_route_logged_in('<space_id>', methods=['DELETE'], enforce_trial=False, required_permission=PermissionValue.get(
+        PermissionAction.Delete, PermissionCategory.Dashboard, PermissionCategory.Spaces))
     def delete_dashboard_space(self, space_id):
         """
         DELETE an existing Dashboard Space
@@ -153,10 +147,9 @@ class Dashboard(Notifications):
         return ''
 
     @gui_route_logged_in('<space_id>/panels', methods=['POST'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Add,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Charts)}
-                         )
+                         required_permission=PermissionValue.get(PermissionAction.Add,
+                                                                 PermissionCategory.Dashboard,
+                                                                 PermissionCategory.Charts))
     def add_dashboard_space_panel(self, space_id):
         """
         POST a new Dashboard Panel configuration, attached to requested space
@@ -186,9 +179,9 @@ class Dashboard(Notifications):
         return str(insert_result.inserted_id)
 
     @gui_route_logged_in('<space_id>/panels/reorder', methods=['POST'], enforce_trial=False,
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Charts)})
+                         required_permission=PermissionValue.get(PermissionAction.Update,
+                                                                 PermissionCategory.Dashboard,
+                                                                 PermissionCategory.Charts))
     def reorder_dashboard_space_panels(self, space_id):
         panels_order = self.get_request_data_as_object().get('panels_order')
         self._dashboard_spaces_collection.update_one({
@@ -284,9 +277,9 @@ class Dashboard(Notifications):
         })
 
     @gui_route_logged_in('<space_id>/panels/<panel_id>', methods=['DELETE', 'POST'],
-                         required_permission_values={PermissionValue.get(None,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Charts)})
+                         required_permission=PermissionValue.get(None,
+                                                                 PermissionCategory.Dashboard,
+                                                                 PermissionCategory.Charts))
     def update_dashboard_panel(self, space_id, panel_id):
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the
@@ -327,10 +320,8 @@ class Dashboard(Notifications):
             generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
         return ''
 
-    @gui_route_logged_in('<space_id>/panels/<panel_id>/move', methods=['PUT'],
-                         required_permission_values={PermissionValue.get(PermissionAction.Update,
-                                                                         PermissionCategory.Dashboard,
-                                                                         PermissionCategory.Charts)})
+    @gui_route_logged_in('<space_id>/panels/<panel_id>/move', methods=['PUT'], required_permission=PermissionValue.get(
+        PermissionAction.Update, PermissionCategory.Dashboard, PermissionCategory.Charts))
     def move_dashboard_panel(self, space_id, panel_id):
         """
         :param panel_id: The mongo id of the panel to handle

@@ -54,7 +54,6 @@ export const IS_AXONIUS_USER = 'IS_AXONIUS_USER';
 
 export const GET_PERMISSION_STRUCTURE = 'GET_PERMISSION_STRUCTURE';
 
-const capitalizeString = (moduleName) => moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
 
 export const auth = {
   state: {
@@ -376,7 +375,7 @@ export const auth = {
         return;
       }
       return dispatch(REQUEST_API, {
-        rule: 'settings/users/self/password',
+        rule: 'self/password',
         method: 'POST',
         data: {
           new: payload.newPassword,
