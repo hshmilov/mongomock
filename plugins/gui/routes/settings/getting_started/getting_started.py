@@ -17,7 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_section_add_rules('getting_started')
 class GettingStarted:
 
-    @gui_route_logged_in(methods=['GET'])
+    @gui_route_logged_in(methods=['GET'], enforce_permissions=False)
     def get_getting_started_data(self):
         """
         Fetch the Getting Started checklist state from db
@@ -25,7 +25,7 @@ class GettingStarted:
         data = self._get_collection('getting_started').find_one({})
         return jsonify(data)
 
-    @gui_route_logged_in('completion', methods=['POST'])
+    @gui_route_logged_in('completion', methods=['POST'], enforce_permissions=False)
     def getting_started_set_milestone_completion(self):
         """
         Check an item in the Getting Started checklist as done.
