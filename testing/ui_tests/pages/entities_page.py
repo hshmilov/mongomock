@@ -1576,3 +1576,6 @@ class EntitiesPage(Page):
 
     def is_tags_input_text_selectable(self):
         return self.is_input_text_selectable(self.TAGS_TEXTBOX_CSS)
+
+    def fill_tags_input_text(self, text):
+        self.fill_text_by_element(self.get_tags_input(), text)

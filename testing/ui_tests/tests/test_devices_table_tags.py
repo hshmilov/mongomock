@@ -63,11 +63,11 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.click_row_checkbox()
         self.devices_page.open_tag_dialog()
 
-        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'save by enter key')
+        self.devices_page.fill_tags_input_text('save by enter key')
         assert self.devices_page.is_tags_input_text_selectable()
         self.devices_page.key_down_enter(self.devices_page.get_tags_input())
         assert self.devices_page.is_focused(self.devices_page.get_tags_input())
-        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'save by create new link button')
+        self.devices_page.fill_tags_input_text('save by create new link button')
         self.devices_page.click_create_new_tag_link_button()
         assert self.devices_page.is_focused(self.devices_page.get_tags_input())
 
@@ -100,7 +100,7 @@ class TestDevicesTable(TestEntitiesTable):
 
         self.devices_page.click_row_checkbox(3)
         self.devices_page.open_tag_dialog()
-        self.devices_page.fill_text_by_element(self.devices_page.get_tags_input(), 'tag3')
+        self.devices_page.fill_tags_input_text('tag3')
         self.devices_page.key_down_enter(self.devices_page.get_tags_input())
 
         statuses = ['checked', 'partial', 'unchecked']
