@@ -16,7 +16,7 @@ COPY nexus-apt /etc/apt/apt.conf.d/nexus
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
     apt-get install -y ssh git libxmlsec1-dev apt-transport-https ca-certificates \
-    supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
+    supervisor software-properties-common python-software-properties odbc-postgresql freetds-dev freetds-bin unixodbc-dev tdsodbc && \
     add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 xenial main" && \
     curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add - && \
     apt-get update && \
@@ -34,6 +34,7 @@ RUN apt-get update && \
     apt-get install libaio1
 
 RUN /bin/bash -c 'echo -e "[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini'
+RUN /bin/bash -c 'echo -e "\n\n[PostgreSQL Unicode]\nDescription=PostgreSQL ODBC Driver (Unicode version)\nDriver=/usr/lib/x86_64-linux-gnu/odbc/psqlodbcw.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libodbcpsqlS.so\nDebug=0\nCommLog=1\nUsageCount=1" >> /etc/odbcinst.ini'
 
 # Install AWS dependencies
 RUN curl -o /usr/bin/aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.10.3/2018-07-26/bin/linux/amd64/aws-iam-authenticator && \
