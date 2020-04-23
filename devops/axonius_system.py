@@ -352,13 +352,9 @@ def service_entry_point(target, args):
             stop_tunnel_for_adapters_register()
     elif args.mode == 'up':
         print(f'Starting {args.name}')
-        if NODE_MARKER_PATH.exists():
-            run_tunnel_for_adapters_register()
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',
                                      args.restart, args.rebuild, args.hard, env_vars=args.env,
                                      system_config=system_config)
-        if NODE_MARKER_PATH.exists():
-            stop_tunnel_for_adapters_register()
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
