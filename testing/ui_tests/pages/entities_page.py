@@ -164,6 +164,9 @@ class EntitiesPage(Page):
     ID_FIELD = 'ID'
     ENTITY_FIELD_VALUE_XPATH = '//div[@class=\'object\' and child::label[text()=\'{field_name}\']]/div'
 
+    AD_ORGANIZATIONAL_UNIT_FIELD = 'AD Organizational Unit'
+    AD_ORGANIZATIONAL_UNIT_COLUMN = 'Organizational Unit'
+
     CUSTOM_DATA_EDIT_BTN = 'Edit Fields'
     CUSTOM_DATA_PREDEFINED_FIELD_CSS = '.custom-fields .fields-item .x-select.item-name'
     CUSTOM_DATA_NEW_FIELD_TYPE_CSS = '.custom-fields .fields-item .x-select.item-type'

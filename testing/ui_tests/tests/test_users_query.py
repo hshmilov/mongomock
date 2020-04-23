@@ -110,3 +110,32 @@ class TestUsersQuery(TestBase):
         assert len([logon_count for logon_count in new_logon_counts if logon_count.strip() == '']) == 0
 
         assert set(logon_counts) == new_logon_counts
+
+    def test_active_directory_exists_filtering(self):
+        """
+        Test that when filtering users who have AD Organizational Unit, we dont get empty result in the field
+        """
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.wait_for_table_to_load()
+        self.users_page.click_query_wizard()
+        self.users_page.select_query_adapter(AD_ADAPTER_NAME)
+        self.users_page.select_query_field(self.users_page.AD_ORGANIZATIONAL_UNIT_FIELD)
+        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_EXISTS)
+        self.users_page.click_search()
+        self.users_page.wait_for_table_to_be_responsive()
+        self.users_page.edit_columns(add_col_names=[self.users_page.AD_ORGANIZATIONAL_UNIT_COLUMN])
+        cell_index = self.users_page.count_sort_column(self.users_page.AD_ORGANIZATIONAL_UNIT_COLUMN)
+        page_size = int(self.users_page.find_active_page_size())
+        row_index = 0
+        page_index = 4  # Represents the second page.. and so on..
+        for index in range(1, self.users_page.count_entities() + 1):
+            # If we reached the end of the page, we need to switch to the next one
+            if index == page_size:
+                row_index = 0
+                self.users_page.select_pagination_index(page_index)
+                page_index += 1
+            row_index += 1
+            organizational_unit = self.users_page.get_row_cell_text(row_index, cell_index)
+            assert organizational_unit != ''
