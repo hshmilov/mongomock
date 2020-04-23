@@ -709,7 +709,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_enum_expressions()
         self._test_asset_entity_expressions()
 
-    @pytest.mark.skip('AX-6079')
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
