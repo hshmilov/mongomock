@@ -162,9 +162,8 @@ export default {
 <style lang="scss">
     .x-entity-custom-fields {
         .custom-fields {
-            height: 60vh;
+            height: 550px;
             overflow-y: auto;
-
         }
 
         .footer {
