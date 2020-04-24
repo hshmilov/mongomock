@@ -14,7 +14,7 @@
       slot="trigger"
       type="primary"
     >Query Wizard</XButton>
-    <div slot="content">
+    <template #content>
       <XFilter
         ref="filter"
         v-model="queryExpressions"
@@ -52,7 +52,7 @@
           @keyup.enter.native="compileFilter"
         >Search</XButton>
       </div>
-    </div>
+    </template>
   </XDropdown>
 </template>
 
@@ -160,17 +160,22 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-query-wizard {
-        .content {
-            padding: 12px;
+  .x-query-wizard {
+    .content {
+      padding: 12px;
 
-          .filter-out-ids {
-            display: block;
-            padding-top: 16px;
-            .ant-btn-link {
-              padding-left: 4px;
-            }
-          }
+      .x-filter {
+        height: calc(100% - 30px);
+      }
+
+      .filter-out-ids {
+        display: block;
+        padding-top: 16px;
+
+        .ant-btn-link {
+          padding-left: 4px;
         }
+      }
     }
+  }
 </style>
