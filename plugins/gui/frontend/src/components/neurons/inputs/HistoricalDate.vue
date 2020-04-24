@@ -13,6 +13,7 @@
 
 
 <script>
+import _isEmpty from 'lodash/isEmpty';
 import { mapState } from 'vuex';
 import XDateEdit from '../schema/types/string/DateEdit.vue';
 
@@ -43,13 +44,19 @@ export default {
     ...mapState({
       firstHistoricalDate(state) {
         let historicalDate = null;
-        if (this.module) {
-          historicalDate = state.constants.firstHistoricalDate[this.module];
-        } else {
-          historicalDate = Object.values(state.constants.firstHistoricalDate)
-            .reduce((a, b) => ((new Date(a) < new Date(b)) ? a : b), new Date());
+        const entityToFirstDate = state.constants.firstHistoricalDate;
+        if (_isEmpty(entityToFirstDate)) {
+          return null;
         }
-        historicalDate = new Date(historicalDate);
+        if (this.module) {
+          if (!entityToFirstDate[this.module]) {
+            return null;
+          }
+          historicalDate = new Date(entityToFirstDate[this.module]);
+        } else {
+          historicalDate = Object.values(entityToFirstDate).reduce((a, b) => (
+            (new Date(a) < new Date(b)) ? a : b), new Date());
+        }
         historicalDate.setDate(historicalDate.getDate() - 1);
         return historicalDate;
       },
@@ -59,6 +66,9 @@ export default {
     isDateUnavailable(date) {
       // return true if date is unavailable, return false if date is available
       // if date smaller then the first day we have historical or bigger than today disable it!
+      if (!this.firstHistoricalDate) {
+        return true;
+      }
       const currentDate = new Date().toISOString();
       const dateToCheck = date.toISOString();
       if (dateToCheck < this.firstHistoricalDate.toISOString() || dateToCheck > currentDate) {

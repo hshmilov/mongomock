@@ -16,6 +16,7 @@ import {
   MdChips,
   MdProgress,
   MdDrawer,
+  MdContent,
 } from 'vue-material/dist/components';
 import 'vue-svgicon/dist/polyfill';
 import * as svgicon from 'vue-svgicon';
@@ -41,6 +42,7 @@ Vue.use(MdChips);
 Vue.use(MdProgress);
 Vue.use(MdDrawer);
 Vue.use(MdButton);
+Vue.use(MdContent);
 
 Vue.use(VueCookies);
 Vue.use(VueWorker);
