@@ -1,5 +1,6 @@
 import codecs
 import io
+import logging
 from datetime import datetime
 
 import requests
@@ -12,6 +13,8 @@ from axonius.consts.plugin_consts import HEAVY_LIFTING_PLUGIN_NAME
 
 CHUNK_SIZE = 1024
 GENERATE_CSV_TIMEOUT = 60 * 5
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history: datetime,
@@ -29,6 +32,10 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
     res = _get_csv_from_heavy_lifting(
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
         field_filters, cell_joiner=cell_joiner)
+
+    is_valid, response = validate_response(res)
+    if not is_valid:
+        return response
 
     def generate():
         # https://stackoverflow.com/questions/42715966/preserve-utf-8-bom-in-browser-downloads
@@ -54,6 +61,10 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
     """
     res = _get_csv_from_heavy_lifting(
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort, field_filters, cell_joiner)
+
+    is_valid, response = validate_response(res)
+    if not is_valid:
+        return response
 
     csv_stream = io.StringIO()
     for chunk in res.iter_content(CHUNK_SIZE):
@@ -81,3 +92,19 @@ def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter
         return return_error('Connection timeout on request to heavy-lifting (for generating csv)')
     except requests.ConnectionError:
         return return_error('Connection error on request to heavy-lifting (for generating csv)')
+
+
+def validate_response(res):
+    """
+    Make sure the response value is positive.
+    :param res: response value, either  Response or return_error
+    :return: bool (positive or negative response), object (return value)
+    """
+    if isinstance(res, requests.Response):
+        if res.status_code != 200:
+            logger.error(f'Error while generating csv file. Status code: {res.status_code}: {res.text}')
+            return False, res
+    else:
+        logger.error(f'Error while generating csv file: {res}')
+        return False, return_error('Error while generating csv file')
+    return True, res
