@@ -10,7 +10,6 @@ from libcloud.compute.drivers.gce import GCEFirewall
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import NodeState, Provider
 
-
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
@@ -24,6 +23,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.parsing import format_subnet
 from gce_adapter.connection import GoogleCloudPlatformConnection
+from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_REASONS, SQL_INSTANCE_TYPES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -44,6 +44,7 @@ POWER_STATE_MAP = {
 class DeviceType(enum.Enum):
     COMPUTE = 1
     STORAGE = 2
+    DATABASE = 3
 
 
 class GceTag(SmartJsonClass):
@@ -54,7 +55,7 @@ class GceTag(SmartJsonClass):
 class GceFirewallRule(SmartJsonClass):
     type = Field(str, 'Allowed / Denied', enum=['Allowed', 'Denied'])
     protocol = Field(str, 'Protocol')
-    ports = ListField(str, 'Ports')     # Ports can also be a range like 50-60 so it can't be int
+    ports = ListField(str, 'Ports')  # Ports can also be a range like 50-60 so it can't be int
 
 
 class GceFirewall(SmartJsonClass):
@@ -96,15 +97,46 @@ class GCPStorageObject(SmartJsonClass):
     storage_class_updated = Field(datetime.datetime, 'Time Storage Class Updated')
 
 
+class CloudSQLSettings(SmartJsonClass):
+    ver = Field(str, 'Settings Version')
+    auth_gae_apps = ListField(str, 'Authorized App Engine IDs')
+    tier = Field(str, 'Tier')
+    avail_type = Field(str, 'Availability Type')
+    price_plan = Field(str, 'Pricing Plan')
+    repl_type = Field(str, 'Replication Type')
+    auto_resize_limit = Field(str, 'Storage Auto Resize Limit')
+    storage_auto_resize = Field(bool, 'Storage Auto Resize Enabled')
+    activation_policy = Field(str, 'Activation Policy')
+    disk_type = Field(str, 'Data Disk Type')
+    db_repl_enabled = Field(bool, 'Database Replication Enabled')
+    crash_safe_repl_enabled = Field(bool, 'Crash-Safe Replication Enabled')
+    disk_size_gb = Field(str, 'Data Disk Size (GB)')
+
+
+class CloudSQLDatabase(SmartJsonClass):
+    charset = Field(str, 'MySQL Charset Value')
+    collation = Field(str, 'MySQL Collation Value')
+    name = Field(str, 'Database Name')
+    instance = Field(str, 'Cloud SQL Instance Name')
+    self_link = Field(str, 'Resource URI')
+    project_id = Field(str, 'Project ID')
+    compat_level = Field(int, 'Compatibility Level')
+    recov_model = Field(str, 'Recovery Model')
+
+
 # pylint: disable=too-many-instance-attributes
 class GceAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         # Device type
         device_type = Field(str, 'Asset Type', enum=list(dev.name for dev in DeviceType))
+
         # generic things
+
         creation_time_stamp = Field(datetime.datetime, 'Creation Time Stamp')
         project_id = Field(str, 'Project ID')
+
         # COMPUTE things
+
         size = Field(str, 'Google Device Size')
         image = Field(str, 'Device image')
         cluster_name = Field(str, 'GCE Cluster Name')
@@ -115,7 +147,9 @@ class GceAdapter(AdapterBase, Configurable):
         gce_network_tags = ListField(str, 'GCE Network Tags')
         service_accounts = ListField(str, 'GCE Service Accounts')
         firewalls = ListField(GceFirewall, 'GCE Firewalls')
+
         # STORAGE things
+
         etag = Field(str, 'eTag')
         loc_type = Field(str, 'Location Type')
         updated = Field(datetime.datetime, 'Updated')
@@ -128,6 +162,26 @@ class GceAdapter(AdapterBase, Configurable):
         iam_config = Field(GCPBucketIamConf, 'Bucket IAM Config', json_format=JsonArrayFormat.table)
         object_count = Field(int, 'Storage Object Count')
         storage_objects = ListField(GCPStorageObject, 'Storage Objects', json_format=JsonArrayFormat.table)
+
+        # SQL_DATABASE things
+
+        self_link = Field(str, 'Resource URI')
+        conn_name = Field(str, 'Connection Name',
+                          description='Connection name of the Cloud SQL isntance used in connection strings')
+        region = Field(str, 'Region')
+        gce_zone = Field(str, 'Compute Engine Zone',
+                         description='The Compute Engine zone that the instance is currently serving from. '
+                                     'This value could be different from the zone that was specified when '
+                                     'the instance was created if the instance has failed over to its secondary zone.')
+        scheduled_maintenance = Field(datetime.datetime, 'Upcoming Scheduled Maintenance')
+        master_inst_name = Field(str, 'Master Instance Name')
+        inst_type = Field(str, 'Instance Type', enum=SQL_INSTANCE_TYPES)
+        suspend_reason = Field(str, 'Suspension Reason', enum=SQL_SUSP_REASONS)
+        repl_names = ListField(str, 'Replica Names')
+        db_version = Field(str, 'Database Version', enum=SQL_DB_VERSIONS)
+        inst_state = Field(str, 'State', enum=SQL_INSTANCE_STATES)
+        db_settings = Field(CloudSQLSettings, 'Database Settings')
+        databases = ListField(CloudSQLDatabase, 'Databases')
 
     class MyUserAdapter(UserAdapter):
         project_ids = ListField(str, 'Project IDs')
@@ -150,6 +204,7 @@ class GceAdapter(AdapterBase, Configurable):
             client = GoogleCloudPlatformConnection(
                 service_account_file=json.loads(self._grab_file_contents(client_config['keypair_file'])),
                 fetch_storage=self.__fetch_buckets,
+                fetch_cloud_sql=self.__fetch_cloud_sql,
                 https_proxy=client_config.get('https_proxy')
             )
             with client:
@@ -173,6 +228,8 @@ class GceAdapter(AdapterBase, Configurable):
         yield from self._query_compute_devices_by_client(client_name, client_data)
         if self.__fetch_buckets:
             yield from self._query_storage_devices_by_client(client_name, client_data)
+        if self.__fetch_cloud_sql:
+            yield from self._query_database_devices_by_client(client_name, client_data)
 
     # pylint: disable=arguments-differ
     @staticmethod
@@ -198,7 +255,7 @@ class GceAdapter(AdapterBase, Configurable):
             for f in response.get('items', []):
                 if f.get('disabled'):
                     continue
-                fw = provider._to_firewall(f)   # pylint: disable=protected-access
+                fw = provider._to_firewall(f)  # pylint: disable=protected-access
                 if f.get('destinationRanges'):
                     fw.extra['destinationRanges'] = f.get('destinationRanges')
                 firewalls.append(fw)
@@ -215,6 +272,31 @@ class GceAdapter(AdapterBase, Configurable):
             project=project or auth_json['project_id'],
             proxy_url=proxy_url
         )
+
+    def _query_database_devices_by_client(self, client_name: str,
+                                          client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_config = client_data
+        auth_json = json.loads(self._grab_file_contents(client_config['keypair_file']))
+        try:
+            with client:
+                try:
+                    for db_instance in client.get_databases():
+                        yield {
+                            'type': DeviceType.DATABASE,
+                            'device_data': (db_instance,)
+                        }
+                except Exception:
+                    logger.warning(f'Failed to get databases for all projects. '
+                                   f'Attempting alternate...',
+                                   exc_info=True)
+                    for db_instance in client.get_databases(auth_json['project_id']):
+                        yield {
+                            'type': DeviceType.DATABASE,
+                            'device_data': (db_instance,)
+                        }
+        except Exception:
+            logger.exception(f'Failed to get databases for {client_name}')
+            yield {}
 
     def _query_storage_devices_by_client(self, client_name: str,
                                          client_data: Tuple[GoogleCloudPlatformConnection, dict]):
@@ -285,6 +367,12 @@ class GceAdapter(AdapterBase, Configurable):
         return {
             'items': [
                 {
+                    'name': 'fetch_cloud_sql',
+                    'type': 'bool',
+                    # 'description': 'Note: The Google Cloud SQL API is currently in BETA.'
+                    'title': 'Fetch Google Cloud SQL database instances'
+                },
+                {
                     'name': 'fetch_buckets',
                     'type': 'bool',
                     'title': 'Fetch Google Cloud Storage buckets'
@@ -296,6 +384,7 @@ class GceAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [
+                'fetch_cloud_sql',
                 'fetch_buckets',
                 'fetch_bucket_objects'
             ],
@@ -307,12 +396,14 @@ class GceAdapter(AdapterBase, Configurable):
     def _db_config_default(cls) -> dict:
         return {
             'fetch_buckets': False,
+            'fetch_cloud_sql': False,
             'fetch_bucket_objects': False
         }
 
     def _on_config_update(self, config):
         logger.info(f'Loading GCP config: {config}')
         self.__fetch_buckets = config['fetch_buckets']
+        self.__fetch_cloud_sql = config['fetch_cloud_sql']
         self.__fetch_bkt_objects = config['fetch_bucket_objects']
 
     @staticmethod
@@ -346,6 +437,8 @@ class GceAdapter(AdapterBase, Configurable):
         elif dev_type == DeviceType.STORAGE:
             create_device = self.create_storage_device
             # return self.create_storage_device(*device_data, *args, **kwargs)
+        elif dev_type == DeviceType.DATABASE:
+            create_device = self.create_database_device
         else:
             create_device = None
         if create_device:
@@ -353,6 +446,164 @@ class GceAdapter(AdapterBase, Configurable):
         logger.warning(f'Unknown device type: {dev_type}. '
                        f'Cannot process device data {device_data}')
         return None
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    def create_database_device(self, device_raw, *args, **kwargs):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('masterInstanceName')
+            if not device_id:
+                logger.warning(f'Bad device with no ID: {device_raw}')
+                return None
+            # generic Axonius stuff
+            project_id = device_raw.get('project')
+            device.id = f'{device_id}_{project_id}_{device_raw.get("name")}'
+            device.cloud_provider = 'GCP'
+            device.name = device_raw.get('name')
+            device.email = device_raw.get('serviceAccountEmailAddress')
+
+            try:
+                total_size = device_raw.get('maxDiskSize') or 0
+                curr_size = device_raw.get('currentDiskSize') or 0
+                free_size = total_size - curr_size
+                device.add_hd(
+                    total_size=total_size,
+                    free_size=free_size)
+            except Exception:
+                logger.warning(f'Failed to add hd info to {device_id}')
+
+            ips_list = list()
+            ip_map_raw = device_raw.get('ipAddresses')
+            if isinstance(ip_map_raw, list):
+                for ip_mapping in ip_map_raw:
+                    if not isinstance(ip_mapping, dict):
+                        continue
+                    ip = ip_mapping.get('ipAddress')
+                    ip_type = ip_mapping.get('type', '')
+                    if ip_type in ('OUTGOING', 'PRIMARY'):
+                        try:
+                            device.add_public_ip(ip)
+                        except Exception:
+                            logger.warning(f'Failed to add public ip {ip} for {device_id}')
+                    ips_list.append(ip)
+            ipv6 = device_raw.get('ipv6Address')
+            if ipv6:
+                ips_list.append(ipv6)
+
+            try:
+                device.add_ips_and_macs(ips=ips_list)
+            except Exception:
+                logger.exception(f'Failed to add IPs for device {device_raw}')
+
+            # GCP specific stuff
+            device.project_id = device_raw.get('project')
+            device.device_type = DeviceType.DATABASE.name
+
+            # DATABASE specific stuff
+            device.etag = device_raw.get('etag')
+            device.self_link = device_raw.get('selfLink')
+            device.region = device_raw.get('region')
+            device.conn_name = device_raw.get('connectionName')
+            device.gce_zone = device_raw.get('gceZone')
+            device.master_inst_name = device_raw.get('masterInstanceName')
+
+            try:
+                device.inst_type = device_raw.get('instanceType')
+            except Exception as e:
+                logger.warning(f'Failed to parse instance type. got {str(e)}')
+
+            try:
+                device.suspend_reason = device_raw.get('suspensionReason')
+            except Exception as e:
+                logger.warning(f'Failed to parse suspend reason, got {str(e)}')
+
+            repl_names = device_raw.get('replicaNames')
+            if repl_names and isinstance(repl_names, list):
+                device.repl_names = repl_names
+
+            try:
+                device.db_version = device_raw.get('databaseVersion')
+            except Exception as e:
+                logger.warning(f'Failed to parse db version, got {str(e)}')
+
+            try:
+                device.inst_state = device_raw.get('state')
+            except Exception as e:
+                logger.warning(f'Failed to parse instance state, got {str(e)}')
+
+            try:
+                maintenance_dict = device_raw.get('scheduledMaintenance') or {}
+                device.scheduled_maintenance = parse_date(maintenance_dict.get('startTime'))
+            except Exception:
+                logger.warning(f'Failed to parse scheduled maintenance data for {device_id}')
+
+            try:
+                db_settings = device_raw.get('settings') or {}
+                if not db_settings:
+                    raise KeyError('settings')
+                auto_resize = db_settings.get('storageAutoResize')
+                if not isinstance(auto_resize, bool):
+                    auto_resize = None
+                repl_enabled = db_settings.get('databaseReplicationEnabled')
+                if not isinstance(repl_enabled, bool):
+                    repl_enabled = None
+                crash_repl_enabled = db_settings.get('crashSafeReplicationEnabled')
+                if not isinstance(crash_repl_enabled, bool):
+                    crash_repl_enabled = None
+
+                auth_gae_apps = db_settings.get('authorizedGaeApplications')
+                if not isinstance(auth_gae_apps, list):
+                    auth_gae_apps = None
+                device.db_settings = CloudSQLSettings(
+                    ver=db_settings.get('settingsVersion'),
+                    auth_gae_apps=auth_gae_apps,
+                    tier=db_settings.get('tier'),
+                    avail_type=db_settings.get('availabilityType'),
+                    price_plan=db_settings.get('pricingPlan'),
+                    repl_type=db_settings.get('replicationType'),
+                    auto_resize_limit=db_settings.get('storageAutoResizeLimit'),
+                    activation_policy=db_settings.get('activationPolicy'),
+                    storage_auto_resize=auto_resize,
+                    disk_type=db_settings.get('dataDiskType'),
+                    db_repl_enabled=repl_enabled,
+                    crash_safe_repl_enabled=crash_repl_enabled,
+                    disk_size_gb=db_settings.get('dataDiskSizeGb')
+                )
+            except Exception:
+                logger.warning(f'Failed to parse database settings for {device_id}')
+
+            databases_list_raw = device_raw.get('databases') or []
+            if databases_list_raw and isinstance(databases_list_raw, list):
+                databases = list()
+                for db in databases_list_raw:
+                    try:
+                        settings = db.get('sqlserverDatabaseDetails') or {}
+                        if not settings:
+                            continue
+                        try:
+                            compat_level = int(settings.get('compatibilityLevel'))
+                        except Exception:
+                            compat_level = None
+                        databases.append(CloudSQLDatabase(
+                            charset=db.get('charset'),
+                            collation=db.get('collation'),
+                            name=db.get('name'),
+                            instance=db.get('instance'),
+                            self_link=db.get('selfLink'),
+                            project_id=db.get('project'),
+                            compat_level=compat_level,
+                            recov_model=settings.get('recoveryModel')
+                        ))
+                    except Exception:
+                        logger.exception(f'Failed to get database information from {device_raw}')
+                device.databases = databases
+            # raw (json)
+            device.set_raw(device_raw)
+        except Exception:
+            # remove objects to make device_raw not hueg
+            logger.exception(f'Failed to create database device for {device_raw}')
+            device = None
+        return device
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def create_storage_device(self, device_raw, *args, **kwargs):
@@ -431,7 +682,7 @@ class GceAdapter(AdapterBase, Configurable):
             device.set_raw(device_raw)
         except Exception:
             # remove objects to make device_raw not hueg
-            device_raw.pop('x_objects')
+            device_raw.pop('x_objects', None)
             logger.exception(f'Failed to create storage device for {device_raw}')
             device = None
         return device
@@ -723,7 +974,7 @@ class GceAdapter(AdapterBase, Configurable):
                     user.gcp_user_type = gcp_user_type
                 except Exception:
                     logger.exception(f'Could not parse user_type, email for user {user_id}')
-                user.set_raw({})    # there is no specific raw for a user
+                user.set_raw({})  # there is no specific raw for a user
                 yield user
             except Exception:
                 logger.exception(f'Failed parsing user')

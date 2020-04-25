@@ -10,6 +10,7 @@ from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+CLOUD_SQL_BASE_URL = 'https://www.googleapis.com/sql/v1beta4/projects'
 STORAGE_BASE_URL = 'https://www.googleapis.com/storage/v1'
 BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
 
@@ -18,6 +19,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
     def __init__(self,
                  service_account_file: dict,
                  *args,
+                 fetch_cloud_sql: bool = False,
                  fetch_storage: bool = False,
                  **kwargs):
         super().__init__(
@@ -32,7 +34,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
         self.__sa_file = service_account_file
         self.__access_token = None
         self.__last_token_fetch = None
+        self.__fetch_cloud_sql = fetch_cloud_sql
         self.__scopes = {
+            'sql': ['https://www.googleapis.com/auth/sqlservice.admin'],
             'compute': ['https://www.googleapis.com/auth/cloudplatformprojects.readonly'],
             'storage': ['https://www.googleapis.com/auth/cloud-platform.read-only',
                         'https://www.googleapis.com/auth/devstorage.read_only'],
@@ -41,6 +45,8 @@ class GoogleCloudPlatformConnection(RESTConnection):
     def _get_scopes(self):
         scopes = list()
         scopes.extend(self.__scopes['compute'])
+        if self.__fetch_cloud_sql:
+            scopes.extend(self.__scopes['sql'])
         if self.__fetch_storage:
             scopes.extend(self.__scopes['storage'])
         return ' '.join(scopes)
@@ -117,6 +123,34 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 raise ValueError(f'Bad response while getting projects: {page}')
             yield from page['projects']
 
+    def _get_sql_databases(self, project_id, instance_id):
+        sql_db_url = f'{CLOUD_SQL_BASE_URL}/{project_id}/instances/{instance_id}/databases'
+        # not actually paged!
+        for page in self._paginated_get(sql_db_url, force_full_url=True):
+            if 'items' not in page:
+                raise ValueError(f'Bad response while getting cloud sql db databases: {page}')
+            return page['items']
+
+    def _get_sql_instances(self, project_id):
+        sql_instances_url = f'{CLOUD_SQL_BASE_URL}/{project_id}/instances'
+        for page in self._paginated_get(sql_instances_url, force_full_url=True):
+            if 'items' not in page:
+                raise ValueError(f'Bad response while getting cloud sql db instances: {page}')
+            yield from page['items']
+
+    def get_sql_instances(self, project_id):
+        for sql_instance in self._get_sql_instances(project_id):
+            sql_inst_id = sql_instance.get('masterInstanceName')
+            if sql_inst_id:
+                try:
+                    sql_instance['databases'] = self._get_sql_databases(project_id, sql_inst_id)
+                except Exception as e:
+                    logger.warning(f'Got {str(e)} trying fetch databases for {sql_inst_id}')
+                    sql_instance['databases'] = list()
+            else:
+                sql_instance['databases'] = list()
+            yield sql_instance
+
     def _get_buckets_list(self, project_id: str, get_objects: bool = True):
         base_url = BUCKETS_BASE_URL
 
@@ -162,13 +196,42 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 yield from self._get_buckets_list(project_id, get_objects=get_bucket_objects)
             except Exception as e:
                 message = f'Failed to get buckets and info for project {project_id}: {str(e)}'
-                exc_info = True
                 if 'Unknown project id: 0' in str(e):
-                    exc_info = False
                     message = f'Failed to get buckets and info for project {project_id}. ' \
                               f'The project may have been deleted or the user may be unauthorized ' \
                               f'for this project.'
-                logger.warning(message, exc_info=exc_info)
+                    logger.warning(message)
+                else:
+                    logger.warning(message, exc_info=True)
+                continue
+
+    def get_databases(self, project_id=None):
+        """
+        Get Database (instances) for each project
+        :param project_id: Optional. Get databases only for this project_id (or a list of project_ids)
+            By defauilt, fetch databases for all projects.
+        :return:  Yield dictionaries representing database instances
+        """
+        if isinstance(project_id, list):
+            projects = [{'project_id': x} for x in project_id]
+        else:
+            projects = [{'project_id': project_id}] if project_id is not None else self.get_project_list()
+        for project in projects:
+            project_id = project['projectId']
+            try:
+                # XXX Plug more database types HERE!
+                if self.__fetch_cloud_sql:
+                    yield from self.get_sql_instances(project_id)
+                # XXX In future Add more database types
+            except Exception as e:
+                message = f'Failed to get database instances for project {project_id}: {str(e)}'
+                if 'Unknown project id: 0' in str(e):
+                    message = f'Failed to get database instances for project {project_id}. ' \
+                              f'The project may have been deleted or the user may be unauthorized ' \
+                              f'for this project.'
+                    logger.warning(message, exc_info=False)
+                else:
+                    logger.exception(message)
                 continue
 
     def get_device_list(self):
