@@ -38,6 +38,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/contrast-security',
         description: 'Contrast Security protects software applications against cyberattacks.'
     },
+    workday_adapter: {
+        title: 'Workday - BETA',
+        description: 'Workday offers software solutions for financial management, human resources, and planning.',
+        link: 'https://docs.axonius.com/docs/workday'
+    },
     jita_adapter: {
         title: 'Remediant SecureONE (JITA)',
         link: 'https://docs.axonius.com/docs/remediant-secureone',

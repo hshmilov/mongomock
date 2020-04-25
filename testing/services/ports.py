@@ -262,6 +262,7 @@ DOCKER_PORTS = {
     'box-platform-adapter':             10016,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,
+    'workday-adapter':                  13200,
     'axonius-users-adapter':            13337,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
