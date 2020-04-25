@@ -21,9 +21,17 @@ def get_session_by_account_dict(account_dict: dict):
         }
     else:
         extra_args = {}
+
+    if account_dict.get('use_attached_iam_role') is True:
+        aws_access_key_id = None
+        aws_secret_access_key = None
+    else:
+        aws_access_key_id = account_dict.get('aws_access_key_id')
+        aws_secret_access_key = account_dict.get('aws_secret_access_key')
+
     return get_boto3_session(
-        aws_access_key_id=account_dict.get('aws_access_key_id'),
-        aws_secret_access_key=account_dict.get('aws_secret_access_key'),
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
         https_proxy=account_dict.get('https_proxy'),
         **extra_args
     )
@@ -36,6 +44,9 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
 
     account_id = account_dict.get('assumed_role_arn') or account_dict.get('aws_access_key_id', 'attached-profile')
     account_name = account_id
+
+    if account_dict.get('use_attached_iam_role') is True and not account_dict.get('assumed_role_arn'):
+        account_name = 'AWS Attached Role'
 
     try:
         session = get_session_by_account_dict(account_dict)

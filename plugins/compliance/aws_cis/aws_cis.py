@@ -55,7 +55,8 @@ class AWSCISGenerator:
                 'aws_secret_access_key': aws_client_config.get('aws_secret_access_key'),
                 'region_name': aws_client_config.get('region_name'),
                 'https_proxy': aws_client_config.get('proxy'),
-                'get_all_regions': aws_client_config.get('get_all_regions')
+                'get_all_regions': aws_client_config.get('get_all_regions'),
+                'use_attached_iam_role': aws_client_config.get('use_attached_iam_role')
             }
 
             client_config_accounts = []
