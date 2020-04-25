@@ -12,6 +12,7 @@ from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=logging-format-interpolation
 
 TEST_SERVICE_CONST = 123
 
@@ -84,4 +85,26 @@ class SkyboxConnection(RESTConnection):
         except Exception:
             logger.exception(f'Problem fetching vulnerabilities')
 
-        return assets_raw, vulnerabilities_by_host
+        # Fetch firewalls rules
+        firewalls_rules_by_id = defaultdict(list)
+        try:
+            firewalls = serialize_object(self.client.service.findFirewallsByName(''))
+            if not isinstance(firewalls, dict):
+                logger.debug(f'Invalid firewalls type: {firewalls}')
+                raise Exception('Invalid firewalls type')
+            firewalls_list = firewalls.get('fwElements')
+            if not isinstance(firewalls_list, list):
+                logger.debug(f'Invalid firewalls_list type: {firewalls_list}')
+                raise Exception('Invalid firewalls type')
+            for firewall_element in firewalls_list:
+                firewall_id = firewall_element.get('id')
+                if firewall_id:
+                    firewall_access_rules = serialize_object(self.client.service.getAccessRules(firewall_element))
+                    if not (isinstance(firewall_access_rules, dict) and
+                            isinstance(firewall_access_rules.get('accessRules'), list)):
+                        continue
+                    firewalls_rules_by_id[str(firewall_id)].extend(firewall_access_rules.get('accessRules'))
+        except Exception:
+            logger.exception(f'Problem fetching firewall rules')
+
+        return assets_raw, vulnerabilities_by_host, firewalls_rules_by_id

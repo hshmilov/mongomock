@@ -13,8 +13,11 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip
 from skybox_adapter.connection import SkyboxConnection
 from skybox_adapter.client_id import get_client_id
+from skybox_adapter.consts import FIREWALL_ACTION, FIREWALL_DIRECTION
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+# pylint: disable=logging-format-interpolation
 
 
 class SkyboxNic(SmartJsonClass):
@@ -43,6 +46,37 @@ class SkyboxVuln(SmartJsonClass):
     last_scan_time = Field(datetime.datetime, 'Last Scan Time')
 
 
+class PortRange(SmartJsonClass):
+    source_port_range = Field(str, 'Source Port Range')
+    destination_port_range = Field(str, 'Destination Port Range')
+    protocol = Field(str, 'Protocol')
+
+
+class ServiceRange(SmartJsonClass):
+    source_service_range = Field(str, 'Source Service Range')
+    destination_service_range = Field(str, 'Destination Service Range')
+    protocol = Field(str, 'Protocol')
+
+
+class FirewallAccessRule(SmartJsonClass):
+    id = Field(int, 'ID')
+    action = Field(str, 'Action', enum=list(FIREWALL_ACTION.values()))
+    comment = Field(str, 'Comment')
+    destination_addresses = ListField(str, 'Destination Addresses')
+    source_addresses = ListField(str, 'Source Addresses')
+    description = Field(str, 'Description')
+    direction = Field(str, 'Direction', enum=list(FIREWALL_DIRECTION.values()))
+    disabled = Field(bool, 'Disabled')
+    global_unique_id = Field(str, 'Global Unique ID')
+    implied = Field(bool, 'Implied')
+    is_authenticated = Field(bool, 'Is Authenticated')
+    network_interfaces = ListField(str, 'Network Interfaces')
+    ports = ListField(PortRange, 'Port Ranges')
+    rule_chain = Field(str, 'Rule Chain')
+    services = ListField(ServiceRange, 'Service Ranges')
+    source_network_interfaces = ListField(str, 'Source Network Interfaces')
+
+
 class SkyboxAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -53,6 +87,7 @@ class SkyboxAdapter(AdapterBase):
         skybox_services = Field(int, 'Skybox Services')
         skybox_nics = ListField(SkyboxNic, 'Skybox Network Interfaces')
         skybox_vulnerabilities = ListField(SkyboxVuln, 'Skybox Vulnerabilities')
+        firewall_access_rules = ListField(FirewallAccessRule, 'Firewall Access Rules')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -144,7 +179,8 @@ class SkyboxAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_device(self, device_raw: dict, vulnerabilities_by_host: dict):
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    def _create_device(self, device_raw: dict, vulnerabilities_by_host: dict, firewalls_rules_by_id: dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('id')
@@ -231,6 +267,82 @@ class SkyboxAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding CVEs')
 
+            firewall_rules = firewalls_rules_by_id.get(device_id) or []
+            for rule_raw in firewall_rules:
+                try:
+                    firewall_action = None
+                    if rule_raw.get('action'):
+                        if FIREWALL_ACTION.get(rule_raw.get('action')) is None:
+                            logger.warning(f'Firewall Action unavailable enum value: {rule_raw.get("action")}')
+                        firewall_action = FIREWALL_ACTION.get(rule_raw.get('action'))
+
+                    firewall_direction = None
+                    if rule_raw.get('direction'):
+                        if FIREWALL_DIRECTION.get(rule_raw.get('direction')) is None:
+                            logger.warning(f'Firewall Direction unavailable enum value: {rule_raw.get("direction")}')
+                        firewall_direction = FIREWALL_DIRECTION.get(rule_raw.get('direction'))
+
+                    destination_addresses = []
+                    if isinstance(rule_raw.get('destinationAddresses'), list):
+                        destination_addresses = rule_raw.get('destinationAddresses')
+
+                    source_addresses = []
+                    if isinstance(rule_raw.get('sourceAddresses'), list):
+                        source_addresses = rule_raw.get('sourceAddresses')
+
+                    net_interfaces = []
+                    if isinstance(rule_raw.get('netInterfaces'), list):
+                        net_interfaces = rule_raw.get('netInterfaces')
+
+                    ports = []
+                    if isinstance(rule_raw.get('ports'), list):
+                        for port_range in rule_raw.get('ports'):
+                            try:
+                                source_port, destination_port, protocol = port_range.split('/')
+                                ports.append(PortRange(source_port_range=source_port,
+                                                       destination_port_range=destination_port,
+                                                       protocol=protocol))
+                            except Exception:
+                                logger.debug(f'Invalid port range: {port_range}')
+
+                    services = []
+                    if isinstance(rule_raw.get('services'), list):
+                        for service_range in rule_raw.get('services'):
+                            try:
+                                source_service, destination_service, protocol = service_range.split('/')
+                                services.append(ServiceRange(source_service_range=source_service,
+                                                             destination_service_range=destination_service,
+                                                             protocol=protocol))
+                            except Exception:
+                                logger.debug(f'Invalid service range: {service_range}')
+
+                    source_network_interfaces = []
+                    if isinstance(rule_raw.get('sourceNetworkInterfaces'), list):
+                        source_network_interfaces = rule_raw.get('sourceNetworkInterfaces')
+
+                    device.firewall_access_rules.append(
+                        FirewallAccessRule(
+                            id=rule_raw.get('id'),
+                            action=firewall_action,
+                            comment=rule_raw.get('comment'),
+                            destination_addresses=destination_addresses,
+                            source_addresses=source_addresses,
+                            description=rule_raw.get('description'),
+                            direction=firewall_direction,
+                            disabled=bool(rule_raw.get('disabled')),
+                            global_unique_id=rule_raw.get('globalUniqueId'),
+                            implied=bool(rule_raw.get('implied')),
+                            is_authenticated=bool(rule_raw.get('isAuthenticated')),
+                            network_interfaces=net_interfaces,
+                            ports=ports,
+                            rule_chain=rule_raw.get('ruleChain'),
+                            services=services,
+                            source_network_interfaces=source_network_interfaces
+                        )
+                    )
+                except Exception:
+                    logger.exception(f'Problem adding Firewall Rules')
+
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -238,9 +350,9 @@ class SkyboxAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        devices_raw_data, vulnerabilities_by_host = devices_raw_data
+        devices_raw_data, vulnerabilities_by_host, firewalls_rules_by_id = devices_raw_data
         for device_raw in devices_raw_data:
-            device = self._create_device(device_raw, vulnerabilities_by_host)
+            device = self._create_device(device_raw, vulnerabilities_by_host, firewalls_rules_by_id)
             if device:
                 yield device
 
