@@ -61,6 +61,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/microfocus-sa',
         description: 'Micro Focus Server Automation (formerly known as HP Server Automation or Opsware) provides operating system provisioning, automated patch management, and compliance control.',
     },
+    keycloak_adapter: {
+        title: 'Keycloak',
+        link: 'https://docs.axonius.com/docs/keycloak',
+        description: 'Keycloak is an open source identity and access management solution.'
+    },
     ip_fabric_adapter: {
         title: 'IP Fabric',
         link: 'https://docs.axonius.com/docs/ip-fabric',
