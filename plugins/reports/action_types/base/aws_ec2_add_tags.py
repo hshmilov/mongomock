@@ -78,9 +78,10 @@ class AwsEc2AddTagsAction(ActionTypeBase):
                     f' {len(tag_keys)} keys and {len(tag_values)} values were given.')
 
         tags = [{'Key': tag_key, 'Value': tag_value} for tag_key, tag_value in zip(tag_keys, tag_values)]
-        logger.debug(f'tags to be added: {tags}')
+        instance_ids = [instance.id for instance in instance_group.instance_list]
+        logger.info(f'tags to be added: {tags}, to machine ids {instance_ids}')
 
-        valid_instance_collection = ec2_resource.instances
+        valid_instance_collection = ec2_resource.instances.filter(InstanceIds=instance_ids)
         valid_instance_obj_list = instance_group.instance_list
         logger.debug(f'Adding tags to instances {valid_instance_obj_list}')
         _ = valid_instance_collection.create_tags(Tags=tags)
