@@ -131,7 +131,7 @@ def _get_all_entities_raw(entity_type: EntityType,
         return db_cursor, cursor_id
 
     if db_projection:
-        sort = get_db_projection(db_projection, sort)
+        db_projection, sort = get_db_projection(db_projection, sort)
     entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
     # if we defaulted to normal history collection, add historized_filter
     if history_date and is_date_filter_required:
