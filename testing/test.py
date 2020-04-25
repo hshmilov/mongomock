@@ -2,6 +2,7 @@
 Handles running all scenarios of tests.
 """
 # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+import datetime
 import glob
 import io
 import socket
@@ -18,6 +19,7 @@ from collections import OrderedDict
 
 from typing import Tuple, List, Dict, Callable
 
+from CI.metrics_utils import generate_graph_from_lines
 from builds import Builds
 from builds.builds_factory import BuildsInstance
 from testing.test_helpers.ci_helper import TeamcityHelper
@@ -265,6 +267,7 @@ class InstanceManager:
         tests_with_exceptions = []
         last_exception = ValueError('General Error')
         jobs_left = jobs.copy()
+        all_tests_start_time = time.time()
 
         def execute_on_next_free_instance(command_job_name, command):
             # Do note this function runs in different threads and thus should be thread-safe in terms of printing.
@@ -343,7 +346,7 @@ class InstanceManager:
             with free_instances_lock:
                 free_instances.append(instance_to_run_on)
 
-            return instance_to_run_on, current_output, time.time() - start_time
+            return instance_to_run_on, current_output, time.time() - start_time, start_time
 
         for (job_name, ret, total_time_including_waiting_and_getting_artifacts) in tp_execute(
                 [
@@ -356,11 +359,16 @@ class InstanceManager:
                 ],
                 len(free_instances)
         ):
-            ret_instance_name, output, overall_time = ret
+            ret_instance_name, output, overall_time, start_time = ret
             overall_time_nice = time.strftime('%H:%M:%S', time.gmtime(overall_time))
             test_summary = f'Finished with job {job_name} on {ret_instance_name} after {overall_time_nice}'
-            tests_statistics.append(test_summary)
             print(test_summary)
+            tests_statistics.append({
+                'job_name': job_name,
+                'instance_name': ret_instance_name,
+                'overall_time': overall_time,
+                'start_time': start_time
+            })
             jobs_left.pop(job_name)
             print(f'Jobs left: {jobs_left.keys()}')
             with TC.block(f'job {job_name} ({overall_time_nice})'):
@@ -391,8 +399,34 @@ class InstanceManager:
                     )
 
         print(f'Finished, below are all tests with the time they took, ordered by the time of run')
-        for i, message in enumerate(tests_statistics):
-            print(f'{i}. {message}', flush=True)
+        metric_lines = []
+        for i, test_summary in enumerate(tests_statistics):
+            job_name = test_summary['job_name']
+            instance_name = test_summary['instance_name']
+            overall_time = test_summary['overall_time']
+            overall_time_nice = time.strftime('%H:%M:%S', time.gmtime(overall_time))
+            start_time = test_summary['start_time']
+            start_time_nice = time.strftime('%H:%M:%S', time.gmtime(overall_time))
+
+            metric_lines.append(
+                {
+                    'node': str(instance_name),
+                    'start': datetime.timedelta(seconds=(start_time - all_tests_start_time)),
+                    'test': str(job_name),
+                    'took': datetime.timedelta(seconds=overall_time)
+                }
+            )
+
+            test_summary = f'Finished with job {job_name} on {instance_name}, ' \
+                f'started with {start_time_nice} and finished after {overall_time_nice}'
+            print(f'{i}. {test_summary}', flush=True)
+
+        try:
+            metric_lines = sorted(metric_lines, key=lambda item: item.get('took') or datetime.timedelta(hours=3))
+            generate_graph_from_lines(metric_lines, ARTIFACTS_DIR_ABSOLUTE)
+        except Exception as e:
+            sys.stderr.write(f'Could not generate metrics: {e}')
+            sys.stderr.flush()
 
         # If there was at least one exception we should exit.
         if len(tests_with_exceptions) > 0:
