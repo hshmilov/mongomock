@@ -729,6 +729,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/lansweeper',
         description: 'Lansweeper is an agentless IT asset management and Network Inventory software tool for Microsoft Windows OS.'
     },
+    extra_hop_adapter: {
+        title: 'ExtraHop Reveal(x)',
+        link: 'https://docs.axonius.com/docs/extrahop-revealx',
+        description: 'ExtraHop Reveal(x) is a network detection and response (NDR) solution that provides visibility, real-time threat detection, and response.'
+    },
     linux_ssh_adapter: {
         title: 'Linux SSH',
         link: 'https://docs.axonius.com/docs/linux-ssh',

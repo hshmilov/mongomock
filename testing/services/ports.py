@@ -107,6 +107,7 @@ DOCKER_PORTS = {
     'scep-adapter':                     6003,
     'observium-adapter':                6004,
     'zabbix-adapter':                   6005,
+    'extra-hop-adapter':                6006,
     'tripwire-enterprise-adapter':      6007,
     'specops-adapter':                  6008,
     'nutanix-adapter':                  6009,
