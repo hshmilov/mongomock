@@ -133,11 +133,23 @@ class EsxAdapter(AdapterBase, Configurable):
         device.vm_path_name = config.get('vmPathName')
         device.figure_os(config.get('guestFullName', ''))
 
+        # set device uuid according to http://www.virtu-al.net/2015/12/04/a-quick-reference-of-vsphere-ids/
+        device_uuid = None
+        if (details.get('esx_system_info') or {}).get('uuid'):
+            # 2. ESX Host UUID
+            device_uuid = details['esx_system_info']['uuid']
+        elif config.get('uuid'):
+            # 4. VM SMBIOS UUID
+            device_uuid = config['uuid']
+        if not device_uuid:
+            logger.warning(f'Missing device UUID for path "{_curr_path}"')
+        device.uuid = device_uuid
+
         device_id = device.name  # default to name
         if config.get('instanceUuid'):
             device_id = config['instanceUuid']
-        elif details.get('system_info'):
-            device_id = details.get('system_info').get('uuid') or device_id
+        elif details.get('esx_system_info'):  # set ESXHosts' IDs to be their uuid
+            device_id = device_uuid or device_id
         device.id = device_id
         device.cloud_id = device_id
 
