@@ -6,6 +6,7 @@
       :read-only="readOnly"
       :user-fields-groups="userFieldsGroups"
       @done="$emit('done')"
+      @reset-search="$refs.searchInput.resetSearchInput()"
     />
     <div class="filter">
       <XQuerySearchInput
@@ -15,6 +16,7 @@
         :user-fields-groups="userFieldsGroups"
         @validate="onValid"
         @done="$emit('done')"
+        ref="searchInput"
       />
       <XButton
         type="link"

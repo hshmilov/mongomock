@@ -214,6 +214,7 @@ export default {
       const resetView = defaultViewForReset(this.module, this.userFieldsGroups.default);
       this.updateView(resetView);
       this.$emit('done');
+      this.$emit('reset-search');
     }, 400, { leading: true, trailing: false }),
     navigateFilteredTask() {
       this.$router.push({ path: `/enforcements/tasks/${this.enforcement.id}` });

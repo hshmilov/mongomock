@@ -325,3 +325,15 @@ class TestDevicesTable(TestEntitiesTable):
                                                 self.QUERY_FIELDS,
                                                 self.QUERY_FILTER_LAST_SEEN)
         self.devices_page.assert_csv_match_ui_data(result)
+
+    def test_devices_search_reset(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.fill_filter(self.QUERY_FILTER_DEVICES)
+
+        assert self.devices_page.find_search_value() == self.QUERY_FILTER_DEVICES
+
+        self.devices_page.enter_search()
+        self.devices_page.reset_query()
+
+        assert self.devices_page.find_search_value() == ''

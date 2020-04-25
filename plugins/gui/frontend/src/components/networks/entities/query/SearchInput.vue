@@ -396,6 +396,9 @@ export default {
       }
       return `(${searchField} == regex('${searchValue}', 'i'))`;
     },
+    resetSearchInput() {
+      this.searchInputValue = '';
+    },
   },
 };
 </script>
