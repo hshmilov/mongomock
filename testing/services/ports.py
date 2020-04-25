@@ -255,6 +255,7 @@ DOCKER_PORTS = {
     'men-and-mice-adapter':             10004,
     'edfs-csv-adapter':                 10005,
     'openvas-adapter':                  10014,
+    'hp-nnmi-xml-adapter':              10017,
     'pa-users-csv-adapter':             10110,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,

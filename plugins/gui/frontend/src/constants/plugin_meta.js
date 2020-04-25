@@ -48,6 +48,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/kenna-security-platform',
         description: 'Kenna Security Platform is a vulnerability assessment solution that provides risk scoring, prioritization, and benchmarking.'
     },
+    hp_nnmi_xml_adapter: {
+        title: 'HP NNMi XML File',
+        description: 'HP Network Node Manager i (NNMi) is a network health and performance monitoring software with scalability and device support.'
+    },
     pa_users_csv_adapter: {
         title: 'Firewall Users CSV',
         description: 'Firewall rules & users CSV adapter'
