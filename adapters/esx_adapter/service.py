@@ -153,6 +153,10 @@ class EsxAdapter(AdapterBase, Configurable):
         device.id = device_id
         device.cloud_id = device_id
 
+        product = config.get('product')
+        if isinstance(product, dict) and isinstance(product.get('fullName'), str):
+            device.figure_os(product.get('fullName'))
+
         device.cloud_provider = 'VMWare'
         added_macs = []
         for iface in details.get('networking', []):

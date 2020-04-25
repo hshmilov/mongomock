@@ -287,6 +287,12 @@ class vCenterApi(object):
                     if esx_host_name:
                         details['esx_host_name'] = esx_host_name
 
+            summary_config = _getattr_permission_safely(summary, 'config', None)
+            if summary_config:
+                product = _getattr_permission_safely(summary_config, 'product', None)
+                if product:
+                    details.setdefault('config', {})['product'] = _take_just_primitives(product.__dict__)
+
         config = _getattr_permission_safely(vm_root, 'config', None)
         if config:
             hardware = _getattr_permission_safely(config, 'hardware', None)
