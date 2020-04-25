@@ -13,6 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 CLOUD_SQL_BASE_URL = 'https://www.googleapis.com/sql/v1beta4/projects'
 STORAGE_BASE_URL = 'https://www.googleapis.com/storage/v1'
 BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
+IAM_BASE_URL = f'https://iam.googleapis.com'
 
 
 class GoogleCloudPlatformConnection(RESTConnection):
@@ -21,6 +22,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                  *args,
                  fetch_cloud_sql: bool = False,
                  fetch_storage: bool = False,
+                 fetch_roles: bool = False,
                  **kwargs):
         super().__init__(
             *args, domain='https://cloudresourcemanager.googleapis.com',
@@ -30,8 +32,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
             },
             **kwargs
         )
-        self.__fetch_storage = fetch_storage
         self.__sa_file = service_account_file
+        self.__fetch_storage = fetch_storage
+        self.__fetch_roles = fetch_roles
         self.__access_token = None
         self.__last_token_fetch = None
         self.__fetch_cloud_sql = fetch_cloud_sql
@@ -40,6 +43,8 @@ class GoogleCloudPlatformConnection(RESTConnection):
             'compute': ['https://www.googleapis.com/auth/cloudplatformprojects.readonly'],
             'storage': ['https://www.googleapis.com/auth/cloud-platform.read-only',
                         'https://www.googleapis.com/auth/devstorage.read_only'],
+            'iam': ['https://www.googleapis.com/auth/cloud-platform.read-only',
+                    'https://www.googleapis.com/auth/iam']
         }
 
     def _get_scopes(self):
@@ -49,6 +54,8 @@ class GoogleCloudPlatformConnection(RESTConnection):
             scopes.extend(self.__scopes['sql'])
         if self.__fetch_storage:
             scopes.extend(self.__scopes['storage'])
+        if self.__fetch_roles:
+            scopes.extend(self.__scopes['iam'])
         return ' '.join(scopes)
 
     def _paginated_request(self, method, *args, **kwargs):
@@ -242,3 +249,17 @@ class GoogleCloudPlatformConnection(RESTConnection):
             if 'bindings' not in page:
                 raise ValueError(f'Bad response while getting iam policy for project {project_id}: {page}')
             yield from page['bindings']
+
+    def get_predefined_roles(self):
+        for page in self._paginated_get(f'{IAM_BASE_URL}/v1/roles', url_params={'view': 'FULL'}, force_full_url=True):
+            if 'roles' not in page:
+                raise ValueError(f'Bad response while getting predefined iam roles list: {page}')
+            yield from page['roles']
+
+    def get_project_roles(self, project_id: str):
+        for page in self._paginated_get(f'{IAM_BASE_URL}/v1/projects/{project_id}/roles',
+                                        url_params={'view': 'FULL'},
+                                        force_full_url=True):
+            if 'roles' not in page:
+                raise ValueError(f'Bad response while getting iam roles list for project {project_id}: {page}')
+            yield from page['roles']

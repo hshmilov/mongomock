@@ -47,6 +47,14 @@ class DeviceType(enum.Enum):
     DATABASE = 3
 
 
+class GCPUserRolePerms(SmartJsonClass):
+    name = Field(str, 'Name')
+    title = Field(str, 'Title')
+    descr = Field(str, 'Description')
+    perms = ListField(str, 'Included Permissions')
+    deleted = Field(bool, 'Deleted')
+
+
 class GceTag(SmartJsonClass):
     gce_key = Field(str, 'GCE Key')
     gce_value = Field(str, 'GCE Value')
@@ -187,6 +195,7 @@ class GceAdapter(AdapterBase, Configurable):
         project_ids = ListField(str, 'Project IDs')
         roles = ListField(str, 'Roles')
         gcp_user_type = Field(str, 'User Type')
+        roles_perms = ListField(GCPUserRolePerms, 'Role Details')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -204,6 +213,7 @@ class GceAdapter(AdapterBase, Configurable):
             client = GoogleCloudPlatformConnection(
                 service_account_file=json.loads(self._grab_file_contents(client_config['keypair_file'])),
                 fetch_storage=self.__fetch_buckets,
+                fetch_roles=self.__get_roles,
                 fetch_cloud_sql=self.__fetch_cloud_sql,
                 https_proxy=client_config.get('https_proxy')
             )
@@ -211,6 +221,12 @@ class GceAdapter(AdapterBase, Configurable):
                 projects = next(client.get_project_list())
                 if not projects:
                     raise ClientConnectionException(f'No projects found. Please check the service account permissions')
+                if self.__get_roles:
+                    try:
+                        self.__predefined_roles = list(client.get_predefined_roles())
+                    except Exception:
+                        logger.exception(f'Failed to fetch roles! Make sure permissions are correct.')
+                        self.__predefined_roles = list()
                 return client, client_config
         except Exception as e:
             client_id = self._get_client_id(client_config)
@@ -232,8 +248,8 @@ class GceAdapter(AdapterBase, Configurable):
             yield from self._query_database_devices_by_client(client_name, client_data)
 
     # pylint: disable=arguments-differ
-    @staticmethod
-    def _query_users_by_client(client_name: str,
+    def _query_users_by_client(self,
+                               client_name: str,
                                client_data: Tuple[GoogleCloudPlatformConnection, dict]):
         client, client_dict = client_data
         with client:
@@ -241,7 +257,12 @@ class GceAdapter(AdapterBase, Configurable):
                 try:
                     project_id = project.get('projectId')
                     all_iam_data = list(client.get_user_list(project_id))
-                    yield all_iam_data, project
+                    try:
+                        role_data = list(client.get_project_roles(project_id)) if self.__get_roles else []
+                    except Exception:
+                        logger.exception(f'Failed to get roles for project {project_id}')
+                        role_data = list()
+                    yield all_iam_data, role_data, project
                 except Exception:
                     logger.exception(f'Error while fetching users for project {project.get("projectId")}')
 
@@ -381,12 +402,18 @@ class GceAdapter(AdapterBase, Configurable):
                     'name': 'fetch_bucket_objects',
                     'type': 'bool',
                     'title': 'Fetch Object metadata in Google Cloud Storage buckets'
+                },
+                {
+                    'name': 'match_role_permissions',
+                    'type': 'bool',
+                    'title': 'Fetch IAM permissions for users'  # Requires iam.roles.list IAM permission
                 }
             ],
             'required': [
                 'fetch_cloud_sql',
                 'fetch_buckets',
-                'fetch_bucket_objects'
+                'fetch_bucket_objects',
+                'match_role_permissions'
             ],
             'pretty_name': 'Google Cloud Platform configuration',
             'type': 'array'
@@ -396,8 +423,9 @@ class GceAdapter(AdapterBase, Configurable):
     def _db_config_default(cls) -> dict:
         return {
             'fetch_buckets': False,
+            'fetch_bucket_objects': False,
+            'match_role_permissions': False,
             'fetch_cloud_sql': False,
-            'fetch_bucket_objects': False
         }
 
     def _on_config_update(self, config):
@@ -405,6 +433,7 @@ class GceAdapter(AdapterBase, Configurable):
         self.__fetch_buckets = config['fetch_buckets']
         self.__fetch_cloud_sql = config['fetch_cloud_sql']
         self.__fetch_bkt_objects = config['fetch_bucket_objects']
+        self.__get_roles = config['match_role_permissions']
 
     @staticmethod
     def _clients_schema():
@@ -943,20 +972,33 @@ class GceAdapter(AdapterBase, Configurable):
     def create_user_entity(self) -> MyUserAdapter:
         return self._new_user_adapter()
 
+    def _find_user_role(self, role_raw, project_roles):
+        for predef_role in self.__predefined_roles:
+            if predef_role['name'] == role_raw:
+                return predef_role
+        for proj_role_list in project_roles.values():
+            for proj_role in proj_role_list:
+                if proj_role['name'] == role_raw:
+                    return proj_role
+        return None
+
     # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, all_data: Iterable[Tuple[list, dict]]) -> Iterable[UserAdapter]:
         # First parse users for all projects. because the same user can be in different projects
         users_info = dict()
-        for (all_iam_data, project) in all_data:
-            for role in all_iam_data:
-                if not role.get('role'):
-                    logger.warning(f'Bad role: {role}')
+        roles_per_project = dict()
+        for (all_iam_data, project_roles, project) in all_data:
+            roles_per_project[project['projectId']] = project_roles
+            for policy_role in all_iam_data:
+                if not policy_role.get('role'):
+                    logger.warning(f'Bad role: {policy_role}')
                     continue
-                for member in (role.get('members') or []):
+                for member in (policy_role.get('members') or []):
                     if member not in users_info:
                         users_info[member] = defaultdict(list)
-                    users_info[member]['roles'].append(role.get('role'))
-                    users_info[member]['projects'].append(project['projectId'])
+                    users_info[member]['roles'].append(policy_role.get('role'))
+                    if project['projectId'] not in users_info[member]['projects']:
+                        users_info[member]['projects'].append(project['projectId'])
 
         for user_id, user_info in users_info.items():
             try:
@@ -966,7 +1008,28 @@ class GceAdapter(AdapterBase, Configurable):
                     user.username = user_id.split(':')[1]
                 except Exception:
                     user.username = user_id
-                user.project_ids = user_info.get('projects')
+                user.project_ids = user_info.get('projects') or None
+                if self.__get_roles:
+                    for role in user_info.get('roles'):
+                        role_dict = self._find_user_role(role, roles_per_project)
+                        if not (role_dict and isinstance(role_dict, dict)):
+                            logger.warning(f'Failed to get permission details for role {role}')
+                            continue
+                        try:
+                            if not user.roles_perms:
+                                user.roles_perms = list()
+                            user.roles_perms.append(
+                                GCPUserRolePerms(
+                                    name=role_dict.get('name'),
+                                    title=role_dict.get('title'),
+                                    descr=role_dict.get('description'),
+                                    perms=role_dict.get('includedPermissions'),
+                                    deleted=role_dict.get('deleted')
+                                )
+                            )
+                        except Exception as e:
+                            logger.warning(f'Error {str(e)} when parsing role details for {role_dict}')
+                            continue
                 user.roles = user_info.get('roles')
                 try:
                     gcp_user_type, mail = user_id.split(':')
