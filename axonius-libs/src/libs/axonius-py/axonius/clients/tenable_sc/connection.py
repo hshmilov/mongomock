@@ -2,6 +2,8 @@ import logging
 
 from collections import defaultdict
 
+from typing import List
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.tenable_sc import consts
@@ -117,7 +119,8 @@ class TenableSecurityScannerConnection(RESTConnection):
 
     # pylint: disable=arguments-differ, too-many-nested-blocks, too-many-branches
     def get_device_list(self, drop_only_ip_devices, top_n_software=0,
-                        per_device_software=False, fetch_vulnerabilities=False):
+                        per_device_software=False, fetch_vulnerabilities=False,
+                        info_vulns_plugin_ids: List[str]=None):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
         for repository_id in repositories_ids:
@@ -128,7 +131,8 @@ class TenableSecurityScannerConnection(RESTConnection):
 
                 if fetch_vulnerabilities:
                     logger.info(f'Fetching vulnerabilities')
-                    vuln_mapping = self._get_vuln_mapping(repository_id=repository_id)
+                    vuln_mapping = self._get_vuln_mapping(repository_id=repository_id,
+                                                          info_vulns_plugin_ids=info_vulns_plugin_ids)
 
                 if per_device_software:
                     logger.info(f'Fetching all software for each device')
@@ -168,13 +172,19 @@ class TenableSecurityScannerConnection(RESTConnection):
                 logger.exception(f'Failed to get device list for repository {repository_id}')
     # pylint: enable=arguments-differ, too-many-nested-blocks, too-many-branches
 
-    def _get_vuln_list(self, repository_id):
+    def _get_vuln_list(self, repository_id, include_info_vulns=False):
+
+        severity_levels = consts.VULN_SEVERITY_ID_ALL_BUT_INFO
+        if include_info_vulns:
+            severity_levels.append(consts.VULN_SEVERITY_ID_INFO)
+        severity_levels_str = ','.join(severity_levels)
+
         filter_ = {'filterName': 'severity',
                    'id': 'severity',
                    'isPredefined': True,
                    'operator': '=',
                    'type': 'vuln',
-                   'value': '2,3,1,4'}
+                   'value': severity_levels_str}
         try:
             yield from self.do_analysis(repository_id=repository_id,
                                         analysis_type='vuln',
@@ -185,13 +195,35 @@ class TenableSecurityScannerConnection(RESTConnection):
         except Exception:
             logger.exception(f'Problem with repository {repository_id}')
 
-    def _get_vuln_mapping(self, repository_id):
+    @staticmethod
+    def _is_info_vuln(vuln_dict):
+        severity = vuln_dict.get('severity')
+        if not isinstance(severity, dict):
+            return False
+
+        severity_id = severity.get('id')
+        if not isinstance(severity_id, str):
+            return False
+
+        return severity_id == consts.VULN_SEVERITY_ID_INFO
+
+    def _get_vuln_mapping(self, repository_id, info_vulns_plugin_ids):
+        include_info_vulns = (isinstance(info_vulns_plugin_ids, list) and (len(info_vulns_plugin_ids) > 0))
         result = defaultdict(list)
-        vuln_list = self._get_vuln_list(repository_id) or []
+        vuln_list = self._get_vuln_list(repository_id, include_info_vulns=include_info_vulns) or []
         for vuln in vuln_list:
             vuln_id = self._vuln_id(vuln)
-            if vuln_id:
-                result[vuln_id].append(vuln)
+            if not vuln_id:
+                continue
+            if include_info_vulns and self._is_info_vuln(vuln):
+                plugin_id = vuln.get('pluginID')
+                if not (plugin_id and isinstance(plugin_id, str)):
+                    continue
+
+                if plugin_id not in info_vulns_plugin_ids:
+                    continue
+
+            result[vuln_id].append(vuln)
         return dict(result)
 
     @staticmethod

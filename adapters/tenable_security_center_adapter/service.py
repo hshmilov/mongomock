@@ -92,7 +92,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('url'))
 
     @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
         verify_ssl = False
         if 'verify_ssl' in client_config:
             verify_ssl = bool(client_config['verify_ssl'])
@@ -119,7 +119,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             yield from client_data.get_device_list(drop_only_ip_devices=self.__drop_only_ip_devices,
                                                    top_n_software=self.__fetch_top_n_installed_software,
                                                    per_device_software=self.__fetch_software_per_device,
-                                                   fetch_vulnerabilities=self.__fetch_vulnerabilities)
+                                                   fetch_vulnerabilities=self.__fetch_vulnerabilities,
+                                                   info_vulns_plugin_ids=self.__info_vulns_plugin_ids)
 
     def _clients_schema(self):
         return {
@@ -351,6 +352,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_vulnerabilities',
                     'title': 'Fetch vulnerabilities',
                     'type': 'bool'
+                },
+                {
+                    'name': 'info_vulns_plugin_ids',
+                    'title': 'Fetch info level vulnerabilities only for listed plugin IDs',
+                    'type': 'string',
                 }
             ],
             "required": [
@@ -368,14 +374,25 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'drop_only_ip_devices': False,
             'fetch_top_n_installed_software': 0,
             'fetch_software_per_device': False,
-            'fetch_vulnerabilities': False
+            'fetch_vulnerabilities': False,
+            'info_vulns_plugin_ids': '',
         }
+
+    @staticmethod
+    def _parse_info_vulns_plugin_ids_config(plugin_ids: str):
+        raw_plugin_ids = (plugin_ids or '').split(',')
+        plugin_ids = []
+        for plugin_id in raw_plugin_ids:
+            if plugin_id.strip():
+                plugin_ids.append(plugin_id.strip())
+        return plugin_ids
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
         self.__fetch_software_per_device = config['fetch_software_per_device']
         self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
+        self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
 
     def outside_reason_to_live(self) -> bool:
         """
