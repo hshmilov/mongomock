@@ -115,7 +115,6 @@ class TestEnforcementNoQuery(TestBase):
         assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
                                                                    MANAGED_DEVICES_QUERY_NAME)
 
-    @pytest.mark.skip('Not working')
     def test_no_scheduling(self):
         self.enforcements_page.create_basic_enforcement(
             ENFORCEMENT_CHANGE_NAME, MANAGED_DEVICES_QUERY_NAME, schedule=False)

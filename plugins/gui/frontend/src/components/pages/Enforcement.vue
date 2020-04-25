@@ -359,14 +359,14 @@ export default {
       this.enforcement = { ...this.enforcementData };
       this.selectActionMain();
     },
-    saveRun() {
-      this.saveEnforcement(this.enforcement).then((response) => {
+    async saveRun() {
+      await this.saveEnforcement(this.enforcement).then(async (response) => {
         if (!this.enforcement.uuid) {
           this.enforcement.uuid = response;
         }
-        this.runEnforcement(this.enforcement.uuid);
+        await this.runEnforcement(this.enforcement.uuid);
         this.message = 'Enforcement Task is in progress';
-        this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
+        await this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
       });
     },
     saveExit() {

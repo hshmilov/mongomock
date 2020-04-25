@@ -1,9 +1,7 @@
 import time
 from datetime import datetime
 
-import pytest
-from selenium.common.exceptions import (NoSuchElementException,
-                                        StaleElementReferenceException)
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -217,7 +215,6 @@ class TestTasks(TestBase):
         assert len(self.enforcements_page.get_all_data()) == 2
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)[0]
 
-    @pytest.mark.skip('Not working')
     def test_enforcement_task_query_change(self):
         query_name = Enforcements.enforcement_query_1
         enforcement_name = TEST_ENFORCEMENT_NAME

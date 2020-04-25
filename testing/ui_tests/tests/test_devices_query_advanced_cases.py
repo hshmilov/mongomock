@@ -896,14 +896,26 @@ class TestDevicesQueryAdvancedCases(TestBase):
 
         def chabchab_in_result():
             self.devices_page.wait_for_table_to_load()
-            return 'ChabChab' in self.devices_page.get_column_data_inline(
-                self.devices_page.FIELD_ASSET_NAME)
+            try:
+                return 'ChabChab' in self.devices_page.get_column_data_inline(
+                    self.devices_page.FIELD_ASSET_NAME)
+            except ValueError:
+                query = self.devices_page.find_search_value()
+                self.devices_page.refresh()
+                self.devices_page.reset_query()
+                self.devices_page.fill_filter(query)
+                self.devices_page.enter_search()
+                self.devices_page.wait_for_table_to_load()
+                return 'ChabChab' in self.devices_page.get_column_data_inline(
+                    self.devices_page.FIELD_ASSET_NAME)
 
         def json_query_filter_last_seen_next_days(days_value=0):
+            self.devices_page.click_query_wizard()
             self.devices_page.select_query_with_adapter(attribute=self.devices_page.FIELD_LAST_SEEN,
                                                         operator=self.devices_page.QUERY_COMP_NEXT_DAYS,
                                                         value=days_value)
             self.devices_page.wait_for_table_to_be_responsive()
+            self.devices_page.click_search()
 
         future_date = (datetime.utcnow() + relativedelta(years=+10)).strftime('%Y-%m-%d %H:%M:%SZ')
         client_details = {
@@ -939,7 +951,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.adapters_page.wait_for_data_collection_toaster_start()
         self.adapters_page.wait_for_data_collection_toaster_absent()
         self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
+        self.devices_page.refresh()
         json_query_filter_last_seen_next_days(1)
         assert chabchab_in_result() is False
         json_query_filter_last_seen_next_days(100)
