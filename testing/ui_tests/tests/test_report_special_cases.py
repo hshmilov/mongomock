@@ -8,11 +8,13 @@ from services.standalone_services.smtp_service import \
     generate_random_valid_email
 from ui_tests.pages.reports_page import ReportConfig
 from ui_tests.tests import ui_consts
-from ui_tests.tests.test_report_generation import TestReportGeneration
+from ui_tests.tests.test_report_base import TestReportGenerationBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 
 
-class TestReportGenerationSpecialCases(TestReportGeneration):
+class TestReportGenerationSpecialCases(TestReportGenerationBase):
+    EMPTY_REPORT_NAME = 'empty_report'
+
     def test_empty_report(self):
         self.reports_page.create_report(ReportConfig(report_name=self.EMPTY_REPORT_NAME))
 

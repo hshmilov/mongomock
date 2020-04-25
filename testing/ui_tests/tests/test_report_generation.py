@@ -1,26 +1,18 @@
-import io
 import urllib.parse
-from functools import reduce
 from datetime import datetime
+from functools import reduce
 
-from PyPDF2 import PdfFileReader
-
-from services.adapters import stresstest_scanner_service, stresstest_service
-from test_credentials.test_gui_credentials import DEFAULT_USER
-from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
-from ui_tests.tests import ui_consts
-from ui_tests.pages.reports_page import ReportConfig
 from axonius.utils.wait import wait_until
+from services.adapters import stresstest_scanner_service, stresstest_service
+from ui_tests.pages.reports_page import ReportConfig
+from ui_tests.tests import ui_consts
+from ui_tests.tests.test_report_base import TestReportGenerationBase
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 
 
-class TestReportGeneration(TestBase):
-    REPORT_NAME = 'test_report_gen'
-    EMPTY_REPORT_NAME = 'empty_report'
-    TEST_REPORT_QUERY_NAME = 'test report query name'
+class TestReportGeneration(TestReportGenerationBase):
     TEST_REPORT_QUERY_NAME1 = 'test report query name1'
     TEST_REPORT_QUERY_NAME2 = 'test report query name2'
-    DATA_QUERY = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
     DATA_QUERY1 = 'specific_data.data.name == regex(\'avigdor\', \'i\')'
     DATA_QUERY2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
     TEST_REPORT_SPACES = 'test report spaces'
@@ -235,15 +227,3 @@ class TestReportGeneration(TestBase):
             return False
         generated_date = datetime.strptime(generated_date_str, '%Y-%m-%d %H:%M:%S')
         return generated_date > current_date
-
-    def _extract_report_pdf_doc(self, report_name):
-        self.reports_page.switch_to_page()
-        self.reports_page.wait_for_table_to_load()
-        report_id = self.reports_page.get_report_id(report_name)
-        self.reports_page.wait_for_report_generation(report_name)
-        self.reports_page.click_report(report_name)
-        self.reports_page.wait_for_spinner_to_end()
-        self.axonius_system.gui.login_user(DEFAULT_USER)
-        report_pdf = self.axonius_system.gui.get_report_pdf(report_id)
-        pdf_file = io.BytesIO(report_pdf.content)
-        return PdfFileReader(pdf_file)
