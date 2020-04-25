@@ -258,6 +258,8 @@ DOCKER_PORTS = {
     'keycloak-adapter':                 10018,
     'hp-nnmi-xml-adapter':              10017,
     'pa-users-csv-adapter':             10110,
+    'openvas-adapter':                  10014,
+    'box-platform-adapter':             10016,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,
     'axonius-users-adapter':            13337,

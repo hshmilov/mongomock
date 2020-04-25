@@ -86,6 +86,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/digicert-certcentral',
         description: 'DigiCert CertCentral consolidates tasks for issuing, installing, inspecting, remediating, and renewing certificates.'
     },
+    box_platform_adapter: {
+        title: 'Box Platform',
+        link:  'https://docs.axonius.com/docs/box',
+        description: 'Box Platform provides data security, file sharing, collaborating, and content management tools. Box Platform provides access to Box APIs.'
+    },
     openvas_adapter: {
         title: 'OpenVAS',
         link: 'https://docs.axonius.com/docs/openvas',
