@@ -8,9 +8,11 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.json import from_json
 from axonius.utils.parsing import figure_out_cloud
 from sophos_cloud_optix_adapter.client_id import get_client_id
 from sophos_cloud_optix_adapter.connection import SophosCloudOptixConnection
@@ -22,7 +24,7 @@ from sophos_cloud_optix_adapter.structures import (GCPServiceAccount,
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class SophosCloudOptixAdapter(AdapterBase):
+class SophosCloudOptixAdapter(AdapterBase, Configurable):
     """ The parameters defined below contain the common fields for each
     cloud provider service (i.e. AWS, Azure and GCP) along with fields
     that are specific to each of those providers.
@@ -86,7 +88,7 @@ class SophosCloudOptixAdapter(AdapterBase):
         password_last_changed = Field(datetime.datetime, 'Password Last Changed')
         password_last_used = Field(datetime.datetime, 'Password Last Used')
         path = Field(str, 'Path')
-        policies_attached = Field(bool, 'Polices Attached')
+        policies_attached = ListField(str, 'Polices Attached')
         policy_utilization_ratio = Field(str, 'Policy Utilization Ratio')
         user_id = Field(str, 'User ID')
         policy_count = Field(int, 'User Policy Count')
@@ -126,14 +128,13 @@ class SophosCloudOptixAdapter(AdapterBase):
         return RESTConnection.test_reachability(host=client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def _set_providers(client_config) -> dict:
+    def _get_providers(self) -> dict:
         """ Determine which cloud providers to query (all are enabled in
         the GUI by default. A dict is returned to the caller."""
         providers = {
-            'AWS': client_config.get('aws'),
-            'Azure': client_config.get('azure'),
-            'GCP': client_config.get('gcp')
+            'AWS': self.__fetch_aws,
+            'Azure': self.__fetch_azure,
+            'GCP': self.__fetch_gcp,
         }
         return providers
 
@@ -143,7 +144,7 @@ class SophosCloudOptixAdapter(AdapterBase):
                                                 verify_ssl=client_config.get('verify_ssl'),
                                                 https_proxy=client_config.get('https_proxy'),
                                                 apikey=client_config.get('apikey'),
-                                                providers=self._set_providers(client_config))
+                                                providers=self._get_providers())
         with connection:
             pass
         return connection
@@ -240,7 +241,8 @@ class SophosCloudOptixAdapter(AdapterBase):
         """
         try:
             device = self._new_device_adapter()
-            device.cloud_provider = figure_out_cloud(device_raw.get('accountType'))
+            cloud_provider = figure_out_cloud(device_raw.get('accountType'))
+            device.cloud_provider = cloud_provider
             device.account_id = device_raw.get('accountId')
 
             device_id = device_raw.get('instanceId')
@@ -260,9 +262,12 @@ class SophosCloudOptixAdapter(AdapterBase):
                 device.instance_profile_id = more_info.get('instanceProfileId')
                 device.instance_type = more_info.get('instanceType')
                 device.is_iam_role_assigned = more_info.get('isIAMRoleAssigned')
-                device.power_state = more_info.get('runningState') or \
-                    more_info.get('status') or \
-                    more_info.get('provisioningState')
+                try:
+                    device.power_state = more_info.get('runningState') or \
+                        more_info.get('status') or \
+                        more_info.get('provisioningState')
+                except Exception:
+                    logger.exception(f'Failed parsing power state for device {device_raw}')
                 device.figure_os(device_raw.get('osType'))
                 device.resource_group = more_info.get('resourceGroup')
                 device.password_login = more_info.get('passwordLogin')
@@ -299,7 +304,7 @@ class SophosCloudOptixAdapter(AdapterBase):
                         device.security_groups = security_group_list
                 except Exception as err:
                     logger.exception(f'Unable to create security groups for '
-                                     f'{device_raw} on {device.cloud_provider}: {err}')
+                                     f'{device_raw} on {cloud_provider}: {err}')
 
                 # firewalls: gcp
                 try:
@@ -314,11 +319,11 @@ class SophosCloudOptixAdapter(AdapterBase):
                                 logger.exception(f'Unable to create a firewall in {device_raw}: {err}')
                 except Exception as err:
                     logger.exception(f'Unable to populate the firewall list for '
-                                     f'{device_raw} on {device.cloud_provider}: {err}')
+                                     f'{device_raw} on {cloud_provider}: {err}')
 
                 # nics: aws and azure
-                try:
-                    for nic in more_info.get('networkInterfaces'):
+                for nic in (more_info.get('networkInterfaces') or []):
+                    try:
                         private_ips = set()
                         private_ip = nic.get('privateIP')
                         if isinstance(private_ip, list):
@@ -342,7 +347,7 @@ class SophosCloudOptixAdapter(AdapterBase):
                                                       nic.get('interfaceId'),
                                                       public_ip=list(public_ips),
                                                       private_ip=list(private_ips),
-                                                      net_sec_group_id=nic.get('nsgId')
+                                                      sec_group_id=nic.get('nsgId')
                                                       )
                         # there is a potential typo in the docs, so testing for the [sic] and correct spelling
                         if isinstance(nic.get('ipConfigration'), list) or \
@@ -375,13 +380,13 @@ class SophosCloudOptixAdapter(AdapterBase):
                             netif.ips = list(private_ips.union(public_ips))
 
                             device.add_nic(name=netif.name, ips=netif.ips)
-                except Exception as err:
-                    logger.exception(f'Problem creating network interfaces for '
-                                     f'{device_raw} on {device.cloud_provider}: {err}')
+                    except Exception as err:
+                        logger.exception(f'Problem creating network interface for'
+                                         f' {nic} on {cloud_provider}: {err}')
 
                 # nics: gcp
-                try:
-                    for nic in more_info.get('networkInterfaceList'):
+                for nic in (more_info.get('networkInterfaceList') or []):
+                    try:
                         private_ips = set()
                         private_ip = nic.get('privateIp')
                         if isinstance(private_ip, list):
@@ -412,14 +417,14 @@ class SophosCloudOptixAdapter(AdapterBase):
                                 netif.access_config = config
 
                             device.add_nic(name=netif.name, ips=netif.ips)
-                except Exception as err:
-                    logger.exception(
-                        f'Problem creating network interfaces for {device_raw} '
-                        f'on {device.cloud_provider}: {err}')
+                    except Exception as err:
+                        logger.exception(
+                            f'Problem creating network interface for {nic} '
+                            f'on {cloud_provider}: {err}')
 
                 # drives: gcp
-                try:
-                    for disk in more_info.get('disksList'):
+                for disk in (more_info.get('disksList') or []):
+                    try:
                         device.add_hd(name=disk.get('name'),
                                       source_image=disk.get('sourceImage'),
                                       total_size=disk.get('diskSizeGb'),
@@ -429,9 +434,9 @@ class SophosCloudOptixAdapter(AdapterBase):
                                       source=disk.get('source'),
                                       disk_index=disk.get('index'),
                                       is_encrypted=disk.get('isEncrypted'))
-                except Exception as err:
-                    logger.exception(f'Unable to populate disk drives for {device_raw} '
-                                     f'on {device.cloud_provider}: {err}')
+                    except Exception as err:
+                        logger.exception(f'Unable to populate disk drive for {disk} '
+                                         f'on {cloud_provider}: {err}')
 
                 # tags
                 try:
@@ -441,7 +446,7 @@ class SophosCloudOptixAdapter(AdapterBase):
                             device.add_key_value_tag(key=key, value=value)
                 except Exception as err:
                     logger.exception(f'Unable to set tags for {device_raw} '
-                                     f'on {device.cloud_provider}: {err}')
+                                     f'on {cloud_provider}: {err}')
 
                 # service accounts: gcp
                 try:
@@ -455,14 +460,14 @@ class SophosCloudOptixAdapter(AdapterBase):
                         device.service_accounts = service_accounts_list
                 except Exception as err:
                     logger.exception(f'Unable to set service accounts for '
-                                     f'{device_raw} on {device.cloud_provider}: {err}')
+                                     f'{device_raw} on {cloud_provider}: {err}')
 
             device.set_raw(device_raw)
             return device
         except Exception as err:
             logger.exception(
-                f'Problem with fetching Sophos Cloud Optix Device for '
-                f'{device_raw} on {device.cloud_provider}: {err}')
+                f'Problem with fetching Sophos Cloud Optix Device: {err} '
+                f' for device_raw: {device_raw}')
             return None
 
     def _create_user(self, user_raw):
@@ -491,7 +496,11 @@ class SophosCloudOptixAdapter(AdapterBase):
                 except BaseException:
                     logger.warning(f'Unable to set the policy count: {user_raw}')
 
-                user.policies_attached = more_info.get('attachedPolicies')
+                try:
+                    # for some reason attachedPolicies are brought as an str representation of a list
+                    user.policies_attached = from_json(more_info.get('attachedPolicies'))
+                except Exception:
+                    logger.warning(f'Failed parsing policies attached {more_info.get("attachedPolicies")}')
                 user.change_passwd_next_login = more_info.get('changePasswordAtNextLogin')
                 user.console_passwd_status = more_info.get('consolePasswdStatus')
                 user.cloud_provider = figure_out_cloud(user_raw.get('accountType'))
@@ -563,8 +572,8 @@ class SophosCloudOptixAdapter(AdapterBase):
                 return user
         except Exception as err:
             logger.exception(
-                f'Problem with fetching Sophos Cloud Optix User for '
-                f'{user_raw} on {user.cloud_provider}: {err}')
+                f'Problem with fetching Sophos Cloud Optix User: {err} '
+                f' for user_raw: {user_raw}')
         return None
 
     def _parse_raw_data(self, devices_raw_data):
