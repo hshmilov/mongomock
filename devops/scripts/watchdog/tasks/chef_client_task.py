@@ -5,7 +5,7 @@ from scripts.watchdog.watchdog_task import WatchdogTask
 import subprocess
 import shlex
 
-SLEEP_SECONDS = 60 * 60 * 12  # that is 12 hrs
+SLEEP_SECONDS = 60 * 60 * 4  # that is 4 hrs
 
 
 def is_endpoint_false(endpoint):
@@ -14,8 +14,8 @@ def is_endpoint_false(endpoint):
         output = subprocess.check_output(
             shlex.split(f'docker run --rm appropriate/curl -kfsSL https://gui.axonius.local:443/api/{endpoint}'),
             env=env, timeout=60 * 2)
-        output = output.decode().strip()
-        return output == 'false'
+        output = output.decode().strip().lower()
+        return output != 'true'
     except Exception:
         return False
 
