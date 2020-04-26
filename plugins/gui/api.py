@@ -6,7 +6,7 @@ from typing import List
 from flask import jsonify, request, has_request_context, g
 from passlib.hash import bcrypt
 
-from axonius.consts.gui_consts import IS_AXONIUS_ROLE
+from axonius.consts.gui_consts import IS_AXONIUS_ROLE, RootMasterNames
 from axonius.consts.metric_consts import ApiMetric
 from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.logging.metric_helper import log_metric
@@ -22,6 +22,7 @@ from axonius.utils.gui_helpers import (accounts as accounts_filter,
 from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction,
                                               PermissionValue, deserialize_db_permissions, is_axonius_role)
 from axonius.utils.metric import remove_ids
+from axonius.utils.root_master.root_master import restore_from_s3_key
 from gui.logic.entity_data import (get_entity_data, entity_tasks)
 from gui.logic.routing_helper import check_permissions
 
@@ -30,9 +31,21 @@ logger = logging.getLogger(f'axonius.{__name__}')
 API_VERSION = '1'
 
 
-# pylint: disable=protected-access,no-self-use,no-member
+# pylint: disable=protected-access,no-self-use,no-member,too-many-lines
 
 # Caution! These decorators must come BEFORE @add_rule
+
+def get_key_default(user_data, key, default_data, default_key, default_value, default_if_none=True):
+    """Get a key from user_data dict or a default key from default dict."""
+    if key in user_data:
+        value = user_data[key]
+
+        if value is None and default_if_none:
+            return default_data.get(default_key, default_value)
+
+        return value
+
+    return default_data.get(default_key, default_value)
 
 
 def basic_authentication(func, required_permission: PermissionValue = None):
@@ -142,52 +155,258 @@ def get_page_metadata(skip, limit, number_of_assets):
 
 class APIMixin:
 
-    # jim:3.0
+    ##########
+    # UNAUTH #
+    ##########
+
+    @add_rule_unauth(
+        rule='api',
+        methods=['GET'],
+    )
+    def api_description(self):
+        return API_VERSION
+
+    @add_rule_unauth(
+        rule='signup_api',
+        methods=['POST', 'GET']
+    )
+    def api_public_signup(self):
+        """Process initial signup.
+
+        jim: 3.3: added for esentire/cimpress automation
+
+        :return: dict
+        """
+        return self._process_signup(return_api_keys=True)
+
     ##########
     # SYSTEM #
     ##########
 
-    @api_add_rule('system/settings/lifecycle', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/central_core',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings)
+    )
+    def central_core_get(self):
+        """Get the current central core (root master) settings from feature flags.
+
+        jim: 3.3: added for esentire/cimpress automation
+
+        :return: dict
+        """
+        return self._get_central_core_settings()
+
+    @api_add_rule(
+        rule='system/central_core',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)
+    )
+    def central_core_update(self):
+        """Update the current central core (root master) settings from feature flags.
+
+        jim: 3.3: added for esentire/cimpress automation
+
+        :return: dict
+        """
+        return self._update_central_core_settings()
+
+    @api_add_rule(
+        rule='system/central_core/restore',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings)
+    )
+    def central_core_restore(self):
+        """Start the restore process.
+
+        jim: 3.3: added for esentire/cimpress automation
+
+        restore_type: str, required
+            type of restore to perform
+
+        :return: dict
+        """
+        request_data = self.get_request_data_as_object()
+        restore_type = request_data.get('restore_type')
+        restore_types = {'aws': self.central_core_restore_aws}
+
+        if restore_type not in restore_types:
+            restore_types = ', '.join(list(restore_types))
+            err = f'Invalid restore_type={restore_type!r}, must be one of: {restore_types}'
+            return return_error(error_message=err, http_status=400, additional_data=None)
+
+        restore_method = restore_types[restore_type]
+        return restore_method(request_data=request_data)
+
+    def central_core_restore_aws(self, request_data):
+        """Perform a restore from an AWS S3.
+
+        jim: 3.3: added for esentire/cimpress automation
+
+        :return: dict
+        """
+        explain = {
+            'key_name': {
+                'type': 'str',
+                'required': True,
+                'description': 'Name of file in [bucket_name] to restore',
+                'default': None,
+            },
+            'bucket_name': {
+                'type': 'str',
+                'required': False,
+                'description': 'Name of bucket in S3 to get [key_name] from',
+                'default': 'Global Settings > Amazon S3 Settings > Amazon S3 bucket name',
+            },
+            'access_key_id': {
+                'type': 'str',
+                'required': False,
+                'description': 'AWS Access Key Id to use to access [bucket_name]',
+                'default': 'Global Settings > Amazon S3 Settings > AWS Access Key Id',
+            },
+            'secret_access_key': {
+                'type': 'str',
+                'required': False,
+                'description': 'AWS Secret Access Key to use to access [bucket_name]',
+                'default': 'Global Settings > Amazon S3 Settings > AWS Secret Access Key',
+            },
+            'preshared_key': {
+                'type': 'str',
+                'required': False,
+                'description': 'Password to use to decrypt [key_name]',
+                'default': 'Global Settings > Amazon S3 Settings > Backup encryption passphrase',
+            },
+            'allow_re_restore': {
+                'type': 'bool',
+                'required': False,
+                'description': 'Restore [key_name] even if it has already been restored',
+                'default': False,
+            },
+            'delete_backups': {
+                'type': 'bool',
+                'required': False,
+                'description': 'Delete [key_name] from [bucket_name] after restore has finished',
+                'default': False,
+            },
+        }
+
+        root_master_settings = self.feature_flags_config().get(RootMasterNames.root_key) or {}
+        aws_s3_settings = self._aws_s3_settings.copy()
+
+        restore_opts = {}
+        restore_opts['key_name'] = request_data.get('key_name')
+        restore_opts['bucket_name'] = aws_s3_settings.get('bucket_name', None)
+        restore_opts['preshared_key'] = aws_s3_settings.get('preshared_key', None)
+        restore_opts['access_key_id'] = aws_s3_settings.get('aws_access_key_id', None)
+        restore_opts['secret_access_key'] = aws_s3_settings.get('aws_secret_access_key', None)
+        restore_opts['delete_backups'] = root_master_settings.get('delete_backups', False)
+        restore_opts['allow_re_restore'] = request_data.get('allow_re_restore', False)
+
+        if request_data.get('delete_backups', None) is not None:
+            restore_opts['delete_backups'] = request_data['delete_backups']
+
+        s3_keys = ['access_key_id', 'secret_access_key', 'bucket_name', 'preshared_key', 'access_key_id']
+        for s3_key in s3_keys:
+            if request_data.get(s3_key, None) is not None:
+                restore_opts[s3_key] = request_data[s3_key]
+
+        key_name = restore_opts['key_name']
+        bucket_name = restore_opts['bucket_name']
+
+        if not key_name:
+            err = f'Must supply \'key_name\' of object in bucket {bucket_name!r}'
+            return return_error(error_message=err, http_status=400, additional_data=explain)
+
+        try:
+            obj_meta = restore_from_s3_key(**restore_opts)
+
+            try:
+                obj_bytes = obj_meta['ContentLength']
+                obj_gb = round(obj_bytes / (1024 ** 3), 3)
+            except Exception:
+                obj_gb = '???'
+
+            return_data = {
+                'status': 'success',
+                'message': f'Successfully restored backup file',
+                'additional_data': {
+                    'bucket_name': bucket_name,
+                    'key_name': key_name,
+                    'key_size_gb': obj_gb,
+                    'key_modified_dt': obj_meta.get('LastModified', None),
+                    'key_deleted': obj_meta.get('deleted', None),
+                    'key_re_restored': obj_meta.get('re_restored', None),
+                },
+            }
+
+            return jsonify(return_data)
+        except Exception as exc:
+            err = f'Failure while restoring: {exc}'
+            return return_error(error_message=err, http_status=400, additional_data=explain)
+
+    def _api_get_settings_json(self, plugin_name, config_name):
+        """Get a plugins settings and schemas in JSON format.
+
+        :return: str
+        """
+        config_obj, config_schema = self._get_plugin_configs(plugin_name=plugin_name, config_name=config_name)
+        return jsonify({'config': config_obj, 'schema': config_schema})
+
+    def _api_update_settings(self, plugin_name, config_name):
+        """Update a plugins settings and return the updated settings in JSON format.
+
+        :return: str
+        """
+        self._save_plugin_config(plugin_name=plugin_name, config_name=config_name)
+        return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
+
+    @api_add_rule(
+        rule='system/settings/lifecycle',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def get_api_settings_lifecycle(self):
-        """Get or set System Settings > Lifecycle settings tab.
+        """Get System Settings > Lifecycle settings tab.
 
-        GET: Returns dict of settings and their schema.
-
-        :return: dict or str
+        :return: dict
         """
-        return self.get_plugin_configs(
-            plugin_name='system_scheduler', config_name='SystemSchedulerService'
-        )
+        plugin_name = 'system_scheduler'
+        config_name = 'SystemSchedulerService'
+        return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/settings/lifecycle', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/settings/lifecycle',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings),
+    )
     def update_api_settings_lifecycle(self):
-        """Get or set System Settings > Lifecycle settings tab.
+        """Update System Settings > Lifecycle settings tab.
 
-        POST: Returns empty str. POST body is dict returned by GET with updated values.
-
-        :return: dict or str
+        :return: dict
         """
-        return self.update_plugin_configs(
-            plugin_name='system_scheduler', config_name='SystemSchedulerService'
-        )
+        plugin_name = 'system_scheduler'
+        config_name = 'SystemSchedulerService'
+        return self._api_update_settings(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/settings/gui', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/settings/gui',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def get_api_settings_gui(self):
-        """Get or set System Settings > GUI settings tab.
+        """Get System Settings > GUI settings tab.
 
-        GET: Returns dict of settings and their schema.
-
-        :return: dict or str
+        :return: dict
         """
-        return self.get_plugin_configs(
-            plugin_name='gui', config_name='GuiService'
-        )
+        plugin_name = 'gui'
+        config_name = 'GuiService'
+        return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/settings/gui', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/settings/gui',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings),
+    )
     def update_api_settings_gui(self):
         """Get or set System Settings > GUI settings tab.
 
@@ -195,12 +414,15 @@ class APIMixin:
 
         :return: dict or str
         """
-        return self.update_plugin_configs(
-            plugin_name='gui', config_name='GuiService'
-        )
+        plugin_name = 'gui'
+        config_name = 'GuiService'
+        return self._api_update_settings(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/settings/core', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/settings/core',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def get_api_settings_core(self):
         """Get or set System Settings > Global settings tab.
 
@@ -208,12 +430,15 @@ class APIMixin:
 
         :return: dict or str
         """
-        return self.get_plugin_configs(
-            plugin_name='core', config_name='CoreService'
-        )
+        plugin_name = 'core'
+        config_name = 'CoreService'
+        return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/settings/core', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/settings/core',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings),
+    )
     def update_api_settings_core(self):
         """Get or set System Settings > Global settings tab.
 
@@ -221,12 +446,15 @@ class APIMixin:
 
         :return: dict or str
         """
-        return self.update_plugin_configs(
-            plugin_name='core', config_name='CoreService'
-        )
+        plugin_name = 'core'
+        config_name = 'CoreService'
+        return self._api_update_settings(plugin_name=plugin_name, config_name=config_name)
 
-    @api_add_rule('system/meta/historical_sizes', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/meta/historical_sizes',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def api_get_historical_size_stats(self):
         """Get disk free, disk usage, and historical data set sizes for Users and Devices.
 
@@ -241,8 +469,11 @@ class APIMixin:
         """
         return self._get_historical_size_stats()
 
-    @api_add_rule('system/meta/about', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/meta/about',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def api_get_metadata(self):
         """Get the System Settings > About tab.
 
@@ -256,8 +487,11 @@ class APIMixin:
         """
         return jsonify(self.metadata)
 
-    @api_add_rule('system/instances', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Instances))
+    @api_add_rule(
+        rule='system/instances',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Instances),
+    )
     def get_api_instances(self):
         """Get instances.
 
@@ -267,8 +501,11 @@ class APIMixin:
         """
         return self.get_instances()
 
-    @api_add_rule('system/instances', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Instances))
+    @api_add_rule(
+        rule='system/instances',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances),
+    )
     def update_api_instances(self):
         """createinstances.
 
@@ -278,8 +515,11 @@ class APIMixin:
         """
         return self.update_instances()
 
-    @api_add_rule('system/instances', methods=['DELETE'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Instances))
+    @api_add_rule(
+        rule='system/instances',
+        methods=['DELETE'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances),
+    )
     def delete_api_instances(self):
         """delete instances.
 
@@ -289,8 +529,11 @@ class APIMixin:
         """
         return self.delete_instances()
 
-    @api_add_rule('system/discover/lifecycle', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Dashboard))
+    @api_add_rule(
+        rule='system/discover/lifecycle',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Dashboard),
+    )
     def api_get_system_lifecycle(self):
         """Get current status of the system's lifecycle.
 
@@ -304,8 +547,11 @@ class APIMixin:
         """
         return jsonify(self._get_system_lifecycle())
 
-    @api_add_rule('system/discover/start', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.RunManualDiscovery, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/discover/start',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.RunManualDiscovery, PermissionCategory.Settings),
+    )
     def api_schedule_research_phase(self):
         """Start a discover.
 
@@ -315,8 +561,11 @@ class APIMixin:
         """
         return self._schedule_research_phase()
 
-    @api_add_rule('system/discover/stop', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.RunManualDiscovery, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/discover/stop',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.RunManualDiscovery, PermissionCategory.Settings),
+    )
     def api_stop_research_phase(self):
         """Stop a discover.
 
@@ -327,8 +576,11 @@ class APIMixin:
         return self._stop_research_phase()
 
     @paginated()
-    @api_add_rule('system/users', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='system/users',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.GetUsersAndRoles, PermissionCategory.Settings),
+    )
     def get_api_system_users(self, limit, skip):
         """Get users
 
@@ -340,8 +592,13 @@ class APIMixin:
         """
         return self._get_user_pages(limit=limit, skip=skip)
 
-    @api_add_rule('system/users', methods=['PUT'], required_permission=PermissionValue.get(
-        PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Users), activity_params=['user_name'])
+    @api_add_rule(
+        rule='system/users',
+        methods=['PUT'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Users,
+        ),
+        activity_params=['user_name'])
     def update_api_system_users(self):
         """Add user.
 
@@ -357,8 +614,14 @@ class APIMixin:
         """
         return self._add_user_wrap()
 
-    @api_add_rule('system/users/<user_id>', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users), activity_params=['user_name'])
+    @api_add_rule(
+        rule='system/users/<user_id>',
+        methods=['POST'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users,
+        ),
+        activity_params=['user_name'],
+    )
     def api_update_user(self, user_id):
         """Get users or add user.
 
@@ -372,8 +635,13 @@ class APIMixin:
         """
         return self.update_user(user_id=user_id)
 
-    @api_add_rule('system/users/<user_id>', methods=['DELETE'], required_permission=PermissionValue.get(
-        PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Users))
+    @api_add_rule(
+        rule='system/users/<user_id>',
+        methods=['DELETE'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Users,
+        ),
+    )
     def api_delete_user(self, user_id):
         """Delete user.
 
@@ -384,20 +652,38 @@ class APIMixin:
         """
         return self.delete_user(user_id=user_id)
 
-    @api_add_rule('system/roles/default', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users))
-    def update_api_roles_default(self):
-        """Set the default role for externally created users.
+    @api_add_rule(
+        rule='system/roles/labels',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.GetUsersAndRoles, PermissionCategory.Settings),
+    )
+    def get_api_roles_labels(self):
+        """Get the permissions structure.
 
-        POST: Returns empty str. POST body dict keys:
-            name: required, str, name of role to set as default
+        jim: 3.3: added so API client can automatically figure out valid permissions
 
-        :return: str
+        :return: dict
         """
-        return self.update_roles_default()
+        return self._get_labels()
 
-    @api_add_rule('system/roles', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
+    # jim: 3.3 now controlled by settings
+    # @api_add_rule('system/roles/default', methods=['POST'], required_permission=PermissionValue.get(
+    #     PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users))
+    # def update_api_roles_default(self):
+    #     """Set the default role for externally created users.
+
+    #     POST: Returns empty str. POST body dict keys:
+    #         name: required, str, name of role to set as default
+
+    #     :return: str
+    #     """
+    #     return self.update_roles_default()
+
+    @api_add_rule(
+        rule='system/roles',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.GetUsersAndRoles, PermissionCategory.Settings),
+    )
     def get_api_roles(self):
         """Get, add, update, or delete roles.
 
@@ -407,8 +693,13 @@ class APIMixin:
         """
         return self.get_roles()
 
-    @api_add_rule('system/roles', methods=['PUT'], required_permission=PermissionValue.get(
-        PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Roles))
+    @api_add_rule(
+        rule='system/roles',
+        methods=['PUT'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Roles,
+        ),
+    )
     def add_api_roles(self):
         """
         add roles
@@ -430,8 +721,13 @@ class APIMixin:
         """
         return self.add_role()
 
-    @api_add_rule('system/roles/<role_id>', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles))
+    @api_add_rule(
+        rule='system/roles/<role_id>',
+        methods=['POST'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles,
+        ),
+    )
     def update_api_roles(self, role_id):
         """add, update, or delete roles.
 
@@ -451,17 +747,19 @@ class APIMixin:
         """
         return self.update_role(role_id)
 
-    @api_add_rule('system/roles/<role_id>', methods=['DELETE'], required_permission=PermissionValue.get(
-        PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Roles))
+    @api_add_rule(
+        rule='system/roles/<role_id>',
+        methods=['DELETE'],
+        required_permission=PermissionValue.get(
+            PermissionAction.Delete, PermissionCategory.Settings, PermissionCategory.Roles,
+        ),
+    )
     def delete_api_roles(self, role_id):
         return self.delete_roles(role_id)
 
     ###########
     # DEVICES #
     ###########
-    @add_rule_unauth('api')
-    def api_description(self):
-        return API_VERSION
 
     @paginated()
     @filtered_entities()
@@ -481,6 +779,54 @@ class APIMixin:
                                         default_sort=self._system_settings['defaultSort']))
         }
 
+        return jsonify(return_doc)
+
+    @api_add_rule(
+        rule='devices/destroy',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.DevicesAssets)
+    )
+    def api_devices_destroy(self):
+        """Delete all assets and optionally all historical assets."""
+        return self._destroy_assets(entity_type=EntityType.Devices, historical_prefix='historical_devices_')
+
+    def _destroy_assets(self, entity_type, historical_prefix):
+        """Delete all assets and optionally all historical assets."""
+        core_config, _ = self._get_plugin_configs(plugin_name='core', config_name='CoreService')
+        api_settings = core_config.get('api_settings', {})
+        destroy_enabled = api_settings.get('enable_destroy', False)
+
+        if not destroy_enabled:
+            err = f'Global Settings > API Settings > Enable API Destroy Endpoints must be enabled!'
+            return return_error(error_message=err, http_status=400, additional_data={'api_settings': api_settings})
+
+        request_data = self.get_request_data_as_object()
+
+        do_destroy = request_data.get('destroy', False)
+        do_history = request_data.get('history', False)
+
+        if do_destroy is not True:
+            err = f'Must supply destroy=True!'
+            return return_error(error_message=err, http_status=400, additional_data=None)
+
+        self._stop_research_phase()
+
+        return_doc = {'removed_history': 0, 'removed': 0}
+
+        if do_history is True:
+            collection_names = self.aggregator_db_connection.list_collection_names()
+            historicals = [x for x in collection_names if x.startswith(historical_prefix)]
+
+            for historical in historicals:
+                collection = self.aggregator_db_connection[historical]
+                return_doc['removed_history'] += collection.count() or 0
+                collection.drop()
+
+        collection = self._entity_db_map[entity_type]
+        return_doc['removed'] += collection.count() or 0
+        collection.drop()
+
+        self._insert_indexes_entity(entity_type=entity_type)
         return jsonify(return_doc)
 
     @filtered_entities()
@@ -569,6 +915,15 @@ class APIMixin:
         }
 
         return jsonify(return_doc)
+
+    @api_add_rule(
+        rule='users/destroy',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.UsersAssets)
+    )
+    def api_users_destroy(self):
+        """Delete all assets and optionally all historical assets."""
+        return self._destroy_assets(entity_type=EntityType.Users, historical_prefix='historical_users_')
 
     @filtered_entities()
     @sorted_endpoint()
@@ -791,27 +1146,30 @@ class APIMixin:
     ############
 
     # jim:3.0
-    @api_add_rule('adapters/<plugin_name>/config/<config_name>', methods=['GET'],
-                  required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='adapters/<plugin_name>/config/<config_name>',
+        methods=['GET'],
+        required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+    )
     def api_get_adapter_config(self, plugin_name, config_name):
         """Get a specific config on a specific adapter.
 
         :return: dict or str
         """
-        return self.get_plugin_configs(
-            plugin_name=plugin_name, config_name=config_name
-        )
+        config_obj, config_schema = self._get_plugin_configs(plugin_name=plugin_name, config_name=config_name)
+        return jsonify({'config': config_obj, 'schema': config_schema})
 
-    @api_add_rule('adapters/<plugin_name>/config/<config_name>', methods=['POST'],
-                  required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings))
+    @api_add_rule(
+        rule='adapters/<plugin_name>/config/<config_name>',
+        methods=['POST'],
+        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings),
+    )
     def api_update_adapter_config(self, plugin_name, config_name):
         """Set a specific config on a specific adapter.
 
         :return: dict or str
         """
-        return self.update_plugin_configs(
-            plugin_name=plugin_name, config_name=config_name
-        )
+        return self._save_plugin_config(plugin_name=plugin_name, config_name=config_name)
 
     @api_add_rule('adapters/<adapter_name>/clients', methods=['PUT', 'POST'], required_permission=PermissionValue.get(
         None, PermissionCategory.Adapters, PermissionCategory.Connections))

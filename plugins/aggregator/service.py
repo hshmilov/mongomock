@@ -11,8 +11,7 @@ from pymongo.errors import CollectionInvalid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
-from aggregator.indices import common_db_indexes, non_historic_indexes, adapter_entity_raw_index, \
-    adapter_entity_historical_raw_index, historic_indexes
+from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
@@ -110,15 +109,11 @@ class AggregatorService(Triggerable, PluginBase):
         """
         Insert useful indexes.
         :return: None
+
+        jeo: 3.3 moved logic to _insert_indexes_entity so public API destroy endpoints can use
         """
         for entity_type in EntityType:
-            common_db_indexes(self._entity_db_map[entity_type])
-            non_historic_indexes(self._entity_db_map[entity_type])
-            adapter_entity_raw_index(self._raw_adapter_entity_db_map[entity_type])
-            adapter_entity_historical_raw_index(self._raw_adapter_historical_entity_db_map[entity_type])
-
-            common_db_indexes(self._historical_entity_views_db_map[entity_type])
-            historic_indexes(self._historical_entity_views_db_map[entity_type])
+            self._insert_indexes_entity(entity_type=entity_type)
 
     def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.

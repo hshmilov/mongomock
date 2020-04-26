@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 
 from flask import (jsonify,
                    request)
@@ -20,6 +21,20 @@ from gui.logic.login_helper import has_customer_login_happened
 class Signup:
     @gui_route_logged_in(methods=['POST', 'GET'], enforce_session=False)
     def process_signup(self):
+        """Process initial signup.
+
+        JEO: 04/23/2020: Moved the meat of this to _process_signup to allow the public API to use this as well.
+        """
+        return self._process_signup(return_api_keys=False)
+
+    def _process_signup(self, return_api_keys: Optional[bool] = False):
+        """Process initial signup.
+
+        Args:
+            return_api_keys: At end of signup, return the api_key and api_secret for the admin account.
+                Added for public API to allow for full automation of deployment, standup, configuration, and use of a
+                new instance.
+        """
         signup_collection = self._get_collection(gui_consts.Signup.SignupCollection)
         signup = signup_collection.find_one({})
 
@@ -72,4 +87,11 @@ class Signup:
             }
         })
         self._getting_started_settings['enabled'] = True
-        return jsonify({})
+
+        result = {}
+        if return_api_keys:
+            user_from_db = self._users_collection.find_one({'user_name': 'admin'})
+            result['api_key'] = user_from_db['api_key']
+            result['api_secret'] = user_from_db['api_secret']
+
+        return jsonify(result)

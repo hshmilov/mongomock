@@ -7,7 +7,7 @@ import logging
 from pymongo.database import Database as PyMongoDatabase
 from pymongo.errors import PyMongoError
 
-from aggregator.indices import common_db_indexes, non_historic_indexes
+from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.entities import EntityType
 from axonius.utils.host_utils import get_free_disk_space
 

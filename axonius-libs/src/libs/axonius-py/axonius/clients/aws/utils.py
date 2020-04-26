@@ -181,3 +181,35 @@ def does_s3_key_exist(
         if '404' in str(e):
             return False
         raise
+
+
+def get_s3_key_meta(
+        bucket_name: str,
+        key_name: str,
+        access_key_id: Optional[str] = None,
+        secret_access_key: Optional[str] = None
+):
+    """
+    Get the meta data for an s3 file exists
+    :param bucket_name: the name of the bucket.
+    :param key_name: the object key
+    :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
+    :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
+    :return:
+    :return:
+    """
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key
+    )
+
+    try:
+        return s3_client.head_object(
+            Bucket=bucket_name,
+            Key=key_name
+        )
+    except Exception as e:
+        if '404' in str(e):
+            return None
+        raise

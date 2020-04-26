@@ -1,5 +1,7 @@
 """
 This module holds index logic of aggregator service database
+
+jim: 3.3: moved from plugins/aggregator/indices.py to here so that plugin_base can access
 """
 import logging
 

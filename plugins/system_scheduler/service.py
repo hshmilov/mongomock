@@ -155,7 +155,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
     @add_rule('trigger_s3_backup')
     def trigger_s3_backup_external(self):
-        self.trigger_s3_backup()
+        return jsonify({'result': str(self.trigger_s3_backup())})
 
     @staticmethod
     def trigger_s3_backup():
@@ -163,7 +163,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
     @add_rule('trigger_root_master_s3_restore')
     def trigger_root_master_s3_restore_external(self):
-        self.trigger_root_master_s3_restore()
+        return jsonify({'result': str(self.trigger_root_master_s3_restore())})
 
     @staticmethod
     def trigger_root_master_s3_restore():

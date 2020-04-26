@@ -1,6 +1,7 @@
 import logging
 import urllib.parse
 
+import copy
 import OpenSSL
 import pymongo
 import requests
@@ -10,7 +11,7 @@ from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
-                                       CONFIG_CONFIG)
+                                       CONFIG_CONFIG, RootMasterNames)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -300,6 +301,61 @@ class Plugins:
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         self._invalidate_sessions()
         return ''
+
+    def _get_central_core_settings(self):
+        """Get the current central core (root master) configuration settings."""
+        plugin_name = GUI_PLUGIN_NAME
+        collection_name = CONFIGURABLE_CONFIGS_COLLECTION
+        config_name = FeatureFlags.__name__
+        central_core_key = RootMasterNames.root_key
+        config_to_find = {'config_name': config_name}
+
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[plugin_name][collection_name]
+        config_doc = config_collection.find_one(config_to_find)
+        config = config_doc['config']
+        config_to_return = config[central_core_key]
+
+        return jsonify(config_to_return)
+
+    def _update_central_core_settings(self):
+        """Set the central core (root master) configuration settings."""
+        request_config = request.get_json(silent=True) or {}
+
+        required = ['delete_backups', 'enabled']
+        if not request_config or not all([x in request_config for x in required]):
+            err = f'Must supply object with keys: {required}'
+            return return_error(error_message=err, http_status=400, additional_data=None)
+
+        delete_backups = request_config['delete_backups']
+        enabled = request_config['enabled']
+
+        plugin_name = GUI_PLUGIN_NAME
+        collection_name = CONFIGURABLE_CONFIGS_COLLECTION
+        config_name = FeatureFlags.__name__
+        central_core_key = RootMasterNames.root_key
+        config_to_find = {'config_name': config_name}
+
+        db_connection = self._get_db_connection()
+        config_collection = db_connection[plugin_name][collection_name]
+        config_doc = config_collection.find_one(config_to_find)
+        config_original = config_doc['config']
+
+        config_to_set = {}
+        config_to_set.update(copy.deepcopy(config_original))
+
+        if delete_backups in [True, False]:
+            config_to_set[central_core_key]['delete_backups'] = delete_backups
+
+        if enabled in [True, False]:
+            config_to_set[central_core_key]['enabled'] = enabled
+
+        if config_to_set == config_original:
+            err = f'No changes supplied!'
+            return return_error(error_message=err, http_status=400, additional_data=None)
+
+        self._update_plugin_config(plugin_name=plugin_name, config_name=config_name, config_to_set=config_to_set)
+        return self._get_central_core_settings()
 
     def _update_plugin_config(self, plugin_name, config_name, config_to_set):
         """

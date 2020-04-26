@@ -135,6 +135,14 @@ from axonius.utils.revving_cache import rev_cached
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
+from axonius.utils.mongo_indices import (
+    common_db_indexes,
+    non_historic_indexes,
+    adapter_entity_raw_index,
+    adapter_entity_historical_raw_index,
+    historic_indexes,
+)
+
 # pylint: disable=C0302
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -692,6 +700,19 @@ class PluginBase(Configurable, Feature, ABC):
                     f'with axonius-libs:{self.lib_version} started successfully')
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
+
+    def _insert_indexes_entity(self, entity_type):
+        """Create all the indices.
+
+        jim: 3.3: moved here from aggregator so plugins can use this
+        """
+        common_db_indexes(self._entity_db_map[entity_type])
+        non_historic_indexes(self._entity_db_map[entity_type])
+        adapter_entity_raw_index(self._raw_adapter_entity_db_map[entity_type])
+        adapter_entity_historical_raw_index(self._raw_adapter_historical_entity_db_map[entity_type])
+
+        common_db_indexes(self._historical_entity_views_db_map[entity_type])
+        historic_indexes(self._historical_entity_views_db_map[entity_type])
 
     # pylint: disable=no-self-use
     @add_rule('reload_uwsgi')
@@ -3780,7 +3801,25 @@ class PluginBase(Configurable, Feature, ABC):
                     'title': 'Amazon S3 Settings',
                     'type': 'array',
                     'required': ['enabled', 'enable_backups', 'bucket_name']
-                }
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable Advanced API Settings',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'enable_destroy',
+                            'title': 'Enable API Destroy Endpoints',
+                            'type': 'bool'
+                        },
+                    ],
+                    'name': 'api_settings',
+                    'title': 'API Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'enable_destroy'],
+                },
             ],
             'pretty_name': 'Global Configuration',
             'type': 'array'
@@ -3900,7 +3939,11 @@ class PluginBase(Configurable, Feature, ABC):
                 'preshared_key': None,
                 'aws_access_key_id': None,
                 'aws_secret_access_key': None
-            }
+            },
+            'api_settings': {
+                'enabled': False,
+                'enable_destroy': False,
+            },
         }
 
     @staticmethod
