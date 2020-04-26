@@ -17,9 +17,6 @@ class BandicootService(WeaveService):
         """
         return [(DOCKER_PORTS[self.container_name], 9090)]
 
-    def get_uwsgi_file(self):
-        return ''
-
     @property
     def _additional_parameters(self):
         return ['api',  '--mgHostname=mongo.axonius.local', '--pgHostname=postgres.axonius.local', '--pgPort=5432',
@@ -31,11 +28,8 @@ class BandicootService(WeaveService):
             return f.read()
 
     @property
-    def image(self):
-        return 'bandicoot'
-
-    def get_main_file(self):
-        return ''
+    def is_unique_image(self):
+        return True
 
     def remove_image(self):
         pass  # We never want to remove this static image...

@@ -34,12 +34,6 @@ class MongoProxyService(WeaveService):
         return shlex.split(f'tcp-listen:{mongo_port},reuseaddr,fork,'
                            f'forever tcp:{MONGO_UNIQUE_NAME}.{AXONIUS_DNS_SUFFIX}:{mongo_port}')
 
-    def get_dockerfile(self, *args, **kwargs):
-        return ''
-
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
         return []

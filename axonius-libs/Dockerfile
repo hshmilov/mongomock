@@ -1,7 +1,7 @@
 # Use axonius-base-image. This gets is from a private repository in docker hub, use docker login to login!
 FROM nexus.pub.axonius.com/axonius/axonius-base-image
 
-WORKDIR /home/axonius
+WORKDIR /home/axonius/app
 ENV HOME /home/axonius
 
 # The following changes a lot, we want less build-time so its a different RUN command.
@@ -9,8 +9,9 @@ RUN mkdir /home/axonius/logs
 
 # At this point we have openresty, python3, and axonius-libs installed.
 # Lets set up configuration files to have our final https server running.
-COPY src/app/main.py ./app/main.py
+COPY src/app/main.py /home/axonius/app/main.py
 COPY src/config/supervisord.conf /etc/supervisor/supervisord.conf
+COPY src/config/uwsgi.ini /etc/uwsgi.ini
 COPY src/config/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY src/config/nginx_generic.conf /usr/local/openresty/nginx/conf/nginx_generic.conf
 COPY src/config/nginx_api.conf /usr/local/openresty/nginx/conf/nginx_api.conf
@@ -19,6 +20,9 @@ RUN cp /etc/ssl/certs/nginx-selfsigned.crt /usr/local/share/ca-certificates/ngin
 RUN update-ca-certificates
 COPY src/keys/nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
 COPY src/keys/dhparam.pem /etc/ssl/certs/dhparam.pem
+
+# Some requirements we need on all containers.
+RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so
 
 # Install axonius-libs.
 COPY src/libs /home/axonius/libs

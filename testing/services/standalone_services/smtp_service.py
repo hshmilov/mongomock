@@ -70,9 +70,6 @@ class SmtpService(WeaveService):
         out, _, _ = self.get_file_contents_from_container('/var/log/guerilla.log')
         return out.splitlines()
 
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
         return []
@@ -82,5 +79,5 @@ class SmtpService(WeaveService):
         return [(DOCKER_PORTS[self.name], DOCKER_PORTS[self.name])]
 
     @property
-    def image(self):
-        return 'smtp_server'
+    def is_unique_image(self):
+        return True

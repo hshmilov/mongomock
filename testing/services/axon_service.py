@@ -33,7 +33,7 @@ class AxonService(ABC):
                 success = True
                 break
             except Exception:
-                time.sleep(0.25)
+                time.sleep(0.5)
 
         if not success:
             raise TimeoutException('Service failed to start')

@@ -65,12 +65,12 @@ class MongoService(WeaveService):
         return None
 
     @property
-    def image(self):
-        return 'mongo:4.2'
+    def is_unique_image(self):
+        return True
 
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def configure_replica_set(self):
-        self.run_command_in_container('mongo /docker-entrypoint-initdb.d/configure_replica_set.js')
+        self.run_command_in_container('mongo /scripts/configure_replica_set.js')
 
     def deprecate_a_leftover_db(self, plugin_unique_name: str):
         admin_db = self.client['admin']
@@ -127,15 +127,9 @@ class MongoService(WeaveService):
         super().start(mode, allow_restart, rebuild, *args, **kwargs)
 
         self.wait_for_service()
-        print("Mongo master is online")
+        print("Mongo master is online. Waiting for replica set to be ready...")
 
         self.configure_replica_set()
-        # The sleep here is only relevant to the core, because it runs first.
-        # The intention of this sleep is to allow the DB to initialize itself properly and then
-        # accessing it without specifying a replicaSet will work.
-        # This might be solved by using a more sophisticated docker setup, but it will do for now.
-        time.sleep(10)
-
         self.clean_old_databases()
 
         print("Finished setting up mongo")
@@ -167,12 +161,9 @@ class MongoService(WeaveService):
     RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/*
     """[1:]
 
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
-        return [f'{self.container_name}_data:/data/db']
+        return [f'{self.container_name}_data:/data/db', f'{self.service_dir}/scripts:/scripts:ro']
 
     @property
     def environment(self):

@@ -23,19 +23,13 @@ class PostgresService(WeaveService):
                 'POSTGRES_PASSWORD=changeme',
                 'PG_SYSTEM_SHARED_BUFFERS=2GB']
 
-    def get_uwsgi_file(self):
-        return ''
-
     def get_dockerfile(self, *args, **kwargs):
         with open('../bandicoot/deployments/docker/postgres/Dockerfile') as f:
             return f.read()
 
     @property
-    def image(self):
-        return 'axonius_postgres'
-
-    def get_main_file(self):
-        return ''
+    def is_unique_image(self):
+        return True
 
     @property
     def volumes(self):

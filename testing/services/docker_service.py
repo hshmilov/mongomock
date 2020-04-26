@@ -96,8 +96,16 @@ class DockerService(AxonService):
         return [(DOCKER_PORTS[self.container_name], 443)]
 
     @property
+    def is_unique_image(self):
+        # If true, the service will have its own image build (axonius/container_name).
+        # otherwise, it will use axonius-libs
+        return False
+
+    @property
     def image(self):
-        return f'axonius/{self.container_name}'
+        if self.is_unique_image:
+            return f'axonius/{self.container_name}'
+        return f'axonius/axonius-libs'
 
     @property
     def run_timeout(self):
@@ -148,58 +156,9 @@ class DockerService(AxonService):
     def get_max_uwsgi_processes(self) -> int:
         return 1
 
-    def get_dockerfile(self, *args, **kwargs):
-        return f'''
-FROM axonius/axonius-libs
-
-# Set the working directory to /app
-WORKDIR /home/axonius/app
-
-# Copy the current directory contents into the container at /app
-COPY ./ ./{self.package_name}/
-
-# Link to libcrypto for RSA keys (originally was a problem for chef adapter)
-RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so
-'''[1:]
-
-    def get_uwsgi_file(self):
-        return f'''
-[uwsgi]
-chdir = /home/axonius/app
-module = main:wsgi_app
-
-master = true
-threads = {self.get_max_uwsgi_threads}
-processes = {self.get_max_uwsgi_processes}
-
-socket = /tmp/openresty-uwsgi.sock
-safe-pidfile = /tmp/uwsgi.pid
-chmod-socket = 666
-vacuum = true
-
-die-on-term = true
-
-ignore-sigpipe = true
-ignore-write-errors = true
-disable-write-exception = true
-buffer-size = 65535
-'''[1:]
-
-    def get_main_file(self):
-        return f'''
-from {self.package_name}.service import {self.service_class_name} as CurrentService
-from axonius.utils.server import init_wsgi
-
-if __name__ == '__main__':
-    # Initialize
-    service = CurrentService()
-
-    # Run (Blocking)
-    service.start_serve()
-else:
-    # Init wsgi if in it.
-    wsgi_app = init_wsgi(CurrentService)
-'''[1:]
+    @staticmethod
+    def get_dockerfile(*args, **kwargs):
+        return f''
 
     @property
     def docker_network(self):
@@ -280,6 +239,10 @@ else:
                 env_variables.extend(['--env', env])
 
         env_variables.extend(['--env', 'DOCKER=true'])
+        env_variables.extend(['--env', f'PACKAGE_NAME={self.package_name}'])
+        env_variables.extend(['--env', f'SERVICE_CLASS_NAME={self.service_class_name}'])
+        env_variables.extend(['--env', f'UWSGI_THREADS={self.get_max_uwsgi_threads}'])
+        env_variables.extend(['--env', f'UWSGI_PROCESSES={self.get_max_uwsgi_processes}'])
         if mode == 'prod':
             env_variables.extend(['--env', 'PROD=true'])
         else:
@@ -402,21 +365,13 @@ else:
             dockerfile = open(dockerfile_path, 'r').read()
         else:
             dockerfile = self.get_dockerfile(docker_internal_env_vars=docker_internal_env_vars)
-            assert dockerfile is not None
 
-        # Append the main.py file creation
-        main_file_data = self.get_main_file().replace('\n', '\\n')
-        assert '"' not in main_file_data
-        if len(main_file_data) > 0:
-            dockerfile += f'\nRUN echo "{main_file_data}" > ./main.py'
-
-        # Append the main.py file creation
-        uwsgi_file = self.get_uwsgi_file().replace('\n', '\\n')
-        assert '"' not in uwsgi_file
-        if len(uwsgi_file) > 0:
-            dockerfile += f'\nRUN echo "{uwsgi_file}" > /etc/uwsgi.ini'
+        if not dockerfile:
+            # No need to build anything
+            return
 
         # dump Dockerfile.autogen to local folder
+        print(f'building {self.image}')
         autogen_path = dockerfile_path + '.autogen'
         open(autogen_path, 'w').write('# This is an auto-generated file, Do not modify\n\n' + dockerfile)
         docker_build.extend(['-f', os.path.relpath(autogen_path, self.service_dir)])

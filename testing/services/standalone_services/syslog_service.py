@@ -45,9 +45,6 @@ class SyslogService(WeaveService):
     RUN openssl x509 -noout -hash -in cacert.pem | xargs -I '{}' ln -s cacert.pem '{}'.0
     '''[1:]
 
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes_override(self):
         return [
@@ -71,13 +68,13 @@ class SyslogService(WeaveService):
         return []
 
     @property
-    def image(self):
-        return 'axonius_syslog'
-
-    @property
     def tcp_port(self):
         return 514
 
     @property
     def tls_port(self):
         return 6514
+
+    @property
+    def is_unique_image(self):
+        return True

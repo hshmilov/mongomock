@@ -80,5 +80,5 @@ class MaildiranasaurusService(SmtpService):
         return payload
 
     @property
-    def image(self):
-        return 'maildiranasaurus_server'
+    def is_unique_image(self):
+        return True

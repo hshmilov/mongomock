@@ -99,12 +99,10 @@ class MasterProxyService(WeaveService):
         return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf',
                 f'{AXONIUS_SETTINGS_HOST_PATH}:{plugin_consts.AXONIUS_SETTINGS_PATH}']
 
-    def get_main_file(self):
-        return ''
-
-    def get_uwsgi_file(self):
-        return ''
-
     @property
     def _additional_parameters(self):
         return ['ANY']
+
+    @property
+    def is_unique_image(self):
+        return True

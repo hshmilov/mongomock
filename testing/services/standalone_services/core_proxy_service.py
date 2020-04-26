@@ -34,12 +34,6 @@ class CoreProxyService(WeaveService):
         return shlex.split(f'tcp-listen:{core_port},reuseaddr,fork,'
                            f'forever tcp:{CORE_UNIQUE_NAME}.{AXONIUS_DNS_SUFFIX}:443')
 
-    def get_dockerfile(self, *args, **kwargs):
-        return ''
-
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
         return []

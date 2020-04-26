@@ -27,6 +27,9 @@ class MockingbirdService(WeaveService):
     def port(self):
         return DOCKER_PORTS[self.name]
 
+    def is_unique_image(self):
+        return True
+
     def get_dockerfile(self, *args, **kwargs):
         return fr'''
         FROM axonius/axonius-libs
@@ -52,9 +55,6 @@ class MockingbirdService(WeaveService):
         RUN echo /home/axonius/adapters > $(python3 -m site --user-site)/axonius.pth
 
         '''[1:]
-
-    def get_main_file(self):
-        return ''
 
     @property
     def max_allowed_cpu(self):

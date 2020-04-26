@@ -17,12 +17,6 @@ class CyberarkVaultSimulatorService(WeaveService):
     def name(self):
         return 'cyberark_vault_simulator'
 
-    def get_dockerfile(self, *args, **kwargs):
-        return ''
-
-    def get_main_file(self):
-        return ''
-
     def build(self, mode='', runner=None, docker_internal_env_vars=None, **kwargs):
         docker_pull = ['docker', 'pull', self.image]
         if runner is None:

@@ -8,6 +8,10 @@ class EsetService(AdapterService):
     def __init__(self):
         super().__init__('eset')
 
+    @property
+    def is_unique_image(self):
+        return True
+
 
 @pytest.fixture(scope="module", autouse=True)
 def eset_fixture(request):

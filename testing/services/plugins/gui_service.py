@@ -1204,6 +1204,10 @@ class GuiService(PluginService, UpdatablePluginMixin):
 
         return volumes
 
+    @property
+    def is_unique_image(self):
+        return True
+
     # I don't want to change all dockerfiles
     # pylint: disable=W0221
     def get_dockerfile(self, *args, docker_internal_env_vars=None, **kwargs):

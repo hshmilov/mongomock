@@ -1,15 +1,20 @@
-from flask import Flask
-wsgi_main = Flask(__name__)
-number = 0
+# Identify the adapter/service we are running and import it for uwsgi.
+# pylint: disable=invalid-name
+import importlib
+import os
+
+from axonius.utils.server import init_wsgi
 
 
-@wsgi_main.route("/")
-def hello():
-    global number
-    number = number + 1
-    return """Hello there! This is the default page of axonius-docker-image, indicating everything is okay.
-            <br>To run your own app, change main.py.<br><br>Run number: %d""" % (number, )
+current_service = getattr(importlib.import_module(f'{os.environ["PACKAGE_NAME"]}.service'),
+                          os.environ['SERVICE_CLASS_NAME'])
 
+if __name__ == '__main__':
+    # Initialize
+    service = current_service()
 
-if __name__ == "__main__":
-    wsgi_main.run(host='0.0.0.0')
+    # Run (Blocking)
+    service.start_serve()
+else:
+    # Init wsgi if in it.
+    wsgi_app = init_wsgi(current_service)

@@ -28,8 +28,6 @@ class HttpdService(WeaveService):
     def volumes_override(self):
         return [f'{self.service_dir}/httpd:/usr/share/nginx/html:ro']
 
-    def get_main_file(self):
-        return ''
-
-    def get_uwsgi_file(self):
-        return ''
+    @property
+    def is_unique_image(self):
+        return True

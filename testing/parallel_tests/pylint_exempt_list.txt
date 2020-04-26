@@ -313,7 +313,6 @@ adapters/webscan_adapter/scanners/cmseek/VersionDetect/xmb.py
 adapters/webscan_adapter/scanners/cmseek/VersionDetect/yabb.py
 adapters/webscan_adapter/scanners/cmseek/VersionDetect/yaf.py
 adapters/webscan_adapter/scanners/cmseek/VersionDetect/__init__.py
-axonius-libs/src/app/main.py
 axonius-libs/src/hacks/periodic_version.py
 axonius-libs/src/libs/axonius-py/setup.py
 axonius-libs/src/libs/axonius-py/axonius/background_scheduler.py

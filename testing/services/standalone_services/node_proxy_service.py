@@ -34,12 +34,6 @@ class NodeProxyService(WeaveService):
 
         return shlex.split(f'tcp-listen:{proxy_port},reuseaddr,fork,forever tcp:{proxy_dns}:{proxy_port}')
 
-    def get_dockerfile(self, *args, **kwargs):
-        return ''
-
-    def get_main_file(self):
-        return ''
-
     @property
     def volumes(self):
         return []
