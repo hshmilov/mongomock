@@ -44,12 +44,18 @@
         <XCycle :data="lifecycle.subPhases" />
         <div class="cycle-info">
           <div class="cycle-history">
-            <div>Last cycle started at:</div><div class="cycle-date">{{ lastStartTime }}</div>
-            <div>Last cycle completed at:</div><div class="cycle-date">{{ lastFinishedTime }}</div>
+            <div>Last cycle started at:</div><div class="cycle-date">
+              {{ lastStartTime }}
+            </div>
+            <div>Last cycle completed at:</div><div class="cycle-date">
+              {{ lastFinishedTime }}
+            </div>
           </div>
           <div class="cycle-time">
             <div class="cycle-next">
-              <div>Next cycle starts in:</div><div class="cycle-next-time">{{ nextRunTime }}</div>
+              <div>Next cycle starts in:</div><div class="cycle-next-time">
+                {{ nextRunTime }}
+              </div>
             </div>
           </div>
         </div>
@@ -61,14 +67,16 @@
 
 <script>
 import {
-  mapState, mapMutations,
+  mapState, mapMutations, mapGetters,
 } from 'vuex';
+import _get from 'lodash/get';
 import XPanels from './Panels.vue';
 import XDataDiscoveryCard from '../../neurons/cards/DataDiscoveryCard.vue';
 import XCard from '../../axons/layout/Card.vue';
 import XCycle from '../../axons/charts/Cycle.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
+import { DATE_FORMAT } from '../../../store/getters';
 import { formatDate } from '../../../constants/utils';
 
 export default {
@@ -94,6 +102,9 @@ export default {
         return state.dashboard.lifecycle.data || {};
       },
     }),
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
     nextRunTime() {
       const leftToRun = this.lifecycle.nextRunTime;
       const thresholds = [0, 60, 60 * 60, 24 * 60 * 60];
@@ -110,13 +121,13 @@ export default {
     },
     lastStartTime() {
       if (this.lifecycle.lastStartTime) {
-        return formatDate(this.lifecycle.lastStartTime);
+        return formatDate(this.lifecycle.lastStartTime, undefined, this.dateFormat);
       }
       return ' ';
     },
     lastFinishedTime() {
       if (this.lifecycle.lastFinishedTime) {
-        return formatDate(this.lifecycle.lastFinishedTime);
+        return formatDate(this.lifecycle.lastFinishedTime, undefined, this.dateFormat);
       }
       return ' ';
     },
@@ -174,7 +185,6 @@ export default {
 
           .cycle-date {
             color: $theme-orange;
-            white-space: pre;
             font-weight: 300;
           }
         }

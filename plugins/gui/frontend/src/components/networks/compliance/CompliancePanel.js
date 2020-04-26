@@ -13,7 +13,7 @@ const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
 }, {
   name: 'category', title: 'Category', type: 'string',
-},{
+}, {
   name: 'account', title: 'Account', type: 'string',
 }];
 
@@ -41,6 +41,9 @@ export default {
     },
     fields: {
       type: Array,
+    },
+    dateFormat: {
+      type: String,
     },
   },
   data() {
@@ -138,7 +141,7 @@ export default {
         <div slot="panelContent" class="body">
           <div class="last-updated">
             <p>
-              Last updated: {formatDate(this.data.last_updated)}
+              Last updated: {formatDate(this.data.last_updated, undefined, this.dateFormat)}
             </p>
           </div>
           {

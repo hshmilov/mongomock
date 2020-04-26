@@ -1,23 +1,26 @@
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
+import utc from 'dayjs/plugin/utc';
+import { DEFAULT_DATE_FORMAT } from '../store/modules/constants';
 
 dayjs.extend(isoWeek);
+dayjs.extend(utc);
 
-export const formatDate = (dateString, schema) => {
-  if (isNaN(Date.parse(dateString))) {
+export const formatDate = (dateString, schema, dateFormat) => {
+  if (!dayjs(dateString).isValid()) {
     return dateString;
   }
-  const dateTime = new Date(dateString);
-  dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset());
-  const dateParts = dateTime.toISOString().split('T');
-  dateParts[1] = dateParts[1].split('.')[0];
+  if (dateFormat === undefined) {
+    dateFormat = DEFAULT_DATE_FORMAT;
+  }
+  const dateTime = dayjs(dateString).utc();
   if (schema && schema.format === 'date') {
-    return dateParts[0];
+    return dateTime.format(dateFormat);
   }
   if (schema && schema.format === 'time') {
-    return dateParts[1];
+    return dateTime.format('HH:mm:ss');
   }
-  return dateParts.join(' ');
+  return dateTime.format(`${dateFormat} HH:mm:ss`);
 };
 
 export const includesIgnoreCase = (str, substring) => str && str.toLowerCase().includes(substring);
@@ -103,4 +106,3 @@ export const parseVaultError = (errorString) => {
 export const getParentFromField = (fieldName) => fieldName.split('.').slice(0, -1).join('.');
 
 export const validateClassName = (name) => /^([a-z_]|-[a-z_-])[a-z\d_-]*$/i.test(name);
-

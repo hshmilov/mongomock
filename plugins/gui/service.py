@@ -639,6 +639,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                             'type': 'string'
                         },
                         {
+                            'name': 'datetime_format',
+                            'title': 'Date format',
+                            'type': 'string',
+                            'enum': ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM-DD-YYYY']
+                        },
+                        {
                             'name': 'timeout_settings',
                             'title': 'Timeout Settings',
                             'items': [
@@ -689,7 +695,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     ],
                     'required': ['refreshRate', 'defaultNumOfEntitiesPerPage', 'singleAdapter', 'multiLine',
                                  'defaultSort', 'autoQuery', 'exactSearch', 'requireConnectionLabel',
-                                 'defaultColumnLimit'],
+                                 'defaultColumnLimit', 'datetime_format'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -933,6 +939,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     'enabled': False,
                     'timeout': 1440
                 },
+                'datetime_format': 'YYYY-MM-DD',
                 'singleAdapter': False,
                 'multiLine': False,
                 'defaultSort': True,

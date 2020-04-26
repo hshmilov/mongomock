@@ -1,5 +1,5 @@
 <template>
-  <x-feedback-modal
+  <XFeedbackModal
     :launch="true"
     :handle-save="saveNewDashboard"
     :disabled="isDisabled"
@@ -7,12 +7,16 @@
     approve-id="chart_save"
     @change="finishNewDashboard"
   >
-    <h3 v-if="editMode">Edit Dashboard Chart - "{{ panel.data.name }}"</h3>
-    <h3 v-else>Create a Dashboard Chart</h3>
+    <h3 v-if="editMode">
+      Edit Dashboard Chart - "{{ panel.data.name }}"
+    </h3>
+    <h3 v-else>
+      Create a Dashboard Chart
+    </h3>
     <div class="x-chart-wizard">
       <!-- Select metric to be tested by chart -->
       <label>Chart metric</label>
-      <x-select
+      <XSelect
         id="metric"
         :value="dashboard.metric"
         :options="metricOptions"
@@ -35,7 +39,7 @@
               :for="view"
               class="type-label"
             >
-              <svg-icon
+              <SvgIcon
                 :name="`symbol/${view}`"
                 :original="true"
                 height="24"
@@ -43,15 +47,15 @@
             </label>
           </template>
         </div>
-        <component
+        <Component
           :is="dashboard.metric"
+          ref="dashboardRef"
           v-model="dashboard.config"
           :entities="entityOptions"
           :views="views"
-          :chartView="dashboard.view"
+          :chart-view="dashboard.view"
           class="grid-span2"
           @validate="configValid = $event"
-          ref="dashboardRef"
         />
       </template>
 
@@ -67,144 +71,149 @@
         class="grid-span2 error-text"
       >{{ message }}</div>
     </div>
-  </x-feedback-modal>
+  </XFeedbackModal>
 </template>
 
 
 <script>
-  import xFeedbackModal from '../../neurons/popover/FeedbackModal.vue'
-  import xSelect from '../../axons/inputs/select/Select.vue'
+import { mapActions, mapGetters } from 'vuex';
+import { formatDate } from '@constants/utils';
+import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
+import XSelect from '../../axons/inputs/select/Select.vue';
 
-  import intersect from './charts/Intersect.vue'
-  import compare from './charts/Compare.vue'
-  import segment from './charts/Segment.vue'
-  import abstract from './charts/Abstract.vue'
-  import timeline from './charts/Timeline.vue'
+import intersect from './charts/Intersect.vue';
+import compare from './charts/Compare.vue';
+import segment from './charts/Segment.vue';
+import abstract from './charts/Abstract.vue';
+import timeline from './charts/Timeline.vue';
 
-  import viewsMixin from '../../../mixins/views'
+import viewsMixin from '../../../mixins/views';
 
-  import { mapActions } from 'vuex'
-  import { SAVE_DASHBOARD_PANEL, CHANGE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
-  import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding'
-  import { DASHBOARD_CREATED } from '../../../constants/getting-started'
-  import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions'
+import { SAVE_DASHBOARD_PANEL, CHANGE_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding';
+import { DASHBOARD_CREATED } from '../../../constants/getting-started';
+import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
+import { DATE_FORMAT } from '../../../store/getters';
 
-  const dashboard = {
-    metric: '', view: '', name: '', config: null
-  }
-  export default {
-    name: 'XChartWizard',
-    components: { xFeedbackModal, xSelect, intersect, compare, segment, abstract, timeline },
-    mixins: [viewsMixin],
-    props: {
-      space: {
-        type: String,
-        required: true
+const dashboard = {
+  metric: '', view: '', name: '', config: null,
+};
+export default {
+  name: 'XChartWizard',
+  components: {
+    XFeedbackModal, XSelect, intersect, compare, segment, abstract, timeline,
+  },
+  mixins: [viewsMixin],
+  props: {
+    space: {
+      type: String,
+      required: true,
+    },
+    panel: {
+      type: Object,
+      default: () => {},
+    },
+  },
+  data() {
+    return {
+      dashboard: { ...dashboard },
+      configValid: false,
+    };
+  },
+  computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
+    dashboardView: {
+      get() {
+        return this.dashboard.view;
       },
-      panel: {
-        type: Object,
-        default: () => {}
+      set(value) {
+        this.dashboard.view = value;
       },
     },
-    data () {
-      return {
-        dashboard: { ...dashboard },
-        configValid: false
+    editMode() {
+      return this.panel !== undefined && this.panel !== null && this.panel.data !== undefined;
+    },
+    metricOptions() {
+      return [
+        { name: 'intersect', title: 'Query Intersection' },
+        { name: 'compare', title: 'Query Comparison' },
+        { name: 'segment', title: 'Field Segmentation' },
+        { name: 'abstract', title: 'Field Summary' },
+        { name: 'timeline', title: 'Query Timeline' },
+      ];
+    },
+    availableViews() {
+      if (this.dashboard.metric === 'compare' || this.dashboard.metric === 'segment') {
+        return ['histogram', 'pie'];
       }
-    },
-    computed: {
-      dashboardView: {
-          get () {
-              return this.dashboard.view
-          },
-          set (value) {
-              this.dashboard.view = value
-          },
-      },
-      editMode () {
-        return this.panel !== undefined && this.panel !== null && this.panel.data !== undefined
-      },
-      metricOptions () {
-        return [
-          { name: 'intersect', title: 'Query Intersection' },
-          { name: 'compare', title: 'Query Comparison' },
-          { name: 'segment', title: 'Field Segmentation' },
-          { name: 'abstract', title: 'Field Summary' },
-          { name: 'timeline', title: 'Query Timeline' }
-        ]
-      },
-      availableViews () {
-        if (this.dashboard.metric === 'compare' || this.dashboard.metric === 'segment') {
-          return ['histogram', 'pie']
-        }
-        if (this.dashboard.metric === 'intersect') {
-          return ['pie']
-        }
-        if (this.dashboard.metric === 'timeline') {
-          return ['line']
-        }
-        return ['summary']
-      },
-      isDisabled () {
-        return (!this.dashboard.name || !this.dashboard.metric || !this.dashboardView || !this.configValid)
-      },
-      message () {
-        if (!this.isDisabled) return ''
-        return 'Missing required configuration'
-      },
-      note () {
-        if (!this.dashboard.updated) return ''
-        let dateTime = new Date(this.dashboard.updated)
-        dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset())
-        return `Last edited on ${dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0]}`
+      if (this.dashboard.metric === 'intersect') {
+        return ['pie'];
       }
-    },
-    async created () {
-      this.entityOptions.forEach((entity) => this.fetchDataFields({ module: entity.name }));
-      if (this.editMode) {
-        this.dashboard = { ...this.panel.data }
-        this.configValid = true
+      if (this.dashboard.metric === 'timeline') {
+        return ['line'];
       }
+      return ['summary'];
     },
-    methods: {
-      ...mapActions({
-        saveDashboard: SAVE_DASHBOARD_PANEL, 
-        changeDashboard: CHANGE_DASHBOARD_PANEL,
-        completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION,
-        fetchDataFields: LAZY_FETCH_DATA_FIELDS,
-      }),
-      updateMetric (metric) {
-        if (this.dashboard.metric === metric) return
-        this.dashboard.metric = metric
-        this.dashboard.config = null
-        this.configValid = false
-        this.$nextTick(() => {
-          if (!this.availableViews.includes(this.dashboardView)) {
-            this.dashboardView = this.availableViews[0]
-          }
-        })
-      },
-      saveNewDashboard () {
-        if (this.panel && this.panel.uuid) {
-          return this.changeDashboard({
-            panelId: this.panel.uuid,
-            spaceId: this.space,
-            data: this.dashboard
-          })
-        }
-        return this.saveDashboard({
-          data: this.dashboard,
-          space: this.space
-        }).then(res => {
-          //complete milestone here
-          this.completeMilestone({ milestoneName: DASHBOARD_CREATED })
-        })
-      },
-      finishNewDashboard () {
-        this.$emit('close')
-      },
+    isDisabled() {
+      return (!this.dashboard.name || !this.dashboard.metric || !this.dashboardView || !this.configValid);
+    },
+    message() {
+      if (!this.isDisabled) return '';
+      return 'Missing required configuration';
+    },
+    note() {
+      if (!this.dashboard.updated) return '';
+      return `Last edited on ${formatDate(this.dashboard.updated, undefined, this.dateFormat)}`;
+    },
+  },
+  async created() {
+    this.entityOptions.forEach((entity) => this.fetchDataFields({ module: entity.name }));
+    if (this.editMode) {
+      this.dashboard = { ...this.panel.data };
+      this.configValid = true;
     }
-  }
+  },
+  methods: {
+    ...mapActions({
+      saveDashboard: SAVE_DASHBOARD_PANEL,
+      changeDashboard: CHANGE_DASHBOARD_PANEL,
+      completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION,
+      fetchDataFields: LAZY_FETCH_DATA_FIELDS,
+    }),
+    updateMetric(metric) {
+      if (this.dashboard.metric === metric) return;
+      this.dashboard.metric = metric;
+      this.dashboard.config = null;
+      this.configValid = false;
+      this.$nextTick(() => {
+        if (!this.availableViews.includes(this.dashboardView)) {
+          this.dashboardView = this.availableViews[0];
+        }
+      });
+    },
+    saveNewDashboard() {
+      if (this.panel && this.panel.uuid) {
+        return this.changeDashboard({
+          panelId: this.panel.uuid,
+          spaceId: this.space,
+          data: this.dashboard,
+        });
+      }
+      return this.saveDashboard({
+        data: this.dashboard,
+        space: this.space,
+      }).then((res) => {
+        // complete milestone here
+        this.completeMilestone({ milestoneName: DASHBOARD_CREATED });
+      });
+    },
+    finishNewDashboard() {
+      this.$emit('close');
+    },
+  },
+};
 </script>
 
 <style lang="scss">

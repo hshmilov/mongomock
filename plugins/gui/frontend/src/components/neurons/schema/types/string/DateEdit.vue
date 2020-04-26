@@ -30,9 +30,12 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
+import _get from 'lodash/get';
 import dayjs from 'dayjs';
 import XButton from '../../../../axons/inputs/Button.vue';
-
+import { DATE_FORMAT } from '../../../../../store/getters';
+import { DEFAULT_DATE_FORMAT } from '../../../../../store/modules/constants';
 
 export default {
   name: 'XDateEdit',
@@ -66,7 +69,13 @@ export default {
       default: false,
     },
   },
+  created() {
+    this.$material.locale.dateFormat = this.dateFormat;
+  },
   computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
     selectedDate: {
       get() {
         return this.value;
@@ -74,9 +83,7 @@ export default {
       set(value) {
         let selectedDate = value;
         if (selectedDate && typeof selectedDate !== 'string') {
-          // selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset());
-          // selectedDate = selectedDate.toISOString().substring(0, 10);
-          selectedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+          selectedDate = dayjs(selectedDate).format(DEFAULT_DATE_FORMAT);
         } else if (!selectedDate) {
           this.$refs.date.modelDate = '';
         }

@@ -3,6 +3,7 @@ import _isEmpty from 'lodash/isEmpty';
 import _snakeCase from 'lodash/snakeCase';
 import { pluginMeta } from '../constants/plugin_meta';
 import { isObjectListField } from '../constants/utils';
+import { DEFAULT_DATE_FORMAT } from './modules/constants';
 
 const selectFields = (schema, objectView) => (objectView
   ? schema.filter(isObjectListField)
@@ -115,6 +116,12 @@ export const requireConnectionLabel = (state) => {
 
 export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
+
+export const DATE_FORMAT = 'DATE_FORMAT';
+export const dateFormat = (state) => {
+  if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return DEFAULT_DATE_FORMAT;
+  return state.configuration.data.system.datetime_format;
+};
 
 export const GET_CONNECTION_LABEL = 'GET_CONNECTION_LABEL';
 export const getConnectionLabel = (state) => (clientId, adapterProps) => {

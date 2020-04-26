@@ -180,10 +180,10 @@
             id="reports_download"
             type="inverse-emphasize"
             :disabled="disableDownloadReport"
-            @click="startDownload"
             :loading="downloading"
+            @click="startDownload"
           >
-              Download Report
+            Download Report
           </XButton>
           <XButton
             id="report_save"
@@ -200,7 +200,9 @@
 <script>
 import Vue from 'vue';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
-import { mapState, mapMutations, mapActions } from 'vuex';
+import {
+  mapState, mapMutations, mapActions, mapGetters,
+} from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XBox from '../axons/layout/Box.vue';
 import XButton from '../axons/inputs/Button.vue';
@@ -208,11 +210,12 @@ import XCheckbox from '../axons/inputs/Checkbox.vue';
 import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
 import XSelect from '../axons/inputs/select/Select.vue';
 import XRecurrence from '../axons/inputs/Recurrence.vue';
+import { formatDate, weekDays, monthDays } from '../../constants/utils';
 import viewsMixin from '../../mixins/views';
 import XArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue';
 import configMixin from '../../mixins/config';
 import { SHOW_TOASTER_MESSAGE, REMOVE_TOASTER } from '../../store/mutations';
-import { weekDays, monthDays } from '../../constants/utils';
+
 
 import {
   FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT,
@@ -220,6 +223,7 @@ import {
 import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 import { REPORT_GENERATED } from '../../constants/getting-started';
+import { DATE_FORMAT } from '../../store/getters';
 
 export default {
   name: 'XReport',
@@ -280,6 +284,9 @@ export default {
         }
         return custom_spaces.map((space) => ({ name: space.uuid, title: space.name }));
       },
+    }),
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
     }),
     cannotEditReport() {
       return this.$cannot(this.$permissionConsts.categories.Reports,
@@ -497,12 +504,9 @@ export default {
           if (this.report.add_scheduling && this.report.mail_properties.emailList.length > 0) {
             this.canSendEmail = true;
           }
-          const dateTime = new Date(this.report.last_generated);
-          if (!isNaN(dateTime.getDate())) {
-            dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset());
-            const dateParts = dateTime.toISOString().split('T');
-            dateParts[1] = dateParts[1].split('.')[0];
-            this.lastGenerated = `Last generated: ${dateParts.join(' ')}`;
+          const formattedDate = formatDate(this.report.last_generated, undefined, this.dateFormat);
+          if (formattedDate !== this.report.last_generated) {
+            this.lastGenerated = `Last generated: ${formattedDate}`;
             this.isLatestReport = true;
           } else {
             this.isLatestReport = false;

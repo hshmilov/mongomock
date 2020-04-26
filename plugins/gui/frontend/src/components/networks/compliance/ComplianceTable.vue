@@ -34,17 +34,19 @@
     <XCompliancePanel
       :data="currentRule"
       :fields="fields"
+      :dateFormat="dateFormat"
       @close="closeSidePanel"
     />
   </div>
 </template>
 <script>
-import { mapActions, mapState } from 'vuex';
+import { mapActions, mapState, mapGetters } from 'vuex';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import XTable from '@components/neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
+import { DATE_FORMAT } from '../../../store/getters';
 import XCompliancePanel from './CompliancePanel';
 
 const tableFields = [{
@@ -110,6 +112,9 @@ export default {
       fields(state) {
         return state[this.module].view.schema_fields;
       },
+    }),
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
     }),
     selectedRules() {
       return this.currentRule ? { ids: [this.currentRuleId], include: true }

@@ -136,7 +136,9 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions, mapGetters } from 'vuex';
+import { formatDate } from '@constants/utils';
+import { DATE_FORMAT } from '../../../store/getters';
 import XCheckbox from '../../axons/inputs/Checkbox.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
@@ -160,6 +162,9 @@ export default {
       maintenance(state) {
         return state.settings.advanced.maintenance;
       },
+    }),
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
     }),
     allowProvision: {
       get() {
@@ -187,9 +192,7 @@ export default {
     },
     accessEndTime() {
       if (!this.maintenance.timeout) return null;
-      const dateTime = new Date(this.maintenance.timeout);
-      dateTime.setMinutes(dateTime.getMinutes() - dateTime.getTimezoneOffset());
-      return dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0];
+      return formatDate(this.maintenance.timeout, undefined, this.dateFormat);
     },
     disableWarnings() {
       return {

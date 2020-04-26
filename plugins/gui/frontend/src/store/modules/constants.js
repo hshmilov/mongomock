@@ -1,5 +1,6 @@
 import { REQUEST_API } from '../actions'
 
+export const DEFAULT_DATE_FORMAT = 'YYYY-MM-DD'
 export const FETCH_CONSTANTS = 'FETCH_CONSTANTS'
 export const SET_CONSTANTS = 'SET_CONSTANTS'
 

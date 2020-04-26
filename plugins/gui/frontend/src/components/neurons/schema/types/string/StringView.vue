@@ -15,15 +15,15 @@
     height="24"
     class="logo md-image"
   >
-  <md-icon
+  <MdIcon
     v-else-if="schema.format && schema.format === 'icon'"
     :md-src="`/src/assets/icons/symbol/${value}.svg`"
     :class="`icon-${value}`"
   />
   <div
     v-else-if="schema.format && schema.format === 'status'"
-    :title="$options.methods.formatDetails(value, schema, title)"
-    :class="`status ${$options.methods.format(value, schema).
+    :title="$options.methods.formatDetails(value, schema, title, dateFormat)"
+    :class="`status ${$options.methods.format(value, schema, dateFormat).
       toLowerCase().replace(' ', '-')}`"
   >
     &nbsp;
@@ -31,25 +31,23 @@
   <div
     v-else-if="value"
     :class="`table-td-content-${schema.name}`"
-    :title="$options.methods.formatDetails(value, schema, title)"
-  >{{ $options.methods.format(value, schema) }}</div>
+    :title="$options.methods.formatDetails(value, schema, title, dateFormat)"
+  >{{ $options.methods.format(value, schema, dateFormat) }}</div>
   <div v-else>
     &nbsp;
   </div>
 </template>
 
 <script>
+import { mapGetters } from 'vuex';
+import _get from 'lodash/get';
 import { formatDate } from '../../../../../constants/utils';
+import { DATE_FORMAT } from '../../../../../store/getters';
 
 const UPDATED_BY_FIELD = 'updated_by';
 
 export default {
   name: 'XStringView',
-  data() {
-    return {
-      foo: 'bac',
-    };
-  },
   props: {
     schema: {
       type: Object,
@@ -64,6 +62,11 @@ export default {
       default: null,
     },
   },
+  computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
+  },
   methods: {
     formatUsername(value) {
       if (value.source) {
@@ -71,12 +74,12 @@ export default {
       }
       return value.username;
     },
-    formatDetails(value, schema, title) {
+    formatDetails(value, schema, title, dateFormat) {
       if (title != null) {
         return title;
       }
       if (schema.name !== UPDATED_BY_FIELD) {
-        return this.format(value, schema);
+        return this.format(value, schema, dateFormat);
       }
       const parsedValue = JSON.parse(value);
       const username = this.formatUsername(parsedValue);
@@ -87,7 +90,7 @@ export default {
       }
       return `${username}${deleted}`;
     },
-    format(value, schema) {
+    format(value, schema, dateFormat) {
       if (schema.cellRenderer) {
         return schema.cellRenderer(value);
       }
@@ -96,7 +99,7 @@ export default {
       }
       if (!schema.format) return value;
       if (schema.format.includes('date') || schema.format.includes('time')) {
-        return formatDate(value, schema);
+        return formatDate(value, schema, dateFormat);
       }
       if (schema.format === 'password') {
         return '********';
