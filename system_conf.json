@@ -15,6 +15,7 @@
       "stresstest_scanner",
       "stresstest",
       "vectra",
+      "infoblox_netmri",
       "stresstest_users",
       "bandicoot",
       "postgres",

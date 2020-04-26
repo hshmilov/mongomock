@@ -160,6 +160,11 @@ export const pluginMeta = {
         title: 'Google Big Query',
         description: 'BigQuery is a serverless, highly-scalable, and cost-effective cloud data warehouse with an in-memory BI Engine and machine learning built in.'
     },
+    infoblox_netmri_adapter: {
+        title: 'Infoblox NetMRI',
+        description: 'Infoblox NetMRI is a network management solution that provides network change and configuration management (NCCM), and enables users to automate network change, see the impact of changes on network health, manage network configurations, and meet a variety of compliance requirements.',
+        link: 'https://docs.axonius.com/docs/infoblox-netmri'
+    },
     nutanix_adapter: {
         title: 'Nutanix AHV',
         link: 'https://docs.axonius.com/docs/nutanix-ahv',
