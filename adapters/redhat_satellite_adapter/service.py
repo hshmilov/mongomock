@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import timedelta
 
 from typing import Match
 
@@ -7,28 +8,21 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from redhat_satellite_adapter import consts
 from redhat_satellite_adapter.connection import RedhatSatelliteConnection
 from redhat_satellite_adapter.client_id import get_client_id
+from redhat_satellite_adapter.structures import RedHatSatelliteDevice
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class RedhatSatelliteAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
-    class MyDeviceAdapter(DeviceAdapter):
-        cert_name = Field(str, 'Certificate Name')
-        environment = Field(str, 'Environment')
-        capabilities = ListField(str, 'Capabilities')
-        compute_profile = Field(str, 'Compute Profile')
-        compute_resource = Field(str, 'Compute Resource')
-        medium = Field(str, 'Medium')
-        organization = Field(str, 'Organization')
+    class MyDeviceAdapter(RedHatSatelliteDevice):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -122,7 +116,7 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-statements,too-many-locals,too-many-branches
     def _create_device(self, device_raw):
         try:
             # noinspection PyTypeChecker
@@ -135,7 +129,12 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
 
             # generic fields
             device.hostname = device.name = device_raw.get('name')
-            device.add_ips_and_macs(ips=[device_raw.get('ip')], macs=[device_raw.get('mac')])
+            ips = []
+            if device_raw.get('ip'):
+                ips.append(device_raw.get('ip'))
+            if device_raw.get('ip6'):
+                ips.append(device_raw.get('ip6'))
+            device.add_ips_and_macs(ips=ips, macs=[device_raw.get('mac')])
             device.device_model = device_raw.get('model_name')
             device.domain = device_raw.get('domain_name')
             device.physical_location = device_raw.get('location_name')
@@ -143,23 +142,64 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             device.uuid = device_raw.get('uuid')
             device.first_seen = parse_date(device_raw.get('created_at'))
             device.last_seen = parse_date(device_raw.get('updated_at'))
-
             device_arch = device_raw.get('architecture_name')
             os_components = [device_arch, device_raw.get('operatingsystem_name')]
             for version_field, software_name in consts.VERISON_FIELDS_TO_SOFTWARE_NAMES.items():
                 version_value = device_raw.get(version_field)
                 if isinstance(version_value, str):
                     device.add_installed_software(name=software_name, version=version_value, architecture=device_arch)
+            device.organizational_unit = device_raw.get('organization_name')
+            device.device_managed_by = device_raw.get('owner_name')
+
+            if isinstance(device_raw.get('uptime_seconds'), int):
+                device.set_boot_time(uptime=timedelta(seconds=device_raw.get('uptime_seconds')))
+
+            device_enabled = device_raw.get('enabled')
+            if isinstance(device_enabled, bool):
+                device.device_disabled = not device_enabled
+
+            try:
+                # parse BMC Interface info, see more here:
+                # https://access.redhat.com/documentation/en-us/red_hat_satellite/6.4/html-single/managing_hosts/index
+                device.add_nic(mac=device_raw.get('sp_mac'),
+                               ips=[device_raw.get('sp_ip')],
+                               name=device_raw.get('sp_name'))
+            except Exception:
+                logger.warning(f'Failed to parse BMC interface for device_raw: {device_raw}')
 
             # specific fields
             device.cert_name = device_raw.get('certname')
-            device.environment = device_raw.get('environment_name')
+            device.environment_name = device_raw.get('environment_name')
+            device.hostgroup_title = device_raw.get('hostgroup_title')
+            device.subnet_name = device_raw.get('subnet_name')
+            device.ptable_name = device_raw.get('ptable_name')
             if isinstance(device_raw.get('capabilities'), list):
                 device.capabilities = device_raw.get('capabilities')
-            device.compute_profile = device_raw.get('compute_profile_name')
-            device.compute_resource = device_raw.get('compute_resource_name')
-            device.medium = device_raw.get('medium_name')
-            device.organization = device_raw.get('organization_name')
+            device.compute_profile_name = device_raw.get('compute_profile_name')
+            device.compute_resource_name = device_raw.get('compute_resource_name')
+            device.medium_name = device_raw.get('medium_name')
+            device.image_name = device_raw.get('image_name')
+            device.image_file = device_raw.get('image_file')
+            device.global_status_label = device_raw.get('global_status_label')
+            device.build_status = device_raw.get('build_status_label')
+            device.puppet_status = device_raw.get('puppet_status')
+            device.puppet_proxy_name = device_raw.get('puppet_proxy_name')
+            device.puppet_ca_proxy_name = device_raw.get('puppet_ca_proxy_name')
+            device.openscap_proxy_name = device_raw.get('openscap_proxy_name')
+
+            content_facet = device_raw.get('content_facet_attributes')
+            if content_facet and isinstance(content_facet, dict):
+                kickstart_repository = content_facet.get('kickstart_repository')
+                if isinstance(kickstart_repository, dict):
+                    device.kickstart_repository = kickstart_repository.get('name')
+
+                content_view = content_facet.get('content_view')
+                if isinstance(content_view, dict):
+                    device.content_view = content_view.get('name')
+
+                lifecycle_environment = content_facet.get('lifecycle_environment')
+                if isinstance(lifecycle_environment, dict):
+                    device.lifecycle_environment = lifecycle_environment.get('name')
 
             # facts
             device_facts = device_raw.get(consts.ATTR_INJECTED_FACTS)
@@ -171,14 +211,6 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
                     if res:
                         device.total_physical_memory = int(res.group(1)) / 1024.0
                 device.bios_version = device_facts.get('bios_version') or device_facts.get('dmi.bios.version')
-                # "lscpu.cpu_family": "6",
-                # "lscpu.l1i_cache": "32K",
-                # "lscpu.numa_node(s)": "1",
-                # "lscpu.numa_node0_cpu(s)": "0",
-                # "lscpu.on-line_cpu(s)_list": "0",
-                # "lscpu.socket(s)": "1",
-                # "lscpu.stepping": "3",
-                # "lscpu.vendor_id": "GenuineIntel",
                 device.add_cpu(cores=(int(device_facts['lscpu.cpu(s)'])
                                       if isinstance(device_facts.get('lscpu.cpu(s)'), str) else None),
                                )
