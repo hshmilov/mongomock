@@ -67,7 +67,8 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
         """
         with client_data:
             yield from client_data.get_device_list(max_log_history=self.__max_log_history,
-                                                   maximum_records=self.__maximum_records)
+                                                   maximum_records=self.__maximum_records,
+                                                   include_messages=self.__include_messages)
 
     @staticmethod
     def _clients_schema():
@@ -131,11 +132,16 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
             logger.exception(f'Problem with fetching SumoLogic Device for {device_raw}')
             return None
 
+    # pylint: disable=arguments-differ
+    def _parse_id(self, *, device_raw, gen_values, **kwargs):
+        return (super()._parse_id(device_raw=device_raw, gen_values=gen_values, **kwargs)
+                or device_raw.get(consts.SEARCH_RESULT_INTERNAL_FIELDS_ID))
+
     def _fill_dynamic_fields(self, device: DeviceAdapter, *, device_raw, **_):
-        # dont parse internal sumo fields
-        super()._fill_dynamic_fields(device,
-                                     device_raw=dict(filter(lambda key_val: not key_val[0].startswith('_'),
-                                                            device_raw.items())))
+        super()._fill_dynamic_fields(device, device_raw={k: v for k, v in device_raw.items()
+                                                         if (not k.startswith('_') or
+                                                             # only parse whitelisted internal sumo fields
+                                                             k in consts.SEARCH_RESULT_INTERNAL_FIELDS_WHITELIST)})
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -147,6 +153,7 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
         logger.info(f'Loading Sumo Logic config: {config}')
         self.__max_log_history = int(config['max_log_history'])
         self.__maximum_records = int(config['maximum_records'])
+        self.__include_messages = bool(config['include_messages'])
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -162,10 +169,16 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
                     'title': 'Maximum amount of messages for search',
                     'type': 'number'
                 },
+                {
+                    'name': 'include_messages',
+                    'title': 'Consume raw messages',
+                    'type': 'bool',
+                },
             ],
             'required': [
                 'max_log_history',
                 'maximum_records',
+                'include_messages',
             ],
             'pretty_name': 'Sumo Logic Configuration',
             'type': 'array'
@@ -176,6 +189,7 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
         return {
             'max_log_history': 30,
             'maximum_records': 100000,
+            'include_messages': False,
         }
 
     @classmethod

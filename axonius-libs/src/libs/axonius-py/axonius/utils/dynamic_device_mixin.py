@@ -53,12 +53,8 @@ class DynamicDeviceMixin:
         normalized column name
         :param column_name:
         """
-        field_name = normalize_var_name(column_name)
-        field_title = ' '.join(word.capitalize() for word in column_name.split(' '))
-        if device.does_field_exist(field_name):
-            # Make sure not to overwrite existing data
-            field_name = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX.lower()}_{field_name}'
-            field_title = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX} {field_title}'
+        field_name = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX.lower()}_{normalize_var_name(column_name)}'
+        field_title = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX} {column_name.title()}'
         return field_name, field_title
 
     def fill_dynamic_device(self, device: DeviceAdapter, device_raw: dict):
@@ -102,8 +98,6 @@ class DynamicDeviceMixin:
             'all_values': all_values,
         }
 
-        logger.debug(f'{kwargs}')
-
         # Handle generic fields
         for filler_method, fields in filler_method_to_normalized_fields.items():
             # curr_values is a filtered version of all_values
@@ -144,9 +138,10 @@ class DynamicDeviceMixin:
             hostname = None
 
         device_id = self._parse_id(**kwargs)
+        device_id = '_'.join(field for field in [device_id, serial, mac, hostname] if field)
         if not device_id:
             raise DynamicDeviceParsingCannotProceedError('Bad device with no ID')
-        device.id = f'{device_id or serial or mac or ""}_{hostname or ""}'
+        device.id = device_id
 
     def _parse_name(self, *, gen_values, **_):
         return gen_values.get('name')

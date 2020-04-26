@@ -23,5 +23,11 @@ PAGINATION_PER_PAGE_FIELD = 'limit'
 
 DEVICES_IDENTIFIER_FIELDS = ['id', 'serial', 'mac_address', 'hostname', 'name']
 
+SEARCH_RESULT_INTERNAL_FIELDS_ID = '_messageid'
+SEARCH_RESULT_INTERNAL_FIELDS_WHITELIST = ['_collector', '_source', '_sourcename', '_sourcecategory',
+                                           '_sourceid', '_collectorid', SEARCH_RESULT_INTERNAL_FIELDS_ID]
+
 MAX_WAIT_SEARCH_JOB = timedelta(hours=10)
 EXECUTION_NOTICE_PERIOD = timedelta(minutes=10)
+
+RECORD_WARNING_THRESHOLD = 10
