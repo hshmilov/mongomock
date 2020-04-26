@@ -603,13 +603,31 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
 
     if entity_data is None:
         # Return no value for this path
-        return ''
+        return None
 
     if specific_adapter is not None and specific_adapter in entity_data['adapters_data']:
         try:
-            return [(entity_adapter[field_path],  entity_adapter['last_seen'])
+            # Check if the field is a complicated field (has dot in it) and if so takes only the desired value
+            # from the specific adapter in the entity
+            first_dot = field_path.find('.')
+            if first_dot != -1:
+                complicated_field = field_path.split('.')
+                # Gets all the values for the main field, for instance of the field name is os.type
+                # it will return a list of dicts like {'type': 'Windows', 'distribution': 'Server 2016'}
+                values = [[entity_adapter[complicated_field[0]],  entity_adapter['last_seen']]
+                          for entity_adapter in entity_data['adapters_data'][specific_adapter]]
+                complicated_field = complicated_field[1:]
+                # Run through the complicated main field values and extract the desired information from it
+                while len(complicated_field) > 0:
+                    for i, v in enumerate(values):
+                        values[i][0] = v[0][0][complicated_field[0]] if isinstance(
+                            v[0], list) else v[0][complicated_field[0]]
+                    complicated_field = complicated_field[1:]
+                return values
+            return [(entity_adapter[field_path], entity_adapter['last_seen'] if 'last_seen' in entity_adapter else None)
                     for entity_adapter in entity_data['adapters_data'][specific_adapter]]
         except Exception:
+            logger.warning('An error parsing field from specific adapter', exc_info=True)
             return None, None
     elif specific_adapter is not None:
         return None, None
@@ -711,10 +729,22 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             return match_name[1]
         return None
 
+    def extract_adapter_name(field_path):
+        """
+        Return the adapter name of a non generic field path
+        """
+        match_name = re.match(r'adapters_data\.([\w._]*?)\..*', field_path)
+        if match_name and len(match_name.groups()) == 1:
+            return match_name[1]
+        return None
+
     field_to_value = {}
+    specific_adapters_values = []
+    specific_adapter_name = ''
+
     if include_details:
-        adapter_datas = [item for value in sorted(set(entity_data['adapters']))
-                         for item in entity_data['adapters_data'][value]]
+        adapter_datas = {f'{value}_{i}': item for value in sorted(set(entity_data['adapters']))
+                         for i, item in enumerate(entity_data['adapters_data'][value])}
 
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
@@ -733,9 +763,32 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             field_to_value[field_path] = val
         if not include_details:
             continue
+
         generic_field = _extract_name(field_path)
-        field_to_value[f'{field_path}_details'] = [find_entity_field(data, generic_field) if generic_field else ''
-                                                   for data in adapter_datas]
+        if not generic_field:
+            specific_adapter_name = extract_adapter_name(field_path)
+            if specific_adapter_name:
+                specific_adapters_values = find_entity_field(entity_data,
+                                                             field_path[len('adapters_data.' +
+                                                                            specific_adapter_name) + 1:],
+                                                             specific_adapter=specific_adapter_name)
+                # (None, None) returns when the specific adapter is correlated with the entity but dont have any data
+                # about the specific field
+                if specific_adapters_values == (None, None):
+                    specific_adapters_values = []
+
+        field_details = []
+        for adapter_name in adapter_datas:
+            if generic_field:
+                field_details.append(find_entity_field(adapter_datas[adapter_name], generic_field))
+            elif specific_adapters_values and specific_adapter_name and \
+                    adapter_name.startswith(specific_adapter_name):
+                adapter_num = int(adapter_name[len(specific_adapter_name) + 1:])
+                field_details.append(specific_adapters_values[adapter_num][0])
+            else:
+                field_details.append(None)
+
+        field_to_value[f'{field_path}_details'] = field_details
 
     # The next block handles columns with _preferred suffix
     # The priority order is according to here https://axonius.atlassian.net/browse/AX-6238
