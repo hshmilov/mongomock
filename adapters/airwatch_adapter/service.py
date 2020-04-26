@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
@@ -13,6 +14,14 @@ from airwatch_adapter.connection import AirwatchConnection
 from airwatch_adapter.consts import NOT_ENROLLED_DEVICE, ENROLLED_DEVICE
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class DeviceCompliance(SmartJsonClass):
+    status = Field(bool, 'Compliant Status')
+    policy_name = Field(str, 'Policy Name')
+    policy_detail = Field(str, 'Policy Details')
+    last_compliance_check = Field(datetime.datetime, 'Last Compliance Check')
+    next_compliance_check = Field(datetime.datetime, 'Next Compliance Check')
 
 
 class AirwatchAdapter(AdapterBase):
@@ -31,6 +40,10 @@ class AirwatchAdapter(AdapterBase):
         ownership = Field(str, 'Ownership')
         location_group_name = Field(str, 'Location Group Name')
         profiles = ListField(str, 'Profiles')
+        security_patch_date = Field(datetime.datetime, 'Security Patch Date')
+        compliance_status = Field(str, 'Compliance Status')
+        compliance_summaries = ListField(DeviceCompliance, 'Compliance Summary')
+        compromised_status = Field(bool, 'Compromised Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -142,8 +155,32 @@ class AirwatchAdapter(AdapterBase):
             logger.exception(f'Problem with fetching not enrolledd Airwatch Device {device_raw}')
             return None
 
+    @staticmethod
+    def _parse_compliance_summary(compliance_summary_raw: dict):
+        if not (isinstance(compliance_summary_raw, dict) and
+                isinstance(compliance_summary_raw.get('DeviceCompliance'), list)):
+            return None
+
+        compliance_summaries = []
+        for device_compliance_dict in compliance_summary_raw.get('DeviceCompliance'):
+            try:
+                compliant_status = False
+                if isinstance(device_compliance_dict.get('CompliantStatus'), bool):
+                    compliant_status = device_compliance_dict.get('CompliantStatus')
+
+                compliance_summaries.append(DeviceCompliance(
+                    status=compliant_status,
+                    policy_name=device_compliance_dict.get('PolicyName'),
+                    policy_detail=device_compliance_dict.get('PolicyDetail'),
+                    last_compliance_check=parse_date(device_compliance_dict.get('LastComplianceCheck')),
+                    next_compliance_check=parse_date(device_compliance_dict.get('NextComplianceCheck')),
+                ))
+            except Exception:
+                logger.warning(f'Failed parsing DeviceCompliance: {device_compliance_dict}')
+        return compliance_summaries
+
     # pylint: disable=R0912,R0915
-    # pylint: disable=too-many-locals,using-constant-test
+    # pylint: disable=too-many-locals,using-constant-test,too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         for device_raw, device_type in devices_raw_data:
             if device_type == NOT_ENROLLED_DEVICE:
@@ -252,6 +289,14 @@ class AirwatchAdapter(AdapterBase):
                                                       version=app_raw.get('Version'))
                 except Exception:
                     logger.exception(f'Problem adding software to Airwatch {device_raw}')
+                device.security_patch_date = parse_date(device_raw.get('SecurityPatchDate'))
+                device.compliance_status = device_raw.get('ComplianceStatus')
+                compliance_summaries = self._parse_compliance_summary(device_raw.get('ComplianceSummary'))
+                if compliance_summaries:
+                    device.compliance_summaries = compliance_summaries
+                if isinstance(device_raw.get('CompromisedStatus'), bool):
+                    device.compromised_status = device_raw.get('CompromisedStatus')
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:
