@@ -69,7 +69,7 @@ export const updateDataCount = (state, payload) => {
   count.error = payload.error;
   count.rule = payload.rule;
 
-  if (payload.isExpermentalAPI && payload.data !== undefined) {
+  if (payload.isExperimentalAPI && payload.data !== undefined) {
         count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
         count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
         return;
@@ -95,7 +95,7 @@ export const updateDataContent = (state, payload) => {
     return;
   }
   let payload_data = payload.data;;
-  if (payload.isExpermentalAPI) {
+  if (payload.isExperimentalAPI) {
     payload_data = payload.data.data[payload.module].map((item) => (item._compatibilityAPI || {}))
 	}
   if (!payload.skip) {

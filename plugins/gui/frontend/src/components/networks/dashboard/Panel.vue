@@ -16,7 +16,6 @@
           @on-item-click="onLegendItemClick"
         />
       </XCard>
-
       <div
         class="x-card card__item"
         :class="{'custom-card': draggable}"

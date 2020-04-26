@@ -5,6 +5,7 @@
     >
       <template slot-scope="{ canView, canUpdate }">
         <XQuery
+          v-if="!viewOnly"
           :module="module"
           :read-only="!canView"
           :user-fields-groups="userFieldsGroups"
@@ -12,15 +13,21 @@
         />
         <XTable
           ref="table"
-          v-model="!canUpdate? undefined: selection"
+          v-model="!canUpdate || viewOnly? undefined: selection"
           :module="module"
+          :fields="viewFieldsToSchema"
+          :fetch-fields="fields"
           id-field="internal_axon_id"
           :expandable="true"
           :filterable="true"
           :on-click-row="configEntity"
+          :experimental-api="experimentalApi"
           @input="updateSelection"
         >
-          <template #actions>
+          <slot
+            slot="actions"
+            name="actions"
+          >
             <XActionMenu
               :disabled="!canUpdate"
               :module="module"
@@ -34,7 +41,7 @@
               :disable-export-csv="!canView"
               @done="updateEntities"
             />
-          </template>
+          </slot>
           <template #default="slotProps">
             <XTableData
               v-bind="slotProps"
@@ -63,8 +70,8 @@ import XTableOptionMenu from './TableOptionMenu.vue';
 import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
-  FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
-} from '../../../store/actions';
+  LAZY_FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
+} from '../../../store/actions'
 
 export default {
   name: 'XEntityTable',
@@ -75,6 +82,19 @@ export default {
     module: {
       type: String,
       required: true,
+    },
+    viewOnly: {
+      type: Boolean,
+      default: false,
+    },
+    fields: {
+      type: Array,
+      default: null,
+    },
+    experimentalApi: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
   },
   data() {
@@ -114,6 +134,14 @@ export default {
     schemaFieldsByName() {
       return this.getFieldSchemaByName(this.module);
     },
+    viewFieldsToSchema() {
+      const { schemaFieldsByName } = this;
+      if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
+        return [];
+      }
+      const fieldsToUse = this.fields ? this.fields : this.viewFields;
+      return fieldsToUse.map((fieldName) => schemaFieldsByName[fieldName]).filter((field) => field);
+    },
   },
   async created() {
     this.fetchDataHyperlinks({ module: this.module });
@@ -125,7 +153,8 @@ export default {
         ...userDefaultTableColumns,
       };
     }
-    if (!this.viewFields.length) {
+    await this.fetchDataFields({ module: this.module });
+    if (!this.viewFields.length && !this.fields) {
       this.updateView({
         module: this.module,
         view: {
@@ -140,7 +169,7 @@ export default {
       updateView: UPDATE_DATA_VIEW,
     }),
     ...mapActions({
-      fetchDataFields: FETCH_DATA_FIELDS,
+      fetchDataFields: LAZY_FETCH_DATA_FIELDS,
       fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
       fetchDataCurrent: FETCH_DATA_CURRENT,
     }),
@@ -149,7 +178,7 @@ export default {
 
       this.$emit('row-clicked');
 
-      let path = `${this.module}/${entityId}`;
+      let path = `/${this.module}/${entityId}`;
       if (this.historicalState) {
         path += `?history=${encodeURIComponent(this.historicalState)}`;
       }
@@ -162,7 +191,6 @@ export default {
     },
     updateEntities(reset = true, selectIds = []) {
       this.$refs.table.fetchContentPages(true);
-      this.fetchDataFields({ module: this.module });
       if (reset) {
         this.selection = { ids: selectIds, include: true };
       } else {

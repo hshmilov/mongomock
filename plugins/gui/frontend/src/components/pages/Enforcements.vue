@@ -18,7 +18,7 @@
           v-model="selection"
           module="enforcements"
           title="Enforcement Sets"
-          :static-fields="fields"
+          :fields="fields"
           :on-click-row="navigateEnforcement"
           :multiple-row-selection="canDelete"
         >

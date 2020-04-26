@@ -11,7 +11,7 @@
       v-if="getMergedData().length > 0"
       :title="schema.title"
       :module="stateLocation"
-      :static-fields="fields"
+      :fields="fields"
       :static-data="getMergedData()"
       :searchable="true"
     >

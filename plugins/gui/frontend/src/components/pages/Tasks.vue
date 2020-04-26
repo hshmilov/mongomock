@@ -10,7 +10,7 @@
       :module="enforcementDesignated ? 'enforcements/current' : 'tasks'"
       :endpoint="endpointForDesignatedTasks"
       title="Enforcement Tasks"
-      :static-fields="fields"
+      :fields="fields"
       :on-click-row="viewTask"
     />
   </x-page>

@@ -2,7 +2,7 @@
   <XTable
     :title="actionFields.title"
     :module="module"
-    :static-fields="actionFields.items"
+    :fields="actionFields.items"
     :static-data="processedTasks"
     :searchable="true"
     id-field="action_id"

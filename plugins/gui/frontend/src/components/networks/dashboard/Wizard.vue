@@ -83,11 +83,11 @@
 
   import viewsMixin from '../../../mixins/views'
 
-  import { mapMutations, mapActions } from 'vuex'
+  import { mapActions } from 'vuex'
   import { SAVE_DASHBOARD_PANEL, CHANGE_DASHBOARD_PANEL } from '../../../store/modules/dashboard'
   import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding'
   import { DASHBOARD_CREATED } from '../../../constants/getting-started'
-
+  import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions'
 
   const dashboard = {
     metric: '', view: '', name: '', config: null
@@ -159,7 +159,8 @@
         return `Last edited on ${dateTime.toISOString().replace(/(T|Z)/g, ' ').split('.')[0]}`
       }
     },
-    created () {
+    async created () {
+      this.entityOptions.forEach((entity) => this.fetchDataFields({ module: entity.name }));
       if (this.editMode) {
         this.dashboard = { ...this.panel.data }
         this.configValid = true
@@ -169,7 +170,8 @@
       ...mapActions({
         saveDashboard: SAVE_DASHBOARD_PANEL, 
         changeDashboard: CHANGE_DASHBOARD_PANEL,
-        completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION
+        completeMilestone: SET_GETTING_STARTED_MILESTONE_COMPLETION,
+        fetchDataFields: LAZY_FETCH_DATA_FIELDS,
       }),
       updateMetric (metric) {
         if (this.dashboard.metric === metric) return

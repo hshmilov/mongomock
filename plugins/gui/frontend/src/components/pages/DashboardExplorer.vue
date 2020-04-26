@@ -1,108 +1,138 @@
 <template>
-  <x-page
+  <XPage
     :breadcrumbs="[
       { title: 'axonius dashboard', path: { name: 'Dashboard'}},
       { title: 'Search' }
     ]"
   >
-    <x-search-insights @click="updateEntities" />
+    <XSearchInsights @search="onSearch" />
     <div class="explorer-results">
-      <x-table
-        v-for="entity in entities"
+      <XTable
+        v-for="{name, title} in entities"
+        :key="name"
         ref="table"
-        :isExpermentalAPI="isExperimentalAPI"
-        :key="entity.name"
-        id-field="internal_axon_id"
-        :module="entity.name"
-        :on-click-row="(id) => configEntity(id, entity.name)"
+        :experimental-api="isExperimentalAPI"
+        :module="name"
+        :fields="defaultFields[name]"
+        :view-only="true"
       >
-        <template slot="actions">
-          <x-button
+        <template #actions>
+          <XButton
             type="link"
-            @click="viewEntities(entity.name)"
-          >View in {{ entity.title }}</x-button>
+            @click="viewEntities(name)"
+          >View in {{ title }}</XButton>
         </template>
-      </x-table>
+      </XTable>
     </div>
-  </x-page>
-
+  </XPage>
 </template>
 
 <script>
-  import xPage from '../axons/layout/Page.vue'
-  import xSearchInsights from '../neurons/inputs/SearchInsights.vue'
-  import xTable from '../neurons/data/Table.vue'
-  import xButton from '../axons/inputs/Button.vue'
-  import { entities } from '../../constants/entities'
-  import { mapMutations, mapState } from 'vuex'
-  import _get from 'lodash/get';
-  import { UPDATE_DATA_VIEW } from '../../store/mutations'
+import { mapState, mapGetters, mapMutations } from 'vuex';
+import _get from 'lodash/get';
+import XPage from '../axons/layout/Page.vue';
+import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
+import XTable from '../networks/entities/Table.vue';
+import XButton from '../axons/inputs/Button.vue';
+import { entities, defaultFieldsExplorer } from '../../constants/entities';
+import { EXACT_SEARCH } from '../../store/getters';
+import { UPDATE_DATA_VIEW } from '../../store/mutations';
 
-  export default {
-    name: 'XDashboardExplorer',
-    components: {
-      xPage, xSearchInsights, xTable, xButton
+export default {
+  name: 'XDashboardExplorer',
+  components: {
+    XPage, XSearchInsights, XTable, XButton,
+  },
+  data() {
+    return {
+      resetFilters: true,
+    };
+  },
+  computed: {
+    ...mapState({
+      featureFlags(state) {
+        return _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
+      },
+    }),
+    ...mapGetters({
+      exactSearch: EXACT_SEARCH,
+    }),
+    entities() {
+      return entities.filter((entity) => this.$canViewEntity(entity.name));
     },
-    data () {
-      return {
-        resetFilters: true
+    isExperimentalAPI() {
+      if (!this.featureFlags || !this.featureFlags.experimental_api) {
+        return false;
       }
+      return true;
     },
-    computed: {
-      ...mapState({
-        featureFlags(state) {
-          const featureFlasConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
-          return featureFlasConfigs;
+    defaultFields() {
+      return defaultFieldsExplorer;
+    },
+  },
+  mounted() {
+    this.onSearch(this.$route.query.search || '');
+  },
+  methods: {
+    ...mapMutations({
+      updateDataView: UPDATE_DATA_VIEW,
+    }),
+    viewEntities(entityType) {
+      this.updateDataView({
+        module: entityType,
+        view: {
+          fields: this.defaultFields[entityType],
         },
-      }),
-      entities () {
-        return entities.filter((entity) => this.$canViewEntity(entity.name));
-      },
-      isExperimentalAPI () {
-        if (!this.featureFlags || !this.featureFlags.experimental_api)  {
-          return false
+      });
+      this.$router.push({
+        path: `/${entityType}`,
+      });
+    },
+    updateEntitiesPerTable() {
+      this.$refs.table.forEach((ref) => ref.updateEntities());
+    },
+    onSearch(search) {
+      const expressions = search.split(',').map((exp) => exp.trim()).filter((exp) => exp);
+      this.entities.forEach(({ name }) => {
+        const patternParts = [];
+        this.defaultFields[name].forEach((field) => {
+          expressions.forEach((expression) => {
+            const expressionValue = this.exactSearch ? `"${expression}"` : `regex("${expression}", "i")`;
+            patternParts.push(`${field} == ${expressionValue}`);
+          });
+        });
+        // Only push if we are in exact search mode and there is a search value
+        // if there is no search value we will not add the "search" term
+        if (this.exactSearch && search) {
+          patternParts.push(`search("${search}")`);
         }
-        return true
-      },
-    },
-    beforeDestroy () {
-      if (!this.resetFilters) return
-      entities.forEach(entity => {
+        const filter = patternParts.length ? patternParts.join(' or ') : '';
         this.updateDataView({
-          module: entity.name, view: {
+          module: name,
+          view: {
             query: {
-              filter: ''
-            }, fields: []
-          }
-        })
-      })
+              filter,
+              search,
+            },
+          },
+        });
+      });
+      this.updateEntitiesPerTable();
     },
-    methods: {
-      ...mapMutations({ updateDataView: UPDATE_DATA_VIEW }),
-      configEntity (entityId, entityType) {
-        this.$router.push({
-          path: `/${entityType}/${entityId}`
-        })
-      },
-      viewEntities (entityType) {
-        this.resetFilters = false
-        this.$router.push({
-          path: `/${entityType}`
-        })
-      },
-      updateEntities () {
-        this.$refs.table.forEach(ref => ref.fetchContentPages(true, true, false))
-      }
-    }
-  }
+  },
+};
 </script>
 
 <style lang="scss">
     .explorer-results {
         height: calc(100% - 48px);
 
-        .x-data-table {
+        .x-entity-table {
             height: 50%;
+
+            .x-data-table {
+                height: 100%;
+            }
         }
     }
 </style>

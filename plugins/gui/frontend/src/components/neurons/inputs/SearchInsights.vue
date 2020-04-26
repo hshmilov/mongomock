@@ -5,12 +5,12 @@
         v-model="searchValue"
         placeholder="Search by Host Name, User Name, Manufacturer Serial, MAC or IP..."
         :disabled="!canViewAnyEntity"
-        @keydown.enter.native="onClick"
+        @keydown.enter.native="onSearch"
       />
       <XButton
         type="right"
         :disabled="!canViewAnyEntity"
-        @click="onClick"
+        @click="onSearch"
       >Search</XButton>
     </div>
     <XAccessModal v-model="blockedComponent" />
@@ -18,14 +18,13 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapGetters } from 'vuex';
+import { mapState, mapMutations } from 'vuex';
 import XButton from '../../axons/inputs/Button.vue';
 import XSearchInput from './SearchInput.vue';
 import XAccessModal from '../popover/AccessModal.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import { entities } from '../../../constants/entities';
-import { EXACT_SEARCH } from '../../../store/getters';
 
 export default {
   name: 'XSearchInsights',
@@ -35,9 +34,6 @@ export default {
       entitiesView(state) {
         return entities.reduce((map, { name }) => ({ ...map, [name]: state[name].view }), {});
       },
-    }),
-    ...mapGetters({
-      exactSearch: EXACT_SEARCH,
     }),
     canViewAnyEntity() {
       return entities.filter((entity) => this.$canViewEntity(entity.name)).length > 0;
@@ -50,30 +46,11 @@ export default {
         this.updateSearchValue(value);
       },
     },
-    entitiesFields() {
-      return {
-        devices: [
-          'adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.device_serial',
-          'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
-          'specific_data.data.last_used_users', 'labels',
-        ],
-        users: [
-          'adapters', 'specific_data.data.username', 'specific_data.data.mail', 'specific_data.data.first_name',
-          'specific_data.data.last_name', 'labels',
-        ],
-      };
-    },
   },
   data() {
     return {
       blockedComponent: '',
     };
-  },
-  mounted() {
-    if (this.$route.query.search) {
-      this.searchValue = this.$route.query.search;
-      this.onClick();
-    }
   },
   methods: {
     ...mapMutations({
@@ -85,42 +62,15 @@ export default {
           module: entity.name,
           view: {
             query: {
-              search, filter: this.entitiesView[entity.name].query.filter,
+              search,
+              filter: this.entitiesView[entity.name].query.filter,
             },
-            fields: this.entitiesFields[entity.name],
           },
         });
       });
     },
-    onClick() {
-      const expressions = this.searchValue.split(',');
-      entities.forEach(({ name }) => {
-        const patternParts = [];
-        this.entitiesView[name].fields.forEach((field) => {
-          expressions.forEach((expression) => {
-            // In case there no search value, use default with regex otherwise no data will return
-            const expressionString = `${expression.trim()}`;
-            const expressionValue = (this.exactSearch && this.searchValue) ? `"${expressionString}"` : `regex("${expressionString}", "i")`;
-            patternParts.push(`${field} == ${expressionValue}`);
-          });
-        });
-        // Only push if we are in exact search mode and there is a search value
-        // if there is no search value we will not add the "search" term
-        if (this.exactSearch && this.searchValue) {
-          patternParts.push(`search("${this.searchValue}")`);
-        }
-        this.updateDataView({
-          module: name,
-          view: {
-            query: {
-              filter: patternParts.join(' or '),
-              search: this.searchValue,
-            },
-            fields: this.entitiesFields[name],
-          },
-        });
-      });
-      this.$emit('click');
+    onSearch() {
+      this.$emit('search', this.searchValue);
     },
   },
 };

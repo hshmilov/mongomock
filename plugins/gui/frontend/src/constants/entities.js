@@ -34,6 +34,18 @@ export const defaultFields = {
   ],
 };
 
+export const defaultFieldsExplorer = {
+  devices: [
+    'adapters', 'specific_data.data.hostname', 'specific_data.data.name', 'specific_data.data.device_serial',
+    'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac',
+    'specific_data.data.last_used_users', 'labels',
+  ],
+  users: [
+    'adapters', 'specific_data.data.username', 'specific_data.data.mail', 'specific_data.data.first_name',
+    'specific_data.data.last_name', 'labels',
+  ],
+};
+
 export const guiPluginName = 'gui';
 
 export const initCustomData = (module) => ({

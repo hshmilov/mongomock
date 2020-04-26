@@ -17,7 +17,7 @@
       :row-class="getRowClass"
       :pagination="true"
       :on-click-row="openSidePanel"
-      :static-fields="getTableFields()"
+      :fields="getTableFields()"
       :static-sort="false"
       :format-title="formatTitle"
       :multiple-row-selection="false"

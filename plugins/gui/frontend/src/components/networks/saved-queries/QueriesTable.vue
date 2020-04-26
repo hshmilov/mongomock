@@ -51,7 +51,7 @@
       v-model="queriesRowsSelections"
       :module="pathToSavedQueryInState"
       title="Saved Queries"
-      :static-fields="queriesTableFieldsSchema"
+      :fields="queriesTableFieldsSchema"
       :on-click-row="openQuerySidePanel"
     >
       <template slot="actions">

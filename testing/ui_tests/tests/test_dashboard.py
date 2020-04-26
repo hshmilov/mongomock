@@ -704,7 +704,6 @@ class TestDashboard(TestBase):
             assert any('testdomain' in s.lower() for s in result)
         # Test search without any term
         self.dashboard_page.switch_to_page()
-        self.base_page.run_discovery()
         self.dashboard_page.fill_query_value('')
         self.dashboard_page.enter_search()
         self.dashboard_page.wait_for_table_to_load()

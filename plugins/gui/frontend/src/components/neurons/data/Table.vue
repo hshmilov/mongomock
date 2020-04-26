@@ -47,7 +47,7 @@
         ref="table"
         v-model="pageSelection"
         :data="pageData"
-        :fields="viewFields"
+        :fields="fields"
         :page-size="pageSize"
         :sort="view.sort"
         :col-filters="view.colFilters"
@@ -122,7 +122,7 @@
 
 <script>
 import {
-  mapState, mapGetters, mapMutations, mapActions,
+  mapState, mapMutations, mapActions,
 } from 'vuex';
 import _orderBy from 'lodash/orderBy';
 import _isEmpty from 'lodash/isEmpty';
@@ -132,7 +132,6 @@ import XTable from '../../axons/tables/Table.vue';
 import XTableData from './TableData';
 import XButton from '../../axons/inputs/Button.vue';
 
-import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
 import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations';
 import { FETCH_DATA_CONTENT } from '../../../store/actions';
 
@@ -162,7 +161,11 @@ export default {
       type: String,
       default: '',
     },
-    staticFields: {
+    fields: {
+      type: Array,
+      default: null,
+    },
+    fetchFields: {
       type: Array,
       default: null,
     },
@@ -206,7 +209,7 @@ export default {
       type: Array,
       default: () => [],
     },
-    isExpermentalAPI: {
+    experimentalApi: {
       type: Boolean,
       required: false,
       default: false,
@@ -251,9 +254,6 @@ export default {
         this.$emit('input', { ids: [], include: !selectAll });
       },
     },
-    ...mapGetters({
-      getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME,
-    }),
     tableTitle() {
       if (this.title) return this.title;
       return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase();
@@ -284,24 +284,7 @@ export default {
       return this.moduleState.view;
     },
     schemaFieldsByName() {
-      if (this.staticFields) {
-        return this.staticFields.reduce((allFields, field) => {
-          allFields[field.name] = field;
-          return allFields;
-        }, {});
-      }
-      return this.getFieldSchemaByName(this.module);
-    },
-    viewFields() {
-      if (this.staticFields || !this.view.fields) {
-        return this.staticFields || [];
-      }
-      const { schemaFieldsByName } = this;
-      if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
-        return [];
-      }
-      return this.view.fields.map((fieldName) => schemaFieldsByName[fieldName])
-        .filter((field) => field);
+      return this.fields.reduce((allFields, field) => ({ ...allFields, [field.name]: field }), {});
     },
     ids() {
       return this.data.map((item) => item[this.idField]);
@@ -423,21 +406,21 @@ export default {
   },
   mounted() {
     if (this.staticData) {
-      if (!this.view.sort.field && !_isEmpty(this.staticFields)) {
+      if (!this.view.sort.field && !_isEmpty(this.fields)) {
         this.updateView({
           module: this.module,
           view: {
             sort: {
-              field: this.staticFields[0].name, desc: false,
+              field: this.fields[0].name, desc: false,
             },
-            schema_fields: this.staticFields,
+            schema_fields: this.fields,
           },
         });
       }
       this.loading = false;
       return;
     }
-    if (!this.$route.query.view && this.viewFields.length) {
+    if (!this.$route.query.view && this.fields.length) {
       this.fetchContentPages();
     }
     if (this.refresh) {
@@ -485,7 +468,8 @@ export default {
         limit,
         getCount,
         isRefresh,
-        isExpermentalAPI: this.isExpermentalAPI,
+        isExperimentalAPI: this.experimentalApi,
+        fields: this.fetchFields,
       }).then(() => {
         if (!this.content.fetching) {
           this.loading = false;

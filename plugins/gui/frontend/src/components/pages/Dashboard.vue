@@ -7,7 +7,7 @@
     <template v-else>
       <XSearchInsights
         v-if="canViewAnyEntity"
-        @click="onClickInsights"
+        @search="showInsights"
       />
       <XSpaces :spaces="spaces" />
     </template>
@@ -94,8 +94,13 @@ export default {
       fetchPanels: FETCH_DASHBOARD_PANELS,
       saveView: SAVE_VIEW,
     }),
-    onClickInsights() {
-      this.$router.push({ name: 'Insights Explorer' });
+    showInsights(search) {
+      this.$router.push({
+        name: 'Insights Explorer',
+        query: {
+          search,
+        },
+      });
     },
     getDashboardData() {
       return Promise.all([

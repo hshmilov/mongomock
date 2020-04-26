@@ -9,7 +9,7 @@
       >
         <XTable
           v-model="selection"
-          :static-fields="fields"
+          :fields="fields"
           :on-click-row="navigateReport"
           module="reports"
           title="Reports"

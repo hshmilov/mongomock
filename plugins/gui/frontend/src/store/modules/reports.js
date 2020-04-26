@@ -14,7 +14,7 @@ export const reports = {
         content: { data: [], fetching: false, error: ''},
         count: { data: 0, fetching: false, error: ''},
         view: {
-            page: 0, pageSize: 20, fields: [], coloumnSizes: [],
+            page: 0, pageSize: 20, coloumnSizes: [],
             query: {
                 filter: '', expressions: []
             },

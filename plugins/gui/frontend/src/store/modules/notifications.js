@@ -16,19 +16,8 @@ export const notifications = {
 		content: { data: [], fetching: false, error: ''},
 		count: { data: 0, fetching: false, error: ''},
 		view: {
-			page: 0, pageSize: 20, fields: [
-				'severity', 'date_fetched', 'plugin_name', 'title'
-			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
+			page: 0, pageSize: 20, coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 		},
-		fields: { data: { generic: [
-			{ name: 'uuid' },
-			{ name: 'severity', title: 'Severity', type: 'string', format: 'icon' },
-			{ name: 'date_fetched', title: 'Date Time', type: 'string', format: 'date-time' },
-			{ name: 'plugin_name', title: 'Source', type: 'string' },
-			{ name: 'title', title: 'Title', type: 'string' },
-			{ name: 'seen' }
-		]}},
-
 
 		aggregatedList: { fetching: false, data: [], error: '' },
 

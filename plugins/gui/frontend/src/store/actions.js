@@ -2,6 +2,7 @@ import axiosClient from '@api/axios.js';
 import Promise from 'promise';
 
 import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
 import { INIT_USER } from './modules/auth';
 import {
   UPDATE_DATA, UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
@@ -88,7 +89,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
 
   module.count.data = undefined;
 
-  if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
+  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path)) {
     return dispatch(REQUEST_API, {
       rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
       type: UPDATE_DATA_COUNT,
@@ -157,10 +158,11 @@ const createPostContentRequest = (state, payload) => {
   if (payload.limit !== undefined) {
     params.limit = payload.limit;
   }
-  if (_get(view, 'fields', []).length) {
+  const fields = payload.fields || _get(view, 'fields', []);
+  if (fields.length) {
     // fields is array, we want to format it as string
     // so we are using ${}
-    params.fields = `${view.fields}`;
+    params.fields = `${fields}`;
   }
   if (_get(view, 'schema_fields', []).length) {
     params.schema_fields = view.schema_fields;
@@ -214,12 +216,12 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
   const getCount = !(payload.getCount === false);
 
   if (!payload.skip && module.count !== undefined && getCount) {
-    await dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExpermentalAPI: payload.isExpermentalAPI });
+    await dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExperimentalAPI: payload.isExperimentalAPI });
   }
 
   const { view } = module;
 
-  if (payload.isExpermentalAPI && ['users', 'devices'].includes(path)) {
+  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path)) {
     return dispatch(REQUEST_API, {
       rule: `/graphql/search/${path}?term=${view.query.search}&limit=${payload.limit}&offset=${payload.skip}`,
       type: UPDATE_DATA_CONTENT,
@@ -345,13 +347,24 @@ export const saveDataView = ({ state, dispatch, commit }, payload) => {
 };
 
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS';
-export const fetchDataFields = ({ state, dispatch }, payload) => {
-  if (!getModule(state, payload)) return;
-  dispatch(REQUEST_API, {
+export const fetchDataFields = async ({ state, dispatch }, payload) => {
+  if (!getModule(state, payload)) {
+    return Promise.resolve();
+  }
+  return dispatch(REQUEST_API, {
     rule: `${payload.module}/fields`,
     type: UPDATE_DATA_FIELDS,
     payload: { module: payload.module },
   });
+};
+
+export const LAZY_FETCH_DATA_FIELDS = 'LAZY_FETCH_DATA_FIELDS';
+export const lazyFetchDataFields = async ({ dispatch, state }, payload) => {
+  const fields = _get(state, `${payload.module}.fields.data`, {});
+  if (!_isEmpty(fields)) {
+    return Promise.resolve();
+  }
+  return dispatch(FETCH_DATA_FIELDS, payload);
 };
 
 export const FETCH_DATA_HYPERLINKS = 'FETCH_DATA_HYPERLINKS';

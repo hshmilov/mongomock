@@ -4,6 +4,7 @@
           module="notifications"
           endpoint="dashboard/notifications"
           title="Notifications"
+          :fields="fields"
           :on-click-row="navigateNotification"
           ref="table"
         />
@@ -21,7 +22,15 @@
         name: 'x-notifications',
         components: {xPage, xTable},
         computed: {
-            ...mapState(['notification'])
+            ...mapState(['notification']),
+          fields() {
+              return [
+                { name: 'severity', title: 'Severity', type: 'string', format: 'icon' },
+                { name: 'date_fetched', title: 'Date Time', type: 'string', format: 'date-time' },
+                { name: 'plugin_name', title: 'Source', type: 'string' },
+                { name: 'title', title: 'Title', type: 'string' },
+              ]
+          }
         },
         methods: {
             ...mapActions({

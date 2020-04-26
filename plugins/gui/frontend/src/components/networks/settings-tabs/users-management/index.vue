@@ -16,7 +16,7 @@
           title="Users"
           module="auth/allUsers"
           endpoint="settings/users"
-          :static-fields="tableColumnsSchema"
+          :fields="tableColumnsSchema"
           :multiple-row-selection="canUpdate || canDelete"
           :on-click-row="canUpdate ? openSidePanel : undefined"
           :read-only="readOnlyRows"

@@ -69,7 +69,6 @@ import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
 
 import {
-  FETCH_DATA_FIELDS,
   FETCH_SYSTEM_CONFIG,
   FETCH_SYSTEM_EXPIRED,
 } from '../store/actions';
@@ -79,8 +78,6 @@ import {
   FETCH_ALLOWED_DATES,
 } from '../store/modules/constants';
 import { GET_GETTING_STARTED_DATA } from '../store/modules/onboarding';
-
-import { entities } from '../constants/entities';
 
 import XGettingStarted from './networks/getting-started/GettingStarted.vue';
 
@@ -189,7 +186,6 @@ export default {
       fetchConstants: FETCH_CONSTANTS,
       fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
       fetchAllowedDates: FETCH_ALLOWED_DATES,
-      fetchDataFields: FETCH_DATA_FIELDS,
       featchFeatureFlags: FETCH_FETURE_FLAGS,
     }),
     changeChecklistOpenState() {
@@ -200,10 +196,6 @@ export default {
       this.fetchConstants();
 
       if (!this.isExpired) {
-        entities.forEach((entity) => {
-          if (this.$cannot(entity.permissionCategory, this.$permissionConsts.actions.View)) return;
-          this.fetchDataFields({ module: entity.name });
-        });
         this.fetchConfig();
         this.fetchFirstHistoricalDate();
         this.fetchAllowedDates();

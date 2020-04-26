@@ -113,7 +113,9 @@ import xEntityTags from './Tags.vue';
 
 import { SINGLE_ADAPTER } from '../../../../store/getters';
 import { SELECT_DATA_CURRENT } from '../../../../store/mutations';
-import { FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS } from '../../../../store/actions';
+import {
+  FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS, LAZY_FETCH_DATA_FIELDS,
+} from '../../../../store/actions';
 
 export default {
   name: 'XEntityLayout',
@@ -210,6 +212,7 @@ export default {
     if (!this.hyperlinks.length) {
       this.fetchDataHyperlinks({ module: this.module });
     }
+    this.fetchDataFields({ module: this.module });
   },
   mounted() {
     this.fetchDataCurrentTasks({
@@ -231,6 +234,7 @@ export default {
       fetchDataCurrent: FETCH_DATA_CURRENT,
       fetchDataCurrentTasks: FETCH_DATA_CURRENT_TASKS,
       fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
+      fetchDataFields: LAZY_FETCH_DATA_FIELDS,
     }),
   },
 };
