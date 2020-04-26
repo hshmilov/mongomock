@@ -1,13 +1,16 @@
 import logging
 
+from typing import Optional
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius_users_adapter.connection import AxoniusUsersConnection
 from axonius_users_adapter.client_id import get_client_id
-from axonius_users_adapter.structures import SystemUser, Permission
+from axonius_users_adapter.structures import SystemUser, PermissionV2, Role, PermissionV1
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -108,6 +111,58 @@ class AxoniusUsersAdapter(AdapterBase):
             'type': 'array'
         }
 
+    @staticmethod
+    def _is_valid_action_item(action_name, is_permitted):
+        return isinstance(action_name, str) and isinstance(is_permitted, bool)
+
+    def _parse_user_role(self, user_role: Optional[dict]):
+        if not (isinstance(user_role, dict) and isinstance(user_role.get('permissions'), dict)):
+            logger.error(f'Invalid user_roles_raw given: {user_role}')
+            return None
+
+        role_permissions = []
+        for category_name, category in user_role['permissions'].items():
+            if not isinstance(category, dict):
+                continue
+
+            for section_or_action_name, val in category.items():
+                section_name = None
+
+                #  * action_item = 'action_name': bool , e.g. "get": true
+                if self._is_valid_action_item(section_or_action_name, val):
+                    actions = {section_or_action_name:  val}
+                #  * 'section_name': { action_item, action_item, ... }
+                #    e.g. "connections": { "delete": true, "post": true, "put": true }
+                elif (isinstance(val, dict) and
+                      all(self._is_valid_action_item(k, v)
+                          for k, v in val.items())):
+                    section_name = section_or_action_name
+                    actions = val
+                else:
+                    logger.warning(f'invalid permission value found for'
+                                   f' {category_name}.{section_or_action_name}: {val}')
+                    continue
+
+                for action_name, is_permitted in actions.items():
+                    try:
+                        role_permissions.append(PermissionV2(category=category_name,
+                                                             section=section_name,
+                                                             action=action_name,
+                                                             is_permitted=is_permitted))
+                    except Exception:
+                        logger.exception(f'Failed appending role permission'
+                                         f' {category_name};{section_name};{action_name}: {is_permitted}')
+
+        try:
+            return Role(uuid=user_role.get('uuid'),
+                        name=user_role.get('name'),
+                        date_fetched=parse_date(user_role.get('date_fetched')),
+                        predefined=user_role.get('predefined'),
+                        permissions=role_permissions)
+        except Exception:
+            logger.exception(f'Failed constructing role: {user_role}')
+            return None
+
     def _create_user(self, user_raw):
         try:
             # noinspection PyTypeChecker
@@ -128,16 +183,21 @@ class AxoniusUsersAdapter(AdapterBase):
             # specific fields
             user.source = user_raw.get('source')
             user.role_name = user_raw.get('role_name')
+
+            # old permissions (pre 3.3)
             permissions_raw = user_raw.get('permissions')
             if isinstance(permissions_raw, dict):
                 permissions = []
                 for permission_type, permission_level in permissions_raw.items():
                     try:
-                        permissions.append(Permission(type=permission_type,
-                                                      level=permission_level))
+                        permissions.append(PermissionV1(type=permission_type,
+                                                        level=permission_level))
                     except Exception:
                         logger.warning(f'Invalid permission encountered: {permission_type} {permission_level}')
                 user.permissions = permissions
+
+            # new role permissions (post 3.3)
+            user.role = self._parse_user_role(user_raw.get('role'))
 
             user.set_raw(user_raw)
             return user

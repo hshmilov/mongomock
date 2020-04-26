@@ -1,5 +1,7 @@
 import logging
 
+from typing import Generator, Tuple
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius_users_adapter import consts
@@ -53,8 +55,31 @@ class AxoniusUsersConnection(RESTConnection):
                 del user['password']
             yield user
 
+    def _iter_system_roles_by_id(self) -> Generator[Tuple[str, dict], None, None]:
+        response = self._get('system/roles')
+        if not isinstance(response, list):
+            logger.error(f'Invalid roles receive: {response}')
+            return
+        for role in response:
+            if not (isinstance(role, dict) and isinstance(role.get('uuid'), str)):
+                logger.error(f'Invalid role encountered: {role}')
+                continue
+            yield (role['uuid'], role)
+
     def get_user_list(self):
-        yield from self._iter_system_users()
+        role_by_id = dict(self._iter_system_roles_by_id())
+
+        def __try_get_user_role(user):
+            if not (isinstance(user.get('role_id'), str) and role_by_id.get(user.get('role_id'))):
+                logger.warning(f'User with no role or role doesnt exist: {user}')
+                return None
+            return role_by_id[user['role_id']]
+
+        for user in self._iter_system_users():
+            user_role = __try_get_user_role(user)
+            if user_role:
+                user['role'] = user_role
+            yield user
 
     def get_device_list(self):
         pass
