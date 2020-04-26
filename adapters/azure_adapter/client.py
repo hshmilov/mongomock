@@ -9,7 +9,7 @@ from azure.mgmt.network import NetworkManagementClient
 from msrestazure import azure_cloud as azure
 
 from axonius.clients.rest.connection import RESTConnection
-from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG
+from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG, AzureStackHubProxySettings
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -20,9 +20,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AzureClient:
     DEFAULT_CLOUD = 'Azure Public Cloud'
 
+    # pylint: disable=too-many-arguments
     def __init__(self, subscription_id,
                  client_id, client_secret, tenant_id, cloud_name=None,
                  azure_stack_hub_resource=None, azure_stack_hub_url=None,
+                 azure_stack_hub_proxy_settings: AzureStackHubProxySettings = AzureStackHubProxySettings.ProxyOnlyAuth,
                  https_proxy=None, verify_ssl=None):
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
@@ -30,15 +32,25 @@ class AzureClient:
         self.cloud = cloud
         self.https_proxy = https_proxy
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
+        self.using_azure_stack_hub = False
+        self.azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
+        self.azure_stack_hub_url = azure_stack_hub_url
 
         if azure_stack_hub_url and azure_stack_hub_resource:
             base_url = azure_stack_hub_url.strip()
             resource = azure_stack_hub_resource.strip()
+            self.using_azure_stack_hub = True
 
-            logger.info(f'Using Azure Stack Hub - Resource "{resource}" with URL "{base_url}"')
+            hub_proxies = None
+            if azure_stack_hub_proxy_settings in [AzureStackHubProxySettings.ProxyOnlyAuth,
+                                                  AzureStackHubProxySettings.ProxyAll]:
+                hub_proxies = proxies.copy()
+
+            logger.info(f'Using Azure Stack Hub - Resource "{resource}" with URL "{base_url}".'
+                        f'Proxy settings: {azure_stack_hub_proxy_settings.name}. Auth Proxy: {hub_proxies}')
             credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
                                                       cloud_environment=cloud, resource=resource,
-                                                      proxies=proxies, verify=verify_ssl)
+                                                      proxies=hub_proxies, verify=verify_ssl)
         else:
             base_url = cloud.endpoints.resource_manager
             credentials = ServicePrincipalCredentials(client_id=client_id, secret=client_secret, tenant=tenant_id,
@@ -46,29 +58,56 @@ class AzureClient:
         self.compute = ComputeManagementClient(credentials, subscription_id, base_url=base_url)
         self.network = NetworkManagementClient(credentials, subscription_id, base_url=base_url)
         if proxies:
-            self.network.config.proxies.use_env_settings = False
-            self.network.config.proxies.proxies = proxies
-            self.compute.config.proxies.use_env_settings = False
-            self.compute.config.proxies.proxies = proxies
+            if not self.using_azure_stack_hub or (self.using_azure_stack_hub and azure_stack_hub_proxy_settings in [
+                    AzureStackHubProxySettings.ProxyOnlyAzureStackHub, AzureStackHubProxySettings.ProxyAll
+            ]):
+                self.network.config.proxies.use_env_settings = False
+                self.network.config.proxies.proxies = proxies
+                self.compute.config.proxies.use_env_settings = False
+                self.compute.config.proxies.proxies = proxies
 
         if verify_ssl is False:
             self.network.config.connection.verify = False
             self.compute.config.connection.verify = False
 
-    def test_connectivity(self):
+    def _test_connectivity(self):
+        # not working
         if self.https_proxy:
             proxies = {'https': RESTConnection.build_url(self.https_proxy).strip('/')}
         else:
             proxies = None
 
+        if self.using_azure_stack_hub and \
+                self.azure_stack_hub_proxy_settings not in [AzureStackHubProxySettings.ProxyOnlyAuth,
+                                                            AzureStackHubProxySettings.ProxyAll]:
+            proxies = None
+
         endpoint = self.cloud.endpoints.active_directory
-        response = requests.get(endpoint, verify=False, proxies=proxies)
+        logger.info(f'Testing connectivity for endpoint {endpoint} with proxy {proxies}')
+        response = requests.get(endpoint, verify=False, proxies=proxies, timeout=10)
         try:
             response.raise_for_status()
         except Exception:
             logger.exception(f'Error while getting to auth point')
             raise ValueError(f'Error while connecting to {endpoint} - '
                              f'Returned status {response.status_code}: {response.content}')
+
+        if self.using_azure_stack_hub:
+            if self.https_proxy and \
+                    self.azure_stack_hub_proxy_settings in [AzureStackHubProxySettings.ProxyOnlyAzureStackHub,
+                                                            AzureStackHubProxySettings.ProxyAll]:
+                proxies = {'https': RESTConnection.build_url(self.https_proxy).strip('/')}
+            else:
+                proxies = None
+
+            logger.info(f'Testing connectivity for endpoint {self.azure_stack_hub_url} with proxy {proxies}')
+            response = requests.get(self.azure_stack_hub_url, verify=False, proxies=proxies, timeout=10)
+            try:
+                response.raise_for_status()
+            except Exception:
+                logger.exception(f'Error while getting to auth point')
+                raise ValueError(f'Error while connecting to {self.azure_stack_hub_url} - '
+                                 f'Returned status {response.status_code}: {response.content}')
 
     @classmethod
     def get_clouds(cls):
@@ -82,7 +121,7 @@ class AzureClient:
         return clouds
 
     def test_connection(self):
-        self.test_connectivity()
+        # self.test_connectivity()
 
         for _ in self.compute.virtual_machines.list_all():
             break

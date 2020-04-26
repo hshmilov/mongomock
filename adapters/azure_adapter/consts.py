@@ -1,4 +1,6 @@
 import re
+from enum import Enum
+
 from axonius.devices.device_adapter import DeviceRunningState
 
 # VM ID Format: /subscriptions/[subscription-id]/resourceGroups/[resource-group-name]/providers/Microsoft.Compute/
@@ -20,3 +22,10 @@ POWER_STATE_MAP = {
     'PowerState/deallocated': DeviceRunningState.TurnedOff,
     'PowerState/deallocating': DeviceRunningState.ShuttingDown,
 }
+
+
+class AzureStackHubProxySettings(Enum):
+    DoNotUseProxy = 'Do Not Use Proxy'
+    ProxyOnlyAuth = 'Proxy Authentication'
+    ProxyOnlyAzureStackHub = 'Proxy Azure Stack Hub'
+    ProxyAll = 'Proxy All'

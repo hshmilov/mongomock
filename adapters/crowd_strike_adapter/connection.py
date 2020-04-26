@@ -293,6 +293,7 @@ class CrowdStrikeConnection(RESTConnection):
 
         devices = self.get_devices_data(response['resources'], should_get_policies, should_get_vulnerabilities)
         yield from devices['resources']
+        logger.info(f'Total count: {total_count}')
         while offset < total_count and offset < consts.MAX_NUMBER_OF_DEVICES:
             try:
                 response = self.get_devices_ids(offset, devices_per_page)

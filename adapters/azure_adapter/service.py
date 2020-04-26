@@ -8,7 +8,7 @@ from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
-from azure_adapter.consts import POWER_STATE_MAP
+from azure_adapter.consts import POWER_STATE_MAP, AzureStackHubProxySettings
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -21,6 +21,7 @@ AZURE_VERIFY_SSL = 'verify_ssl'
 AZURE_CLOUD_ENVIRONMENT = 'cloud_environment'
 AZURE_STACK_HUB_URL = 'azure_stack_hub_url'
 AZURE_STACK_HUB_RESOURCE = 'azure_stack_hub_resource'
+AZURE_STACK_HUB_PROXY_SETTINGS = 'azure_stack_hub_proxy_settings'
 
 
 class AzureImage(SmartJsonClass):
@@ -68,6 +69,14 @@ class AzureAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
+            azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
+            azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
+            try:
+                if azure_stack_hub_proxy_settings_value:
+                    azure_stack_hub_proxy_settings = [
+                        x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
+            except Exception:
+                logger.exception(f'Failed getting azure stack hub proxy settings')
             connection = AzureClient(client_config[AZURE_SUBSCRIPTION_ID],
                                      client_id=client_config[AZURE_CLIENT_ID],
                                      client_secret=client_config[AZURE_CLIENT_SECRET],
@@ -75,6 +84,7 @@ class AzureAdapter(AdapterBase):
                                      cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
                                      azure_stack_hub_resource=client_config.get(AZURE_STACK_HUB_RESOURCE),
                                      azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
+                                     azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
                                      https_proxy=client_config.get('https_proxy'),
                                      verify_ssl=client_config.get(AZURE_VERIFY_SSL))
             connection.test_connection()
@@ -132,6 +142,13 @@ class AzureAdapter(AdapterBase):
                     'description': 'If you are using Azure Stack Hub, please specify the resource string'
                 },
                 {
+                    'name': AZURE_STACK_HUB_PROXY_SETTINGS,
+                    'title': 'Azure Stack Hub Proxy Settings',
+                    'type': 'string',
+                    'enum': [x.value for x in AzureStackHubProxySettings],
+                    'default': AzureStackHubProxySettings.ProxyOnlyAuth.value
+                },
+                {
                     'name': 'account_tag',
                     'title': 'Account Tag',
                     'type': 'string'
@@ -154,7 +171,8 @@ class AzureAdapter(AdapterBase):
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
-                AZURE_VERIFY_SSL
+                AZURE_VERIFY_SSL,
+                AZURE_STACK_HUB_PROXY_SETTINGS
             ],
             'type': 'array'
         }

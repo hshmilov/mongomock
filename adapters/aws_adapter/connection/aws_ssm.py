@@ -170,6 +170,13 @@ def parse_raw_data_inner_ssm(
             basic_data.get('LastSuccessfulAssociationExecutionDate'))
 
         patch_group = (device_raw_data.get('tags') or {}).get('Patch Group')
+
+        try:
+            for tag_key, tag_value in (device_raw_data.get('tags') or {}).items():
+                device.add_aws_ec2_tag(key=tag_key, value=tag_value)
+        except Exception:
+            logger.exception(f'Could not populate ssm tags')
+
         ssm_data.patch_group = patch_group
 
         patch_baseline_info = (patch_group_to_patch_baseline_mapping.get(patch_group) or {})

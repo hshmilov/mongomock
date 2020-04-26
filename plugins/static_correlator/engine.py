@@ -98,6 +98,7 @@ def is_only_host_adapter(adapter_device):
                                               'cisco_ucm_adapter',
                                               'symantec_dlp_adapter',
                                               'netskope_adapter',
+                                              'sumo_logic_adapter',
                                               'flexera_adapter',
                                               'bigid_adapter',
                                               'json_adapter',

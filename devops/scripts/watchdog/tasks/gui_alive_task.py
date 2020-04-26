@@ -1,13 +1,14 @@
-import time
-import requests
-import urllib3
 import os
 import subprocess
+import time
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
-from axonius.utils.host_utils import check_installer_locks
-from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
+import requests
+import urllib3
+from scripts.watchdog.watchdog_task import WatchdogTask
+
+from axonius.consts.system_consts import CORTEX_PATH, NODE_MARKER_PATH
+from axonius.utils.host_utils import check_installer_locks
 
 SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
