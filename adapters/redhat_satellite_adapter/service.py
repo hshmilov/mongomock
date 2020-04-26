@@ -9,6 +9,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from redhat_satellite_adapter import consts
@@ -18,7 +19,7 @@ from redhat_satellite_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class RedhatSatelliteAdapter(AdapterBase):
+class RedhatSatelliteAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         cert_name = Field(str, 'Certificate Name')
@@ -41,13 +42,15 @@ class RedhatSatelliteAdapter(AdapterBase):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
+    # pylint: disable=arguments-differ
+    def get_connection(self, client_config):
         connection = RedhatSatelliteConnection(domain=client_config['domain'],
                                                verify_ssl=client_config['verify_ssl'],
                                                https_proxy=client_config.get('https_proxy'),
                                                username=client_config['username'],
-                                               password=client_config['password'])
+                                               password=client_config['password'],
+                                               fetch_host_facts=self._fetch_host_facts,
+                                               hosts_chunk_size=self._hosts_chunk_size)
         with connection:
             pass
         return connection
@@ -143,7 +146,7 @@ class RedhatSatelliteAdapter(AdapterBase):
 
             device_arch = device_raw.get('architecture_name')
             os_components = [device_arch, device_raw.get('operatingsystem_name')]
-            for version_field, software_name in consts.VERISON_FIELDS_TO_SOFTWARE_NAMES:
+            for version_field, software_name in consts.VERISON_FIELDS_TO_SOFTWARE_NAMES.items():
                 version_value = device_raw.get(version_field)
                 if isinstance(version_value, str):
                     device.add_installed_software(name=software_name, version=version_value, architecture=device_arch)
@@ -221,3 +224,35 @@ class RedhatSatelliteAdapter(AdapterBase):
     def adapter_properties(cls):
         # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_host_facts',
+                    'title': 'Fetch host facts',
+                    'type': 'bool',
+                },
+                {
+                    'name': 'hosts_chunk_size',
+                    'title': 'Host chunk size',
+                    'description': 'Hosts fetching chunk size.',
+                    'type': 'number',
+                }
+            ],
+            'required': ['fetch_host_facts', 'hosts_chunk_size'],
+            'pretty_name': 'Red Hat Satellite Configuration',
+            'type': 'array',
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_host_facts': True,
+            'hosts_chunk_size': consts.DEVICE_PER_PAGE,
+        }
+
+    def _on_config_update(self, config):
+        self._fetch_host_facts = config.get('fetch_host_facts', True)
+        self._hosts_chunk_size = config.get('hosts_chunk_size', consts.DEVICE_PER_PAGE)

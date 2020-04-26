@@ -1,7 +1,6 @@
 import logging
-from functools import partialmethod
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Iterable
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -13,18 +12,32 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class RedhatSatelliteConnection(RESTConnection):
     """ rest client for RedhatSatellite adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, fetch_host_facts: bool, *args,
+                 hosts_chunk_size: int = consts.DEVICE_PER_PAGE, **kwargs):
         super().__init__(*args, url_base_prefix='api',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
-        self._environments = []
+        self._fetch_host_facts = fetch_host_facts
+        self._hosts_chunk_size = hosts_chunk_size
 
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
-        # raises HTTPError(403) if there are no permissions
-        _ = list(self._iter_hosts(include_facts=False, limit=1))
+        # raises HTTPError(403/401) if there are no permissions
+        host = next(self._iter_hosts(limit=1, should_raise=True), None)
+        if not isinstance(host, dict):
+            message = 'Invalid hosts response received from Satellite Server. Please contact Axonius.'
+            logger.warning(f'{message} {host}')
+            raise RESTException(message)
+
+        # only check facts if it was requested and the first host had host_name
+        if self._fetch_host_facts and isinstance(host.get('name'), str):
+            facts = self._get(**self._request_params_for_facts_for_host(host['name']))
+            if not isinstance(facts, dict):
+                message = 'Invalid facts response received from Satellite Server. Please contact Axonius.'
+                logger.warning(f'{message} {facts}')
+                raise RESTException(message)
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
@@ -41,16 +54,18 @@ class RedhatSatelliteConnection(RESTConnection):
                 raise RESTException(f'Red Hat Satellite Error: {error_dict}')
         return response
 
-    def _paginated_request(self, *args, limit: int = consts.MAX_NUMBER_OF_DEVICES, **kwargs):
-        pagination_params = kwargs.setdefault(
-            'url_params' if (kwargs.get('method') or args[0]) == 'GET'
-            else 'body_params', {})
-        pagination_params.setdefault('per_page', min(consts.DEVICE_PER_PAGE, limit))
+    def paginated_get(self, *args, limit: Optional[int] = None, should_raise=False, **kwargs):
+        pagination_params = kwargs.setdefault('url_params', {})
+        chunk_size = self._hosts_chunk_size
+        if isinstance(limit, int):
+            chunk_size = min(chunk_size, limit)
+        pagination_params.setdefault('per_page', chunk_size)
+
         curr_page = pagination_params.setdefault('page', 1)  # page is 1-index based
         # Note: initial value used only for initial while iteration
         total_count = count_so_far = 0
         try:
-            while count_so_far <= min(total_count, limit):
+            while count_so_far <= min(total_count, limit or consts.MAX_NUMBER_OF_DEVICES):
                 pagination_params['page'] = curr_page
                 response = self._do_request(*args, **kwargs)
 
@@ -82,43 +97,81 @@ class RedhatSatelliteConnection(RESTConnection):
                     return
 
                 curr_page = curr_page + 1
-        except Exception:
+        except Exception as e:
             logger.exception(f'Failed paginated request after {count_so_far}/{total_count}')
+            if should_raise:
+                raise e
 
-    paginated_get = partialmethod(_paginated_request, 'GET')
+    @staticmethod
+    def _request_params_for_facts_for_host(host_name):
+        return {'name': f'v2/hosts/{host_name}/facts', 'do_basic_auth': True}
 
-    def _iter_hosts(self, include_facts=True, limit=consts.MAX_NUMBER_OF_DEVICES):
+    def _iter_async_facts_for_hosts(self, host_names: Iterable[str]):
+        get_params_by_host_name = {host_name: self._request_params_for_facts_for_host(
+            host_name) for host_name in host_names}
 
-        hosts_iter = self.paginated_get('v2/hosts', limit=limit)
-        if not include_facts:
-            # If facts are not included, all hosts are yielded here
-            yield from hosts_iter
-            return
+        # Handle succesful fact retrievals
+        for response in self._async_get(list(get_params_by_host_name.values()),
+                                        chunks=consts.ASYNC_CHUNKS,
+                                        retry_on_error=True):
+            if not self._is_async_response_good(response):
+                logger.error(f'Async response returned bad, its {response}')
+                continue
+            if not (isinstance(response, dict) and isinstance(response.get('results'), dict)):
+                logger.warning(f'invalid response returned: {response}')
+                continue
+            for host_name, facts in response['results'].items():
+                if not get_params_by_host_name.pop(host_name, None):
+                    logger.warning(f'cannot find hostname {host_name} in requests')
+                    continue
 
-        fact_requests = []
+                yield (host_name, facts)
+
+        # Yield the rest of the hosts
+        logger.info(f'The following host_names did not return facts: {list(get_params_by_host_name.keys())}')
+        yield from ((host_name, None) for host_name in get_params_by_host_name.keys())
+
+    def _iter_hosts_and_facts(self, limit: Optional[int]=None):
+
         hosts_by_hostname = {}  # type: Dict[str, List[Dict]]
-        for host in hosts_iter:
+
+        def _inject_facts_and_flush_hosts():
+            if not hosts_by_hostname:
+                return
+
+            for host_name, facts_response in self._iter_async_facts_for_hosts(hosts_by_hostname.keys()):
+                for host in (hosts_by_hostname.pop(host_name, None) or []):
+                    # Note: facts_response might be None if no facts were returned for host_name
+                    host[consts.ATTR_INJECTED_FACTS] = facts_response
+                    yield host
+
+            # yield the rest if for some reason not yielded by self._iter_async_facts_for_hosts
+            # Note: this relies on the dict.pop above to clear any host from the dict that was yielded by facts
+            for host_name, hosts in hosts_by_hostname:
+                yield from hosts
+
+        for i, host in enumerate(self._iter_hosts(limit=limit)):
             host_name = host.get('name')
             if not isinstance(host_name, str):
                 # hosts with no hostname are yielded here
                 yield host
                 continue
 
+            # Note: we're popping the hosts for the current host_name because we dont need them anymore.
             hosts_by_hostname.setdefault(host_name, []).append(host)
-            fact_requests.append(self._request_params_for_facts_for_host(host_name))
 
-        for host_name, facts in self._async_get_only_good_response(fact_requests):
-            for host in (hosts_by_hostname.get(host_name) or []):
-                host[consts.ATTR_INJECTED_FACTS] = facts
-                # the rest of the hosts, including their facts, are yielded here
-                yield host
+            # after every page, run the facts requests
+            if (i % self._hosts_chunk_size) == 0:
+                yield from _inject_facts_and_flush_hosts()
 
-    @staticmethod
-    def _request_params_for_facts_for_host(host_name):
-        return {'name': f'v2/hosts/{host_name}/facts'}
+        # perform facts injection and flush the rest
+        yield from _inject_facts_and_flush_hosts()
 
-    def _list_facts_for_host(self, host_name):
-        yield from self.paginated_get(**self._request_params_for_facts_for_host(host_name))
+    def _iter_hosts(self, limit: Optional[int]=None, should_raise=False):
+        yield from self.paginated_get('v2/hosts', limit=limit, should_raise=should_raise)
 
     def get_device_list(self):
-        yield from self._iter_hosts()
+        if self._fetch_host_facts:
+            yield from self._iter_hosts_and_facts()
+        else:
+            yield from self._iter_hosts()
