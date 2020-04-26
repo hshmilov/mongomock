@@ -178,6 +178,10 @@ class SettingsPage(Page):
     ADD_USER_BUTTON_TEXT = 'Add User'
     ADD_ROLE_BUTTON_TEXT = 'Add Role'
 
+    USE_S3_INTEGRATION = 'Enable Amazon S3 integration'
+    USE_S3_BACKUP = 'Enable backup to Amazon S3'
+    USE_ROOT_MASTER = 'Enable Root Master Mode'
+
     FOOTER_ERROR_CSS = '.x-side-panel__footer .indicator-error--text'
 
     EXPANSION_HEADER_ICON_CSS = '.v-expansion-panel-header__icon'
@@ -1303,3 +1307,27 @@ class SettingsPage(Page):
         current_settings = session.get('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
                                        timeout=self.SETTINGS_SAVE_TIMEOUT)
         return current_settings.json().get('config', None)
+
+    def toggle_root_master(self, toggle_value):
+        toggle = self.find_checkbox_by_label(self.USE_ROOT_MASTER)
+        self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
+
+    def set_s3_integration_settings_enabled(self):
+        toggle = self.find_checkbox_by_label(self.USE_S3_INTEGRATION)
+        self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+
+    def set_s3_backup_settings_enabled(self, make_yes=True):
+        toggle = self.find_checkbox_by_label(self.USE_S3_BACKUP)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
+
+    def fill_s3_bucket_name(self, value):
+        self.fill_text_field_by_element_id('bucket_name', value)
+
+    def fill_s3_access_key(self, value):
+        self.fill_text_field_by_element_id('aws_access_key_id', value)
+
+    def fill_s3_secret_key(self, value):
+        self.fill_text_field_by_element_id('aws_secret_access_key', value)
+
+    def fill_s3_preshared_key(self, value):
+        self.fill_text_field_by_element_id('preshared_key', value)

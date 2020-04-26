@@ -115,6 +115,7 @@ def backup_to_s3():
         # Final step: Upload the file to s3
         with open(f'{AXONIUS_BACKUP_FILENAME}.gpg', 'rb') as file_obj:
             upload_file_to_s3(aws_bucket_name, key_name, file_obj, aws_access_key_id, aws_secret_access_key)
+            logger.info(f'Completed S3 backup file name: {key_name}')
 
         logger.info(f'Backup to s3: Finished')
     except Exception as e:

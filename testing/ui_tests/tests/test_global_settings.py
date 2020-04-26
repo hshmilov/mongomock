@@ -1,20 +1,39 @@
+import json
+import os
+import random
+import shutil
+import tarfile
+from pathlib import Path
 import pytest
+import boto3
+from botocore.exceptions import ClientError
 
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_service import SmtpService
+from test_credentials.test_aws_credentials import (EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+                                                   EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+from test_credentials.test_gui_credentials import AXONIUS_USER
+from test_credentials.test_ad_credentials import ad_client1_details
+from test_credentials.json_file_credentials import client_details as json_file_creds
 from test_helpers.log_tester import LogTester
 from test_helpers.machines import PROXY_IP, PROXY_PORT
-from ui_tests.tests.ui_consts import GUI_LOG_PATH
+from ui_tests.tests.ui_consts import GUI_LOG_PATH, SYSTEM_SCHEDULER_LOG_PATH, AD_ADAPTER_NAME, JSON_ADAPTER_NAME,\
+    S3_DEVICES_BACKUP_FILE_NAME, S3_USERS_BACKUP_FILE_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
-from testing.test_credentials.test_ad_credentials import ad_client1_details
 
 INVALID_EMAIL_HOST = 'dada...$#@'
+AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
+AXONIUS_BACKUP_FILENAME = 'axonius_backup.tar.gz'
+S3_BACKUP_PRESHARED_KEY = '1234567812345678'
+S3_BACKUP_FILE_PATTERN = 'Completed S3 backup file name: (.*)\\.gpg'
+S3_FILES_LOCAL_DIRECTORY = 'tmp_backup_files'
 
 
 class TestGlobalSettings(TestBase):
@@ -213,3 +232,211 @@ class TestGlobalSettings(TestBase):
         with pytest.raises(NoSuchElementException):
             self.settings_page.find_correlation_hours_error()
         assert not self.settings_page.is_save_button_disabled()
+
+    def _enable_s3_integration(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.wait_for_spinner_to_end()
+
+        self.settings_page.set_s3_integration_settings_enabled()
+        self.settings_page.fill_s3_bucket_name(AXONIUS_CI_TESTS_BUCKET)
+        self.settings_page.fill_s3_access_key(EC2_ECS_EKS_READONLY_ACCESS_KEY_ID)
+        self.settings_page.fill_s3_secret_key(EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+        self.settings_page.set_s3_backup_settings_enabled()
+        self.settings_page.fill_s3_preshared_key(S3_BACKUP_PRESHARED_KEY)
+        self.settings_page.save_and_wait_for_toaster()
+
+    def test_s3_backup(self):
+        local_dir = _get_backup_files_local_dir()
+        self._enable_s3_integration()
+
+        # Backup files will be added after discovery cycle is done.
+        self.base_page.run_discovery()
+
+        file_name = _get_s3_backup_file_name()
+
+        if file_name:
+            try:
+                files = _get_s3_backup_file_content(file_name, local_dir)
+                devices_file_name = files.get(S3_DEVICES_BACKUP_FILE_NAME, None)
+                users_file_name = files.get(S3_USERS_BACKUP_FILE_NAME, None)
+
+                def validate_data(db, internal_file_name):
+                    if internal_file_name is not None:
+                        with open(local_dir / internal_file_name) as file:
+                            items = json.load(file)
+                            num_of_backup_items = len(items)
+
+                        assert db.count_documents({}) == num_of_backup_items
+
+                        if items is not None:
+                            random_item_position = random.randint(0, num_of_backup_items - 1)
+                            item_to_compare = items[random_item_position]
+                            local_item = db.find_one({'internal_axon_id': item_to_compare['internal_axon_id']})
+
+                            assert json.dumps(local_item, cls=IteratorJSONEncoder, sort_keys=True) \
+                                == json.dumps(item_to_compare, cls=IteratorJSONEncoder, sort_keys=True)
+                        else:
+                            raise AssertionError(f'S3 Backup: backup file: {internal_file_name} is empty.')
+                    else:
+                        raise AssertionError('Unable to assert backup with empty file.')
+
+                validate_data(self.axonius_system.get_devices_db(), devices_file_name)
+                validate_data(self.axonius_system.get_users_db(), users_file_name)
+            finally:
+                remove_s3_backup_file(file_name)
+                shutil.rmtree(local_dir)
+        else:
+            raise AssertionError('Unable to locate s3 backup file name')
+
+    def _toggle_root_master(self, toggle_value):
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+
+        self.settings_page.switch_to_page()
+        self.settings_page.click_feature_flags()
+        self.settings_page.toggle_root_master(toggle_value)
+        self.settings_page.save_and_wait_for_toaster()
+
+    def test_s3_restore(self):
+        local_dir = _get_backup_files_local_dir()
+        self._enable_s3_integration()
+
+        # Backup files will be added after discovery cycle is done.
+        self.base_page.run_discovery()
+
+        file_name = _get_s3_backup_file_name()
+
+        if file_name:
+            try:
+                files = _get_s3_backup_file_content(file_name, local_dir)
+                devices_file_name = files.get(S3_DEVICES_BACKUP_FILE_NAME, None)
+                users_file_name = files.get(S3_USERS_BACKUP_FILE_NAME, None)
+
+                # get devices and users data.
+                def get_backup_data(internal_file_name):
+                    if internal_file_name is not None:
+                        with open(local_dir / internal_file_name) as file:
+                            items = json.load(file)
+                            if items is not None:
+                                num_of_backup_items = len(items)
+                                random_item_position = random.randint(0, num_of_backup_items - 1)
+                                item_to_compare = items[random_item_position]
+                                return {
+                                    'num_of_items': num_of_backup_items,
+                                    'item_to_compare': item_to_compare
+                                }
+                            raise AssertionError(f'S3 Restore: backup file: {internal_file_name} is empty.')
+                    else:
+                        raise AssertionError('Unable to assert backup with empty file.')
+
+                devices_data = get_backup_data(devices_file_name)
+                users_data = get_backup_data(users_file_name)
+
+                # Start restore process after backup data is ready for comparison.
+                self._toggle_root_master(True)
+
+                self._enable_s3_integration()
+
+                # Clean adapters connection so only backup data will be inserted.
+                self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
+                self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
+
+                # Restore process is running at the beginning of a cycle.
+                self.base_page.run_discovery()
+
+                def assert_data_after_restore(db, item_to_compare, num_of_backup_items):
+                    assert db.count_documents({}) == num_of_backup_items
+                    local_item = db.find_one({'internal_axon_id': item_to_compare['internal_axon_id']})
+
+                    for adapter_entity in (local_item.get('adapters') or []):
+                        if adapter_entity.get('data'):
+                            adapter_entity['data'].pop('backup_source', None)
+
+                    assert json.dumps(local_item, cls=IteratorJSONEncoder, sort_keys=True) \
+                        == json.dumps(item_to_compare, cls=IteratorJSONEncoder, sort_keys=True)
+
+                assert_data_after_restore(self.axonius_system.get_devices_db(), devices_data.get('item_to_compare'),
+                                          devices_data.get('num_of_items'))
+                assert_data_after_restore(self.axonius_system.get_users_db(), users_data.get('item_to_compare'),
+                                          users_data.get('num_of_items'))
+
+            finally:
+                # Add adapters credentials for other tests.
+                self._toggle_root_master(False)
+                self.adapters_page.add_server(ad_client1_details)
+                self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
+                remove_s3_backup_file(file_name)
+                # Remove local dir
+                shutil.rmtree(local_dir)
+
+        else:
+            raise AssertionError('Unable to locate s3 backup file name')
+
+
+def _get_backup_files_local_dir():
+    current_dir = Path().absolute()
+    return current_dir / S3_FILES_LOCAL_DIRECTORY
+
+
+def _get_s3_backup_file_name():
+    # get latest backup file name
+    wait_until(lambda: LogTester(SYSTEM_SCHEDULER_LOG_PATH).is_pattern_in_log(S3_BACKUP_FILE_PATTERN,
+                                                                              10))
+    log_rows = LogTester(SYSTEM_SCHEDULER_LOG_PATH).get_pattern_lines_from_log(S3_BACKUP_FILE_PATTERN, 10)
+    # e.g: log_rows =
+    # ["Completed S3 backup file name: axonius_backup_Master_None__2020-04-21_08:31:25.524785.tar.gz.gpg"]
+    return log_rows[len(log_rows) - 1].split(':', 1)[1].strip()
+
+
+def _get_s3_backup_file_content(file_name, backup_local_directory):
+    Path(backup_local_directory).mkdir(parents=True, exist_ok=True)
+
+    backup_local_file_path = backup_local_directory / file_name
+    decrypted_backup_local_file = backup_local_directory / 'decrypted_backup.tar.gz'
+
+    client = boto3.client(
+        's3',
+        aws_access_key_id=EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+        aws_secret_access_key=EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
+    )
+
+    print(file_name)
+    client.download_file(AXONIUS_CI_TESTS_BUCKET, str(file_name), str(backup_local_file_path))
+
+    os.system(f'echo {S3_BACKUP_PRESHARED_KEY} | gpg --batch --yes --passphrase-fd 0 --output'
+              f' {decrypted_backup_local_file}'
+              f' --decrypt {backup_local_file_path}')
+
+    devices_file_name = None
+    users_file_name = None
+
+    with tarfile.open(decrypted_backup_local_file, mode='r') as tar:
+        tar.extractall(backup_local_directory)
+        names = tar.getnames()
+        for zipped_file_name in names:
+            if zipped_file_name.startswith('devices'):
+                devices_file_name = zipped_file_name
+            elif zipped_file_name.startswith('users'):
+                users_file_name = zipped_file_name
+
+    return {
+        'devices_file_name': devices_file_name,
+        'users_file_name': users_file_name
+    }
+
+
+def remove_s3_backup_file(file_name):
+    client = boto3.client(
+        's3',
+        aws_access_key_id=EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+        aws_secret_access_key=EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
+    )
+
+    try:
+        client.delete_object(Bucket=AXONIUS_CI_TESTS_BUCKET, Key=file_name)
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code != 'NotFound':
+            raise e

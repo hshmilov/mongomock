@@ -18,6 +18,7 @@ LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
 GUI_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'gui', 'gui.axonius.log')
 REPORTS_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'reports', 'reports.axonius.log')
 LOGS_AFTER_UPGRADE_PATH = os.path.join(CORTEX_PATH, 'install_dir', 'cortex', 'logs')
+SYSTEM_SCHEDULER_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'system-scheduler', 'system_scheduler.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
 UPDATE_USERNAME = 'UpdateUser'
@@ -98,6 +99,9 @@ TAGS_FIELD_NAME = 'Tags'
 
 DISCOVERY_DEFAULT_VALUE = '12'
 DISCOVERY_UPDATED_VALUE = '8'
+
+S3_DEVICES_BACKUP_FILE_NAME = 'devices_file_name'
+S3_USERS_BACKUP_FILE_NAME = 'users_file_name'
 
 
 class EmailSettings:
