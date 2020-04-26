@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "Running unitests"
-pytest -vv -s --ignore=testing --ignore=deployment --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform
+pytest -vv -s --ignore=testing --ignore=deployment --ignore=plugins/gui/src/frontend --ignore=libs/axonius-base-image/libs/py-space-platform
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"

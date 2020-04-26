@@ -8,10 +8,6 @@ class JuniperService(AdapterService):
     def __init__(self):
         super().__init__('juniper')
 
-    @property
-    def is_unique_image(self):
-        return True
-
 
 @pytest.fixture(scope='module', autouse=True)
 def juniper_fixture(request):

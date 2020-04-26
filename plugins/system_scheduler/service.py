@@ -90,7 +90,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__realtime_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
         self.__realtime_scheduler.add_job(func=self.__run_realtime_adapters,
                                           trigger=IntervalTrigger(seconds=30),
-                                          next_run_time=datetime.now(),
+                                          next_run_time=datetime.now() + timedelta(minutes=10),
                                           max_instances=1)
         self.__realtime_scheduler.start()
 

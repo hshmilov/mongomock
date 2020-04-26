@@ -20,7 +20,7 @@ USER = 'username'
 ESET_HOST = 'host'
 ESET_PORT = 'port'
 
-BIN_LOCATION = '/home/axonius/bin/eset_connection.so'
+BIN_LOCATION = '/home/axonius-base-image/bin/ERAApi/eset_connection.so'
 
 
 class EsetAdapter(AdapterBase):

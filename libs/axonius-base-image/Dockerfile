@@ -113,5 +113,16 @@ RUN rm -rf temp_openssl
 RUN cp /usr/local/ssl/lib/libcrypto.so.* /lib/x86_64-linux-gnu/ && \
     cp /usr/local/ssl/lib/libssl.so.* /lib/x86_64-linux-gnu/
 
+# Install specific adapters dependencies
+# 1. Juniper
+COPY ./libs/py-space-platform /home/axonius-base-image/adapters-libs/py-space-platform
+RUN pip3 install /home/axonius-base-image/adapters-libs/py-space-platform
+
+# 2. ESET
+COPY ./libs/ERAApi/Network.so /usr/bin/
+COPY ./libs/ERAApi/Network.so /usr/local/bin/
+COPY ./libs/ERAApi/* /home/axonius-base-image/bin/ERAApi/
+RUN cd /home/axonius-base-image/bin/ERAApi && make
+
 # Set a label for this image.
 LABEL "com.axonius.image-type"="axonius"
