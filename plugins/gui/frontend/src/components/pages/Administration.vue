@@ -26,6 +26,7 @@
       />
     </div>
     <XButton
+      id="execute_script"
       :disabled="!uploaded"
       title="Run"
       @click="handleFileExecution"

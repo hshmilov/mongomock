@@ -89,7 +89,7 @@ class Configuration:
         del self.upload_files_list[file_id]
         return make_response((f'file {file_id} deleted', 200))
 
-    @gui_route_logged_in('/execute/<file_id>', methods=['POST'], enforce_trial=False)
+    @gui_route_logged_in('execute/<file_id>', methods=['POST'], enforce_trial=False)
     def execute_file(self, file_id):
         if file_id in self.upload_files_list:
             file_name = 'configuration_script.tar'

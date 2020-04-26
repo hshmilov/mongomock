@@ -109,6 +109,7 @@ class DashboardPage(Page):
 
     NEW_CARD_CHART_CSS = '.x-tab.active .x-card.chart-new'
     EXPLORER_RESULTS_CSS = '.explorer-results'
+    TRIAL_BANNER_CSS = '.x-trial-banner'
 
     @property
     def root_page_css(self):
@@ -756,7 +757,13 @@ class DashboardPage(Page):
         return translated_data
 
     def find_no_trial_banner(self):
-        self.wait_for_element_absent_by_css('.x-trial-banner')
+        self.wait_for_element_absent_by_css(self.TRIAL_BANNER_CSS)
+
+    def wait_for_trial_banner(self):
+        self.wait_for_element_present_by_css(self.TRIAL_BANNER_CSS)
+
+    def try_to_find_trial_banner(self):
+        self.driver.find_element_by_css_selector(self.TRIAL_BANNER_CSS)
 
     def find_banner_no_contract(self):
         self.wait_for_element_absent_by_css(self.BANNER_NO_CONTRACT_CLASS)

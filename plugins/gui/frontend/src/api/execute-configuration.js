@@ -2,7 +2,7 @@ import axiosClient from '@api/axios';
 import createRequest from './create-request';
 
 export const executeFile = async (fileServerId) => {
-  const uri = `/settings/configurations/execute/${fileServerId}`;
+  const uri = `/settings/configuration/execute/${fileServerId}`;
   const request = createRequest(uri);
 
   const requestOptions = {
@@ -46,7 +46,7 @@ export const processFileUploadInChunks = (
         // eslint-disable-next-line no-await-in-loop
         const result = await axiosClient({
           method: 'patch',
-          url: `/upload_file?patch=${fileId}`,
+          url: `settings/configuration/upload_file?patch=${fileId}`,
           data: chunk,
           headers: {
             'Content-Type': 'application/offset+octet-stream',

@@ -27,6 +27,7 @@ from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
+from ui_tests.pages.administration_page import AdministrationPage
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.compliance_page import CompliancePage
 from ui_tests.pages.dashboard_page import DashboardPage
@@ -374,6 +375,7 @@ class TestBase:
         self.instances_page = InstancesPage(**params)
         self.signup_page = SignupPage(**params)
         self.compliance_page = CompliancePage(**params)
+        self.administration_page = AdministrationPage(**params)
 
     def register_components(self):
         params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)
