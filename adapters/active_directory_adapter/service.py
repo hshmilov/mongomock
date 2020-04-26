@@ -123,6 +123,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         account_lockout = Field(bool, "Account Lockout")
         ad_dc_source = Field(str, 'AD DC Source')
         mobile = Field(str, 'Mobile Number')
+        company = Field(str, 'Company')
+        company_code = Field(str, 'Company Code')
+        cost_center = Field(str, 'Cost Center')
+        cost_center_description = Field(str, 'Cost Center Description')
+        division = Field(str, 'Division')
+        division_code = Field(str, 'Division Code')
+        se_business_role = Field(str, 'SE Business Role')
+        se_business_unit_name = Field(str, 'SE Business Unit Name')
+        sw_hw_segment = Field(str, 'SE HW Segment')
+        se_job_code = Field(str, 'SE Job Code')
+        se_guid_manager = Field(str, 'SE guid_manager')
+        se_department_role_title = Field(str, 'SE Department Role Title')
+        se_sub_functional_area = Field(str, 'SE Sub Functional Area')
 
     def __init__(self):
 
@@ -829,6 +842,23 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.employee_number = user_raw.get('employeeNumber')
                 user.employee_type = user_raw.get('employeeType')
                 user.mobile = user_raw.get('mobile')
+                try:
+                    user.company = user_raw.get('company')
+                    user.company_code = user_raw.get('companyCode')
+                    user.cost_center = user_raw.get('costCenter')
+                    user.cost_center_description = user_raw.get('costCenterDescription')
+                    user.division = user_raw.get('division')
+                    user.division_code = user_raw.get('divisionCode')
+                    user.se_business_role = user_raw.get('sEbusinessRole')
+                    user.se_business_unit_name = user_raw.get('sEbusinessUnitName')
+                    user.sw_hw_segment = user_raw.get('sEHWSegment')
+                    user.se_job_code = user_raw.get('sEjobCode')
+                    user.se_guid_manager = user_raw.get('sEguidManager')
+                    user.user_department = user_raw.get('sEdepartment')
+                    user.se_department_role_title = user_raw.get('sEdepartmentRoleTitle')
+                    user.se_sub_functional_area = user_raw.get('sEsubFunctionalArea')
+                except Exception:
+                    logger.exception(f'Problem adding extra fields')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
