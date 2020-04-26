@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field, ListField
 from defender_atp_adapter.connection import DefenderAtpConnection
@@ -14,7 +15,7 @@ from defender_atp_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class DefenderAtpAdapter(AdapterBase):
+class DefenderAtpAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         group_name = Field(str, 'Group Name')
@@ -56,8 +57,7 @@ class DefenderAtpAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -67,7 +67,9 @@ class DefenderAtpAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_users=self.__fetch_users,
+                                                   fetch_apps=self.__fetch_apps,
+                                                   fetch_vulns=self.__fetch_vulns)
 
     @staticmethod
     def _clients_schema():
@@ -176,3 +178,41 @@ class DefenderAtpAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_users',
+                    'title': 'Fetch users',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_apps',
+                    'title': 'Fetch applications',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_vulns',
+                    'title': 'Fetch vulnerabilities',
+                    'type': 'bool'
+                },
+            ],
+            'required': ['fetch_users', 'fetch_apps', 'fetch_vulns'],
+            'pretty_name': 'Defender ATP Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_users': False,
+            'fetch_apps': False,
+            'fetch_vulns': False,
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_users = config.get('fetch_users') or False
+        self.__fetch_apps = config.get('fetch_apps') or False
+        self.__fetch_vulns = config.get('fetch_vulns') or False

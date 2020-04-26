@@ -14,6 +14,7 @@ FORCEPOINT_QUERY = 'SELECT hostname.STR_VALUE AS "Hostname",ips.STR_VALUE AS "IP
                    'clientInstallationVersion.STR_VALUE as "ClientInstallationVersion", ' \
                    'lastProfileUpdate.TIME_VALUE_TS as "LastProfileUpdate", ' \
                    'lastPolicyUpdate.TIME_VALUE_TS as "LastPolicyUpdate", ' \
+                   'operationStatus.STR_VALUE  as "OperationStatus", ' \
                    'profileVersion.INT_VALUE as "ProfileVersion" ' \
                    'FROM PA_DYNAMIC_STATUS ' \
                    'AS endpoint LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS hostname on endpoint.ID =' \
@@ -40,6 +41,9 @@ FORCEPOINT_QUERY = 'SELECT hostname.STR_VALUE AS "Hostname",ips.STR_VALUE AS "IP
                    'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS profileVersion on ' \
                    'endpoint.ID = profileVersion.DYNAMIC_STATUS_ID ' \
                    'and profileVersion.NAME = \'eps_os_ProfileVersion\'' \
+                   'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS operationStatus on ' \
+                   'endpoint.ID = operationStatus.DYNAMIC_STATUS_ID ' \
+                   'and operationStatus.NAME = \'eps_os_OperationStatus\'' \
                    'LEFT OUTER JOIN PA_DYNAMIC_STATUS_PROPS lastPolicyUpdate on ' \
                    'endpoint.ID = lastPolicyUpdate.DYNAMIC_STATUS_ID ' \
                    'and lastPolicyUpdate.NAME = \'eps_os_LastPolicyUpdate\''

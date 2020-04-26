@@ -1,5 +1,7 @@
 import datetime
 import logging
+import chardet
+
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.datetime import parse_date
@@ -9,6 +11,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.consts import *
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.parsing import make_dict_from_csv
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
 from axonius.types.correlation import CorrelationResult, CorrelationReason
@@ -44,6 +47,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
         category = Field(str, 'Category')
+        u_subcategory = Field(str, 'Subcategory')
         class_name = Field(str, 'Class Name')
         owner = Field(str, 'Owner')
         discovery_source = Field(str, 'Discovery Source')
@@ -62,6 +66,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         substatus = Field(str, 'Substatus')
         u_shared = Field(str, 'Shared')
         u_loaner = Field(str, 'Loaner')
+        u_virtual_system_type = Field(str, 'Virtual System Type')
         u_cloud_premises = Field(str, 'Cloud Premises')
         u_bia_confidentiallity = Field(str, 'BIA Confidentiallity')
         u_bia_availability = Field(str, 'BIA Availability')
@@ -69,6 +74,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         u_bia_integrity = Field(str, 'BIA Integrity')
         u_bia_overall = Field(str, 'BIA Overall')
         u_casper_status = Field(str, 'Casper Status')
+        u_cloud_deployment_model = Field(str, 'Cloud Deployment Model')
+        u_cloud_hosted = Field(str, 'Cloud Hosted')
+        u_cloud_service_type = Field(str, 'Cloud Service Type')
+        u_crosssite_condition = Field(str, 'Cross site Condition')
+        u_heritage = Field(str, 'Heritage')
         u_altiris_status = Field(str, 'Altiris Status')
         first_deployed = Field(datetime.datetime, 'First Deployed')
         created_at = Field(datetime.datetime, 'Created At')
@@ -108,9 +118,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            snow_alm_asset_table_dict=None,
                            snow_user_groups_table_dict=None,
                            companies_table_dict=None,
-                           ips_table_dict=None):
+                           ips_table_dict=None,
+                           install_status_dict=None):
         got_nic = False
         got_serial = False
+        if not install_status_dict:
+            install_status_dict = INSTALL_STATUS_DICT
         if ci_ips_table_dict is None:
             ci_ips_table_dict = dict()
         if users_username_dict is None:
@@ -139,7 +152,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 return None
             device.id = str(device_id)
             device.table_type = table_type
-            device.category = device_raw.get('category')
+            device.category = device_raw.get('u_category') or device_raw.get('category')
+            device.u_subcategory = device_raw.get('u_subcategory')
             name = device_raw.get('name')
             device.name = name
             class_name = device_raw.get('sys_class_name')
@@ -149,6 +163,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.u_bia_id = device_raw.get('u_bia_id')
             device.u_bia_integrity = device_raw.get('u_bia_integrity')
             device.u_bia_overall = device_raw.get('u_bia_overall')
+            device.u_cloud_deployment_model = device_raw.get('u_cloud_deployment_model')
+            device.u_cloud_hosted = device_raw.get('u_cloud_hosted')
+            device.u_cloud_service_type = device_raw.get('u_cloud_service_type')
+            device.u_crosssite_condition = device_raw.get('u_crosssite_condition')
+            device.u_virtual_system_type = device_raw.get('u_virtual_system_type')
+            device.u_heritage = device_raw.get('u_heritage')
             virtual = device_raw.get('virtual')
             if isinstance(virtual, str):
                 device.is_virtual = virtual.lower() == 'true'
@@ -247,7 +267,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 install_status = None
                 if snow_asset:
                     try:
-                        install_status = INSTALL_STATUS_DICT.get(snow_asset.get('install_status'))
+                        install_status = install_status_dict.get(snow_asset.get('install_status'))
                     except Exception:
                         logger.warning(f'Problem getting install status for {device_raw}', exc_info=True)
                     device.u_loaner = snow_asset.get('u_loaner')
@@ -329,7 +349,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
                 if not install_status or self.__use_ci_table_for_install_status:
-                    install_status = INSTALL_STATUS_DICT.get(device_raw.get('install_status'))
+                    install_status = install_status_dict.get(device_raw.get('install_status'))
                 if self.__exclude_disposed_devices and install_status \
                         and install_status in ['Disposed', 'Decommissioned']:
                     return None
@@ -436,7 +456,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.end_of_support = device_raw.get('u_end_of_support')
             device.firmware_version = device_raw.get('u_firmware_version')
             device.model_version_number = device_raw.get('u_model_version_number')
-            device.operational_status = INSTALL_STATUS_DICT.get(device_raw.get('operational_status'))
+            if self.__fetch_operational_status:
+                device.operational_status = install_status_dict.get(device_raw.get('operational_status'))
             device.hardware_status = device_raw.get('hardware_status')
             device.u_number = device_raw.get('u_number')
             device.set_raw(device_raw)
@@ -470,12 +491,30 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            return self.get_connection(client_config), self._get_install_status_dict(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.warning(message, exc_info=True)
             raise ClientConnectionException(message)
+
+    def _get_install_status_dict(self, client_config):
+        install_status_dict = dict()
+        try:
+            if client_config.get('install_status_file'):
+                csv_data_bytes = self._grab_file_contents(client_config['install_status_file'])
+                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+                encoding = encoding or 'utf-8'
+                csv_data = csv_data_bytes.decode(encoding)
+                csv_data = make_dict_from_csv(csv_data)
+                if 'Value' in csv_data.fieldnames and 'Label' in csv_data.fieldnames:
+                    for csv_line in csv_data:
+                        if csv_line.get('Value') and csv_line.get('Label'):
+                            install_status_dict[str(csv_line['Value'])] = csv_line['Label']
+
+        except Exception:
+            logger.exception(f'Problem parsing install status dict')
+        return install_status_dict
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -486,8 +525,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        with client_data:
-            yield from client_data.get_device_list(fetch_users_info_for_devices=self.__fetch_users_info_for_devices)
+        connection, install_status_dict = client_data
+        with connection:
+            for device_raw in connection.get_device_list(
+                    fetch_users_info_for_devices=self.__fetch_users_info_for_devices):
+                yield device_raw, install_status_dict
 
     def _query_users_by_client(self, key, data):
         if self.__fetch_users:
@@ -527,7 +569,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
-                }
+                },
+                {
+                    'name': 'install_status_file',
+                    'title': 'Install Status ENUM CSV File',
+                    'type': 'file'
+                },
             ],
             'required': [
                 'domain',
@@ -648,7 +695,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting user {user_raw}', exc_info=True)
 
     def _parse_raw_data(self, devices_raw_data):
-        for table_devices_data in devices_raw_data:
+        for table_devices_data, install_status_dict in devices_raw_data:
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
             users_username_dict = table_devices_data.get(USERS_USERNAME_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
@@ -672,7 +719,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  snow_user_groups_table_dict=snow_user_groups_table_dict,
                                                  ips_table_dict=ips_table_dict,
                                                  fetch_ips=self.__fetch_ips,
-                                                 table_type=table_devices_data[DEVICE_TYPE_NAME_KEY])
+                                                 table_type=table_devices_data[DEVICE_TYPE_NAME_KEY],
+                                                 install_status_dict=install_status_dict)
                 if device:
                     yield device
 
@@ -738,6 +786,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'fetch_only_virtual_devices',
                     'title': 'Fetch Only Virtual Devices',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_operational_status',
+                    'type': 'bool',
+                    'title': 'Fetch operational status'
                 }
             ],
             "required": [
@@ -748,7 +801,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 'exclude_no_strong_identifier',
                 'exclude_vm_tables',
                 'fetch_only_active_users',
-                'fetch_only_virtual_devices'
+                'fetch_only_virtual_devices',
+                'fetch_operational_status'
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -767,7 +821,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'email_whitelist': None,
             'fetch_only_active_users': False,
             'install_status_exclude_list': None,
-            'fetch_only_virtual_devices': False
+            'fetch_only_virtual_devices': False,
+            'fetch_operational_status': True
         }
 
     def _on_config_update(self, config):
@@ -778,6 +833,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__exclude_no_strong_identifier = config['exclude_no_strong_identifier']
         self.__use_ci_table_for_install_status = config['use_ci_table_for_install_status']
         self.__exclude_vm_tables = config['exclude_vm_tables']
+        self.__fetch_operational_status = config.get('fetch_operational_status')
         self.__fetch_only_virtual_devices = config.get('fetch_only_virtual_devices') or False
         self.__email_whitelist = config['email_whitelist'].split(',') if config.get('email_whitelist') else None
         self.__fetch_only_active_users = config.get('fetch_only_active_users') or False

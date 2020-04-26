@@ -22,9 +22,6 @@ class SymantecAdapter(AdapterBase):
         client_id = Field(str, 'SEP Server Details')
         online_status = Field(str, 'Online Status')
         cids_defset_version = Field(str, 'Definition Set Version')
-        cids_defset_year = Field(str, 'Definition Set Year')
-        cids_defset_month = Field(str, 'Definition Set Month')
-        cids_defset_day = Field(str, 'Definition Set Day')
         cids_defset_date = Field(datetime.datetime, 'Definition Set Date')
         last_scan_date = Field(datetime.datetime, 'Last Scan Date')
         is_npvdi_client = Field(bool, 'Is Npvdi Client')
@@ -194,9 +191,6 @@ class SymantecAdapter(AdapterBase):
                 device.cids_defset_version = cids_defset_version
                 try:
                     if cids_defset_version:
-                        device.cids_defset_year = cids_defset_version[0:2]
-                        device.cids_defset_month = cids_defset_version[2:4]
-                        device.cids_defset_day = cids_defset_version[4:6]
                         device.cids_defset_version = cids_defset_version[6:9]
                         try:
                             device.cids_defset_date = datetime.datetime(year=int('20' + cids_defset_version[0:2]),

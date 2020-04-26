@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import logging
 from collections import defaultdict
 from itertools import combinations
@@ -5,7 +6,7 @@ from itertools import combinations
 from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compare_reg_mac
 from axonius.consts.plugin_consts import PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
 from axonius.correlator_base import (has_ad_or_azure_name, has_cloud_id,
-                                     has_hostname, has_last_used_users,
+                                     has_hostname, has_last_used_users, has_public_ips,
                                      has_mac, has_name, has_serial, has_nessus_scan_no_id, has_resource_id)
 from axonius.correlator_engine_base import (CorrelatorEngineBase, CorrelationMarker)
 from axonius.plugin_base import PluginBase
@@ -98,6 +99,8 @@ def is_only_host_adapter(adapter_device):
                                               'symantec_dlp_adapter',
                                               'netskope_adapter',
                                               'flexera_adapter',
+                                              'bigid_adapter',
+                                              'json_adapter',
                                               'druva_adapter']):
         return True
     try:
@@ -139,6 +142,31 @@ def get_fqdn_or_hostname(adapter_device):
 
 def get_resource_id(adapter_device):
     return adapter_device['data'].get('resource_id')
+
+
+def get_one_public_ip(adapter_device):
+    public_ips = adapter_device['data'].get('public_ips')
+    if not public_ips:
+        return None
+    if len(public_ips) == 1:
+        return public_ips[0]
+    return None
+
+
+def compare_one_public_ip(adapter_device1, adapter_device2):
+    if not get_one_public_ip(adapter_device1) or not get_one_public_ip(adapter_device2):
+        return False
+    return get_one_public_ip(adapter_device1) == get_one_public_ip(adapter_device2)
+
+
+def is_public_ip_correlation_adapter(adapter_device):
+    return adapter_device.get('plugin_name') in ['edfs_csv_adapter',
+                                                 'nmap_adapter',
+                                                 'masscan_adapter',
+                                                 'shodan_adapter',
+                                                 'bitsight_adapter',
+                                                 'censys_adapter',
+                                                 'cycognito_adapter']
 
 
 def get_dst_name(adapter_device):
@@ -388,6 +416,10 @@ def force_mac_adapters(adapter_device):
 # pylint: disable=global-statement
 
 
+def is_full_hostname_adapter(adapter_device):
+    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter']
+
+
 # Solarwinds Node are bad for MAC correlation
 def not_solarwinds_node(adapter_device):
     if adapter_device.get('plugin_name') == 'solarwinds_orion_adapter' \
@@ -522,7 +554,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
-                has_nessus_scan_no_id, has_resource_id]
+                has_nessus_scan_no_id, has_resource_id, has_public_ips]
 
     # pylint: disable=R0912,too-many-boolean-expressions
     def _correlate_mac(self, adapters_to_correlate, correlate_by_snow_mac):
@@ -814,14 +846,14 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         AD correlation is a little more loose - we allow correlation based on hostname alone.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        logger.info('Starting to correlate on Hostname-AD')
+        logger.info('Starting to correlate on Hostname-(FULL HOSTNAME)')
         filtered_adapters_list = filter(get_hostname_no_localhost, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
                                       [compare_hostname],
-                                      [lambda x: x.get('plugin_name') == ACTIVE_DIRECTORY_PLUGIN_NAME],
+                                      [is_full_hostname_adapter],
                                       [not_wifi_adapters],
-                                      {'Reason': 'They have the same hostname and one is AD'},
+                                      {'Reason': 'They have the same FULL hostname'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_with_twistlock(self, adapters_to_correlate):
@@ -1049,6 +1081,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the friendly and AD name the saem'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_one_public_ip(self, adapters_to_correlate):
+        logger.info('Starting to correlate public ip')
+        filtered_adapters_list = filter(get_one_public_ip, adapters_to_correlate)
+        filtered_adapters_list = filter(is_public_ip_correlation_adapter, filtered_adapters_list)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_one_public_ip],
+                                      [compare_one_public_ip],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same public ip'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_agent_uuid(self, adapters_to_correlate):
         logger.info('Starting to correlate Agent UUID')
         filtered_adapters_list = filter(get_agent_uuid, adapters_to_correlate)
@@ -1079,6 +1123,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         correlate_azure_ad_name_only = bool(self._correlation_config and
                                             self._correlation_config.get('correlate_azure_ad_name_only') is True)
+        correlate_public_ip_only = bool(self._correlation_config and
+                                        self._correlation_config.get('correlate_public_ip_only') is True)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)
@@ -1139,6 +1185,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_deep_aws_id(adapters_to_correlate)
         yield from self._correlate_agent_uuid(adapters_to_correlate)
         yield from self._correlate_friendly_ad_name(adapters_to_correlate)
+        if correlate_public_ip_only:
+            yield from self._correlate_one_public_ip(adapters_to_correlate)
         # Disable route53 correlation, because this usually correlates many instances of the same ELB
         # and we don't want these kind of correlations - they are not the same host.
         #

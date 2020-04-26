@@ -140,6 +140,16 @@ class ADEntity(object):
     extension_attribute_7 = Field(str, 'Extension Attribute 7')
     extension_attribute_8 = Field(str, 'Extension Attribute 8')
     extension_attribute_9 = Field(str, 'Extension Attribute 9')
+    extension_attribute_10 = Field(str, 'Extension Attribute 10')
+    extension_attribute_11 = Field(str, 'Extension Attribute 11')
+    extension_attribute_12 = Field(str, 'Extension Attribute 12')
+    extension_attribute_13 = Field(str, 'Extension Attribute 13')
+    extension_attribute_14 = Field(str, 'Extension Attribute 14')
+    extension_attribute_15 = Field(str, 'Extension Attribute 15')
+    extension_attribute_16 = Field(str, 'Extension Attribute 16')
+    extension_attribute_17 = Field(str, 'Extension Attribute 17')
+    extension_attribute_18 = Field(str, 'Extension Attribute 18')
+    extension_attribute_19 = Field(str, 'Extension Attribute 19')
 
     # Other
     ad_last_dc_fetched = Field(str, 'Last DC Fetched from')

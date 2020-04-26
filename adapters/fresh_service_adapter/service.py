@@ -114,6 +114,7 @@ class FreshServiceAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -142,26 +143,33 @@ class FreshServiceAdapter(AdapterBase, Configurable):
                 extra_data_raw = device_raw.get('levelfield_values')
                 if not isinstance(extra_data_raw, dict):
                     extra_data_raw = {}
-                ci_type_id = device_raw.get('ci_type_id')
-                ci_parent_id = ci_type_id - 5
-                device.figure_os((extra_data_raw.get(f'os_{ci_type_id}') or '') + ' ' +
-                                 (extra_data_raw.get(f'os_version_{ci_type_id}') or ''))
-                device.warranty = parse_date(extra_data_raw.get(f'warranty_expiry_date_{ci_parent_id}'))
-                device.acquisition = parse_date(extra_data_raw.get(f'acquisition_date_date_{ci_type_id}'))
-                device.hostname = extra_data_raw.get(f'hostname_{ci_type_id}')
-                if extra_data_raw.get(f'last_login_by_{ci_type_id}'):
-                    device.last_used_users = [extra_data_raw.get(f'last_login_by_{ci_type_id}')]
+                os_str = ''
                 ips = []
-                if extra_data_raw.get(f'computer_ip_address_{ci_type_id}'):
-                    ips_raw = extra_data_raw.get(f'computer_ip_address_{ci_type_id}')
-                    ips_raw = ips_raw[:ips_raw.find('%')]
-                    ips = ips_raw.split(',')
                 mac = None
-                if extra_data_raw.get(f'mac_address_{ci_type_id}'):
-                    mac = extra_data_raw.get(f'mac_address_{ci_type_id}')
+                for field_name, field_value in extra_data_raw.items():
+                    if not field_value:
+                        continue
+                    if field_name.startswith('os_'):
+                        os_str += ' ' + field_value
+                    elif field_name.startswith('warranty_expiry_date_'):
+                        device.warranty = parse_date(field_value)
+                    elif field_name.startswith('acquisition_date_date_'):
+                        device.acquisition = parse_date(field_value)
+                    elif field_name.startswith('hostname_'):
+                        device.hostname = field_value
+                    elif field_name.startswith('serial_number_'):
+                        device.device_serial = field_value
+                    elif field_name.startswith('last_login_by_'):
+                        device.last_used_users = [field_value]
+                    elif field_name.startswith('computer_ip_address_'):
+                        ips_raw = field_value
+                        ips_raw = ips_raw[:ips_raw.find('%')]
+                        ips = ips_raw.split(',')
+                    elif field_name.startswith('mac_address_'):
+                        mac = field_value
+                device.figure_os(os_str)
                 if ips or mac:
                     device.add_nic(mac=mac, ips=ips)
-                device.device_serial = extra_data_raw.get(f'serial_number_{ci_parent_id}')
             except Exception:
                 logger.exception(f'Problem getting extra fields for {device_raw}')
             device.set_raw(device_raw)
@@ -198,7 +206,7 @@ class FreshServiceAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fresh_service_white_list': 'Computer'
+            'fresh_service_white_list': None
         }
 
     def _on_config_update(self, config):

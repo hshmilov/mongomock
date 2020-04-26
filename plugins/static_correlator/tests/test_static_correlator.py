@@ -521,7 +521,7 @@ def test_rule_one_is_ad_and_full_hostname():
     device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter1'
     device2['adapters'][0]['plugin_name'] = ACTIVE_DIRECTORY_PLUGIN_NAME
     device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter2'
-    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 1)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same FULL hostname', 1)
 
 
 def test_rule_one_is_ad_and_full_hostname_fail_on_hostname_even_with_default_domain():

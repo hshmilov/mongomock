@@ -26,6 +26,7 @@ class ForcepointAdapter(AdapterBase, Configurable):
         last_policy_update = Field(datetime.datetime, 'Last Policy Update')
         last_profile_update = Field(datetime.datetime, 'Last Profile Update')
         profile_version = Field(int, 'Profile Version')
+        operation_status = Field(str, 'Operation Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -131,6 +132,7 @@ class ForcepointAdapter(AdapterBase, Configurable):
                 device.client_installation_version = device_raw.get('ClientInstallationVersion')
                 device.last_policy_update = parse_date(device_raw.get('LastPolicyUpdate'))
                 device.last_profile_update = parse_date(device_raw.get('LastProfileUpdate'))
+                device.operation_status = device_raw.get('OperationStatus')
                 device.profile_version = device_raw.get('ProfileVersion') \
                     if isinstance(device_raw.get('ProfileVersion'), int) else None
                 if str(device_raw.get('Synced')) == '1':

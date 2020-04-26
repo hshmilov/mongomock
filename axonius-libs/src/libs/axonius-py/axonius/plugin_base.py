@@ -74,7 +74,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                          GUI_PLUGIN_NAME,
+                                          GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                           MAX_WORKERS,
                                           NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
@@ -2850,7 +2850,7 @@ class PluginBase(Configurable, Feature, ABC):
                     if isinstance(extra_fields_dict, dict):
                         issue_dict.update(extra_fields_dict)
             except Exception:
-                pass
+                logger.exception(f'Problem parsing extra fields')
             issue = jira.create_issue(fields=issue_dict)
             if csv_file_name and csv_bytes:
                 jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
@@ -3038,6 +3038,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._csv_full_hostname = config[CORRELATION_SETTINGS].get(CSV_FULL_HOSTNAME, True)
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
+        self._correlate_public_ip_only = config[CORRELATION_SETTINGS].get(CORRELATE_PUBLIC_IP_ONLY, False)
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
@@ -3659,12 +3660,17 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': CORRELATE_BY_AZURE_AD_NAME_ONLY,
                             'type': 'bool',
                             'title': 'Correlate Microsoft Azure AD based on asset name only'
+                        },
+                        {
+                            'name': CORRELATE_PUBLIC_IP_ONLY,
+                            'type': 'bool',
+                            'title': 'Correlate devices based on public IP only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
                     'title': 'Correlation Settings',
                     'type': 'array',
-                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME,
+                    'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
@@ -3869,7 +3875,8 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
-                CORRELATE_BY_AZURE_AD_NAME_ONLY: False
+                CORRELATE_BY_AZURE_AD_NAME_ONLY: False,
+                CORRELATE_PUBLIC_IP_ONLY: False
             },
             CORRELATION_SCHEDULE: {
                 CORRELATION_SCHEDULE_ENABLED: False,

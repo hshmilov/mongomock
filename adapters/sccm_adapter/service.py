@@ -731,15 +731,26 @@ class SccmAdapter(AdapterBase, Configurable):
                                 user_local_admin = local_admin_data.get('account0')
                                 domain_local_admin = local_admin_data.get('domain0')
                                 admin_type = None
-                                if local_admin_data.get('type0') == 'UserAccount':
+                                if local_admin_data.get('Category0') == 'UserAccount':
                                     admin_type = 'Admin User'
-                                if local_admin_data.get('type0') == 'Group':
+                                if local_admin_data.get('Category0') == 'Group':
                                     admin_type = 'Group Membership'
                                 if is_domain_valid(domain_local_admin):
                                     if '.' not in domain_local_admin:
                                         user_local_admin = f'{domain_local_admin}\\{user_local_admin}'
                                     else:
                                         user_local_admin = f'{user_local_admin}@{domain_local_admin}'
+                                    try:
+                                        if admin_type == 'Admin User':
+                                            hostname_start_lower = device_full_hostname.split('.')[0].lower()
+                                            domain_start_lower = domain_local_admin.split('.')[0].lower()
+                                            if hostname_start_lower != domain_start_lower:
+                                                device.local_admins_domain_users.append(
+                                                    local_admin_data.get('account0'))
+                                            else:
+                                                device.local_admins_local_users.append(local_admin_data.get('account0'))
+                                    except Exception:
+                                        pass
                                 device.add_local_admin(admin_name=user_local_admin, admin_type=admin_type)
                             except Exception:
                                 logger.exception(f'Problem with local admin data {local_admin_data}')
@@ -909,6 +920,8 @@ class SccmAdapter(AdapterBase, Configurable):
                                 if not patch_description:
                                     patch_description = None
                                 installed_on = parse_date(patch_data.get('InstallDate0'))
+                                if not installed_on:
+                                    installed_on = parse_date(patch_data.get('InstalledOn0'))
                                 device.add_security_patch(
                                     security_patch_id=patch_data.get('HotFixID0'),
                                     patch_description=patch_description,

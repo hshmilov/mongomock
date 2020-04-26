@@ -42,6 +42,7 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
         return RESTConnection.test_reachability(client_config.get('domain') or 'api.shodan.io',
                                                 https_proxy=client_config.get('https_proxy'))
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _connect_client(self, client_config):
         try:
             with ShodanConnection(apikey=client_config['apikey'],
@@ -61,20 +62,27 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                 encoding = encoding or 'utf-8'
                 csv_data = csv_data_bytes.decode(encoding)
                 csv_data = make_dict_from_csv(csv_data)
-                if 'CIDR' not in csv_data.fieldnames:
-                    raise ClientConnectionException('The CSV file is missing the CIDR column')
+                if 'CIDR' not in csv_data.fieldnames and 'Search' not in csv_data.fieldnames:
+                    raise ClientConnectionException('The CSV file is missing the CIDR or Search column')
                 dns_field_name = None
                 for field_name in csv_data.fieldnames:
                     if field_name and field_name.replace(' ', '').lower() == 'dnsname':
                         dns_field_name = field_name
                 cidr_list = []
+                search_list = []
                 for cidr_raw in csv_data:
                     if cidr_raw.get('CIDR'):
                         cidr_dns_name = None
                         if dns_field_name:
                             cidr_dns_name = cidr_raw.get(dns_field_name)
                         cidr_list.append([cidr_raw.get('CIDR'), cidr_dns_name])
-                return connection, cidr_list, CIDR_TYPE, client_config.get('user_id')
+                    elif cidr_raw.get('Search'):
+                        search_list.append(cidr_raw.get('Search'))
+                if cidr_list:
+                    return connection, cidr_list, CIDR_TYPE, client_config.get('user_id')
+                if search_list:
+                    return connection, search_list, SEARCH_TYPE, client_config.get('user_id')
+                raise ClientConnectionException('The CSV file is missing the CIDR or Search column')
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config.get('domain'), str(e))

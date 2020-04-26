@@ -67,4 +67,11 @@ class ZoomConnection(RESTConnection):
         except Exception:
             logger.info('Problem with devices', exc_info=True)
         for user_raw in self._get_api_endpoint('users'):
+            try:
+                user_id = user_raw.get('id')
+                if not user_id:
+                    continue
+                user_raw['settings_raw'] = self._get(f'users/{user_id}/settings')
+            except Exception:
+                logger.exception(f'Problem getting setting for {user_raw}')
             yield user_raw, groups_dict, im_groups_dict

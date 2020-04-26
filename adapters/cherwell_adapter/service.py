@@ -31,6 +31,7 @@ class CherwellAdapter(AdapterBase, Configurable):
         asset_owner = Field(str, 'Asset Owner')
         location_building = Field(str, 'Location Building')
         primary_full_user_name = Field(str, 'Primary Full User Name')
+        asset_type = Field(str, 'Asset Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -194,6 +195,8 @@ class CherwellAdapter(AdapterBase, Configurable):
                     if field_name == 'SerialNumber':
                         device.device_serial = field_value
                         device.id += '_' + field_value
+                    elif field_name == 'AssetType':
+                        device.asset_type = field_value
                     elif field_name == 'Model':
                         device.device_model = field_value
                     elif field_name == 'BIOSVersion':

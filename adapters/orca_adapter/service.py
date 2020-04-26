@@ -43,6 +43,24 @@ class AffectedServices(SmartJsonClass):
     is_public = Field(bool, 'Is Public')
 
 
+class LoginData(SmartJsonClass):
+    log_time = Field(datetime.datetime, 'Login Time')
+    logout_time = Field(datetime.datetime, 'Logout Time')
+    source_ipv4 = Field(str, 'Source IPv4')
+    username = Field(str, 'Username')
+
+
+class ComplianceData(SmartJsonClass):
+    category = Field(str, 'Category')
+    description = Field(str, 'Description')
+    os = Field(str, 'OS')
+    result = Field(str, 'Result')
+    scored = Field(bool, 'Scored')
+    subcategory = Field(str, 'Subcategory')
+    test_name = Field(str, 'Test Name')
+    version = Field(str, 'Version')
+
+
 class OrcaAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -55,6 +73,9 @@ class OrcaAdapter(AdapterBase):
         alerts_data = ListField(AlertData, 'Alerts Data')
         malware_data = ListField(MalwareData, 'Malware Data')
         affected_services = ListField(AffectedServices, 'Affected Services')
+        failed_logins = ListField(LoginData, 'Failed Logins')
+        successful_logins = ListField(LoginData, 'Successful Logins')
+        compliance_information = ListField(ComplianceData, 'Compliance Infomation')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -139,7 +160,8 @@ class OrcaAdapter(AdapterBase):
         }
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def _create_device(self, device_raw, devices_alerst_dict, device_inventory_dict):
+    def _create_device(self, device_raw, devices_alerst_dict, device_inventory_dict,
+                       devices_logs_dict, devices_compliance_dict):
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('asset_unique_id')
@@ -151,10 +173,65 @@ class OrcaAdapter(AdapterBase):
             device.cloud_provider = figure_out_cloud(device_raw.get('cloud_provider'))
             device.cloud_id = device_raw.get('vm_id')
             try:
+                logs_data = devices_logs_dict.get(device_id)
+                if not isinstance(logs_data, list):
+                    logs_data = []
+                for log_raw in logs_data:
+                    try:
+                        if log_raw.get('login_failed'):
+                            login_raw = log_raw.get('login_failed')
+                            log_time = parse_date(login_raw.get('log_time'))
+                            source_ipv4 = login_raw.get('source_ipv4')
+                            username = login_raw.get('username')
+                            device.failed_logins.append(LoginData(log_time=log_time,
+                                                                  source_ipv4=source_ipv4,
+                                                                  username=username))
+                        elif log_raw.get('login_successful'):
+                            login_raw = log_raw.get('login_successful')
+                            log_time = parse_date(login_raw.get('log_time'))
+                            source_ipv4 = login_raw.get('source_ipv4')
+                            username = login_raw.get('username')
+                            logout_time = parse_date(login_raw.get('logout_time'))
+                            device.successful_logins.append(LoginData(log_time=log_time,
+                                                                      source_ipv4=source_ipv4,
+                                                                      logout_time=logout_time,
+                                                                      username=username))
+                    except Exception:
+                        logger.exception(f'Problem with log_raw {log_raw}')
+            except Exception:
+                logger.exception(f'Problem getting inventory')
+            try:
+                compliance_data = devices_compliance_dict.get(device_id)
+                if not isinstance(compliance_data, list):
+                    compliance_data = []
+                for compliance_raw in compliance_data:
+                    try:
+                        cis_raw = compliance_raw.get('cis_os') or {}
+                        category = cis_raw.get('category')
+                        description = cis_raw.get('description')
+                        os = cis_raw.get('os')
+                        result = cis_raw.get('result')
+                        subcategory = cis_raw.get('subcategory')
+                        test_name = cis_raw.get('test_name')
+                        version = cis_raw.get('version')
+                        scored = cis_raw.get('scored') \
+                            if isinstance(cis_raw.get('scored'), bool) else None
+                        device.compliance_information.append(ComplianceData(category=category,
+                                                                            description=description,
+                                                                            os=os,
+                                                                            result=result,
+                                                                            subcategory=subcategory,
+                                                                            test_name=test_name,
+                                                                            version=version,
+                                                                            scored=scored))
+                    except Exception:
+                        logger.exception(f'Problem with compliance_raw {compliance_raw}')
+            except Exception:
+                logger.exception(f'Problem getting inventory')
+            try:
                 inventory_data = device_inventory_dict.get(device_id)
                 if not isinstance(inventory_data, list):
                     inventory_data = []
-                device_raw['inventory_data'] = inventory_data
                 for inventory_raw in inventory_data:
                     try:
                         device.add_installed_software(name=(inventory_raw.get('package') or {}).get('name'),
@@ -167,7 +244,6 @@ class OrcaAdapter(AdapterBase):
                 alerts_data = devices_alerst_dict.get(device_id)
                 if not isinstance(alerts_data, list):
                     alerts_data = []
-                device_raw['alerts_data'] = alerts_data
                 for alert_raw in alerts_data:
                     try:
                         alert_id = alert_raw.get('alert_id')
@@ -257,8 +333,10 @@ class OrcaAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, devices_alerst_dict, device_inventory_dict in devices_raw_data:
-            device = self._create_device(device_raw, devices_alerst_dict, device_inventory_dict)
+        for device_raw, devices_alerst_dict, device_inventory_dict, \
+                devices_logs_dict, devices_compliance_dict in devices_raw_data:
+            device = self._create_device(device_raw, devices_alerst_dict, device_inventory_dict,
+                                         devices_logs_dict, devices_compliance_dict)
             if device:
                 yield device
 

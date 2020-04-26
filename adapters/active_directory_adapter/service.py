@@ -618,6 +618,16 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             ad_entity.extension_attribute_7 = raw_data.get('extensionAttribute7')
             ad_entity.extension_attribute_8 = raw_data.get('extensionAttribute8')
             ad_entity.extension_attribute_9 = raw_data.get('extensionAttribute9')
+            ad_entity.extension_attribute_10 = raw_data.get('extensionAttribute10')
+            ad_entity.extension_attribute_11 = raw_data.get('extensionAttribute11')
+            ad_entity.extension_attribute_12 = raw_data.get('extensionAttribute12')
+            ad_entity.extension_attribute_13 = raw_data.get('extensionAttribute13')
+            ad_entity.extension_attribute_14 = raw_data.get('extensionAttribute14')
+            ad_entity.extension_attribute_15 = raw_data.get('extensionAttribute15')
+            ad_entity.extension_attribute_16 = raw_data.get('extensionAttribute16')
+            ad_entity.extension_attribute_17 = raw_data.get('extensionAttribute17')
+            ad_entity.extension_attribute_18 = raw_data.get('extensionAttribute18')
+            ad_entity.extension_attribute_19 = raw_data.get('extensionAttribute19')
         except Exception:
             logger.exception(f'Could not parse extension attributes')
 

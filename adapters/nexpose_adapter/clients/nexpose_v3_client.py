@@ -13,7 +13,7 @@ from axonius.async.utils import async_request
 from axonius.utils.json import from_json
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_cloud
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 
 from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 
@@ -31,6 +31,30 @@ class ScanData(SmartJsonClass):
     scan_type = Field(str, 'Scan Type')
     scan_name = Field(str, 'Scan Name')
     end_time = Field(datetime.datetime, 'End Time')
+
+
+class PciStatus(SmartJsonClass):
+    adjusted_cvss_score = Field(int, 'Adjusted CVSS Score')
+    adjusted_severity_score = Field(int, 'Adjusted Severity Score')
+    fail = Field(bool, 'Fail')
+    status = Field(str, 'Status')
+
+
+class NexposeVuln(SmartJsonClass):
+    added = Field(datetime.datetime, 'Added')
+    categories = ListField(str, 'Categories')
+    cves = ListField(str, 'CVEs')
+    denial_of_service = Field(bool, 'Denial Of Service')
+    description = Field(str, 'Description')
+    exploits = Field(int, 'Exploits')
+    malware_kits = Field(int, 'Malware Kits')
+    modified = Field(datetime.datetime, 'Modified')
+    published = Field(datetime.datetime, 'Published')
+    risk_score = Field(float, 'Risk Score')
+    severity = Field(str, 'Severity')
+    severity_score = Field(int, 'Severity Score')
+    title = Field(str, 'Title')
+    pci = Field(PciStatus, 'PCI Data')
 
 
 class NexposeV3Client(NexposeClient):
@@ -362,6 +386,60 @@ class NexposeV3Client(NexposeClient):
                 for vuln in device_raw.get('vulnerability_details_full') or []:
                     for cve in vuln.get('cves') or []:
                         device.add_vulnerable_software(cve_id=cve)
+                    try:
+                        added = parse_date(vuln.get('added'))
+                        cves = vuln.get('cves') if isinstance(vuln.get('cves'), list) else None
+                        categories = vuln.get('categories') if isinstance(vuln.get('categories'), list) else None
+
+                        denial_of_service = vuln.get('denialOfService') \
+                            if isinstance(vuln.get('denialOfService'), bool) else None
+                        description = vuln.get('description').get('text') \
+                            if isinstance(vuln.get('description'), dict) else None
+                        exploits = vuln.get('exploits') \
+                            if isinstance(vuln.get('exploits'), int) else None
+                        malware_kits = vuln.get('malwareKits') \
+                            if isinstance(vuln.get('malwareKits'), int) else None
+                        modified = parse_date(vuln.get('modified'))
+                        published = parse_date(vuln.get('published'))
+                        risk_score = None
+                        try:
+                            risk_score = float(vuln.get('riskScore'))
+                        except Exception:
+                            pass
+                        severity = vuln.get('severity')
+                        severity_score = vuln.get('severityScore') \
+                            if isinstance(vuln.get('severityScore'), int) else None
+                        title = vuln.get('title')
+                        pci_raw = vuln.get('pci') if isinstance(vuln.get('pci'), dict) else {}
+                        pci_fail = pci_raw.get('fail') if isinstance(pci_raw.get('fail'), bool) else None
+                        pci_status = pci_raw.get('status')
+                        adjusted_cvss_score = pci_raw.get('adjustedCVSSScore') \
+                            if isinstance(pci_raw.get('adjustedCVSSScore'), int) else None
+                        adjusted_severity_score = pci_raw.get('adjustedSeverityScore') \
+                            if isinstance(pci_raw.get('adjustedSeverityScore'), int) else None
+                        pci = PciStatus(fail=pci_fail,
+                                        status=pci_status,
+                                        adjusted_cvss_score=adjusted_cvss_score,
+                                        adjusted_severity_score=adjusted_severity_score
+                                        )
+                        nexpose_vuln = NexposeVuln(added=added,
+                                                   categories=categories,
+                                                   cves=cves,
+                                                   denial_of_service=denial_of_service,
+                                                   description=description,
+                                                   exploits=exploits,
+                                                   malware_kits=malware_kits,
+                                                   modified=modified,
+                                                   published=published,
+                                                   risk_score=risk_score,
+                                                   severity=severity,
+                                                   severity_score=severity_score,
+                                                   title=title,
+                                                   pci=pci
+                                                   )
+                        device.nexpose_vulns.append(nexpose_vuln)
+                    except Exception:
+                        logger.exception(f'Problem add full vuln')
             except Exception:
                 logger.exception(f'Problem adding CVES to device')
 

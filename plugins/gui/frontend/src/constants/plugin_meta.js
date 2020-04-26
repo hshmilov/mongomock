@@ -101,6 +101,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/openvas',
         description: 'OpenVAS is a full-featured vulnerability scanner. Its capabilities include unauthenticated testing, authenticated testing, various high level and low level Internet and industrial protocols, performance tuning for large-scale scans and a powerful internal programming language to implement any type of vulnerability test.'
     },
+    panorays_adapter: {
+        title: 'Panorays',
+        link: 'https://docs.axonius.com/docs/panorays',
+        description: 'Panorays iis a SaaS-based platform that enables companies to easily view, manage and engage on the security posture of their third-parties, vendors, suppliers, and business partners.'
+    },
     jira_adapter: {
         title: 'Atlassian Jira Asset Platform',
         link: 'https://docs.axonius.com/docs/atlassian-jira-asset-platform',
@@ -238,6 +243,11 @@ export const pluginMeta = {
         title: 'Freshservice',
         link: 'https://docs.axonius.com/docs/freshservice',
         description: 'Freshservice is a cloud-based IT help desk and service management solution that enables organizations to simplify their IT operations.'
+    },
+    bigid_adapter: {
+        title: 'BigID',
+        description: 'BigID is data security solution that provides enterprise protection and privacy of personal',
+        link: 'https://docs.axonius.com/docs/bigid'
     },
     defender_atp_adapter: {
         title: 'Microsoft Defender ATP',

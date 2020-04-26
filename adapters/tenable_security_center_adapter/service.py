@@ -291,6 +291,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     device.last_seen = last_seen
             except Exception:
                 logger.error(f'Couldn\'t parse last unauth run {last_unauth_run}')
+        if last_unauth_run and not last_auth_run and self.__drop_only_unauth_scans:
+            return None
 
         has_passive = raw_device_data.get('hasPassive')
         if has_passive is not None and has_passive != '':
@@ -354,6 +356,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'drop_only_unauth_scans',
+                    'title': 'Do not fetch devices with unauthenticated scans only',
+                    'type': 'bool'
+                },
+                {
                     'name': 'info_vulns_plugin_ids',
                     'title': 'Fetch info level vulnerabilities only for listed plugin IDs',
                     'type': 'string',
@@ -362,7 +369,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             "required": [
                 'drop_only_ip_devices',
                 'fetch_software_per_device',
-                'fetch_vulnerabilities'
+                'fetch_vulnerabilities',
+                'drop_only_unauth_scans'
             ],
             "pretty_name": "Tenable.sc Configuration",
             "type": "array"
@@ -375,6 +383,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'fetch_top_n_installed_software': 0,
             'fetch_software_per_device': False,
             'fetch_vulnerabilities': False,
+            'drop_only_unauth_scans': False,
             'info_vulns_plugin_ids': '',
         }
 
@@ -392,6 +401,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
         self.__fetch_software_per_device = config['fetch_software_per_device']
         self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
+        self.__drop_only_unauth_scans = config['drop_only_unauth_scans']
         self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
 
     def outside_reason_to_live(self) -> bool:

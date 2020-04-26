@@ -122,7 +122,8 @@ class NexposeV2Client(NexposeClient):
         device = device_class()
         device.figure_os(device_raw.get('os_name'))
         device.last_seen = last_seen
-        device.id = str(device_raw['id'])
+        if device_raw.get('id'):
+            device.id = str(device_raw.get('id'))
         device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []))
         device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
         risk_score = device_raw.get('riskScore')

@@ -282,6 +282,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                         device.add_nic(mac=mac)
             except Exception:
                 logger.exception(f'Problem with discovered data for {device_raw}')
+            device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching Infoblox A Device: {device_raw}')

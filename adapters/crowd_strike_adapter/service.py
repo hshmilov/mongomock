@@ -298,6 +298,12 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                                      (device_raw.get('os_version') or ''))
                     device.os.build = device_raw.get('build_number')
                     try:
+                        device.os.major = int(device_raw.get('service_pack_major'))
+                        device.os.minor = int(device_raw.get('service_pack_minor'))
+                    except Exception:
+                        pass
+
+                    try:
                         if device.os.type == 'OS X':
                             device.full_osx_version = \
                                 device_raw.get('os_version').split(' ')[-1].strip(')').strip('(') \

@@ -2,12 +2,12 @@ import io
 import urllib
 import logging
 # pylint: disable=import-error
-from smb.SMBHandler import SMBHandler
 
 
 from axonius.utils import gui_helpers
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
+from axonius.utils.remote_file_smb_handler import get_smb_handler
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 
@@ -38,9 +38,15 @@ class SendCsvToShare(ActionTypeAlert):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    'name': 'use_nbns',
+                    'type': 'bool',
+                    'title': 'Use NBNS'
+                }
             ],
             'required': [
-                'csv_share'
+                'csv_share',
+                'use_nbns'
             ],
             'type': 'array'
         }
@@ -50,7 +56,8 @@ class SendCsvToShare(ActionTypeAlert):
         return {
             'csv_share': None,
             'csv_share_username': None,
-            'csv_share_password': None
+            'csv_share_password': None,
+            'use_nbns': True
         }
 
     def _run(self) -> AlertActionResult:
@@ -85,15 +92,13 @@ class SendCsvToShare(ActionTypeAlert):
                 share_password = None
                 share_username = None
             share_path = self._config.get('csv_share')
-            if not share_path.startswith('\\\\'):
-                raise Exception(f'Bad Share Format {share_path}')
             share_path = share_path[2:]
             share_path = share_path.replace('\\', '/')
             if share_username and share_password:
                 share_path = f'{urllib.parse.quote(share_username)}:' \
                              f'{urllib.parse.quote(share_password)}@{share_path}'
             share_path = 'smb://' + share_path
-            opener = urllib.request.build_opener(SMBHandler)
+            opener = urllib.request.build_opener(get_smb_handler(use_nbns=self._config.get('use_nbns')))
             fh = opener.open(share_path, data=csv_data)
             fh.close()
 

@@ -695,6 +695,10 @@ class DeviceAdapter(SmartJsonClass):
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     users = ListField(DeviceAdapterUser, "Users", json_format=JsonArrayFormat.table)
     local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins", json_format=JsonArrayFormat.table)
+    local_admins_users = ListField(str, 'Local Admins - Users')
+    local_admins_domain_users = ListField(str, 'Local Admins - Domain Users')
+    local_admins_local_users = ListField(str, 'Local Admins - Local Users')
+    local_admins_groups = ListField(str, 'Local Admins - Groups')
     pretty_id = Field(str, 'Axonius Name')
     agent_versions = ListField(DeviceAdapterAgentVersion, 'Agent Versions', json_format=JsonArrayFormat.table)
 
@@ -1108,6 +1112,16 @@ class DeviceAdapter(SmartJsonClass):
         self.batteries.append(DeviceAdapterBattery(**kwargs))
 
     def add_local_admin(self, **kwargs):
+        try:
+            admin_name = kwargs.get('admin_name')
+            if not admin_name:
+                return
+            if kwargs.get('admin_type') == 'Admin User':
+                self.local_admins_users.append(admin_name)
+            elif kwargs.get('admin_type') == 'Group Membership':
+                self.local_admins_groups.append(admin_name)
+        except Exception:
+            pass
         self.local_admins.append(DeviceAdapterLocalAdmin(**kwargs))
 
     def add_hd(self, **kwargs):

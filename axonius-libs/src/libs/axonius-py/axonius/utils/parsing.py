@@ -1410,8 +1410,13 @@ def serials_do_not_contradict(adapter_device1, adapter_device2):
     return serial1 == serial2
 
 
+def is_freshservice_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'fresh_service_adapter'
+
+
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
-    if not get_hostname(adapter_device1) or not get_hostname(adapter_device2):
+    if not get_hostname(adapter_device1) or not get_hostname(adapter_device2) \
+            or is_freshservice_adapter(adapter_device1) or is_freshservice_adapter(adapter_device2):
         return True
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 

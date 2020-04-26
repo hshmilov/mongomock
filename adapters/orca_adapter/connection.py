@@ -42,10 +42,12 @@ class OrcaConnection(RESTConnection):
         return devices_extra_api_dict
 
     def get_device_list(self):
+        devices_logs_dict = self._get_extra_api_dict('query/logs')
+        devices_compliance_dict = self._get_extra_api_dict('query/compliance')
         devices_alerts_dict = self._get_extra_api_dict('query/alerts')
         device_inventory_dict = self._get_extra_api_dict('query/inventory')
         for device_raw in self._get_api_endpoint('query/assets'):
-            yield device_raw, devices_alerts_dict, device_inventory_dict
+            yield device_raw, devices_alerts_dict, device_inventory_dict, devices_logs_dict, devices_compliance_dict
 
     def _get_api_endpoint(self, endpoint):
         response = self._get(endpoint)
