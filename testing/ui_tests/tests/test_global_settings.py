@@ -299,6 +299,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.toggle_root_master(toggle_value)
         self.settings_page.save_and_wait_for_toaster()
 
+    @pytest.mark.skip('AX-7190')
     def test_s3_restore(self):
         local_dir = _get_backup_files_local_dir()
         self._enable_s3_integration()
