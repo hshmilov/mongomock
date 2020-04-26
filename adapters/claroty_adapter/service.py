@@ -101,14 +101,14 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'verify_ssl',
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                },
-                {
                     'name': 'tenant_tag',
                     'title': 'Tenant Tag',
                     'type': 'string'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 },
                 {
                     'name': 'https_proxy',
@@ -261,6 +261,7 @@ class ClarotyAdapter(ScannerAdapterBase, Configurable):
                 }
             ],
             'required': [
+                'exclude_ipv6',
                 'exclude_no_mac_address'
             ],
             'pretty_name': 'Claroty Configuration',

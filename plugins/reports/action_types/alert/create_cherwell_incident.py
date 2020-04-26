@@ -60,7 +60,7 @@ class CherwellIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'short_description',
-                    'title': 'Short Description',
+                    'title': 'Short description',
                     'type': 'string'
                 },
                 {
@@ -69,8 +69,13 @@ class CherwellIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': 'description_default',
+                    'title': 'Add default incident description',
+                    'type': 'bool'
+                },
+                {
                     'name': 'customer_display_name',
-                    'title': 'Customer Display Name',
+                    'title': 'Customer display name',
                     'type': 'string'
                 },
                 {
@@ -89,11 +94,6 @@ class CherwellIncidentAction(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
-                    'name': 'description_default',
-                    'title': 'Add default incident description',
-                    'type': 'bool'
-                },
-                {
                     'name': 'category',
                     'type': 'string',
                     'title': 'Category'
@@ -105,7 +105,7 @@ class CherwellIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'incident_type',
-                    'title': 'Incident Type',
+                    'title': 'Incident type',
                     'type': 'string'
                 },
                 {

@@ -11,6 +11,7 @@ export const pluginMeta = {
     },
     axonius_users_adapter: {
         title: 'Axonius Users',
+        link: 'https://docs.axonius.com/docs/axonius-users',
         description: 'The Axonius Users adapter fetches users with Axonius credentials and their permissions using our API client.'
     },
     sevone_adapter: {
@@ -1001,7 +1002,7 @@ export const pluginMeta = {
     },
     nessus_adapter: {
         title: 'Tenable Nessus',
-        link: '',
+        link: 'https://docs.axonius.com/docs/tenable-nessus',
         description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
     },
     tenable_io_adapter: {

@@ -635,7 +635,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                         },
                         {
                             'name': 'cell_joiner',
-                            'title': 'Export CSV Cell Joiner',
+                            'title': 'Export CSV delimiter to use for multi-value fields',
                             'type': 'string'
                         },
                         {

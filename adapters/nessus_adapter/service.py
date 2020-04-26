@@ -306,7 +306,7 @@ class NessusAdapter(ScannerAdapterBase, Configurable):
             'items': [
                 {
                     'name': 'scan_id_white_list',
-                    'title': 'Scan IDs category whitelist',
+                    'title': 'Scan IDs whitelist',
                     'type': 'string'
                 },
                 {

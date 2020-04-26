@@ -784,7 +784,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_only_virtual_devices',
-                    'title': 'Fetch Only Virtual Devices',
+                    'title': 'Fetch only virtual devices',
                     'type': 'bool'
                 },
                 {
