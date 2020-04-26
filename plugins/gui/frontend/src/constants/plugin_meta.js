@@ -4,6 +4,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/sophos-cloud-optix',
         description: 'Sophos Cloud Optix is a public cloud visibility and threat response solution that detects, responds, and prevents cloud security and compliance gaps.'
     },
+    nozomi_guardian_adapter: {
+        title: 'Nozomi Networks Guardian',
+        link: 'https://docs.axonius.com/docs/nozomi-networks-guardian',
+        description: 'Nozomi Networks Guardian monitors network communications and device behavior for physical and virtual appliances.'
+    },
     axonius_users_adapter: {
         title: 'Axonius Users',
         description: 'The Axonius Users adapter fetches users with Axonius credentials and their permissions using our API client.'

@@ -284,6 +284,7 @@ DOCKER_PORTS = {
     'jira-adapter':                     13380,
     'sophos-cloud-optix-adapter':       13381,
     'sevone-adapter':                   13389,
+    'nozomi-guardian-adapter':          14284,
     'ip-fabric-adapter':                14285,
     'sumo-logic-adapter':               14286,
     'mongo':                            27017,
