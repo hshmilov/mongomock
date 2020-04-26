@@ -15,6 +15,8 @@ from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AWS_ADAPTER,
                                       AWS_ADAPTER_NAME,
                                       AD_ADAPTER_NAME,
+                                      CROWD_STRIKE_ADAPTER,
+                                      CROWD_STRIKE_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME,
                                       STRESSTEST_SCANNER_ADAPTER,
@@ -25,6 +27,7 @@ from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
 from services.adapters.cylance_service import CylanceService
 from services.adapters.aws_service import AwsService
+from services.adapters.crowd_strike_service import CrowdStrikeService
 from services.adapters.tanium_asset_service import TaniumAssetService
 from services.adapters.tanium_discover_service import TaniumDiscoverService
 from services.adapters.tanium_sq_service import TaniumSqService
@@ -43,6 +46,7 @@ from test_credentials.test_aws_credentials import client_details as aws_client_d
 from test_credentials.test_tanium_asset_credentials import CLIENT_DETAILS as tanium_asset_details
 from test_credentials.test_tanium_discover_credentials import CLIENT_DETAILS as tanium_discovery_details
 from test_credentials.test_tanium_sq_credentials import CLIENT_DETAILS as tanium_sq_details
+from test_credentials.test_crowd_strike_credentials import client_details as crowd_strike_client_details
 from devops.scripts.automate_dev import credentials_inputer
 
 
@@ -992,6 +996,37 @@ class TestDevicesQueryAdvancedCases(TestBase):
             self.devices_page.click_search()
             updated_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
             assert all_tanium_count - tanium_discovery_count == updated_tanium_count
+
+    def test_default_field_query_remains_id(self):
+        """
+        Verify that when switching to crowd strike adapter in the query wizard,
+        If the previous field was ID, that it still remains this ID
+        Also make sure that if a different field was selected,
+        It will be shown and not the ID.
+        """
+        try:
+            with CrowdStrikeService().contextmanager(take_ownership=True):
+                self.adapters_page.wait_for_adapter(CROWD_STRIKE_ADAPTER_NAME)
+                self.adapters_page.create_new_adapter_connection(CROWD_STRIKE_ADAPTER_NAME, crowd_strike_client_details)
+                self.settings_page.switch_to_page()
+                self.base_page.run_discovery()
+                self.devices_page.switch_to_page()
+                self.devices_page.click_query_wizard()
+                self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
+                self.devices_page.select_query_field(self.devices_page.ID_FIELD)
+                self.devices_page.select_query_adapter(CROWD_STRIKE_ADAPTER_NAME)
+                assert self.devices_page.get_query_field() == self.users_page.ID_FIELD
+                self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES)
+                self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
+                assert self.devices_page.get_query_field() == self.devices_page.FIELD_NETWORK_INTERFACES
+                self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
+                self.devices_page.select_query_adapter(CROWD_STRIKE_ADAPTER_NAME)
+                assert self.devices_page.get_query_field() == self.devices_page.FIELD_LAST_SEEN
+                self.devices_page.close_dropdown()
+                self.devices_page.wait_for_table_to_load()
+        finally:
+            self.adapters_page.clean_adapter_servers(CROWD_STRIKE_ADAPTER_NAME, delete_associated_entities=True)
+            self.wait_for_adapter_down(CROWD_STRIKE_ADAPTER)
 
     def test_devices_id_contains_query(self):
         self.dashboard_page.switch_to_page()

@@ -59,6 +59,9 @@ ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
 AWS_ADAPTER = 'aws_adapter'
 AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
 
+CROWD_STRIKE_ADAPTER = 'crowd_strike_adapter'
+CROWD_STRIKE_ADAPTER_NAME = 'CrowdStrike Falcon'
+
 SHODAN_ADAPTER = 'shodan_adapter'
 
 TANIUM_SQ_ADAPTER = 'Tanium Interact'
