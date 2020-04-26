@@ -25,7 +25,7 @@ AWS_ADAPTER_REQUIRED_FIELDS = {'cloud_id', 'aws_region', 'aws_source'}
 AWS_ROLE_ARN_RE = re.compile('^arn:aws:iam::[0-9]+:role/.*')
 EC2_ACTION_REQUIRED_ENTITIES = ['internal_axon_id', 'adapters.plugin_name', 'adapters.data.cloud_id',
                                 'adapters.data.aws_device_type', 'adapters.data.aws_region',
-                                'adapters.data.aws_source']
+                                'adapters.data.aws_source', 'adapters.data.ssm_data']
 AWS_EC2_INSTANCE_STATES = {'pending', 'running', 'shutting-down', 'terminated', 'stopping', 'stopped'}
 EC2_CONTAINER_DEVICE_TYPES = ['ECS', 'EKS']
 
@@ -215,7 +215,8 @@ class AWSActionUtils():
     def perform_grouped_ec2_cfg_action(
             current_result: Iterable[dict],
             client_config: dict,
-            action_func: EC2ActionCfgCallable) -> Generator[EntityResult, None, None]:
+            action_func: EC2ActionCfgCallable,
+            support_container_ec2_host: bool=False) -> Generator[EntityResult, None, None]:
         # Test valid configuration - both or none are valid
         if bool(client_config.get(AWS_ACCESS_KEY_ID)) ^ bool(client_config.get(AWS_SECRET_ACCESS_KEY)):
             yield from generic_fail((entry['internal_axon_id'] for entry in current_result),
@@ -224,7 +225,8 @@ class AWSActionUtils():
             return
 
         # reject invalid entries (using PEP342) and group them into (region, role_arn) groups
-        valid_entries = (yield from AWSActionUtils._reject_invalid_entries(current_result))
+        valid_entries = (yield from AWSActionUtils._reject_invalid_entries(
+            current_result, support_container_ec2_host=support_container_ec2_host))
         instance_group_list = AWSActionUtils._group_ec2_devices_by_role_and_region(valid_entries)
 
         aws_connnection = AwsConnection(client_config)
@@ -402,12 +404,14 @@ class AWSActionUtils():
         return (valid_state_instances, list(map(instance_id_to_instance.get, valid_instance_ids)))
 
     @staticmethod
-    def _reject_invalid_entries(entries_list: Iterable[dict]) -> Generator[EntityResult, None, List[dict]]:
+    def _reject_invalid_entries(entries_list: Iterable[dict], support_container_ec2_host: bool=False) \
+            -> Generator[EntityResult, None, List[dict]]:
 
         valid_entries = []  # type: List[dict]
 
         for entry in entries_list:
-            reject_reason = AWSActionUtils._try_reject_entry(entry)
+            reject_reason = AWSActionUtils._try_reject_entry(
+                entry, support_container_ec2_host=support_container_ec2_host)
             if reject_reason:
                 yield AWSActionUtils._generic_fail_axon(entry['internal_axon_id'], reject_reason)
             else:
@@ -417,7 +421,8 @@ class AWSActionUtils():
 
     #pylint: disable=R0911
     @staticmethod
-    def _try_reject_entry(entry: dict) -> Optional[str]:
+    def _try_reject_entry(entry: dict, support_container_ec2_host: bool=False) \
+            -> Optional[str]:
         try:
             # Retrieve Entry adapters list
             adapters_list = entry.get('adapters') or []
@@ -438,9 +443,12 @@ class AWSActionUtils():
             ec2_adapter_data = ec2_adapter_list[0]
 
             # Filter out device having ECS/EKS adapter connections, meaning they are containers over EC2.
-            if any(next(AWSActionUtils._iter_aws_adapters_data(entry, unsupported_device_type), None)
-                   for unsupported_device_type in EC2_CONTAINER_DEVICE_TYPES):
-                return f'EC2 Devices running containers are currently unsupported.'
+            if not support_container_ec2_host:
+                unsupported_adapter_connection_iter = (
+                    next(AWSActionUtils._iter_aws_adapters_data(entry, unsupported_device_type), None)
+                    for unsupported_device_type in EC2_CONTAINER_DEVICE_TYPES)
+                if any(unsupported_adapter_connection_iter):
+                    return f'EC2 Devices running containers are currently unsupported.'
 
             # Filter out devices without required fields
             missing_fields = AWS_ADAPTER_REQUIRED_FIELDS - set(ec2_adapter_data.keys())
@@ -474,7 +482,12 @@ class AWSActionUtils():
             if (adapter.get('plugin_name') or '') != ADAPTER_NAME:
                 continue
             adapter_data = adapter.get('data') or {}
-            if device_type and ((adapter_data.get('aws_device_type') or '') != device_type):
+            adapter_device_type = adapter_data.get('aws_device_type') or ''
+            if device_type and (adapter_device_type != device_type):
+                continue
+            # we do not support ec2 adapter connection originating for ssm data
+            if ((adapter_device_type == 'EC2') and
+                    (adapter_data.get('ssm_data') and isinstance(adapter_data.get('ssm_data'), dict))):
                 continue
             yield adapter_data
 

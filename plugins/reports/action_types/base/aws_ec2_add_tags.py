@@ -92,4 +92,4 @@ class AwsEc2AddTagsAction(ActionTypeBase):
     def _run(self) -> EntitiesResult:
         current_result = self._get_entities_from_view({entity: 1 for entity in EC2_ACTION_REQUIRED_ENTITIES})
         yield from AWSActionUtils.perform_grouped_ec2_cfg_action(
-            current_result, self._config, self.add_tags)
+            current_result, self._config, self.add_tags, support_container_ec2_host=True)

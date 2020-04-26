@@ -2,6 +2,9 @@ export const actionsMeta = {
     aws_ec2_add_tags: {
         title: 'Add Tag to Amazon EC2 Instance'
     },
+    aws_ec2_delete_tags: {
+        title: 'Remove Tag from Amazon EC2 Instance'
+    },
     aws_ec2_start_instance: {
         title: 'Start Amazon EC2 Instance'
     },
@@ -187,7 +190,7 @@ export const actionsMeta = {
     },
     aws_operations: {
         title: 'Manage AWS Services',
-        items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance', 'aws_ec2_add_tags']
+        items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance', 'aws_ec2_add_tags', 'aws_ec2_delete_tags']
     },
     azure_operations: {
         title: 'Manage Microsoft Azure Services',
