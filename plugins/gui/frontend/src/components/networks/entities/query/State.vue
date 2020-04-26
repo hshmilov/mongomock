@@ -295,7 +295,8 @@ export default {
         }
       }
 
-      > .x-button {
+      > .x-button,
+      .dropdown-input .x-button {
         margin-bottom: 8px;
         padding: 4px;
         margin-right: 16px;

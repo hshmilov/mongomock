@@ -8,7 +8,7 @@
       <XButton
         class="entityMenu"
         :class="columnButtonClass"
-        link
+        type="link"
       >
         <VIcon
           size="18"
@@ -42,7 +42,7 @@
       </AMenu>
     </ADropdown>
     <XButton
-      link
+      type="link"
       class="entityMenu"
       :disabled="disableExportCsv || exportInProgress"
       @click.stop.prevent="exportTableToCSV"

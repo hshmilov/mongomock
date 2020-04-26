@@ -23,10 +23,11 @@
       />
       <section class="modal-assign-role__actions">
         <XButton
-          link
+          type="link"
           @click="callCloseModal"
         >Cancel</XButton>
         <XButton
+          type="primary"
           :disabled="roleNotselected"
           @click="callAssignRole"
         >Assign</XButton>

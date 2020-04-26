@@ -10,6 +10,7 @@
       @submit="onSave"
     />
     <x-button
+      type="primary"
       :disabled="!valid"
       @click="onSave"
     >Get Started</x-button>

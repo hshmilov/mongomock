@@ -2,7 +2,7 @@
     <div class="x-text-box" :class="{disabled: !clickable, selected}">
         <slot name="logo" />
         <div class="content">{{ text }}</div>
-        <x-button v-if="removable" link @click.prevent.stop="remove">x</x-button>
+        <x-button type="link" v-if="removable" @click.prevent.stop="remove">x</x-button>
     </div>
 </template>
 

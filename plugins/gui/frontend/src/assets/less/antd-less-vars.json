@@ -1,4 +1,5 @@
 {
   "primary-color": "#0076FF",
-  "btn-height-base": "30px"
+  "btn-height-base": "30px",
+  "btn-font-weight": 300
 }

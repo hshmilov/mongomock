@@ -22,13 +22,14 @@
               @click="removeConnection"
             >Remove</XButton>
             <XButton
-              id="new_connection"
               type="primary"
+              id="new_connection"
               :disabled="!canAdd"
               @click="configConnection('new')"
             >Add Connection</XButton>
           </template>
           <XTable
+            type="primary"
             slot="table"
             v-model="selectedServersModel"
             :fields="tableFields"
@@ -159,14 +160,14 @@
               @click="toggleServerModal"
             >Cancel</XButton>
             <XButton
-              id="test_reachability"
               type="primary"
+              id="test_reachability"
               :disabled="!serverModal.valid || !connectionLabelValid"
               @click="testServer"
             >Test Reachability</XButton>
             <XButton
+              type="primary"
               id="save_server"
-              type="link"
               :disabled="!serverModal.valid || !connectionLabelValid"
               @click="saveServer"
             >Save and Connect</XButton>

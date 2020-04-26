@@ -9,6 +9,7 @@
     ></x-form>
     <div class="place-left">
       <x-button
+        type="primary"
         id="feature-flags-save"
         :disabled="!isValid"
         @click="$emit('save')"

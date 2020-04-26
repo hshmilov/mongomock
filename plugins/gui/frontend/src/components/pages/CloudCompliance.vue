@@ -26,7 +26,7 @@
         </div>
         <x-button
           class="search__reset"
-          link
+          type="link"
           @click="resetAccountsFilter"
         >Reset</x-button>
         <md-switch
