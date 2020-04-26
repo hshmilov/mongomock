@@ -8,12 +8,18 @@ from bson import ObjectId
 from flask import (jsonify)
 from passlib.hash import bcrypt
 
-from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED, UNCHANGED_MAGIC_FOR_GUI, IS_AXONIUS_ROLE)
+from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED, UNCHANGED_MAGIC_FOR_GUI, IS_AXONIUS_ROLE,
+                                       USERS_TOKENS_EMAIL_SUBJECT, USERS_TOKENS_RESET_EMAIL_CONTENT,
+                                       USERS_TOKENS_RESET_LINK, USERS_TOKENS_INVITE_EMAIL_CONTENT,
+                                       USERS_TOKENS_EMAIL_INVITE_SUBJECT)
 
 from axonius.consts.plugin_consts import (PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE,
                                           PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
-                                          PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES)
+                                          PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES,
+                                          CORE_UNIQUE_NAME, CONFIGURABLE_CONFIGS_COLLECTION,
+                                          RESET_PASSWORD_LINK_EXPIRATION, RESET_PASSWORD_SETTINGS, ADMIN_USER_NAME)
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (paginated, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
@@ -90,10 +96,12 @@ class Users:
         :return: str
         """
         post_data = self.get_request_data_as_object()
-        if not self._check_password_validity(post_data['password']):
+        if not post_data.get('auto_generated_password') and not self._check_password_validity(post_data['password']):
             return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
 
         password = post_data.get('password')
+        if post_data.get('auto_generated_password'):
+            password = secrets.token_urlsafe()
         user_name = post_data.get('user_name')
         role_id = post_data.get('role_id')
 
@@ -292,6 +300,10 @@ class Users:
             logger.info('Attempt to assign axonius role to users')
             return return_error('role is not assignable', 400)
 
+        # Only admin users can update the 'admin' user
+        if not self.is_admin_user() and user.get('user_name') == ADMIN_USER_NAME:
+            return return_error(f'Not allowed to update {user["user_name"]} user', 401)
+
         new_user_info = {
             'role_id': ObjectId(role_id),
             'last_updated': datetime.now()
@@ -398,3 +410,154 @@ class Users:
             return '', 202
         logger.info(f'Bulk deletion users succeeded')
         return '', 200
+
+    @gui_route_logged_in('tokens/create/reset_password', methods=['PUT', 'POST'])
+    def generate_user_reset_password_link(self):
+        """
+        Gets user ID and generate reset password token
+        user id expected to be plain text, not ObjectId
+        :return: link to current machine reset password page, with the token as url param
+        """
+        post_data = self.get_request_data_as_object()
+        user_id = post_data.get('user_id')
+        if not user_id:
+            return return_error('please provide valid user id', 400)
+
+        user = self._users_collection.find_one({
+            '_id': ObjectId(user_id)
+        })
+        if not user:
+            return return_error('please provide valid user id', 400)
+
+        # Only admin users can create a reset link for the 'admin' user
+        if not self.is_admin_user() and user.get('user_name') == ADMIN_USER_NAME:
+            return return_error(f'Not allowed to reset {user["user_name"]} user', 401)
+
+        token = secrets.token_urlsafe()
+        result = self._users_tokens_collection.update_one({
+            'user_id': ObjectId(user_id)
+        }, {
+            '$set': {
+                'token': token,
+                'date_added': datetime.utcnow(),
+                'type': 'reset_password'
+            }
+        }, upsert=True)
+        if not result:
+            return return_error('token cannot created', 400)
+
+        system_config = self.system_collection.find_one({'type': 'server'}) or {}
+        server_name = system_config.get('server_name', 'localhost')
+
+        return USERS_TOKENS_RESET_LINK.format(server_name=server_name, token=token)
+
+    @gui_route_logged_in('tokens/validate/reset_password/<token>', methods=['GET'], enforce_session=False)
+    def verify_user_reset_password_token(self, token):
+        """
+        Search for current user's reset password token
+        if no token exist, its count as expired
+        :param: token: a valid token for user reset password
+        :return: boolean representation of token status, valid or expired in any other case
+        """
+        user_token = self._users_tokens_collection.find_one({
+            'token': token,
+            'type': 'reset_password'
+        })
+        return jsonify({'valid': bool(user_token)}), 200
+
+    @gui_route_logged_in('tokens/reset_password',
+                         methods=['POST'],
+                         enforce_session=False,
+                         enforce_permissions=False)
+    def reset_user_password_by_token(self):
+        """
+        Change user password verified by the reset password token, new password expected to be in post_data
+        :param token: a valid token for user reset password
+        :return:
+        """
+        post_data = self.get_request_data_as_object()
+        if not self._check_password_validity(post_data.get('password')):
+            return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
+
+        token = post_data.get('token')
+        if not token:
+            return return_error('token error', 400)
+
+        match_token = {
+            'token': token,
+            'type': 'reset_password'
+        }
+        user_token = self._users_tokens_collection.find_one(match_token)
+        if not user_token:
+            return return_error('token error', 400)
+
+        user_id = user_token.get('user_id')
+
+        result = self._users_collection.update_one({
+            '_id': ObjectId(user_id)
+        }, {
+            '$set': {
+                'password': bcrypt.hash(post_data['password'])
+            }
+        })
+        if not result.modified_count or not result.matched_count:
+            return return_error(f'error updating password count:{result.modified_count} matched:{result.matched_count}',
+                                400)
+        self._users_tokens_collection.delete_one(match_token)
+        self._invalidate_sessions([user_id])
+        return '', 200
+
+    @gui_route_logged_in('tokens/send_reset_password', methods=['PUT', 'POST'])
+    def send_reset_password(self):
+        post_data = self.get_request_data_as_object()
+        if not post_data.get('user_id'):
+            return return_error('please provide valid user id', 400)
+        user_id = ObjectId(post_data['user_id'])
+        email_address = post_data.get('email')
+        if not email_address:
+            return return_error('please provide valid email address', 400)
+
+        invite = post_data.get('invite')
+        user_token = self._users_tokens_collection.find_one({
+            'user_id': user_id,
+            'type': 'reset_password'
+        })
+        user = self._users_collection.find_one({'_id': user_id})
+        system_config = self.system_collection.find_one({'type': 'server'}) or {}
+        server_name = system_config.get('server_name', 'localhost')
+        reset_link = USERS_TOKENS_RESET_LINK.format(server_name=server_name,
+                                                    token=user_token['token'])
+        try:
+            self._send_reset_password_email(reset_link, email_address, invite, user['user_name'])
+        except RuntimeWarning as e:
+            return return_error(str(e), 412)
+        except Exception as e:
+            return return_error(str(e), 500)
+        return '', 204
+
+    def _send_reset_password_email(self, link, email_address, invite: bool = False, user_name: str = None):
+        core_config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
+            {'config_name': CORE_CONFIG_NAME})['config']
+        expire_hours = core_config.get(RESET_PASSWORD_SETTINGS).get(RESET_PASSWORD_LINK_EXPIRATION)
+        if self.mail_sender:
+            try:
+                if not invite:
+                    subject = USERS_TOKENS_EMAIL_SUBJECT
+                    content = USERS_TOKENS_RESET_EMAIL_CONTENT.format(link=link,
+                                                                      expire_hours=expire_hours)
+                else:
+                    subject = USERS_TOKENS_EMAIL_INVITE_SUBJECT
+                    content = USERS_TOKENS_INVITE_EMAIL_CONTENT.format(link=link,
+                                                                       expire_hours=expire_hours,
+                                                                       user_name=user_name)
+                email = self.mail_sender.new_email(subject,
+                                                   [email_address])
+                email.send(content.replace('\n', '\n<br>'))
+                logger.info(f'The reset password link was sent to {email_address}')
+            except Exception:
+                error_message = f'Failed to send a reset password link to {email_address}'
+                logger.info(error_message)
+                raise Exception(error_message)
+        else:
+            logger.info('Email cannot be sent because no email server is configured')
+            raise RuntimeWarning('No email server configured')

@@ -7,7 +7,7 @@ import axios from 'axios';
 */
 
 let host = '';
-const excludedUrls = ['login', 'signup', 'login/ldap', 'login/saml'];
+const excludedUrls = ['login', 'signup', 'login/ldap', 'login/saml', 'settings/users/tokens/reset_password'];
 if (process.env.NODE_ENV === 'development') {
   host = 'https://127.0.0.1';
 }

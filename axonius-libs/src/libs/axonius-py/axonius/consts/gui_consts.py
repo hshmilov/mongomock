@@ -123,6 +123,33 @@ USERS_PREFERENCES_COLLECTION = 'users_preferences'
 USERS_PREFERENCES_COLUMNS_FIELD = 'table_columns'
 USERS_PREFERENCES_DEFAULT_FIELD = 'default'
 
+###############
+# User tokens #
+###############
+USERS_TOKENS_COLLECTION_TTL_INDEX_NAME = 'date_added'
+USERS_TOKENS_COLLECTION = 'users_token'
+USERS_TOKENS_RESET_LINK = 'https://{server_name}/login?token={token}'
+USERS_TOKENS_EMAIL_INVITE_SUBJECT = 'Welcome to Axonius'
+USERS_TOKENS_EMAIL_SUBJECT = 'Axonius Password Reset'
+USERS_TOKENS_RESET_EMAIL_CONTENT = '''Dear Axonius user,
+
+We've received a request from your Axonius administrator to reset your password. If you didn't make the request, just ignore this email.
+Otherwise, you can reset your password using this link:
+{link}
+
+The password reset link will expire in {expire_hours} hours.
+
+Thanks,
+Axonius'''
+USERS_TOKENS_INVITE_EMAIL_CONTENT = '''Dear Axonius user,
+
+An Axonius administrator has invited you to the Axonius Cybersecurity Asset Management Platform. Your username is: {user_name}.
+To accept the invitation and to create your password, use the following link: {link}
+The invite will expire in {expire_hours} hours.
+
+Thank you,
+Axonius'''
+
 ####################
 # Instances consts #
 ####################
@@ -248,7 +275,8 @@ HASH_SALT = '2098f251e4f9d93cd379de4184e7eef17817fbc504e03ded3d6f09364d7725a3'
 # CSRF Values #
 #########################
 CSRF_TOKEN_LENGTH = 64
-EXCLUDED_CSRF_ENDPOINTS = ('/api/login', '/api/signup', 'api/login/ldap', 'api/login/saml')
+EXCLUDED_CSRF_ENDPOINTS = ('/api/login', '/api/signup', 'api/login/ldap', 'api/login/saml',
+                           'settings/users/tokens/reset_password')
 
 
 #################

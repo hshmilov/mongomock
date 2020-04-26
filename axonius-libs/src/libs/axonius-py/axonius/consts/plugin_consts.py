@@ -110,6 +110,8 @@ PASSWORD_PROTECTION_ALLOWED_RETRIES = 'password_max_allowed_tries'
 PASSWORD_PROTECTION_LOCKOUT_MIN = 'password_lockout_minutes'
 PASSWORD_PROTECTION_BY_IP = 'password_protection_by_ip'
 PASSWORD_PROTECTION_BY_USERNAME = 'password_protection_by_username'
+RESET_PASSWORD_SETTINGS = 'password_reset_password'
+RESET_PASSWORD_LINK_EXPIRATION = 'reset_password_link_expiration'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'

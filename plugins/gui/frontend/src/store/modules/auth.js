@@ -22,6 +22,7 @@ export const SET_USER = 'SET_USER';
 export const SET_LOGIN_OPTIONS = 'SET_LOGIN_OPTIONS';
 export const INIT_USER = 'INIT_USER';
 export const INIT_ERROR = 'INIT_ERROR';
+export const SET_USER_ERROR = 'SET_USER_ERROR';
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS';
 export const GET_ALL_USERS = 'GET_ALL_USERS';
 export const UPDATE_ALL_USERS = 'UPDATE_ALL_USERS';
@@ -54,6 +55,7 @@ export const IS_AXONIUS_USER = 'IS_AXONIUS_USER';
 
 export const GET_PERMISSION_STRUCTURE = 'GET_PERMISSION_STRUCTURE';
 
+export const NOT_LOGGED_IN = 'Not logged in';
 
 export const auth = {
   state: {
@@ -149,6 +151,9 @@ export const auth = {
     },
     [INIT_ERROR](state) {
       state.currentUser.error = '';
+    },
+    [SET_USER_ERROR](state, payload) {
+      state.currentUser.error = payload.error;
     },
     [UPDATE_ALL_USERS](state, payload) {
       state.allUsers.content.fetching = payload.fetching;

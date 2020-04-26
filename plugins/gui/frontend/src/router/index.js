@@ -70,6 +70,11 @@ const routes = [
     component: Dashboard,
   },
   {
+    path: '/login',
+    name: 'login',
+    redirect: '/',
+  },
+  {
     path: '/dashboard/explorer',
     name: 'Insights Explorer',
     component: DashboardExplorer,

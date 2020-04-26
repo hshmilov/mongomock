@@ -106,7 +106,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
                                           PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
                                           PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME,
-                                          AUDIT_COLLECTION)
+                                          AUDIT_COLLECTION, RESET_PASSWORD_LINK_EXPIRATION, RESET_PASSWORD_SETTINGS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -3377,6 +3377,20 @@ class PluginBase(Configurable, Feature, ABC):
                     ]
                 },
                 {
+                    'name': RESET_PASSWORD_SETTINGS,
+                    'title': 'Password Reset Settings',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': RESET_PASSWORD_LINK_EXPIRATION,
+                            'title': 'Reset password link expiration (hours)',
+                            'type': 'integer',
+                            'min': 1,
+                            'required': True,
+                        },
+                    ]
+                },
+                {
                     'name': PASSWORD_BRUTE_FORCE_PROTECTION,
                     'title': 'Password Brute Force Settings',
                     'type': 'array',
@@ -3888,6 +3902,9 @@ class PluginBase(Configurable, Feature, ABC):
                 PASSWORD_MIN_UPPERCASE: 1,
                 PASSWORD_MIN_NUMBERS: 1,
                 PASSWORD_MIN_SPECIAL_CHARS: 0
+            },
+            RESET_PASSWORD_SETTINGS: {
+                RESET_PASSWORD_LINK_EXPIRATION: 48,
             },
             PASSWORD_BRUTE_FORCE_PROTECTION: {
                 'enabled': False,

@@ -56,7 +56,7 @@
                 type="primary"
                 id="global-settings-save"
                 :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy
-                  || !validPasswordProtection"
+                  || !validPasswordResetSettings || !validPasswordProtection"
                 @click="saveGlobalSettings"
               >Save</XButton>
             </div>
@@ -135,8 +135,9 @@
 
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
+import _cloneDeep from 'lodash/cloneDeep';
 
-import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from '@store/modules/settings';
+import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG } from '@store/modules/settings';
 import { UPDATE_SYSTEM_CONFIG, SHOW_TOASTER_MESSAGE } from '@store/mutations';
 import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '@store/actions';
 import { GET_USER } from '@store/modules/auth';
@@ -170,19 +171,19 @@ export default {
   },
   computed: {
     ...mapState({
-      schedulerSettings(state) {
+      schedulerSettingsFromState(state) {
         if (!state.settings.configurable.system_scheduler) return undefined;
         return state.settings.configurable.system_scheduler.SystemSchedulerService;
       },
-      coreSettings(state) {
+      coreSettingsFromState(state) {
         if (!state.settings.configurable.core) return undefined;
         return state.settings.configurable.core.CoreService;
       },
-      guiSettings(state) {
+      guiSettingsFromState(state) {
         if (!state.settings.configurable.gui) return undefined;
         return state.settings.configurable.gui.GuiService;
       },
-      featureFlags(state) {
+      featureFlagsFromState(state) {
         if (!state.settings.configurable.gui) return undefined;
         return state.settings.configurable.gui.FeatureFlags;
       },
@@ -196,10 +197,21 @@ export default {
     },
     validResearchRate() {
       if (!this.schedulerSettings.config) return 12;
-      return this.validNumber(this.schedulerSettings.config.discovery_settings.system_research_rate);
+      return this.validNumber(
+        this.schedulerSettings.config.discovery_settings.system_research_rate
+      );
     },
     validResearchDate() {
-      return this.schedulerSettings.config.discovery_settings.system_research_date.system_research_date_recurrence >= 0;
+      return this.schedulerSettings.config.discovery_settings
+        .system_research_date.system_research_date_recurrence >= 0;
+    },
+    validPasswordResetSettings() {
+      if (!this.coreSettings.config) {
+        return false;
+      }
+      return this.validNumber(
+        this.coreSettings.config.password_reset_password.reset_password_link_expiration
+      );
     },
     validPasswordPolicy() {
       if (!this.coreSettings.config) {
@@ -210,9 +222,11 @@ export default {
       }
 
       const {
-        password_min_lowercase, password_min_numbers, password_min_special_chars, password_min_uppercase, password_length,
+        password_min_lowercase, password_min_numbers,
+        password_min_special_chars, password_min_uppercase, password_length,
       } = this.coreSettings.config.password_policy_settings;
-      const sumChars = password_min_lowercase + password_min_numbers + password_min_special_chars + password_min_uppercase;
+      const sumChars = password_min_lowercase + password_min_numbers
+        + password_min_special_chars + password_min_uppercase;
 
       return password_length > 0
       && password_min_lowercase >= 0
@@ -249,6 +263,10 @@ export default {
   },
   data() {
     return {
+      schedulerSettings: {},
+      coreSettings: {},
+      guiSettings: {},
+      featureFlags: {},
       coreComplete: true,
       guiComplete: true,
       schedulerComplete: true,
@@ -264,30 +282,30 @@ export default {
       userToRemove: null,
     };
   },
-  created() {
-    this.loadPluginConfig({
+  async created() {
+    await this.loadPluginConfig({
       pluginId: 'gui',
       configName: 'GuiService',
     });
-    this.loadPluginConfig({
+    await this.loadPluginConfig({
       pluginId: 'core',
       configName: 'CoreService',
     });
-    this.loadPluginConfig({
+    await this.loadPluginConfig({
       pluginId: 'system_scheduler',
       configName: 'SystemSchedulerService',
     });
-    this.fetchData({
+    this.schedulerSettings = _cloneDeep(this.schedulerSettingsFromState);
+    this.coreSettings = _cloneDeep(this.coreSettingsFromState);
+    this.guiSettings = _cloneDeep(this.guiSettingsFromState);
+    this.featureFlags = _cloneDeep(this.featureFlagsFromState);
+    const response = await this.fetchData({
       rule: 'settings/metadata',
-    }).then((response) => {
-      if (response.status === 200) {
-        this.systemInfo = response.data;
-      }
     });
+    this.systemInfo = response.data;
   },
   methods: {
     ...mapMutations({
-      changePluginConfig: CHANGE_PLUGIN_CONFIG,
       updateSystemConfig: UPDATE_SYSTEM_CONFIG,
       showToasterMessage: SHOW_TOASTER_MESSAGE,
     }),

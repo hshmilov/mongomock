@@ -31,11 +31,6 @@
         class="print-exclude"
         @access-violation="notifyAccess"
       />
-      <XToast
-        v-if="toastMessage"
-        v-model="toastMessage"
-        :timeout="toastData.toastTimeout"
-      />
       <XAccessModal v-model="blockedComponent" />
       <XGettingStarted
         v-if="$isAdmin() && gettingStartedEnabled"
@@ -46,6 +41,11 @@
       <XLogin />
     </template>
     <XBottomBar />
+    <XToast
+      v-if="toastMessage"
+      v-model="toastMessage"
+      :timeout="toastData.toastTimeout"
+    />
   </VApp>
 </template>
 

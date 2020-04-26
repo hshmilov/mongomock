@@ -19,6 +19,7 @@ import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 const XNewUserForm = () => import(/* webpackChunkName: "XNewUserForm" */ './content/new-user-panel.vue');
 const XEditUserInfoForm = () => import(/* webpackChunkName: "XEditUserInfoForm" */ './content/edit-user-panel.vue');
+const XModalResetPassword = () => import(/* webpackChunkName: "XModalResetPassword" */ '../modal-reset-password.vue');
 
 export default {
   name: 'UserPanel',
@@ -29,6 +30,7 @@ export default {
     XActionsGroup,
     XNewUserForm,
     XEditUserInfoForm,
+    XModalResetPassword,
   },
   props: {
     value: {
@@ -57,6 +59,8 @@ export default {
       isFormInvalid: false,
       userInfo: null,
       serverError: null,
+      lastSavedEmail: null,
+      temporary: true,
     };
   },
   computed: {
@@ -69,10 +73,14 @@ export default {
         this.$permissionConsts.actions.Delete,
         this.$permissionConsts.categories.Users);
     },
+    showPanel() {
+      return this.value;
+    },
   },
   watch: {
     userId(id) {
       this.userInfo = this.usersMap[id];
+      this.lastSavedEmail = this.userInfo ? this.userInfo.email : null;
     },
   },
   methods: {
@@ -91,22 +99,36 @@ export default {
     },
     genPanelActions() {
       if (this.panelType !== 'new') {
-        return this.canDeleteUser && this.systemAdminUuid !== this.userId ? (
-          <x-action-item
+        const panelActions = [];
+        if (this.canDeleteUser && this.systemAdminUuid !== this.userId) {
+          panelActions.push(<x-action-item
             class="action-remove"
             title="Remove"
             onClick={this.callDeleteUser}
             size="20"
             color="#fff"
             icon={mdiDelete}
-          />
-        ) : null;
+          />);
+        }
+        panelActions.push(<x-action-item
+            className="action-reset-password"
+            title="Reset Password"
+            onClick={() => this.displayResetPasswordModal(this.userId, this.lastSavedEmail)}
+            size="20"
+            color="#fff"
+            icon="$vuetify.icons.resetPassword"
+          />);
+        return panelActions;
       }
       return null;
     },
     genPanelContent() {
       if (this.panelType === 'new') {
-        return <XNewUserForm ref="form" onValidate={this.validate} onChange={this.syncUserInfo}/>;
+        return <XNewUserForm
+          ref="form"
+          onValidate={this.validate}
+          onChange={this.syncUserInfo}
+        />;
       }
       return this.userInfo
         ? <XEditUserInfoForm
@@ -139,6 +161,10 @@ export default {
           if (this.panelType === 'new') {
             snackbarMessage = 'User created successfully';
             res = await this.createNewUser(this.userInfo);
+            if (res.status === 200 && this.userInfo.auto_generated_password) {
+              const inviteUser = true;
+              this.displayResetPasswordModal(res.data.uuid, res.data.email, inviteUser);
+            }
           } else {
             snackbarMessage = 'User updated successfully';
             res = await this.updateUser({
@@ -162,6 +188,21 @@ export default {
     callDeleteUser() {
       this.$emit('delete');
     },
+    displayResetPasswordModal(userId, email, invite = false) {
+      if (!invite) {
+        this.temporary = false;
+      }
+      this.$emit('reset-password', {
+        userId,
+        email,
+        invite,
+        onClose: this.restoreTemporaryPanel,
+      });
+    },
+    restoreTemporaryPanel() {
+      this.temporary = true;
+      return Promise.resolve();
+    },
     onCancel() {
       this.isFormInvalid = false;
       this.serverError = null;
@@ -172,9 +213,10 @@ export default {
   render(h) {
     return (
       <XSidePanel
-        value={this.value}
+        value={this.showPanel}
         title={this.title}
         panel-class="user-panel"
+        temporary={this.temporary}
         onInput={this.onPanelStateChange}
       >
         <XActionsGroup slot="panelHeader">

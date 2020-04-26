@@ -599,7 +599,7 @@ class APIMixin:
             PermissionAction.Add, PermissionCategory.Settings, PermissionCategory.Users,
         ),
         activity_params=['user_name'])
-    def update_api_system_users(self):
+    def add_api_system_users(self):
         """Add user.
 
         POST: Returns empty str. Add a user. POST body dict keys:
@@ -622,7 +622,7 @@ class APIMixin:
         ),
         activity_params=['user_name'],
     )
-    def api_update_user(self, user_id):
+    def update_api_system_user(self, user_id):
         """Get users or add user.
 
         POST: Returns empty str. POST body dict keys:
@@ -633,7 +633,39 @@ class APIMixin:
         :param user_id:
         :return: str
         """
-        return self.update_user(user_id=user_id)
+        return self._update_user(user_id=user_id)
+
+    @api_add_rule(
+        'tokens/create/reset_password',
+        methods=['PUT', 'POST'],
+        required_permission=PermissionValue.get(None, PermissionCategory.Settings, PermissionCategory.Users),
+    )
+    def create_api_reset_password(self):
+        """
+        Generate a reset password token and link
+
+        POST or PUT (according to the user permission): the body has to contain:
+            user_id: str
+        :return: The link containing the token
+        """
+        return self.generate_user_reset_password_link()
+
+    @api_add_rule(
+        'tokens/send_reset_password',
+        methods=['PUT', 'POST'],
+        required_permission=PermissionValue.get(None, PermissionCategory.Settings, PermissionCategory.Users),
+    )
+    def send_api_reset_password_email(self):
+        """
+        Send a reset password link to a new on an exist user
+
+        POST or PUT (according to the user permission): the body has to contain:
+            user_id: str - the user id to reset it's password
+            email: str - the email to send the mail to
+            invite: str - is it a new user
+        :return:
+        """
+        return self.send_reset_password()
 
     @api_add_rule(
         rule='system/users/<user_id>',

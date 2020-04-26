@@ -7,10 +7,12 @@
     <div class="x-modal">
       <div :class="`modal-container w-${size}`">
         <div
-          v-if="title"
+          v-if="title || dismissable"
           class="modal-header"
         >
-          <div class="modal-header-title">
+          <div
+            class="modal-header-title"
+          >
             {{ title }}
           </div>
           <XButton
@@ -64,13 +66,35 @@ export default {
   name: 'XModal',
   components: { XButton },
   props: {
-    approveText: { default: 'OK' },
-    approveId: {},
-    dismissText: { default: 'Cancel' },
-    disabled: { default: false },
-    size: { default: 'xl' },
-    title: {},
-    dismissable: { default: false },
+    approveText:
+      {
+        type: String,
+        default: 'OK',
+      },
+    approveId: {
+      type: String,
+      default: 'approveId',
+    },
+    dismissText: {
+      type: String,
+      default: 'Cancel',
+    },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
+    size: {
+      type: String,
+      default: 'xl',
+    },
+    title: {
+      type: String,
+      default: null,
+    },
+    dismissable: {
+      type: Boolean,
+      default: false,
+    },
   },
   mounted() {
     if (this.$el.querySelector('input')) {

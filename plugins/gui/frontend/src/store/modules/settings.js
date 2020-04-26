@@ -112,7 +112,9 @@ export const settings = {
           commit(CHANGE_PLUGIN_CONFIG, {
             pluginId: payload.pluginId,
             configName: payload.configName,
-            config: payload.config,
+            data: {
+              config: payload.config,
+            },
           });
         }
         return response;

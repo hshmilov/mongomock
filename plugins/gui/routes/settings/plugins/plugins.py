@@ -18,7 +18,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          EXECUTION_PLUGIN_NAME)
+                                          EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
+                                          RESET_PASSWORD_SETTINGS)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -210,6 +211,14 @@ class Plugins:
                     return return_error(f'Error listing AWS S3 Objects: {str(e)}', 400)
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')
+
+            password_reset_config_from_db = config_from_db['config'].get(RESET_PASSWORD_SETTINGS)
+            password_reset_config_to_set = config_to_set.get(RESET_PASSWORD_SETTINGS)
+
+            if password_reset_config_from_db and password_reset_config_to_set\
+                and password_reset_config_from_db.get(RESET_PASSWORD_LINK_EXPIRATION) !=\
+                    password_reset_config_to_set.get(RESET_PASSWORD_LINK_EXPIRATION):
+                self._update_user_tokens_index(password_reset_config_to_set.get(RESET_PASSWORD_LINK_EXPIRATION))
 
             log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING,
                        metric_value=getting_started_feature_enabled)

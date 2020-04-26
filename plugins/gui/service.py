@@ -37,7 +37,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_RESTRICTED,
                                        PREDEFINED_FIELD,
                                        PREDEFINED_ROLE_OWNER_RO,
-                                       IS_AXONIUS_ROLE)
+                                       IS_AXONIUS_ROLE,
+                                       USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -117,6 +118,29 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                            'api_secret': secrets.token_urlsafe()
                            }
 
+    def __create_user_tokens_index(self):
+        # add ttl index to user tokens collection if not exist, prior to our logic the ttl value
+        # can be set from the setting page, therefore we have to check the existence of the index
+        # before applying the default value.
+        # setting a different value from the existed value will raise exception
+        # we dont take the value from the settings collection because if he exist this mean no index need to be created
+        users_tokens_collection_indexes = \
+            [x['key'][0][0] for x in self._users_tokens_collection.index_information().values()]
+
+        if USERS_TOKENS_COLLECTION_TTL_INDEX_NAME not in users_tokens_collection_indexes:
+            # default is 48 hours in seconds
+            default_ttl = 60 * 60 * 48
+            self._users_tokens_collection.create_index(USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
+                                                       expireAfterSeconds=default_ttl)
+
+    def _update_user_tokens_index(self, expire_hours):
+        if expire_hours:
+            new_ttl = 60 * 60 * expire_hours
+            self._get_db_connection()[self.plugin_unique_name].command(
+                'collMod', USERS_TOKENS_COLLECTION,
+                index={'keyPattern': {USERS_TOKENS_COLLECTION_TTL_INDEX_NAME: 1},
+                       'expireAfterSeconds': new_ttl})
+
     def __add_defaults(self):
         self._add_default_roles()
         restricted_role_id = self.get_default_external_role_id(self._roles_collection)
@@ -184,6 +208,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self._users_collection = self._get_collection(USERS_COLLECTION)
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
         self._users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
+        self._users_tokens_collection = self._get_collection(USERS_TOKENS_COLLECTION)
         self._users_preferences_collection = self._get_collection(USERS_PREFERENCES_COLLECTION)
         self._dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
         self._dashboard_spaces_collection = self._get_collection(DASHBOARD_SPACES_COLLECTION)
@@ -199,6 +224,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                                                  ('source', pymongo.ASCENDING)], unique=True)
         except pymongo.errors.DuplicateKeyError as e:
             logger.critical(f'Error creating user_name and source unique index: {e}')
+
+        self.__create_user_tokens_index()
 
         self.__add_defaults()
 

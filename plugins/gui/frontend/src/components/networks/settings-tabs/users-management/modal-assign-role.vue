@@ -3,7 +3,7 @@
     :value="value"
     width="720"
     persistent
-    @click:outside="callCloseModal"
+    @click:outside="onCloseModal"
   >
     <VCard
       v-if="value"
@@ -24,7 +24,7 @@
       <section class="modal-assign-role__actions">
         <XButton
           type="link"
-          @click="callCloseModal"
+          @click="onCloseModal"
         >Cancel</XButton>
         <XButton
           type="primary"
@@ -68,7 +68,7 @@ export default {
     this.rolesOptions = await fetchAssignableRolesList();
   },
   methods: {
-    callCloseModal() {
+    onCloseModal() {
       this.$emit('close');
     },
     callAssignRole() {

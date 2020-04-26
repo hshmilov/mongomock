@@ -30,7 +30,7 @@
             <XButton
               type="primary"
               :disabled="!canAdd"
-              @click="onCareateNewUser"
+              @click="onCreateNewUser"
             >Add User</XButton>
           </template>
         </XTable>
@@ -41,6 +41,14 @@
           :title="UserSidePanelTitle"
           @close="onPanelClose"
           @delete="callDeleteUser"
+          @reset-password="onResetPassword"
+        />
+        <XModalResetPassword
+          v-if="resetPasswordInfo"
+          :user-id="resetPasswordInfo ? resetPasswordInfo.userId : ''"
+          :user-email="resetPasswordInfo ? resetPasswordInfo.email : ''"
+          :invite="resetPasswordInfo ? resetPasswordInfo.invite : false"
+          @close="closeResetPassword"
         />
       </div>
     </template>
@@ -66,6 +74,7 @@ import XButton from '@axons/inputs/Button.vue';
 import XUsersPanel from './side-panels/user-panel.vue';
 import XActionsMenu from './actions-menu.vue';
 import XModalAssignRole from './modal-assign-role.vue';
+import XModalResetPassword from './modal-reset-password.vue';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export default {
@@ -76,6 +85,7 @@ export default {
     XUsersPanel,
     XActionsMenu,
     XModalAssignRole,
+    XModalResetPassword,
   },
   data() {
     return {
@@ -84,6 +94,7 @@ export default {
       panelType: 'new',
       UserSidePanelTitle: 'New User',
       selectedRows: { ids: [], include: true },
+      resetPasswordInfo: null,
       tableColumnsSchema: [{
         name: 'user_name', title: 'User Name', type: 'string',
       }, {
@@ -153,7 +164,7 @@ export default {
       removerUsers: REMOVE_USERS,
       assignUsersRole: UPDATE_USERS_ROLE,
     }),
-    onCareateNewUser() {
+    onCreateNewUser() {
       this.panelType = 'new';
       this.isPanelOpen = true;
       this.selectedRows = { ids: [], include: true };
@@ -194,6 +205,22 @@ export default {
     assignSelectedUsersRole(roleId) {
       this.assignUsersRole({ ...this.selectedRows, roleId });
       this.modal = false;
+    },
+    onResetPassword(resetPasswordInfo) {
+      /*
+      The reset password info structure:
+      {
+        userId - the new or updated user uuid,
+        email - the email saved in the user,
+        invite - should the mail be sent as an invitation,
+        onClose - what function to call after the reset password is closed
+      }
+       */
+      this.resetPasswordInfo = resetPasswordInfo;
+    },
+    async closeResetPassword() {
+      await this.resetPasswordInfo.onClose();
+      this.resetPasswordInfo = null;
     },
   },
 };

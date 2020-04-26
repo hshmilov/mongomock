@@ -11,6 +11,7 @@ import CardSearch from '../components/axons/icons/axoniusIcons/cardSearch.vue';
 import EntityAction from '../components/axons/icons/axoniusIcons/entityAction.vue';
 import EntityColumn from '../components/axons/icons/axoniusIcons/entityColumn.vue';
 import EntityExport from '../components/axons/icons/axoniusIcons/entityExport.vue';
+import ResetPassword from '../components/axons/icons/axoniusIcons/resetPassword.vue';
 import Toggle from '../components/axons/icons/axoniusIcons/toggle.vue';
 import defaultTheme from '../assets/themes/default.json';
 
@@ -79,6 +80,9 @@ const axoniusIcons = {
       rightFill: '#4A4A4A',
       rightStroke: '#4A4A4A',
     },
+  },
+  resetPassword: {
+    component: ResetPassword,
   },
 };
 

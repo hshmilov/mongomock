@@ -34,7 +34,7 @@ from gui.logic.login_helper import has_customer_login_happened
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.users_helper import beautify_user_entry
 from gui.okta_login import try_connecting_using_okta
-# pylint: disable=no-member,too-many-boolean-expressions,too-many-return-statements,no-self-use,no-else-return,too-many-branches
+# pylint: disable=no-member,too-many-boolean-expressions,too-many-return-statements,no-self-use,no-else-return,too-many-branches,too-many-locals
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

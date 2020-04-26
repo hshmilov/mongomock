@@ -131,7 +131,7 @@
       }
 
       input[type="radio"] {
-        margin: 9px 0.7ex;
+        margin: 9px 6px;
       }
 
       .send-day{
