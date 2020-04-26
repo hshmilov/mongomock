@@ -312,17 +312,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                         {
                             'name': 'history_settings',
-                            'title': 'History Settings',
+                            'title': 'Historical Data Settings',
                             'type': 'array',
                             'items': [
                                 {
                                     'name': 'enabled',
-                                    'title': 'Limit History',
+                                    'title': 'Enable historical data retention',
                                     'type': 'bool'
                                 },
                                 {
                                     'name': 'max_days_to_save',
-                                    'title': 'Max Days To Save',
+                                    'title': 'Historical data retention period (days)',
                                     'type': 'integer'
                                 }
                             ],
