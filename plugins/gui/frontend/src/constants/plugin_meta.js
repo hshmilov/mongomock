@@ -919,6 +919,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/vmware-airwatch',
         description: 'VMWare Workspace ONE (formerly AirWatch) provides enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
+    hyper_sql_adapter: {
+        title: 'HyperSQL',
+        link: 'https://docs.axonius.com/docs/hypersql',
+        description: 'The HyperSQL adapter imports device information from an HyperSQL database.'
+    },
     fireeye_hx_adapter: {
         title: 'FireEye Endpoint Security (formerly HX)',
         link: 'https://docs.axonius.com/docs/fireeye-endpoint-security-formerly-hx',

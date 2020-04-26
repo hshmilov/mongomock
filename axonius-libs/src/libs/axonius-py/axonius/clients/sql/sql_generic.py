@@ -86,16 +86,16 @@ def _sql_parse_raw_data(create_adapter_func, devices_raw_data):
 
             for column_name, column_value in device_raw.items():
                 try:
-                    if sql_type.lower() == SQLTypes.SQLITE.value.lower():
+                    if sql_type.lower() == SQLTypes.SQLITE.value.lower() or \
+                            sql_type.lower() == SQLTypes.HYPERSQL.value.lower():
                         normalized_column_name = sql_type.lower() + '_' + normalize_var_name(column_name)
                     else:
                         normalized_column_name = 'mssql_' + '_' + normalize_var_name(column_name)
                     if not device.does_field_exist(normalized_column_name):
                         # Currently we treat all columns as str
                         cn_capitalized = ' '.join([word.capitalize() for word in column_name.split(' ')])
-                        device.declare_new_field(normalized_column_name,
-                                                 Field(str, f'{sql_type.upper()} {cn_capitalized}'))
-                        if sql_type.lower() == SQLTypes.SQLITE.value.lower():
+                        if sql_type.lower() == SQLTypes.SQLITE.value.lower() or \
+                                sql_type.lower() == SQLTypes.HYPERSQL.value.lower():
                             device.declare_new_field(normalized_column_name,
                                                      Field(str, f'{sql_type.upper()} {cn_capitalized}'))
                         else:

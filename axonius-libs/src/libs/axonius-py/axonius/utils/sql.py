@@ -9,6 +9,7 @@ class SQLServers(Enum):
     Postgres = 'PostgreSQL'
     MySQL = 'MySQL'
     Oracle = 'Oracle'
+    HyperSQL = 'HyperSQL'
 
 
 class SQLDatabases(Enum):
@@ -20,6 +21,7 @@ class SQLTypes(Enum):
     POSTGRES = SQLServers.Postgres.value
     MYSQL = SQLServers.MySQL.value
     SQLITE = SQLDatabases.SQLite.value
+    HYPERSQL = SQLServers.HyperSQL.value
 
 
 class MySqlAdapter(DeviceAdapter):
