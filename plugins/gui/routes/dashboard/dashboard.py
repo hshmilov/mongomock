@@ -22,7 +22,7 @@ from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (entity_fields, get_connected_user_id,
                                        paginated, historical_range, search_filter)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
-from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG
+from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG, NoCacheException
 from gui.logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
                                       generate_dashboard, generate_dashboard_uncached,
                                       generate_dashboard_historical)
@@ -35,6 +35,7 @@ from gui.routes.dashboard.notifications import Notifications
 # pylint: disable=no-member,invalid-name,inconsistent-return-statements,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
+REQUEST_MAX_WAIT_TIME = 10 * 60
 
 
 @gui_category_add_rules('dashboard')
@@ -259,7 +260,16 @@ class Dashboard(Notifications):
         if from_date and to_date:
             generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
         else:
-            generated_dashboard = generate_dashboard(panel_id)
+            try:
+                if request.args.get('refresh', False):
+                    # we want to wait for a fresh data
+                    generated_dashboard = generate_dashboard.wait_for_cache(panel_id, wait_time=REQUEST_MAX_WAIT_TIME)
+                else:
+                    generated_dashboard = generate_dashboard(panel_id)
+            except (TimeoutError, NoCacheException):
+                # the dashboard is still being calculated
+                logger.debug(f'Dashboard {panel_id} is not ready')
+                generated_dashboard = {}
 
         error = generated_dashboard.get('error', None)
         if error is not None:
@@ -400,6 +410,8 @@ class Dashboard(Notifications):
                 }):
             try:
                 generate_dashboard(dashboard['_id'])
+            except NoCacheException:
+                logger.debug(f'dashboard {dashboard["_id"]} is not ready')
             except Exception:
                 logger.warning(f'Failed generating dashboard for {dashboard}', exc_info=True)
 
@@ -452,16 +464,21 @@ class Dashboard(Notifications):
                 }):
             # Let's fetch and execute them query filters
             try:
+                generated_dashboard = {}
                 if generate_data:
                     if uncached:
                         generated_dashboard = generate_dashboard_uncached(dashboard['_id'])
                     else:
-                        generated_dashboard = generate_dashboard(dashboard['_id'])
-                    yield {
-                        **generated_dashboard,
-                        **self._process_initial_dashboard_data(generated_dashboard.get('data', []))
-                    }
-                else:
+                        try:
+                            generated_dashboard = generate_dashboard(dashboard['_id'])
+                        except NoCacheException:
+                            logger.debug(f'dashboard {dashboard["_id"]} is not ready')
+                    if generated_dashboard:
+                        yield {
+                            **generated_dashboard,
+                            **self._process_initial_dashboard_data(generated_dashboard.get('data', []))
+                        }
+                if not generate_data or not generated_dashboard:
                     yield {
                         'uuid': str(dashboard['_id']),
                         'name': dashboard['name'],

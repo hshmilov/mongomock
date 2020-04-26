@@ -876,7 +876,7 @@ class DashboardPage(Page):
         return False
 
     def find_no_data_label(self):
-        return self.find_element_by_text(self.NO_DATA_FOUND_TEXT)
+        return self.wait_for_element_present_by_text(self.NO_DATA_FOUND_TEXT)
 
     def is_chart_save_disabled(self) -> bool:
         return self.is_element_disabled_by_id('chart_save')

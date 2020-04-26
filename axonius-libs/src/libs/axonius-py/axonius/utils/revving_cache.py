@@ -12,9 +12,12 @@ from dataclasses import dataclass, field
 from axonius.entities import EntityType
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.utils.memory_usage import memory
+
 # pylint: disable=no-member,raising-bad-type
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+EVENT_MAX_WAIT_TIME = 900
 
 
 def hashkey(func: Callable, *args, **kwargs):
@@ -110,6 +113,12 @@ ALL_CACHES: List['RevCached'] = []
 
 # When using update_cache or clear_cache, use this as a wildcard arg to clean all matching caches
 WILDCARD_ARG = object()
+
+
+class NoCacheException(Exception):
+    """
+    indicate that there is not cached response yet
+    """
 
 
 class RevCached:
@@ -221,6 +230,28 @@ class RevCached:
             cached_entity = self.__initial_values.pop(k, None)
             cached_entity.job.remove()
 
+    def cache_event(self, *args, **kwargs):
+        """
+        Get the event that indicates that the cache is ready.
+        if there is no cached entry, return None
+        """
+        key = self.__get_key_from_args(*args, **kwargs)
+        if not key:
+            return None
+        cache_entry = self.__initial_values.get(key)
+        if not cache_entry:
+            return None
+        return cache_entry.event
+
+    def has_cache(self, *args, **kwargs):
+        """
+        Return True if there is a cached value, otherwise false
+        """
+        event = self.cache_event(*args, **kwargs)
+        if event is not None and event.is_set():
+            return True
+        return False
+
     def get_value(self, *args, **kwargs):
         """
         Gets the value from the cache if it's a value that was present in "initial_values"
@@ -250,6 +281,58 @@ class RevCached:
                 name=f'{self.__func.__name__}_calc',
                 max_instances=1)
             self.__initial_values[key] = cache_entry
+            return cache_entry.get_cached_result()
+
+    def get_value_unblocked(self, *args, **kwargs):
+        """
+        Gets the value from the cache if it's a value that was present in "initial_values"
+        If it's not, add it and raise NoCacheException
+
+        This deals with the case that a fetch request is made before the first value
+        has been calculated to make sure we don't run the function more than necessary
+        """
+        key = self.__get_key_from_args(*args, **kwargs)
+
+        cache_entry = self.__initial_values.get(key)
+        if cache_entry and cache_entry.event.is_set():
+            return cache_entry.get_cached_result()
+        # if cache_entry exists and the event is not set, __warm_cache is running
+        if cache_entry:
+            raise NoCacheException
+        with self.__initial_values_lock_dict[key]:
+            cache_entry = self.__initial_values.get(key)
+            if cache_entry and cache_entry.event.is_set():
+                return cache_entry.get_cached_result()
+            if cache_entry:
+                raise NoCacheException
+            cache_entry = CachedEntry(args, kwargs, datetime.now(), key, self.__func)
+            cache_entry.job = plugin_base_instance().cached_operation_scheduler.add_job(
+                func=self.__warm_cache,
+                args=[cache_entry],
+                trigger=IntervalTrigger(
+                    seconds=self.__ttl),
+                name=f'{self.__func.__name__}_calc',
+                max_instances=1)
+            self.__initial_values[key] = cache_entry
+        # update cache in background
+        cache_entry.job.modify(next_run_time=datetime.now())
+        plugin_base_instance().cached_operation_scheduler.wakeup()
+        raise NoCacheException
+
+    def wait_for_cache(self, *args, **kwargs):
+        """
+        wait wait_time seconds for value to be cached
+        """
+        wait_time = kwargs.pop('wait_time', EVENT_MAX_WAIT_TIME)
+        try:
+            return self.get_value_unblocked(*args, **kwargs)
+        except NoCacheException:
+            # the value us not cached
+            key = self.__get_key_from_args(*args, **kwargs)
+            cache_entry = self.__initial_values.get(key)
+
+            if not cache_entry.event.wait(wait_time):
+                raise TimeoutError('Cache wait timeout')
             return cache_entry.get_cached_result()
 
     def get_all_values(self, args: List = None) -> Iterable[CachedEntry]:
@@ -325,7 +408,7 @@ class RevCached:
 
 
 def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cache_ttl: int = 3600 * 48,
-               key_func: Callable = None):
+               key_func: Callable = None, blocking=True):
     """
     See RevCached documentation
     You can call .update_cache on the method this decorates to trigger a cache update asynchronously
@@ -340,12 +423,16 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
         ALL_CACHES.append(cache)
 
         def actual_wrapper(*args, **kwargs):
+            if not blocking:
+                return cache.get_value_unblocked(*args, **kwargs)
             return cache.get_value(*args, **kwargs)
 
         actual_wrapper.update_cache = cache.trigger_cache_update_now
         actual_wrapper.clean_cache = cache.sync_clean_cache
         actual_wrapper.call_uncached = cache.call_uncached
         actual_wrapper.remove_from_cache = cache.remove_from_cache
+        actual_wrapper.has_cache = cache.has_cache
+        actual_wrapper.wait_for_cache = cache.wait_for_cache
 
         return actual_wrapper
 
