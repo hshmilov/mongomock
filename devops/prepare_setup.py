@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -19,7 +20,25 @@ def safe_run_bash(args):
     return args
 
 
-if __name__ == '__main__':
+def setup_args():
+    parser = argparse.ArgumentParser(usage='''
+        This script builds the system.
+        Using --dev will build only the core of the system and doing so will shorten it's run time.
+        Any adapter will be built when explicitly raised if it was not built before.
+        ''')
+    parser.add_argument('--dev', action='store_true', default=False, help='Dev Mode')
+
+    try:
+        args, _ = parser.parse_known_args()
+    except AttributeError:
+        print(parser.usage())
+        sys.exit(1)
+
+    return args
+
+
+def main():
+    args = setup_args()
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
     runner = ParallelRunner()
@@ -28,9 +47,15 @@ if __name__ == '__main__':
     runner.append_single('venv', safe_run_bash(['./create_venv.sh']))
     assert runner.wait_for_all() == 0
 
+    all_flag = '' if args.dev else '--all'
+
     # build
     runner.append_single(
         'system',
-        safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod', '--hard', '--yes-hard', '--rebuild-libs'])
+        safe_run_bash(['./axonius.sh', 'system', 'build', all_flag, '--prod', '--hard', '--yes-hard', '--rebuild-libs'])
     )
     assert runner.wait_for_all() == 0
+
+
+if __name__ == '__main__':
+    main()
