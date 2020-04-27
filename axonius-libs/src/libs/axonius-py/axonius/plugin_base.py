@@ -3820,12 +3820,12 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Enable Advanced API Settings',
+                            'title': 'Enable advanced API settings',
                             'type': 'bool'
                         },
                         {
                             'name': 'enable_destroy',
-                            'title': 'Enable API Destroy Endpoints',
+                            'title': 'Enable API destroy endpoints',
                             'type': 'bool'
                         },
                     ],
