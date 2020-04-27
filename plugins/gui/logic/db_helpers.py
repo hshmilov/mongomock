@@ -24,7 +24,7 @@ def translate_user_id_to_details(user_id: ObjectId) -> str:
     :return:        Simple class with the saved details of the requested user
     """
     if user_id == '*':
-        return UserInfo(PREDEFINED_PLACEHOLDER).to_json()
+        return UserInfo(PREDEFINED_PLACEHOLDER)
     # pylint: disable=no-member
     # pylint: disable=protected-access
     user = plugin_base_instance()._users_collection.find_one({
@@ -37,23 +37,23 @@ def translate_user_id_to_details(user_id: ObjectId) -> str:
                     user.get('source', ''),
                     user.get('first_name', ''),
                     user.get('last_name', ''),
-                    user.get('archived', False)).to_json()
+                    user.get('archived', False))
 
 
-def beautify_db_entry(entry):
+def beautify_db_entry(entry, user_field_names=None):
     """
     Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
     :type entry: dict
     :param entry: dict from mongodb
     :return: dict
     """
-    tmp = {
-        **entry,
-        'date_fetched': entry['_id'],
-    }
+    tmp = {**entry, 'date_fetched': entry['_id']}
     tmp['uuid'] = str(entry['_id'])
     del tmp['_id']
-    updated_by_id = tmp.get(UPDATED_BY_FIELD)
-    if updated_by_id is not None:
-        tmp[UPDATED_BY_FIELD] = translate_user_id_to_details(updated_by_id)
+    if not user_field_names:
+        user_field_names = [UPDATED_BY_FIELD]
+    for field in user_field_names:
+        field_value = tmp.get(field)
+        if field_value is not None:
+            tmp[field] = translate_user_id_to_details(field_value).to_json()
     return tmp

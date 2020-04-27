@@ -1,19 +1,35 @@
 <template>
-    <router-link tag="li" :to="disabled? {}: link" :id="id" @click.native="onClick"
-                 class="x-nav-item" :class="{ disabled }"
-                 :active-class="activeClass" :exact-active-class="exactActiveClass">
-        <button class="item-link" :title="disabled? undefined : name">
-            <svg-icon v-if="icon" :name="`navigation/${icon}`" width="24" :original="true" />
-            <div v-else class="empty-icon"></div>
-            <div class="menu-title">{{ title || name }}</div>
-        </button>
-        <slot/>
-    </router-link>
+  <router-link
+    :id="id"
+    tag="li"
+    :to="disabled? {}: link"
+    class="x-nav-item"
+    :class="{ disabled }"
+    :active-class="activeClass"
+    :exact-active-class="exactActiveClass"
+    @click.native="onClick"
+  >
+    <button
+      class="item-link"
+      :title="disabled? undefined : name"
+    >
+      <md-icon
+        v-if="icon"
+        :md-src="`/src/assets/icons/navigation/${icon}.svg`"
+      />
+      <div
+        v-else
+        class="empty-icon"
+      />
+      <div class="menu-title">{{ title || name }}</div>
+    </button>
+    <slot />
+  </router-link>
 </template>
 
 <script>
     export default {
-		name: 'x-nav-item',
+		name: 'XNavItem',
 		props: [ 'name', 'path', 'title', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
         computed: {
             link() {
@@ -62,12 +78,12 @@
             background-color: $theme-black;
             border: 0;
             cursor: pointer;
-            .svg-icon {
+            .md-icon {
                 transition: all ease-in 0.2s;
                 margin-right: 10px;
+                display: inline-block;
                 .svg-fill {  fill: $grey-4  }
                 .svg-stroke {  stroke: $grey-4  }
-                stroke-width: 24px;
             }
             .empty-icon {
                 width: 35px;
@@ -80,7 +96,7 @@
             }
         }
         &.disabled {
-            .svg-icon {
+            .md-icon {
                 .svg-fill {  fill: $grey-5;  }
                 .svg-stroke {  stroke: $grey-5;  }
             }
@@ -92,7 +108,7 @@
             >.item-link {
                 color: $theme-orange;
             }
-            .svg-icon {
+            .md-icon {
                 .svg-fill {  fill: $theme-orange;  }
                 .svg-stroke {  stroke: $theme-orange;  }
             }

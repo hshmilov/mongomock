@@ -25,6 +25,7 @@ const User = () => import('../components/pages/User.vue');
 const Users = () => import('../components/pages/Users.vue');
 const Report = () => import('../components/pages/Report.vue');
 const Administration = () => import('../components/pages/Administration.vue');
+const Audit = () => import('@pages/Audit.vue');
 
 const xDevicesSavedQueries = () => import('../components/pages/DevicesSavedQueries');
 const xUsersSavedQueries = () => import('../components/pages/UsersSavedQueries');
@@ -178,6 +179,11 @@ const routes = [
     path: '/account',
     name: 'My Account',
     component: Account,
+  },
+  {
+    path: '/audit',
+    name: 'Activity Logs',
+    component: Audit,
   },
   {
     path: '/instances',

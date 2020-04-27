@@ -5,6 +5,7 @@ import re
 import threading
 from datetime import datetime, timedelta
 from typing import Tuple, List
+import json
 
 import gridfs
 import pymongo
@@ -126,7 +127,7 @@ class Reports:
         self._generate_and_schedule_report(report_to_add)
         return jsonify(report_to_add), 201
 
-    @gui_route_logged_in(methods=['DELETE'])
+    @gui_route_logged_in(methods=['DELETE'], activity_params=['count'])
     def delete_reports(self):
         return self._delete_report_configs(self.get_request_data_as_object()), 200
 
@@ -586,7 +587,9 @@ class Reports:
             if exec_report_job:
                 exec_report_job.remove()
             logger.info(f'Deleted report {name} id: {report_id}')
-        return ''
+        return json.dumps({
+            'count': str(len(ids))
+        })
 
     def _send_report_thread(self, report):
         if self.trial_expired():

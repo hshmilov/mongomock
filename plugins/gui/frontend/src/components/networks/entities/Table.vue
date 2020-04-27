@@ -72,6 +72,7 @@ import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
   LAZY_FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
 } from '../../../store/actions'
+import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '../../../store/modules/adapters';
 
 export default {
   name: 'XEntityTable',
@@ -145,6 +146,7 @@ export default {
   },
   async created() {
     this.fetchDataHyperlinks({ module: this.module });
+    await this.fetchConnectionLabels();
     // get all saved user defined columns group
     const userDefaultTableColumns = await getUserTableColumnGroups(this.module);
     if (userDefaultTableColumns) {
@@ -171,6 +173,7 @@ export default {
     ...mapActions({
       fetchDataFields: LAZY_FETCH_DATA_FIELDS,
       fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
+      fetchConnectionLabels: LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
       fetchDataCurrent: FETCH_DATA_CURRENT,
     }),
     configEntity(entityId) {

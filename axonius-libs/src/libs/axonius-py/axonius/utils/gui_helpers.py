@@ -154,22 +154,16 @@ def log_activity_rule(rule: str,
                 return response
 
             is_response_tuple = isinstance(response, tuple)
-            if not is_response_tuple or response[1] < 200 or response[1] > 204:
+            if is_response_tuple and (response[1] < 200 or response[1] > 204):
                 return response
 
-            activity_action = get_clean_rule(rule) or request.method.lower()
-            activity_data = {**kwargs, **self.get_request_data_as_object()}
-            if is_response_tuple and response[0]:
-                try:
-                    activity_data.update(json.loads(response[0]))
-                except (ValueError, TypeError):
-                    # Cannot parse json from response - no helpful data
-                    pass
-            activity_params = get_activity_params(activity_param_names, activity_data)
             try:
+                activity_action = get_clean_rule(rule) or request.method.lower()
+                activity_params = get_activity_params(activity_param_names, kwargs, self.get_request_data_as_object(),
+                                                      response[0] if is_response_tuple else response)
                 self.log_activity_user_default(activity_category, activity_action, activity_params)
             except Exception:
-                logger.info(f'Failed to log activity: {activity_category} - {activity_action}, {activity_params}')
+                logger.info(f'Failed to log: category {activity_category}, rule {rule}, method {request.method}')
             return response
         return actual_wrapper
 
@@ -187,7 +181,7 @@ def get_clean_rule(rule: str):
     return clean_rule_parts[0] if len(clean_rule_parts) == 1 else None
 
 
-def get_activity_params(param_names: List[str], activity_data: dict) -> dict:
+def get_activity_params(param_names: List[str], request_args: dict, request_data: dict, response_data: str) -> dict:
     """
     Find values for each of given param_names in given activity_data
 
@@ -196,15 +190,21 @@ def get_activity_params(param_names: List[str], activity_data: dict) -> dict:
     :return: Each name found and its value
     """
     if not param_names:
-        param_names = ['name', 'ids']
+        param_names = ['name']
 
-    param_values = {}
-    for param_name in param_names:
-        param_value = activity_data.get(param_name)
-        if not param_value:
-            continue
-        param_values[param_name] = len(param_value) if isinstance(param_value, list) else param_value
-    return param_values
+    activity_data = {**request_args}
+    if isinstance(request_data, dict):
+        activity_data.update(request_data)
+    try:
+        activity_data.update(json.loads(response_data))
+    except Exception:
+        # Cannot parse json from response - no helpful data
+        pass
+
+    return {
+        param_name: activity_data.get(param_name, '')
+        for param_name in param_names if param_name in activity_data
+    }
 
 
 # Caution! These decorators must come BEFORE @add_rule

@@ -1,5 +1,5 @@
 import logging
-
+import json
 from flask import (jsonify)
 from bson import ObjectId
 
@@ -162,7 +162,9 @@ class Roles:
                 'archived': True
             }
         })
-        return ''
+        return json.dumps({
+            'name': existing_role.get('name', '')
+        })
 
     @gui_route_logged_in('default', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))

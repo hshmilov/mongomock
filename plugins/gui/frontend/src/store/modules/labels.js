@@ -1,9 +1,11 @@
 import { REQUEST_API } from '../actions';
 
 export const SET_LABELS = 'SET_LABELS';
-export const FETCH_LABELS = 'FETCH_LABELS';
+export const LAZY_FETCH_LABELS = 'LAZY_FETCH_LABELS';
 export const GET_LABELS = 'GET_LABELS';
 export const GET_LABELS_BY_MODULE = 'GET_LABELS_BY_MODULE';
+
+import _isEmpty from 'lodash/isEmpty';
 
 export const labels = {
   state: {
@@ -11,7 +13,7 @@ export const labels = {
   },
   getters: {
     [GET_LABELS]: (state) => state.labels,
-    [GET_LABELS_BY_MODULE]: (state) => (module) => state.labels ? state.labels[module] : {},
+    [GET_LABELS_BY_MODULE]: (state) => (module) => (state.labels ? state.labels[module] : {}),
   },
   mutations: {
     [SET_LABELS](state, payload) {
@@ -21,11 +23,13 @@ export const labels = {
     },
   },
   actions: {
-    [FETCH_LABELS]({ dispatch }) {
+    [LAZY_FETCH_LABELS]({ state, dispatch }) {
       /*
           Call API to save labels
        */
-
+      if (!_isEmpty(state.labels)) {
+        return Promise.resolve();
+      }
       const rule = 'labels';
       return dispatch(REQUEST_API, {
         rule,

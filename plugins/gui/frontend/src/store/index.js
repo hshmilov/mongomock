@@ -80,6 +80,7 @@ import {
 } from './getters';
 
 import { adapters } from './modules/adapters';
+import audit from './modules/audit';
 import { auth } from './modules/auth';
 import { constants } from './modules/constants';
 import { dashboard } from './modules/dashboard';
@@ -195,6 +196,7 @@ export default new Vuex.Store({
         Module stores controls and manages the way of obtaining it.
      */
     adapters,
+    audit,
     auth,
     constants,
     dashboard,

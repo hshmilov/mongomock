@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-
+import json
 import gridfs
 import pymongo
 from flask import (jsonify,
@@ -250,4 +250,17 @@ class Adapters(Connections):
     @gui_route_logged_in('<adapter_name>/<config_name>', methods=['POST'], enforce_trial=False,
                          activity_params=['adapter_name', 'config_name'])
     def update_adapter(self, adapter_name, config_name):
-        return self._save_plugin_config(adapter_name, config_name)
+        response = self._save_plugin_config(adapter_name, config_name)
+        if response != '':
+            return response
+        unique_names = self.request_remote_plugin(f'find_plugin_unique_name/nodes/None/plugins/{adapter_name}').json()
+        if not unique_names:
+            return response
+        config_schema = self._get_collection('config_schemas', unique_names[0]).find_one({
+            'config_name': config_name
+        }, {
+            'schema.pretty_name': 1
+        })
+        return json.dumps({
+            'config_name': config_schema['schema'].get('pretty_name', '')
+        }) if config_schema else ''

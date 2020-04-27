@@ -4,15 +4,11 @@
     :class="{ collapse: collapseSidebar }"
   >
     <div class="x-user">
-      <div
-        class="x-user-profile"
-      >
+      <div class="x-user-profile">
         <img :src="userDetails.pic">
         <h5>{{ userDetails.name }}</h5>
       </div>
-      <div
-        class="x-user-actions"
-      >
+      <div class="x-user-actions">
         <a
           title="Logout"
           @click="onLogout"
@@ -43,29 +39,20 @@
         :exact="true"
       />
       <x-nav-item
-        v-bind="navigationProps('Devices', 'devices', null,
-                                $permissionConsts.categories.DevicesAssets)"
+        v-bind="navigationProps('Devices', 'devices', null, $permissionConsts.categories.DevicesAssets)"
       />
       <x-nav-item
-        v-bind="navigationProps('Users', 'users', null,
-                                $permissionConsts.categories.UsersAssets)"
+        v-bind="navigationProps('Users', 'users', null, $permissionConsts.categories.UsersAssets)"
       />
       <x-nav-item
         v-if="isComplianceVisible"
         v-bind="navigationProps('Cloud Asset Compliance', 'compliance', 'Cloud Compliance')"
       />
-      <x-nav-item
-        v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')"
-      />
-      <x-nav-item
-        v-bind="navigationProps('Adapters', 'adapters')"
-      />
-      <x-nav-item
-        v-bind="navigationProps('Reports', 'reports')"
-      />
-      <x-nav-item
-        v-bind="navigationProps('Instances', 'instances')"
-      />
+      <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
+      <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
+      <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
+      <x-nav-item v-bind="navigationProps('Activity Logs', 'audit')" />
+      <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
     </x-nav>
   </aside>
 </template>
@@ -77,13 +64,12 @@ import _get from 'lodash/get';
 import { REMOVE_TOASTER } from '@store/mutations';
 import xNav from '../../axons/menus/Nav.vue';
 import xNavItem from '../../axons/menus/NavItem.vue';
-import xNestedNav from '../../axons/menus/NestedNav.vue';
 import { LOGOUT } from '../../../store/modules/auth';
 
 
 export default {
   name: 'XSideBar',
-  components: { xNav, xNavItem, xNestedNav },
+  components: { xNav, xNavItem },
   computed: {
     ...mapState({
       featureFlags(state) {
@@ -235,12 +221,13 @@ export default {
 
         > .x-nav {
             width: 100%;
+
             > .x-nav-item {
                 border-left: 2px solid transparent;
 
                 > .item-link {
                     width: 100%;
-                    height: 100%;
+                    height: 40px;
                     text-align: left;
                 }
 
@@ -275,34 +262,8 @@ export default {
             }
         }
     }
+
     .x-side-bar.collapse .x-nav {
         overflow: visible;
-        .x-nested-nav {
-            overflow: hidden;
-            .item-link span {
-                transition: all ease-in 0.2s;
-                opacity: 0;
-                line-height: 20px;
-            }
-            .x-nav.collapse {
-                display: none;
-            }
-            &:hover {
-                overflow: hidden;
-                position: relative;
-                .x-nav.collapse {
-                    left: 58px;
-                    margin-left: 0;
-                    top: 0;
-                    position: absolute;
-                    background-color: $grey-5;
-                    padding-left: 0;
-                    display: block;
-                    .item-link span {
-                        opacity: 1;
-                    }
-                }
-            }
-        }
     }
 </style>

@@ -18,7 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_section_add_rules('getting_started')
 class GettingStarted:
 
-    @gui_route_logged_in(methods=['GET'], enforce_permissions=False)
+    @gui_route_logged_in(methods=['GET'], enforce_permissions=False, skip_activity=True)
     def get_getting_started_data(self):
         """
         Fetch the Getting Started checklist state from db

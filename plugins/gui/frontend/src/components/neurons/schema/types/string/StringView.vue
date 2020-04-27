@@ -44,8 +44,6 @@ import _get from 'lodash/get';
 import { formatDate } from '../../../../../constants/utils';
 import { DATE_FORMAT } from '../../../../../store/getters';
 
-const UPDATED_BY_FIELD = 'updated_by';
-
 export default {
   name: 'XStringView',
   props: {
@@ -78,7 +76,7 @@ export default {
       if (title != null) {
         return title;
       }
-      if (schema.name !== UPDATED_BY_FIELD) {
+      if (schema.format !== 'user') {
         return this.format(value, schema, dateFormat);
       }
       const parsedValue = JSON.parse(value);
@@ -94,7 +92,7 @@ export default {
       if (schema.cellRenderer) {
         return schema.cellRenderer(value);
       }
-      if (schema.name === UPDATED_BY_FIELD) {
+      if (schema.format === 'user') {
         return this.formatUsername(JSON.parse(value));
       }
       if (!schema.format) return value;

@@ -6,9 +6,10 @@ from typing import List
 from flask import jsonify, request, has_request_context, g
 from passlib.hash import bcrypt
 
+from axonius.consts.adapter_consts import CONNECTION_LABEL
 from axonius.consts.gui_consts import IS_AXONIUS_ROLE, RootMasterNames
 from axonius.consts.metric_consts import ApiMetric
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, PLUGIN_NAME, NODE_ID
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.db_querying_helper import get_entities
@@ -1230,7 +1231,20 @@ class APIMixin:
     @api_add_rule('adapters', methods=['GET'], required_permission=PermissionValue.get(
         None, PermissionCategory.Adapters))
     def api_adapters(self):
-        return jsonify(self._adapters())
+        adapters = self._adapters()
+        for adapter_name in adapters.keys():
+            for adapter in adapters[adapter_name]:
+                for client in adapter['clients']:
+                    client_label = self.adapter_client_labels_db.find_one({
+                        'client_id': client['client_id'],
+                        PLUGIN_NAME: adapter_name,
+                        NODE_ID: adapter[NODE_ID]
+                    }, {
+                        CONNECTION_LABEL: 1
+                    })
+                    client['client_config'][CONNECTION_LABEL] = (client_label.get(CONNECTION_LABEL, '')
+                                                                 if client_label else '')
+        return jsonify(adapters)
 
     @api_add_rule('adapters/<adapter_name>/clients/<client_id>', methods=['PUT', 'DELETE'],
                   required_permission=PermissionValue.get(None,

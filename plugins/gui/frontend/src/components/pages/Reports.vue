@@ -43,6 +43,7 @@ import XButton from '../axons/inputs/Button.vue';
 
 import { REMOVE_REPORTS, FETCH_REPORT } from '../../store/modules/reports';
 
+
 export default {
   name: 'XReports',
   components: { XPage, XTable, XButton },
@@ -69,7 +70,7 @@ export default {
       }, {
         name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
       }, {
-        name: 'updated_by', title: 'Updated By', type: 'string',
+        name: 'updated_by', title: 'Updated By', type: 'string', format: 'user',
       }];
     },
     hasSelection() {

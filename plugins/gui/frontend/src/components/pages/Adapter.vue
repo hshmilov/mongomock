@@ -206,7 +206,6 @@
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
 import _get from 'lodash/get';
-import _isEmpty from 'lodash/isEmpty';
 import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
@@ -227,8 +226,9 @@ import {
   HINT_ADAPTER_UP,
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
+  LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
 } from '../../store/modules/adapters';
-import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters'
+import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
 
@@ -331,7 +331,7 @@ export default {
           ...client,
           ...client.client_config,
           node_name: instance.node_name,
-          connection_label: this.getConnectionLabel(client.client_id, {
+          connection_label: client.connectionLabel || this.getConnectionLabel(client.client_id, {
             plugin_name: this.adapterId, node_id,
           }),
         };
@@ -398,6 +398,7 @@ export default {
     this.fetchConfig();
     this.hintAdapterUp(this.adapterId);
     await this.lazyFetchAdapters();
+    await this.lazyFetchConnectionLabels();
     this.setDefaultInstance();
   },
   methods: {
@@ -409,6 +410,7 @@ export default {
       updatePluginConfig: SAVE_PLUGIN_CONFIG,
       hintAdapterUp: HINT_ADAPTER_UP,
       fetchConfig: FETCH_SYSTEM_CONFIG,
+      lazyFetchConnectionLabels: LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
     }),
     openHelpLink() {
       window.open(this.adapterLink, '_blank');

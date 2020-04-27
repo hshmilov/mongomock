@@ -134,7 +134,7 @@ class Enforcements(Tasks):
             TRIGGERS_FIELD: enforcement_to_add[TRIGGERS_FIELD]
         })
 
-    @gui_route_logged_in(methods=['DELETE'])
+    @gui_route_logged_in(methods=['DELETE'], activity_params=['deleted'])
     def delete_enforcements(self):
         """
         DELETE delete an enforcement

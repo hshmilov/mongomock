@@ -14,6 +14,7 @@ from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.routes.settings.audit.audit import Audit
 from gui.routes.settings.getting_started.getting_started import GettingStarted
 from gui.routes.settings.plugins.plugins import Plugins
 from gui.routes.settings.roles.roles import Roles
@@ -26,7 +27,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 @gui_category_add_rules('settings')
-class Settings(Plugins, GettingStarted, Users, Roles, Configuration):
+class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration):
 
     @gui_route_logged_in(methods=['GET'], enforce_permissions=False)
     def system_config(self):

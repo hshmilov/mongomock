@@ -156,6 +156,14 @@ class TestAdapters(TestBase):
             self.adapters_page.fill_creds(connectionLabel=JSON_NAME)
             self.adapters_page.click_save()
             self.adapters_page.wait_for_server_green(1)
+            self.adapters_page.refresh()
+            self.adapters_page.click_adapter(JSON_NAME)
+            self.adapters_page.wait_for_table_to_be_responsive()
+            assert self.adapters_page.get_column_data_inline('Connection Label')[0] == JSON_NAME
+            self.adapters_page.click_edit_server()
+            assert self.adapters_page.find_server_connection_label_value() == JSON_NAME
+            self.adapters_page.click_cancel()
+
             self.check_for_connection_labels()
             # restart the adapter and check again
             # https://axonius.atlassian.net/browse/AX-6191
@@ -171,6 +179,8 @@ class TestAdapters(TestBase):
     def check_for_connection_labels(self):
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
+        self.users_page.refresh()
+        self.users_page.wait_for_table_to_be_responsive()
         self.users_page.run_filter_query('avidor')
         self.users_page.hover_over_entity_adapter_icon(index=0)
         data = self.users_page.get_adapters_popup_table_data()

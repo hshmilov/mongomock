@@ -51,7 +51,7 @@ import {
   REMOVE_ROLE,
   GET_PERMISSION_STRUCTURE,
 } from '@store/modules/auth';
-import { FETCH_LABELS, GET_LABELS } from '@store/modules/labels';
+import { LAZY_FETCH_LABELS, GET_LABELS } from '@store/modules/labels';
 import { getPermissionState, RESTRICTED_ROLE_NAME } from '@constants/permissions';
 import XRolePanel from './panels/RolePanel';
 
@@ -149,7 +149,7 @@ export default {
     ...mapActions({
       fetchAllRoles: GET_ALL_ROLES,
       removeRole: REMOVE_ROLE,
-      fetchLabels: FETCH_LABELS,
+      fetchLabels: LAZY_FETCH_LABELS,
     }),
     openEditRolePanel(selectedRoleId) {
       if (selectedRoleId) {

@@ -11,6 +11,7 @@ export const LAZY_FETCH_ADAPTERS = 'LAZY_FETCH_ADAPTERS';
 export const SET_ADAPTERS = 'SET_ADAPTERS';
 export const FETCH_ADAPTERS_CLIENT_LABELS = 'FETCH_ADAPTERS_CLIENT_LABELS';
 export const SET_ADAPTERS_CLIENT_LABELS = 'SET_ADAPTERS_CLIENT_LABELS';
+export const LAZY_FETCH_ADAPTERS_CLIENT_LABELS = 'LAZY_FETCH_ADAPTERS_CLIENT_LABELS';
 export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT';
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER';
 export const UPDATE_ADAPTER_CLIENT = 'UPDATE_ADAPTER_CLIENT';
@@ -282,6 +283,7 @@ export const adapters = {
         client_id: payload.clientId,
         adapterId: payload.adapterId,
         client_config: serverData,
+        connectionLabel: payload.connectionLabel,
         uuid: isNewClient ? uniqueTmpId : payload.uuid,
         status: 'warning',
         node_id: instance.node_id,
@@ -378,6 +380,13 @@ export const adapters = {
         rule: 'adapters/connections/labels',
         type: SET_ADAPTERS_CLIENT_LABELS,
       });
+    },
+    [LAZY_FETCH_ADAPTERS_CLIENT_LABELS]({ dispatch, state }) {
+      const connectionLabelsData = _get(state, 'connectionLabels', []);
+      if (_size(connectionLabelsData)) {
+        return Promise.resolve();
+      }
+      return dispatch(FETCH_ADAPTERS_CLIENT_LABELS);
     },
   },
   getters: {

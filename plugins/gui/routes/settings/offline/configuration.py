@@ -41,7 +41,7 @@ class Configuration:
         return make_response((file_id, 200))
 
     @gui_route_logged_in('upload_file', methods=['PATCH'], enforce_trial=False, required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.Settings))
+        PermissionAction.Update, PermissionCategory.Settings), skip_activity=True)
     def upload_file(self):
         """
         Fetch the Getting Started checklist state from db

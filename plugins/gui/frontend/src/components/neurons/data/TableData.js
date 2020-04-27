@@ -1,40 +1,43 @@
-import xSlice from '../schema/Slice.vue'
-import xTableData from '../../axons/tables/TableData.js'
+import xSlice from '../schema/Slice.vue';
+import xTableData from '../../axons/tables/TableData.js';
 
-import {isObject, includesIgnoreCase, formatStringTemplate} from '../../../constants/utils'
+import { isObject, includesIgnoreCase, formatStringTemplate } from '../../../constants/utils';
 
 function hasFilter(data, filter) {
   if (!data) {
-    return false
+    return false;
   }
   if (typeof data === 'string') {
-    return includesIgnoreCase(data, filter)
+    return includesIgnoreCase(data, filter);
   }
   if (typeof data !== 'object') {
-    return false
+    return false;
   }
-  const itemsToCheck = Array.isArray(data) ? data : Object.values(data)
-  return Boolean(itemsToCheck.find(item => hasFilter(item, filter)))
+  const itemsToCheck = Array.isArray(data) ? data : Object.values(data);
+  return Boolean(itemsToCheck.find((item) => hasFilter(item, filter)));
 }
 
 function processData(data, schema, filter, sort) {
-  if (schema.name && isObject(data)) {
-    data = data[schema.name]
-    if (Array.isArray(data) && sort && schema.name === sort.field) {
-      data = [...data]
-      data.sort()
+  let processedData = data;
+  if (schema.name && isObject(processedData)) {
+    processedData = schema.rowDataTransform
+      ? schema.rowDataTransform(processedData)
+      : processedData[schema.name];
+    if (Array.isArray(processedData) && sort && schema.name === sort.field) {
+      processedData = [...processedData];
+      processedData.sort();
       if (sort.desc) {
-        data.reverse()
+        processedData.reverse();
       }
     }
   }
   if (!filter) {
-    return data
+    return processedData;
   }
-  if (Array.isArray(data)) {
-    return data.filter(item => hasFilter(item, filter))
+  if (Array.isArray(processedData)) {
+    return processedData.filter((item) => hasFilter(item, filter));
   }
-  return hasFilter(data, filter) ? data : null
+  return hasFilter(processedData, filter) ? processedData : null;
 }
 
 export default {
@@ -42,59 +45,57 @@ export default {
   props: {
     schema: {
       type: Object,
-      required: true
+      required: true,
     },
     data: {
       type: [String, Number, Boolean, Array, Object],
-      default: undefined
+      default: undefined,
     },
     sort: {
       type: Object,
-      default: () => {
-        return {
-          field: '', desc: true
-        }
-      }
+      default: () => ({
+        field: '', desc: true,
+      }),
     },
     filter: {
       type: String,
-      default: ''
-    }
+      default: '',
+    },
   },
-  render(createElement, {props}) {
-    let {data, schema, filter, sort} = props
-    schema = {...schema}
+  render(createElement, { props }) {
+    let {
+      data, schema, filter, sort,
+    } = props;
+    schema = { ...schema };
     if (schema.link) {
-      schema.hyperlinks = () => {
-        return {
-          href: formatStringTemplate(schema.link, data),
-          type: 'link'
-        }
-      }
+      schema.hyperlinks = () => ({
+        href: formatStringTemplate(schema.link, data),
+        type: 'link',
+      });
     }
-    const value = processData(data, schema, filter, sort)
+    const value = processData(data, schema, filter, sort);
     if (!Array.isArray(value)) {
       return createElement(xTableData, {
         props: {
           schema,
-          data: value
-        }
-      })
+          data: value,
+        },
+      });
     }
     // Wrapping list data with a component limiting the items displayed, with a tooltip presenting entire list
     return createElement(xSlice, {
       props: {
         schema,
-        value
+        value,
       },
       scopedSlots: {
         default: ({ sliced }) => createElement(xTableData, {
           props: {
             schema,
-            data: sliced
-          }
-        })
-      }
-    })
-  }
-}
+            data: sliced,
+          },
+        }),
+      },
+    });
+  },
+};

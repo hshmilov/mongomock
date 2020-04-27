@@ -1,6 +1,7 @@
 import logging
 import secrets
 import re
+import json
 
 from datetime import datetime
 import pymongo
@@ -226,7 +227,7 @@ class Users:
         })
         return [role.get('_id', '') for role in axonius_roles]
 
-    @gui_route_logged_in('assign_role', methods=['POST'])
+    @gui_route_logged_in('assign_role', methods=['POST'], activity_params=['name', 'count'])
     def users_assign_role_bulk(self):
         """
         set new role_id to all users or all users with id found in a given set.
@@ -244,7 +245,7 @@ class Users:
 
         # axonius roles is not assignable
         axonius_roles_ids = self._get_axonius_roles_ids()
-        if role_id in axonius_roles_ids:
+        if ObjectId(role_id) in axonius_roles_ids:
             logger.info('Attempt to assign axonius role to users')
             return return_error('role is not assignable', 400)
 
@@ -252,7 +253,6 @@ class Users:
             return return_error('role id is required', 400)
 
         # if include value is False, all users should be updated (beside admin, _axonius and _axonius_ro)
-        find_query = {}
         if not include:
             find_query = filter_archived({
                 '_id': {'$nin': [ObjectId(user_id) for user_id in ids]},
@@ -270,15 +270,19 @@ class Users:
 
         if result.modified_count < 1:
             logger.info('operation failed, could not update users\' role')
-            return return_error('operation failed, could not update users\' role', 500)
+            return return_error('operation failed, could not update users\' role', 400)
         user_ids = [str(user_id.get('_id')) for user_id in users_collection.find(find_query, {'_id': 1})]
         self._invalidate_sessions(user_ids)
+        response_str = json.dumps({
+            'count': str(result.modified_count),
+            'name': self._roles_collection.find_one({'_id': ObjectId(role_id)}, {'name': 1}).get('name', '')
+        })
         if result.matched_count != result.modified_count:
             logger.info(f'Bulk assign role modified {result.modified_count} out of {result.matched_count}')
-            return '', 202
+            return response_str, 202
 
         logger.info(f'Bulk assign role modified succeeded')
-        return '', 200
+        return response_str, 200
 
     @gui_route_logged_in('<user_id>', methods=['POST'], activity_params=['user_name'])
     def update_user(self, user_id):
@@ -344,14 +348,14 @@ class Users:
         translate_user_id_to_details.clean_cache()
         return '', 200
 
-    @gui_route_logged_in(methods=['DELETE'])
+    @gui_route_logged_in(methods=['DELETE'], activity_params=['count'])
     def delete_users_bulk(self):
         """
         archive all users or all users with id found in a given set.
         :return:
         status code 200 - archived all requested users and invalidate their session
         status code 202 - the request partially succeed. Not akk users archived
-        status code 500 - server error. Operation failed.
+        status code 400 - server error. Operation failed.
         """
         users_collection = self._users_collection
         request_data = self.get_request_data_as_object()
@@ -372,17 +376,21 @@ class Users:
             if result.modified_count < 1:
                 err_msg = 'operation failed, could not delete users\''
                 logger.info(err_msg)
-                return return_error(err_msg, 500)
+                return return_error(err_msg, 400)
 
+            response_str = json.dumps({
+                'count': str(result.modified_count)
+            })
             if result.matched_count != result.modified_count:
                 logger.info(f'Deleted {result.modified_count} out of {result.matched_count} users')
-                return '', 202
+                return response_str, 202
 
             logger.info(f'Bulk deletion users succeeded')
-            return '', 200
+            return response_str, 200
 
         partial_success = False
         deletion_success = False
+        deletion_count = 0
         for user_id in ids:
             existed_user = users_collection.find_one_and_update(filter_archived({
                 '_id': ObjectId(user_id)
@@ -395,6 +403,8 @@ class Users:
             if existed_user is None:
                 logger.info(f'User with id {user_id} does not exists')
                 partial_success = True
+            else:
+                deletion_count += 1
             deletion_success = True
             self._invalidate_sessions([user_id])
             name = existed_user['user_name']
@@ -404,12 +414,15 @@ class Users:
         if not deletion_success:
             err_msg = 'operation failed, could not delete users\''
             logger.info(err_msg)
-            return return_error(err_msg, 500)
+            return return_error(err_msg, 400)
+        response_str = json.dumps({
+            'count': str(deletion_count)
+        })
         if deletion_success and partial_success:
             logger.info('Deletion partially succeeded')
-            return '', 202
+            return response_str, 202
         logger.info(f'Bulk deletion users succeeded')
-        return '', 200
+        return response_str, 200
 
     @gui_route_logged_in('tokens/create/reset_password', methods=['PUT', 'POST'])
     def generate_user_reset_password_link(self):

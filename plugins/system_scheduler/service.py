@@ -336,7 +336,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                  'save_history', 'constant_alerts', 'analyse_reimage']
                 }
             ],
-            'type': 'array'
+            'type': 'array',
+            'pretty_name': 'Lifecycle Configuration'
         }
 
     @classmethod

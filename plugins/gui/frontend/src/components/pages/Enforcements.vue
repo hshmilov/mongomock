@@ -75,11 +75,6 @@ export default {
       query(state) {
         return state.enforcements.view.query;
       },
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Enforcements === 'ReadOnly';
-      },
     }),
     name() {
       return 'enforcements';
@@ -98,7 +93,7 @@ export default {
       }, {
         name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
       }, {
-        name: 'updated_by', title: 'Updated By', type: 'string',
+        name: 'updated_by', title: 'Updated By', type: 'string', format: 'user',
       }];
     },
     hasSelection() {
@@ -136,16 +131,17 @@ export default {
       this.fetchEnforcement(enforcementId);
       this.$router.push({ path: `/${this.name}/${enforcementId}` });
     },
-    newEnforcement(enforcementId) {
+    newEnforcement() {
       this.setEnforcement();
       this.$router.push({ path: `/${this.name}/new` });
     },
     remove() {
+      const numberPostfix = this.numberOfSelections > 1 ? 'Sets' : 'Set';
       this.$safeguard.show({
         text: `
-            The selected Enforcement ${this.numberOfSelections > 1 ? 'Sets' : 'Set'} will be completely removed from the system.
+            The selected Enforcement ${numberPostfix} will be completely removed from the system.
             <br />
-            Removing the Enforcement ${this.numberOfSelections > 1 ? 'Sets' : 'Set'} is an irreversible action.
+            Removing the Enforcement ${numberPostfix} is an irreversible action.
             <br />Do you wish to continue?
           `,
         confirmText: this.numberOfSelections > 1 ? 'Remove Enforcement Sets' : 'Remove Enforcement Set',

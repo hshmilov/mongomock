@@ -79,7 +79,7 @@ export default {
         lastUpdate: {
           name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
         },
-        updatedBy: { name: 'updated_by', title: 'Updated By', type: 'string' },
+        updatedBy: { name: 'updated_by', title: 'Updated By', type: 'string', format: 'user' },
       },
       entityTags: [],
       existingQueriesNamesList: new Set(),

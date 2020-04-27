@@ -1,5 +1,6 @@
 import logging
 import urllib.parse
+import json
 
 import copy
 import OpenSSL
@@ -107,7 +108,17 @@ class Plugins:
     @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False,
                          activity_params=['config_name'])
     def update_plugin_configs(self, plugin_name, config_name):
-        return self._save_plugin_config(plugin_name, config_name)
+        response = self._save_plugin_config(plugin_name, config_name)
+        if response:
+            return response
+        config_schema = self._get_collection('config_schemas', plugin_name).find_one({
+            'config_name': config_name
+        }, {
+            'schema.pretty_name': 1
+        })
+        return json.dumps({
+            'config_name': config_schema['schema'].get('pretty_name', '')
+        }) if config_schema else ''
 
     def _save_plugin_config(self, plugin_name, config_name):
         """
@@ -115,8 +126,6 @@ class Plugins:
         """
         db_connection = self._get_db_connection()
         config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-
-        # Otherwise, handle POST
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)

@@ -123,8 +123,13 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
   } else {
     const params = [];
 
-    if (view.query && view.query.filter) {
-      params.push(`filter=${encodeURIComponent(view.query.filter)}`);
+    if (view.query) {
+      if (view.query.filter) {
+        params.push(`filter=${encodeURIComponent(view.query.filter)}`);
+      }
+      if (view.query.search) {
+        params.push(`search=${encodeURIComponent(view.query.search)}`);
+      }
     }
     if (view.historical) {
       params.push(`history=${encodeURIComponent(view.historical)}`);

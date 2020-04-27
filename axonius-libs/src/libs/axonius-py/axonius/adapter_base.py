@@ -375,8 +375,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             self.create_notification(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
         logger.info(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
         self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
+            'asset': EntityType.Devices.value,
             'adapter': self.plugin_name,
-            'count': devices_cleaned + users_cleaned
+            'count': str(devices_cleaned)
+        })
+        self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
+            'asset': EntityType.Users.value,
+            'adapter': self.plugin_name,
+            'count': str(users_cleaned)
         })
         return {
             EntityType.Devices.value: devices_cleaned,
@@ -676,7 +682,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'asset': entity_type.value,
             'adapter': self.plugin_name,
             'client_id': client_name,
-            'count': data_count
+            'count': str(data_count)
         })
         return data_count
 

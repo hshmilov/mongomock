@@ -389,3 +389,6 @@ class AdaptersPage(EntitiesPage):
             self.click_new_server()
         else:
             self.click_edit_server(row_position - 1)
+
+    def find_server_connection_label_value(self):
+        return self.driver.find_element_by_id('connectionLabel').get_attribute('value')

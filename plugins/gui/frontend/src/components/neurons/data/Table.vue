@@ -15,9 +15,9 @@
         class="header"
       >
         <XSearchInput
-          :value="searchValue"
+          v-model="searchValue"
           :placeholder="`Search ${tableTitle}...`"
-          @input="onInput"
+          @keyup.enter.native="onConfirmSearch"
         />
       </div>
       <div
@@ -55,7 +55,7 @@
         :expandable="expandable"
         :filterable="filterable"
         :on-click-row="onClickRow"
-        :on-click-col="staticData && !staticSort ? undefined : onClickSort"
+        :on-click-col="sortable ? onClickSort : undefined"
         :on-click-all="onClickAll"
         :multiple-row-selection="multipleRowSelection"
         :row-class="rowClass"
@@ -219,7 +219,6 @@ export default {
     return {
       loading: true,
       enableSelectAll: false,
-      searchValue: '',
     };
   },
   computed: {
@@ -372,6 +371,23 @@ export default {
         return value;
       }], [this.view.sort.desc ? 'desc' : 'asc']);
     },
+    searchValue: {
+      get() {
+        return this.view.query.search;
+      },
+      set(search) {
+        this.updateView({
+          module: this.module,
+          view: {
+            page: 0,
+            query: {
+              filter: '',
+              search,
+            },
+          },
+        });
+      }
+    },
     searchValueLower() {
       return this.searchValue.toLowerCase();
     },
@@ -395,6 +411,9 @@ export default {
         }
         return val.toString().toLowerCase().includes(this.searchValueLower);
       }));
+    },
+    sortable() {
+      return (this.staticData && this.staticSort) || this.view.sort;
     },
   },
   watch: {
@@ -528,20 +547,14 @@ export default {
     updateColFilters(colFilters) {
       this.updateViewFilter({ module: this.module, view: { colFilters } });
     },
-    onInput(searchValue) {
-      this.searchValue = searchValue;
-      this.updateView({
-        module: this.module,
-        view: {
-          page: 0,
-          query: {
-            search: searchValue,
-          },
-        },
-      });
-    },
     resetScrollPosition() {
       this.$refs.table.$el.scrollTop = 0;
+    },
+    onConfirmSearch() {
+      if (this.staticData) {
+        return;
+      }
+      this.fetchContentPages(true, true);
     },
   },
 };
@@ -553,7 +566,6 @@ export default {
 
         .header {
           .x-search-input {
-            width: 60%;
             display: block;
           }
         }

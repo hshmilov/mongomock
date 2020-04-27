@@ -16,7 +16,7 @@
         class="list__item"
         :class="{ dragging }"
       >
-        <md-icon md-src="src/assets/icons/action/drag.svg"></md-icon>
+        <md-icon md-src="/src/assets/icons/action/drag.svg"></md-icon>
         <x-checkbox
           :value="item.name"
           :label="item.title"
