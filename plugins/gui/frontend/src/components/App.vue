@@ -67,6 +67,7 @@ import sessionTimeoutMixin from '../mixins/session_timeout';
 
 import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
+import { FETCH_ADAPTERS } from '@store/modules/adapters';
 
 import {
   FETCH_SYSTEM_CONFIG,
@@ -187,6 +188,7 @@ export default {
       fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
       fetchAllowedDates: FETCH_ALLOWED_DATES,
       featchFeatureFlags: FETCH_FETURE_FLAGS,
+      fetchAdapters: FETCH_ADAPTERS,
     }),
     changeChecklistOpenState() {
       this.open = !this.open;
@@ -196,6 +198,10 @@ export default {
       this.fetchConstants();
 
       if (!this.isExpired) {
+        if (this.$can(this.$permissionConsts.categories.Adapters,
+          this.$permissionConsts.actions.View)) {
+          this.fetchAdapters();
+        }
         this.fetchConfig();
         this.fetchFirstHistoricalDate();
         this.fetchAllowedDates();
