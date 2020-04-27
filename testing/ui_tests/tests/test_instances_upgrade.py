@@ -2,7 +2,6 @@ import io
 
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from services.ports import DOCKER_PORTS
-from test_helpers.machines import PROXY_PORT, PROXY_IP
 from ui_tests.tests.instances_test_base import TestInstancesBase
 
 
@@ -30,7 +29,8 @@ class TestInstancesUpgrade(TestInstancesBase):
         upgrader = io.StringIO('#!/bin/bash\n'
                                'set -e\n'
                                'cd /home/ubuntu/\n'
-                               f'export https_proxy=https://{PROXY_IP}:{PROXY_PORT}\n'  # bypass internet disconnect!
+                               # bypass internet disconnect using our own node-proxy!
+                               f'export https_proxy=https://localhost:{DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]}\n'
                                'wget https://s3.us-east-2.amazonaws.com/axonius-releases/latest/axonius_latest.py\n'
                                f'echo {instance.ssh_pass} | sudo -S python3 axonius_latest.py\n')
 
