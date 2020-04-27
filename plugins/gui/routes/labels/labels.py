@@ -136,7 +136,7 @@ class Labels:
 
             'audit.instances': 'Instances',
             'audit.instances.post': 'Edit Instance',
-            'audit.instances.post.template': 'Edited instance {name}',
+            'audit.instances.post.template': 'Edited instance {node_name}',
 
             'audit.reports': 'Reports',
             'audit.reports.put': 'Add Report',

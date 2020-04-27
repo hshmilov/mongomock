@@ -39,7 +39,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @sorted_endpoint()
         @projected()
         @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
-            PermissionAction.View, permission_category))
+            PermissionAction.View, permission_category), skip_activity=True)
         def get(self, limit, skip, mongo_filter, mongo_sort,
                 mongo_projection, history: datetime):
             # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
@@ -92,7 +92,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @historical()
         @gui_route_logged_in('count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-            PermissionAction.View, permission_category))
+            PermissionAction.View, permission_category), skip_activity=True)
         def get_count(self, mongo_filter, history: datetime):
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')

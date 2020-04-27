@@ -6,7 +6,6 @@ import csv
 import io
 
 import pymongo
-from bson import ObjectId
 from flask import (jsonify, make_response)
 
 from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT
@@ -31,12 +30,12 @@ class Audit:
             limited_activity_logs = self._fetch_audit().skip(skip).limit(limit)
             return jsonify([self._format_activity(activity) for activity in limited_activity_logs])
 
-        return jsonify(self._handle_activity_search(search)[skip:(skip + limit)])
+        return jsonify(self._get_activities_formatted_filtered(search)[skip:(skip + limit)])
 
     def _fetch_audit(self):
         return self._audit_collection.find().sort([('timestamp', pymongo.DESCENDING)])
 
-    def _format_activity(self, activity: dict) -> dict:
+    def _format_activity(self, activity: dict, format_date=False) -> dict:
         """
         Format each activity field to a human readable string
 
@@ -44,7 +43,14 @@ class Audit:
         :param fields_format: map base fields to pretty names
         :return:
         """
-        def _get_user_from_id(user_id: ObjectId):
+        def _get_date_from_timestamp(activity: dict):
+            timestamp = activity.get('timestamp')
+            if not timestamp:
+                return ''
+            return timestamp.strftime(DTFMT) if format_date else str(timestamp)
+
+        def _get_user_from_id(activity: dict):
+            user_id = activity.get('user')
             if not user_id:
                 return ''
             user_info = translate_user_id_to_details(user_id)
@@ -64,8 +70,8 @@ class Audit:
 
         audit_field_to_processor = {
             'type': lambda activity: activity.get('type', ''),
-            'date': lambda activity: activity['timestamp'].strftime(DTFMT) if activity.get('timestamp') else '',
-            'user': lambda activity: _get_user_from_id(activity.get('user')),
+            'date': _get_date_from_timestamp,
+            'user': _get_user_from_id,
             'action': lambda activity: _get_label(_get_category_action(activity)),
             'category': lambda activity: _get_label(activity.get('category', '')),
             'message': _get_message_from_activity
@@ -75,11 +81,11 @@ class Audit:
             for field, processor in audit_field_to_processor.items()
         }
 
-    def _handle_activity_search(self, search):
+    def _get_activities_formatted_filtered(self, search, format_date=False):
         search = search.lower().strip()
         matching_activities = []
         for activity in self._fetch_audit():
-            formatted_activity = self._format_activity(activity)
+            formatted_activity = self._format_activity(activity, format_date)
             stringified_activity = ','.join(formatted_activity.values()).lower()
             if search in stringified_activity:
                 matching_activities.append(formatted_activity)
@@ -95,12 +101,12 @@ class Audit:
         if not search:
             return jsonify(self._audit_collection.count_documents({}))
 
-        return jsonify(len(self._handle_activity_search(search)))
+        return jsonify(len(self._get_activities_formatted_filtered(search)))
 
     @search_filter()
     @gui_route_logged_in('csv')
     def get_audit_csv(self, search):
-        csv_audit_data = self._handle_activity_search(search)
+        csv_audit_data = self._get_activities_formatted_filtered(search, format_date=True)
         csv_string = io.StringIO()
         dw = csv.DictWriter(csv_string, ['type', 'date', 'user', 'action', 'category', 'message'])
         dw.writeheader()

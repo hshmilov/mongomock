@@ -918,7 +918,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 },
             ],
             'type': 'array',
-            'pretty_name': 'GUI Configuration'
+            'pretty_name': 'GUI Settings'
         }
 
     @classmethod

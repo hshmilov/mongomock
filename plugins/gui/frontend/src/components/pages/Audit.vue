@@ -52,6 +52,7 @@ export default {
         name: 'date',
         title: 'Date',
         type: 'string',
+        format: 'date-time',
       }, {
         name: 'user',
         title: 'User',
@@ -91,6 +92,7 @@ export default {
 .x-audit {
 
   .x-data-table {
+    height: auto;
 
     .anticon-loading {
       margin-right: 4px;

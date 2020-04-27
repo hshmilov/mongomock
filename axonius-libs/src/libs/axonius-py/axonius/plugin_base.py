@@ -3835,7 +3835,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'required': ['enabled', 'enable_destroy'],
                 },
             ],
-            'pretty_name': 'Global Configuration',
+            'pretty_name': 'Global Settings',
             'type': 'array'
         }
 

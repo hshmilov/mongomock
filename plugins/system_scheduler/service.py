@@ -337,7 +337,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 }
             ],
             'type': 'array',
-            'pretty_name': 'Lifecycle Configuration'
+            'pretty_name': 'Lifecycle Settings'
         }
 
     @classmethod
