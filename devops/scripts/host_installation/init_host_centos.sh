@@ -93,7 +93,6 @@ export LC_CTYPE="en_US.UTF-8"
 #sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 #export DEBIAN_FRONTEND=noninteractive
 #dpkg --add-architecture i386
-echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 
 _wait_for_yum -y update
 echo "Upgrading..."
