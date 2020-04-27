@@ -1,3 +1,5 @@
+import os
+import shutil
 import threading
 import ctypes
 import logging
@@ -20,7 +22,9 @@ USER = 'username'
 ESET_HOST = 'host'
 ESET_PORT = 'port'
 
-BIN_LOCATION = '/home/axonius-base-image/bin/ERAApi/eset_connection.so'
+BIN_ORIG_LOCATION = '/home/axonius-base-image/bin/ERAApi'
+BIN_NEW_LOCATION = '/home/axonius/bin'
+BIN_NAME = 'eset_connection.so'
 
 
 class EsetAdapter(AdapterBase):
@@ -50,8 +54,13 @@ class EsetAdapter(AdapterBase):
 
         """
         try:
+            if os.path.exists(BIN_NEW_LOCATION):
+                os.rmdir(BIN_NEW_LOCATION)
+            shutil.move(BIN_ORIG_LOCATION, BIN_NEW_LOCATION)
+
+            bin_location = os.path.join(BIN_NEW_LOCATION, BIN_NAME)
             # Loading the cpp wrapper.
-            self.eset_connection_library = ctypes.cdll.LoadLibrary(BIN_LOCATION)
+            self.eset_connection_library = ctypes.cdll.LoadLibrary(bin_location)
 
             # Check cpp wrapper load
             self.eset_connection_library.GetState.restype = ctypes.c_char_p
