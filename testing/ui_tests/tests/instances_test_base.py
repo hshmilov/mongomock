@@ -20,6 +20,7 @@ from builds.builds_factory import BuildsInstance
 from deployment.install import SYSTEM_BOOT_CRON_SCRIPT_PATH
 from devops.scripts.instances.system_boot import \
     BOOTED_FOR_PRODUCTION_MARKER_PATH
+from scripts.automate_dev.download_version import get_export
 from scripts.instances.instances_consts import CORTEX_PATH
 from services.axonius_service import AxoniusService
 from test_credentials.test_nexpose_credentials import client_details
@@ -91,10 +92,7 @@ def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):
 
 def setup_instances(logger, instance_name, export_name=None):
     builds_instance = Builds()
-    if export_name:
-        latest_export = builds_instance.get_export_by_name(export_name)
-    else:
-        latest_export = builds_instance.get_latest_daily_export()
+    latest_export = get_export(export_name, builds_instance)
     logger.info(f'using {latest_export["version"]} for instances tests')
 
     def create_instances_helper():

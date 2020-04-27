@@ -20,6 +20,7 @@ set -e
 version="head"
 installer_name=axonius_${version}.py
 install_dir="install_dir"
+upgrade_version_name=$1
 
 mkdir -p logs
 mkdir -p ${install_dir}
@@ -54,7 +55,7 @@ echo "#### Cleaning done"
 # assume we put our latest stable at the following location.
 echo "#### Installing latest stable version"
 cd ${install_dir}
-wget -q https://s3.us-east-2.amazonaws.com/axonius-releases/latest/axonius_latest.py
+../pyrun.sh ../devops/scripts/automate_dev/download_version.py -o "$(pwd)"/axonius_latest.py -v "${upgrade_version_name}"
 chmod +x ./axonius_latest.py
 sudo ./axonius_latest.py --first-time &> ../logs/install_latest_stable.log
 

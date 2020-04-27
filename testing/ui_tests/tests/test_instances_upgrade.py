@@ -1,6 +1,9 @@
 import io
 
+import pytest
+
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
+from scripts.automate_dev.download_version import get_export
 from services.ports import DOCKER_PORTS
 from ui_tests.tests.instances_test_base import TestInstancesBase
 
@@ -26,12 +29,18 @@ class TestInstancesUpgrade(TestInstancesBase):
     def run_upgrade_on_node(self):
         instance = self._instances[0]
         upgrade_script_path = '/home/ubuntu/upgrade.sh'
+        upgrade_file_name = 'axonius_latest.py'
+
+        export = get_export(pytest.config.option.export_name)
+
+        self.logger.info(f'Upgrading to version: {export["version"]}')
+
         upgrader = io.StringIO('#!/bin/bash\n'
                                'set -e\n'
                                'cd /home/ubuntu/\n'
                                # bypass internet disconnect using our own node-proxy!
                                f'export https_proxy=https://localhost:{DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]}\n'
-                               'wget https://s3.us-east-2.amazonaws.com/axonius-releases/latest/axonius_latest.py\n'
+                               f'wget -O {upgrade_file_name} {export["installer_download_link"]}\n'
                                f'echo {instance.ssh_pass} | sudo -S python3 axonius_latest.py\n')
 
         instance.put_file(file_object=upgrader,
