@@ -129,10 +129,6 @@ export default {
       return _get(this.coreSettings, 'config.password_reset_password.reset_password_link_expiration', 48);
     },
   },
-  async created() {
-    this.link = await getUserResetPasswordLink(this.userId, this.invite);
-    this.email = this.userEmail;
-  },
   async mounted() {
     this.link = await getUserResetPasswordLink(this.userId, this.invite);
     this.email = this.userEmail;

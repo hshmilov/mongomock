@@ -172,7 +172,8 @@ export const getPermissionState = (labels, category, role) => {
     return PermissionCategoryState.none;
   }
   // extract category related actions
-  const actionsUnderCurrentCategory = _keys(labels).filter((action) => _includes(action, category) && action !== `permissions.${category}`);
+  const actionsUnderCurrentCategory = _keys(labels).filter((action) => _includes(action, `permissions.${category}`)
+    && action !== `permissions.${category}`);
   // count permitted actions based on role permissions
   let permittedActions = 0;
   actionsUnderCurrentCategory.forEach((action) => {

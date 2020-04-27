@@ -1,5 +1,5 @@
 import xSidePanel from '@networks/side-panel/SidePanel.vue';
-import xButton from '@axons/inputs/Button.vue';
+import XButton from '@axons/inputs/Button.vue';
 
 import './compliance-panel.scss';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
@@ -7,7 +7,7 @@ import { mapMutations } from 'vuex';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
 import { formatDate } from '@constants/utils';
-import { entities } from '@constants/entities';
+import { getEntityPermissionCategory } from '@constants/entities';
 
 const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
@@ -33,7 +33,7 @@ export default {
   name: 'xCompliancePanel',
   components: {
     xSidePanel,
-    xButton,
+    XButton,
   },
   props: {
     data: {
@@ -56,7 +56,7 @@ export default {
       if (!this.data.entities_results_query) {
         return false;
       }
-      return this.$can(entities[this.data.entities_results_query.type].permissionCategory,
+      return this.$can(getEntityPermissionCategory(this.data.entities_results_query.type),
         this.$permissionConsts.actions.View);
     },
   },
@@ -175,14 +175,15 @@ export default {
               // conditionally render action button in footer
               this.data.status !== 'No data' && this.data.entities_results_query
                 ? [
-                  <x-button
-                    disabled={this.canViewEntities}
+                  <XButton
+                    type="primary"
+                    disabled={!this.canViewEntities}
                     onClick={this.runQueryOnAffectedEntities}
                   >
                     Show Affected {
                     _capitalize(this.data.entities_results_query.type)
                   }
-                  </x-button>,
+                  </XButton>,
                 ]
                 : ''
             }

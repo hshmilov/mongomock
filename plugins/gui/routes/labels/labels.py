@@ -25,7 +25,7 @@ class Labels:
             'permissions.settings.reset_api_key': 'Reset API Key',
             'permissions.settings.post': 'Update system settings',
             'permissions.settings.run_manual_discovery': 'Run manual discovery cycle',
-            'permissions.settings.audit.get': 'View Audit Log',
+            'permissions.settings.audit.get': 'View Activity Logs',
 
             'permissions.dashboard': 'Dashboard',
             'permissions.dashboard.get': 'View dashboard',
