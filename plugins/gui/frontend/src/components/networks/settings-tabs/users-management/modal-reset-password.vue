@@ -22,6 +22,7 @@
             disabled
           >
           <XButton
+            type="primary"
             class="copy-to-clipboard-icon"
             title="Copy Reset Link"
             shape="circle"
@@ -60,6 +61,7 @@
         class="error-input indicator-error--text"
       >{{ serverError }}</p>
       <XButton
+        type="primary"
         :loading="sendingEmail"
         :disabled="!canSendEmail || this.$v.$invalid"
         @click="sendEmail"

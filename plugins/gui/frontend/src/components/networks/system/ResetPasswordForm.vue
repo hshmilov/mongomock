@@ -18,6 +18,7 @@
         @submit="onSubmit"
       />
       <XButton
+        type="primary"
         :disabled="invalidForm"
         @click="onSubmit"
       >Set Password</XButton>

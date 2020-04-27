@@ -81,7 +81,10 @@
                   <div class="warning mr-12">
                     Temporary Remote Support will end at: {{ accessEndTime }}
                   </div>
-                  <XButton @click="stopTempAccess">
+                  <XButton
+                    type="primary"
+                    @click="stopTempAccess"
+                  >
                     Stop
                   </XButton>
                 </template>

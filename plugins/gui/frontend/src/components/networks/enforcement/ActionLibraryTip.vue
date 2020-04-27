@@ -22,7 +22,7 @@
       </div>
     </div>
     <div slot="footer">
-      <x-button @click="$emit('close')">OK</x-button>
+      <x-button type="primary" @click="$emit('close')">OK</x-button>
     </div>
   </x-modal>
 </template>

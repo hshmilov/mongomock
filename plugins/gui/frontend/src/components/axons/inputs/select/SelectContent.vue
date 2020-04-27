@@ -81,7 +81,7 @@
         >Select all</XButton>
       </div>
       <XButton
-        link
+        type="link"
         @click="clearAllData"
       >Clear all</XButton>
     </div>
