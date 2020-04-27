@@ -1,13 +1,17 @@
 import base64
 import configparser
+import importlib
 import json
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
 from datetime import datetime, timedelta
 from multiprocessing.pool import ThreadPool
+from typing import Tuple, Any, Optional
+
 from dateutil.parser import parser
 
 import docker.models
@@ -66,6 +70,8 @@ class CoreService(Triggerable, PluginBase, Configurable):
     def __init__(self, **kwargs):
         """ Initialize all needed configurations
         """
+        # Add the adapters mapping to the python mapping
+        sys.path.insert(0, "/home/axonius/app/adapters")
         # Get local configuration
         config = configparser.ConfigParser()
         config.read(get_local_config_file(__file__))
@@ -578,8 +584,124 @@ class CoreService(Triggerable, PluginBase, Configurable):
     def _check_registered_thread(self, *args, **kwargs):
         return  # No need to check on core itself
 
+    @add_rule('quick_register', methods=['POST'], should_authenticate=False)
+    def quick_register(self):
+        try:
+            data = self.get_request_data_as_object()
+            node_id = data['node_id']
+            plugin_name = data['plugin_name']
+            package_name = data['package_name']
+            service_class_name = data['service_class_name']
+
+            additional_data = {}
+            found_document = self.core_configs_collection.find_one({
+                PLUGIN_NAME: plugin_name,
+                NODE_ID: {
+                    # we want to fix all plugins with the given node_id
+                    # in some cases, node_id might have a leading exclamation mark, and we want to catch it too
+                    '$in': [node_id, f'!{node_id}']
+                }
+            })
+            if found_document:
+                # if this node_id&plugin_name exists, then re-register with the appropriate information.
+                logger.info(f'Quick Register: Already registered as {found_document[PLUGIN_UNIQUE_NAME]}')
+                additional_data[PLUGIN_UNIQUE_NAME] = found_document[PLUGIN_UNIQUE_NAME]
+                additional_data['api_key'] = found_document['api_key']
+
+                # However, if this adapter has clients, fail the process, because we want these adapters to actually
+                # run (and not have quick register). These lines can be removed in the future when we have a
+                # better weave/aod support.
+                plugin_unique_name = found_document[PLUGIN_UNIQUE_NAME]
+                if self.mongo_client[plugin_unique_name]['clients'].count_documents() > 0:
+                    logger.info(f'Plugin {plugin_unique_name} has clients, do not run quick register')
+                    raise ValueError(f'pluin {plugin_unique_name} has clients, not running quick register')
+
+            del found_document
+
+            # Importing the actual python class for the plugin
+            adapter_module = importlib.import_module(f'{package_name}.service')
+            adapter_class = getattr(adapter_module, service_class_name)
+
+            class Empty:
+                pass
+
+            # Initializing an instance of the class without calling the constructor
+            empty_instance = Empty()
+            empty_instance.__class__ = adapter_class
+
+            # override internal DB client
+            empty_instance.mongo_client = self.mongo_client
+
+            # First, verify we have the schema and don't fail on getting it
+            clients_schema = empty_instance._clients_schema()
+
+            # Second, try to perform a registration with core, so it will actually show up in the list of adapters
+            doc = {
+                PLUGIN_NAME: plugin_name,
+                'plugin_type': empty_instance.plugin_type,
+                'plugin_subtype': empty_instance.plugin_subtype.value,
+                'is_debug': False,
+                'supported_features': list(empty_instance._Feature__supported_features()),
+                NODE_ID: node_id,
+                'quick_register': True,  # Implies this adapter isn't actually up,
+                **additional_data
+            }
+            response_type, response_dict = self.__register(
+                method='POST',
+                api_key=None,
+                unique_name=None,
+                all_data=doc,
+                remote_addr='local-quick-register-func'
+            )
+            if response_type != 'jsonify':
+                raise ValueError(f'Unknown response: {response_type}, {response_dict}')
+
+            plugin_unique_name = response_dict[PLUGIN_UNIQUE_NAME]
+            empty_instance.plugin_unique_name = plugin_unique_name
+
+            adapter_db = self.mongo_client[plugin_unique_name]
+
+            adapter_db['adapter_schema'].replace_one({
+                'adapter_name': plugin_unique_name
+            }, {
+                'adapter_name': plugin_unique_name,
+                'adapter_version': '%version%',  # leftover
+                'schema': clients_schema
+            }, upsert=True)
+
+            # Insert configurable to DB
+            # If this fails, we need to actually raise the adapter
+            empty_instance._update_schema()
+            logger.info(f'Quick registered to {plugin_unique_name}')
+            return ''
+        except Exception:
+            logger.exception(f'Error quick registering')
+            raise
+
     @add_rule("register", methods=['POST', 'GET'], should_authenticate=False)
     def register(self):
+        method = self.get_method()
+        api_key = self.get_request_header('x-api-key')
+        unique_name = request.args.get('unique_name')
+        all_data = self.get_request_data_as_object()
+        remote_addr = request.remote_addr
+
+        ret_type, ret_value = self.__register(method, api_key, unique_name, all_data, remote_addr)
+        if ret_type == 'string':
+            return ret_value
+        elif ret_type == 'jsonify':
+            return jsonify(ret_value)
+        elif ret_type == 'return_error':
+            return return_error(*ret_value)
+
+    def __register(
+            self,
+            method: str,
+            api_key: Optional[str],
+            unique_name: Optional[str],
+            all_data: Optional[dict],
+            remote_addr: str
+    ) -> Tuple[str, Any]:
         """Calling this function from the REST API will start the registration process.
 
         Accepts:
@@ -589,14 +711,12 @@ class CoreService(Triggerable, PluginBase, Configurable):
             POST - For registering. Should send the following data on the page:
                    {"plugin_name": <plugin_name>, "plugin_unique_name"(Optional):<plugin_unique_name>}
         """
-        if self.get_method() == 'GET':
-            api_key = self.get_request_header('x-api-key')
-            unique_name = request.args.get('unique_name')
+        if method == 'GET':
             if not api_key:
                 if not unique_name:
                     # No api_key, Returning the current online plugins. This will be used by the aggregator
                     # To find out which adapters are available
-                    return jsonify({
+                    return ('jsonify', {
                         adapter[PLUGIN_UNIQUE_NAME]: adapter
                         for adapter
                         in self.core_configs_collection.find({
@@ -614,7 +734,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                         })
                     })
                 else:
-                    return 'OK'
+                    return 'string', 'OK'
             else:
                 # This is a registered check, we should get the plugin name (a parameter) and tell if it's
                 # already registered
@@ -631,17 +751,17 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                 'last_seen': plugin['last_seen']
                             }
                         })
-                        return 'OK'
+                        return 'string', 'OK'
                     else:
                         # Probably a new node_connection.
-                        return return_error('Non matching api_key', 409)
+                        return 'return_error', ('Non matching api_key', 409)
                 elif unique_name == self.plugin_name:
-                    return 'OK'
+                    return 'string', 'OK'
                 # If we reached here than plugin is not registered, returning error
-                return return_error('Plugin not registered', 404)
+                return 'return_error', ('Plugin not registered', 404)
 
         # method == POST
-        data = self.get_request_data_as_object()
+        data = all_data
 
         try:
             plugin_name = data['plugin_name']
@@ -657,7 +777,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
             logger.info(f'data: {data}')
             raise
 
-        logger.info(f"Got registration request : {data} from {request.remote_addr}")
+        logger.info(f"Got registration request : {data} from {remote_addr}")
 
         nodes_metadata = self._get_collection('nodes_metadata').find_one({NODE_ID: node_id})
         if not nodes_metadata:
@@ -702,7 +822,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                 }
                             })
                             self.online_plugins[plugin_unique_name] = relevant_doc
-                            return jsonify(relevant_doc)
+                            return 'jsonify', relevant_doc
             else:
                 plugin_unique_name = self._generate_unique_name(plugin_name)
 
@@ -753,7 +873,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
             logger.info("Plugin {0} registered successfully{1}!".format(relevant_doc[PLUGIN_UNIQUE_NAME],
                                                                         ' quickly' if quick_register else ''))
             logger.debug(relevant_doc)
-            return jsonify(relevant_doc)
+            return 'jsonify', relevant_doc
 
     def _generate_unique_name(self, plugin_name):
         # New plugin. First, start with a name with no unique identifier. Then, continue to

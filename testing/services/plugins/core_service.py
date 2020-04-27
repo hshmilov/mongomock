@@ -203,7 +203,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
         Performs a POST register call to Core
         :param doc: the doc to transfer
         """
-        return requests.post(f'{self.req_url}/register', json=doc)
+        return requests.post(f'{self.req_url}/quick_register', json=doc)
 
     def _update_schema_version_4(self):
         # https://axonius.atlassian.net/browse/AX-4732
@@ -848,6 +848,9 @@ class CoreService(PluginService, UpdatablePluginMixin):
             docker_socket_mapping = '/var/run/docker.sock:/var/run/docker.sock'
         volumes = [f'{settings_path}:{container_settings_dir_path}', docker_socket_mapping]
 
+        # Core has all adapters exposed.
+        adapters = os.path.abspath(os.path.join(self.cortex_root_dir, 'adapters'))
+        volumes.append(f'{adapters}:/home/axonius/app/adapters:ro')
         volumes.extend(super().volumes_override)
         return volumes
 
