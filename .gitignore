@@ -322,6 +322,7 @@ axonius-libs/__build_metadata
 *.json.zip
 nvd_current_state.json
 account_data.tmp
+uploaded_files/*
 
 # gui
 plugins/gui/frontend/.idea/
