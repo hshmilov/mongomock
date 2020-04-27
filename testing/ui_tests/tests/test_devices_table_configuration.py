@@ -181,3 +181,10 @@ class TestDevicesTable(TestEntitiesTable):
             adapters_from_edit_columns.pop(0)
             for adapter_element in adapters_from_edit_columns:
                 assert first_element_height == adapter_element.value_of_css_property('height')
+
+    def test_devices_initial_column_order(self):
+        """
+        Test that the initial column order of the devices table columns
+        is the same as the default fields order
+        """
+        self.check_initial_column_order(self.devices_page)

@@ -31,6 +31,7 @@ class EntitiesPage(Page):
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
     EDIT_COLUMNS_SELECT_XPATH = '//div[@class=\'field-list {list_type}\']' \
                                 '//div[@class=\'x-checkbox\' and .//text()=\'{col_title}\']'
+    DISPLAYED_COLUMNS_MENU_XPATH = '//div[@class=\'field-list view\']//div[@class=\'x-checkbox\']'
 
     QUERY_WIZARD_ID = 'query_wizard'
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
@@ -320,6 +321,18 @@ class EntitiesPage(Page):
         self.open_edit_columns_adapters_list()
         return self.get_edit_column_adapters_dropdown_element()\
             .find_elements_by_css_selector(self.DROPDOWN_SELECTED_OPTION_CSS)
+
+    def get_displayed_columns_in_menu(self):
+        """
+        Gets all of the displayed columns that appear in the "edit column" menu
+        In other words, all the fields that appear on the right side table
+        """
+        self.open_edit_columns()
+        displayed_columns = [column.text for column in self.find_elements_by_xpath(self.DISPLAYED_COLUMNS_MENU_XPATH)]
+        self.close_edit_columns()
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        return displayed_columns
 
     def get_adapters_list(self):
         adapters_list = self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text.split('\n')

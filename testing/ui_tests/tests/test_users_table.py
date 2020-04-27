@@ -216,3 +216,10 @@ class TestUsersTable(TestEntitiesTable):
             generic_col_data = self.users_page.get_column_data_slicer(self.ACCOUNT_DISABLED_COLUMN)
             specific_col_data = self.users_page.get_column_data_slicer(self.ACCOUNT_DISABLED_COLUMN, False)
             assert generic_col_data == specific_col_data
+
+    def test_users_initial_column_order(self):
+        """
+        Test that the initial column order of the users table columns
+        is the same as the default fields order
+        """
+        self.check_initial_column_order(self.users_page)

@@ -28,3 +28,8 @@ class TestEntitiesTable(TestBase):
             adapters = self.devices_page.get_query_adapters_list()
             # WMI Info should be in the adapters list because its does have a client
             assert WMI_INFO_ADAPTER in adapters
+
+    @staticmethod
+    def check_initial_column_order(entities_page):
+        entities_page.switch_to_page()
+        assert entities_page.get_columns_header_text() == entities_page.get_displayed_columns_in_menu()
