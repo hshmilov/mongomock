@@ -157,7 +157,7 @@ export default {
 .x-tag-modal {
   .modal-container .modal-body {
     padding: 0;
-    margin-bottom: 24px;
+    margin: 24px 0;
     height: 90%;
 
     .row {
