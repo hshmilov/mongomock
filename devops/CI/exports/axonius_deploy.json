@@ -150,11 +150,6 @@
     },
     {
       "type": "shell",
-      "script": "./set_axonius_dns_until_boot.sh",
-      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    },
-    {
-      "type": "shell",
       "expect_disconnect": true,
       "inline": [
         "reboot"
