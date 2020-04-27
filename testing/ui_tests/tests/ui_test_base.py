@@ -320,6 +320,7 @@ class TestBase:
         self.axonius_system = get_service()
 
         self.login()
+        self.base_page.wait_for_run_research()
         logger.info(f'finishing setup_method {method.__name__}')
 
     def setup_browser(self):
