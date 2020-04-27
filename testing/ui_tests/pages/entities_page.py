@@ -45,6 +45,8 @@ class EntitiesPage(Page):
     EXPRESSION_INPUT_INT_TRIGGER_CSS = '.x-condition-function .argument .x-select-trigger'
     EXP1_TRIGGER_CSS = '.x-condition-function .argument > .trigger.arrow'
     EXP2_INPUT_CSS = '.x-condition-function .argument .content.expand .x-search-input.x-select-search .input-value'
+    QUERY_ADAPTER_DROPDOWN_SECONDARY_OPTIONS_CSS = 'div.x-select-options > .x-secondary-select-content >' \
+                                                   '.x-select-options'
 
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
@@ -322,6 +324,11 @@ class EntitiesPage(Page):
     def get_adapters_list(self):
         adapters_list = self.driver.find_element_by_css_selector(self.DROPDOWN_SELECTED_OPTIONS_CSS).text.split('\n')
         adapters_list.remove(self.VALUE_ADAPTERS_GENERAL)
+        return adapters_list
+
+    def get_adapters_secondary_list(self):
+        adapters_list = self.driver.find_element_by_css_selector(
+            self.QUERY_ADAPTER_DROPDOWN_SECONDARY_OPTIONS_CSS).text.split('\n')
         return adapters_list
 
     def select_query_comp_op(self, text, parent=None):

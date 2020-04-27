@@ -9,13 +9,22 @@ const selectFields = (schema, objectView) => (objectView
   ? schema.filter(isObjectListField)
   : schema);
 
+function sortPlugins(first, second) {
+  // Sort by adapters plugin name (the one that is shown in the gui).
+  const firstText = first.title.toLowerCase();
+  const secondText = second.title.toLowerCase();
+  if (firstText < secondText) return -1;
+  if (firstText > secondText) return 1;
+  return 0;
+}
+
 function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema, objectView, filterPlugins) {
   if (_isEmpty(fieldsGeneric) || (objectView && _isEmpty(fieldsSchema))) {
     return [];
   }
   const plugins = Object.keys(fieldsSpecific)
     .map((name) => {
-      const title = pluginMeta[name] ? pluginMeta[name].title : name
+      const title = pluginMeta[name] ? pluginMeta[name].title : name;
       return {
         title,
         name,
@@ -27,19 +36,12 @@ function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema, obje
     fields: selectFields(fieldsGeneric, objectView),
   };
   if (filterPlugins) {
-    aggregated.plugins = plugins;
+    aggregated.plugins = plugins.sort(sortPlugins);
   }
   const sortedPluginFields = plugins.map((plugin) => ({
     ...plugin,
     fields: selectFields(fieldsSpecific[plugin.name], objectView),
-  })).sort((first, second) => {
-    // Sort by adapters plugin name (the one that is shown in the gui).
-    const firstText = first.title.toLowerCase();
-    const secondText = second.title.toLowerCase();
-    if (firstText < secondText) return -1;
-    if (firstText > secondText) return 1;
-    return 0;
-  });
+  })).sort(sortPlugins);
   return [aggregated, ...sortedPluginFields];
 }
 
@@ -51,23 +53,23 @@ export const CONNECTION_LABEL_SCHEMA = {
   source: {
     key: 'all-connection-labels',
     options: {
-      'allow-custom-option': false
-    }
-  }
-}
+      'allow-custom-option': false,
+    },
+  },
+};
 
-export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA'
+export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA';
 export const getModuleSchema = (state) => (module, objectView = false, filterPlugins = false) => {
-  const fields = _get(state[module], 'fields.data' , {})
-  return getModuleSchemaFields(fields.specific , fields.generic, fields.schema , objectView, filterPlugins);
-}
+  const fields = _get(state[module], 'fields.data', {});
+  return getModuleSchemaFields(fields.specific, fields.generic, fields.schema, objectView, filterPlugins);
+};
 
-export const GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL = 'GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL'
+export const GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL = 'GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL';
 export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView = false, filterPlugins = false) => {
-  const fields = _get(state[module], 'fields.data', {})
-  return getModuleSchemaFields(fields.specific , [CONNECTION_LABEL_SCHEMA,
+  const fields = _get(state[module], 'fields.data', {});
+  return getModuleSchemaFields(fields.specific, [CONNECTION_LABEL_SCHEMA,
     ...fields.generic], fields.schema, objectView, filterPlugins);
-}
+};
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
 export const getDataSchemaList = (state) => (module) => {
@@ -108,11 +110,11 @@ export const exactSearch = (state) => {
   return state.configuration.data.system.exactSearch;
 };
 
-export const REQUIRE_CONNECTION_LABEL = 'REQUIRE_CONNECTION_LABEL'
+export const REQUIRE_CONNECTION_LABEL = 'REQUIRE_CONNECTION_LABEL';
 export const requireConnectionLabel = (state) => {
-  if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false
-  return state.configuration.data.system.requireConnectionLabel
-}
+  if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false;
+  return state.configuration.data.system.requireConnectionLabel;
+};
 
 export const IS_EXPIRED = 'IS_EXPIRED';
 export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';

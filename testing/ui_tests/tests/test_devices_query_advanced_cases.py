@@ -689,6 +689,17 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.clear_query_wizard()
 
+    def test_adapters_name_sort(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.open_query_adapters_list_and_open_adapter_filter()
+        adapters_list = self.devices_page.get_adapters_secondary_list()
+
+        previous_value = adapters_list[0]
+        for value in adapters_list[1:]:
+            assert value >= previous_value
+            previous_value = value
+
     @pytest.mark.skip('AX-6585')
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
@@ -698,6 +709,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self._test_adapters_filter_change_icon()
+        self.test_adapters_name_sort()
         self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
