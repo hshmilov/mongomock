@@ -22,7 +22,6 @@
             disabled
           >
           <XButton
-            type="primary"
             class="copy-to-clipboard-icon"
             title="Copy Reset Link"
             shape="circle"
