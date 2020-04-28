@@ -77,6 +77,7 @@ class JamfAdapter(AdapterBase, Configurable):
         certificates = ListField(JamfCertificate, 'Certificates')
         extension_attributes = ListField(JamfExtensionAttribute, 'Extension Attributes')
         disk_encryption_configuration = Field(str, 'Disk Encryption Configuration')
+        jamf_groups = ListField(str, 'Jamf Groups')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -332,6 +333,12 @@ class JamfAdapter(AdapterBase, Configurable):
                                 inventory_users_dict[user_inventory.get('username') or 'UNKNOWN'] = user_inventory
                         except Exception:
                             logger.exception(f'Problem getting inventory list')
+                        try:
+                            jamf_groups = (groups_accounts.get('computer_group_memberships') or {}).get('group')
+                            if jamf_groups and isinstance(jamf_groups, list):
+                                device.jamf_groups = jamf_groups
+                        except Exception:
+                            logger.exception(f'Problem adding jamf groups')
                         for user_raw in users_raw:
                             try:
                                 user_name_raw = user_raw.get('name')
