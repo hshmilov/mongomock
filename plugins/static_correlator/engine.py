@@ -634,7 +634,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                 or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and compare_domain_for_correlation(x, y)) \
                                 or x.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or y.get('plugin_name') in DANGEROUS_ADAPTERS \
-                                or 'vmware' in mac_manufacturer.lower():
+                                or 'vmware' in mac_manufacturer.lower() \
+                                or not cloud_id_do_not_contradict(x, y):
                             logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
                             mac_blacklist.add(mac)
                             break
