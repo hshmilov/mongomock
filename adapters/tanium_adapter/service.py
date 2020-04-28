@@ -82,8 +82,11 @@ class TaniumAdapter(AdapterBase):
     def _get_hostname(device_raw):
         value = device_raw.get('host_name')
         try:
-            if value and value.endswith('(none)'):
-                value = value[: -len('(none)')]
+            if value:
+                if value.endswith('(none)'):
+                    value = value[: -len('(none)')]
+                if './bin/sh' in value:
+                    value = value[:value.find('./bin/sh')]
             return value or ''
         except Exception:
             logger.exception(f'ERROR getting host_name from {value!r} from {list(device_raw)}')
