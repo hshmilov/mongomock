@@ -10,6 +10,7 @@ from ui_tests.tests.test_report_base import TestReportGenerationBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 
 
+#pylint: disable=no-member
 class TestReportGeneration(TestReportGenerationBase):
     TEST_REPORT_QUERY_NAME1 = 'test report query name1'
     TEST_REPORT_QUERY_NAME2 = 'test report query name2'
