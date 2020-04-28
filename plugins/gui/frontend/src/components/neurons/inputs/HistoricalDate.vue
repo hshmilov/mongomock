@@ -52,11 +52,15 @@ export default {
           if (!entityToFirstDate[this.module]) {
             return null;
           }
-          historicalDate = new Date(entityToFirstDate[this.module]);
+          historicalDate = entityToFirstDate[this.module];
         } else {
           historicalDate = Object.values(entityToFirstDate).reduce((a, b) => (
             (new Date(a) < new Date(b)) ? a : b), new Date());
         }
+        if (!historicalDate) {
+          return null;
+        }
+        historicalDate = new Date(historicalDate);
         historicalDate.setDate(historicalDate.getDate() - 1);
         return historicalDate;
       },
