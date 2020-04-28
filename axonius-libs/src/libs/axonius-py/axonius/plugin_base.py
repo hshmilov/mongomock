@@ -841,20 +841,24 @@ class PluginBase(Configurable, Feature, ABC):
 
         with entity_fields['fields_db_lock']:
             logger.debug(f'Persisting {entity_type.name} fields to DB')
-            raw_fields = list(entity_fields['raw_fields_set'])  # copy
+            try:
+                raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
-            # Upsert new fields
-            fields_collection = self._all_fields_db_map[entity_type]
-            fields_collection.update({
-                'name': 'raw',
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
-            }, {
-                '$addToSet': {
-                    'raw': {
-                        '$each': raw_fields
+                # Upsert new fields
+                logger.info(len(str(raw_fields)))
+                fields_collection = self._all_fields_db_map[entity_type]
+                fields_collection.update({
+                    'name': 'raw',
+                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                }, {
+                    '$addToSet': {
+                        'raw': {
+                            '$each': raw_fields
+                        }
                     }
-                }
-            }, upsert=True)
+                }, upsert=True)
+            except Exception:
+                logger.debug(f'Could not persist raw_fields_set', exc_info=True)
 
             # Dynamic fields that were somewhen in the schema must always stay there (unless explicitly removed)
             # because otherwise we would always miss them (image an adapter parsing csv1 and then removing it. csv1's

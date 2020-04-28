@@ -336,7 +336,7 @@ class LdapConnection(object):
                 logger.exception(f'Failed to get domain version')
                 self.domain_version = 0
         except ldap3.core.exceptions.LDAPException:
-            raise LdapException(get_exception_string())
+            raise LdapException(get_exception_string(force_show_traceback=True))
 
     def _ldap_search(self, search_filter, attributes=None, search_base=None, search_scope=None):
         """

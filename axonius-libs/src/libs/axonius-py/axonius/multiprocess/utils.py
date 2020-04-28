@@ -24,7 +24,7 @@ def get_function_rv_safe(function_target, *args, **kwargs):
     if proc.is_alive():
         logger.info(f'function {function_target.__name__} timed out.')
         os.kill(proc.pid, signal.SIGKILL)
-        raise ValueError(f'Please check the settings')
+        raise ValueError(f'timed out')
 
     if proc.exitcode != 0:
         logger.info(f'function {function_target.__name__} returned unexpected error: {proc.exitcode}')

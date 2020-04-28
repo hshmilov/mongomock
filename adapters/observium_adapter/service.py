@@ -126,7 +126,7 @@ class ObserviumAdapter(AdapterBase):
             device.version = device_raw.get('version')
             device.hardware = device_raw.get('hardware')
             device.features = device_raw.get('features')
-            # device.set_raw(device_raw)
+            device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching Observium Device for {device_raw}')

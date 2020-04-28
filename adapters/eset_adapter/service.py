@@ -55,7 +55,7 @@ class EsetAdapter(AdapterBase):
         """
         try:
             if os.path.exists(BIN_NEW_LOCATION):
-                os.rmdir(BIN_NEW_LOCATION)
+                shutil.rmtree(BIN_NEW_LOCATION, ignore_errors=True)
             shutil.move(BIN_ORIG_LOCATION, BIN_NEW_LOCATION)
 
             bin_location = os.path.join(BIN_NEW_LOCATION, BIN_NAME)

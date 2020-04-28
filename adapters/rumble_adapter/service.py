@@ -145,8 +145,7 @@ class RumbleAdapter(AdapterBase):
         connection = RumbleConnection(domain=client_config.get('domain') or DEFAULT_RUMBLE_DOMAIN,
                                       verify_ssl=client_config['verify_ssl'],
                                       https_proxy=client_config.get('https_proxy'),
-                                      apikey=client_config['apikey'],
-                                      org_id=client_config['org_id'])
+                                      apikey=client_config['apikey'])
         with connection:
             pass
 
@@ -200,11 +199,6 @@ class RumbleAdapter(AdapterBase):
                     'default': DEFAULT_RUMBLE_DOMAIN
                 },
                 {
-                    'name': 'org_id',
-                    'title': 'Organization Id',
-                    'type': 'string'
-                },
-                {
                     'name': 'apikey',
                     'title': 'API Key',
                     'type': 'string',
@@ -224,13 +218,13 @@ class RumbleAdapter(AdapterBase):
                 {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
-                    'type': 'bool'
+                    'type': 'bool',
+                    'default': True
                 },
             ],
             'required': [
                 'domain',
                 'apikey',
-                'org_id',
                 'verify_ssl'
             ],
             'type': 'array'
