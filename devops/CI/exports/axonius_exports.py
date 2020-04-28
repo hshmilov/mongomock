@@ -1,6 +1,5 @@
 #!/usr/bin/env python3.6
 
-import time
 import json
 import signal
 import urllib
@@ -80,6 +79,7 @@ def main():
     cloud_parser.add_argument('--qcow-output', type=pathlib.Path, default=None)
     cloud_parser.add_argument('--force', default=False, action='store_true')
     cloud_parser.add_argument('--disk-size', default=500, type=int)
+    cloud_parser.add_argument('--unencrypted', default=False, action='store_true')
     cloud_parser.add_argument('--name', type=str, required=True)
     cloud_parser.set_defaults(entrypoint=cloud)
 
@@ -173,6 +173,8 @@ def cloud(args, notify):
                 subprocess_arguments.append(f'-only={args.only}')
             if args.force:
                 subprocess_arguments.append('-force')
+            if args.unencrypted:
+                subprocess_arguments.extend(['-var', f'deployment_script=./deploy_unencrypted_axonius.sh'])
             subprocess_arguments.append(cloud_packer_file)
             try:
                 subprocess.run(subprocess_arguments, check=True, cwd=_SCRIPT_FOLDER)
@@ -180,7 +182,7 @@ def cloud(args, notify):
                 with manifest_path.open() as manifest_file:
                     manifest = json.load(manifest_file)
 
-                    # A bit of a hack, for GCE `artificat_id` is just the image name (which may not contain ':'), and for
+                    # A bit of a hack, for GCE `artifact_id` is just the image name (which may not contain ':'), and for
                     # AWS, it is in the format `region`:`ami_id`, so we want to take the last part only.
                     def extract_id(s): return s.split(':')[-1]
 
@@ -260,7 +262,9 @@ def local_installer_path(args):
         yield args.installer
     else:
         releases_bucket = args.s3_bucket
-        axonius_releases_url_for_release = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/{{0}}/axonius_{{0}}.zip'.format
+        base_url = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/'
+        path_template = '{0}/axonius_{0}.' + ('py' if args.unencrypted else 'zip')
+        axonius_releases_url_for_release = (base_url + path_template).format
         url = args.installer_url or axonius_releases_url_for_release(args.installer_s3_name)
         with tempfile.TemporaryDirectory() as temporary_directory:
             installer_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name

@@ -201,27 +201,7 @@ else
     echo customer:customer | /usr/sbin/chpasswd
 fi
 
-DECRYPT_USER=decrypt
-if [ $(cat /etc/passwd | grep $DECRYPT_USER | wc -l) -ne 0 ]; then
-    echo "User $DECRYPT_USER exists"
-else
-    cd $SCRIPT_DIR
-    echo "Setting $DECRYPT_USER user"
-    useradd $DECRYPT_USER
-    mkdir -p /home/$DECRYPT_USER
-    chown decrypt /home/$DECRYPT_USER
-    usermod -s /home/$DECRYPT_USER/decrypt_user.py decrypt
-    usermod -aG sudo $DECRYPT_USER
-    echo $DECRYPT_USER:decrypt | /usr/sbin/chpasswd
-    cp ./uploads/decrypt_wizard/decrypt_user.py /home/$DECRYPT_USER/decrypt_user.py
-    cp ./uploads/decrypt_wizard/first_install.py /home/$DECRYPT_USER/first_install.py
-    cp ./uploads/decrypt_wizard/install_and_run.sh /home/$DECRYPT_USER/install_and_run.sh
-    chmod +x /home/$DECRYPT_USER/install_and_run.sh
-    chown -R $DECRYPT_USER:$DECRYPT_USER /home/$DECRYPT_USER/
-    chmod 0744 /home/$DECRYPT_USER/*.py
-    echo "decrypt ALL=(ALL) NOPASSWD: /home/$DECRYPT_USER/first_install.py" > /etc/sudoers.d/90-decrypt
-    echo "Done setting user $DECRYPT_USER"
-fi
+
 
 echo "making ubuntu passwordless sudo"
 echo "ubuntu ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-ubuntu

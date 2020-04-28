@@ -5,6 +5,7 @@
     "disk_size": "500",
     "qemu_output_directory": "output-axonius",
     "qcow_output": "axonius.qcow3",
+    "deployment_script": "./deploy_encrypted_axonius.sh",
     "manifest_file": "manifest.json",
     "ami_regions": ""
   },
@@ -175,11 +176,11 @@
     },
     {
       "type": "shell",
-      "inline": [
-        "echo '{{user `name`}}' | sudo tee /home/decrypt/version.txt",
-        "sudo chown decrypt:decrypt /home/decrypt/version.txt",
-        "sudo chmod 0444 /home/decrypt/version.txt"
-      ]
+      "script": "{{user `deployment_script`}}",
+      "environment_vars": [
+        "AXONIUS_VERSION_NAME={{user `name`}}"
+      ],
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
       "type": "shell",
