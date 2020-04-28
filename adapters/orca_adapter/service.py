@@ -61,6 +61,21 @@ class ComplianceData(SmartJsonClass):
     version = Field(str, 'Version')
 
 
+class OrcaGitRepo(SmartJsonClass):
+    local_name = Field(str, 'Local Name')
+    path = Field(str, 'Path')
+    size = Field(int, 'Size')
+    url = Field(str, 'URL')
+
+
+class OrcaDb(SmartJsonClass):
+    db_path = Field(str, 'DB Path')
+    db_size = Field(int, 'DB Size')
+    last_accessed_time = Field(datetime.datetime, 'Last Accessed Time')
+    last_modified_time = Field(datetime.datetime, 'Last Modified Time')
+    type = Field(str, 'Type')
+
+
 class OrcaAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -76,6 +91,8 @@ class OrcaAdapter(AdapterBase):
         failed_logins = ListField(LoginData, 'Failed Logins')
         successful_logins = ListField(LoginData, 'Successful Logins')
         compliance_information = ListField(ComplianceData, 'Compliance Infomation')
+        git_repos = ListField(OrcaGitRepo, 'Git Repositories')
+        orca_dbs = ListField(OrcaDb, 'Databases')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -233,11 +250,34 @@ class OrcaAdapter(AdapterBase):
                 if not isinstance(inventory_data, list):
                     inventory_data = []
                 for inventory_raw in inventory_data:
-                    try:
-                        device.add_installed_software(name=(inventory_raw.get('package') or {}).get('name'),
-                                                      version=(inventory_raw.get('package') or {}).get('version'))
-                    except Exception:
-                        logger.exception(f'Problem with inventory {inventory_raw}')
+                    if inventory_raw.get('package'):
+                        try:
+                            device.add_installed_software(name=(inventory_raw.get('package') or {}).get('name'),
+                                                          version=(inventory_raw.get('package') or {}).get('version'))
+                        except Exception:
+                            logger.exception(f'Problem with inventory {inventory_raw}')
+                    if inventory_raw.get('git_repository'):
+                        git_repository = inventory_raw.get('git_repository')
+                        if not isinstance(git_repository, dict):
+                            git_repository = {}
+                        git_size = git_repository.get('size') if isinstance(git_repository.get('size'), int) else None
+                        device.git_repos.append(OrcaGitRepo(local_name=git_repository.get('local_name'),
+                                                            path=git_repository.get('path'),
+                                                            size=git_size,
+                                                            url=git_repository.get('url')))
+                    if inventory_raw.get('database'):
+                        orca_db = inventory_raw.get('database')
+                        if not isinstance(orca_db, dict):
+                            orca_db = {}
+                        db_size = orca_db.get('db_size') if isinstance(orca_db.get('db_size'), int) else None
+                        last_accessed_time = parse_date(orca_db.get('last_accessed_time'))
+                        last_modified_time = parse_date(orca_db.get('last_modified_time'))
+
+                        device.orca_dbs.append(OrcaDb(db_path=orca_db.get('db_path'),
+                                                      db_size=db_size,
+                                                      last_accessed_time=last_accessed_time,
+                                                      last_modified_time=last_modified_time,
+                                                      type=orca_db.get('type')))
             except Exception:
                 logger.exception(f'Problem getting inventory')
             try:
