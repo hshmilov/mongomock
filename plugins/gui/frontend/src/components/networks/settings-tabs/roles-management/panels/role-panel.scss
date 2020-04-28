@@ -9,7 +9,7 @@
     .v-navigation-drawer__content {
         overflow-y: unset;
         .x-side-panel__content {
-            height: 100%;
+            height: calc(100% - 64px);
             padding-bottom: 30px;
             overflow-y: auto;
             bottom: 0;

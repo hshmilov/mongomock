@@ -186,6 +186,7 @@ export default {
       }
     },
     callDeleteUser() {
+      this.$emit('close');
       this.$emit('delete');
     },
     displayResetPasswordModal(userId, email, invite = false) {
