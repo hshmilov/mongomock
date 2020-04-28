@@ -11,6 +11,7 @@ from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
 import selenium.common.exceptions
+
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
@@ -449,3 +450,11 @@ class TestBase:
         assert self.axonius_system.db.get_collection(CORE_UNIQUE_NAME, 'configs').find_one({
             PLUGIN_NAME: adapter_name
         })['status'] == 'down'
+
+    def _add_action_to_role_and_login_with_user(self, permissions, category, add_action, role, user_name, password):
+        self.login_page.logout_and_login_with_admin()
+        if not permissions.get(category):
+            permissions[category] = []
+        permissions[category].append(add_action)
+        self.settings_page.update_role(role, permissions, True)
+        self.login_page.logout_and_login_with_user(user_name, password=password)
