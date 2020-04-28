@@ -612,7 +612,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 # run (and not have quick register). These lines can be removed in the future when we have a
                 # better weave/aod support.
                 plugin_unique_name = found_document[PLUGIN_UNIQUE_NAME]
-                if self.mongo_client[plugin_unique_name]['clients'].count_documents() > 0:
+                if self.mongo_client[plugin_unique_name]['clients'].count_documents({}) > 0:
                     logger.info(f'Plugin {plugin_unique_name} has clients, do not run quick register')
                     raise ValueError(f'pluin {plugin_unique_name} has clients, not running quick register')
 
