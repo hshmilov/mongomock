@@ -44,13 +44,13 @@
 
 <script>
 import { mdiArrowRight } from '@mdi/js';
-import xModal from '../../axons/popover/Modal/index.vue';
-import xButton from '../../axons/inputs/Button.vue';
+import XModal from '../../axons/popover/Modal/index.vue';
+import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XComplianceTip',
   components: {
-    xModal, xButton,
+    XModal, XButton,
   },
   props: {
     enabled: {
