@@ -697,7 +697,7 @@ class APIMixin:
 
         :return: dict
         """
-        return self._get_labels()
+        return jsonify(self._get_labels())
 
     # jim: 3.3 now controlled by settings
     # @api_add_rule('system/roles/default', methods=['POST'], required_permission=PermissionValue.get(
