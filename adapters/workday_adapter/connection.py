@@ -58,8 +58,9 @@ class WorkdayConnection(RESTConnection):
     def _create_auth(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
+        wsse = []
         try:
-            self._wsse.append(UsernameToken(self._username, self._password))
+            wsse.append(UsernameToken(self._username, self._password))
         except Exception as e:
             message = f'Failed to create wsse signature from supplied credentials: {str(e)}'
             logger.exception(message)
@@ -68,11 +69,15 @@ class WorkdayConnection(RESTConnection):
             raise RESTException('Invalid options: Please supply both key and certificate, or neither.')
         if self._priv_key and self._pub_cert:
             try:
-                self._wsse.append(MemorySignature(self._priv_key, self._pub_cert, self._cert_pass))
+                wsse.append(MemorySignature(self._priv_key, self._pub_cert, self._cert_pass))
             except Exception as e:
                 message = f'Failed to create wsse signature from supplied credentials: {str(e)}'
                 logger.exception(message)
                 raise RESTException(message)
+
+        self._wsse = wsse
+        if len(wsse) == 1:
+            self._wsse = wsse[0]
 
     def _connect(self):
         self._create_auth()
@@ -104,7 +109,7 @@ class WorkdayConnection(RESTConnection):
         }
         return request_crit
 
-    def get_users(self):
+    def get_users_list(self):
         kwargs = self._gen_args()
         response = self._client.service.Get_Workers(**kwargs)
         logger.debug(f'Got response: {response}')
