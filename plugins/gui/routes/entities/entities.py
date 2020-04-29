@@ -215,9 +215,11 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         view_set_data = {
             'name': view_data['name'],
             'view': view_data['view'],
-            'description': view_data.get('description', ''),
-            'tags': view_data.get('tags', []),
         }
+        if 'description' in view_data:
+            view_set_data['description'] = view_data.get('description', '')
+        if 'tags' in view_data:
+            view_set_data['tags'] = view_data.get('tags', [])
         if not self.is_axonius_user():
             view_set_data[LAST_UPDATED_FIELD] = datetime.now()
             view_set_data[UPDATED_BY_FIELD] = get_connected_user_id()
