@@ -3,7 +3,6 @@ import math
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-import pytest
 from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
@@ -700,7 +699,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
             assert value >= previous_value
             previous_value = value
 
-    @pytest.mark.skip('AX-6585')
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -709,7 +707,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self._test_adapters_filter_change_icon()
-        self.test_adapters_name_sort()
         self._test_complex_obj()
         self._test_comp_op_change()
         self._test_and_expression()
