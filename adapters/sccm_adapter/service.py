@@ -725,6 +725,11 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting drivers data dor {device_raw}')
 
                 try:
+                    device.local_admins = []
+                    device.local_admins_domain_users = []
+                    device.local_admins_local_users = []
+                    device.local_admins_groups = []
+                    device.local_admins_users = []
                     if isinstance(local_admins_dict.get(device_raw.get('ResourceID')), list):
                         for local_admin_data in local_admins_dict.get(device_raw.get('ResourceID')):
                             try:
