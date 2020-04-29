@@ -27,6 +27,7 @@ https://docs.mongodb.com/manual/core/security-client-side-encryption/
 
 class MongoEncrypt:
     _fips_lock = Lock()
+    _is_fips_enabled = False
 
     @staticmethod
     def get_db_encryption(db_connection: pymongo.MongoClient, collection: str, key: bytes) -> ClientEncryption:
@@ -49,12 +50,22 @@ class MongoEncrypt:
         return enc
 
     @classmethod
+    def enable_fips(cls):
+        cls._is_fips_enabled = True
+
+    @classmethod
+    def disable_fips(cls):
+        cls._is_fips_enabled = False
+
+    @classmethod
     def set_fips(cls, mode: bool) -> int:
         """
         Enable or disable fips mode
         :param mode: True/False
         :return: 1 on success
         """
+        if not cls._is_fips_enabled:
+            return 1
         try:
             lib = backend._lib
             with cls._fips_lock:

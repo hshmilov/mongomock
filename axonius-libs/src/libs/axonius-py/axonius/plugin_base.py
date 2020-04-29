@@ -411,6 +411,11 @@ class PluginBase(Configurable, Feature, ABC):
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
+        try:
+            self._current_feature_flag_config = self.feature_flags_config()
+        except TypeError:
+            # Probably first boot of core and feature flags didnt initialize yet
+            self._current_feature_flag_config = {}
 
         # MyDeviceAdapter things.
         self._entity_adapter_fields = {entity_type: {
@@ -2807,6 +2812,7 @@ class PluginBase(Configurable, Feature, ABC):
     def _update_config_inner(self):
         self.renew_config_from_db()
         self.__renew_global_settings_from_db()
+        self.update_fips_status()
         self._global_config_updated()
         return ''
 
@@ -3073,6 +3079,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
+        self.update_fips_status()
 
         self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
@@ -3197,6 +3204,16 @@ class PluginBase(Configurable, Feature, ABC):
             syslog_logger.addHandler(syslog_handler)
         except Exception:
             logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
+
+    def update_fips_status(self):
+        try:
+            if self.feature_flags_config().get(FeatureFlagsNames.EnableFIPS, False):
+                MongoEncrypt.enable_fips()
+            else:
+                MongoEncrypt.disable_fips()
+        except TypeError:
+            # Probably first boot and gui didnt initialize yet
+            MongoEncrypt.disable_fips()
 
     def feature_flags_config(self) -> dict:
         return self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({

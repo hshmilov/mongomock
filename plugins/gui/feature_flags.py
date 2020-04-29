@@ -12,9 +12,17 @@ class FeatureFlags(Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    # pylint: disable=R0201
+    # pylint: disable=R0201,E0203,no-member
     def _on_config_update(self, config):
-        logger.info(f'Loading FeatureFlags config: {config}')
+        # In order for core to update all plugins with the new settings (specially fips)
+        if config != self._current_feature_flag_config:
+            logger.info(f'Loading FeatureFlags config: {config}')
+            self._current_feature_flag_config = self.feature_flags_config()
+            resp = self.request_remote_plugin('update_config', 'core', method='POST')
+            if resp.status_code == 200:
+                logger.info('Feature Flags settings updated in all plugins')
+            else:
+                logger.error(f'An error occurred while trying to update all feature flags config: {resp.content}')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -34,6 +42,11 @@ class FeatureFlags(Configurable):
                 {
                     'name': FeatureFlagsNames.RefetchAssetEntityAction,
                     'title': 'Allow Refetch Asset Entity Action',
+                    'type': 'bool'
+                },
+                {
+                    'name': FeatureFlagsNames.EnableFIPS,
+                    'title': 'Enable FIPS on MongoEncrypt actions',
                     'type': 'bool'
                 },
                 {
@@ -125,5 +138,6 @@ class FeatureFlags(Configurable):
                 RootMasterNames.delete_backups: False,
             },
             FeatureFlagsNames.ReenterCredentials: False,
-            FeatureFlagsNames.RefetchAssetEntityAction: False
+            FeatureFlagsNames.RefetchAssetEntityAction: False,
+            FeatureFlagsNames.EnableFIPS: False
         }

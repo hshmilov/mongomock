@@ -181,6 +181,7 @@ class FeatureFlagsNames:
     LockOnExpiry = 'lock_on_expiry'
     ReenterCredentials = 'reenter_credentials'
     RefetchAssetEntityAction = 'refetch_action'
+    EnableFIPS = 'enable_fips'
 
 
 class CloudComplianceNames:
