@@ -324,7 +324,19 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         # filter old data from adapters
         {
             '$project': {
-                'tags': '$tags',
+                'tags': {
+                    '$filter': {
+                        'input': '$tags',
+                        'as': 'i',
+                        'cond': {
+                            '$and': [{
+                                '$eq': ['$$i.type', 'label']
+                            }, {
+                                '$eq': ['$$i.data', True]
+                            }]
+                        }
+                    }
+                },
                 'adapters': {
                     '$filter': {
                         'input': '$adapters',
