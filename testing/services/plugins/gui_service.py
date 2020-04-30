@@ -29,7 +29,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           LIBS_PATH, ADMIN_USER_NAME,
-                                          AXONIUS_USER_NAME, REPORTS_CONFIG_COLLECTION)
+                                          AXONIUS_USER_NAME, REPORTS_CONFIG_COLLECTION, DEFAULT_ROLE_ID)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
                                        deserialize_db_permissions as old_deserialize_db_permissions)
@@ -1120,7 +1120,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             self._migrate_old_users_and_roles()
             self.db_schema_version = 31
         except Exception as e:
-            print(f'Exception while upgrading gui db to version 30. Details: {e}')
+            print(f'Exception while upgrading gui db to version 31. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
@@ -1469,6 +1469,20 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def _migrate_old_users_and_roles(self):
         users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
         roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        users_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_CONFIG_COLLECTION)
+        external_role_id = None
+        config_doc = users_config_collection.find_one({})
+        # Get the old default external role
+        if config_doc:
+            external_role_default_name = config_doc['external_default_role']
+            external_role = roles_collection.find_one({'name': external_role_default_name})
+            if external_role:
+                external_role_id = external_role.get('_id')
+        # Just in case the default role was not defined and the old restricted role name exists
+        if not external_role_id:
+            external_role = roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED_USER})
+            if external_role:
+                external_role_id = external_role.get('_id')
 
         with users_collection.start_session() as users_session:
             with users_session.start_transaction():
@@ -1481,17 +1495,25 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                             self._migrate_user(number_of_custom_roles, old_roles, user, users_session)
                         for role in old_roles:
                             self._migrate_role(role, roles_session, old_roles)
-            users_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_CONFIG_COLLECTION)
-            config_doc = users_config_collection.find_one({})
-            if config_doc:
-                default_role = roles_collection.find_one({
-                    'name': config_doc['external_default_role']
-                })
-                users_config_collection.update_one({
-                    '_id': config_doc.get('_id')
-                }, {
-                    '$set': {'external_default_role': default_role.get('_id')}
-                })
+            # Update the default external role, if a default role exists
+            if external_role_id:
+                config_match = {
+                    'config_name': CONFIG_CONFIG
+                }
+                current_config = self.db.get_collection(
+                    GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+                if current_config:
+                    for external_service_settings in ['okta_login_settings',
+                                                      'saml_login_settings',
+                                                      'ldap_login_settings']:
+                        external_service = current_config['config'][external_service_settings]
+                        external_service[DEFAULT_ROLE_ID] = str(external_role_id)
+
+                    self.db.get_collection(
+                        GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION) \
+                        .replace_one(filter={'config_name': GUI_PLUGIN_NAME},
+                                     replacement={'config_name': GUI_PLUGIN_NAME, 'config': current_config})
+                users_config_collection.drop()
 
     @staticmethod
     def _is_role_name_exists(old_roles, name):

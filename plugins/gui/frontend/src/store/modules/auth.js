@@ -45,9 +45,6 @@ export const UPDATE_ALL_ROLES = 'UPDATE_ALL_ROLES';
 export const CREATE_ROLE = 'CREATE_ROLE';
 export const CHANGE_ROLE = 'CHANGE_ROLE';
 
-export const GET_DEFAULT_ROLE = 'GET_DEFAULT_ROLE';
-export const SET_DEFAULT_ROLE = 'SET_DEFAULT_ROLE';
-export const UPDATE_DEFAULT_ROLE = 'UPDATE_DEFAULT_ROLE';
 export const GET_ADMIN_USER_ID = 'GET_ADMIN_USER_ID';
 
 export const IS_USER_ADMIN = 'IS_USER_ADMIN';
@@ -171,13 +168,6 @@ export const auth = {
       state.allRoles.error = payload.error;
       if (payload.data) {
         state.allRoles.data = [...payload.data];
-      }
-    },
-    [SET_DEFAULT_ROLE](state, payload) {
-      state.defaultRole.fetching = payload.fetching;
-      state.defaultRole.error = payload.error;
-      if (payload.data) {
-        state.defaultRole.data = payload.data;
       }
     },
     [UPDATE_SIGNUP](state, payload) {
@@ -501,22 +491,6 @@ export const auth = {
         method: 'DELETE',
         type: REMOVE_ROLE,
         payload,
-      });
-    },
-    [GET_DEFAULT_ROLE]({ dispatch }) {
-      return dispatch(REQUEST_API, {
-        rule: 'settings/roles/default',
-        type: SET_DEFAULT_ROLE,
-      });
-    },
-    [UPDATE_DEFAULT_ROLE]({ dispatch }, payload) {
-      if (!payload || !payload.name) {
-        return;
-      }
-      return dispatch(REQUEST_API, {
-        rule: 'settings/roles/default',
-        method: 'POST',
-        data: payload,
       });
     },
     [UPDATE_USERS_ROLE]({ dispatch, commit }, payload) {

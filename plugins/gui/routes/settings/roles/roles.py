@@ -165,34 +165,3 @@ class Roles:
         return json.dumps({
             'name': existing_role.get('name', '')
         })
-
-    @gui_route_logged_in('default', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
-    def get_roles_default(self):
-        """
-        Get the default roles
-        :return:
-        """
-        config_doc = self._users_config_collection.find_one({})
-        if not config_doc or 'external_default_role' not in config_doc:
-            return ''
-        return jsonify(config_doc['external_default_role'])
-
-    @gui_route_logged_in('default', methods=['POST'])
-    def update_roles_default(self):
-        """
-        Receives a name of a role that will be assigned by default to every external user created
-
-        :return:
-        """
-        default_role_data = self.get_request_data_as_object()
-        if not default_role_data.get('name'):
-            logger.error('Role name is required in order to set it as a default')
-            return return_error('Role name is required in order to set it as a default')
-        if self._roles_collection.find_one(filter_archived(default_role_data)) is None:
-            logger.error(f'Role {default_role_data["name"]} was not found and cannot be default')
-            return return_error(f'Role {default_role_data["name"]} was not found and cannot be default')
-        self._users_config_collection.replace_one({}, {
-            'external_default_role': default_role_data['name']
-        }, upsert=True)
-        return ''

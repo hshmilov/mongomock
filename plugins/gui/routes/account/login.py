@@ -18,7 +18,8 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
-from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE)
+from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE,
+                                       PREDEFINED_ROLE_RESTRICTED)
 from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
@@ -197,8 +198,6 @@ class Login:
         :param remember_me: whether or not to remember the session after the browser has been closed
         :return: None
         """
-        role_name = None
-        config_doc = self._users_config_collection.find_one({})
         db_connection = self._get_db_connection()
         config_collection = db_connection[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
         config_name = f'{source}_login_settings'
@@ -206,8 +205,9 @@ class Login:
         default_role_id = None
         if config and config.get(config_name):
             default_role_id = config.get(config_name).get('default_role_id')
-        if not default_role_id and config_doc and config_doc.get('external_default_role'):
-            default_role_id = config_doc['external_default_role']
+        if not default_role_id:
+            restricted_role = self._roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED})
+            default_role_id = restricted_role.get('_id')
         user = self._create_user_if_doesnt_exist(
             username,
             first_name,

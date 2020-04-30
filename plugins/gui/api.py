@@ -699,19 +699,6 @@ class APIMixin:
         """
         return jsonify(self._get_labels())
 
-    # jim: 3.3 now controlled by settings
-    # @api_add_rule('system/roles/default', methods=['POST'], required_permission=PermissionValue.get(
-    #     PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Users))
-    # def update_api_roles_default(self):
-    #     """Set the default role for externally created users.
-
-    #     POST: Returns empty str. POST body dict keys:
-    #         name: required, str, name of role to set as default
-
-    #     :return: str
-    #     """
-    #     return self.update_roles_default()
-
     @api_add_rule(
         rule='system/roles',
         methods=['GET'],

@@ -26,7 +26,6 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ROLES_COLLECTION,
                                        TEMP_MAINTENANCE_THREAD_ID,
                                        USERS_COLLECTION,
-                                       USERS_CONFIG_COLLECTION,
                                        PROXY_DATA_PATH,
                                        DASHBOARD_SPACES_COLLECTION,
                                        DASHBOARD_COLLECTION,
@@ -207,7 +206,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
         self._users_collection = self._get_collection(USERS_COLLECTION)
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
-        self._users_config_collection = self._get_collection(USERS_CONFIG_COLLECTION)
         self._users_tokens_collection = self._get_collection(USERS_TOKENS_COLLECTION)
         self._users_preferences_collection = self._get_collection(USERS_PREFERENCES_COLLECTION)
         self._dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
