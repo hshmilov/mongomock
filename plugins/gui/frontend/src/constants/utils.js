@@ -13,7 +13,7 @@ export const formatDate = (dateString, schema, dateFormat) => {
   if (dateFormat === undefined) {
     dateFormat = DEFAULT_DATE_FORMAT;
   }
-  const dateTime = dayjs(dateString).utc();
+  const dateTime = dayjs(dateString);
   if (schema && schema.format === 'date') {
     return dateTime.format(dateFormat);
   }
