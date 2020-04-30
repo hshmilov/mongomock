@@ -38,6 +38,7 @@ class DockerService(AxonService):
         self._system_config = dict()
         self.container_name = container_name
         self.cortex_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        self.libs_dir = Path(self.cortex_root_dir) / 'axonius-libs' / 'src'
 
         if not (Path(self.cortex_root_dir) / 'venv').is_dir:
             raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
@@ -115,6 +116,7 @@ class DockerService(AxonService):
     def volumes(self):
         return [
             f'{self.container_name}_data:/home/axonius',
+            f'{self.libs_dir}/hacks:/home/axonius/hacks',
             f'{self.log_dir}:/home/axonius/logs',
             f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
             f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
