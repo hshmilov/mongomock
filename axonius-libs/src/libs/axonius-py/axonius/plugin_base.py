@@ -3401,6 +3401,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': RESET_PASSWORD_SETTINGS,
                     'title': 'Password Reset Settings',
                     'type': 'array',
+                    'required': [RESET_PASSWORD_LINK_EXPIRATION],
                     'items': [
                         {
                             'name': RESET_PASSWORD_LINK_EXPIRATION,

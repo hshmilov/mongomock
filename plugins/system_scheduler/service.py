@@ -306,7 +306,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                         {
                             'name': 'save_history',
-                            'title': 'Gather historical data',
+                            'title': 'Enable daily historical snapshot',
                             'type': 'bool',
                             'required': True
                         },
