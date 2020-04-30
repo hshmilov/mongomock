@@ -4,7 +4,6 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
-from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.devices.device_adapter import RegistryInfomation
@@ -12,6 +11,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import get_exception_string, is_domain_valid
 from lansweeper_adapter import consts
 from lansweeper_adapter.client_id import get_client_id
@@ -47,11 +47,10 @@ class LansweeperAdapter(AdapterBase, Configurable):
     def _get_client_id(client_config):
         return get_client_id(client_config)
 
-    @staticmethod
-    def _test_reachability(client_config):
-        RESTConnection.test_reachability(
-            client_config.get(consts.LANSWEEPER_HOST),
-            port=client_config.get(consts.LANSWEEPER_PORT, consts.DEFAULT_LANSWEEPER_PORT),
+    def _test_reachability(self, client_config):
+        return test_reachability_tcp(
+            client_config.get('server'),
+            client_config.get('port') or consts.DEFAULT_LANSWEEPER_PORT
         )
 
     def _connect_client(self, client_config):

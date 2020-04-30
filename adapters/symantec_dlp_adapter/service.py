@@ -7,8 +7,8 @@ from axonius.clients.oracle_db.connection import OracleDBConnection
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.mixins.configurable import Configurable
-from axonius.clients.rest.connection import RESTConnection
 from axonius.utils.files import get_local_config_file
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import get_exception_string
 from symantec_dlp_adapter import consts
 
@@ -28,8 +28,10 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
         return client_config[consts.SYMANTEC_DLP_HOST] + '_' + client_config[consts.USER]
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('server'),
-                                                port=client_config.get('port'))
+        return test_reachability_tcp(
+            client_config.get('server'),
+            client_config.get('port') or consts.DEFAULT_SYMANTEC_DLP_PORT
+        )
 
     def _connect_client(self, client_config):
         try:

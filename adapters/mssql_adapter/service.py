@@ -9,6 +9,7 @@ from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.sql.sql_generic import _sql_parse_raw_data
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.sql import SQLServers, MySqlAdapter
 from mssql_adapter.client_id import get_client_id
 
@@ -27,9 +28,11 @@ class MssqlAdapter(AdapterBase, Configurable):
     def _get_client_id(client_config):
         return get_client_id(client_config)
 
-    @staticmethod
-    def _test_reachability(client_config):
-        raise NotImplementedError()
+    def _test_reachability(self, client_config):
+        return test_reachability_tcp(
+            client_config.get('server'),
+            client_config.get('port')
+        )
 
     def _connect_client(self, client_config):
         try:

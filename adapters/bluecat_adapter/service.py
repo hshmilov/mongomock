@@ -15,6 +15,7 @@ from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.postgres.consts import DEFAULT_POSTGRES_PORT
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import int_to_mac
 from bluecat_adapter.connection import BluecatConnection
 from bluecat_adapter.consts import DEVICE_PER_PAGE
@@ -51,6 +52,11 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
+        if client_config.get('is_direct_db_connection'):
+            return test_reachability_tcp(
+                client_config.get('domain'),
+                client_config.get('db_port') or DEFAULT_POSTGRES_PORT
+            )
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 

@@ -3,9 +3,9 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import is_domain_valid
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
@@ -26,8 +26,10 @@ class Symantec12Adapter(AdapterBase, Configurable):
         return client_config[consts.SYMANTEC_12_HOST] + '_' + client_config[consts.USER]
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('server'),
-                                                port=client_config.get('port'))
+        return test_reachability_tcp(
+            client_config.get('server'),
+            client_config.get('port') or consts.DEFAULT_SYMANTEC_12_PORT
+        )
 
     def _connect_client(self, client_config):
         try:

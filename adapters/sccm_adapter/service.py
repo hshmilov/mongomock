@@ -6,10 +6,10 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
-from axonius.clients.rest.connection import RESTConnection
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -107,8 +107,10 @@ class SccmAdapter(AdapterBase, Configurable):
         return client_config[consts.SCCM_HOST]
 
     def _test_reachability(self, client_config):
-        return RESTConnection.test_reachability(client_config.get('server'),
-                                                port=client_config.get('port'))
+        return test_reachability_tcp(
+            client_config.get('server'),
+            client_config.get('port') or consts.DEFAULT_SCCM_PORT
+        )
 
     def _connect_client(self, client_config):
         try:
