@@ -65,7 +65,7 @@ class OracleVmAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'OracleVm Domain',
+                    'title': 'Oracle VM Domain',
                     'type': 'string'
                 },
                 {

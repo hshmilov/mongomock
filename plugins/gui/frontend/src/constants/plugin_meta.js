@@ -568,7 +568,7 @@ export const pluginMeta = {
     },
     opswat_adapter: {
         title: 'OPSWAT MetaAccess',
-        link: '',
+        link: 'https://docs.axonius.com/docs/opswat-metaaccess',
         description: 'OPSWAT MetaAccess prevents risky devices from accessing local networks and cloud applications.'
     },
     spacewalk_adapter: {
@@ -712,7 +712,7 @@ export const pluginMeta = {
     },
     proxmox_adapter: {
         title: 'Proxmox Virtual Environment (VE)',
-        link: '',
+        link: 'https://docs.axonius.com/docs/proxmox-virtual-environment-ve',
         description: 'Proxmox Virtual Environment (VE) is an open source server virtualization management solution based on QEMU/KVM and LXC.'
     },
     foreman_adapter: {
@@ -1187,7 +1187,7 @@ export const pluginMeta = {
     },
     oracle_vm_adapter: {
         title: 'Oracle VM',
-        link: '',
+        link: 'https://docs.axonius.com/docs/oracle-vm',
         description: 'Oracle VM\'s server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris. '
     },
     cisco_meraki_adapter: {

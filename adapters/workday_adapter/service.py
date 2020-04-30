@@ -74,7 +74,7 @@ class WorkdayAdapter(AdapterBase):
                 },
                 {
                     'name': 'tenant',
-                    'title': 'Workday tenant name',
+                    'title': 'Workday Tenant Name',
                     'type': 'string'
                 },
                 # {
@@ -86,7 +86,7 @@ class WorkdayAdapter(AdapterBase):
                 # },
                 {
                     'name': 'username',
-                    'title': 'User name',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {
@@ -102,13 +102,13 @@ class WorkdayAdapter(AdapterBase):
                 },
                 {
                     'name': 'public_cert',
-                    'title': 'Public certificate file',
+                    'title': 'Public Certificate File',
                     'type': 'file',
                     'format': 'password'
                 },
                 {
                     'name': 'cert_passphrase',
-                    'title': 'Certificate passphrase',
+                    'title': 'Certificate Passphrase',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -119,7 +119,7 @@ class WorkdayAdapter(AdapterBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS proxy',
+                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
             ],

@@ -88,13 +88,13 @@ class OpswatAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Opswat Domain',
+                    'title': 'OPSWAT Domain',
                     'type': 'string',
                     'default': DEFAULT_DOMAIN
                 },
                 {
                     'name': 'client_id',
-                    'title': 'Client Id',
+                    'title': 'Client Key',
                     'type': 'string'
                 },
                 {

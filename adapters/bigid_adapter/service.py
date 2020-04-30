@@ -74,7 +74,7 @@ class BigidAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Bigid Domain',
+                    'title': 'BigID Domain',
                     'type': 'string'
                 },
                 {
