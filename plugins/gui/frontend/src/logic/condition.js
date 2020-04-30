@@ -289,7 +289,10 @@ export const getOpsMap = (schema) => {
   } else {
     ops = { ...ops, ...compOps[schema.type] };
   }
-  if ((schema.type === 'array' || parentSchema.type === 'array') && ops.exists) {
+  if (parentSchema.type === 'array') {
+    ops.exists = compOps[parentSchema.type].exists
+  }
+  if (schema.type === 'array' && ops.exists) {
     ops.exists = `(${ops.exists} and {field} != [])`;
   }
   if (schema.name === 'labels') {
