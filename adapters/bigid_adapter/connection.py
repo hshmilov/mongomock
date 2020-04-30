@@ -56,7 +56,7 @@ class BigidConnection(RESTConnection):
                         continue
                     device_raw['extra_data'] = self._get(f'objects/{object_name}/records')
                 except Exception:
-                    logger.exception(f'Problem getting extra data for {device_raw}')
+                    logger.debug(f'Problem getting extra data for {device_raw}', exc_info=True)
                 yield device_raw
         except RESTException as err:
             logger.exception(str(err))
