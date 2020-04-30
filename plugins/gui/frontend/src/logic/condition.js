@@ -272,6 +272,7 @@ export const checkShowValue = (fieldSchema, compOp) => {
 export const getOpsMap = (schema) => {
   if (!schema || !schema) return {};
   let ops = {};
+  let parentSchema = schema;
   if (schema.type === 'array') {
     ops = compOps[`array_${schema.format}`] || compOps['array'];
     schema = schema.items;
@@ -288,7 +289,7 @@ export const getOpsMap = (schema) => {
   } else {
     ops = { ...ops, ...compOps[schema.type] };
   }
-  if (schema.type === 'array' && ops.exists) {
+  if ((schema.type === 'array' || parentSchema.type === 'array') && ops.exists) {
     ops.exists = `(${ops.exists} and {field} != [])`;
   }
   if (schema.name === 'labels') {
