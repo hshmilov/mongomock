@@ -110,13 +110,22 @@ class Labels:
             'audit.settings.run_manual_discovery.template': 'Ran manual discovery',
             'audit.settings.stop_research_phase': 'Stop Discovery',
             'audit.settings.stop_research_phase.template': 'Stopped discovery',
+
             'audit.settings.plugins': 'Settings Management',
             'audit.settings.plugins.post': 'Edit Settings',
             'audit.settings.plugins.post.template': 'Edited {config_name}',
 
+            'audit.settings.configuration': 'Administration',
+            'audit.settings.configuration.execute': 'Execute Config Script',
+            'audit.settings.configuration.execute.template': 'Exceuted configuration script',
+            'audit.settings.configuration.upload_file': 'Upload Config Script',
+            'audit.settings.configuration.upload_file.template': 'Uploaded configuration script',
+
             'audit.self': 'Account Management',
             'audit.self.password': 'Change Password',
             'audit.self.password.template': 'Changed password',
+            'audit.self.preferences': 'Edit Default Columns',
+            'audit.self.preferences.template': 'Edited default columns',
 
             'audit.discovery': 'Discovery',
             'audit.discovery.start': 'Discovery Started',

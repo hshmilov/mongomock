@@ -9,6 +9,7 @@
         <VSpacer />
         <XButton
           id="message-confirm-btn"
+          type="primary"
           @click="onConfirm"
         >
           {{ params.confirmText }}
@@ -58,7 +59,7 @@ export default {
 
 <style lang="scss">
     .v-dialog__content--active {
-        z-index: 1003 !important;
+        z-index: 1004 !important;
 
         .x-checkbox {
             padding: 0 24px;
@@ -70,8 +71,8 @@ export default {
     .theme--light.v-card > .v-card__text {
       color: unset !important;
     }
-    .v-overlay--active {
-        z-index: 1001 !important;
+    .v-application > .v-overlay--active {
+        z-index: 1003 !important;
     }
 
     #message-confirm-btn {

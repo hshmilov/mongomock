@@ -51,7 +51,10 @@
       <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
       <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
       <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
-      <x-nav-item v-bind="navigationProps('Activity Logs', 'audit')" />
+      <x-nav-item
+        v-bind="navigationProps('Activity Logs', 'audit', null,
+        $permissionConsts.categories.Settings, $permissionConsts.categories.Audit)"
+      />
       <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
     </x-nav>
   </aside>
@@ -112,13 +115,13 @@ export default {
     ...mapMutations({
       removeToaster: REMOVE_TOASTER,
     }),
-    navigationProps(name, id, title, permissionCategory) {
+    navigationProps(name, id, title, permissionCategory, permissionSection) {
       let currentPermissionCategory = permissionCategory;
       if (!currentPermissionCategory && this.permissionCategoriesMap[id]) {
         currentPermissionCategory = id;
       }
       const restricted = this.$cannot(currentPermissionCategory,
-        this.$permissionConsts.actions.View);
+        this.$permissionConsts.actions.View, permissionSection);
       return {
         id,
         name,

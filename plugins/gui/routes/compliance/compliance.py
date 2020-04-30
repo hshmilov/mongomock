@@ -26,7 +26,7 @@ class Compliance:
 
     @accounts_filter()
     @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Compliance))
+        PermissionAction.View, PermissionCategory.Compliance), skip_activity=True)
     def compliance(self, name, method, accounts):
         return self._get_compliance(name, method, accounts)
 
