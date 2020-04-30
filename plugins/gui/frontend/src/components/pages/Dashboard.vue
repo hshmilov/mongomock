@@ -62,13 +62,17 @@ export default {
     deviceDiscovery() {
       return this.dashboard.dataDiscovery.devices.data;
     },
-    seenDevices() {
-      return (this.deviceDiscovery && this.deviceDiscovery.seen);
+    usersDiscovery() {
+      return this.dashboard.dataDiscovery.users.data;
+    },
+    seenEntities() {
+      return (this.deviceDiscovery && this.deviceDiscovery.seen)
+              || (this.usersDiscovery && this.usersDiscovery.seen);
     },
     isEmptySystem() {
       if (this.deviceDiscovery.seen === undefined || this.dashboardFirstUse === null) return null;
 
-      return (!this.seenDevices && this.dashboardFirstUse);
+      return (!this.seenEntities && this.dashboardFirstUse);
     },
     canViewAnyEntity() {
       return entities.find((entity) => this.$canViewEntity(entity.name));
