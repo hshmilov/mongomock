@@ -16,9 +16,6 @@ export const compliance = {
           query: {
             filter: '', expressions: [],
           },
-          sort: {
-            field: '', desc: true,
-          },
         },
       },
     },

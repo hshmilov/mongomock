@@ -359,7 +359,7 @@ export default {
     sortedData() {
       return _orderBy(this.staticData, [(item) => {
         if (!this.staticSort) return 1;
-        if (!this.view.sort.field) return 1;
+        if (this.view.sort && !this.view.sort.field) return 1;
         let value = item[this.view.sort.field] || '';
         if (Array.isArray(value)) {
           value = value.join('');
@@ -369,7 +369,7 @@ export default {
           value = dateValue;
         }
         return value;
-      }], [this.view.sort.desc ? 'desc' : 'asc']);
+      }], [this.view.sort && this.view.sort.desc ? 'desc' : 'asc']);
     },
     searchValue: {
       get() {
@@ -425,7 +425,7 @@ export default {
   },
   mounted() {
     if (this.staticData) {
-      if (!this.view.sort.field && !_isEmpty(this.fields)) {
+      if (this.view.sort && !this.view.sort.field && !_isEmpty(this.fields)) {
         this.updateView({
           module: this.module,
           view: {
