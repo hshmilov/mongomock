@@ -17,7 +17,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
-from axonius.users.user_adapter import UserAdapter
+from axonius.users.user_adapter import UserAdapter, ASSOCIATED_FIELD
 from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_valid_user
@@ -793,8 +793,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
     # pylint: disable=invalid-name, too-many-nested-blocks
     def __parse_devices_last_used_users_departments(self):
-        users_to_department = dict()
-        users_to_ad_display_name = dict()
+        users_to_devices_fields = dict()
+        for associcated_field in ASSOCIATED_FIELD:
+            users_to_devices_fields[associcated_field] = dict()
         # Notice that we have a non-default batch_size of 10 here (instead of 100). We do this
         # because we want to interact with the server every 10 devices, and not 100. From our experience,
         # if the default is saved, then every batch will be fetched in more than every 10 minutes. But the default
@@ -845,15 +846,17 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
             # Now we have a set of all last used users for this device, from all of its adapters.
             # Lets try to get each of these users to achieve their department
-            device_last_used_users_departments = set()
-            device_last_used_users_ad_display_name = set()
+            device_last_used_users_fields_sets = dict()
+            for associcated_field in ASSOCIATED_FIELD:
+                device_last_used_users_fields_sets[associcated_field] = set()
             for last_used_user in device_last_used_users_set:
                 # if last used user is in one of them, it will also be in the second. so 'or' == 'and' here.
-                if last_used_user in users_to_department or last_used_user in users_to_ad_display_name:
-                    if users_to_department.get(last_used_user):
-                        device_last_used_users_departments.add(users_to_department[last_used_user])
-                    if users_to_ad_display_name.get(last_used_user):
-                        device_last_used_users_ad_display_name.add(users_to_ad_display_name[last_used_user])
+                if last_used_user in users_to_devices_fields[ASSOCIATED_FIELD[0]]:
+                    for associcated_field in ASSOCIATED_FIELD:
+                        if users_to_devices_fields[associcated_field].get(last_used_user):
+                            device_last_used_users_fields_sets[associcated_field].add(users_to_devices_fields
+                                                                                      [associcated_field]
+                                                                                      [last_used_user])
                 else:
                     user = self.__get_users_by_identifier(last_used_user)
 
@@ -861,35 +864,26 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         if len(user) > 1 and str(last_used_user).lower() in LIST_OF_DEFAULT_USERS:
                             # Ignore 'default' users as they are probably incorrect
                             continue
-                        user_department = None
-                        ad_display_name = None
-                        for one_user in user:
-                            ud_candidate = one_user.get_first_data('user_department')
-                            if ud_candidate:
-                                user_department = ud_candidate
-                                break
-
-                        for one_user in user:
-                            addn_candidate = one_user.get_first_data('ad_display_name')
-                            if addn_candidate:
-                                ad_display_name = addn_candidate
-                                break
-
-                        if user_department:
-                            device_last_used_users_departments.add(user_department)
-                        if ad_display_name:
-                            device_last_used_users_ad_display_name.add(ad_display_name)
-                        users_to_department[last_used_user] = user_department
-                        users_to_ad_display_name[last_used_user] = ad_display_name
+                        for associcated_field in ASSOCIATED_FIELD:
+                            field_candidate = None
+                            for one_user in user:
+                                field_candidate = one_user.get_first_data(associcated_field)
+                                if field_candidate:
+                                    break
+                            if field_candidate:
+                                device_last_used_users_fields_sets[associcated_field].add(field_candidate)
+                            users_to_devices_fields[last_used_user] = field_candidate
 
             # Now that we have all departments for this device lets add the appropriate adapterdata.
             # be careful not to override an adapterdata which already exists like the vuln one.
             device_adapter = self._new_device_adapter()
-            if list(device_last_used_users_departments):
-                device_adapter.last_used_users_departments_association = list(device_last_used_users_departments)
-            if list(device_last_used_users_ad_display_name):
-                device_adapter.last_used_users_ad_display_name_association = \
-                    list(device_last_used_users_ad_display_name)
+            for associcated_field in ASSOCIATED_FIELD:
+                if device_last_used_users_fields_sets[associcated_field]:
+                    attr_name = f'last_used_users_{associcated_field}_association'
+                    if attr_name == 'last_used_users_user_department_association':
+                        attr_name = 'last_used_users_departments_association'
+                    device_adapter.__setattr__(attr_name,
+                                               list(device_last_used_users_fields_sets[associcated_field]))
             # Add the final one
             device_object = list(self.devices.get(internal_axon_id=device_raw['internal_axon_id']))
             if len(device_object) != 1:

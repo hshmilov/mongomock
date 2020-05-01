@@ -669,6 +669,9 @@ class DeviceAdapter(SmartJsonClass):
     last_used_users = ListField(str, "Last Used Users")
     last_used_users_departments_association = ListField(str, 'Last Used Users Departments')
     last_used_users_ad_display_name_association = ListField(str, 'Last Used Users AD Display Name')
+    last_used_users_mail_association = ListField(str, 'Last Used Users Email')
+    last_used_users_division_association = ListField(str, 'Last Used Users Division')
+    last_used_users_company_association = ListField(str, 'Last Used Users Company')
     installed_software = ListField(
         DeviceAdapterInstalledSoftware, "Installed Software", json_format=JsonArrayFormat.table
     )
