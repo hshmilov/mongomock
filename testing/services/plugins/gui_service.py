@@ -1551,6 +1551,8 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         }
         if role.get(PREDEFINED_FIELD):
             role_to_set[PREDEFINED_FIELD] = role[PREDEFINED_FIELD]
+        if role.get(IS_AXONIUS_ROLE):
+            role_to_set[IS_AXONIUS_ROLE] = role[IS_AXONIUS_ROLE]
         roles_session.update_one(
             {'_id': role['_id']}, {'$set': role_to_set}, upsert=True)
 
