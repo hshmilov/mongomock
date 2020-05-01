@@ -234,8 +234,7 @@ export default {
         view: { ...selectedView.view, enforcement: null },
         uuid: selectedView.uuid,
       });
-
-      this.$router.push({ path: `/${this.namespace}`, query: { selectedQueryId: this.selection.ids } });
+      this.$router.push({ path: `/${this.namespace}` });
     },
     createEnforcement(queryName) {
       this.setEnforcement({

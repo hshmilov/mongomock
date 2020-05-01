@@ -30,9 +30,6 @@ class TestSavedQuery(TestBase):
 
     JSON_ASSET_ENTITY_QUERY_NAME = 'JSON Asset Entity Query'
 
-    TABLE_SPINNER_DISPLAYED_XPATH = '//div[@class=\'v-spinner-bg\']'
-    CSS_SELECTOR_TABLE_SPINNER = '.v-spinner-bg'
-
     def test_query_state(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -383,21 +380,6 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.click_query_row_by_name(saved_query_name)
         with pytest.raises(TimeoutException):
             self.devices_queries_page.get_query_last_update_from_panel()
-
-    def test_predefined_query_not_recompiling_wizard(self):
-        """
-        Test that when selecting predefined query and pressing the query wizard,
-        the query doesn't get recompiled (resulting in table refresh and edited state)
-        """
-        saved_query_name = 'Devices seen in last 7 days'
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_be_responsive()
-        self.devices_queries_page.click_query_row_by_name(saved_query_name)
-        self.devices_queries_page.run_query()
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_query_wizard()
-        self.devices_page.assert_element_absent_by_css_selector(self.CSS_SELECTOR_TABLE_SPINNER)
-        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
 
     def test_generated_saved_query_in_table_and_panel(self):
         query_name = ''
