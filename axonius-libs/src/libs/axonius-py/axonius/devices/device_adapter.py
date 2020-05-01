@@ -648,6 +648,7 @@ class DeviceAdapter(SmartJsonClass):
     fetch_time = Field(datetime.datetime, 'Fetch Time')
     first_fetch_time = Field(datetime.datetime, 'First Fetch Time')
     email = Field(str, 'Email Address')
+    owner = Field(str, 'Owner')
     public_ips = ListField(str, 'Public IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     public_ips_raw = ListField(
         str,

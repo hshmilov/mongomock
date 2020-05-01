@@ -40,7 +40,6 @@ class IgarAdapter(AdapterBase):
         has_ip_duplication = Field(bool, 'Has IP Duplication')
         last_modified = Field(datetime.datetime, 'Last Modified')
         network_zone = Field(str, 'Network Zone')
-        system_owner = Field(str, 'System Owner')
         owner_email = Field(str, 'Owner Email')
         owner_geid = Field(str, 'Owner Geid')
         support_status = Field(str, 'Support Status')
@@ -315,7 +314,7 @@ class IgarAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f'Problem with app id {app_id}')
                 device.network_zone = device_raw.get('Network Zone')
-                device.system_owner = device_raw.get('System Owner')
+                device.owner = device_raw.get('System Owner')
                 device.owner_email = device_raw.get('Owner Email')
                 device.owner_geid = device_raw.get('Owner GEID')
                 device.support_status = device_raw.get('Support Status')

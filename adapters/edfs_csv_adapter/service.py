@@ -41,7 +41,6 @@ class EdfsCsvAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         vuln_status = ListField(VulnStatus, 'Vulnerability Status')
         edfs_domain = Field(str, 'Domain Name')
-        edfs_owner = Field(str, 'Owner')
         is_vuln = Field(bool, 'Vulnerable Asset')
         known_ip = Field(bool, 'Known IP Address')
         is_live = Field(bool, 'Live Known Asset')
@@ -189,7 +188,7 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                 # The next line may also raise an exception. This is also intended.
                 device.add_ips_and_macs(ips=[device_id])
                 # Now for the adapter-specific stuff
-                device.edfs_owner = device_raw.get('Owner')
+                device.owner = device_raw.get('Owner')
                 device.edfs_domain = device_raw.get('Domain Name')
                 device.is_vuln = _make_bool_from_data(device_raw.get('Vulnerable Asset'))
                 device.known_ip = _make_bool_from_data(device_raw.get('Known IP Address'))

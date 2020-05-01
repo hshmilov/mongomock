@@ -20,7 +20,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class IvantiSmAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        owner = Field(str, 'Owner')
         last_modified_time = Field(datetime.datetime, 'Last Modified Time')
         agent_status = Field(str, 'Agent Status')
 

@@ -28,7 +28,6 @@ class CherwellAdapter(AdapterBase, Configurable):
         asset_tag = Field(str, 'Asset Tag')
         last_modified = Field(datetime.datetime, 'Last Modification')
         asset_status = Field(str, 'Asset Status')
-        asset_owner = Field(str, 'Asset Owner')
         location_building = Field(str, 'Location Building')
         primary_full_user_name = Field(str, 'Primary Full User Name')
         asset_type = Field(str, 'Asset Type')
@@ -235,7 +234,7 @@ class CherwellAdapter(AdapterBase, Configurable):
                     elif field_name == 'AssetStatus':
                         device.asset_status = field_value
                     elif field_name == 'AssetOwner':
-                        device.asset_owner = field_value
+                        device.owner = field_value
                     elif field_name == 'PrimaryUserName':
                         device.primary_full_user_name = field_value
                     elif field_name == 'LocationBuilding':

@@ -21,7 +21,6 @@ class Maas360Adapter(AdapterBase):
         ownership = Field(str, 'Ownership')
         installed_date = Field(datetime.datetime, 'Installed Date')
         custom_asset_number = Field(str, 'Custom Asset Number')
-        device_owner = Field(str, 'Device Owner')
         mdm_device_type = Field(str, 'Maas360 Device Type')
         device_status = Field(str, 'Device Status')
         maas_status = Field(str, 'Maas360 Managed Status')
@@ -166,7 +165,7 @@ class Maas360Adapter(AdapterBase):
             device.name = device_raw.get('deviceName')
             device.ownership = device_raw.get('ownership')
             device.custom_asset_number = device_raw.get('customAssetNumber')
-            device.device_owner = device_raw.get('deviceOwner')
+            device.owner = device_raw.get('deviceOwner')
             if device_raw.get('username') and isinstance(device_raw.get('username'), str):
                 device.last_used_users = device_raw.get('username').split(',')
             device.email = device_raw.get('emailAddress')

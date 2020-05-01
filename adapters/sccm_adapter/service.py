@@ -83,7 +83,6 @@ class SccmAdapter(AdapterBase, Configurable):
         desktop_or_laptop = Field(str, 'Desktop Or Laptop', enum=['Desktop', 'Laptop'])
         chasis_value = Field(str, 'Chasis Value')
         sccm_vms = ListField(SccmVm, 'SCCM VMs')
-        owner = Field(str, 'Owner')
         department = Field(str, 'Department')
         purpose = Field(str, 'Purpose')
         tpm_is_activated = Field(bool, 'TPM Is Activated')

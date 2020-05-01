@@ -20,7 +20,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class SamangeAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
-        owner = Field(str, 'Owner')
         updated_at = Field(datetime.datetime, 'Updated At')
         department = Field(str, 'Department')
         videos_name = ListField(str, 'Video Displays Name')

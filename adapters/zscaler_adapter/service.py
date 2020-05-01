@@ -23,7 +23,6 @@ class ZscalerAdapter(AdapterBase, Configurable):
         detail = Field(str, 'Detail')
         registration_state = Field(str, 'Registration State')
         policy_name = Field(str, 'Policy Name')
-        owner = Field(str, 'Owner')
 
     class MyUserAdapter(UserAdapter):
         comments = Field(str, 'Comments')

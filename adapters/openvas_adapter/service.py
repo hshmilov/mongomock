@@ -27,7 +27,6 @@ class OpenvasAdapter(AdapterBase):
         severity = Field(int, 'Overall Severity')
         creation_time = Field(datetime.datetime, 'Creation Time')
         mod_time = Field(datetime.datetime, 'Modification Time')
-        owner = Field(str, 'Owner')
         identifiers = ListField(HostAssetIdentifier, 'Host Asset Identifiers')
         host_details = ListField(OpenvasHostDetails, 'Host Details')
         asset_type = Field(str, 'Asset Type')

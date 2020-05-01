@@ -83,7 +83,6 @@ class OrcaAdapter(AdapterBase):
         asset_state = Field(str, 'Asset State')
         asset_labels = ListField(str, 'Asset Labels')
         asset_score = Field(int, 'Asset Score')
-        owner = Field(str, 'Owner')
         region = Field(str, 'Region')
         alerts_data = ListField(AlertData, 'Alerts Data')
         malware_data = ListField(MalwareData, 'Malware Data')

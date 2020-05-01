@@ -92,7 +92,6 @@ class PreemptAdapter(AdapterBase, Configurable):
         is_server = Field(bool, 'Is Server')
         risk_score_severity = Field(str, 'Risk Score Severity')
         risk_factors = ListField(RiskFactor, 'Risk Factors')
-        owner = Field(str, 'Owner')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

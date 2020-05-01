@@ -49,7 +49,6 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         category = Field(str, 'Category')
         u_subcategory = Field(str, 'Subcategory')
         class_name = Field(str, 'Class Name')
-        owner = Field(str, 'Owner')
         discovery_source = Field(str, 'Discovery Source')
         last_discovered = Field(datetime.datetime, 'Last Discovered')
         first_discovered = Field(datetime.datetime, 'First Discovered')
