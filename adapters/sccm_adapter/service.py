@@ -93,6 +93,7 @@ class SccmAdapter(AdapterBase, Configurable):
         compliance_status = Field(str, 'Compliance Status')
         drivers_data = ListField(DriverData, 'Drivers Data')
         network_drivers_data = ListField(DriverData, 'Network Drivers Data')
+        bios_release_date = Field(datetime.datetime, 'Bios Release Date')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -672,6 +673,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.bios_serial = bios_data.get('SerialNumber0')
                         device_manufacturer = bios_data.get('Manufacturer0')
                         device.device_manufacturer = device_manufacturer
+                        device.bios_release_date = parse_date(bios_data.get('ReleaseDate0'))
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 try:
