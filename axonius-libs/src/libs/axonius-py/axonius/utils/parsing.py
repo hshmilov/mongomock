@@ -119,6 +119,24 @@ def parse_bool_from_raw(bool_raw_value, raise_on_exception=False):
         return None
 
 
+def int_or_none(val):
+    if val is None:
+        return None
+    try:
+        return int(val)
+    except Exception:
+        return None
+
+
+def float_or_none(val):
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except Exception:
+        return None
+
+
 def get_manufacturer_from_mac(mac: str) -> Optional[str]:
     if mac:
         try:
