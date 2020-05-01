@@ -20,6 +20,7 @@ class SymantecCcsConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('No username or password')
         response = self._post('oauth/tokens',
+                              use_json_in_body=False,
                               body_params={'username': self._username,
                                            'password': self._password,
                                            'grant_type': 'password'})

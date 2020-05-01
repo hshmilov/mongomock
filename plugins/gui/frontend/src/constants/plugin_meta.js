@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    g_naapi_adapter: {
+        title: 'GE NAAPI',
+        description: 'GE NAAPI'
+    },
     sophos_cloud_optix_adapter: {
         title: 'Sophos Cloud Optix',
         link: 'https://docs.axonius.com/docs/sophos-cloud-optix',

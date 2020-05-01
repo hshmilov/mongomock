@@ -21,7 +21,8 @@
       "postgres",
       "workday",
       "infinite_sleep",
-      "mysql_special"
+      "mysql_special",
+      "g_naapi"
     ],
     "remove-from-exclude": []
   }

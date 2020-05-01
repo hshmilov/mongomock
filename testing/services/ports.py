@@ -246,6 +246,7 @@ DOCKER_PORTS = {
     'fresh-service-adapter':            9991,
     'bigfix-inventory-adapter':         9992,
     'ca-spectrum-adapter':              9993,
+    'g-naapi-adapter':                  9912,
     'symantec-ccs-adapter':             9994,
     'pkware-adapter':                   9995,
     'snow-adapter':                     9996,
