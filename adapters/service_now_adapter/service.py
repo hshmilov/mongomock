@@ -167,7 +167,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.u_cloud_service_type = device_raw.get('u_cloud_service_type')
             device.u_crosssite_condition = device_raw.get('u_crosssite_condition')
             device.u_virtual_system_type = device_raw.get('u_virtual_system_type')
-            device.u_heritage = device_raw.get('u_heritage')
+            device.u_heritage = U_HERITAGE_DICT.get(device_raw.get('u_heritage')) or device_raw.get('u_heritage')
             virtual = device_raw.get('virtual')
             if isinstance(virtual, str):
                 device.is_virtual = virtual.lower() == 'true'
@@ -449,7 +449,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.domain = device_raw.get('dns_domain')
             device.used_for = device_raw.get('used_for')
             device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
-            device.environment = device_raw.get('u_environment')
+            u_environment = device_raw.get('u_environment')
+            device.environment = U_ENVIRONMENT_DICT.get(u_environment) or u_environment
             device.cmdb_business_function = device_raw.get('u_cmdb_business_function')
             device.management_ip = device_raw.get('u_management_ip')
             device.end_of_support = device_raw.get('u_end_of_support')
