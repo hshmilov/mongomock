@@ -39,6 +39,10 @@ class WorkdayConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        # fix username according to
+        # https://community.boomi.com/s/question/0D51W00006As2jiSAB/workday-error-message-when-retrieving-getworkers
+        if self._username and f'@{self._tenant}' not in self._username:
+            self._username = f'{self._username}@{self._tenant}'
         self._client = None
         self._wsse = list()
         if self._url.endswith('/'):
@@ -82,13 +86,14 @@ class WorkdayConnection(RESTConnection):
     def _connect(self):
         self._create_auth()
         self._create_client()
+        next(self.get_users_list(1))
 
     @staticmethod
-    def _gen_args():
+    def _gen_args(count=DEVICE_PER_PAGE):
         request_crit = {
             'Response_Filter': {
                 'Page': 1,
-                'Count': DEVICE_PER_PAGE,
+                'Count': count,
                 'As_Of_Entry_DateTime': datetime.datetime.utcnow()
             },
             'Response_Group': {
@@ -109,8 +114,8 @@ class WorkdayConnection(RESTConnection):
         }
         return request_crit
 
-    def get_users_list(self):
-        kwargs = self._gen_args()
+    def get_users_list(self, count=DEVICE_PER_PAGE):
+        kwargs = self._gen_args(count)
         response = self._client.service.Get_Workers(**kwargs)
         logger.debug(f'Got response: {response}')
         logger.debug(f'Response is {type(response)}')
