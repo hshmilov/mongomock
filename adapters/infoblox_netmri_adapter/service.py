@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from infoblox_netmri_adapter.connection import InfobloxNetmriConnection
 from infoblox_netmri_adapter.client_id import get_client_id
@@ -31,7 +32,6 @@ class InfobloxNetmriAdapter(AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
-        # AUTOADAPTER
         connection = InfobloxNetmriConnection(domain=client_config['domain'],
                                               verify_ssl=client_config['verify_ssl'],
                                               https_proxy=client_config.get('https_proxy'),
@@ -124,29 +124,77 @@ class InfobloxNetmriAdapter(AdapterBase):
 
     @staticmethod
     def _fill_infoblox_netmri_device_fields(device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
+
+        def parse_int(value):
+            if value is None:
+                return None
+            try:
+                return int(value)
+            except Exception as e:
+                logger.warning(f'Failed to parse {value} as integer! Got {str(e)}')
+                return None
+
+        def parse_bool(value):
+            if isinstance(value, bool):
+                return value
+            return None
+
         try:
-            pass
+            device.extra_info = device_raw.get('DeviceAddlInfo')
+            device.netbios_name = device_raw.get('DeviceNetBIOSName')
+            device.device_type = device_raw.get('DeviceType')
+            device.unique_key = device_raw.get('DeviceUniqueKey')
+            device.snmp_sysdescr = device_raw.get('DeviceSysDescr')
+            device.snmp_syslocation = device_raw.get('DeviceSysLocation')
+            device.snmp_sysname = device_raw.get('DeviceSysName')
+            device.dns_name = device_raw.get('DeviceDNSName')
+            device.rev_end_time = parse_date(device_raw.get('DeviceEndTime'))
+            device.rev_start_time = parse_date(device_raw.get('DeviceStartTime'))
+            device.assurance = parse_int(device_raw.get('DeviceAssurance'))
+            device.collector = parse_int(device_raw.get('DataSourceID'))
+            device.parent_id = parse_int(device_raw.get('ParentDeviceID'))
+            device.mgmt_server_id = parse_int(device_raw.get('MgmtServerDeviceID'))
+            device.virtual_net_id = parse_int(device_raw.get('VirtualNetworkID'))
+            device.is_infra = parse_bool(device_raw.get('InfraDeviceInd'))
+            device.is_network = parse_bool(device_raw.get('NetworkDeviceInd'))
+            device.is_virtual = parse_bool(device_raw.get('VirtualInd'))
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         logger.debug(f'Got device data: {device_raw}')
         try:
-            device_id = device_raw.get('')
+            device_id = device_raw.get('DeviceID')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('') or '')
-
+            device_name = device_raw.get('DeviceName')
+            device.id = device_id + '_' + device_name or '' + '_' + device_raw.get('DeviceUniqueKey') or ''
+            device.name = device_name
+            if device_raw.get('DeviceDNSName') != 'unknown':
+                device.hostname = device_raw.get('DeviceDNSName')
+            device.device_model = device_raw.get('DeviceModel')
+            device.first_seen = parse_date(device_raw.get('DeviceFirstOccurrenceTime'))
+            device.last_seen = parse_date(device_raw.get('DeviceTimestamp'))
+            device.device_manufacturer = device_raw.get('DeviceVendor') or device_raw.get('DeviceOUI')
+            try:
+                device.figure_os(device_raw.get('DeviceVersion'))
+            except Exception as e:
+                logger.warning(f'Failed to parse OS for {device_name}', exc_info=True)
+            device.device_managed_by = device_raw.get('DeviceSysContact')
+            device_ip = [device_raw.get('DeviceIPDotted')] or [device_raw.get('DeviceIPNumeric')] or None
+            device_mac = [device_raw.get('DeviceMAC')] or None
+            try:
+                device.add_ips_and_macs(ips=device_ip, macs=device_mac)
+            except Exception as e:
+                logger.warning(f'Failed to parse ip {device_ip} and mac {device_mac}: {str(e)}')
+            # Now parse specific fields
             self._fill_infoblox_netmri_device_fields(device_raw, device)
-
             device.set_raw(device_raw)
 
             return device
         except Exception:
-            logger.exception(f'Problem with fetching InfobloxNetmri Device for {device_raw}')
+            logger.exception(f'Problem with fetching Infoblox NetMRI Device for {device_raw}')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
@@ -161,13 +209,11 @@ class InfobloxNetmriAdapter(AdapterBase):
             try:
                 # noinspection PyTypeChecker
                 device = self._create_device(device_raw, self._new_device_adapter())
-                logger.debug(device)
-                # if device:
-                #     yield device
+                if device:
+                    yield device
             except Exception:
                 logger.exception(f'Problem with fetching InfobloxNetmri Device for {device_raw}')
 
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Assets, AdapterProperty.Network]
