@@ -54,7 +54,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
 
-    # pylint: disable=too-many-branches,too-many-lines
+    # pylint: disable=too-many-branches,too-many-lines,too-many-locals
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 10:
@@ -1500,19 +1500,21 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 config_match = {
                     'config_name': CONFIG_CONFIG
                 }
-                current_config = self.db.get_collection(
-                    GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
-                if current_config:
+                config_collection = self.db.get_collection(
+                    GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
+                gui_config = config_collection.find_one(config_match)
+                if gui_config and gui_config.get('config'):
+                    current_config = gui_config['config']
                     for external_service_settings in ['okta_login_settings',
                                                       'saml_login_settings',
                                                       'ldap_login_settings']:
-                        external_service = current_config['config'][external_service_settings]
+                        external_service = current_config[external_service_settings]
                         external_service[DEFAULT_ROLE_ID] = str(external_role_id)
 
                     self.db.get_collection(
                         GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION) \
-                        .replace_one(filter={'config_name': GUI_PLUGIN_NAME},
-                                     replacement={'config_name': GUI_PLUGIN_NAME, 'config': current_config})
+                        .replace_one(filter=config_match,
+                                     replacement={'config_name': CONFIG_CONFIG, 'config': current_config})
                 users_config_collection.drop()
 
     @staticmethod
