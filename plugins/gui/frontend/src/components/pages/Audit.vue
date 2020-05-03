@@ -92,7 +92,7 @@ export default {
 .x-audit {
 
   .x-data-table {
-    height: auto;
+    height: 100%;
 
     .anticon-loading {
       margin-right: 4px;

@@ -11,7 +11,7 @@
   >
     <button
       class="item-link"
-      :title="disabled? undefined : name"
+      :title="name"
     >
       <md-icon
         v-if="icon"
