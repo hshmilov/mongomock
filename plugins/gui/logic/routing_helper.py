@@ -53,7 +53,7 @@ def session_connection(func,
         if enforce_session and not enforce_by_api_key:
             user = session.get('user') if session else None
             if user is None:
-                return return_error('You are not connected', 401)
+                return return_error('Not logged in', 401)
 
             if enforce_permissions:
                 is_expired = PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()

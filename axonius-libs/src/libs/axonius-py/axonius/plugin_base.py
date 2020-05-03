@@ -265,7 +265,7 @@ def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
                             raise RuntimeError(f'Bad api key. got {request.headers.get("x-api-key")}')
                 return func(self, *args, **kwargs)
             except SessionInvalid:
-                return return_error('You are not connected', 401)
+                return return_error('Not logged in', 401)
             except Exception as err:
                 try:
                     if logger:
