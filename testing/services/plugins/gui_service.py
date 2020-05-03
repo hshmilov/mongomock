@@ -1568,7 +1568,8 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 IS_AXONIUS_ROLE: True
             }
             old_roles.append(user_role)
-        elif user.get('admin') or user.get('user_name') == ADMIN_USER_NAME:
+        elif (user.get('admin') or user.get('user_name') == ADMIN_USER_NAME
+              or user.get('role_name') == PREDEFINED_ROLE_ADMIN):
             user_role = next((x for x in old_roles if x.get('name') == PREDEFINED_ROLE_ADMIN), None)
         else:
             user_role = self._get_matched_role(user, old_roles)
@@ -1605,70 +1606,70 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     # pylint: disable=too-many-statements
     def _map_old_permissions_to_new_permissions(self, old_permissions: dict):
         new_permissions = get_permissions_structure(False)
-        for permission_type in old_permissions.keys():
-            old_permission = old_permissions[permission_type]
-            if permission_type == PermissionType.Dashboard:
-                if PermissionLevel.ReadOnly == old_permission:
-                    new_permissions[PermissionCategory.Settings][
-                        PermissionAction.ResetApiKey] = True
+        for old_type, old_value in old_permissions.items():
+            if old_type == PermissionType.Dashboard:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Dashboard][
                         PermissionAction.View] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     new_permissions[PermissionCategory.Settings][
                         PermissionAction.RunManualDiscovery] = True
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Dashboard)
-            if permission_type == PermissionType.Devices:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Devices:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.DevicesAssets][
                         PermissionAction.View] = True
                     new_permissions[PermissionCategory.DevicesAssets][PermissionCategory.SavedQueries][
                         PermissionAction.Run] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.DevicesAssets)
-            if permission_type == PermissionType.Users:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Users:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.UsersAssets][
                         PermissionAction.View] = True
                     new_permissions[PermissionCategory.UsersAssets][PermissionCategory.SavedQueries][
                         PermissionAction.Run] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.UsersAssets)
-            if permission_type == PermissionType.Adapters:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Adapters:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Adapters][
                         PermissionAction.View] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Adapters)
-            if permission_type == PermissionType.Enforcements:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Enforcements:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Enforcements][
                         PermissionAction.View] = True
                     new_permissions[PermissionCategory.Enforcements][PermissionCategory.Tasks][
                         PermissionAction.View] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Enforcements)
-            if permission_type == PermissionType.Reports:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Reports:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Reports][
                         PermissionAction.View] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Reports)
-            if permission_type == PermissionType.Settings:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Settings:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Settings][
                         PermissionAction.View] = True
                     new_permissions[PermissionCategory.Dashboard][
                         PermissionAction.GetUsersAndRoles] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Settings)
-                    new_permissions[PermissionCategory.Settings][PermissionAction.ResetApiKey] = False
-                    new_permissions[PermissionCategory.Settings][PermissionCategory.Audit][
-                        PermissionAction.View] = False
-            if permission_type == PermissionType.Instances:
-                if PermissionLevel.ReadOnly == old_permission:
+            if old_type == PermissionType.Instances:
+                if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Instances][PermissionAction.View] = True
-                if PermissionLevel.ReadWrite == old_permission:
+                if PermissionLevel.ReadWrite == old_value:
                     self._enable_all_category_permissions(new_permissions, PermissionCategory.Instances)
+        if (old_permissions[PermissionType.Devices] != PermissionLevel.Restricted
+                and old_permissions[PermissionType.Users] != PermissionLevel.Restricted):
+            new_permissions[PermissionCategory.Compliance][PermissionAction.View] = True
+        admin_like = all(value == PermissionLevel.ReadWrite for value in old_permissions.values())
+        new_permissions[PermissionCategory.Settings][PermissionAction.ResetApiKey] = admin_like
+        new_permissions[PermissionCategory.Settings][PermissionCategory.Audit][PermissionAction.View] = admin_like
         return serialize_db_permissions(new_permissions)
 
     def _enable_all_category_permissions(self, permissions, category):
