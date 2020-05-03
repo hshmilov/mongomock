@@ -1,10 +1,14 @@
+import datetime
 import logging
+
+import funcy
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from symantec_ccs_adapter.consts import DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
+ASYNC_CHUNKS = 50
 
 
 class SymantecCcsConnection(RESTConnection):
@@ -15,10 +19,13 @@ class SymantecCcsConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        self._last_refresh = None
+        self._expires_in = None
 
-    def _connect(self):
-        if not self._username or not self._password:
-            raise RESTException('No username or password')
+    def _refresh_token(self):
+        if self._last_refresh and self._expires_in \
+                and self._last_refresh + datetime.timedelta(seconds=self._expires_in) > datetime.datetime.now():
+            return
         response = self._post('oauth/tokens',
                               use_json_in_body=False,
                               body_params={'username': self._username,
@@ -28,6 +35,14 @@ class SymantecCcsConnection(RESTConnection):
             raise RESTException(f'Bad login response: {response}')
         self._token = response['access_token']
         self._session_headers['Authorization'] = f'Bearer {self._token}'
+        self._last_refresh = datetime.datetime.now()
+        self._expires_in = int(response['expires_in']) - 30
+
+    def _connect(self):
+        if not self._username or not self._password:
+            raise RESTException('No username or password')
+        self._last_refresh = None
+        self._refresh_token()
         response = self._get('Assets',
                              url_params={'pagesize': 1,
                                          'page': 0,
@@ -73,8 +88,12 @@ class SymantecCcsConnection(RESTConnection):
                 break
 
     def get_device_list(self):
-        for device_id in self._get_device_ids():
+        self._refresh_token()
+        for device_ids in funcy.chunks(ASYNC_CHUNKS, self._get_device_ids()):
             try:
-                yield self._get(f'Assets/{device_id}')
+                async_requests = [{'name': f'Assets/{device_id}'} for device_id in device_ids]
+                yield from self._async_get_only_good_response(async_requests, chunks=ASYNC_CHUNKS)
             except Exception:
-                logger.exception(f'Problem getting data for {device_id}')
+                logger.exception(f'Problem getting data for {str(device_ids)}')
+            finally:
+                self._refresh_token()

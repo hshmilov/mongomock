@@ -200,7 +200,8 @@ class SymantecCcsAdapter(AdapterBase):
                 if not isinstance(ip_addresses, list):
                     ip_addresses = ip_addresses.split(',')
 
-                ip_addresses = [ip.replace('%14', '').strip() for ip in ip_addresses]
+                ip_addresses = [ip.strip() for ip in ip_addresses]
+                ip_addresses = [ip[:-3].strip() for ip in ip_addresses if '%' in ip]
 
                 device.add_nic(ips=ip_addresses)
             except Exception:

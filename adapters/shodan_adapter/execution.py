@@ -1,3 +1,4 @@
+import datetime
 import logging
 import ipaddress
 import re
@@ -169,6 +170,7 @@ class ShodanExecutionMixIn(Triggerable):
             if not data:
                 return False
             new_device = self._new_device_adapter()
+            new_device.fetch_time = datetime.datetime.now()
             new_device.id = client_id
             new_device.add_public_ip(ip)
             hostnames = result.get('hostnames')
