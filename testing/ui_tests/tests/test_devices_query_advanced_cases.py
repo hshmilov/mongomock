@@ -1,6 +1,8 @@
 import random
 import math
 from datetime import datetime
+
+import pytest
 from dateutil.relativedelta import relativedelta
 
 from selenium.common.exceptions import NoSuchElementException
@@ -972,6 +974,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         json_query_filter_last_seen_next_days(10000)
         assert chabchab_in_result()
 
+    @pytest.mark.skip('AX-7287')
     def test_connection_label_query_with_same_client_id(self):
         """
             verify connection label when adapter client have same client_id ( like tanium adapters )
