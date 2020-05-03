@@ -101,12 +101,14 @@ echo "Done upgrading"
 
 echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 _wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
+echo "Installing docker"
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
 
+echo "Installing python3.6"
 curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add -
 source /etc/lsb-release
 add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
