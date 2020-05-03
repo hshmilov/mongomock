@@ -16,7 +16,8 @@ class TestRealtime(TestBase):
         Then makes that adapter an RT adapter and waits for devices to appear, asserting they will.
         Then makes that adapter a non-RT adapter again, and again verifies that devices don't reappear.
         """
-        # make sure there's an adapter
+        # Wait 10 minutes for the rt scheduler to start
+        time.sleep(600)
         self.settings_page.switch_to_page()
         self.base_page.run_discovery(wait=True)
         self.adapters_page.switch_to_page()
