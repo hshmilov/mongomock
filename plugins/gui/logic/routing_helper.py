@@ -77,7 +77,7 @@ def session_connection(func,
                 csrf_token_header = request.headers.get('X-CSRF-TOKEN', None)
                 if 'csrf-token' in session:
                     csrf_token = session['csrf-token']
-                    if csrf_token is not None and request.path not in EXCLUDED_CSRF_ENDPOINTS and \
+                    if csrf_token is not None and request.path.strip('/') not in EXCLUDED_CSRF_ENDPOINTS and \
                             csrf_token != csrf_token_header:
                         return return_error('Bad CSRF-Token', 403)
                     # Success token comparison or first session after login, no token twice
