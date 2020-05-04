@@ -665,7 +665,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_remove_query_expression_does_not_reset_values()
         self._test_not_expression()
         self._test_adapters_size()
-        self._test_enum_expressions()
+        # self._test_enum_expressions()
         self._test_asset_entity_expressions()
 
     def test_empty_fields_arent_there(self):
