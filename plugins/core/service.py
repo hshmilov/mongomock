@@ -50,7 +50,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           AXONIUS_DNS_SUFFIX,
                                           NODE_HOSTNAME,
                                           NODE_USE_AS_ENV_NAME,
-                                          NODE_IP_LIST)
+                                          NODE_IP_LIST, CONFIGURABLE_CONFIGS_COLLECTION)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -612,9 +612,18 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 # run (and not have quick register). These lines can be removed in the future when we have a
                 # better weave/aod support.
                 plugin_unique_name = found_document[PLUGIN_UNIQUE_NAME]
-                if self.mongo_client[plugin_unique_name]['clients'].count_documents({}) > 0:
+
+                is_rt_adapter = self.mongo_client[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
+                    {
+                        'config_name': 'AdapterBase',
+                        'config.realtime_adapter': True
+                    }
+                )
+
+                if not is_rt_adapter and self.mongo_client[plugin_unique_name]['clients'].count_documents({}) > 0:
                     logger.info(f'Plugin {plugin_unique_name} has clients, do not run quick register')
-                    raise ValueError(f'pluin {plugin_unique_name} has clients, not running quick register')
+                    raise ValueError(f'plugin {plugin_unique_name} has clients and is not a realtime adapter, '
+                                     f'not running quick register')
 
             del found_document
 
