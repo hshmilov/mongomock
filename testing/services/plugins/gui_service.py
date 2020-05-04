@@ -1614,7 +1614,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 if PermissionLevel.ReadWrite == old_value:
                     new_permissions[PermissionCategory.Settings][
                         PermissionAction.RunManualDiscovery] = True
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Dashboard)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Dashboard)
             if old_type == PermissionType.Devices:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.DevicesAssets][
@@ -1622,7 +1622,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                     new_permissions[PermissionCategory.DevicesAssets][PermissionCategory.SavedQueries][
                         PermissionAction.Run] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.DevicesAssets)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.DevicesAssets)
             if old_type == PermissionType.Users:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.UsersAssets][
@@ -1630,13 +1630,13 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                     new_permissions[PermissionCategory.UsersAssets][PermissionCategory.SavedQueries][
                         PermissionAction.Run] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.UsersAssets)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.UsersAssets)
             if old_type == PermissionType.Adapters:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Adapters][
                         PermissionAction.View] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Adapters)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Adapters)
             if old_type == PermissionType.Enforcements:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Enforcements][
@@ -1644,26 +1644,28 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                     new_permissions[PermissionCategory.Enforcements][PermissionCategory.Tasks][
                         PermissionAction.View] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Enforcements)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Enforcements)
             if old_type == PermissionType.Reports:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Reports][
                         PermissionAction.View] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Reports)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Reports)
             if old_type == PermissionType.Settings:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Settings][
                         PermissionAction.View] = True
-                    new_permissions[PermissionCategory.Dashboard][
-                        PermissionAction.GetUsersAndRoles] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Settings)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Settings)
+                    new_permissions_settings = new_permissions[PermissionCategory.Settings]
+                    new_permissions_settings[PermissionAction.GetUsersAndRoles] = False
+                    self._update_all_category_permissions(new_permissions_settings, PermissionCategory.Users, False)
+                    self._update_all_category_permissions(new_permissions_settings, PermissionCategory.Roles, False)
             if old_type == PermissionType.Instances:
                 if PermissionLevel.ReadOnly == old_value:
                     new_permissions[PermissionCategory.Instances][PermissionAction.View] = True
                 if PermissionLevel.ReadWrite == old_value:
-                    self._enable_all_category_permissions(new_permissions, PermissionCategory.Instances)
+                    self._update_all_category_permissions(new_permissions, PermissionCategory.Instances)
         if (old_permissions[PermissionType.Devices] != PermissionLevel.Restricted
                 and old_permissions[PermissionType.Users] != PermissionLevel.Restricted):
             new_permissions[PermissionCategory.Compliance][PermissionAction.View] = True
@@ -1672,9 +1674,9 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         new_permissions[PermissionCategory.Settings][PermissionCategory.Audit][PermissionAction.View] = admin_like
         return serialize_db_permissions(new_permissions)
 
-    def _enable_all_category_permissions(self, permissions, category):
+    def _update_all_category_permissions(self, permissions, category, permission_value=True):
         for permission_name in permissions[category].keys():
             if permission_name in PermissionCategory:
-                self._enable_all_category_permissions(permissions[category], permission_name)
+                self._update_all_category_permissions(permissions[category], permission_name, permission_value)
             else:
-                permissions[category][permission_name] = True
+                permissions[category][permission_name] = permission_value
