@@ -12,7 +12,7 @@ from dateutil.parser import parse as parse_date
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA,
                                        RANGE_UNIT_DAYS,
-                                       DASHBOARD_COLLECTION)
+                                       DASHBOARD_COLLECTION, LABELS_FIELD)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
@@ -315,7 +315,6 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
                                                       tags_parent_field_name,
                                                       filter_key))
     name_pattern['doc_id'] = {'$toString': '$_id'}
-
     query = [
         # match base queries
         {
@@ -334,6 +333,8 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
                             }, {
                                 '$eq': ['$$i.data', True]
                             }]
+                        } if LABELS_FIELD in filters_keys else {
+                            '$eq': ['$$i.type', 'adapterdata']
                         }
                     }
                 },
@@ -610,7 +611,7 @@ def _generate_aggregate_combine_inputs_reduce(field_adapter_parent, field_tags_p
     :return: object representing one filter reduce to be in array of reduces
     """
     field_name = field_key = key
-    if field_key == 'labels':
+    if field_key == LABELS_FIELD:
         field_key = 'name'
     return {
         '$reduce': {

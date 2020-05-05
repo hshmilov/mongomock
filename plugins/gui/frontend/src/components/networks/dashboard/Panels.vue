@@ -78,7 +78,7 @@ import XModal from '../../axons/popover/Modal/index.vue';
 import XPanel from './Panel.vue';
 
 import {
-  REMOVE_DASHBOARD_PANEL, FETCH_CHART_SEGMENTS_CSV, SAVE_REORDERED_PANELS,
+  REMOVE_DASHBOARD_PANEL, SAVE_REORDERED_PANELS,
 } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 
@@ -154,7 +154,6 @@ export default {
     }),
     ...mapActions({
       removePanel: REMOVE_DASHBOARD_PANEL,
-      fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
       saveReorderedPanels: SAVE_REORDERED_PANELS,
     }),
     checkMove(evt) {

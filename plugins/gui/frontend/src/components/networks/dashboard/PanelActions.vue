@@ -75,7 +75,9 @@
 <script>
 import { mapMutations, mapActions } from 'vuex';
 import { Menu, Dropdown } from 'ant-design-vue';
-import { MOVE_OR_COPY_TOGGLE, FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
+import {
+  MOVE_OR_COPY_TOGGLE, FETCH_DASHBOARD_PANEL, FETCH_CHART_SEGMENTS_CSV
+} from '../../../store/modules/dashboard';
 
 export default {
   name: 'PanelActions',
@@ -114,6 +116,7 @@ export default {
     }),
     ...mapActions({
       fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
+      fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
     }),
     getPopupContainer() {
       return document.querySelector('.x-tabs .body');
