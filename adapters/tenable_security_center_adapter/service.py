@@ -92,7 +92,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('url'))
 
     @staticmethod
-    def get_connection(self, client_config):
+    def get_connection(client_config):
         verify_ssl = False
         if 'verify_ssl' in client_config:
             verify_ssl = bool(client_config['verify_ssl'])
