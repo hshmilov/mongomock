@@ -44,9 +44,9 @@ class CyberarkPasConnection(RESTConnection):
 
             self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=250)
             self._token = self._post(API_LOGON_SUFFIX, body_params=body_params, use_json_in_response=False,
-                                     return_response_raw=False)
+                                     return_response_raw=False)  # type: bytes
             self._session_headers = {
-                'Authorization': self._token
+                'Authorization': self._token.decode('utf-8').strip('"')
             }
 
         except Exception:
@@ -61,8 +61,9 @@ class CyberarkPasConnection(RESTConnection):
         try:
             self._refresh_token()
             response = self._get('PasswordVault/api/Users')
-            if response.get('users') and isinstance(response.get('users'), list):
-                for user in response.get('users'):
+            users = response.get('Users')
+            if users and isinstance(users, list):
+                for user in users:
                     if user.get('id'):
                         self._refresh_token()
                         yield self._get(f'PasswordVault/api/Users/{user.get("id")}')

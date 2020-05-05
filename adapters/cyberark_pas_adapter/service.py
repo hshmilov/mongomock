@@ -145,10 +145,10 @@ class CyberarkPasAdapter(AdapterBase):
         try:
             phone = Phones()
 
-            phone.business = user.get('businessNumber')
-            phone.fax = user.get('faxNumber')
-            phone.home = user.get('homeNumber')
-            phone.page = user.get('pagerNumber')
+            phone.business = user_raw.get('businessNumber')
+            phone.fax = user_raw.get('faxNumber')
+            phone.home = user_raw.get('homeNumber')
+            phone.page = user_raw.get('pagerNumber')
 
             user.phones = phone
         except Exception:
@@ -229,11 +229,12 @@ class CyberarkPasAdapter(AdapterBase):
             user.description = user_raw.get('description')
             user.last_logon = parse_date(user_raw.get('lastSuccessfulLoginDate'))
             user.password_never_expires = user_raw.get('passwordNeverExpires')
-            user.account_expires = user_raw.get('expiryDate')
+            user.account_expires = parse_date(user_raw.get('expiryDate'))
             user.account_disabled = user_raw.get('enableUser')
 
             self._fill_cyberark_pas_user_fields(user_raw, user)
 
+            user.set_raw(user_raw)
             return user
         except Exception:
             logger.exception(f'Problem with fetching CyberArk PAS User for {user_raw}')
