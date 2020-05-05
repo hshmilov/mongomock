@@ -54,6 +54,8 @@ class Audit:
             if not user_id:
                 return ''
             user_info = translate_user_id_to_details(user_id)
+            if not user_info:
+                return ''
             return f'{user_info.source}/{user_info.username}'
 
         def _get_category_action(activity: dict):

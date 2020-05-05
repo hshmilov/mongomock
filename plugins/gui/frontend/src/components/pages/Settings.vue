@@ -136,6 +136,7 @@
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
 import _cloneDeep from 'lodash/cloneDeep';
+import _findIndex from 'lodash/findIndex';
 
 import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG } from '@store/modules/settings';
 import { UPDATE_SYSTEM_CONFIG, SHOW_TOASTER_MESSAGE } from '@store/mutations';
@@ -260,6 +261,10 @@ export default {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.GetUsersAndRoles);
     },
+    canEditRoles() {
+      return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.Update, this.$permissionConsts.categories.Roles);
+    },
   },
   data() {
     return {
@@ -298,6 +303,14 @@ export default {
     this.schedulerSettings = _cloneDeep(this.schedulerSettingsFromState);
     this.coreSettings = _cloneDeep(this.coreSettingsFromState);
     this.guiSettings = _cloneDeep(this.guiSettingsFromState);
+    if (!this.canViewUsersAndRoles && !this.canEditRoles) {
+      this.guiSettings.schema.items.forEach((serviceItem) => {
+        const defaultRoleIdIndex = _findIndex(serviceItem.items, ((settingsItem) => settingsItem.name === 'default_role_id'));
+        if (defaultRoleIdIndex > -1) {
+          serviceItem.items.splice(defaultRoleIdIndex, 1);
+        }
+      });
+    }
     this.featureFlags = _cloneDeep(this.featureFlagsFromState);
     const response = await this.fetchData({
       rule: 'settings/metadata',

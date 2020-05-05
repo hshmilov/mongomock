@@ -55,5 +55,7 @@ def beautify_db_entry(entry, user_field_names=None):
     for field in user_field_names:
         field_value = tmp.get(field)
         if field_value is not None:
-            tmp[field] = translate_user_id_to_details(field_value).to_json()
+            user_details = translate_user_id_to_details(field_value)
+            if user_details:
+                tmp[field] = user_details.to_json()
     return tmp

@@ -20,12 +20,13 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
-                                          RESET_PASSWORD_SETTINGS)
+                                          RESET_PASSWORD_SETTINGS, DEFAULT_ROLE_ID)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.backup import verify_preshared_key
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca
 from gui.feature_flags import FeatureFlags
@@ -233,6 +234,13 @@ class Plugins:
                        metric_value=getting_started_feature_enabled)
 
         elif plugin_name == 'gui' and config_name == CONFIG_CONFIG:
+            user_settings_permission = self.get_user_permissions().get(PermissionCategory.Settings)
+            if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and\
+               not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
+                for external_service in ['ldap_login_settings', 'okta_login_settings', 'saml_login_settings']:
+                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db['config'].\
+                        get(external_service, {}).get(DEFAULT_ROLE_ID)
+
             mutual_tls_settings = config_to_set.get('mutual_tls_settings')
             if mutual_tls_settings.get('enabled'):
                 is_mandatory = mutual_tls_settings.get('mandatory')
