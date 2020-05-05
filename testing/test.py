@@ -595,14 +595,17 @@ def main():
                 'ui_test_users_table',
                 'ui_test_report_special_cases',
                 'ui_test_saved_query',
+                'ui_test_devices_query_advanced_cases',
                 'ui_test_session',
                 'integ_test_system'
             ]
 
-            test_code_name = [x for x in jobs.keys() if 'test_code_' in x]
+            test_code_name = [x for x in jobs.keys() if 'test_code' in x]
             if test_code_name:
                 # test_code == pylint test.
-                priority_tests.append(test_code_name[0])
+                priority_tests.extend(test_code_name)
+            else:
+                print(f'Warning: Could not find test_code.')
 
             for priority_test in priority_tests:
                 try:
