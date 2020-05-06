@@ -1,4 +1,5 @@
 
+"Network interface is a system's interface between two pieces of equipment or protocol layers in a computer network."
 type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "networkInterface_order_by") {
     deviceId: UUID
     macAddr: Mac

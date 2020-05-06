@@ -4,6 +4,7 @@ import (
 	"bandicoot/pkg/gql"
 	"context"
 	"fmt"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -40,6 +41,8 @@ func Serve() {
 	//}
 	// Setting up Gin
 	r := gin.New()
+	// add cors to everyone
+	r.Use(cors.Default())
 	// Add Panic Recovery
 	r.Use(gin.Recovery())
 	// Add a logger middleware, which:

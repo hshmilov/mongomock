@@ -89,8 +89,9 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
 
   module.count.data = undefined;
 
-  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path)) {
-    return dispatch(REQUEST_API, {
+  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path) && view.query.search !== null) {
+    // eslint-disable-next-line consistent-return
+    return await dispatch(REQUEST_API, {
       rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
       type: UPDATE_DATA_COUNT,
       payload,
@@ -186,6 +187,9 @@ const createPostContentRequest = (state, payload) => {
   if (view && view.colFilters) {
     params.field_filters = view.colFilters;
   }
+  if (payload.isExperimentalAPI) {
+    params.experimental = payload.isExperimentalAPI;
+  }
   // TODO: Not passing expressions because it might reach max URL size
   // if (view.query.expressions) {
   // 	params.push(`expressions=${encodeURI(JSON.stringify(view.query.expressions))}`)
@@ -208,7 +212,7 @@ const createPostContentRequest = (state, payload) => {
 const createContentRequest = (state, payload) => {
   const params = createPostContentRequest(state, payload);
   return Object.keys(params)
-    .filter((key) => ['string', 'number'].includes(typeof params[key]))
+    .filter((key) => ['string', 'number', 'boolean'].includes(typeof params[key]))
     .map((key) => `${key}=${encodeURIComponent(params[key])}`).join('&');
 };
 
@@ -225,9 +229,8 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
   }
 
   const { view } = module;
-
-  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path)) {
-    return dispatch(REQUEST_API, {
+  if (payload.isExperimentalAPI && ['users', 'devices'].includes(path) && view.query.search !== null) {
+    return await dispatch(REQUEST_API, {
       rule: `/graphql/search/${path}?term=${view.query.search}&limit=${payload.limit}&offset=${payload.skip}`,
       type: UPDATE_DATA_CONTENT,
       payload,

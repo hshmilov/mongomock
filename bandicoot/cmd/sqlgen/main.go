@@ -27,7 +27,7 @@ func mutateHook(b *modelgen.ModelBuild) *modelgen.ModelBuild {
 
 // TODO: make this get argument of input output and gqlgen yml
 func main() {
-	augmentors.Generate("../../api/schema/", "../../api/generated/augmented_schema.graphql",
+	augmentors.Generate("../../api/schema", "../../api/generated/augmented_schema.graphql",
 		[]augmentors.Augmenter{augmentors.Pagination{}, augmentors.Filters{}, augmentors.Ordering{}, augmentors.Aggregation{}})
 
 	cfg, err := config.LoadConfig("../../pkg/gql/gqlgen.yml")

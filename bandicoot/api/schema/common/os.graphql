@@ -37,5 +37,5 @@ type OperatingSystem  @generateInputs(where: "operating_system_bool_exp", orderB
     major: Int
     minor: Int
     build: String
-    RawName: String
+    rawName: String
 }

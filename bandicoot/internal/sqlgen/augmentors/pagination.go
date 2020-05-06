@@ -17,6 +17,9 @@ func (p Pagination) Field(s *ast.Schema, d *ast.FieldDefinition, _ *ast.Definiti
 	if !def.IsCompositeType() {
 		return nil
 	}
+	if sqlGenSkip(d) {
+		return nil
+	}
 	d.Arguments = append(d.Arguments, &ast.ArgumentDefinition{
 		Description:  "limit the number of rows returned.",
 		Name:         sqlgen.LimitClause,

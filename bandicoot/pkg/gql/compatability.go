@@ -27,6 +27,7 @@ var mappingConversions = map[string]string{
 	"ipAddrs":        "ips",
 	"tags":           "label_details",
 	"id":             "internal_axon_id",
+	"admin": 		  "is_admin",
 }
 
 var pathFolding = map[string]string{

@@ -3,6 +3,7 @@ package augmentors
 import (
 	"bandicoot/internal/sqlgen"
 	"fmt"
+	"github.com/spf13/cast"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -19,19 +20,6 @@ const (
 	typeIP           = "IP"
 	typeMacAddr      = "Mac"
 )
-
-// GetNamedType returns the name from an ast.FieldDefinition, if the definition is an array
-// returns the inner element name
-func getNamedType(f *ast.FieldDefinition) string {
-
-	if f.Type.NamedType != "" {
-		return f.Type.NamedType
-	}
-	if f.Type.Elem == nil {
-		return ""
-	}
-	return f.Type.Elem.NamedType
-}
 
 type typeConfig struct {
 	Where     string
@@ -70,6 +58,20 @@ func newTypeConfig(t *ast.Definition) (*typeConfig, error) {
 		Where:   whereName.(string),
 		OrderBy: orderByName.(string),
 	}, nil
+}
+
+// sqlGenSkip verifies if fields needs to be skipped based on given directive in schema
+func sqlGenSkip(f *ast.FieldDefinition) bool {
+	d := f.Directives.ForName(sqlgen.DirectiveSQLGen)
+	if d == nil {
+		return false
+	}
+	a := d.Arguments.ForName("skip")
+	if a == nil {
+		return false
+	}
+	val, _ := a.Value.Value(nil)
+	return cast.ToBool(val)
 }
 
 type Augmenter interface {

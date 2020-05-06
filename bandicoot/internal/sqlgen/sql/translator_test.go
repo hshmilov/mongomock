@@ -40,7 +40,7 @@ func TestTranslator_Translate(t *testing.T) {
 		op := q.Operations.ForName("")
 		field := op.SelectionSet[0].(*ast.Field)
 		r, _ := translator.Translate(field)
-		assert.Equal(t, r.Query, tc.wantQuery)
+		assert.Equal(t, r.Query, tc.wantQuery, tc.query)
 		assert.EqualValues(t, r.Params, tc.wantParams)
 	}
 }

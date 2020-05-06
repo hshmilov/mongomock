@@ -51,6 +51,7 @@ type DirectiveRoot struct {
 	GenerateInputs func(ctx context.Context, obj interface{}, next graphql.Resolver, where *string, orderBy *string) (res interface{}, err error)
 	Jsonpath       func(ctx context.Context, obj interface{}, next graphql.Resolver, name *string, depends []*string) (res interface{}, err error)
 	Relation       func(ctx context.Context, obj interface{}, next graphql.Resolver, name string, fkName []string, relationFkName []string, relType string, manyToManyTableName *string, joinOn []string) (res interface{}, err error)
+	Sqlgen         func(ctx context.Context, obj interface{}, next graphql.Resolver, skip bool) (res interface{}, err error)
 	ViewFunction   func(ctx context.Context, obj interface{}, next graphql.Resolver, name *string, arguments []*string) (res interface{}, err error)
 }
 
@@ -279,6 +280,14 @@ type ComplexityRoot struct {
 		MacAddr  func(childComplexity int) int
 	}
 
+	ObjectFilter struct {
+		Description func(childComplexity int) int
+		DisplayName func(childComplexity int) int
+		Filters     func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Type        func(childComplexity int) int
+	}
+
 	OperatingSystem struct {
 		Architecture  func(childComplexity int) int
 		Build         func(childComplexity int) int
@@ -294,6 +303,14 @@ type ComplexityRoot struct {
 		Type          func(childComplexity int) int
 	}
 
+	Operator struct {
+		Description   func(childComplexity int) int
+		DisplayName   func(childComplexity int) int
+		FormatDisplay func(childComplexity int) int
+		Name          func(childComplexity int) int
+		Type          func(childComplexity int) int
+	}
+
 	Query struct {
 		AdapterDevices          func(childComplexity int, limit *int, offset *int, where *AdapterDeviceBoolExp, orderBy []AdapterDeviceOrderBy) int
 		AdapterDevicesAggregate func(childComplexity int, groupBy []AdapterDevicesAggregateColumns, distinctOn []AdapterDevicesAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *AdapterDeviceBoolExp) int
@@ -303,6 +320,15 @@ type ComplexityRoot struct {
 		DevicesAggregate        func(childComplexity int, groupBy []DevicesAggregateColumns, distinctOn []DevicesAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *DeviceBoolExp) int
 		Users                   func(childComplexity int, limit *int, offset *int, where *UserBoolExp, orderBy []UserOrderBy) int
 		UsersAggregate          func(childComplexity int, groupBy []UsersAggregateColumns, distinctOn []UsersAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *UserBoolExp) int
+		WizardFilters           func(childComplexity int, typeArg string) int
+	}
+
+	ScalarFilter struct {
+		Description func(childComplexity int) int
+		DisplayName func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Operators   func(childComplexity int) int
+		Type        func(childComplexity int) int
 	}
 
 	Storage struct {
@@ -319,6 +345,14 @@ type ComplexityRoot struct {
 		Creator func(childComplexity int) int
 		Level   func(childComplexity int) int
 		Name    func(childComplexity int) int
+	}
+
+	UnionFilter struct {
+		Description func(childComplexity int) int
+		DisplayName func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Objects     func(childComplexity int) int
+		Type        func(childComplexity int) int
 	}
 
 	User struct {
@@ -508,6 +542,7 @@ type QueryResolver interface {
 	Devices(ctx context.Context, limit *int, offset *int, where *DeviceBoolExp, orderBy []DeviceOrderBy) ([]Device, error)
 	AdapterUsers(ctx context.Context, limit *int, offset *int, where *AdapterUserBoolExp, orderBy []AdapterUserOrderBy) ([]AdapterUser, error)
 	Users(ctx context.Context, limit *int, offset *int, where *UserBoolExp, orderBy []UserOrderBy) ([]User, error)
+	WizardFilters(ctx context.Context, typeArg string) (*ObjectFilter, error)
 	AdapterDevicesAggregate(ctx context.Context, groupBy []AdapterDevicesAggregateColumns, distinctOn []AdapterDevicesAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *AdapterDeviceBoolExp) ([]AdapterDevicesAggregate, error)
 	DevicesAggregate(ctx context.Context, groupBy []DevicesAggregateColumns, distinctOn []DevicesAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *DeviceBoolExp) ([]DevicesAggregate, error)
 	AdapterUsersAggregate(ctx context.Context, groupBy []AdapterUsersAggregateColumns, distinctOn []AdapterUsersAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *AdapterUserBoolExp) ([]AdapterUsersAggregate, error)
@@ -1914,6 +1949,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.NetworkInterface.MacAddr(childComplexity), true
 
+	case "ObjectFilter.description":
+		if e.complexity.ObjectFilter.Description == nil {
+			break
+		}
+
+		return e.complexity.ObjectFilter.Description(childComplexity), true
+
+	case "ObjectFilter.displayName":
+		if e.complexity.ObjectFilter.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.ObjectFilter.DisplayName(childComplexity), true
+
+	case "ObjectFilter.filters":
+		if e.complexity.ObjectFilter.Filters == nil {
+			break
+		}
+
+		return e.complexity.ObjectFilter.Filters(childComplexity), true
+
+	case "ObjectFilter.name":
+		if e.complexity.ObjectFilter.Name == nil {
+			break
+		}
+
+		return e.complexity.ObjectFilter.Name(childComplexity), true
+
+	case "ObjectFilter.type":
+		if e.complexity.ObjectFilter.Type == nil {
+			break
+		}
+
+		return e.complexity.ObjectFilter.Type(childComplexity), true
+
 	case "OperatingSystem.architecture":
 		if e.complexity.OperatingSystem.Architecture == nil {
 			break
@@ -1997,6 +2067,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.OperatingSystem.Type(childComplexity), true
+
+	case "Operator.description":
+		if e.complexity.Operator.Description == nil {
+			break
+		}
+
+		return e.complexity.Operator.Description(childComplexity), true
+
+	case "Operator.displayName":
+		if e.complexity.Operator.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.Operator.DisplayName(childComplexity), true
+
+	case "Operator.formatDisplay":
+		if e.complexity.Operator.FormatDisplay == nil {
+			break
+		}
+
+		return e.complexity.Operator.FormatDisplay(childComplexity), true
+
+	case "Operator.name":
+		if e.complexity.Operator.Name == nil {
+			break
+		}
+
+		return e.complexity.Operator.Name(childComplexity), true
+
+	case "Operator.type":
+		if e.complexity.Operator.Type == nil {
+			break
+		}
+
+		return e.complexity.Operator.Type(childComplexity), true
 
 	case "Query.adapterDevices":
 		if e.complexity.Query.AdapterDevices == nil {
@@ -2094,6 +2199,53 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.UsersAggregate(childComplexity, args["groupBy"].([]UsersAggregateColumns), args["distinctOn"].([]UsersAggregateColumns), args["orderBy"].([]AggregateOrdering), args["limit"].(*int), args["offset"].(*int), args["where"].(*UserBoolExp)), true
 
+	case "Query._wizardFilters":
+		if e.complexity.Query.WizardFilters == nil {
+			break
+		}
+
+		args, err := ec.field_Query__wizardFilters_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.WizardFilters(childComplexity, args["type"].(string)), true
+
+	case "ScalarFilter.description":
+		if e.complexity.ScalarFilter.Description == nil {
+			break
+		}
+
+		return e.complexity.ScalarFilter.Description(childComplexity), true
+
+	case "ScalarFilter.displayName":
+		if e.complexity.ScalarFilter.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.ScalarFilter.DisplayName(childComplexity), true
+
+	case "ScalarFilter.name":
+		if e.complexity.ScalarFilter.Name == nil {
+			break
+		}
+
+		return e.complexity.ScalarFilter.Name(childComplexity), true
+
+	case "ScalarFilter.operators":
+		if e.complexity.ScalarFilter.Operators == nil {
+			break
+		}
+
+		return e.complexity.ScalarFilter.Operators(childComplexity), true
+
+	case "ScalarFilter.type":
+		if e.complexity.ScalarFilter.Type == nil {
+			break
+		}
+
+		return e.complexity.ScalarFilter.Type(childComplexity), true
+
 	case "Storage.description":
 		if e.complexity.Storage.Description == nil {
 			break
@@ -2163,6 +2315,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Tag.Name(childComplexity), true
+
+	case "UnionFilter.description":
+		if e.complexity.UnionFilter.Description == nil {
+			break
+		}
+
+		return e.complexity.UnionFilter.Description(childComplexity), true
+
+	case "UnionFilter.displayName":
+		if e.complexity.UnionFilter.DisplayName == nil {
+			break
+		}
+
+		return e.complexity.UnionFilter.DisplayName(childComplexity), true
+
+	case "UnionFilter.name":
+		if e.complexity.UnionFilter.Name == nil {
+			break
+		}
+
+		return e.complexity.UnionFilter.Name(childComplexity), true
+
+	case "UnionFilter.objects":
+		if e.complexity.UnionFilter.Objects == nil {
+			break
+		}
+
+		return e.complexity.UnionFilter.Objects(childComplexity), true
+
+	case "UnionFilter.type":
+		if e.complexity.UnionFilter.Type == nil {
+			break
+		}
+
+		return e.complexity.UnionFilter.Type(childComplexity), true
 
 	case "User.adapterCount":
 		if e.complexity.User.AdapterCount == nil {
@@ -3342,16 +3529,38 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	&ast.Source{Name: "../../api/generated/augmented_schema.graphql", Input: `# Code generated by go generate; DO NOT EDIT THIS FILE. 
-# This file was generated at 2020-03-11T10:47:43+02:00
+# This file was generated at 2020-04-19T22:48:14+03:00
 directive @generateInputs(where: String, orderBy: String) on OBJECT | UNION
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
 directive @jsonpath(name: String, depends: [String]) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 directive @relation(name: String!, fkName: [String!]!, relationFkName: [String!]!, relType: RelationType!, manyToManyTableName: String, joinOn: [String!]) on FIELD_DEFINITION
+directive @sqlgen(skip: Boolean!) on FIELD_DEFINITION
 directive @viewFunction(name: String, arguments: [String]) on FIELD_DEFINITION
 enum AccessType {
 	ALLOW
 	DENY
+}
+"""
+Enum filter expression for AccessType
+"""
+input AccessTypeComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: AccessType
+	"""
+	neq comparison operator
+	"""
+	neq: AccessType
+	"""
+	in comparison operator
+	"""
+	in: [AccessType]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [AccessType]
 }
 type ActiveDirectoryData {
 	"""
@@ -3489,6 +3698,9 @@ type Adapter @generateInputs(where: "adapter_bool_exp", orderBy: "adapter_order_
 	properties: [String]
 }
 union AdapterData @generateInputs(where: "adapter_data_bool_exp", orderBy: "adapter_data_order_by") = ActiveDirectoryData | CylanceData | CrowdStrikeData
+"""
+Adapter device is a single enitity returned from that adapter
+"""
 type AdapterDevice @generateInputs(where: "adapter_device_bool_exp", orderBy: "adapter_device_order_by") {
 	"""
 	Unique id of adapter device
@@ -3962,6 +4174,27 @@ enum AdapterType @goModel(model: "bandicoot/pkg/domain.AdapterType") {
 	ZABBIX
 	ZSCALER
 }
+"""
+Enum filter expression for AdapterType
+"""
+input AdapterTypeComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: AdapterType
+	"""
+	neq comparison operator
+	"""
+	neq: AdapterType
+	"""
+	in comparison operator
+	"""
+	in: [AdapterType]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [AdapterType]
+}
 type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapter_user_order_by") {
 	"""
 	Unique id of adapter device
@@ -4059,6 +4292,27 @@ enum AdminType {
 	ADMIN_USER
 	GROUP_MEMBERSHIP
 }
+"""
+Enum filter expression for AdminType
+"""
+input AdminTypeComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: AdminType
+	"""
+	neq comparison operator
+	"""
+	neq: AdminType
+	"""
+	in comparison operator
+	"""
+	in: [AdminType]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [AdminType]
+}
 interface Aggregate {
 	group: [String!]!
 	distinct: [String!]!
@@ -4080,6 +4334,7 @@ enum AggregateOrdering {
 	max_ASC
 	max_DESC
 }
+scalar Any
 enum Architecture {
 	X86
 	X64
@@ -4088,6 +4343,32 @@ enum Architecture {
 	ARM
 	POWER_PC
 	IA64
+}
+"""
+Enum filter expression for Architecture
+"""
+input ArchitectureComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: Architecture
+	"""
+	neq comparison operator
+	"""
+	neq: Architecture
+	"""
+	in comparison operator
+	"""
+	in: [Architecture]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [Architecture]
+}
+input BooleanComparator {
+	exists: Boolean
+	eq: Boolean
+	neq: Boolean
 }
 """
 IPv4 and IPv6 networks
@@ -4163,6 +4444,27 @@ type CylanceData {
 enum CylanceDeviceState {
 	ONLINE
 	OFFLINE
+}
+"""
+Enum filter expression for CylanceDeviceState
+"""
+input CylanceDeviceStateComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: CylanceDeviceState
+	"""
+	neq comparison operator
+	"""
+	neq: CylanceDeviceState
+	"""
+	in comparison operator
+	"""
+	in: [CylanceDeviceState]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [CylanceDeviceState]
 }
 """
 Device aggregates one or more adapter device that were correlated
@@ -4307,11 +4609,53 @@ enum Direction {
 	EGRESS
 }
 """
+Enum filter expression for Direction
+"""
+input DirectionComparator {
+	"""
+	eq comparison operator
+	"""
+	eq: Direction
+	"""
+	neq comparison operator
+	"""
+	neq: Direction
+	"""
+	in comparison operator
+	"""
+	in: [Direction]
+	"""
+	not_in comparison operator
+	"""
+	not_in: [Direction]
+}
+"""
 Unix Time (also known as Epoch time) is a system for describing a point in time.
 It is the number of seconds that have elapsed since the Unix epoch, that is the time 00:00:00 UTC on 1 January 1970,
 minus leap seconds.
 """
 scalar Epoch
+input EpochArrayComparator {
+	exists: Boolean
+	eq: [Epoch]
+	neq: [Epoch]
+}
+input EpochComparator {
+	exists: Boolean
+	eq: Epoch
+	neq: Epoch
+	lte: Epoch
+	lt: Epoch
+	gte: Epoch
+	gt: Epoch
+	days: Int
+}
+interface Filter {
+	name: String!
+	description: String
+	type: String!
+	displayName: String!
+}
 type FirewallRule @generateInputs(where: "firewall_rule_bool_exp", orderBy: "firewall_rule_order_by") {
 	name: String
 	source: String
@@ -4321,6 +4665,24 @@ type FirewallRule @generateInputs(where: "firewall_rule_bool_exp", orderBy: "fir
 	protocol: String
 	srcPort: Int
 	dstPort: Int
+}
+input FloatArrayComparator {
+	exists: Boolean
+	eq: [Float]
+	neq: [Float]
+	contains: [Float]
+	contained_by: [Float]
+	overlap: [Float]
+	size: Int
+}
+input FloatComparator {
+	exists: Boolean
+	eq: Float
+	neq: Float
+	lte: Float
+	lt: Float
+	gte: Float
+	gt: Float
 }
 type GCETagsAggregate {
 	group: [String!]!
@@ -4419,6 +4781,22 @@ type GoogleCloudData {
 	where: gce_tags_bool_exp): [GCETagsAggregate!]
 }
 scalar IP
+input IPArrayComparator {
+	exists: Boolean
+	eq: [IP]
+	neq: [IP]
+	contains: [IP]
+	contained_by: [IP]
+	overlap: [IP]
+	size: Int
+	in_subnet: CIDR
+	ip_family: IPFamily
+}
+input IPComparator {
+	exists: Boolean
+	eq: IP
+	neq: IP
+}
 enum IPFamily {
 	V4
 	V6
@@ -4443,21 +4821,65 @@ type InstalledSoftware @generateInputs(where: "installed_software_bool_exp", ord
 	swLicense: String
 	path: String
 }
+input IntArrayComparator {
+	exists: Boolean
+	eq: [Int]
+	neq: [Int]
+	contains: [Int]
+	contained_by: [Int]
+	overlap: [Int]
+	size: Int
+}
+input IntComparator {
+	exists: Boolean
+	eq: Int
+	neq: Int
+	lte: Int
+	lt: Int
+	gte: Int
+	gt: Int
+	in: [Int]
+	not_in: [Int]
+}
 """
 A media access control address (MAC address) is a unique identifier assigned to a network interface controller (NIC)
 for use as a network address in communications within a network segment.
 """
 scalar Mac
+input MacArrayComparator {
+	exists: Boolean
+	eq: [Mac]
+	neq: [Mac]
+	contains: [Mac]
+	contained_by: [Mac]
+	overlap: [Mac]
+	size: Mac
+}
+input MacComparator {
+	exists: Boolean
+	eq: Mac
+	neq: Mac
+}
 """
 JavaScript Object Notation (JSON) is an open-standard file format or data interchange format
 that uses human-readable text to transmit data objects consisting of attribute–value pairs and array data types
 (or any other serializable value)
 """
 scalar Map
+"""
+Network interface is a system's interface between two pieces of equipment or protocol layers in a computer network.
+"""
 type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "networkInterface_order_by") {
 	deviceId: UUID
 	macAddr: Mac
 	ipAddrs: [IP!]
+}
+type ObjectFilter implements Filter {
+	name: String!
+	displayName: String!
+	type: String!
+	description: String
+	filters: [Filter] @sqlgen(skip: true)
 }
 """
 Operating System is the system installed on an adapter device
@@ -4475,6 +4897,13 @@ type OperatingSystem @generateInputs(where: "operating_system_bool_exp", orderBy
 	minor: Int
 	build: String
 	RawName: String
+}
+type Operator implements Filter {
+	name: String!
+	type: String!
+	displayName: String!
+	description: String
+	formatDisplay: String
 }
 enum OsTypes {
 	WINDOWS
@@ -4549,6 +4978,7 @@ type Query {
 	sort the rows by one or more columns
 	"""
 	orderBy: [user_order_by!]): [User!]!
+	_wizardFilters(type: String!): ObjectFilter @sqlgen(skip: true)
 	"""
 	Returns aggregate of adapterDevices
 	"""
@@ -4643,6 +5073,13 @@ enum RelationType {
 	ONE_TO_MANY
 	MANY_TO_MANY
 }
+type ScalarFilter implements Filter {
+	name: String!
+	displayName: String!
+	description: String
+	type: String!
+	operators: [Operator]! @sqlgen(skip: true)
+}
 type Storage {
 	deviceId: UUID!
 	"""
@@ -4670,6 +5107,30 @@ type Storage {
 	"""
 	description: String
 }
+input StringArrayComparator {
+	exists: Boolean
+	eq: [String]
+	neq: [String]
+	contains: [String]
+	contained_by: [String]
+	overlap: [String]
+	no_overlap: [String]
+	size: Int
+	contains_regex: String
+}
+input StringComparator {
+	exists: Boolean
+	eq: String
+	neq: String
+	in: [String]
+	not_in: [String]
+	like: String
+	ilike: String
+	not_like: String
+	not_ilike: String
+	suffix: String
+	prefix: String
+}
 type Tag @generateInputs(where: "tag_bool_exp", orderBy: "tag_order_by") {
 	name: String!
 	creator: String!
@@ -4677,6 +5138,29 @@ type Tag @generateInputs(where: "tag_bool_exp", orderBy: "tag_order_by") {
 }
 scalar Time
 scalar UUID
+input UUIDArrayComparator {
+	exists: Boolean
+	eq: [UUID]
+	neq: [UUID]
+	contains: [UUID]
+	contained_by: [UUID]
+	overlap: [UUID]
+	size: Int
+}
+input UUIDComparator {
+	exists: Boolean
+	eq: UUID
+	neq: UUID
+	in: [UUID]
+	not_in: [UUID]
+}
+type UnionFilter implements Filter {
+	name: String!
+	displayName: String!
+	type: String!
+	description: String
+	objects: [ObjectFilter] @sqlgen(skip: true)
+}
 type User @generateInputs(where: "user_bool_exp", orderBy: "user_order_by") {
 	id: UUID!
 	fetchCycle: Int!
@@ -5055,7 +5539,7 @@ type adapterUsersAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: adapter_user_bool_exp): [AdapterUser] @relation(name: "adapter_users", fkName: ["id","fetch_cycle"], relationFkName: ["user_id","fetch_cycle"], relType: ONE_TO_MANY)
+	where: adapter_user_bool_exp): [AdapterUser]
 }
 enum adapterUsers_aggregate_avg_columns {
 	"""
@@ -5216,89 +5700,17 @@ Boolean filter expression for Adapter
 """
 input adapter_bool_exp {
 	"""
-	eq comparison operator
+	filter by id
 	"""
-	id_eq: AdapterType
+	id: AdapterTypeComparator
 	"""
-	neq comparison operator
+	filter by name
 	"""
-	id_neq: AdapterType
+	name: StringComparator
 	"""
-	in comparison operator
+	filter by properties
 	"""
-	id_in: [AdapterType]
-	"""
-	not_in comparison operator
-	"""
-	id_not_in: [AdapterType]
-	"""
-	exists comparison operator
-	"""
-	name_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	name_not: String
-	"""
-	eq comparison operator
-	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	contains comparison operator
-	"""
-	properties_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	properties_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	properties_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	properties_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	properties_contains_regex: String
+	properties: StringArrayComparator
 	AND: [adapter_bool_exp!]
 	OR: [adapter_bool_exp!]
 	NOT: [adapter_bool_exp!]
@@ -5308,1561 +5720,141 @@ Boolean filter expression for AdapterData
 """
 input adapter_data_bool_exp {
 	"""
-	exists comparison operator
+	filter by adCn
 	"""
-	adCn_exists: Boolean
+	adCn: StringComparator
 	"""
-	not comparison operator
+	filter by adSid
 	"""
-	adCn_not: String
+	adSid: StringComparator
 	"""
-	eq comparison operator
+	filter by adGuid
 	"""
-	adCn_eq: String
+	adGuid: StringComparator
 	"""
-	neq comparison operator
+	filter by adName
 	"""
-	adCn_neq: String
+	adName: StringComparator
 	"""
-	in comparison operator
+	filter by adSAMAccountName
 	"""
-	adCn_in: [String]
+	adSAMAccountName: StringComparator
 	"""
-	not_in comparison operator
+	filter by adUserPrincipalName
 	"""
-	adCn_not_in: [String]
+	adUserPrincipalName: StringComparator
 	"""
-	like comparison operator
+	filter by adDisplayName
 	"""
-	adCn_like: String
+	adDisplayName: StringComparator
 	"""
-	not_like comparison operator
+	filter by adDistinguishedName
 	"""
-	adCn_not_like: String
+	adDistinguishedName: StringComparator
 	"""
-	ilike comparison operator
+	filter by adCanonicalName
 	"""
-	adCn_ilike: String
+	adCanonicalName: StringComparator
 	"""
-	not_ilike comparison operator
+	filter by adAccountExpires
 	"""
-	adCn_not_ilike: String
+	adAccountExpires: EpochComparator
 	"""
-	suffix comparison operator
+	filter by adObjectClass
 	"""
-	adCn_suffix: String
+	adObjectClass: StringArrayComparator
 	"""
-	prefix comparison operator
+	filter by adObjectCategory
 	"""
-	adCn_prefix: String
+	adObjectCategory: StringComparator
 	"""
-	exists comparison operator
+	filter by adOrganizationalUnit
 	"""
-	adSid_exists: Boolean
+	adOrganizationalUnit: StringArrayComparator
 	"""
-	not comparison operator
+	filter by ad_bad_pwd_count
 	"""
-	adSid_not: String
+	ad_bad_pwd_count: IntComparator
 	"""
-	eq comparison operator
+	filter by adManagedBy
 	"""
-	adSid_eq: String
+	adManagedBy: StringComparator
 	"""
-	neq comparison operator
+	filter by adPrimaryGroupId
 	"""
-	adSid_neq: String
+	adPrimaryGroupId: IntComparator
 	"""
-	in comparison operator
+	filter by adPrimaryGroupDn
 	"""
-	adSid_in: [String]
+	adPrimaryGroupDn: StringComparator
 	"""
-	not_in comparison operator
+	filter by adMemberOf
 	"""
-	adSid_not_in: [String]
+	adMemberOf: StringArrayComparator
 	"""
-	like comparison operator
+	filter by adMemberOfFull
 	"""
-	adSid_like: String
+	adMemberOfFull: StringArrayComparator
 	"""
-	not_like comparison operator
+	filter by adUsnChanged
 	"""
-	adSid_not_like: String
+	adUsnChanged: IntComparator
 	"""
-	ilike comparison operator
+	filter by adUsnCreated
 	"""
-	adSid_ilike: String
+	adUsnCreated: IntComparator
 	"""
-	not_ilike comparison operator
+	filter by adIsCriticalSystemObject
 	"""
-	adSid_not_ilike: String
+	adIsCriticalSystemObject: BooleanComparator
 	"""
-	suffix comparison operator
+	filter by adMsdsAllowedToDelegateTo
 	"""
-	adSid_suffix: String
+	adMsdsAllowedToDelegateTo: StringArrayComparator
 	"""
-	prefix comparison operator
+	filter by adPwdMustChange
 	"""
-	adSid_prefix: String
+	adPwdMustChange: BooleanComparator
 	"""
-	exists comparison operator
+	filter by adMsdsResultantPso
 	"""
-	adGuid_exists: Boolean
+	adMsdsResultantPso: StringComparator
 	"""
-	not comparison operator
+	filter by isSafe
 	"""
-	adGuid_not: String
+	isSafe: StringComparator
 	"""
-	eq comparison operator
+	filter by deviceState
 	"""
-	adGuid_eq: String
+	deviceState: CylanceDeviceStateComparator
 	"""
-	neq comparison operator
+	filter by policyId
 	"""
-	adGuid_neq: String
+	policyId: StringComparator
 	"""
-	in comparison operator
+	filter by policyName
 	"""
-	adGuid_in: [String]
+	policyName: StringComparator
 	"""
-	not_in comparison operator
+	filter by policiesDetails
 	"""
-	adGuid_not_in: [String]
+	policiesDetails: StringArrayComparator
 	"""
-	like comparison operator
+	filter by tenantTag
 	"""
-	adGuid_like: String
+	tenantTag: StringComparator
 	"""
-	not_like comparison operator
+	filter by zoneNames
 	"""
-	adGuid_not_like: String
+	zoneNames: StringArrayComparator
 	"""
-	ilike comparison operator
+	filter by agentVersion
 	"""
-	adGuid_ilike: String
+	agentVersion: StringComparator
 	"""
-	not_ilike comparison operator
+	filter by externalIp
 	"""
-	adGuid_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adGuid_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adGuid_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adName_not: String
-	"""
-	eq comparison operator
-	"""
-	adName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adName_neq: String
-	"""
-	in comparison operator
-	"""
-	adName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adSAMAccountName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adSAMAccountName_not: String
-	"""
-	eq comparison operator
-	"""
-	adSAMAccountName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adSAMAccountName_neq: String
-	"""
-	in comparison operator
-	"""
-	adSAMAccountName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adSAMAccountName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adSAMAccountName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adSAMAccountName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adSAMAccountName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adSAMAccountName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adSAMAccountName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adSAMAccountName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adUserPrincipalName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adUserPrincipalName_not: String
-	"""
-	eq comparison operator
-	"""
-	adUserPrincipalName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adUserPrincipalName_neq: String
-	"""
-	in comparison operator
-	"""
-	adUserPrincipalName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adUserPrincipalName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adUserPrincipalName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adUserPrincipalName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adUserPrincipalName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adUserPrincipalName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adUserPrincipalName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adUserPrincipalName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adDisplayName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adDisplayName_not: String
-	"""
-	eq comparison operator
-	"""
-	adDisplayName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adDisplayName_neq: String
-	"""
-	in comparison operator
-	"""
-	adDisplayName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adDisplayName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adDisplayName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adDisplayName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adDisplayName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adDisplayName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adDisplayName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adDisplayName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adDistinguishedName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adDistinguishedName_not: String
-	"""
-	eq comparison operator
-	"""
-	adDistinguishedName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adDistinguishedName_neq: String
-	"""
-	in comparison operator
-	"""
-	adDistinguishedName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adDistinguishedName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adDistinguishedName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adDistinguishedName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adDistinguishedName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adDistinguishedName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adDistinguishedName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adDistinguishedName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adCanonicalName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adCanonicalName_not: String
-	"""
-	eq comparison operator
-	"""
-	adCanonicalName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adCanonicalName_neq: String
-	"""
-	in comparison operator
-	"""
-	adCanonicalName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adCanonicalName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adCanonicalName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adCanonicalName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adCanonicalName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adCanonicalName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adCanonicalName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adCanonicalName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adAccountExpires_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adAccountExpires_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	adAccountExpires_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	adAccountExpires_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	adAccountExpires_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	adAccountExpires_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	adAccountExpires_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	adAccountExpires_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	adAccountExpires_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	adAccountExpires_days: Int
-	"""
-	contains comparison operator
-	"""
-	adObjectClass_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adObjectClass_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adObjectClass_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adObjectClass_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adObjectClass_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	adObjectCategory_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adObjectCategory_not: String
-	"""
-	eq comparison operator
-	"""
-	adObjectCategory_eq: String
-	"""
-	neq comparison operator
-	"""
-	adObjectCategory_neq: String
-	"""
-	in comparison operator
-	"""
-	adObjectCategory_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adObjectCategory_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adObjectCategory_like: String
-	"""
-	not_like comparison operator
-	"""
-	adObjectCategory_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adObjectCategory_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adObjectCategory_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adObjectCategory_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adObjectCategory_prefix: String
-	"""
-	contains comparison operator
-	"""
-	adOrganizationalUnit_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adOrganizationalUnit_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adOrganizationalUnit_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adOrganizationalUnit_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adOrganizationalUnit_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	adLastLogoff_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adLastLogoff_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adLastLogoff_neq: Time
-	"""
-	in comparison operator
-	"""
-	adLastLogoff_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adLastLogoff_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adLastLogoff_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adLastLogoff_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adLastLogoff_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adLastLogoff_lte: Time
-	"""
-	days comparison operator
-	"""
-	adLastLogoff_days: Int
-	"""
-	exists comparison operator
-	"""
-	adLastLogon_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adLastLogon_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adLastLogon_neq: Time
-	"""
-	in comparison operator
-	"""
-	adLastLogon_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adLastLogon_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adLastLogon_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adLastLogon_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adLastLogon_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adLastLogon_lte: Time
-	"""
-	days comparison operator
-	"""
-	adLastLogon_days: Int
-	"""
-	exists comparison operator
-	"""
-	adLastLogonTimestamp_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adLastLogonTimestamp_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adLastLogonTimestamp_neq: Time
-	"""
-	in comparison operator
-	"""
-	adLastLogonTimestamp_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adLastLogonTimestamp_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adLastLogonTimestamp_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adLastLogonTimestamp_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adLastLogonTimestamp_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adLastLogonTimestamp_lte: Time
-	"""
-	days comparison operator
-	"""
-	adLastLogonTimestamp_days: Int
-	"""
-	exists comparison operator
-	"""
-	adBadPasswordTime_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adBadPasswordTime_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adBadPasswordTime_neq: Time
-	"""
-	in comparison operator
-	"""
-	adBadPasswordTime_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adBadPasswordTime_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adBadPasswordTime_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adBadPasswordTime_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adBadPasswordTime_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adBadPasswordTime_lte: Time
-	"""
-	days comparison operator
-	"""
-	adBadPasswordTime_days: Int
-	"""
-	exists comparison operator
-	"""
-	ad_bad_pwd_count_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	ad_bad_pwd_count_eq: Int
-	"""
-	neq comparison operator
-	"""
-	ad_bad_pwd_count_neq: Int
-	"""
-	in comparison operator
-	"""
-	ad_bad_pwd_count_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	ad_bad_pwd_count_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	ad_bad_pwd_count_gt: Int
-	"""
-	gte comparison operator
-	"""
-	ad_bad_pwd_count_gte: Int
-	"""
-	lt comparison operator
-	"""
-	ad_bad_pwd_count_lt: Int
-	"""
-	lte comparison operator
-	"""
-	ad_bad_pwd_count_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adManagedBy_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adManagedBy_not: String
-	"""
-	eq comparison operator
-	"""
-	adManagedBy_eq: String
-	"""
-	neq comparison operator
-	"""
-	adManagedBy_neq: String
-	"""
-	in comparison operator
-	"""
-	adManagedBy_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adManagedBy_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adManagedBy_like: String
-	"""
-	not_like comparison operator
-	"""
-	adManagedBy_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adManagedBy_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adManagedBy_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adManagedBy_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adManagedBy_prefix: String
-	"""
-	exists comparison operator
-	"""
-	adPasswordLastSet_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adPasswordLastSet_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adPasswordLastSet_neq: Time
-	"""
-	in comparison operator
-	"""
-	adPasswordLastSet_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adPasswordLastSet_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adPasswordLastSet_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adPasswordLastSet_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adPasswordLastSet_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adPasswordLastSet_lte: Time
-	"""
-	days comparison operator
-	"""
-	adPasswordLastSet_days: Int
-	"""
-	exists comparison operator
-	"""
-	adPrimaryGroupId_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adPrimaryGroupId_eq: Int
-	"""
-	neq comparison operator
-	"""
-	adPrimaryGroupId_neq: Int
-	"""
-	in comparison operator
-	"""
-	adPrimaryGroupId_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	adPrimaryGroupId_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	adPrimaryGroupId_gt: Int
-	"""
-	gte comparison operator
-	"""
-	adPrimaryGroupId_gte: Int
-	"""
-	lt comparison operator
-	"""
-	adPrimaryGroupId_lt: Int
-	"""
-	lte comparison operator
-	"""
-	adPrimaryGroupId_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adPrimaryGroupDn_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adPrimaryGroupDn_not: String
-	"""
-	eq comparison operator
-	"""
-	adPrimaryGroupDn_eq: String
-	"""
-	neq comparison operator
-	"""
-	adPrimaryGroupDn_neq: String
-	"""
-	in comparison operator
-	"""
-	adPrimaryGroupDn_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adPrimaryGroupDn_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adPrimaryGroupDn_like: String
-	"""
-	not_like comparison operator
-	"""
-	adPrimaryGroupDn_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adPrimaryGroupDn_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adPrimaryGroupDn_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adPrimaryGroupDn_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adPrimaryGroupDn_prefix: String
-	"""
-	contains comparison operator
-	"""
-	adMemberOf_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adMemberOf_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adMemberOf_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adMemberOf_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adMemberOf_contains_regex: String
-	"""
-	contains comparison operator
-	"""
-	adMemberOfFull_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adMemberOfFull_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adMemberOfFull_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adMemberOfFull_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adMemberOfFull_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	adUsnChanged_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adUsnChanged_eq: Int
-	"""
-	neq comparison operator
-	"""
-	adUsnChanged_neq: Int
-	"""
-	in comparison operator
-	"""
-	adUsnChanged_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	adUsnChanged_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	adUsnChanged_gt: Int
-	"""
-	gte comparison operator
-	"""
-	adUsnChanged_gte: Int
-	"""
-	lt comparison operator
-	"""
-	adUsnChanged_lt: Int
-	"""
-	lte comparison operator
-	"""
-	adUsnChanged_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adUsnCreated_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adUsnCreated_eq: Int
-	"""
-	neq comparison operator
-	"""
-	adUsnCreated_neq: Int
-	"""
-	in comparison operator
-	"""
-	adUsnCreated_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	adUsnCreated_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	adUsnCreated_gt: Int
-	"""
-	gte comparison operator
-	"""
-	adUsnCreated_gte: Int
-	"""
-	lt comparison operator
-	"""
-	adUsnCreated_lt: Int
-	"""
-	lte comparison operator
-	"""
-	adUsnCreated_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adWhenChanged_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adWhenChanged_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adWhenChanged_neq: Time
-	"""
-	in comparison operator
-	"""
-	adWhenChanged_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adWhenChanged_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adWhenChanged_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adWhenChanged_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adWhenChanged_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adWhenChanged_lte: Time
-	"""
-	days comparison operator
-	"""
-	adWhenChanged_days: Int
-	"""
-	exists comparison operator
-	"""
-	adWhenCreated_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adWhenCreated_eq: Time
-	"""
-	neq comparison operator
-	"""
-	adWhenCreated_neq: Time
-	"""
-	in comparison operator
-	"""
-	adWhenCreated_in: [Time]
-	"""
-	not_in comparison operator
-	"""
-	adWhenCreated_not_in: [Time]
-	"""
-	gt comparison operator
-	"""
-	adWhenCreated_gt: Time
-	"""
-	gte comparison operator
-	"""
-	adWhenCreated_gte: Time
-	"""
-	lt comparison operator
-	"""
-	adWhenCreated_lt: Time
-	"""
-	lte comparison operator
-	"""
-	adWhenCreated_lte: Time
-	"""
-	days comparison operator
-	"""
-	adWhenCreated_days: Int
-	"""
-	exists comparison operator
-	"""
-	adIsCriticalSystemObject_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adIsCriticalSystemObject_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	adIsCriticalSystemObject_neq: Boolean
-	"""
-	contains comparison operator
-	"""
-	adMsdsAllowedToDelegateTo_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adMsdsAllowedToDelegateTo_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adMsdsAllowedToDelegateTo_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adMsdsAllowedToDelegateTo_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adMsdsAllowedToDelegateTo_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	adPwdMustChange_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adPwdMustChange_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	adPwdMustChange_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	adMsdsResultantPso_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	adMsdsResultantPso_not: String
-	"""
-	eq comparison operator
-	"""
-	adMsdsResultantPso_eq: String
-	"""
-	neq comparison operator
-	"""
-	adMsdsResultantPso_neq: String
-	"""
-	in comparison operator
-	"""
-	adMsdsResultantPso_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adMsdsResultantPso_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adMsdsResultantPso_like: String
-	"""
-	not_like comparison operator
-	"""
-	adMsdsResultantPso_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adMsdsResultantPso_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adMsdsResultantPso_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adMsdsResultantPso_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adMsdsResultantPso_prefix: String
-	"""
-	exists comparison operator
-	"""
-	isSafe_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	isSafe_not: String
-	"""
-	eq comparison operator
-	"""
-	isSafe_eq: String
-	"""
-	neq comparison operator
-	"""
-	isSafe_neq: String
-	"""
-	in comparison operator
-	"""
-	isSafe_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	isSafe_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	isSafe_like: String
-	"""
-	not_like comparison operator
-	"""
-	isSafe_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	isSafe_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	isSafe_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	isSafe_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	isSafe_prefix: String
-	"""
-	eq comparison operator
-	"""
-	deviceState_eq: CylanceDeviceState
-	"""
-	neq comparison operator
-	"""
-	deviceState_neq: CylanceDeviceState
-	"""
-	in comparison operator
-	"""
-	deviceState_in: [CylanceDeviceState]
-	"""
-	not_in comparison operator
-	"""
-	deviceState_not_in: [CylanceDeviceState]
-	"""
-	exists comparison operator
-	"""
-	policyId_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	policyId_not: String
-	"""
-	eq comparison operator
-	"""
-	policyId_eq: String
-	"""
-	neq comparison operator
-	"""
-	policyId_neq: String
-	"""
-	in comparison operator
-	"""
-	policyId_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	policyId_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	policyId_like: String
-	"""
-	not_like comparison operator
-	"""
-	policyId_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	policyId_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	policyId_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	policyId_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	policyId_prefix: String
-	"""
-	exists comparison operator
-	"""
-	policyName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	policyName_not: String
-	"""
-	eq comparison operator
-	"""
-	policyName_eq: String
-	"""
-	neq comparison operator
-	"""
-	policyName_neq: String
-	"""
-	in comparison operator
-	"""
-	policyName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	policyName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	policyName_like: String
-	"""
-	not_like comparison operator
-	"""
-	policyName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	policyName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	policyName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	policyName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	policyName_prefix: String
-	"""
-	contains comparison operator
-	"""
-	policiesDetails_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	policiesDetails_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	policiesDetails_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	policiesDetails_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	policiesDetails_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	tenantTag_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	tenantTag_not: String
-	"""
-	eq comparison operator
-	"""
-	tenantTag_eq: String
-	"""
-	neq comparison operator
-	"""
-	tenantTag_neq: String
-	"""
-	in comparison operator
-	"""
-	tenantTag_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	tenantTag_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	tenantTag_like: String
-	"""
-	not_like comparison operator
-	"""
-	tenantTag_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	tenantTag_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	tenantTag_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	tenantTag_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	tenantTag_prefix: String
-	"""
-	contains comparison operator
-	"""
-	zoneNames_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	zoneNames_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	zoneNames_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	zoneNames_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	zoneNames_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	agentVersion_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	agentVersion_not: String
-	"""
-	eq comparison operator
-	"""
-	agentVersion_eq: String
-	"""
-	neq comparison operator
-	"""
-	agentVersion_neq: String
-	"""
-	in comparison operator
-	"""
-	agentVersion_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	agentVersion_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	agentVersion_like: String
-	"""
-	not_like comparison operator
-	"""
-	agentVersion_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	agentVersion_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	agentVersion_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	agentVersion_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	agentVersion_prefix: String
-	"""
-	exists comparison operator
-	"""
-	externalIp_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	externalIp_not: String
-	"""
-	eq comparison operator
-	"""
-	externalIp_eq: String
-	"""
-	neq comparison operator
-	"""
-	externalIp_neq: String
-	"""
-	in comparison operator
-	"""
-	externalIp_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	externalIp_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	externalIp_like: String
-	"""
-	not_like comparison operator
-	"""
-	externalIp_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	externalIp_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	externalIp_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	externalIp_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	externalIp_prefix: String
+	externalIp: StringComparator
 	"""
 	filter by groups
 	"""
@@ -6876,53 +5868,9 @@ input adapter_data_bool_exp {
 	"""
 	sensorUpdatePolicy: cs_group_bool_exp
 	"""
-	exists comparison operator
+	filter by csAgentVersion
 	"""
-	csAgentVersion_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	csAgentVersion_not: String
-	"""
-	eq comparison operator
-	"""
-	csAgentVersion_eq: String
-	"""
-	neq comparison operator
-	"""
-	csAgentVersion_neq: String
-	"""
-	in comparison operator
-	"""
-	csAgentVersion_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	csAgentVersion_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	csAgentVersion_like: String
-	"""
-	not_like comparison operator
-	"""
-	csAgentVersion_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	csAgentVersion_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	csAgentVersion_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	csAgentVersion_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	csAgentVersion_prefix: String
+	csAgentVersion: StringComparator
 	AND: [adapter_data_bool_exp!]
 	OR: [adapter_data_bool_exp!]
 	NOT: [adapter_data_bool_exp!]
@@ -6932,69 +5880,13 @@ Boolean filter expression for AdapterDeviceAdmin
 """
 input adapter_device_admin_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
+	name: StringComparator
 	"""
-	not comparison operator
+	filter by type
 	"""
-	name_not: String
-	"""
-	eq comparison operator
-	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	eq comparison operator
-	"""
-	type_eq: AdminType
-	"""
-	neq comparison operator
-	"""
-	type_neq: AdminType
-	"""
-	in comparison operator
-	"""
-	type_in: [AdminType]
-	"""
-	not_in comparison operator
-	"""
-	type_not_in: [AdminType]
+	type: AdminTypeComparator
 	AND: [adapter_device_admin_bool_exp!]
 	OR: [adapter_device_admin_bool_exp!]
 	NOT: [adapter_device_admin_bool_exp!]
@@ -7017,449 +5909,61 @@ Boolean filter expression for AdapterDevice
 """
 input adapter_device_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: UUIDComparator
 	"""
-	eq comparison operator
+	filter by fetchCycle
 	"""
-	id_eq: UUID
+	fetchCycle: IntComparator
 	"""
-	neq comparison operator
+	filter by adapterId
 	"""
-	id_neq: UUID
-	"""
-	in comparison operator
-	"""
-	id_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	id_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	id_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	id_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	id_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	id_lte: UUID
-	"""
-	exists comparison operator
-	"""
-	fetchCycle_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	fetchCycle_eq: Int
-	"""
-	neq comparison operator
-	"""
-	fetchCycle_neq: Int
-	"""
-	in comparison operator
-	"""
-	fetchCycle_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	fetchCycle_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	fetchCycle_gt: Int
-	"""
-	gte comparison operator
-	"""
-	fetchCycle_gte: Int
-	"""
-	lt comparison operator
-	"""
-	fetchCycle_lt: Int
-	"""
-	lte comparison operator
-	"""
-	fetchCycle_lte: Int
-	"""
-	eq comparison operator
-	"""
-	adapterId_eq: AdapterType
-	"""
-	neq comparison operator
-	"""
-	adapterId_neq: AdapterType
-	"""
-	in comparison operator
-	"""
-	adapterId_in: [AdapterType]
-	"""
-	not_in comparison operator
-	"""
-	adapterId_not_in: [AdapterType]
+	adapterId: AdapterTypeComparator
 	"""
 	filter by adapter
 	"""
 	adapter: adapter_bool_exp
 	"""
-	exists comparison operator
+	filter by adapterName
 	"""
-	adapterName_exists: Boolean
+	adapterName: StringComparator
 	"""
-	not comparison operator
+	filter by deviceId
 	"""
-	adapterName_not: String
-	"""
-	eq comparison operator
-	"""
-	adapterName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adapterName_neq: String
-	"""
-	in comparison operator
-	"""
-	adapterName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adapterName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adapterName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adapterName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adapterName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adapterName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adapterName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adapterName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	deviceId_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	deviceId_eq: UUID
-	"""
-	neq comparison operator
-	"""
-	deviceId_neq: UUID
-	"""
-	in comparison operator
-	"""
-	deviceId_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	deviceId_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	deviceId_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	deviceId_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	deviceId_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	deviceId_lte: UUID
+	deviceId: UUIDComparator
 	"""
 	filter by adapterData
 	"""
 	adapterData: adapter_data_bool_exp
 	"""
-	exists comparison operator
+	filter by fetchTime
 	"""
-	fetchTime_exists: Boolean
+	fetchTime: EpochComparator
 	"""
-	eq comparison operator
+	filter by hostname
 	"""
-	fetchTime_eq: Epoch
+	hostname: StringComparator
 	"""
-	neq comparison operator
+	filter by name
 	"""
-	fetchTime_neq: Epoch
+	name: StringComparator
 	"""
-	in comparison operator
+	filter by lastSeen
 	"""
-	fetchTime_in: [Epoch]
+	lastSeen: EpochComparator
 	"""
-	not_in comparison operator
+	filter by osId
 	"""
-	fetchTime_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	fetchTime_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	fetchTime_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	fetchTime_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	fetchTime_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	fetchTime_days: Int
-	"""
-	exists comparison operator
-	"""
-	hostname_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	hostname_not: String
-	"""
-	eq comparison operator
-	"""
-	hostname_eq: String
-	"""
-	neq comparison operator
-	"""
-	hostname_neq: String
-	"""
-	in comparison operator
-	"""
-	hostname_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	hostname_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	hostname_like: String
-	"""
-	not_like comparison operator
-	"""
-	hostname_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	hostname_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	hostname_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	hostname_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	hostname_prefix: String
-	"""
-	exists comparison operator
-	"""
-	name_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	name_not: String
-	"""
-	eq comparison operator
-	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	lastSeen_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	lastSeen_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	lastSeen_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	lastSeen_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	lastSeen_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	lastSeen_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	lastSeen_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	lastSeen_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	lastSeen_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	lastSeen_days: Int
-	"""
-	exists comparison operator
-	"""
-	osId_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	osId_eq: UUID
-	"""
-	neq comparison operator
-	"""
-	osId_neq: UUID
-	"""
-	in comparison operator
-	"""
-	osId_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	osId_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	osId_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	osId_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	osId_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	osId_lte: UUID
+	osId: UUIDComparator
 	"""
 	filter by os
 	"""
 	os: operating_system_bool_exp
 	"""
-	exists comparison operator
+	filter by prettyId
 	"""
-	prettyId_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	prettyId_not: String
-	"""
-	eq comparison operator
-	"""
-	prettyId_eq: String
-	"""
-	neq comparison operator
-	"""
-	prettyId_neq: String
-	"""
-	in comparison operator
-	"""
-	prettyId_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	prettyId_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	prettyId_like: String
-	"""
-	not_like comparison operator
-	"""
-	prettyId_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	prettyId_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	prettyId_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	prettyId_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	prettyId_prefix: String
+	prettyId: StringComparator
 	"""
 	filter by tags
 	"""
@@ -7469,85 +5973,17 @@ input adapter_device_bool_exp {
 	"""
 	interfaces: network_interface_bool_exp
 	"""
-	contains comparison operator
+	filter by lastUsedUsers
 	"""
-	lastUsedUsers_contains: [String]
+	lastUsedUsers: StringArrayComparator
 	"""
-	contained_by comparison operator
+	filter by domain
 	"""
-	lastUsedUsers_contained_by: [String]
+	domain: StringComparator
 	"""
-	overlap comparison operator
+	filter by partOfDomain
 	"""
-	lastUsedUsers_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	lastUsedUsers_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	lastUsedUsers_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	domain_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	domain_not: String
-	"""
-	eq comparison operator
-	"""
-	domain_eq: String
-	"""
-	neq comparison operator
-	"""
-	domain_neq: String
-	"""
-	in comparison operator
-	"""
-	domain_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	domain_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	domain_like: String
-	"""
-	not_like comparison operator
-	"""
-	domain_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	domain_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	domain_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	domain_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	domain_prefix: String
-	"""
-	exists comparison operator
-	"""
-	partOfDomain_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	partOfDomain_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	partOfDomain_neq: Boolean
+	partOfDomain: BooleanComparator
 	"""
 	filter by deviceUsers
 	"""
@@ -7565,437 +6001,41 @@ input adapter_device_bool_exp {
 	"""
 	installedSoftware: installed_software_bool_exp
 	"""
-	exists comparison operator
+	filter by agentVersion
 	"""
-	agentVersion_exists: Boolean
+	agentVersion: StringComparator
 	"""
-	not comparison operator
+	filter by agentStatus
 	"""
-	agentVersion_not: String
+	agentStatus: StringComparator
 	"""
-	eq comparison operator
+	filter by agentName
 	"""
-	agentVersion_eq: String
+	agentName: StringComparator
 	"""
-	neq comparison operator
+	filter by model
 	"""
-	agentVersion_neq: String
+	model: StringComparator
 	"""
-	in comparison operator
+	filter by manufacturer
 	"""
-	agentVersion_in: [String]
+	manufacturer: StringComparator
 	"""
-	not_in comparison operator
+	filter by serial
 	"""
-	agentVersion_not_in: [String]
+	serial: StringComparator
 	"""
-	like comparison operator
+	filter by family
 	"""
-	agentVersion_like: String
+	family: StringComparator
 	"""
-	not_like comparison operator
+	filter by biosVersion
 	"""
-	agentVersion_not_like: String
+	biosVersion: StringComparator
 	"""
-	ilike comparison operator
+	filter by biosSerial
 	"""
-	agentVersion_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	agentVersion_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	agentVersion_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	agentVersion_prefix: String
-	"""
-	exists comparison operator
-	"""
-	agentStatus_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	agentStatus_not: String
-	"""
-	eq comparison operator
-	"""
-	agentStatus_eq: String
-	"""
-	neq comparison operator
-	"""
-	agentStatus_neq: String
-	"""
-	in comparison operator
-	"""
-	agentStatus_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	agentStatus_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	agentStatus_like: String
-	"""
-	not_like comparison operator
-	"""
-	agentStatus_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	agentStatus_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	agentStatus_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	agentStatus_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	agentStatus_prefix: String
-	"""
-	exists comparison operator
-	"""
-	agentName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	agentName_not: String
-	"""
-	eq comparison operator
-	"""
-	agentName_eq: String
-	"""
-	neq comparison operator
-	"""
-	agentName_neq: String
-	"""
-	in comparison operator
-	"""
-	agentName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	agentName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	agentName_like: String
-	"""
-	not_like comparison operator
-	"""
-	agentName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	agentName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	agentName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	agentName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	agentName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	model_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	model_not: String
-	"""
-	eq comparison operator
-	"""
-	model_eq: String
-	"""
-	neq comparison operator
-	"""
-	model_neq: String
-	"""
-	in comparison operator
-	"""
-	model_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	model_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	model_like: String
-	"""
-	not_like comparison operator
-	"""
-	model_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	model_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	model_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	model_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	model_prefix: String
-	"""
-	exists comparison operator
-	"""
-	manufacturer_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	manufacturer_not: String
-	"""
-	eq comparison operator
-	"""
-	manufacturer_eq: String
-	"""
-	neq comparison operator
-	"""
-	manufacturer_neq: String
-	"""
-	in comparison operator
-	"""
-	manufacturer_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	manufacturer_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	manufacturer_like: String
-	"""
-	not_like comparison operator
-	"""
-	manufacturer_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	manufacturer_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	manufacturer_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	manufacturer_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	manufacturer_prefix: String
-	"""
-	exists comparison operator
-	"""
-	serial_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	serial_not: String
-	"""
-	eq comparison operator
-	"""
-	serial_eq: String
-	"""
-	neq comparison operator
-	"""
-	serial_neq: String
-	"""
-	in comparison operator
-	"""
-	serial_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	serial_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	serial_like: String
-	"""
-	not_like comparison operator
-	"""
-	serial_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	serial_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	serial_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	serial_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	serial_prefix: String
-	"""
-	exists comparison operator
-	"""
-	family_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	family_not: String
-	"""
-	eq comparison operator
-	"""
-	family_eq: String
-	"""
-	neq comparison operator
-	"""
-	family_neq: String
-	"""
-	in comparison operator
-	"""
-	family_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	family_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	family_like: String
-	"""
-	not_like comparison operator
-	"""
-	family_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	family_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	family_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	family_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	family_prefix: String
-	"""
-	exists comparison operator
-	"""
-	biosVersion_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	biosVersion_not: String
-	"""
-	eq comparison operator
-	"""
-	biosVersion_eq: String
-	"""
-	neq comparison operator
-	"""
-	biosVersion_neq: String
-	"""
-	in comparison operator
-	"""
-	biosVersion_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	biosVersion_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	biosVersion_like: String
-	"""
-	not_like comparison operator
-	"""
-	biosVersion_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	biosVersion_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	biosVersion_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	biosVersion_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	biosVersion_prefix: String
-	"""
-	exists comparison operator
-	"""
-	biosSerial_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	biosSerial_not: String
-	"""
-	eq comparison operator
-	"""
-	biosSerial_eq: String
-	"""
-	neq comparison operator
-	"""
-	biosSerial_neq: String
-	"""
-	in comparison operator
-	"""
-	biosSerial_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	biosSerial_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	biosSerial_like: String
-	"""
-	not_like comparison operator
-	"""
-	biosSerial_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	biosSerial_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	biosSerial_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	biosSerial_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	biosSerial_prefix: String
+	biosSerial: StringComparator
 	AND: [adapter_device_bool_exp!]
 	OR: [adapter_device_bool_exp!]
 	NOT: [adapter_device_bool_exp!]
@@ -8146,309 +6186,45 @@ Boolean filter expression for AdapterDeviceUser
 """
 input adapter_device_user_bool_exp {
 	"""
-	exists comparison operator
+	filter by deviceId
 	"""
-	deviceId_exists: Boolean
+	deviceId: UUIDComparator
 	"""
-	eq comparison operator
+	filter by sid
 	"""
-	deviceId_eq: UUID
+	sid: StringComparator
 	"""
-	neq comparison operator
+	filter by username
 	"""
-	deviceId_neq: UUID
+	username: StringComparator
 	"""
-	in comparison operator
+	filter by lastUseDate
 	"""
-	deviceId_in: [UUID]
+	lastUseDate: EpochComparator
 	"""
-	not_in comparison operator
+	filter by isLocal
 	"""
-	deviceId_not_in: [UUID]
+	isLocal: BooleanComparator
 	"""
-	gt comparison operator
+	filter by isDisabled
 	"""
-	deviceId_gt: UUID
+	isDisabled: BooleanComparator
 	"""
-	gte comparison operator
+	filter by isAdmin
 	"""
-	deviceId_gte: UUID
+	isAdmin: BooleanComparator
 	"""
-	lt comparison operator
+	filter by userDepartment
 	"""
-	deviceId_lt: UUID
+	userDepartment: BooleanComparator
 	"""
-	lte comparison operator
+	filter by passwordMaxAge
 	"""
-	deviceId_lte: UUID
+	passwordMaxAge: IntComparator
 	"""
-	exists comparison operator
+	filter by interpreter
 	"""
-	sid_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	sid_not: String
-	"""
-	eq comparison operator
-	"""
-	sid_eq: String
-	"""
-	neq comparison operator
-	"""
-	sid_neq: String
-	"""
-	in comparison operator
-	"""
-	sid_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	sid_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	sid_like: String
-	"""
-	not_like comparison operator
-	"""
-	sid_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	sid_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	sid_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	sid_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	sid_prefix: String
-	"""
-	exists comparison operator
-	"""
-	username_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	username_not: String
-	"""
-	eq comparison operator
-	"""
-	username_eq: String
-	"""
-	neq comparison operator
-	"""
-	username_neq: String
-	"""
-	in comparison operator
-	"""
-	username_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	username_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	username_like: String
-	"""
-	not_like comparison operator
-	"""
-	username_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	username_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	username_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	username_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	username_prefix: String
-	"""
-	exists comparison operator
-	"""
-	lastUseDate_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	lastUseDate_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	lastUseDate_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	lastUseDate_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	lastUseDate_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	lastUseDate_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	lastUseDate_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	lastUseDate_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	lastUseDate_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	lastUseDate_days: Int
-	"""
-	exists comparison operator
-	"""
-	isLocal_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	isLocal_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	isLocal_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	isDisabled_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	isDisabled_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	isDisabled_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	isAdmin_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	isAdmin_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	isAdmin_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	userDepartment_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	userDepartment_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	userDepartment_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	passwordMaxAge_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	passwordMaxAge_eq: Int
-	"""
-	neq comparison operator
-	"""
-	passwordMaxAge_neq: Int
-	"""
-	in comparison operator
-	"""
-	passwordMaxAge_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	passwordMaxAge_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	passwordMaxAge_gt: Int
-	"""
-	gte comparison operator
-	"""
-	passwordMaxAge_gte: Int
-	"""
-	lt comparison operator
-	"""
-	passwordMaxAge_lt: Int
-	"""
-	lte comparison operator
-	"""
-	passwordMaxAge_lte: Int
-	"""
-	exists comparison operator
-	"""
-	interpreter_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	interpreter_not: String
-	"""
-	eq comparison operator
-	"""
-	interpreter_eq: String
-	"""
-	neq comparison operator
-	"""
-	interpreter_neq: String
-	"""
-	in comparison operator
-	"""
-	interpreter_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	interpreter_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	interpreter_like: String
-	"""
-	not_like comparison operator
-	"""
-	interpreter_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	interpreter_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	interpreter_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	interpreter_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	interpreter_prefix: String
+	interpreter: StringComparator
 	AND: [adapter_device_user_bool_exp!]
 	OR: [adapter_device_user_bool_exp!]
 	NOT: [adapter_device_user_bool_exp!]
@@ -8516,553 +6292,89 @@ Boolean filter expression for AdapterUser
 """
 input adapter_user_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: UUIDComparator
 	"""
-	eq comparison operator
+	filter by fetchCycle
 	"""
-	id_eq: UUID
+	fetchCycle: IntComparator
 	"""
-	neq comparison operator
+	filter by adapterId
 	"""
-	id_neq: UUID
-	"""
-	in comparison operator
-	"""
-	id_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	id_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	id_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	id_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	id_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	id_lte: UUID
-	"""
-	exists comparison operator
-	"""
-	fetchCycle_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	fetchCycle_eq: Int
-	"""
-	neq comparison operator
-	"""
-	fetchCycle_neq: Int
-	"""
-	in comparison operator
-	"""
-	fetchCycle_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	fetchCycle_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	fetchCycle_gt: Int
-	"""
-	gte comparison operator
-	"""
-	fetchCycle_gte: Int
-	"""
-	lt comparison operator
-	"""
-	fetchCycle_lt: Int
-	"""
-	lte comparison operator
-	"""
-	fetchCycle_lte: Int
-	"""
-	eq comparison operator
-	"""
-	adapterId_eq: AdapterType
-	"""
-	neq comparison operator
-	"""
-	adapterId_neq: AdapterType
-	"""
-	in comparison operator
-	"""
-	adapterId_in: [AdapterType]
-	"""
-	not_in comparison operator
-	"""
-	adapterId_not_in: [AdapterType]
+	adapterId: AdapterTypeComparator
 	"""
 	filter by adapter
 	"""
 	adapter: adapter_bool_exp
 	"""
-	exists comparison operator
+	filter by adapterName
 	"""
-	adapterName_exists: Boolean
+	adapterName: StringComparator
 	"""
-	not comparison operator
+	filter by userId
 	"""
-	adapterName_not: String
-	"""
-	eq comparison operator
-	"""
-	adapterName_eq: String
-	"""
-	neq comparison operator
-	"""
-	adapterName_neq: String
-	"""
-	in comparison operator
-	"""
-	adapterName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	adapterName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	adapterName_like: String
-	"""
-	not_like comparison operator
-	"""
-	adapterName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	adapterName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	adapterName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	adapterName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	adapterName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	userId_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	userId_eq: UUID
-	"""
-	neq comparison operator
-	"""
-	userId_neq: UUID
-	"""
-	in comparison operator
-	"""
-	userId_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	userId_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	userId_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	userId_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	userId_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	userId_lte: UUID
+	userId: UUIDComparator
 	"""
 	filter by adapterData
 	"""
 	adapterData: adapter_data_bool_exp
 	"""
-	exists comparison operator
+	filter by fetchTime
 	"""
-	fetchTime_exists: Boolean
+	fetchTime: EpochComparator
 	"""
-	eq comparison operator
+	filter by lastSeen
 	"""
-	fetchTime_eq: Epoch
+	lastSeen: EpochComparator
 	"""
-	neq comparison operator
+	filter by username
 	"""
-	fetchTime_neq: Epoch
+	username: StringComparator
 	"""
-	in comparison operator
+	filter by firstName
 	"""
-	fetchTime_in: [Epoch]
+	firstName: StringComparator
 	"""
-	not_in comparison operator
+	filter by lastName
 	"""
-	fetchTime_not_in: [Epoch]
+	lastName: StringComparator
 	"""
-	gt comparison operator
+	filter by mail
 	"""
-	fetchTime_gt: Epoch
+	mail: StringComparator
 	"""
-	gte comparison operator
+	filter by admin
 	"""
-	fetchTime_gte: Epoch
+	admin: BooleanComparator
 	"""
-	lt comparison operator
+	filter by local
 	"""
-	fetchTime_lt: Epoch
+	local: BooleanComparator
 	"""
-	lte comparison operator
+	filter by delegated_admin
 	"""
-	fetchTime_lte: Epoch
+	delegated_admin: BooleanComparator
 	"""
-	days comparison operator
+	filter by mfa_enforced
 	"""
-	fetchTime_days: Int
+	mfa_enforced: BooleanComparator
 	"""
-	exists comparison operator
+	filter by mfa_enrolled
 	"""
-	lastSeen_exists: Boolean
+	mfa_enrolled: BooleanComparator
 	"""
-	eq comparison operator
+	filter by suspended
 	"""
-	lastSeen_eq: Epoch
+	suspended: BooleanComparator
 	"""
-	neq comparison operator
+	filter by locked
 	"""
-	lastSeen_neq: Epoch
+	locked: BooleanComparator
 	"""
-	in comparison operator
+	filter by disabled
 	"""
-	lastSeen_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	lastSeen_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	lastSeen_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	lastSeen_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	lastSeen_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	lastSeen_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	lastSeen_days: Int
-	"""
-	exists comparison operator
-	"""
-	username_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	username_not: String
-	"""
-	eq comparison operator
-	"""
-	username_eq: String
-	"""
-	neq comparison operator
-	"""
-	username_neq: String
-	"""
-	in comparison operator
-	"""
-	username_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	username_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	username_like: String
-	"""
-	not_like comparison operator
-	"""
-	username_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	username_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	username_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	username_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	username_prefix: String
-	"""
-	exists comparison operator
-	"""
-	firstName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	firstName_not: String
-	"""
-	eq comparison operator
-	"""
-	firstName_eq: String
-	"""
-	neq comparison operator
-	"""
-	firstName_neq: String
-	"""
-	in comparison operator
-	"""
-	firstName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	firstName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	firstName_like: String
-	"""
-	not_like comparison operator
-	"""
-	firstName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	firstName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	firstName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	firstName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	firstName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	lastName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	lastName_not: String
-	"""
-	eq comparison operator
-	"""
-	lastName_eq: String
-	"""
-	neq comparison operator
-	"""
-	lastName_neq: String
-	"""
-	in comparison operator
-	"""
-	lastName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	lastName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	lastName_like: String
-	"""
-	not_like comparison operator
-	"""
-	lastName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	lastName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	lastName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	lastName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	lastName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	mail_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	mail_not: String
-	"""
-	eq comparison operator
-	"""
-	mail_eq: String
-	"""
-	neq comparison operator
-	"""
-	mail_neq: String
-	"""
-	in comparison operator
-	"""
-	mail_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	mail_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	mail_like: String
-	"""
-	not_like comparison operator
-	"""
-	mail_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	mail_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	mail_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	mail_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	mail_prefix: String
-	"""
-	exists comparison operator
-	"""
-	admin_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	admin_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	admin_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	local_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	local_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	local_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	delegated_admin_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	delegated_admin_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	delegated_admin_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	mfa_enforced_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	mfa_enforced_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	mfa_enforced_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	mfa_enrolled_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	mfa_enrolled_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	mfa_enrolled_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	suspended_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	suspended_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	suspended_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	locked_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	locked_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	locked_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	disabled_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	disabled_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	disabled_neq: Boolean
+	disabled: BooleanComparator
 	AND: [adapter_user_bool_exp!]
 	OR: [adapter_user_bool_exp!]
 	NOT: [adapter_user_bool_exp!]
@@ -9274,373 +6586,37 @@ Boolean filter expression for csGroup
 """
 input cs_group_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: StringComparator
 	"""
-	not comparison operator
+	filter by name
 	"""
-	id_not: String
+	name: StringComparator
 	"""
-	eq comparison operator
+	filter by createdBy
 	"""
-	id_eq: String
+	createdBy: StringComparator
 	"""
-	neq comparison operator
+	filter by createdTimestamp
 	"""
-	id_neq: String
+	createdTimestamp: EpochComparator
 	"""
-	in comparison operator
+	filter by description
 	"""
-	id_in: [String]
+	description: StringComparator
 	"""
-	not_in comparison operator
+	filter by groupType
 	"""
-	id_not_in: [String]
+	groupType: StringComparator
 	"""
-	like comparison operator
+	filter by modifiedBy
 	"""
-	id_like: String
+	modifiedBy: StringComparator
 	"""
-	not_like comparison operator
+	filter by modifiedTime
 	"""
-	id_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	id_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	id_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	id_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	id_prefix: String
-	"""
-	exists comparison operator
-	"""
-	name_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	name_not: String
-	"""
-	eq comparison operator
-	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	createdBy_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	createdBy_not: String
-	"""
-	eq comparison operator
-	"""
-	createdBy_eq: String
-	"""
-	neq comparison operator
-	"""
-	createdBy_neq: String
-	"""
-	in comparison operator
-	"""
-	createdBy_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	createdBy_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	createdBy_like: String
-	"""
-	not_like comparison operator
-	"""
-	createdBy_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	createdBy_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	createdBy_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	createdBy_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	createdBy_prefix: String
-	"""
-	exists comparison operator
-	"""
-	createdTimestamp_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	createdTimestamp_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	createdTimestamp_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	createdTimestamp_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	createdTimestamp_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	createdTimestamp_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	createdTimestamp_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	createdTimestamp_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	createdTimestamp_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	createdTimestamp_days: Int
-	"""
-	exists comparison operator
-	"""
-	description_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	description_not: String
-	"""
-	eq comparison operator
-	"""
-	description_eq: String
-	"""
-	neq comparison operator
-	"""
-	description_neq: String
-	"""
-	in comparison operator
-	"""
-	description_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	description_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	description_like: String
-	"""
-	not_like comparison operator
-	"""
-	description_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	description_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	description_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	description_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	description_prefix: String
-	"""
-	exists comparison operator
-	"""
-	groupType_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	groupType_not: String
-	"""
-	eq comparison operator
-	"""
-	groupType_eq: String
-	"""
-	neq comparison operator
-	"""
-	groupType_neq: String
-	"""
-	in comparison operator
-	"""
-	groupType_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	groupType_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	groupType_like: String
-	"""
-	not_like comparison operator
-	"""
-	groupType_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	groupType_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	groupType_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	groupType_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	groupType_prefix: String
-	"""
-	exists comparison operator
-	"""
-	modifiedBy_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	modifiedBy_not: String
-	"""
-	eq comparison operator
-	"""
-	modifiedBy_eq: String
-	"""
-	neq comparison operator
-	"""
-	modifiedBy_neq: String
-	"""
-	in comparison operator
-	"""
-	modifiedBy_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	modifiedBy_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	modifiedBy_like: String
-	"""
-	not_like comparison operator
-	"""
-	modifiedBy_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	modifiedBy_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	modifiedBy_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	modifiedBy_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	modifiedBy_prefix: String
-	"""
-	exists comparison operator
-	"""
-	modifiedTime_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	modifiedTime_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	modifiedTime_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	modifiedTime_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	modifiedTime_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	modifiedTime_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	modifiedTime_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	modifiedTime_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	modifiedTime_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	modifiedTime_days: Int
+	modifiedTime: EpochComparator
 	AND: [cs_group_bool_exp!]
 	OR: [cs_group_bool_exp!]
 	NOT: [cs_group_bool_exp!]
@@ -9719,253 +6695,33 @@ Boolean filter expression for csPolicy
 """
 input cs_policy_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
+	name: StringComparator
 	"""
-	not comparison operator
+	filter by description
 	"""
-	name_not: String
+	description: StringComparator
 	"""
-	eq comparison operator
+	filter by platformName
 	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	description_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	description_not: String
-	"""
-	eq comparison operator
-	"""
-	description_eq: String
-	"""
-	neq comparison operator
-	"""
-	description_neq: String
-	"""
-	in comparison operator
-	"""
-	description_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	description_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	description_like: String
-	"""
-	not_like comparison operator
-	"""
-	description_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	description_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	description_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	description_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	description_prefix: String
-	"""
-	exists comparison operator
-	"""
-	platformName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	platformName_not: String
-	"""
-	eq comparison operator
-	"""
-	platformName_eq: String
-	"""
-	neq comparison operator
-	"""
-	platformName_neq: String
-	"""
-	in comparison operator
-	"""
-	platformName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	platformName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	platformName_like: String
-	"""
-	not_like comparison operator
-	"""
-	platformName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	platformName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	platformName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	platformName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	platformName_prefix: String
+	platformName: StringComparator
 	"""
 	filter by groups
 	"""
 	groups: cs_group_bool_exp
 	"""
-	exists comparison operator
+	filter by enabled
 	"""
-	enabled_exists: Boolean
+	enabled: BooleanComparator
 	"""
-	eq comparison operator
+	filter by createdBy
 	"""
-	enabled_eq: Boolean
+	createdBy: StringComparator
 	"""
-	neq comparison operator
+	filter by createdTime
 	"""
-	enabled_neq: Boolean
-	"""
-	exists comparison operator
-	"""
-	createdBy_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	createdBy_not: String
-	"""
-	eq comparison operator
-	"""
-	createdBy_eq: String
-	"""
-	neq comparison operator
-	"""
-	createdBy_neq: String
-	"""
-	in comparison operator
-	"""
-	createdBy_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	createdBy_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	createdBy_like: String
-	"""
-	not_like comparison operator
-	"""
-	createdBy_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	createdBy_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	createdBy_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	createdBy_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	createdBy_prefix: String
-	"""
-	exists comparison operator
-	"""
-	createdTime_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	createdTime_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	createdTime_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	createdTime_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	createdTime_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	createdTime_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	createdTime_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	createdTime_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	createdTime_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	createdTime_days: Int
+	createdTime: EpochComparator
 	"""
 	filter by preventionSettings
 	"""
@@ -10028,17 +6784,9 @@ Boolean filter expression for csPolicySettings
 """
 input cs_policy_settings_bool_exp {
 	"""
-	exists comparison operator
+	filter by enabled
 	"""
-	enabled_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	enabled_eq: Boolean
-	"""
-	neq comparison operator
-	"""
-	enabled_neq: Boolean
+	enabled: BooleanComparator
 	AND: [cs_policy_settings_bool_exp!]
 	OR: [cs_policy_settings_bool_exp!]
 	NOT: [cs_policy_settings_bool_exp!]
@@ -10048,53 +6796,9 @@ Boolean filter expression for csPreventionSettings
 """
 input cs_prevention_settings_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	name_not: String
-	"""
-	eq comparison operator
-	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
+	name: StringComparator
 	"""
 	filter by settings
 	"""
@@ -10121,53 +6825,9 @@ Boolean filter expression for csSensorUpdateSettings
 """
 input cs_sensor_update_settings_bool_exp {
 	"""
-	exists comparison operator
+	filter by build
 	"""
-	build_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	build_not: String
-	"""
-	eq comparison operator
-	"""
-	build_eq: String
-	"""
-	neq comparison operator
-	"""
-	build_neq: String
-	"""
-	in comparison operator
-	"""
-	build_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	build_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	build_like: String
-	"""
-	not_like comparison operator
-	"""
-	build_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	build_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	build_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	build_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	build_prefix: String
+	build: StringComparator
 	AND: [cs_sensor_update_settings_bool_exp!]
 	OR: [cs_sensor_update_settings_bool_exp!]
 	NOT: [cs_sensor_update_settings_bool_exp!]
@@ -10190,193 +6850,29 @@ Boolean filter expression for Device
 """
 input device_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: UUIDComparator
 	"""
-	eq comparison operator
+	filter by fetchCycle
 	"""
-	id_eq: UUID
+	fetchCycle: IntComparator
 	"""
-	neq comparison operator
+	filter by adapterCount
 	"""
-	id_neq: UUID
+	adapterCount: IntComparator
 	"""
-	in comparison operator
+	filter by adapterNames
 	"""
-	id_in: [UUID]
+	adapterNames: StringArrayComparator
 	"""
-	not_in comparison operator
+	filter by hostnames
 	"""
-	id_not_in: [UUID]
+	hostnames: StringArrayComparator
 	"""
-	gt comparison operator
+	filter by lastSeen
 	"""
-	id_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	id_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	id_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	id_lte: UUID
-	"""
-	exists comparison operator
-	"""
-	fetchCycle_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	fetchCycle_eq: Int
-	"""
-	neq comparison operator
-	"""
-	fetchCycle_neq: Int
-	"""
-	in comparison operator
-	"""
-	fetchCycle_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	fetchCycle_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	fetchCycle_gt: Int
-	"""
-	gte comparison operator
-	"""
-	fetchCycle_gte: Int
-	"""
-	lt comparison operator
-	"""
-	fetchCycle_lt: Int
-	"""
-	lte comparison operator
-	"""
-	fetchCycle_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adapterCount_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adapterCount_eq: Int
-	"""
-	neq comparison operator
-	"""
-	adapterCount_neq: Int
-	"""
-	in comparison operator
-	"""
-	adapterCount_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	adapterCount_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	adapterCount_gt: Int
-	"""
-	gte comparison operator
-	"""
-	adapterCount_gte: Int
-	"""
-	lt comparison operator
-	"""
-	adapterCount_lt: Int
-	"""
-	lte comparison operator
-	"""
-	adapterCount_lte: Int
-	"""
-	contains comparison operator
-	"""
-	adapterNames_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adapterNames_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adapterNames_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adapterNames_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adapterNames_contains_regex: String
-	"""
-	contains comparison operator
-	"""
-	hostnames_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	hostnames_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	hostnames_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	hostnames_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	hostnames_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	lastSeen_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	lastSeen_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	lastSeen_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	lastSeen_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	lastSeen_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	lastSeen_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	lastSeen_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	lastSeen_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	lastSeen_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	lastSeen_days: Int
+	lastSeen: EpochComparator
 	"""
 	filter by adapterDevices
 	"""
@@ -10672,301 +7168,37 @@ Boolean filter expression for FirewallRule
 """
 input firewall_rule_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
+	name: StringComparator
 	"""
-	not comparison operator
+	filter by source
 	"""
-	name_not: String
+	source: StringComparator
 	"""
-	eq comparison operator
+	filter by type
 	"""
-	name_eq: String
+	type: AccessTypeComparator
 	"""
-	neq comparison operator
+	filter by direction
 	"""
-	name_neq: String
+	direction: DirectionComparator
 	"""
-	in comparison operator
+	filter by target
 	"""
-	name_in: [String]
+	target: StringComparator
 	"""
-	not_in comparison operator
+	filter by protocol
 	"""
-	name_not_in: [String]
+	protocol: StringComparator
 	"""
-	like comparison operator
+	filter by srcPort
 	"""
-	name_like: String
+	srcPort: IntComparator
 	"""
-	not_like comparison operator
+	filter by dstPort
 	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	source_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	source_not: String
-	"""
-	eq comparison operator
-	"""
-	source_eq: String
-	"""
-	neq comparison operator
-	"""
-	source_neq: String
-	"""
-	in comparison operator
-	"""
-	source_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	source_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	source_like: String
-	"""
-	not_like comparison operator
-	"""
-	source_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	source_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	source_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	source_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	source_prefix: String
-	"""
-	eq comparison operator
-	"""
-	type_eq: AccessType
-	"""
-	neq comparison operator
-	"""
-	type_neq: AccessType
-	"""
-	in comparison operator
-	"""
-	type_in: [AccessType]
-	"""
-	not_in comparison operator
-	"""
-	type_not_in: [AccessType]
-	"""
-	eq comparison operator
-	"""
-	direction_eq: Direction
-	"""
-	neq comparison operator
-	"""
-	direction_neq: Direction
-	"""
-	in comparison operator
-	"""
-	direction_in: [Direction]
-	"""
-	not_in comparison operator
-	"""
-	direction_not_in: [Direction]
-	"""
-	exists comparison operator
-	"""
-	target_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	target_not: String
-	"""
-	eq comparison operator
-	"""
-	target_eq: String
-	"""
-	neq comparison operator
-	"""
-	target_neq: String
-	"""
-	in comparison operator
-	"""
-	target_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	target_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	target_like: String
-	"""
-	not_like comparison operator
-	"""
-	target_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	target_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	target_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	target_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	target_prefix: String
-	"""
-	exists comparison operator
-	"""
-	protocol_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	protocol_not: String
-	"""
-	eq comparison operator
-	"""
-	protocol_eq: String
-	"""
-	neq comparison operator
-	"""
-	protocol_neq: String
-	"""
-	in comparison operator
-	"""
-	protocol_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	protocol_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	protocol_like: String
-	"""
-	not_like comparison operator
-	"""
-	protocol_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	protocol_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	protocol_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	protocol_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	protocol_prefix: String
-	"""
-	exists comparison operator
-	"""
-	srcPort_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	srcPort_eq: Int
-	"""
-	neq comparison operator
-	"""
-	srcPort_neq: Int
-	"""
-	in comparison operator
-	"""
-	srcPort_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	srcPort_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	srcPort_gt: Int
-	"""
-	gte comparison operator
-	"""
-	srcPort_gte: Int
-	"""
-	lt comparison operator
-	"""
-	srcPort_lt: Int
-	"""
-	lte comparison operator
-	"""
-	srcPort_lte: Int
-	"""
-	exists comparison operator
-	"""
-	dstPort_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	dstPort_eq: Int
-	"""
-	neq comparison operator
-	"""
-	dstPort_neq: Int
-	"""
-	in comparison operator
-	"""
-	dstPort_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	dstPort_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	dstPort_gt: Int
-	"""
-	gte comparison operator
-	"""
-	dstPort_gte: Int
-	"""
-	lt comparison operator
-	"""
-	dstPort_lt: Int
-	"""
-	lte comparison operator
-	"""
-	dstPort_lte: Int
+	dstPort: IntComparator
 	AND: [firewall_rule_bool_exp!]
 	OR: [firewall_rule_bool_exp!]
 	NOT: [firewall_rule_bool_exp!]
@@ -11029,101 +7261,13 @@ Boolean filter expression for GceTags
 """
 input gce_tags_bool_exp {
 	"""
-	exists comparison operator
+	filter by gceKey
 	"""
-	gceKey_exists: Boolean
+	gceKey: StringComparator
 	"""
-	not comparison operator
+	filter by gceValue
 	"""
-	gceKey_not: String
-	"""
-	eq comparison operator
-	"""
-	gceKey_eq: String
-	"""
-	neq comparison operator
-	"""
-	gceKey_neq: String
-	"""
-	in comparison operator
-	"""
-	gceKey_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	gceKey_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	gceKey_like: String
-	"""
-	not_like comparison operator
-	"""
-	gceKey_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	gceKey_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	gceKey_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	gceKey_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	gceKey_prefix: String
-	"""
-	exists comparison operator
-	"""
-	gceValue_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	gceValue_not: String
-	"""
-	eq comparison operator
-	"""
-	gceValue_eq: String
-	"""
-	neq comparison operator
-	"""
-	gceValue_neq: String
-	"""
-	in comparison operator
-	"""
-	gceValue_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	gceValue_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	gceValue_like: String
-	"""
-	not_like comparison operator
-	"""
-	gceValue_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	gceValue_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	gceValue_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	gceValue_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	gceValue_prefix: String
+	gceValue: StringComparator
 	AND: [gce_tags_bool_exp!]
 	OR: [gce_tags_bool_exp!]
 	NOT: [gce_tags_bool_exp!]
@@ -11455,393 +7599,41 @@ Boolean filter expression for InstalledSoftware
 """
 input installed_software_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
+	name: StringComparator
 	"""
-	not comparison operator
+	filter by version
 	"""
-	name_not: String
+	version: StringComparator
 	"""
-	eq comparison operator
+	filter by architecture
 	"""
-	name_eq: String
+	architecture: ArchitectureComparator
 	"""
-	neq comparison operator
+	filter by description
 	"""
-	name_neq: String
+	description: StringComparator
 	"""
-	in comparison operator
+	filter by vendor
 	"""
-	name_in: [String]
+	vendor: StringComparator
 	"""
-	not_in comparison operator
+	filter by publisher
 	"""
-	name_not_in: [String]
+	publisher: StringComparator
 	"""
-	like comparison operator
+	filter by cveCount
 	"""
-	name_like: String
+	cveCount: IntComparator
 	"""
-	not_like comparison operator
+	filter by swLicense
 	"""
-	name_not_like: String
+	swLicense: StringComparator
 	"""
-	ilike comparison operator
+	filter by path
 	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	version_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	version_not: String
-	"""
-	eq comparison operator
-	"""
-	version_eq: String
-	"""
-	neq comparison operator
-	"""
-	version_neq: String
-	"""
-	in comparison operator
-	"""
-	version_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	version_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	version_like: String
-	"""
-	not_like comparison operator
-	"""
-	version_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	version_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	version_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	version_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	version_prefix: String
-	"""
-	eq comparison operator
-	"""
-	architecture_eq: Architecture
-	"""
-	neq comparison operator
-	"""
-	architecture_neq: Architecture
-	"""
-	in comparison operator
-	"""
-	architecture_in: [Architecture]
-	"""
-	not_in comparison operator
-	"""
-	architecture_not_in: [Architecture]
-	"""
-	exists comparison operator
-	"""
-	description_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	description_not: String
-	"""
-	eq comparison operator
-	"""
-	description_eq: String
-	"""
-	neq comparison operator
-	"""
-	description_neq: String
-	"""
-	in comparison operator
-	"""
-	description_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	description_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	description_like: String
-	"""
-	not_like comparison operator
-	"""
-	description_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	description_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	description_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	description_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	description_prefix: String
-	"""
-	exists comparison operator
-	"""
-	vendor_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	vendor_not: String
-	"""
-	eq comparison operator
-	"""
-	vendor_eq: String
-	"""
-	neq comparison operator
-	"""
-	vendor_neq: String
-	"""
-	in comparison operator
-	"""
-	vendor_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	vendor_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	vendor_like: String
-	"""
-	not_like comparison operator
-	"""
-	vendor_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	vendor_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	vendor_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	vendor_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	vendor_prefix: String
-	"""
-	exists comparison operator
-	"""
-	publisher_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	publisher_not: String
-	"""
-	eq comparison operator
-	"""
-	publisher_eq: String
-	"""
-	neq comparison operator
-	"""
-	publisher_neq: String
-	"""
-	in comparison operator
-	"""
-	publisher_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	publisher_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	publisher_like: String
-	"""
-	not_like comparison operator
-	"""
-	publisher_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	publisher_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	publisher_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	publisher_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	publisher_prefix: String
-	"""
-	exists comparison operator
-	"""
-	cveCount_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	cveCount_eq: Int
-	"""
-	neq comparison operator
-	"""
-	cveCount_neq: Int
-	"""
-	in comparison operator
-	"""
-	cveCount_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	cveCount_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	cveCount_gt: Int
-	"""
-	gte comparison operator
-	"""
-	cveCount_gte: Int
-	"""
-	lt comparison operator
-	"""
-	cveCount_lt: Int
-	"""
-	lte comparison operator
-	"""
-	cveCount_lte: Int
-	"""
-	exists comparison operator
-	"""
-	swLicense_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	swLicense_not: String
-	"""
-	eq comparison operator
-	"""
-	swLicense_eq: String
-	"""
-	neq comparison operator
-	"""
-	swLicense_neq: String
-	"""
-	in comparison operator
-	"""
-	swLicense_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	swLicense_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	swLicense_like: String
-	"""
-	not_like comparison operator
-	"""
-	swLicense_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	swLicense_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	swLicense_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	swLicense_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	swLicense_prefix: String
-	"""
-	exists comparison operator
-	"""
-	path_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	path_not: String
-	"""
-	eq comparison operator
-	"""
-	path_eq: String
-	"""
-	neq comparison operator
-	"""
-	path_neq: String
-	"""
-	in comparison operator
-	"""
-	path_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	path_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	path_like: String
-	"""
-	not_like comparison operator
-	"""
-	path_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	path_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	path_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	path_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	path_prefix: String
+	path: StringComparator
 	AND: [installed_software_bool_exp!]
 	OR: [installed_software_bool_exp!]
 	NOT: [installed_software_bool_exp!]
@@ -11975,85 +7767,17 @@ Boolean filter expression for NetworkInterface
 """
 input network_interface_bool_exp {
 	"""
-	exists comparison operator
+	filter by deviceId
 	"""
-	deviceId_exists: Boolean
+	deviceId: UUIDComparator
 	"""
-	eq comparison operator
+	filter by macAddr
 	"""
-	deviceId_eq: UUID
+	macAddr: MacComparator
 	"""
-	neq comparison operator
+	filter by ipAddrs
 	"""
-	deviceId_neq: UUID
-	"""
-	in comparison operator
-	"""
-	deviceId_in: [UUID]
-	"""
-	not_in comparison operator
-	"""
-	deviceId_not_in: [UUID]
-	"""
-	gt comparison operator
-	"""
-	deviceId_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	deviceId_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	deviceId_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	deviceId_lte: UUID
-	"""
-	exists comparison operator
-	"""
-	macAddr_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	macAddr_eq: Mac
-	"""
-	neq comparison operator
-	"""
-	macAddr_neq: Mac
-	"""
-	in comparison operator
-	"""
-	macAddr_in: [Mac]
-	"""
-	not_in comparison operator
-	"""
-	macAddr_not_in: [Mac]
-	"""
-	contains comparison operator
-	"""
-	ipAddrs_contains: [IP]
-	"""
-	contained_by comparison operator
-	"""
-	ipAddrs_contained_by: [IP]
-	"""
-	overlap comparison operator
-	"""
-	ipAddrs_overlap: [IP]
-	"""
-	size comparison operator
-	"""
-	ipAddrs_size: Int
-	"""
-	in_subnet comparison operator
-	"""
-	ipAddrs_in_subnet: CIDR
-	"""
-	ip_family comparison operator
-	"""
-	ipAddrs_ip_family: IPFamily
+	ipAddrs: IPArrayComparator
 	AND: [network_interface_bool_exp!]
 	OR: [network_interface_bool_exp!]
 	NOT: [network_interface_bool_exp!]
@@ -12063,525 +7787,53 @@ Boolean filter expression for OperatingSystem
 """
 input operating_system_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: UUIDComparator
 	"""
-	eq comparison operator
+	filter by type
 	"""
-	id_eq: UUID
+	type: StringComparator
 	"""
-	neq comparison operator
+	filter by distribution
 	"""
-	id_neq: UUID
+	distribution: StringComparator
 	"""
-	in comparison operator
+	filter by architecture
 	"""
-	id_in: [UUID]
+	architecture: IntComparator
 	"""
-	not_in comparison operator
+	filter by servicePack
 	"""
-	id_not_in: [UUID]
+	servicePack: StringComparator
 	"""
-	gt comparison operator
+	filter by installDate
 	"""
-	id_gt: UUID
+	installDate: EpochComparator
 	"""
-	gte comparison operator
+	filter by kernelVersion
 	"""
-	id_gte: UUID
+	kernelVersion: StringComparator
 	"""
-	lt comparison operator
+	filter by codeName
 	"""
-	id_lt: UUID
+	codeName: StringComparator
 	"""
-	lte comparison operator
+	filter by major
 	"""
-	id_lte: UUID
+	major: IntComparator
 	"""
-	exists comparison operator
+	filter by minor
 	"""
-	type_exists: Boolean
+	minor: IntComparator
 	"""
-	not comparison operator
+	filter by build
 	"""
-	type_not: String
+	build: StringComparator
 	"""
-	eq comparison operator
+	filter by RawName
 	"""
-	type_eq: String
-	"""
-	neq comparison operator
-	"""
-	type_neq: String
-	"""
-	in comparison operator
-	"""
-	type_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	type_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	type_like: String
-	"""
-	not_like comparison operator
-	"""
-	type_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	type_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	type_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	type_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	type_prefix: String
-	"""
-	exists comparison operator
-	"""
-	distribution_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	distribution_not: String
-	"""
-	eq comparison operator
-	"""
-	distribution_eq: String
-	"""
-	neq comparison operator
-	"""
-	distribution_neq: String
-	"""
-	in comparison operator
-	"""
-	distribution_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	distribution_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	distribution_like: String
-	"""
-	not_like comparison operator
-	"""
-	distribution_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	distribution_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	distribution_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	distribution_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	distribution_prefix: String
-	"""
-	exists comparison operator
-	"""
-	architecture_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	architecture_eq: Int
-	"""
-	neq comparison operator
-	"""
-	architecture_neq: Int
-	"""
-	in comparison operator
-	"""
-	architecture_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	architecture_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	architecture_gt: Int
-	"""
-	gte comparison operator
-	"""
-	architecture_gte: Int
-	"""
-	lt comparison operator
-	"""
-	architecture_lt: Int
-	"""
-	lte comparison operator
-	"""
-	architecture_lte: Int
-	"""
-	exists comparison operator
-	"""
-	servicePack_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	servicePack_not: String
-	"""
-	eq comparison operator
-	"""
-	servicePack_eq: String
-	"""
-	neq comparison operator
-	"""
-	servicePack_neq: String
-	"""
-	in comparison operator
-	"""
-	servicePack_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	servicePack_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	servicePack_like: String
-	"""
-	not_like comparison operator
-	"""
-	servicePack_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	servicePack_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	servicePack_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	servicePack_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	servicePack_prefix: String
-	"""
-	exists comparison operator
-	"""
-	installDate_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	installDate_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	installDate_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	installDate_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	installDate_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	installDate_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	installDate_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	installDate_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	installDate_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	installDate_days: Int
-	"""
-	exists comparison operator
-	"""
-	kernelVersion_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	kernelVersion_not: String
-	"""
-	eq comparison operator
-	"""
-	kernelVersion_eq: String
-	"""
-	neq comparison operator
-	"""
-	kernelVersion_neq: String
-	"""
-	in comparison operator
-	"""
-	kernelVersion_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	kernelVersion_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	kernelVersion_like: String
-	"""
-	not_like comparison operator
-	"""
-	kernelVersion_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	kernelVersion_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	kernelVersion_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	kernelVersion_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	kernelVersion_prefix: String
-	"""
-	exists comparison operator
-	"""
-	codeName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	codeName_not: String
-	"""
-	eq comparison operator
-	"""
-	codeName_eq: String
-	"""
-	neq comparison operator
-	"""
-	codeName_neq: String
-	"""
-	in comparison operator
-	"""
-	codeName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	codeName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	codeName_like: String
-	"""
-	not_like comparison operator
-	"""
-	codeName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	codeName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	codeName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	codeName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	codeName_prefix: String
-	"""
-	exists comparison operator
-	"""
-	major_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	major_eq: Int
-	"""
-	neq comparison operator
-	"""
-	major_neq: Int
-	"""
-	in comparison operator
-	"""
-	major_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	major_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	major_gt: Int
-	"""
-	gte comparison operator
-	"""
-	major_gte: Int
-	"""
-	lt comparison operator
-	"""
-	major_lt: Int
-	"""
-	lte comparison operator
-	"""
-	major_lte: Int
-	"""
-	exists comparison operator
-	"""
-	minor_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	minor_eq: Int
-	"""
-	neq comparison operator
-	"""
-	minor_neq: Int
-	"""
-	in comparison operator
-	"""
-	minor_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	minor_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	minor_gt: Int
-	"""
-	gte comparison operator
-	"""
-	minor_gte: Int
-	"""
-	lt comparison operator
-	"""
-	minor_lt: Int
-	"""
-	lte comparison operator
-	"""
-	minor_lte: Int
-	"""
-	exists comparison operator
-	"""
-	build_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	build_not: String
-	"""
-	eq comparison operator
-	"""
-	build_eq: String
-	"""
-	neq comparison operator
-	"""
-	build_neq: String
-	"""
-	in comparison operator
-	"""
-	build_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	build_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	build_like: String
-	"""
-	not_like comparison operator
-	"""
-	build_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	build_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	build_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	build_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	build_prefix: String
-	"""
-	exists comparison operator
-	"""
-	RawName_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	RawName_not: String
-	"""
-	eq comparison operator
-	"""
-	RawName_eq: String
-	"""
-	neq comparison operator
-	"""
-	RawName_neq: String
-	"""
-	in comparison operator
-	"""
-	RawName_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	RawName_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	RawName_like: String
-	"""
-	not_like comparison operator
-	"""
-	RawName_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	RawName_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	RawName_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	RawName_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	RawName_prefix: String
+	RawName: StringComparator
 	AND: [operating_system_bool_exp!]
 	OR: [operating_system_bool_exp!]
 	NOT: [operating_system_bool_exp!]
@@ -12770,149 +8022,17 @@ Boolean filter expression for Tag
 """
 input tag_bool_exp {
 	"""
-	exists comparison operator
+	filter by name
 	"""
-	name_exists: Boolean
+	name: StringComparator
 	"""
-	not comparison operator
+	filter by creator
 	"""
-	name_not: String
+	creator: StringComparator
 	"""
-	eq comparison operator
+	filter by level
 	"""
-	name_eq: String
-	"""
-	neq comparison operator
-	"""
-	name_neq: String
-	"""
-	in comparison operator
-	"""
-	name_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	name_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	name_like: String
-	"""
-	not_like comparison operator
-	"""
-	name_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	name_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	name_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	name_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	name_prefix: String
-	"""
-	exists comparison operator
-	"""
-	creator_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	creator_not: String
-	"""
-	eq comparison operator
-	"""
-	creator_eq: String
-	"""
-	neq comparison operator
-	"""
-	creator_neq: String
-	"""
-	in comparison operator
-	"""
-	creator_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	creator_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	creator_like: String
-	"""
-	not_like comparison operator
-	"""
-	creator_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	creator_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	creator_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	creator_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	creator_prefix: String
-	"""
-	exists comparison operator
-	"""
-	level_exists: Boolean
-	"""
-	not comparison operator
-	"""
-	level_not: String
-	"""
-	eq comparison operator
-	"""
-	level_eq: String
-	"""
-	neq comparison operator
-	"""
-	level_neq: String
-	"""
-	in comparison operator
-	"""
-	level_in: [String]
-	"""
-	not_in comparison operator
-	"""
-	level_not_in: [String]
-	"""
-	like comparison operator
-	"""
-	level_like: String
-	"""
-	not_like comparison operator
-	"""
-	level_not_like: String
-	"""
-	ilike comparison operator
-	"""
-	level_ilike: String
-	"""
-	not_ilike comparison operator
-	"""
-	level_not_ilike: String
-	"""
-	suffix comparison operator
-	"""
-	level_suffix: String
-	"""
-	prefix comparison operator
-	"""
-	level_prefix: String
+	level: StringComparator
 	AND: [tag_bool_exp!]
 	OR: [tag_bool_exp!]
 	NOT: [tag_bool_exp!]
@@ -13018,193 +8138,29 @@ Boolean filter expression for User
 """
 input user_bool_exp {
 	"""
-	exists comparison operator
+	filter by id
 	"""
-	id_exists: Boolean
+	id: UUIDComparator
 	"""
-	eq comparison operator
+	filter by fetchCycle
 	"""
-	id_eq: UUID
+	fetchCycle: IntComparator
 	"""
-	neq comparison operator
+	filter by adapterCount
 	"""
-	id_neq: UUID
+	adapterCount: IntComparator
 	"""
-	in comparison operator
+	filter by adapterNames
 	"""
-	id_in: [UUID]
+	adapterNames: StringArrayComparator
 	"""
-	not_in comparison operator
+	filter by usernames
 	"""
-	id_not_in: [UUID]
+	usernames: StringArrayComparator
 	"""
-	gt comparison operator
+	filter by lastSeen
 	"""
-	id_gt: UUID
-	"""
-	gte comparison operator
-	"""
-	id_gte: UUID
-	"""
-	lt comparison operator
-	"""
-	id_lt: UUID
-	"""
-	lte comparison operator
-	"""
-	id_lte: UUID
-	"""
-	exists comparison operator
-	"""
-	fetchCycle_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	fetchCycle_eq: Int
-	"""
-	neq comparison operator
-	"""
-	fetchCycle_neq: Int
-	"""
-	in comparison operator
-	"""
-	fetchCycle_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	fetchCycle_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	fetchCycle_gt: Int
-	"""
-	gte comparison operator
-	"""
-	fetchCycle_gte: Int
-	"""
-	lt comparison operator
-	"""
-	fetchCycle_lt: Int
-	"""
-	lte comparison operator
-	"""
-	fetchCycle_lte: Int
-	"""
-	exists comparison operator
-	"""
-	adapterCount_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	adapterCount_eq: Int
-	"""
-	neq comparison operator
-	"""
-	adapterCount_neq: Int
-	"""
-	in comparison operator
-	"""
-	adapterCount_in: [Int]
-	"""
-	not_in comparison operator
-	"""
-	adapterCount_not_in: [Int]
-	"""
-	gt comparison operator
-	"""
-	adapterCount_gt: Int
-	"""
-	gte comparison operator
-	"""
-	adapterCount_gte: Int
-	"""
-	lt comparison operator
-	"""
-	adapterCount_lt: Int
-	"""
-	lte comparison operator
-	"""
-	adapterCount_lte: Int
-	"""
-	contains comparison operator
-	"""
-	adapterNames_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	adapterNames_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	adapterNames_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	adapterNames_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	adapterNames_contains_regex: String
-	"""
-	contains comparison operator
-	"""
-	usernames_contains: [String]
-	"""
-	contained_by comparison operator
-	"""
-	usernames_contained_by: [String]
-	"""
-	overlap comparison operator
-	"""
-	usernames_overlap: [String]
-	"""
-	size comparison operator
-	"""
-	usernames_size: Int
-	"""
-	contains_regex comparison operator
-	"""
-	usernames_contains_regex: String
-	"""
-	exists comparison operator
-	"""
-	lastSeen_exists: Boolean
-	"""
-	eq comparison operator
-	"""
-	lastSeen_eq: Epoch
-	"""
-	neq comparison operator
-	"""
-	lastSeen_neq: Epoch
-	"""
-	in comparison operator
-	"""
-	lastSeen_in: [Epoch]
-	"""
-	not_in comparison operator
-	"""
-	lastSeen_not_in: [Epoch]
-	"""
-	gt comparison operator
-	"""
-	lastSeen_gt: Epoch
-	"""
-	gte comparison operator
-	"""
-	lastSeen_gte: Epoch
-	"""
-	lt comparison operator
-	"""
-	lastSeen_lt: Epoch
-	"""
-	lte comparison operator
-	"""
-	lastSeen_lte: Epoch
-	"""
-	days comparison operator
-	"""
-	lastSeen_days: Int
+	lastSeen: EpochComparator
 	"""
 	filter by adapterUsers
 	"""
@@ -13458,6 +8414,20 @@ func (ec *executionContext) dir_relation_args(ctx context.Context, rawArgs map[s
 		}
 	}
 	args["joinOn"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) dir_sqlgen_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 bool
+	if tmp, ok := rawArgs["skip"]; ok {
+		arg0, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
 	return args, nil
 }
 
@@ -14466,6 +9436,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query__wizardFilters_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["type"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["type"] = arg0
 	return args, nil
 }
 
@@ -22522,6 +17506,194 @@ func (ec *executionContext) _NetworkInterface_ipAddrs(ctx context.Context, field
 	return ec.marshalOIP2ᚕnetᚐIPᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _ObjectFilter_name(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ObjectFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ObjectFilter_displayName(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ObjectFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ObjectFilter_type(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ObjectFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ObjectFilter_description(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ObjectFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ObjectFilter_filters(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ObjectFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Filters, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			skip, err := ec.unmarshalNBoolean2bool(ctx, true)
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Sqlgen == nil {
+				return nil, errors.New("directive sqlgen is not implemented")
+			}
+			return ec.directives.Sqlgen(ctx, obj, directive0, skip)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]Filter); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []bandicoot/pkg/gql.Filter`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]Filter)
+	fc.Result = res
+	return ec.marshalOFilter2ᚕbandicootᚋpkgᚋgqlᚐFilter(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _OperatingSystem_id(ctx context.Context, field graphql.CollectedField, obj *OperatingSystem) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -22897,6 +18069,170 @@ func (ec *executionContext) _OperatingSystem_RawName(ctx context.Context, field 
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Operator_name(ctx context.Context, field graphql.CollectedField, obj *Operator) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Operator",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Operator_type(ctx context.Context, field graphql.CollectedField, obj *Operator) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Operator",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Operator_displayName(ctx context.Context, field graphql.CollectedField, obj *Operator) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Operator",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Operator_description(ctx context.Context, field graphql.CollectedField, obj *Operator) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Operator",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Operator_formatDisplay(ctx context.Context, field graphql.CollectedField, obj *Operator) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Operator",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FormatDisplay, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_adapterDevices(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -23059,6 +18395,68 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 	res := resTmp.([]User)
 	fc.Result = res
 	return ec.marshalNUser2ᚕbandicootᚋpkgᚋgqlᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query__wizardFilters(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query__wizardFilters_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().WizardFilters(rctx, args["type"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			skip, err := ec.unmarshalNBoolean2bool(ctx, true)
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Sqlgen == nil {
+				return nil, errors.New("directive sqlgen is not implemented")
+			}
+			return ec.directives.Sqlgen(ctx, nil, directive0, skip)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*ObjectFilter); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *bandicoot/pkg/gql.ObjectFilter`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ObjectFilter)
+	fc.Result = res
+	return ec.marshalOObjectFilter2ᚖbandicootᚋpkgᚋgqlᚐObjectFilter(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_adapterDevices_aggregate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -23280,6 +18678,197 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ScalarFilter_name(ctx context.Context, field graphql.CollectedField, obj *ScalarFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ScalarFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ScalarFilter_displayName(ctx context.Context, field graphql.CollectedField, obj *ScalarFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ScalarFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ScalarFilter_description(ctx context.Context, field graphql.CollectedField, obj *ScalarFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ScalarFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ScalarFilter_type(ctx context.Context, field graphql.CollectedField, obj *ScalarFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ScalarFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ScalarFilter_operators(ctx context.Context, field graphql.CollectedField, obj *ScalarFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ScalarFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Operators, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			skip, err := ec.unmarshalNBoolean2bool(ctx, true)
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Sqlgen == nil {
+				return nil, errors.New("directive sqlgen is not implemented")
+			}
+			return ec.directives.Sqlgen(ctx, obj, directive0, skip)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*Operator); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.Operator`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*Operator)
+	fc.Result = res
+	return ec.marshalNOperator2ᚕᚖbandicootᚋpkgᚋgqlᚐOperator(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Storage_deviceId(ctx context.Context, field graphql.CollectedField, obj *Storage) (ret graphql.Marshaler) {
@@ -23617,6 +19206,194 @@ func (ec *executionContext) _Tag_level(ctx context.Context, field graphql.Collec
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UnionFilter_name(ctx context.Context, field graphql.CollectedField, obj *UnionFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UnionFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UnionFilter_displayName(ctx context.Context, field graphql.CollectedField, obj *UnionFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UnionFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DisplayName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UnionFilter_type(ctx context.Context, field graphql.CollectedField, obj *UnionFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UnionFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UnionFilter_description(ctx context.Context, field graphql.CollectedField, obj *UnionFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UnionFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Description, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UnionFilter_objects(ctx context.Context, field graphql.CollectedField, obj *UnionFilter) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UnionFilter",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Objects, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			skip, err := ec.unmarshalNBoolean2bool(ctx, true)
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Sqlgen == nil {
+				return nil, errors.New("directive sqlgen is not implemented")
+			}
+			return ec.directives.Sqlgen(ctx, obj, directive0, skip)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*ObjectFilter); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.ObjectFilter`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*ObjectFilter)
+	fc.Result = res
+	return ec.marshalOObjectFilter2ᚕᚖbandicootᚋpkgᚋgqlᚐObjectFilter(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *User) (ret graphql.Marshaler) {
@@ -25643,44 +21420,8 @@ func (ec *executionContext) _adapterUsersAggregate_adapterUsers(ctx context.Cont
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.AdapterUsers, nil
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			name, err := ec.unmarshalNString2string(ctx, "adapter_users")
-			if err != nil {
-				return nil, err
-			}
-			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"user_id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
-			if err != nil {
-				return nil, err
-			}
-			if ec.directives.Relation == nil {
-				return nil, errors.New("directive relation is not implemented")
-			}
-			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, err
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*AdapterUser); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.AdapterUser`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.AdapterUsers, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -29204,135 +24945,1011 @@ func (ec *executionContext) _usersAggregate_users(ctx context.Context, field gra
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAccessTypeComparator(ctx context.Context, obj interface{}) (AccessTypeComparator, error) {
+	var it AccessTypeComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOAccessType2ᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOAccessType2ᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOAccessType2ᚕᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOAccessType2ᚕᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAdapterTypeComparator(ctx context.Context, obj interface{}) (AdapterTypeComparator, error) {
+	var it AdapterTypeComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAdminTypeComparator(ctx context.Context, obj interface{}) (AdminTypeComparator, error) {
+	var it AdminTypeComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOAdminType2ᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOAdminType2ᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOAdminType2ᚕᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOAdminType2ᚕᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputArchitectureComparator(ctx context.Context, obj interface{}) (ArchitectureComparator, error) {
+	var it ArchitectureComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOArchitecture2ᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOArchitecture2ᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOArchitecture2ᚕᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOArchitecture2ᚕᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputBooleanComparator(ctx context.Context, obj interface{}) (BooleanComparator, error) {
+	var it BooleanComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCylanceDeviceStateComparator(ctx context.Context, obj interface{}) (CylanceDeviceStateComparator, error) {
+	var it CylanceDeviceStateComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOCylanceDeviceState2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOCylanceDeviceState2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOCylanceDeviceState2ᚕᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOCylanceDeviceState2ᚕᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputDirectionComparator(ctx context.Context, obj interface{}) (DirectionComparator, error) {
+	var it DirectionComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalODirection2ᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalODirection2ᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalODirection2ᚕᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalODirection2ᚕᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputEpochArrayComparator(ctx context.Context, obj interface{}) (EpochArrayComparator, error) {
+	var it EpochArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputEpochComparator(ctx context.Context, obj interface{}) (EpochComparator, error) {
+	var it EpochComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lte":
+			var err error
+			it.Lte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lt":
+			var err error
+			it.Lt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gte":
+			var err error
+			it.Gte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gt":
+			var err error
+			it.Gt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "days":
+			var err error
+			it.Days, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputFloatArrayComparator(ctx context.Context, obj interface{}) (FloatArrayComparator, error) {
+	var it FloatArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOFloat2ᚕᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOFloat2ᚕᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOFloat2ᚕᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOFloat2ᚕᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOFloat2ᚕᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputFloatComparator(ctx context.Context, obj interface{}) (FloatComparator, error) {
+	var it FloatComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lte":
+			var err error
+			it.Lte, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lt":
+			var err error
+			it.Lt, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gte":
+			var err error
+			it.Gte, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gt":
+			var err error
+			it.Gt, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIPArrayComparator(ctx context.Context, obj interface{}) (IPArrayComparator, error) {
+	var it IPArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in_subnet":
+			var err error
+			it.InSubnet, err = ec.unmarshalOCIDR2ᚖnetᚐIPNet(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "ip_family":
+			var err error
+			it.IPFamily, err = ec.unmarshalOIPFamily2ᚖbandicootᚋpkgᚋgqlᚐIPFamily(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIPComparator(ctx context.Context, obj interface{}) (IPComparator, error) {
+	var it IPComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOIP2ᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOIP2ᚖnetᚐIP(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIntArrayComparator(ctx context.Context, obj interface{}) (IntArrayComparator, error) {
+	var it IntArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIntComparator(ctx context.Context, obj interface{}) (IntComparator, error) {
+	var it IntComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lte":
+			var err error
+			it.Lte, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lt":
+			var err error
+			it.Lt, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gte":
+			var err error
+			it.Gte, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gt":
+			var err error
+			it.Gt, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputMacArrayComparator(ctx context.Context, obj interface{}) (MacArrayComparator, error) {
+	var it MacArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOMac2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputMacComparator(ctx context.Context, obj interface{}) (MacComparator, error) {
+	var it MacComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOMac2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOMac2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputStringArrayComparator(ctx context.Context, obj interface{}) (StringArrayComparator, error) {
+	var it StringArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "no_overlap":
+			var err error
+			it.NoOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains_regex":
+			var err error
+			it.ContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputStringComparator(ctx context.Context, obj interface{}) (StringComparator, error) {
+	var it StringComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "like":
+			var err error
+			it.Like, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "ilike":
+			var err error
+			it.Ilike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_like":
+			var err error
+			it.NotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_ilike":
+			var err error
+			it.NotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "suffix":
+			var err error
+			it.Suffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "prefix":
+			var err error
+			it.Prefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUUIDArrayComparator(ctx context.Context, obj interface{}) (UUIDArrayComparator, error) {
+	var it UUIDArrayComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contains":
+			var err error
+			it.Contains, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "contained_by":
+			var err error
+			it.ContainedBy, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "overlap":
+			var err error
+			it.Overlap, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "size":
+			var err error
+			it.Size, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUUIDComparator(ctx context.Context, obj interface{}) (UUIDComparator, error) {
+	var it UUIDComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "in":
+			var err error
+			it.In, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "not_in":
+			var err error
+			it.NotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputadapter_bool_exp(ctx context.Context, obj interface{}) (AdapterBoolExp, error) {
 	var it AdapterBoolExp
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
 		switch k {
-		case "id_eq":
+		case "id":
 			var err error
-			it.IDEq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			it.ID, err = ec.unmarshalOAdapterTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "name":
 			var err error
-			it.IDNeq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_in":
+		case "properties":
 			var err error
-			it.IDIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_not_in":
-			var err error
-			it.IDNotIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_exists":
-			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not":
-			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_eq":
-			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "properties_contains":
-			var err error
-			it.PropertiesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "properties_contained_by":
-			var err error
-			it.PropertiesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "properties_overlap":
-			var err error
-			it.PropertiesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "properties_size":
-			var err error
-			it.PropertiesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "properties_contains_regex":
-			var err error
-			it.PropertiesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Properties, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -29366,2337 +25983,207 @@ func (ec *executionContext) unmarshalInputadapter_data_bool_exp(ctx context.Cont
 
 	for k, v := range asMap {
 		switch k {
-		case "adCn_exists":
+		case "adCn":
 			var err error
-			it.AdCnExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AdCn, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_not":
+		case "adSid":
 			var err error
-			it.AdCnNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdSid, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_eq":
+		case "adGuid":
 			var err error
-			it.AdCnEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdGUID, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_neq":
+		case "adName":
 			var err error
-			it.AdCnNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_in":
+		case "adSAMAccountName":
 			var err error
-			it.AdCnIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.AdSAMAccountName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_not_in":
+		case "adUserPrincipalName":
 			var err error
-			it.AdCnNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.AdUserPrincipalName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_like":
+		case "adDisplayName":
 			var err error
-			it.AdCnLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdDisplayName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_not_like":
+		case "adDistinguishedName":
 			var err error
-			it.AdCnNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdDistinguishedName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_ilike":
+		case "adCanonicalName":
 			var err error
-			it.AdCnIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdCanonicalName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_not_ilike":
+		case "adAccountExpires":
 			var err error
-			it.AdCnNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdAccountExpires, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_suffix":
+		case "adObjectClass":
 			var err error
-			it.AdCnSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdObjectClass, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adCn_prefix":
+		case "adObjectCategory":
 			var err error
-			it.AdCnPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdObjectCategory, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_exists":
+		case "adOrganizationalUnit":
 			var err error
-			it.AdSidExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AdOrganizationalUnit, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_not":
+		case "ad_bad_pwd_count":
 			var err error
-			it.AdSidNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdBadPwdCount, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_eq":
+		case "adManagedBy":
 			var err error
-			it.AdSidEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdManagedBy, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_neq":
+		case "adPrimaryGroupId":
 			var err error
-			it.AdSidNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdPrimaryGroupID, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_in":
+		case "adPrimaryGroupDn":
 			var err error
-			it.AdSidIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.AdPrimaryGroupDn, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_not_in":
+		case "adMemberOf":
 			var err error
-			it.AdSidNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.AdMemberOf, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_like":
+		case "adMemberOfFull":
 			var err error
-			it.AdSidLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdMemberOfFull, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_not_like":
+		case "adUsnChanged":
 			var err error
-			it.AdSidNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdUsnChanged, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_ilike":
+		case "adUsnCreated":
 			var err error
-			it.AdSidIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdUsnCreated, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_not_ilike":
+		case "adIsCriticalSystemObject":
 			var err error
-			it.AdSidNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdIsCriticalSystemObject, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_suffix":
+		case "adMsdsAllowedToDelegateTo":
 			var err error
-			it.AdSidSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdMsdsAllowedToDelegateTo, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adSid_prefix":
+		case "adPwdMustChange":
 			var err error
-			it.AdSidPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AdPwdMustChange, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_exists":
+		case "adMsdsResultantPso":
 			var err error
-			it.AdGUIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AdMsdsResultantPso, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_not":
+		case "isSafe":
 			var err error
-			it.AdGUIDNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.IsSafe, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_eq":
+		case "deviceState":
 			var err error
-			it.AdGUIDEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.DeviceState, err = ec.unmarshalOCylanceDeviceStateComparator2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceStateComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_neq":
+		case "policyId":
 			var err error
-			it.AdGUIDNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.PolicyID, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_in":
+		case "policyName":
 			var err error
-			it.AdGUIDIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.PolicyName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_not_in":
+		case "policiesDetails":
 			var err error
-			it.AdGUIDNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.PoliciesDetails, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_like":
+		case "tenantTag":
 			var err error
-			it.AdGUIDLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.TenantTag, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_not_like":
+		case "zoneNames":
 			var err error
-			it.AdGUIDNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.ZoneNames, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_ilike":
+		case "agentVersion":
 			var err error
-			it.AdGUIDIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AgentVersion, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adGuid_not_ilike":
+		case "externalIp":
 			var err error
-			it.AdGUIDNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adGuid_suffix":
-			var err error
-			it.AdGUIDSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adGuid_prefix":
-			var err error
-			it.AdGUIDPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_exists":
-			var err error
-			it.AdNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_not":
-			var err error
-			it.AdNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_eq":
-			var err error
-			it.AdNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_neq":
-			var err error
-			it.AdNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_in":
-			var err error
-			it.AdNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_not_in":
-			var err error
-			it.AdNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_like":
-			var err error
-			it.AdNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_not_like":
-			var err error
-			it.AdNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_ilike":
-			var err error
-			it.AdNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_not_ilike":
-			var err error
-			it.AdNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_suffix":
-			var err error
-			it.AdNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adName_prefix":
-			var err error
-			it.AdNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_exists":
-			var err error
-			it.AdSAMAccountNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_not":
-			var err error
-			it.AdSAMAccountNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_eq":
-			var err error
-			it.AdSAMAccountNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_neq":
-			var err error
-			it.AdSAMAccountNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_in":
-			var err error
-			it.AdSAMAccountNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_not_in":
-			var err error
-			it.AdSAMAccountNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_like":
-			var err error
-			it.AdSAMAccountNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_not_like":
-			var err error
-			it.AdSAMAccountNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_ilike":
-			var err error
-			it.AdSAMAccountNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_not_ilike":
-			var err error
-			it.AdSAMAccountNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_suffix":
-			var err error
-			it.AdSAMAccountNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adSAMAccountName_prefix":
-			var err error
-			it.AdSAMAccountNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_exists":
-			var err error
-			it.AdUserPrincipalNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_not":
-			var err error
-			it.AdUserPrincipalNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_eq":
-			var err error
-			it.AdUserPrincipalNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_neq":
-			var err error
-			it.AdUserPrincipalNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_in":
-			var err error
-			it.AdUserPrincipalNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_not_in":
-			var err error
-			it.AdUserPrincipalNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_like":
-			var err error
-			it.AdUserPrincipalNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_not_like":
-			var err error
-			it.AdUserPrincipalNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_ilike":
-			var err error
-			it.AdUserPrincipalNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_not_ilike":
-			var err error
-			it.AdUserPrincipalNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_suffix":
-			var err error
-			it.AdUserPrincipalNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUserPrincipalName_prefix":
-			var err error
-			it.AdUserPrincipalNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_exists":
-			var err error
-			it.AdDisplayNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_not":
-			var err error
-			it.AdDisplayNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_eq":
-			var err error
-			it.AdDisplayNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_neq":
-			var err error
-			it.AdDisplayNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_in":
-			var err error
-			it.AdDisplayNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_not_in":
-			var err error
-			it.AdDisplayNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_like":
-			var err error
-			it.AdDisplayNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_not_like":
-			var err error
-			it.AdDisplayNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_ilike":
-			var err error
-			it.AdDisplayNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_not_ilike":
-			var err error
-			it.AdDisplayNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_suffix":
-			var err error
-			it.AdDisplayNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDisplayName_prefix":
-			var err error
-			it.AdDisplayNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_exists":
-			var err error
-			it.AdDistinguishedNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_not":
-			var err error
-			it.AdDistinguishedNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_eq":
-			var err error
-			it.AdDistinguishedNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_neq":
-			var err error
-			it.AdDistinguishedNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_in":
-			var err error
-			it.AdDistinguishedNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_not_in":
-			var err error
-			it.AdDistinguishedNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_like":
-			var err error
-			it.AdDistinguishedNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_not_like":
-			var err error
-			it.AdDistinguishedNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_ilike":
-			var err error
-			it.AdDistinguishedNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_not_ilike":
-			var err error
-			it.AdDistinguishedNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_suffix":
-			var err error
-			it.AdDistinguishedNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adDistinguishedName_prefix":
-			var err error
-			it.AdDistinguishedNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_exists":
-			var err error
-			it.AdCanonicalNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_not":
-			var err error
-			it.AdCanonicalNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_eq":
-			var err error
-			it.AdCanonicalNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_neq":
-			var err error
-			it.AdCanonicalNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_in":
-			var err error
-			it.AdCanonicalNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_not_in":
-			var err error
-			it.AdCanonicalNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_like":
-			var err error
-			it.AdCanonicalNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_not_like":
-			var err error
-			it.AdCanonicalNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_ilike":
-			var err error
-			it.AdCanonicalNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_not_ilike":
-			var err error
-			it.AdCanonicalNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_suffix":
-			var err error
-			it.AdCanonicalNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adCanonicalName_prefix":
-			var err error
-			it.AdCanonicalNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_exists":
-			var err error
-			it.AdAccountExpiresExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_eq":
-			var err error
-			it.AdAccountExpiresEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_neq":
-			var err error
-			it.AdAccountExpiresNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_in":
-			var err error
-			it.AdAccountExpiresIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_not_in":
-			var err error
-			it.AdAccountExpiresNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_gt":
-			var err error
-			it.AdAccountExpiresGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_gte":
-			var err error
-			it.AdAccountExpiresGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_lt":
-			var err error
-			it.AdAccountExpiresLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_lte":
-			var err error
-			it.AdAccountExpiresLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adAccountExpires_days":
-			var err error
-			it.AdAccountExpiresDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectClass_contains":
-			var err error
-			it.AdObjectClassContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectClass_contained_by":
-			var err error
-			it.AdObjectClassContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectClass_overlap":
-			var err error
-			it.AdObjectClassOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectClass_size":
-			var err error
-			it.AdObjectClassSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectClass_contains_regex":
-			var err error
-			it.AdObjectClassContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_exists":
-			var err error
-			it.AdObjectCategoryExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_not":
-			var err error
-			it.AdObjectCategoryNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_eq":
-			var err error
-			it.AdObjectCategoryEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_neq":
-			var err error
-			it.AdObjectCategoryNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_in":
-			var err error
-			it.AdObjectCategoryIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_not_in":
-			var err error
-			it.AdObjectCategoryNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_like":
-			var err error
-			it.AdObjectCategoryLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_not_like":
-			var err error
-			it.AdObjectCategoryNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_ilike":
-			var err error
-			it.AdObjectCategoryIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_not_ilike":
-			var err error
-			it.AdObjectCategoryNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_suffix":
-			var err error
-			it.AdObjectCategorySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adObjectCategory_prefix":
-			var err error
-			it.AdObjectCategoryPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adOrganizationalUnit_contains":
-			var err error
-			it.AdOrganizationalUnitContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adOrganizationalUnit_contained_by":
-			var err error
-			it.AdOrganizationalUnitContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adOrganizationalUnit_overlap":
-			var err error
-			it.AdOrganizationalUnitOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adOrganizationalUnit_size":
-			var err error
-			it.AdOrganizationalUnitSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adOrganizationalUnit_contains_regex":
-			var err error
-			it.AdOrganizationalUnitContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_exists":
-			var err error
-			it.AdLastLogoffExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_eq":
-			var err error
-			it.AdLastLogoffEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_neq":
-			var err error
-			it.AdLastLogoffNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_in":
-			var err error
-			it.AdLastLogoffIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_not_in":
-			var err error
-			it.AdLastLogoffNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_gt":
-			var err error
-			it.AdLastLogoffGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_gte":
-			var err error
-			it.AdLastLogoffGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_lt":
-			var err error
-			it.AdLastLogoffLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_lte":
-			var err error
-			it.AdLastLogoffLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogoff_days":
-			var err error
-			it.AdLastLogoffDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_exists":
-			var err error
-			it.AdLastLogonExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_eq":
-			var err error
-			it.AdLastLogonEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_neq":
-			var err error
-			it.AdLastLogonNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_in":
-			var err error
-			it.AdLastLogonIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_not_in":
-			var err error
-			it.AdLastLogonNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_gt":
-			var err error
-			it.AdLastLogonGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_gte":
-			var err error
-			it.AdLastLogonGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_lt":
-			var err error
-			it.AdLastLogonLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_lte":
-			var err error
-			it.AdLastLogonLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogon_days":
-			var err error
-			it.AdLastLogonDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_exists":
-			var err error
-			it.AdLastLogonTimestampExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_eq":
-			var err error
-			it.AdLastLogonTimestampEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_neq":
-			var err error
-			it.AdLastLogonTimestampNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_in":
-			var err error
-			it.AdLastLogonTimestampIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_not_in":
-			var err error
-			it.AdLastLogonTimestampNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_gt":
-			var err error
-			it.AdLastLogonTimestampGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_gte":
-			var err error
-			it.AdLastLogonTimestampGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_lt":
-			var err error
-			it.AdLastLogonTimestampLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_lte":
-			var err error
-			it.AdLastLogonTimestampLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adLastLogonTimestamp_days":
-			var err error
-			it.AdLastLogonTimestampDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_exists":
-			var err error
-			it.AdBadPasswordTimeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_eq":
-			var err error
-			it.AdBadPasswordTimeEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_neq":
-			var err error
-			it.AdBadPasswordTimeNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_in":
-			var err error
-			it.AdBadPasswordTimeIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_not_in":
-			var err error
-			it.AdBadPasswordTimeNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_gt":
-			var err error
-			it.AdBadPasswordTimeGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_gte":
-			var err error
-			it.AdBadPasswordTimeGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_lt":
-			var err error
-			it.AdBadPasswordTimeLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_lte":
-			var err error
-			it.AdBadPasswordTimeLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adBadPasswordTime_days":
-			var err error
-			it.AdBadPasswordTimeDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_exists":
-			var err error
-			it.AdBadPwdCountExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_eq":
-			var err error
-			it.AdBadPwdCountEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_neq":
-			var err error
-			it.AdBadPwdCountNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_in":
-			var err error
-			it.AdBadPwdCountIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_not_in":
-			var err error
-			it.AdBadPwdCountNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_gt":
-			var err error
-			it.AdBadPwdCountGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_gte":
-			var err error
-			it.AdBadPwdCountGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_lt":
-			var err error
-			it.AdBadPwdCountLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ad_bad_pwd_count_lte":
-			var err error
-			it.AdBadPwdCountLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_exists":
-			var err error
-			it.AdManagedByExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_not":
-			var err error
-			it.AdManagedByNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_eq":
-			var err error
-			it.AdManagedByEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_neq":
-			var err error
-			it.AdManagedByNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_in":
-			var err error
-			it.AdManagedByIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_not_in":
-			var err error
-			it.AdManagedByNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_like":
-			var err error
-			it.AdManagedByLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_not_like":
-			var err error
-			it.AdManagedByNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_ilike":
-			var err error
-			it.AdManagedByIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_not_ilike":
-			var err error
-			it.AdManagedByNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_suffix":
-			var err error
-			it.AdManagedBySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adManagedBy_prefix":
-			var err error
-			it.AdManagedByPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_exists":
-			var err error
-			it.AdPasswordLastSetExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_eq":
-			var err error
-			it.AdPasswordLastSetEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_neq":
-			var err error
-			it.AdPasswordLastSetNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_in":
-			var err error
-			it.AdPasswordLastSetIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_not_in":
-			var err error
-			it.AdPasswordLastSetNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_gt":
-			var err error
-			it.AdPasswordLastSetGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_gte":
-			var err error
-			it.AdPasswordLastSetGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_lt":
-			var err error
-			it.AdPasswordLastSetLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_lte":
-			var err error
-			it.AdPasswordLastSetLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPasswordLastSet_days":
-			var err error
-			it.AdPasswordLastSetDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_exists":
-			var err error
-			it.AdPrimaryGroupIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_eq":
-			var err error
-			it.AdPrimaryGroupIDEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_neq":
-			var err error
-			it.AdPrimaryGroupIDNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_in":
-			var err error
-			it.AdPrimaryGroupIDIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_not_in":
-			var err error
-			it.AdPrimaryGroupIDNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_gt":
-			var err error
-			it.AdPrimaryGroupIDGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_gte":
-			var err error
-			it.AdPrimaryGroupIDGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_lt":
-			var err error
-			it.AdPrimaryGroupIDLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupId_lte":
-			var err error
-			it.AdPrimaryGroupIDLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_exists":
-			var err error
-			it.AdPrimaryGroupDnExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_not":
-			var err error
-			it.AdPrimaryGroupDnNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_eq":
-			var err error
-			it.AdPrimaryGroupDnEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_neq":
-			var err error
-			it.AdPrimaryGroupDnNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_in":
-			var err error
-			it.AdPrimaryGroupDnIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_not_in":
-			var err error
-			it.AdPrimaryGroupDnNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_like":
-			var err error
-			it.AdPrimaryGroupDnLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_not_like":
-			var err error
-			it.AdPrimaryGroupDnNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_ilike":
-			var err error
-			it.AdPrimaryGroupDnIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_not_ilike":
-			var err error
-			it.AdPrimaryGroupDnNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_suffix":
-			var err error
-			it.AdPrimaryGroupDnSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPrimaryGroupDn_prefix":
-			var err error
-			it.AdPrimaryGroupDnPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOf_contains":
-			var err error
-			it.AdMemberOfContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOf_contained_by":
-			var err error
-			it.AdMemberOfContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOf_overlap":
-			var err error
-			it.AdMemberOfOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOf_size":
-			var err error
-			it.AdMemberOfSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOf_contains_regex":
-			var err error
-			it.AdMemberOfContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOfFull_contains":
-			var err error
-			it.AdMemberOfFullContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOfFull_contained_by":
-			var err error
-			it.AdMemberOfFullContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOfFull_overlap":
-			var err error
-			it.AdMemberOfFullOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOfFull_size":
-			var err error
-			it.AdMemberOfFullSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMemberOfFull_contains_regex":
-			var err error
-			it.AdMemberOfFullContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_exists":
-			var err error
-			it.AdUsnChangedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_eq":
-			var err error
-			it.AdUsnChangedEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_neq":
-			var err error
-			it.AdUsnChangedNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_in":
-			var err error
-			it.AdUsnChangedIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_not_in":
-			var err error
-			it.AdUsnChangedNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_gt":
-			var err error
-			it.AdUsnChangedGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_gte":
-			var err error
-			it.AdUsnChangedGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_lt":
-			var err error
-			it.AdUsnChangedLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnChanged_lte":
-			var err error
-			it.AdUsnChangedLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_exists":
-			var err error
-			it.AdUsnCreatedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_eq":
-			var err error
-			it.AdUsnCreatedEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_neq":
-			var err error
-			it.AdUsnCreatedNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_in":
-			var err error
-			it.AdUsnCreatedIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_not_in":
-			var err error
-			it.AdUsnCreatedNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_gt":
-			var err error
-			it.AdUsnCreatedGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_gte":
-			var err error
-			it.AdUsnCreatedGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_lt":
-			var err error
-			it.AdUsnCreatedLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adUsnCreated_lte":
-			var err error
-			it.AdUsnCreatedLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_exists":
-			var err error
-			it.AdWhenChangedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_eq":
-			var err error
-			it.AdWhenChangedEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_neq":
-			var err error
-			it.AdWhenChangedNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_in":
-			var err error
-			it.AdWhenChangedIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_not_in":
-			var err error
-			it.AdWhenChangedNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_gt":
-			var err error
-			it.AdWhenChangedGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_gte":
-			var err error
-			it.AdWhenChangedGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_lt":
-			var err error
-			it.AdWhenChangedLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_lte":
-			var err error
-			it.AdWhenChangedLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenChanged_days":
-			var err error
-			it.AdWhenChangedDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_exists":
-			var err error
-			it.AdWhenCreatedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_eq":
-			var err error
-			it.AdWhenCreatedEq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_neq":
-			var err error
-			it.AdWhenCreatedNeq, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_in":
-			var err error
-			it.AdWhenCreatedIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_not_in":
-			var err error
-			it.AdWhenCreatedNotIn, err = ec.unmarshalOTime2ᚕᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_gt":
-			var err error
-			it.AdWhenCreatedGt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_gte":
-			var err error
-			it.AdWhenCreatedGte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_lt":
-			var err error
-			it.AdWhenCreatedLt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_lte":
-			var err error
-			it.AdWhenCreatedLte, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adWhenCreated_days":
-			var err error
-			it.AdWhenCreatedDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adIsCriticalSystemObject_exists":
-			var err error
-			it.AdIsCriticalSystemObjectExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adIsCriticalSystemObject_eq":
-			var err error
-			it.AdIsCriticalSystemObjectEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adIsCriticalSystemObject_neq":
-			var err error
-			it.AdIsCriticalSystemObjectNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsAllowedToDelegateTo_contains":
-			var err error
-			it.AdMsdsAllowedToDelegateToContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsAllowedToDelegateTo_contained_by":
-			var err error
-			it.AdMsdsAllowedToDelegateToContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsAllowedToDelegateTo_overlap":
-			var err error
-			it.AdMsdsAllowedToDelegateToOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsAllowedToDelegateTo_size":
-			var err error
-			it.AdMsdsAllowedToDelegateToSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsAllowedToDelegateTo_contains_regex":
-			var err error
-			it.AdMsdsAllowedToDelegateToContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPwdMustChange_exists":
-			var err error
-			it.AdPwdMustChangeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPwdMustChange_eq":
-			var err error
-			it.AdPwdMustChangeEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adPwdMustChange_neq":
-			var err error
-			it.AdPwdMustChangeNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_exists":
-			var err error
-			it.AdMsdsResultantPsoExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_not":
-			var err error
-			it.AdMsdsResultantPsoNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_eq":
-			var err error
-			it.AdMsdsResultantPsoEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_neq":
-			var err error
-			it.AdMsdsResultantPsoNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_in":
-			var err error
-			it.AdMsdsResultantPsoIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_not_in":
-			var err error
-			it.AdMsdsResultantPsoNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_like":
-			var err error
-			it.AdMsdsResultantPsoLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_not_like":
-			var err error
-			it.AdMsdsResultantPsoNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_ilike":
-			var err error
-			it.AdMsdsResultantPsoIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_not_ilike":
-			var err error
-			it.AdMsdsResultantPsoNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_suffix":
-			var err error
-			it.AdMsdsResultantPsoSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adMsdsResultantPso_prefix":
-			var err error
-			it.AdMsdsResultantPsoPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_exists":
-			var err error
-			it.IsSafeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_not":
-			var err error
-			it.IsSafeNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_eq":
-			var err error
-			it.IsSafeEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_neq":
-			var err error
-			it.IsSafeNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_in":
-			var err error
-			it.IsSafeIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_not_in":
-			var err error
-			it.IsSafeNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_like":
-			var err error
-			it.IsSafeLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_not_like":
-			var err error
-			it.IsSafeNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_ilike":
-			var err error
-			it.IsSafeIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_not_ilike":
-			var err error
-			it.IsSafeNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_suffix":
-			var err error
-			it.IsSafeSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isSafe_prefix":
-			var err error
-			it.IsSafePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceState_eq":
-			var err error
-			it.DeviceStateEq, err = ec.unmarshalOCylanceDeviceState2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceState_neq":
-			var err error
-			it.DeviceStateNeq, err = ec.unmarshalOCylanceDeviceState2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceState_in":
-			var err error
-			it.DeviceStateIn, err = ec.unmarshalOCylanceDeviceState2ᚕᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceState_not_in":
-			var err error
-			it.DeviceStateNotIn, err = ec.unmarshalOCylanceDeviceState2ᚕᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceState(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_exists":
-			var err error
-			it.PolicyIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_not":
-			var err error
-			it.PolicyIDNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_eq":
-			var err error
-			it.PolicyIDEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_neq":
-			var err error
-			it.PolicyIDNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_in":
-			var err error
-			it.PolicyIDIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_not_in":
-			var err error
-			it.PolicyIDNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_like":
-			var err error
-			it.PolicyIDLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_not_like":
-			var err error
-			it.PolicyIDNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_ilike":
-			var err error
-			it.PolicyIDIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_not_ilike":
-			var err error
-			it.PolicyIDNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_suffix":
-			var err error
-			it.PolicyIDSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyId_prefix":
-			var err error
-			it.PolicyIDPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_exists":
-			var err error
-			it.PolicyNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_not":
-			var err error
-			it.PolicyNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_eq":
-			var err error
-			it.PolicyNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_neq":
-			var err error
-			it.PolicyNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_in":
-			var err error
-			it.PolicyNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_not_in":
-			var err error
-			it.PolicyNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_like":
-			var err error
-			it.PolicyNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_not_like":
-			var err error
-			it.PolicyNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_ilike":
-			var err error
-			it.PolicyNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_not_ilike":
-			var err error
-			it.PolicyNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_suffix":
-			var err error
-			it.PolicyNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policyName_prefix":
-			var err error
-			it.PolicyNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policiesDetails_contains":
-			var err error
-			it.PoliciesDetailsContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policiesDetails_contained_by":
-			var err error
-			it.PoliciesDetailsContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policiesDetails_overlap":
-			var err error
-			it.PoliciesDetailsOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policiesDetails_size":
-			var err error
-			it.PoliciesDetailsSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "policiesDetails_contains_regex":
-			var err error
-			it.PoliciesDetailsContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_exists":
-			var err error
-			it.TenantTagExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_not":
-			var err error
-			it.TenantTagNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_eq":
-			var err error
-			it.TenantTagEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_neq":
-			var err error
-			it.TenantTagNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_in":
-			var err error
-			it.TenantTagIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_not_in":
-			var err error
-			it.TenantTagNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_like":
-			var err error
-			it.TenantTagLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_not_like":
-			var err error
-			it.TenantTagNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_ilike":
-			var err error
-			it.TenantTagIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_not_ilike":
-			var err error
-			it.TenantTagNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_suffix":
-			var err error
-			it.TenantTagSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "tenantTag_prefix":
-			var err error
-			it.TenantTagPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "zoneNames_contains":
-			var err error
-			it.ZoneNamesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "zoneNames_contained_by":
-			var err error
-			it.ZoneNamesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "zoneNames_overlap":
-			var err error
-			it.ZoneNamesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "zoneNames_size":
-			var err error
-			it.ZoneNamesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "zoneNames_contains_regex":
-			var err error
-			it.ZoneNamesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_exists":
-			var err error
-			it.AgentVersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_not":
-			var err error
-			it.AgentVersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_eq":
-			var err error
-			it.AgentVersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_neq":
-			var err error
-			it.AgentVersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_in":
-			var err error
-			it.AgentVersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_not_in":
-			var err error
-			it.AgentVersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_like":
-			var err error
-			it.AgentVersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_not_like":
-			var err error
-			it.AgentVersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_ilike":
-			var err error
-			it.AgentVersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_not_ilike":
-			var err error
-			it.AgentVersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_suffix":
-			var err error
-			it.AgentVersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_prefix":
-			var err error
-			it.AgentVersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_exists":
-			var err error
-			it.ExternalIPExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_not":
-			var err error
-			it.ExternalIPNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_eq":
-			var err error
-			it.ExternalIPEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_neq":
-			var err error
-			it.ExternalIPNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_in":
-			var err error
-			it.ExternalIPIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_not_in":
-			var err error
-			it.ExternalIPNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_like":
-			var err error
-			it.ExternalIPLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_not_like":
-			var err error
-			it.ExternalIPNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_ilike":
-			var err error
-			it.ExternalIPIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_not_ilike":
-			var err error
-			it.ExternalIPNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_suffix":
-			var err error
-			it.ExternalIPSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "externalIp_prefix":
-			var err error
-			it.ExternalIPPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.ExternalIP, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -31718,75 +26205,9 @@ func (ec *executionContext) unmarshalInputadapter_data_bool_exp(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
-		case "csAgentVersion_exists":
+		case "csAgentVersion":
 			var err error
-			it.CsAgentVersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_not":
-			var err error
-			it.CsAgentVersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_eq":
-			var err error
-			it.CsAgentVersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_neq":
-			var err error
-			it.CsAgentVersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_in":
-			var err error
-			it.CsAgentVersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_not_in":
-			var err error
-			it.CsAgentVersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_like":
-			var err error
-			it.CsAgentVersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_not_like":
-			var err error
-			it.CsAgentVersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_ilike":
-			var err error
-			it.CsAgentVersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_not_ilike":
-			var err error
-			it.CsAgentVersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_suffix":
-			var err error
-			it.CsAgentVersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "csAgentVersion_prefix":
-			var err error
-			it.CsAgentVersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.CsAgentVersion, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -31820,99 +26241,15 @@ func (ec *executionContext) unmarshalInputadapter_device_admin_bool_exp(ctx cont
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not":
+		case "type":
 			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_eq":
-			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_eq":
-			var err error
-			it.TypeEq, err = ec.unmarshalOAdminType2ᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_neq":
-			var err error
-			it.TypeNeq, err = ec.unmarshalOAdminType2ᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_in":
-			var err error
-			it.TypeIn, err = ec.unmarshalOAdminType2ᚕᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_not_in":
-			var err error
-			it.TypeNotIn, err = ec.unmarshalOAdminType2ᚕᚖbandicootᚋpkgᚋgqlᚐAdminType(ctx, v)
+			it.Type, err = ec.unmarshalOAdminTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdminTypeComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -31946,135 +26283,21 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "fetchCycle":
 			var err error
-			it.IDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.FetchCycle, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "adapterId":
 			var err error
-			it.IDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_in":
-			var err error
-			it.IDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_not_in":
-			var err error
-			it.IDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gt":
-			var err error
-			it.IDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gte":
-			var err error
-			it.IDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lt":
-			var err error
-			it.IDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lte":
-			var err error
-			it.IDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_exists":
-			var err error
-			it.FetchCycleExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_eq":
-			var err error
-			it.FetchCycleEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_neq":
-			var err error
-			it.FetchCycleNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_in":
-			var err error
-			it.FetchCycleIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_not_in":
-			var err error
-			it.FetchCycleNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gt":
-			var err error
-			it.FetchCycleGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gte":
-			var err error
-			it.FetchCycleGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lt":
-			var err error
-			it.FetchCycleLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lte":
-			var err error
-			it.FetchCycleLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_eq":
-			var err error
-			it.AdapterIDEq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_neq":
-			var err error
-			it.AdapterIDNeq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_in":
-			var err error
-			it.AdapterIDIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_not_in":
-			var err error
-			it.AdapterIDNotIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			it.AdapterID, err = ec.unmarshalOAdapterTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -32084,129 +26307,15 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 			if err != nil {
 				return it, err
 			}
-		case "adapterName_exists":
+		case "adapterName":
 			var err error
-			it.AdapterNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AdapterName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adapterName_not":
+		case "deviceId":
 			var err error
-			it.AdapterNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_eq":
-			var err error
-			it.AdapterNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_neq":
-			var err error
-			it.AdapterNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_in":
-			var err error
-			it.AdapterNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_in":
-			var err error
-			it.AdapterNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_like":
-			var err error
-			it.AdapterNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_like":
-			var err error
-			it.AdapterNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_ilike":
-			var err error
-			it.AdapterNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_ilike":
-			var err error
-			it.AdapterNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_suffix":
-			var err error
-			it.AdapterNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_prefix":
-			var err error
-			it.AdapterNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_exists":
-			var err error
-			it.DeviceIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_eq":
-			var err error
-			it.DeviceIDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_neq":
-			var err error
-			it.DeviceIDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_in":
-			var err error
-			it.DeviceIDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_not_in":
-			var err error
-			it.DeviceIDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_gt":
-			var err error
-			it.DeviceIDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_gte":
-			var err error
-			it.DeviceIDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_lt":
-			var err error
-			it.DeviceIDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_lte":
-			var err error
-			it.DeviceIDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.DeviceID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -32216,321 +26325,33 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_exists":
+		case "fetchTime":
 			var err error
-			it.FetchTimeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.FetchTime, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_eq":
+		case "hostname":
 			var err error
-			it.FetchTimeEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Hostname, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_neq":
+		case "name":
 			var err error
-			it.FetchTimeNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_in":
+		case "lastSeen":
 			var err error
-			it.FetchTimeIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.LastSeen, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_not_in":
+		case "osId":
 			var err error
-			it.FetchTimeNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchTime_gt":
-			var err error
-			it.FetchTimeGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchTime_gte":
-			var err error
-			it.FetchTimeGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchTime_lt":
-			var err error
-			it.FetchTimeLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchTime_lte":
-			var err error
-			it.FetchTimeLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchTime_days":
-			var err error
-			it.FetchTimeDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_exists":
-			var err error
-			it.HostnameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_not":
-			var err error
-			it.HostnameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_eq":
-			var err error
-			it.HostnameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_neq":
-			var err error
-			it.HostnameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_in":
-			var err error
-			it.HostnameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_not_in":
-			var err error
-			it.HostnameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_like":
-			var err error
-			it.HostnameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_not_like":
-			var err error
-			it.HostnameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_ilike":
-			var err error
-			it.HostnameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_not_ilike":
-			var err error
-			it.HostnameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_suffix":
-			var err error
-			it.HostnameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostname_prefix":
-			var err error
-			it.HostnamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_exists":
-			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not":
-			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_eq":
-			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_exists":
-			var err error
-			it.LastSeenExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_eq":
-			var err error
-			it.LastSeenEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_neq":
-			var err error
-			it.LastSeenNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_in":
-			var err error
-			it.LastSeenIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_not_in":
-			var err error
-			it.LastSeenNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gt":
-			var err error
-			it.LastSeenGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gte":
-			var err error
-			it.LastSeenGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lt":
-			var err error
-			it.LastSeenLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lte":
-			var err error
-			it.LastSeenLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_days":
-			var err error
-			it.LastSeenDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_exists":
-			var err error
-			it.OsIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_eq":
-			var err error
-			it.OsIDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_neq":
-			var err error
-			it.OsIDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_in":
-			var err error
-			it.OsIDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_not_in":
-			var err error
-			it.OsIDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_gt":
-			var err error
-			it.OsIDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_gte":
-			var err error
-			it.OsIDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_lt":
-			var err error
-			it.OsIDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "osId_lte":
-			var err error
-			it.OsIDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.OsID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -32540,75 +26361,9 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 			if err != nil {
 				return it, err
 			}
-		case "prettyId_exists":
+		case "prettyId":
 			var err error
-			it.PrettyIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_not":
-			var err error
-			it.PrettyIDNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_eq":
-			var err error
-			it.PrettyIDEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_neq":
-			var err error
-			it.PrettyIDNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_in":
-			var err error
-			it.PrettyIDIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_not_in":
-			var err error
-			it.PrettyIDNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_like":
-			var err error
-			it.PrettyIDLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_not_like":
-			var err error
-			it.PrettyIDNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_ilike":
-			var err error
-			it.PrettyIDIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_not_ilike":
-			var err error
-			it.PrettyIDNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_suffix":
-			var err error
-			it.PrettyIDSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "prettyId_prefix":
-			var err error
-			it.PrettyIDPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.PrettyID, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -32624,123 +26379,21 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 			if err != nil {
 				return it, err
 			}
-		case "lastUsedUsers_contains":
+		case "lastUsedUsers":
 			var err error
-			it.LastUsedUsersContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.LastUsedUsers, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastUsedUsers_contained_by":
+		case "domain":
 			var err error
-			it.LastUsedUsersContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Domain, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastUsedUsers_overlap":
+		case "partOfDomain":
 			var err error
-			it.LastUsedUsersOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUsedUsers_size":
-			var err error
-			it.LastUsedUsersSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUsedUsers_contains_regex":
-			var err error
-			it.LastUsedUsersContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_exists":
-			var err error
-			it.DomainExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_not":
-			var err error
-			it.DomainNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_eq":
-			var err error
-			it.DomainEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_neq":
-			var err error
-			it.DomainNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_in":
-			var err error
-			it.DomainIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_not_in":
-			var err error
-			it.DomainNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_like":
-			var err error
-			it.DomainLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_not_like":
-			var err error
-			it.DomainNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_ilike":
-			var err error
-			it.DomainIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_not_ilike":
-			var err error
-			it.DomainNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_suffix":
-			var err error
-			it.DomainSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "domain_prefix":
-			var err error
-			it.DomainPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "partOfDomain_exists":
-			var err error
-			it.PartOfDomainExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "partOfDomain_eq":
-			var err error
-			it.PartOfDomainEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "partOfDomain_neq":
-			var err error
-			it.PartOfDomainNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.PartOfDomain, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -32768,651 +26421,57 @@ func (ec *executionContext) unmarshalInputadapter_device_bool_exp(ctx context.Co
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_exists":
+		case "agentVersion":
 			var err error
-			it.AgentVersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AgentVersion, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_not":
+		case "agentStatus":
 			var err error
-			it.AgentVersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AgentStatus, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_eq":
+		case "agentName":
 			var err error
-			it.AgentVersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.AgentName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_neq":
+		case "model":
 			var err error
-			it.AgentVersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Model, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_in":
+		case "manufacturer":
 			var err error
-			it.AgentVersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Manufacturer, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_not_in":
+		case "serial":
 			var err error
-			it.AgentVersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Serial, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_like":
+		case "family":
 			var err error
-			it.AgentVersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Family, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_not_like":
+		case "biosVersion":
 			var err error
-			it.AgentVersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.BiosVersion, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "agentVersion_ilike":
+		case "biosSerial":
 			var err error
-			it.AgentVersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_not_ilike":
-			var err error
-			it.AgentVersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_suffix":
-			var err error
-			it.AgentVersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentVersion_prefix":
-			var err error
-			it.AgentVersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_exists":
-			var err error
-			it.AgentStatusExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_not":
-			var err error
-			it.AgentStatusNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_eq":
-			var err error
-			it.AgentStatusEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_neq":
-			var err error
-			it.AgentStatusNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_in":
-			var err error
-			it.AgentStatusIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_not_in":
-			var err error
-			it.AgentStatusNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_like":
-			var err error
-			it.AgentStatusLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_not_like":
-			var err error
-			it.AgentStatusNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_ilike":
-			var err error
-			it.AgentStatusIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_not_ilike":
-			var err error
-			it.AgentStatusNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_suffix":
-			var err error
-			it.AgentStatusSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentStatus_prefix":
-			var err error
-			it.AgentStatusPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_exists":
-			var err error
-			it.AgentNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_not":
-			var err error
-			it.AgentNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_eq":
-			var err error
-			it.AgentNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_neq":
-			var err error
-			it.AgentNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_in":
-			var err error
-			it.AgentNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_not_in":
-			var err error
-			it.AgentNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_like":
-			var err error
-			it.AgentNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_not_like":
-			var err error
-			it.AgentNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_ilike":
-			var err error
-			it.AgentNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_not_ilike":
-			var err error
-			it.AgentNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_suffix":
-			var err error
-			it.AgentNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "agentName_prefix":
-			var err error
-			it.AgentNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_exists":
-			var err error
-			it.ModelExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_not":
-			var err error
-			it.ModelNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_eq":
-			var err error
-			it.ModelEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_neq":
-			var err error
-			it.ModelNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_in":
-			var err error
-			it.ModelIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_not_in":
-			var err error
-			it.ModelNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_like":
-			var err error
-			it.ModelLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_not_like":
-			var err error
-			it.ModelNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_ilike":
-			var err error
-			it.ModelIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_not_ilike":
-			var err error
-			it.ModelNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_suffix":
-			var err error
-			it.ModelSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "model_prefix":
-			var err error
-			it.ModelPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_exists":
-			var err error
-			it.ManufacturerExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_not":
-			var err error
-			it.ManufacturerNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_eq":
-			var err error
-			it.ManufacturerEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_neq":
-			var err error
-			it.ManufacturerNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_in":
-			var err error
-			it.ManufacturerIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_not_in":
-			var err error
-			it.ManufacturerNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_like":
-			var err error
-			it.ManufacturerLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_not_like":
-			var err error
-			it.ManufacturerNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_ilike":
-			var err error
-			it.ManufacturerIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_not_ilike":
-			var err error
-			it.ManufacturerNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_suffix":
-			var err error
-			it.ManufacturerSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "manufacturer_prefix":
-			var err error
-			it.ManufacturerPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_exists":
-			var err error
-			it.SerialExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_not":
-			var err error
-			it.SerialNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_eq":
-			var err error
-			it.SerialEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_neq":
-			var err error
-			it.SerialNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_in":
-			var err error
-			it.SerialIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_not_in":
-			var err error
-			it.SerialNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_like":
-			var err error
-			it.SerialLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_not_like":
-			var err error
-			it.SerialNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_ilike":
-			var err error
-			it.SerialIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_not_ilike":
-			var err error
-			it.SerialNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_suffix":
-			var err error
-			it.SerialSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "serial_prefix":
-			var err error
-			it.SerialPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_exists":
-			var err error
-			it.FamilyExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_not":
-			var err error
-			it.FamilyNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_eq":
-			var err error
-			it.FamilyEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_neq":
-			var err error
-			it.FamilyNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_in":
-			var err error
-			it.FamilyIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_not_in":
-			var err error
-			it.FamilyNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_like":
-			var err error
-			it.FamilyLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_not_like":
-			var err error
-			it.FamilyNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_ilike":
-			var err error
-			it.FamilyIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_not_ilike":
-			var err error
-			it.FamilyNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_suffix":
-			var err error
-			it.FamilySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "family_prefix":
-			var err error
-			it.FamilyPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_exists":
-			var err error
-			it.BiosVersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_not":
-			var err error
-			it.BiosVersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_eq":
-			var err error
-			it.BiosVersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_neq":
-			var err error
-			it.BiosVersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_in":
-			var err error
-			it.BiosVersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_not_in":
-			var err error
-			it.BiosVersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_like":
-			var err error
-			it.BiosVersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_not_like":
-			var err error
-			it.BiosVersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_ilike":
-			var err error
-			it.BiosVersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_not_ilike":
-			var err error
-			it.BiosVersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_suffix":
-			var err error
-			it.BiosVersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosVersion_prefix":
-			var err error
-			it.BiosVersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_exists":
-			var err error
-			it.BiosSerialExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_not":
-			var err error
-			it.BiosSerialNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_eq":
-			var err error
-			it.BiosSerialEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_neq":
-			var err error
-			it.BiosSerialNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_in":
-			var err error
-			it.BiosSerialIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_not_in":
-			var err error
-			it.BiosSerialNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_like":
-			var err error
-			it.BiosSerialLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_not_like":
-			var err error
-			it.BiosSerialNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_ilike":
-			var err error
-			it.BiosSerialIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_not_ilike":
-			var err error
-			it.BiosSerialNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_suffix":
-			var err error
-			it.BiosSerialSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "biosSerial_prefix":
-			var err error
-			it.BiosSerialPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.BiosSerial, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -33446,459 +26505,63 @@ func (ec *executionContext) unmarshalInputadapter_device_user_bool_exp(ctx conte
 
 	for k, v := range asMap {
 		switch k {
-		case "deviceId_exists":
+		case "deviceId":
 			var err error
-			it.DeviceIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.DeviceID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_eq":
+		case "sid":
 			var err error
-			it.DeviceIDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Sid, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_neq":
+		case "username":
 			var err error
-			it.DeviceIDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Username, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_in":
+		case "lastUseDate":
 			var err error
-			it.DeviceIDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.LastUseDate, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_not_in":
+		case "isLocal":
 			var err error
-			it.DeviceIDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.IsLocal, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_gt":
+		case "isDisabled":
 			var err error
-			it.DeviceIDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.IsDisabled, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_gte":
+		case "isAdmin":
 			var err error
-			it.DeviceIDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.IsAdmin, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_lt":
+		case "userDepartment":
 			var err error
-			it.DeviceIDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.UserDepartment, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_lte":
+		case "passwordMaxAge":
 			var err error
-			it.DeviceIDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.PasswordMaxAge, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "sid_exists":
+		case "interpreter":
 			var err error
-			it.SidExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_not":
-			var err error
-			it.SidNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_eq":
-			var err error
-			it.SidEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_neq":
-			var err error
-			it.SidNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_in":
-			var err error
-			it.SidIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_not_in":
-			var err error
-			it.SidNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_like":
-			var err error
-			it.SidLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_not_like":
-			var err error
-			it.SidNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_ilike":
-			var err error
-			it.SidIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_not_ilike":
-			var err error
-			it.SidNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_suffix":
-			var err error
-			it.SidSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "sid_prefix":
-			var err error
-			it.SidPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_exists":
-			var err error
-			it.UsernameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not":
-			var err error
-			it.UsernameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_eq":
-			var err error
-			it.UsernameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_neq":
-			var err error
-			it.UsernameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_in":
-			var err error
-			it.UsernameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_in":
-			var err error
-			it.UsernameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_like":
-			var err error
-			it.UsernameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_like":
-			var err error
-			it.UsernameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_ilike":
-			var err error
-			it.UsernameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_ilike":
-			var err error
-			it.UsernameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_suffix":
-			var err error
-			it.UsernameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_prefix":
-			var err error
-			it.UsernamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_exists":
-			var err error
-			it.LastUseDateExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_eq":
-			var err error
-			it.LastUseDateEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_neq":
-			var err error
-			it.LastUseDateNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_in":
-			var err error
-			it.LastUseDateIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_not_in":
-			var err error
-			it.LastUseDateNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_gt":
-			var err error
-			it.LastUseDateGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_gte":
-			var err error
-			it.LastUseDateGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_lt":
-			var err error
-			it.LastUseDateLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_lte":
-			var err error
-			it.LastUseDateLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastUseDate_days":
-			var err error
-			it.LastUseDateDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isLocal_exists":
-			var err error
-			it.IsLocalExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isLocal_eq":
-			var err error
-			it.IsLocalEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isLocal_neq":
-			var err error
-			it.IsLocalNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isDisabled_exists":
-			var err error
-			it.IsDisabledExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isDisabled_eq":
-			var err error
-			it.IsDisabledEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isDisabled_neq":
-			var err error
-			it.IsDisabledNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isAdmin_exists":
-			var err error
-			it.IsAdminExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isAdmin_eq":
-			var err error
-			it.IsAdminEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "isAdmin_neq":
-			var err error
-			it.IsAdminNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userDepartment_exists":
-			var err error
-			it.UserDepartmentExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userDepartment_eq":
-			var err error
-			it.UserDepartmentEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userDepartment_neq":
-			var err error
-			it.UserDepartmentNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_exists":
-			var err error
-			it.PasswordMaxAgeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_eq":
-			var err error
-			it.PasswordMaxAgeEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_neq":
-			var err error
-			it.PasswordMaxAgeNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_in":
-			var err error
-			it.PasswordMaxAgeIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_not_in":
-			var err error
-			it.PasswordMaxAgeNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_gt":
-			var err error
-			it.PasswordMaxAgeGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_gte":
-			var err error
-			it.PasswordMaxAgeGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_lt":
-			var err error
-			it.PasswordMaxAgeLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "passwordMaxAge_lte":
-			var err error
-			it.PasswordMaxAgeLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_exists":
-			var err error
-			it.InterpreterExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_not":
-			var err error
-			it.InterpreterNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_eq":
-			var err error
-			it.InterpreterEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_neq":
-			var err error
-			it.InterpreterNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_in":
-			var err error
-			it.InterpreterIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_not_in":
-			var err error
-			it.InterpreterNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_like":
-			var err error
-			it.InterpreterLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_not_like":
-			var err error
-			it.InterpreterNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_ilike":
-			var err error
-			it.InterpreterIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_not_ilike":
-			var err error
-			it.InterpreterNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_suffix":
-			var err error
-			it.InterpreterSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "interpreter_prefix":
-			var err error
-			it.InterpreterPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Interpreter, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -33932,135 +26595,21 @@ func (ec *executionContext) unmarshalInputadapter_user_bool_exp(ctx context.Cont
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "fetchCycle":
 			var err error
-			it.IDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.FetchCycle, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "adapterId":
 			var err error
-			it.IDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_in":
-			var err error
-			it.IDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_not_in":
-			var err error
-			it.IDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gt":
-			var err error
-			it.IDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gte":
-			var err error
-			it.IDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lt":
-			var err error
-			it.IDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lte":
-			var err error
-			it.IDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_exists":
-			var err error
-			it.FetchCycleExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_eq":
-			var err error
-			it.FetchCycleEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_neq":
-			var err error
-			it.FetchCycleNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_in":
-			var err error
-			it.FetchCycleIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_not_in":
-			var err error
-			it.FetchCycleNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gt":
-			var err error
-			it.FetchCycleGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gte":
-			var err error
-			it.FetchCycleGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lt":
-			var err error
-			it.FetchCycleLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lte":
-			var err error
-			it.FetchCycleLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_eq":
-			var err error
-			it.AdapterIDEq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_neq":
-			var err error
-			it.AdapterIDNeq, err = ec.unmarshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_in":
-			var err error
-			it.AdapterIDIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterId_not_in":
-			var err error
-			it.AdapterIDNotIn, err = ec.unmarshalOAdapterType2ᚕᚖbandicootᚋpkgᚋdomainᚐAdapterType(ctx, v)
+			it.AdapterID, err = ec.unmarshalOAdapterTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -34070,129 +26619,15 @@ func (ec *executionContext) unmarshalInputadapter_user_bool_exp(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
-		case "adapterName_exists":
+		case "adapterName":
 			var err error
-			it.AdapterNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.AdapterName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "adapterName_not":
+		case "userId":
 			var err error
-			it.AdapterNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_eq":
-			var err error
-			it.AdapterNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_neq":
-			var err error
-			it.AdapterNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_in":
-			var err error
-			it.AdapterNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_in":
-			var err error
-			it.AdapterNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_like":
-			var err error
-			it.AdapterNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_like":
-			var err error
-			it.AdapterNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_ilike":
-			var err error
-			it.AdapterNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_not_ilike":
-			var err error
-			it.AdapterNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_suffix":
-			var err error
-			it.AdapterNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterName_prefix":
-			var err error
-			it.AdapterNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_exists":
-			var err error
-			it.UserIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_eq":
-			var err error
-			it.UserIDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_neq":
-			var err error
-			it.UserIDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_in":
-			var err error
-			it.UserIDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_not_in":
-			var err error
-			it.UserIDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_gt":
-			var err error
-			it.UserIDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_gte":
-			var err error
-			it.UserIDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_lt":
-			var err error
-			it.UserIDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "userId_lte":
-			var err error
-			it.UserIDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.UserID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -34202,555 +26637,87 @@ func (ec *executionContext) unmarshalInputadapter_user_bool_exp(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_exists":
+		case "fetchTime":
 			var err error
-			it.FetchTimeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.FetchTime, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_eq":
+		case "lastSeen":
 			var err error
-			it.FetchTimeEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.LastSeen, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_neq":
+		case "username":
 			var err error
-			it.FetchTimeNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Username, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_in":
+		case "firstName":
 			var err error
-			it.FetchTimeIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.FirstName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_not_in":
+		case "lastName":
 			var err error
-			it.FetchTimeNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.LastName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_gt":
+		case "mail":
 			var err error
-			it.FetchTimeGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Mail, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_gte":
+		case "admin":
 			var err error
-			it.FetchTimeGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Admin, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_lt":
+		case "local":
 			var err error
-			it.FetchTimeLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Local, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_lte":
+		case "delegated_admin":
 			var err error
-			it.FetchTimeLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.DelegatedAdmin, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "fetchTime_days":
+		case "mfa_enforced":
 			var err error
-			it.FetchTimeDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.MfaEnforced, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastSeen_exists":
+		case "mfa_enrolled":
 			var err error
-			it.LastSeenExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.MfaEnrolled, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastSeen_eq":
+		case "suspended":
 			var err error
-			it.LastSeenEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Suspended, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastSeen_neq":
+		case "locked":
 			var err error
-			it.LastSeenNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
+			it.Locked, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "lastSeen_in":
+		case "disabled":
 			var err error
-			it.LastSeenIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_not_in":
-			var err error
-			it.LastSeenNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gt":
-			var err error
-			it.LastSeenGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gte":
-			var err error
-			it.LastSeenGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lt":
-			var err error
-			it.LastSeenLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lte":
-			var err error
-			it.LastSeenLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_days":
-			var err error
-			it.LastSeenDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_exists":
-			var err error
-			it.UsernameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not":
-			var err error
-			it.UsernameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_eq":
-			var err error
-			it.UsernameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_neq":
-			var err error
-			it.UsernameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_in":
-			var err error
-			it.UsernameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_in":
-			var err error
-			it.UsernameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_like":
-			var err error
-			it.UsernameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_like":
-			var err error
-			it.UsernameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_ilike":
-			var err error
-			it.UsernameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_not_ilike":
-			var err error
-			it.UsernameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_suffix":
-			var err error
-			it.UsernameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "username_prefix":
-			var err error
-			it.UsernamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_exists":
-			var err error
-			it.FirstNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_not":
-			var err error
-			it.FirstNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_eq":
-			var err error
-			it.FirstNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_neq":
-			var err error
-			it.FirstNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_in":
-			var err error
-			it.FirstNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_not_in":
-			var err error
-			it.FirstNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_like":
-			var err error
-			it.FirstNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_not_like":
-			var err error
-			it.FirstNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_ilike":
-			var err error
-			it.FirstNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_not_ilike":
-			var err error
-			it.FirstNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_suffix":
-			var err error
-			it.FirstNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "firstName_prefix":
-			var err error
-			it.FirstNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_exists":
-			var err error
-			it.LastNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_not":
-			var err error
-			it.LastNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_eq":
-			var err error
-			it.LastNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_neq":
-			var err error
-			it.LastNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_in":
-			var err error
-			it.LastNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_not_in":
-			var err error
-			it.LastNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_like":
-			var err error
-			it.LastNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_not_like":
-			var err error
-			it.LastNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_ilike":
-			var err error
-			it.LastNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_not_ilike":
-			var err error
-			it.LastNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_suffix":
-			var err error
-			it.LastNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastName_prefix":
-			var err error
-			it.LastNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_exists":
-			var err error
-			it.MailExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_not":
-			var err error
-			it.MailNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_eq":
-			var err error
-			it.MailEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_neq":
-			var err error
-			it.MailNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_in":
-			var err error
-			it.MailIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_not_in":
-			var err error
-			it.MailNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_like":
-			var err error
-			it.MailLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_not_like":
-			var err error
-			it.MailNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_ilike":
-			var err error
-			it.MailIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_not_ilike":
-			var err error
-			it.MailNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_suffix":
-			var err error
-			it.MailSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mail_prefix":
-			var err error
-			it.MailPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "admin_exists":
-			var err error
-			it.AdminExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "admin_eq":
-			var err error
-			it.AdminEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "admin_neq":
-			var err error
-			it.AdminNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "local_exists":
-			var err error
-			it.LocalExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "local_eq":
-			var err error
-			it.LocalEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "local_neq":
-			var err error
-			it.LocalNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "delegated_admin_exists":
-			var err error
-			it.DelegatedAdminExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "delegated_admin_eq":
-			var err error
-			it.DelegatedAdminEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "delegated_admin_neq":
-			var err error
-			it.DelegatedAdminNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enforced_exists":
-			var err error
-			it.MfaEnforcedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enforced_eq":
-			var err error
-			it.MfaEnforcedEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enforced_neq":
-			var err error
-			it.MfaEnforcedNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enrolled_exists":
-			var err error
-			it.MfaEnrolledExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enrolled_eq":
-			var err error
-			it.MfaEnrolledEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "mfa_enrolled_neq":
-			var err error
-			it.MfaEnrolledNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "suspended_exists":
-			var err error
-			it.SuspendedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "suspended_eq":
-			var err error
-			it.SuspendedEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "suspended_neq":
-			var err error
-			it.SuspendedNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "locked_exists":
-			var err error
-			it.LockedExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "locked_eq":
-			var err error
-			it.LockedEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "locked_neq":
-			var err error
-			it.LockedNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "disabled_exists":
-			var err error
-			it.DisabledExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "disabled_eq":
-			var err error
-			it.DisabledEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "disabled_neq":
-			var err error
-			it.DisabledNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Disabled, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -34784,555 +26751,51 @@ func (ec *executionContext) unmarshalInputcs_group_bool_exp(ctx context.Context,
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not":
+		case "name":
 			var err error
-			it.IDNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "createdBy":
 			var err error
-			it.IDEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.CreatedBy, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "createdTimestamp":
 			var err error
-			it.IDNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.CreatedTimestamp, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_in":
+		case "description":
 			var err error
-			it.IDIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Description, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not_in":
+		case "groupType":
 			var err error
-			it.IDNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.GroupType, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_like":
+		case "modifiedBy":
 			var err error
-			it.IDLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.ModifiedBy, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not_like":
+		case "modifiedTime":
 			var err error
-			it.IDNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_ilike":
-			var err error
-			it.IDIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_not_ilike":
-			var err error
-			it.IDNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_suffix":
-			var err error
-			it.IDSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_prefix":
-			var err error
-			it.IDPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_exists":
-			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not":
-			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_eq":
-			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_exists":
-			var err error
-			it.CreatedByExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not":
-			var err error
-			it.CreatedByNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_eq":
-			var err error
-			it.CreatedByEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_neq":
-			var err error
-			it.CreatedByNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_in":
-			var err error
-			it.CreatedByIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_in":
-			var err error
-			it.CreatedByNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_like":
-			var err error
-			it.CreatedByLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_like":
-			var err error
-			it.CreatedByNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_ilike":
-			var err error
-			it.CreatedByIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_ilike":
-			var err error
-			it.CreatedByNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_suffix":
-			var err error
-			it.CreatedBySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_prefix":
-			var err error
-			it.CreatedByPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_exists":
-			var err error
-			it.CreatedTimestampExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_eq":
-			var err error
-			it.CreatedTimestampEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_neq":
-			var err error
-			it.CreatedTimestampNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_in":
-			var err error
-			it.CreatedTimestampIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_not_in":
-			var err error
-			it.CreatedTimestampNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_gt":
-			var err error
-			it.CreatedTimestampGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_gte":
-			var err error
-			it.CreatedTimestampGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_lt":
-			var err error
-			it.CreatedTimestampLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_lte":
-			var err error
-			it.CreatedTimestampLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTimestamp_days":
-			var err error
-			it.CreatedTimestampDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_exists":
-			var err error
-			it.DescriptionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not":
-			var err error
-			it.DescriptionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_eq":
-			var err error
-			it.DescriptionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_neq":
-			var err error
-			it.DescriptionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_in":
-			var err error
-			it.DescriptionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_in":
-			var err error
-			it.DescriptionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_like":
-			var err error
-			it.DescriptionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_like":
-			var err error
-			it.DescriptionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_ilike":
-			var err error
-			it.DescriptionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_ilike":
-			var err error
-			it.DescriptionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_suffix":
-			var err error
-			it.DescriptionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_prefix":
-			var err error
-			it.DescriptionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_exists":
-			var err error
-			it.GroupTypeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_not":
-			var err error
-			it.GroupTypeNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_eq":
-			var err error
-			it.GroupTypeEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_neq":
-			var err error
-			it.GroupTypeNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_in":
-			var err error
-			it.GroupTypeIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_not_in":
-			var err error
-			it.GroupTypeNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_like":
-			var err error
-			it.GroupTypeLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_not_like":
-			var err error
-			it.GroupTypeNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_ilike":
-			var err error
-			it.GroupTypeIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_not_ilike":
-			var err error
-			it.GroupTypeNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_suffix":
-			var err error
-			it.GroupTypeSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "groupType_prefix":
-			var err error
-			it.GroupTypePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_exists":
-			var err error
-			it.ModifiedByExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_not":
-			var err error
-			it.ModifiedByNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_eq":
-			var err error
-			it.ModifiedByEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_neq":
-			var err error
-			it.ModifiedByNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_in":
-			var err error
-			it.ModifiedByIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_not_in":
-			var err error
-			it.ModifiedByNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_like":
-			var err error
-			it.ModifiedByLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_not_like":
-			var err error
-			it.ModifiedByNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_ilike":
-			var err error
-			it.ModifiedByIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_not_ilike":
-			var err error
-			it.ModifiedByNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_suffix":
-			var err error
-			it.ModifiedBySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedBy_prefix":
-			var err error
-			it.ModifiedByPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_exists":
-			var err error
-			it.ModifiedTimeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_eq":
-			var err error
-			it.ModifiedTimeEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_neq":
-			var err error
-			it.ModifiedTimeNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_in":
-			var err error
-			it.ModifiedTimeIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_not_in":
-			var err error
-			it.ModifiedTimeNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_gt":
-			var err error
-			it.ModifiedTimeGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_gte":
-			var err error
-			it.ModifiedTimeGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_lt":
-			var err error
-			it.ModifiedTimeLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_lte":
-			var err error
-			it.ModifiedTimeLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "modifiedTime_days":
-			var err error
-			it.ModifiedTimeDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.ModifiedTime, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -35366,219 +26829,21 @@ func (ec *executionContext) unmarshalInputcs_policy_bool_exp(ctx context.Context
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not":
+		case "description":
 			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Description, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_eq":
+		case "platformName":
 			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_exists":
-			var err error
-			it.DescriptionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not":
-			var err error
-			it.DescriptionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_eq":
-			var err error
-			it.DescriptionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_neq":
-			var err error
-			it.DescriptionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_in":
-			var err error
-			it.DescriptionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_in":
-			var err error
-			it.DescriptionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_like":
-			var err error
-			it.DescriptionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_like":
-			var err error
-			it.DescriptionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_ilike":
-			var err error
-			it.DescriptionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_ilike":
-			var err error
-			it.DescriptionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_suffix":
-			var err error
-			it.DescriptionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_prefix":
-			var err error
-			it.DescriptionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_exists":
-			var err error
-			it.PlatformNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_not":
-			var err error
-			it.PlatformNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_eq":
-			var err error
-			it.PlatformNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_neq":
-			var err error
-			it.PlatformNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_in":
-			var err error
-			it.PlatformNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_not_in":
-			var err error
-			it.PlatformNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_like":
-			var err error
-			it.PlatformNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_not_like":
-			var err error
-			it.PlatformNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_ilike":
-			var err error
-			it.PlatformNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_not_ilike":
-			var err error
-			it.PlatformNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_suffix":
-			var err error
-			it.PlatformNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "platformName_prefix":
-			var err error
-			it.PlatformNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.PlatformName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -35588,153 +26853,21 @@ func (ec *executionContext) unmarshalInputcs_policy_bool_exp(ctx context.Context
 			if err != nil {
 				return it, err
 			}
-		case "enabled_exists":
+		case "enabled":
 			var err error
-			it.EnabledExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Enabled, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "enabled_eq":
+		case "createdBy":
 			var err error
-			it.EnabledEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.CreatedBy, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "enabled_neq":
+		case "createdTime":
 			var err error
-			it.EnabledNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_exists":
-			var err error
-			it.CreatedByExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not":
-			var err error
-			it.CreatedByNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_eq":
-			var err error
-			it.CreatedByEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_neq":
-			var err error
-			it.CreatedByNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_in":
-			var err error
-			it.CreatedByIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_in":
-			var err error
-			it.CreatedByNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_like":
-			var err error
-			it.CreatedByLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_like":
-			var err error
-			it.CreatedByNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_ilike":
-			var err error
-			it.CreatedByIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_not_ilike":
-			var err error
-			it.CreatedByNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_suffix":
-			var err error
-			it.CreatedBySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdBy_prefix":
-			var err error
-			it.CreatedByPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_exists":
-			var err error
-			it.CreatedTimeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_eq":
-			var err error
-			it.CreatedTimeEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_neq":
-			var err error
-			it.CreatedTimeNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_in":
-			var err error
-			it.CreatedTimeIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_not_in":
-			var err error
-			it.CreatedTimeNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_gt":
-			var err error
-			it.CreatedTimeGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_gte":
-			var err error
-			it.CreatedTimeGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_lt":
-			var err error
-			it.CreatedTimeLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_lte":
-			var err error
-			it.CreatedTimeLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "createdTime_days":
-			var err error
-			it.CreatedTimeDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.CreatedTime, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -35780,21 +26913,9 @@ func (ec *executionContext) unmarshalInputcs_policy_settings_bool_exp(ctx contex
 
 	for k, v := range asMap {
 		switch k {
-		case "enabled_exists":
+		case "enabled":
 			var err error
-			it.EnabledExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "enabled_eq":
-			var err error
-			it.EnabledEq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "enabled_neq":
-			var err error
-			it.EnabledNeq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Enabled, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -35828,75 +26949,9 @@ func (ec *executionContext) unmarshalInputcs_prevention_settings_bool_exp(ctx co
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not":
-			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_eq":
-			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -35936,75 +26991,9 @@ func (ec *executionContext) unmarshalInputcs_sensor_update_settings_bool_exp(ctx
 
 	for k, v := range asMap {
 		switch k {
-		case "build_exists":
+		case "build":
 			var err error
-			it.BuildExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not":
-			var err error
-			it.BuildNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_eq":
-			var err error
-			it.BuildEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_neq":
-			var err error
-			it.BuildNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_in":
-			var err error
-			it.BuildIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_in":
-			var err error
-			it.BuildNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_like":
-			var err error
-			it.BuildLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_like":
-			var err error
-			it.BuildNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_ilike":
-			var err error
-			it.BuildIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_ilike":
-			var err error
-			it.BuildNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_suffix":
-			var err error
-			it.BuildSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_prefix":
-			var err error
-			it.BuildPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Build, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -36038,285 +27027,39 @@ func (ec *executionContext) unmarshalInputdevice_bool_exp(ctx context.Context, o
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "fetchCycle":
 			var err error
-			it.IDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.FetchCycle, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "adapterCount":
 			var err error
-			it.IDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.AdapterCount, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_in":
+		case "adapterNames":
 			var err error
-			it.IDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.AdapterNames, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not_in":
+		case "hostnames":
 			var err error
-			it.IDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Hostnames, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_gt":
+		case "lastSeen":
 			var err error
-			it.IDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gte":
-			var err error
-			it.IDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lt":
-			var err error
-			it.IDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lte":
-			var err error
-			it.IDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_exists":
-			var err error
-			it.FetchCycleExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_eq":
-			var err error
-			it.FetchCycleEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_neq":
-			var err error
-			it.FetchCycleNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_in":
-			var err error
-			it.FetchCycleIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_not_in":
-			var err error
-			it.FetchCycleNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gt":
-			var err error
-			it.FetchCycleGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gte":
-			var err error
-			it.FetchCycleGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lt":
-			var err error
-			it.FetchCycleLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lte":
-			var err error
-			it.FetchCycleLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_exists":
-			var err error
-			it.AdapterCountExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_eq":
-			var err error
-			it.AdapterCountEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_neq":
-			var err error
-			it.AdapterCountNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_in":
-			var err error
-			it.AdapterCountIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_not_in":
-			var err error
-			it.AdapterCountNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_gt":
-			var err error
-			it.AdapterCountGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_gte":
-			var err error
-			it.AdapterCountGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_lt":
-			var err error
-			it.AdapterCountLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_lte":
-			var err error
-			it.AdapterCountLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contains":
-			var err error
-			it.AdapterNamesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contained_by":
-			var err error
-			it.AdapterNamesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_overlap":
-			var err error
-			it.AdapterNamesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_size":
-			var err error
-			it.AdapterNamesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contains_regex":
-			var err error
-			it.AdapterNamesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostnames_contains":
-			var err error
-			it.HostnamesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostnames_contained_by":
-			var err error
-			it.HostnamesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostnames_overlap":
-			var err error
-			it.HostnamesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostnames_size":
-			var err error
-			it.HostnamesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "hostnames_contains_regex":
-			var err error
-			it.HostnamesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_exists":
-			var err error
-			it.LastSeenExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_eq":
-			var err error
-			it.LastSeenEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_neq":
-			var err error
-			it.LastSeenNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_in":
-			var err error
-			it.LastSeenIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_not_in":
-			var err error
-			it.LastSeenNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gt":
-			var err error
-			it.LastSeenGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gte":
-			var err error
-			it.LastSeenGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lt":
-			var err error
-			it.LastSeenLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lte":
-			var err error
-			it.LastSeenLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_days":
-			var err error
-			it.LastSeenDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.LastSeen, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -36368,447 +27111,51 @@ func (ec *executionContext) unmarshalInputfirewall_rule_bool_exp(ctx context.Con
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not":
+		case "source":
 			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Source, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_eq":
+		case "type":
 			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Type, err = ec.unmarshalOAccessTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAccessTypeComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_neq":
+		case "direction":
 			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Direction, err = ec.unmarshalODirectionComparator2ᚖbandicootᚋpkgᚋgqlᚐDirectionComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_in":
+		case "target":
 			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Target, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not_in":
+		case "protocol":
 			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Protocol, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_like":
+		case "srcPort":
 			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.SrcPort, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not_like":
+		case "dstPort":
 			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_exists":
-			var err error
-			it.SourceExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_not":
-			var err error
-			it.SourceNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_eq":
-			var err error
-			it.SourceEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_neq":
-			var err error
-			it.SourceNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_in":
-			var err error
-			it.SourceIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_not_in":
-			var err error
-			it.SourceNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_like":
-			var err error
-			it.SourceLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_not_like":
-			var err error
-			it.SourceNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_ilike":
-			var err error
-			it.SourceIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_not_ilike":
-			var err error
-			it.SourceNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_suffix":
-			var err error
-			it.SourceSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "source_prefix":
-			var err error
-			it.SourcePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_eq":
-			var err error
-			it.TypeEq, err = ec.unmarshalOAccessType2ᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_neq":
-			var err error
-			it.TypeNeq, err = ec.unmarshalOAccessType2ᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_in":
-			var err error
-			it.TypeIn, err = ec.unmarshalOAccessType2ᚕᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_not_in":
-			var err error
-			it.TypeNotIn, err = ec.unmarshalOAccessType2ᚕᚖbandicootᚋpkgᚋgqlᚐAccessType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction_eq":
-			var err error
-			it.DirectionEq, err = ec.unmarshalODirection2ᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction_neq":
-			var err error
-			it.DirectionNeq, err = ec.unmarshalODirection2ᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction_in":
-			var err error
-			it.DirectionIn, err = ec.unmarshalODirection2ᚕᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "direction_not_in":
-			var err error
-			it.DirectionNotIn, err = ec.unmarshalODirection2ᚕᚖbandicootᚋpkgᚋgqlᚐDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_exists":
-			var err error
-			it.TargetExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_not":
-			var err error
-			it.TargetNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_eq":
-			var err error
-			it.TargetEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_neq":
-			var err error
-			it.TargetNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_in":
-			var err error
-			it.TargetIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_not_in":
-			var err error
-			it.TargetNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_like":
-			var err error
-			it.TargetLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_not_like":
-			var err error
-			it.TargetNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_ilike":
-			var err error
-			it.TargetIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_not_ilike":
-			var err error
-			it.TargetNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_suffix":
-			var err error
-			it.TargetSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "target_prefix":
-			var err error
-			it.TargetPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_exists":
-			var err error
-			it.ProtocolExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_not":
-			var err error
-			it.ProtocolNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_eq":
-			var err error
-			it.ProtocolEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_neq":
-			var err error
-			it.ProtocolNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_in":
-			var err error
-			it.ProtocolIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_not_in":
-			var err error
-			it.ProtocolNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_like":
-			var err error
-			it.ProtocolLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_not_like":
-			var err error
-			it.ProtocolNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_ilike":
-			var err error
-			it.ProtocolIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_not_ilike":
-			var err error
-			it.ProtocolNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_suffix":
-			var err error
-			it.ProtocolSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "protocol_prefix":
-			var err error
-			it.ProtocolPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_exists":
-			var err error
-			it.SrcPortExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_eq":
-			var err error
-			it.SrcPortEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_neq":
-			var err error
-			it.SrcPortNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_in":
-			var err error
-			it.SrcPortIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_not_in":
-			var err error
-			it.SrcPortNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_gt":
-			var err error
-			it.SrcPortGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_gte":
-			var err error
-			it.SrcPortGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_lt":
-			var err error
-			it.SrcPortLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "srcPort_lte":
-			var err error
-			it.SrcPortLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_exists":
-			var err error
-			it.DstPortExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_eq":
-			var err error
-			it.DstPortEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_neq":
-			var err error
-			it.DstPortNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_in":
-			var err error
-			it.DstPortIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_not_in":
-			var err error
-			it.DstPortNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_gt":
-			var err error
-			it.DstPortGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_gte":
-			var err error
-			it.DstPortGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_lt":
-			var err error
-			it.DstPortLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dstPort_lte":
-			var err error
-			it.DstPortLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.DstPort, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -36842,147 +27189,15 @@ func (ec *executionContext) unmarshalInputgce_tags_bool_exp(ctx context.Context,
 
 	for k, v := range asMap {
 		switch k {
-		case "gceKey_exists":
+		case "gceKey":
 			var err error
-			it.GceKeyExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.GceKey, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "gceKey_not":
+		case "gceValue":
 			var err error
-			it.GceKeyNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_eq":
-			var err error
-			it.GceKeyEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_neq":
-			var err error
-			it.GceKeyNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_in":
-			var err error
-			it.GceKeyIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_not_in":
-			var err error
-			it.GceKeyNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_like":
-			var err error
-			it.GceKeyLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_not_like":
-			var err error
-			it.GceKeyNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_ilike":
-			var err error
-			it.GceKeyIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_not_ilike":
-			var err error
-			it.GceKeyNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_suffix":
-			var err error
-			it.GceKeySuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceKey_prefix":
-			var err error
-			it.GceKeyPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_exists":
-			var err error
-			it.GceValueExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_not":
-			var err error
-			it.GceValueNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_eq":
-			var err error
-			it.GceValueEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_neq":
-			var err error
-			it.GceValueNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_in":
-			var err error
-			it.GceValueIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_not_in":
-			var err error
-			it.GceValueNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_like":
-			var err error
-			it.GceValueLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_not_like":
-			var err error
-			it.GceValueNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_ilike":
-			var err error
-			it.GceValueIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_not_ilike":
-			var err error
-			it.GceValueNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_suffix":
-			var err error
-			it.GceValueSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "gceValue_prefix":
-			var err error
-			it.GceValuePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.GceValue, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -37016,585 +27231,57 @@ func (ec *executionContext) unmarshalInputinstalled_software_bool_exp(ctx contex
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not":
+		case "version":
 			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Version, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_eq":
+		case "architecture":
 			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Architecture, err = ec.unmarshalOArchitectureComparator2ᚖbandicootᚋpkgᚋgqlᚐArchitectureComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_neq":
+		case "description":
 			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Description, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_in":
+		case "vendor":
 			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Vendor, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not_in":
+		case "publisher":
 			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			it.Publisher, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_like":
+		case "cveCount":
 			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.CveCount, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not_like":
+		case "swLicense":
 			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.SwLicense, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_ilike":
+		case "path":
 			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_exists":
-			var err error
-			it.VersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_not":
-			var err error
-			it.VersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_eq":
-			var err error
-			it.VersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_neq":
-			var err error
-			it.VersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_in":
-			var err error
-			it.VersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_not_in":
-			var err error
-			it.VersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_like":
-			var err error
-			it.VersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_not_like":
-			var err error
-			it.VersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_ilike":
-			var err error
-			it.VersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_not_ilike":
-			var err error
-			it.VersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_suffix":
-			var err error
-			it.VersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "version_prefix":
-			var err error
-			it.VersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_eq":
-			var err error
-			it.ArchitectureEq, err = ec.unmarshalOArchitecture2ᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_neq":
-			var err error
-			it.ArchitectureNeq, err = ec.unmarshalOArchitecture2ᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_in":
-			var err error
-			it.ArchitectureIn, err = ec.unmarshalOArchitecture2ᚕᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_not_in":
-			var err error
-			it.ArchitectureNotIn, err = ec.unmarshalOArchitecture2ᚕᚖbandicootᚋpkgᚋgqlᚐArchitecture(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_exists":
-			var err error
-			it.DescriptionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not":
-			var err error
-			it.DescriptionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_eq":
-			var err error
-			it.DescriptionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_neq":
-			var err error
-			it.DescriptionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_in":
-			var err error
-			it.DescriptionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_in":
-			var err error
-			it.DescriptionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_like":
-			var err error
-			it.DescriptionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_like":
-			var err error
-			it.DescriptionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_ilike":
-			var err error
-			it.DescriptionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_not_ilike":
-			var err error
-			it.DescriptionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_suffix":
-			var err error
-			it.DescriptionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "description_prefix":
-			var err error
-			it.DescriptionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_exists":
-			var err error
-			it.VendorExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_not":
-			var err error
-			it.VendorNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_eq":
-			var err error
-			it.VendorEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_neq":
-			var err error
-			it.VendorNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_in":
-			var err error
-			it.VendorIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_not_in":
-			var err error
-			it.VendorNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_like":
-			var err error
-			it.VendorLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_not_like":
-			var err error
-			it.VendorNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_ilike":
-			var err error
-			it.VendorIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_not_ilike":
-			var err error
-			it.VendorNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_suffix":
-			var err error
-			it.VendorSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "vendor_prefix":
-			var err error
-			it.VendorPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_exists":
-			var err error
-			it.PublisherExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_not":
-			var err error
-			it.PublisherNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_eq":
-			var err error
-			it.PublisherEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_neq":
-			var err error
-			it.PublisherNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_in":
-			var err error
-			it.PublisherIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_not_in":
-			var err error
-			it.PublisherNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_like":
-			var err error
-			it.PublisherLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_not_like":
-			var err error
-			it.PublisherNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_ilike":
-			var err error
-			it.PublisherIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_not_ilike":
-			var err error
-			it.PublisherNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_suffix":
-			var err error
-			it.PublisherSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "publisher_prefix":
-			var err error
-			it.PublisherPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_exists":
-			var err error
-			it.CveCountExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_eq":
-			var err error
-			it.CveCountEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_neq":
-			var err error
-			it.CveCountNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_in":
-			var err error
-			it.CveCountIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_not_in":
-			var err error
-			it.CveCountNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_gt":
-			var err error
-			it.CveCountGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_gte":
-			var err error
-			it.CveCountGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_lt":
-			var err error
-			it.CveCountLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "cveCount_lte":
-			var err error
-			it.CveCountLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_exists":
-			var err error
-			it.SwLicenseExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_not":
-			var err error
-			it.SwLicenseNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_eq":
-			var err error
-			it.SwLicenseEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_neq":
-			var err error
-			it.SwLicenseNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_in":
-			var err error
-			it.SwLicenseIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_not_in":
-			var err error
-			it.SwLicenseNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_like":
-			var err error
-			it.SwLicenseLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_not_like":
-			var err error
-			it.SwLicenseNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_ilike":
-			var err error
-			it.SwLicenseIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_not_ilike":
-			var err error
-			it.SwLicenseNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_suffix":
-			var err error
-			it.SwLicenseSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "swLicense_prefix":
-			var err error
-			it.SwLicensePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_exists":
-			var err error
-			it.PathExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_not":
-			var err error
-			it.PathNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_eq":
-			var err error
-			it.PathEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_neq":
-			var err error
-			it.PathNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_in":
-			var err error
-			it.PathIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_not_in":
-			var err error
-			it.PathNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_like":
-			var err error
-			it.PathLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_not_like":
-			var err error
-			it.PathNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_ilike":
-			var err error
-			it.PathIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_not_ilike":
-			var err error
-			it.PathNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_suffix":
-			var err error
-			it.PathSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "path_prefix":
-			var err error
-			it.PathPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Path, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -37628,123 +27315,21 @@ func (ec *executionContext) unmarshalInputnetwork_interface_bool_exp(ctx context
 
 	for k, v := range asMap {
 		switch k {
-		case "deviceId_exists":
+		case "deviceId":
 			var err error
-			it.DeviceIDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.DeviceID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_eq":
+		case "macAddr":
 			var err error
-			it.DeviceIDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.MacAddr, err = ec.unmarshalOMacComparator2ᚖbandicootᚋpkgᚋgqlᚐMacComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "deviceId_neq":
+		case "ipAddrs":
 			var err error
-			it.DeviceIDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_in":
-			var err error
-			it.DeviceIDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_not_in":
-			var err error
-			it.DeviceIDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_gt":
-			var err error
-			it.DeviceIDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_gte":
-			var err error
-			it.DeviceIDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_lt":
-			var err error
-			it.DeviceIDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "deviceId_lte":
-			var err error
-			it.DeviceIDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "macAddr_exists":
-			var err error
-			it.MacAddrExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "macAddr_eq":
-			var err error
-			it.MacAddrEq, err = ec.unmarshalOMac2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "macAddr_neq":
-			var err error
-			it.MacAddrNeq, err = ec.unmarshalOMac2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "macAddr_in":
-			var err error
-			it.MacAddrIn, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "macAddr_not_in":
-			var err error
-			it.MacAddrNotIn, err = ec.unmarshalOMac2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_contains":
-			var err error
-			it.IPAddrsContains, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_contained_by":
-			var err error
-			it.IPAddrsContainedBy, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_overlap":
-			var err error
-			it.IPAddrsOverlap, err = ec.unmarshalOIP2ᚕᚖnetᚐIP(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_size":
-			var err error
-			it.IPAddrsSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_in_subnet":
-			var err error
-			it.IPAddrsInSubnet, err = ec.unmarshalOCIDR2ᚖnetᚐIPNet(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "ipAddrs_ip_family":
-			var err error
-			it.IPAddrsIPFamily, err = ec.unmarshalOIPFamily2ᚖbandicootᚋpkgᚋgqlᚐIPFamily(ctx, v)
+			it.IPAddrs, err = ec.unmarshalOIPArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐIPArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -37778,783 +27363,75 @@ func (ec *executionContext) unmarshalInputoperating_system_bool_exp(ctx context.
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "type":
 			var err error
-			it.IDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Type, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "distribution":
 			var err error
-			it.IDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Distribution, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_in":
+		case "architecture":
 			var err error
-			it.IDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Architecture, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not_in":
+		case "servicePack":
 			var err error
-			it.IDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.ServicePack, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_gt":
+		case "installDate":
 			var err error
-			it.IDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.InstallDate, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_gte":
+		case "kernelVersion":
 			var err error
-			it.IDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.KernelVersion, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_lt":
+		case "codeName":
 			var err error
-			it.IDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.CodeName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_lte":
+		case "major":
 			var err error
-			it.IDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Major, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "type_exists":
+		case "minor":
 			var err error
-			it.TypeExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Minor, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "type_not":
+		case "build":
 			var err error
-			it.TypeNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Build, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "type_eq":
+		case "RawName":
 			var err error
-			it.TypeEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_neq":
-			var err error
-			it.TypeNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_in":
-			var err error
-			it.TypeIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_not_in":
-			var err error
-			it.TypeNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_like":
-			var err error
-			it.TypeLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_not_like":
-			var err error
-			it.TypeNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_ilike":
-			var err error
-			it.TypeIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_not_ilike":
-			var err error
-			it.TypeNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_suffix":
-			var err error
-			it.TypeSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "type_prefix":
-			var err error
-			it.TypePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_exists":
-			var err error
-			it.DistributionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_not":
-			var err error
-			it.DistributionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_eq":
-			var err error
-			it.DistributionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_neq":
-			var err error
-			it.DistributionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_in":
-			var err error
-			it.DistributionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_not_in":
-			var err error
-			it.DistributionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_like":
-			var err error
-			it.DistributionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_not_like":
-			var err error
-			it.DistributionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_ilike":
-			var err error
-			it.DistributionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_not_ilike":
-			var err error
-			it.DistributionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_suffix":
-			var err error
-			it.DistributionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "distribution_prefix":
-			var err error
-			it.DistributionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_exists":
-			var err error
-			it.ArchitectureExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_eq":
-			var err error
-			it.ArchitectureEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_neq":
-			var err error
-			it.ArchitectureNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_in":
-			var err error
-			it.ArchitectureIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_not_in":
-			var err error
-			it.ArchitectureNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_gt":
-			var err error
-			it.ArchitectureGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_gte":
-			var err error
-			it.ArchitectureGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_lt":
-			var err error
-			it.ArchitectureLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "architecture_lte":
-			var err error
-			it.ArchitectureLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_exists":
-			var err error
-			it.ServicePackExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_not":
-			var err error
-			it.ServicePackNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_eq":
-			var err error
-			it.ServicePackEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_neq":
-			var err error
-			it.ServicePackNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_in":
-			var err error
-			it.ServicePackIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_not_in":
-			var err error
-			it.ServicePackNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_like":
-			var err error
-			it.ServicePackLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_not_like":
-			var err error
-			it.ServicePackNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_ilike":
-			var err error
-			it.ServicePackIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_not_ilike":
-			var err error
-			it.ServicePackNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_suffix":
-			var err error
-			it.ServicePackSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "servicePack_prefix":
-			var err error
-			it.ServicePackPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_exists":
-			var err error
-			it.InstallDateExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_eq":
-			var err error
-			it.InstallDateEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_neq":
-			var err error
-			it.InstallDateNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_in":
-			var err error
-			it.InstallDateIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_not_in":
-			var err error
-			it.InstallDateNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_gt":
-			var err error
-			it.InstallDateGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_gte":
-			var err error
-			it.InstallDateGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_lt":
-			var err error
-			it.InstallDateLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_lte":
-			var err error
-			it.InstallDateLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "installDate_days":
-			var err error
-			it.InstallDateDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_exists":
-			var err error
-			it.KernelVersionExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_not":
-			var err error
-			it.KernelVersionNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_eq":
-			var err error
-			it.KernelVersionEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_neq":
-			var err error
-			it.KernelVersionNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_in":
-			var err error
-			it.KernelVersionIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_not_in":
-			var err error
-			it.KernelVersionNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_like":
-			var err error
-			it.KernelVersionLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_not_like":
-			var err error
-			it.KernelVersionNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_ilike":
-			var err error
-			it.KernelVersionIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_not_ilike":
-			var err error
-			it.KernelVersionNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_suffix":
-			var err error
-			it.KernelVersionSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kernelVersion_prefix":
-			var err error
-			it.KernelVersionPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_exists":
-			var err error
-			it.CodeNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_not":
-			var err error
-			it.CodeNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_eq":
-			var err error
-			it.CodeNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_neq":
-			var err error
-			it.CodeNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_in":
-			var err error
-			it.CodeNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_not_in":
-			var err error
-			it.CodeNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_like":
-			var err error
-			it.CodeNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_not_like":
-			var err error
-			it.CodeNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_ilike":
-			var err error
-			it.CodeNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_not_ilike":
-			var err error
-			it.CodeNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_suffix":
-			var err error
-			it.CodeNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "codeName_prefix":
-			var err error
-			it.CodeNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_exists":
-			var err error
-			it.MajorExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_eq":
-			var err error
-			it.MajorEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_neq":
-			var err error
-			it.MajorNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_in":
-			var err error
-			it.MajorIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_not_in":
-			var err error
-			it.MajorNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_gt":
-			var err error
-			it.MajorGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_gte":
-			var err error
-			it.MajorGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_lt":
-			var err error
-			it.MajorLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "major_lte":
-			var err error
-			it.MajorLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_exists":
-			var err error
-			it.MinorExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_eq":
-			var err error
-			it.MinorEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_neq":
-			var err error
-			it.MinorNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_in":
-			var err error
-			it.MinorIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_not_in":
-			var err error
-			it.MinorNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_gt":
-			var err error
-			it.MinorGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_gte":
-			var err error
-			it.MinorGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_lt":
-			var err error
-			it.MinorLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "minor_lte":
-			var err error
-			it.MinorLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_exists":
-			var err error
-			it.BuildExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not":
-			var err error
-			it.BuildNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_eq":
-			var err error
-			it.BuildEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_neq":
-			var err error
-			it.BuildNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_in":
-			var err error
-			it.BuildIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_in":
-			var err error
-			it.BuildNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_like":
-			var err error
-			it.BuildLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_like":
-			var err error
-			it.BuildNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_ilike":
-			var err error
-			it.BuildIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_not_ilike":
-			var err error
-			it.BuildNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_suffix":
-			var err error
-			it.BuildSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "build_prefix":
-			var err error
-			it.BuildPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_exists":
-			var err error
-			it.RawNameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_not":
-			var err error
-			it.RawNameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_eq":
-			var err error
-			it.RawNameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_neq":
-			var err error
-			it.RawNameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_in":
-			var err error
-			it.RawNameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_not_in":
-			var err error
-			it.RawNameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_like":
-			var err error
-			it.RawNameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_not_like":
-			var err error
-			it.RawNameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_ilike":
-			var err error
-			it.RawNameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_not_ilike":
-			var err error
-			it.RawNameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_suffix":
-			var err error
-			it.RawNameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "RawName_prefix":
-			var err error
-			it.RawNamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.RawName, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -38588,219 +27465,21 @@ func (ec *executionContext) unmarshalInputtag_bool_exp(ctx context.Context, obj 
 
 	for k, v := range asMap {
 		switch k {
-		case "name_exists":
+		case "name":
 			var err error
-			it.NameExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_not":
+		case "creator":
 			var err error
-			it.NameNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Creator, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "name_eq":
+		case "level":
 			var err error
-			it.NameEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_neq":
-			var err error
-			it.NameNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_in":
-			var err error
-			it.NameIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_in":
-			var err error
-			it.NameNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_like":
-			var err error
-			it.NameLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_like":
-			var err error
-			it.NameNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_ilike":
-			var err error
-			it.NameIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_not_ilike":
-			var err error
-			it.NameNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_suffix":
-			var err error
-			it.NameSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "name_prefix":
-			var err error
-			it.NamePrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_exists":
-			var err error
-			it.CreatorExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_not":
-			var err error
-			it.CreatorNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_eq":
-			var err error
-			it.CreatorEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_neq":
-			var err error
-			it.CreatorNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_in":
-			var err error
-			it.CreatorIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_not_in":
-			var err error
-			it.CreatorNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_like":
-			var err error
-			it.CreatorLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_not_like":
-			var err error
-			it.CreatorNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_ilike":
-			var err error
-			it.CreatorIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_not_ilike":
-			var err error
-			it.CreatorNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_suffix":
-			var err error
-			it.CreatorSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "creator_prefix":
-			var err error
-			it.CreatorPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_exists":
-			var err error
-			it.LevelExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_not":
-			var err error
-			it.LevelNot, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_eq":
-			var err error
-			it.LevelEq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_neq":
-			var err error
-			it.LevelNeq, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_in":
-			var err error
-			it.LevelIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_not_in":
-			var err error
-			it.LevelNotIn, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_like":
-			var err error
-			it.LevelLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_not_like":
-			var err error
-			it.LevelNotLike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_ilike":
-			var err error
-			it.LevelIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_not_ilike":
-			var err error
-			it.LevelNotIlike, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_suffix":
-			var err error
-			it.LevelSuffix, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "level_prefix":
-			var err error
-			it.LevelPrefix, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Level, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -38834,285 +27513,39 @@ func (ec *executionContext) unmarshalInputuser_bool_exp(ctx context.Context, obj
 
 	for k, v := range asMap {
 		switch k {
-		case "id_exists":
+		case "id":
 			var err error
-			it.IDExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.ID, err = ec.unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_eq":
+		case "fetchCycle":
 			var err error
-			it.IDEq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.FetchCycle, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_neq":
+		case "adapterCount":
 			var err error
-			it.IDNeq, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.AdapterCount, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_in":
+		case "adapterNames":
 			var err error
-			it.IDIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.AdapterNames, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_not_in":
+		case "usernames":
 			var err error
-			it.IDNotIn, err = ec.unmarshalOUUID2ᚕᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
+			it.Usernames, err = ec.unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "id_gt":
+		case "lastSeen":
 			var err error
-			it.IDGt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_gte":
-			var err error
-			it.IDGte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lt":
-			var err error
-			it.IDLt, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "id_lte":
-			var err error
-			it.IDLte, err = ec.unmarshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_exists":
-			var err error
-			it.FetchCycleExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_eq":
-			var err error
-			it.FetchCycleEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_neq":
-			var err error
-			it.FetchCycleNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_in":
-			var err error
-			it.FetchCycleIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_not_in":
-			var err error
-			it.FetchCycleNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gt":
-			var err error
-			it.FetchCycleGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_gte":
-			var err error
-			it.FetchCycleGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lt":
-			var err error
-			it.FetchCycleLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fetchCycle_lte":
-			var err error
-			it.FetchCycleLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_exists":
-			var err error
-			it.AdapterCountExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_eq":
-			var err error
-			it.AdapterCountEq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_neq":
-			var err error
-			it.AdapterCountNeq, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_in":
-			var err error
-			it.AdapterCountIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_not_in":
-			var err error
-			it.AdapterCountNotIn, err = ec.unmarshalOInt2ᚕᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_gt":
-			var err error
-			it.AdapterCountGt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_gte":
-			var err error
-			it.AdapterCountGte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_lt":
-			var err error
-			it.AdapterCountLt, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterCount_lte":
-			var err error
-			it.AdapterCountLte, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contains":
-			var err error
-			it.AdapterNamesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contained_by":
-			var err error
-			it.AdapterNamesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_overlap":
-			var err error
-			it.AdapterNamesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_size":
-			var err error
-			it.AdapterNamesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "adapterNames_contains_regex":
-			var err error
-			it.AdapterNamesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "usernames_contains":
-			var err error
-			it.UsernamesContains, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "usernames_contained_by":
-			var err error
-			it.UsernamesContainedBy, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "usernames_overlap":
-			var err error
-			it.UsernamesOverlap, err = ec.unmarshalOString2ᚕᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "usernames_size":
-			var err error
-			it.UsernamesSize, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "usernames_contains_regex":
-			var err error
-			it.UsernamesContainsRegex, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_exists":
-			var err error
-			it.LastSeenExists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_eq":
-			var err error
-			it.LastSeenEq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_neq":
-			var err error
-			it.LastSeenNeq, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_in":
-			var err error
-			it.LastSeenIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_not_in":
-			var err error
-			it.LastSeenNotIn, err = ec.unmarshalOEpoch2ᚕᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gt":
-			var err error
-			it.LastSeenGt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_gte":
-			var err error
-			it.LastSeenGte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lt":
-			var err error
-			it.LastSeenLt, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_lte":
-			var err error
-			it.LastSeenLte, err = ec.unmarshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "lastSeen_days":
-			var err error
-			it.LastSeenDays, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.LastSeen, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -39184,6 +27617,43 @@ func (ec *executionContext) _Aggregate(ctx context.Context, sel ast.SelectionSet
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
+	default:
+		panic(fmt.Errorf("unexpected type %T", obj))
+	}
+}
+
+func (ec *executionContext) _Filter(ctx context.Context, sel ast.SelectionSet, obj Filter) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case ObjectFilter:
+		return ec._ObjectFilter(ctx, sel, &obj)
+	case *ObjectFilter:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._ObjectFilter(ctx, sel, obj)
+	case Operator:
+		return ec._Operator(ctx, sel, &obj)
+	case *Operator:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Operator(ctx, sel, obj)
+	case ScalarFilter:
+		return ec._ScalarFilter(ctx, sel, &obj)
+	case *ScalarFilter:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._ScalarFilter(ctx, sel, obj)
+	case UnionFilter:
+		return ec._UnionFilter(ctx, sel, &obj)
+	case *UnionFilter:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._UnionFilter(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -39975,6 +28445,47 @@ func (ec *executionContext) _NetworkInterface(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var objectFilterImplementors = []string{"ObjectFilter", "Filter"}
+
+func (ec *executionContext) _ObjectFilter(ctx context.Context, sel ast.SelectionSet, obj *ObjectFilter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, objectFilterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ObjectFilter")
+		case "name":
+			out.Values[i] = ec._ObjectFilter_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._ObjectFilter_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+			out.Values[i] = ec._ObjectFilter_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "description":
+			out.Values[i] = ec._ObjectFilter_description(ctx, field, obj)
+		case "filters":
+			out.Values[i] = ec._ObjectFilter_filters(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var operatingSystemImplementors = []string{"OperatingSystem"}
 
 func (ec *executionContext) _OperatingSystem(ctx context.Context, sel ast.SelectionSet, obj *OperatingSystem) graphql.Marshaler {
@@ -40013,6 +28524,47 @@ func (ec *executionContext) _OperatingSystem(ctx context.Context, sel ast.Select
 			out.Values[i] = ec._OperatingSystem_build(ctx, field, obj)
 		case "RawName":
 			out.Values[i] = ec._OperatingSystem_RawName(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var operatorImplementors = []string{"Operator", "Filter"}
+
+func (ec *executionContext) _Operator(ctx context.Context, sel ast.SelectionSet, obj *Operator) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, operatorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Operator")
+		case "name":
+			out.Values[i] = ec._Operator_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+			out.Values[i] = ec._Operator_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._Operator_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "description":
+			out.Values[i] = ec._Operator_description(ctx, field, obj)
+		case "formatDisplay":
+			out.Values[i] = ec._Operator_formatDisplay(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -40095,6 +28647,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "_wizardFilters":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query__wizardFilters(ctx, field)
+				return res
+			})
 		case "adapterDevices_aggregate":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -40143,6 +28706,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._Query___schema(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var scalarFilterImplementors = []string{"ScalarFilter", "Filter"}
+
+func (ec *executionContext) _ScalarFilter(ctx context.Context, sel ast.SelectionSet, obj *ScalarFilter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, scalarFilterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ScalarFilter")
+		case "name":
+			out.Values[i] = ec._ScalarFilter_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._ScalarFilter_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "description":
+			out.Values[i] = ec._ScalarFilter_description(ctx, field, obj)
+		case "type":
+			out.Values[i] = ec._ScalarFilter_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "operators":
+			out.Values[i] = ec._ScalarFilter_operators(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -40234,6 +28841,47 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var unionFilterImplementors = []string{"UnionFilter", "Filter"}
+
+func (ec *executionContext) _UnionFilter(ctx context.Context, sel ast.SelectionSet, obj *UnionFilter) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, unionFilterImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UnionFilter")
+		case "name":
+			out.Values[i] = ec._UnionFilter_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "displayName":
+			out.Values[i] = ec._UnionFilter_displayName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+			out.Values[i] = ec._UnionFilter_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "description":
+			out.Values[i] = ec._UnionFilter_description(ctx, field, obj)
+		case "objects":
+			out.Values[i] = ec._UnionFilter_objects(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -41540,6 +30188,43 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 
 func (ec *executionContext) marshalNNetworkInterface2bandicootᚋpkgᚋgqlᚐNetworkInterface(ctx context.Context, sel ast.SelectionSet, v NetworkInterface) graphql.Marshaler {
 	return ec._NetworkInterface(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOperator2ᚕᚖbandicootᚋpkgᚋgqlᚐOperator(ctx context.Context, sel ast.SelectionSet, v []*Operator) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOOperator2ᚖbandicootᚋpkgᚋgqlᚐOperator(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) unmarshalNRelationType2string(ctx context.Context, v interface{}) (string, error) {
@@ -44599,6 +33284,18 @@ func (ec *executionContext) marshalOAccessType2ᚖbandicootᚋpkgᚋgqlᚐAccess
 	return v
 }
 
+func (ec *executionContext) unmarshalOAccessTypeComparator2bandicootᚋpkgᚋgqlᚐAccessTypeComparator(ctx context.Context, v interface{}) (AccessTypeComparator, error) {
+	return ec.unmarshalInputAccessTypeComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOAccessTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAccessTypeComparator(ctx context.Context, v interface{}) (*AccessTypeComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOAccessTypeComparator2bandicootᚋpkgᚋgqlᚐAccessTypeComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) marshalOAdapter2bandicootᚋpkgᚋgqlᚐAdapter(ctx context.Context, sel ast.SelectionSet, v Adapter) graphql.Marshaler {
 	return ec._Adapter(ctx, sel, &v)
 }
@@ -44894,6 +33591,18 @@ func (ec *executionContext) marshalOAdapterType2ᚖbandicootᚋpkgᚋdomainᚐAd
 	return ec.marshalOAdapterType2bandicootᚋpkgᚋdomainᚐAdapterType(ctx, sel, *v)
 }
 
+func (ec *executionContext) unmarshalOAdapterTypeComparator2bandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx context.Context, v interface{}) (AdapterTypeComparator, error) {
+	return ec.unmarshalInputAdapterTypeComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOAdapterTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx context.Context, v interface{}) (*AdapterTypeComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOAdapterTypeComparator2bandicootᚋpkgᚋgqlᚐAdapterTypeComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) marshalOAdapterUser2bandicootᚋpkgᚋgqlᚐAdapterUser(ctx context.Context, sel ast.SelectionSet, v AdapterUser) graphql.Marshaler {
 	return ec._AdapterUser(ctx, sel, &v)
 }
@@ -45069,6 +33778,18 @@ func (ec *executionContext) marshalOAdminType2ᚖbandicootᚋpkgᚋgqlᚐAdminTy
 	return v
 }
 
+func (ec *executionContext) unmarshalOAdminTypeComparator2bandicootᚋpkgᚋgqlᚐAdminTypeComparator(ctx context.Context, v interface{}) (AdminTypeComparator, error) {
+	return ec.unmarshalInputAdminTypeComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOAdminTypeComparator2ᚖbandicootᚋpkgᚋgqlᚐAdminTypeComparator(ctx context.Context, v interface{}) (*AdminTypeComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOAdminTypeComparator2bandicootᚋpkgᚋgqlᚐAdminTypeComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOAggregateOrdering2ᚕbandicootᚋpkgᚋgqlᚐAggregateOrderingᚄ(ctx context.Context, v interface{}) ([]AggregateOrdering, error) {
 	var vSlice []interface{}
 	if v != nil {
@@ -45213,6 +33934,18 @@ func (ec *executionContext) marshalOArchitecture2ᚖbandicootᚋpkgᚋgqlᚐArch
 	return v
 }
 
+func (ec *executionContext) unmarshalOArchitectureComparator2bandicootᚋpkgᚋgqlᚐArchitectureComparator(ctx context.Context, v interface{}) (ArchitectureComparator, error) {
+	return ec.unmarshalInputArchitectureComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOArchitectureComparator2ᚖbandicootᚋpkgᚋgqlᚐArchitectureComparator(ctx context.Context, v interface{}) (*ArchitectureComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOArchitectureComparator2bandicootᚋpkgᚋgqlᚐArchitectureComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	return graphql.UnmarshalBoolean(v)
 }
@@ -45234,6 +33967,18 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOBooleanComparator2bandicootᚋpkgᚋgqlᚐBooleanComparator(ctx context.Context, v interface{}) (BooleanComparator, error) {
+	return ec.unmarshalInputBooleanComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx context.Context, v interface{}) (*BooleanComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBooleanComparator2bandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) unmarshalOCIDR2netᚐIPNet(ctx context.Context, v interface{}) (net.IPNet, error) {
@@ -45341,6 +34086,18 @@ func (ec *executionContext) marshalOCylanceDeviceState2ᚖbandicootᚋpkgᚋgql�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOCylanceDeviceStateComparator2bandicootᚋpkgᚋgqlᚐCylanceDeviceStateComparator(ctx context.Context, v interface{}) (CylanceDeviceStateComparator, error) {
+	return ec.unmarshalInputCylanceDeviceStateComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOCylanceDeviceStateComparator2ᚖbandicootᚋpkgᚋgqlᚐCylanceDeviceStateComparator(ctx context.Context, v interface{}) (*CylanceDeviceStateComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOCylanceDeviceStateComparator2bandicootᚋpkgᚋgqlᚐCylanceDeviceStateComparator(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalODevice2bandicootᚋpkgᚋgqlᚐDevice(ctx context.Context, sel ast.SelectionSet, v Device) graphql.Marshaler {
@@ -45478,6 +34235,18 @@ func (ec *executionContext) marshalODirection2ᚖbandicootᚋpkgᚋgqlᚐDirecti
 	return v
 }
 
+func (ec *executionContext) unmarshalODirectionComparator2bandicootᚋpkgᚋgqlᚐDirectionComparator(ctx context.Context, v interface{}) (DirectionComparator, error) {
+	return ec.unmarshalInputDirectionComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalODirectionComparator2ᚖbandicootᚋpkgᚋgqlᚐDirectionComparator(ctx context.Context, v interface{}) (*DirectionComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalODirectionComparator2bandicootᚋpkgᚋgqlᚐDirectionComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOEpoch2bandicootᚋinternalᚐEpoch(ctx context.Context, v interface{}) (internal.Epoch, error) {
 	return UnmarshalEpochScalar(v)
 }
@@ -45531,6 +34300,65 @@ func (ec *executionContext) marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx co
 		return graphql.Null
 	}
 	return ec.marshalOEpoch2bandicootᚋinternalᚐEpoch(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOEpochComparator2bandicootᚋpkgᚋgqlᚐEpochComparator(ctx context.Context, v interface{}) (EpochComparator, error) {
+	return ec.unmarshalInputEpochComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx context.Context, v interface{}) (*EpochComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOEpochComparator2bandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOFilter2bandicootᚋpkgᚋgqlᚐFilter(ctx context.Context, sel ast.SelectionSet, v Filter) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Filter(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOFilter2ᚕbandicootᚋpkgᚋgqlᚐFilter(ctx context.Context, sel ast.SelectionSet, v []Filter) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOFilter2bandicootᚋpkgᚋgqlᚐFilter(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalOFirewallRule2bandicootᚋpkgᚋgqlᚐFirewallRule(ctx context.Context, sel ast.SelectionSet, v FirewallRule) graphql.Marshaler {
@@ -45590,6 +34418,38 @@ func (ec *executionContext) unmarshalOFloat2float64(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
 	return graphql.MarshalFloat(v)
+}
+
+func (ec *executionContext) unmarshalOFloat2ᚕᚖfloat64(ctx context.Context, v interface{}) ([]*float64, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*float64, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalOFloat2ᚖfloat64(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOFloat2ᚕᚖfloat64(ctx context.Context, sel ast.SelectionSet, v []*float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOFloat2ᚖfloat64(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
@@ -45845,6 +34705,18 @@ func (ec *executionContext) marshalOIP2ᚖnetᚐIP(ctx context.Context, sel ast.
 	return ec.marshalOIP2netᚐIP(ctx, sel, *v)
 }
 
+func (ec *executionContext) unmarshalOIPArrayComparator2bandicootᚋpkgᚋgqlᚐIPArrayComparator(ctx context.Context, v interface{}) (IPArrayComparator, error) {
+	return ec.unmarshalInputIPArrayComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOIPArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐIPArrayComparator(ctx context.Context, v interface{}) (*IPArrayComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOIPArrayComparator2bandicootᚋpkgᚋgqlᚐIPArrayComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOIPFamily2bandicootᚋpkgᚋgqlᚐIPFamily(ctx context.Context, v interface{}) (IPFamily, error) {
 	var res IPFamily
 	return res, res.UnmarshalGQL(v)
@@ -45975,6 +34847,18 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
+func (ec *executionContext) unmarshalOIntComparator2bandicootᚋpkgᚋgqlᚐIntComparator(ctx context.Context, v interface{}) (IntComparator, error) {
+	return ec.unmarshalInputIntComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx context.Context, v interface{}) (*IntComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOIntComparator2bandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOMac2string(ctx context.Context, v interface{}) (string, error) {
 	return UnmarshalMacScalar(v)
 }
@@ -46028,6 +34912,18 @@ func (ec *executionContext) marshalOMac2ᚖstring(ctx context.Context, sel ast.S
 		return graphql.Null
 	}
 	return ec.marshalOMac2string(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOMacComparator2bandicootᚋpkgᚋgqlᚐMacComparator(ctx context.Context, v interface{}) (MacComparator, error) {
+	return ec.unmarshalInputMacComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOMacComparator2ᚖbandicootᚋpkgᚋgqlᚐMacComparator(ctx context.Context, v interface{}) (*MacComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOMacComparator2bandicootᚋpkgᚋgqlᚐMacComparator(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
@@ -46135,6 +35031,57 @@ func (ec *executionContext) marshalONetworkInterface2ᚖbandicootᚋpkgᚋgqlᚐ
 	return ec._NetworkInterface(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalOObjectFilter2bandicootᚋpkgᚋgqlᚐObjectFilter(ctx context.Context, sel ast.SelectionSet, v ObjectFilter) graphql.Marshaler {
+	return ec._ObjectFilter(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOObjectFilter2ᚕᚖbandicootᚋpkgᚋgqlᚐObjectFilter(ctx context.Context, sel ast.SelectionSet, v []*ObjectFilter) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOObjectFilter2ᚖbandicootᚋpkgᚋgqlᚐObjectFilter(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOObjectFilter2ᚖbandicootᚋpkgᚋgqlᚐObjectFilter(ctx context.Context, sel ast.SelectionSet, v *ObjectFilter) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ObjectFilter(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalOOperatingSystem2bandicootᚋpkgᚋgqlᚐOperatingSystem(ctx context.Context, sel ast.SelectionSet, v OperatingSystem) graphql.Marshaler {
 	return ec._OperatingSystem(ctx, sel, &v)
 }
@@ -46144,6 +35091,17 @@ func (ec *executionContext) marshalOOperatingSystem2ᚖbandicootᚋpkgᚋgqlᚐO
 		return graphql.Null
 	}
 	return ec._OperatingSystem(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOOperator2bandicootᚋpkgᚋgqlᚐOperator(ctx context.Context, sel ast.SelectionSet, v Operator) graphql.Marshaler {
+	return ec._Operator(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOOperator2ᚖbandicootᚋpkgᚋgqlᚐOperator(ctx context.Context, sel ast.SelectionSet, v *Operator) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Operator(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
@@ -46231,6 +35189,30 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return ec.marshalOString2string(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOStringArrayComparator2bandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx context.Context, v interface{}) (StringArrayComparator, error) {
+	return ec.unmarshalInputStringArrayComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOStringArrayComparator2ᚖbandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx context.Context, v interface{}) (*StringArrayComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOStringArrayComparator2bandicootᚋpkgᚋgqlᚐStringArrayComparator(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOStringComparator2bandicootᚋpkgᚋgqlᚐStringComparator(ctx context.Context, v interface{}) (StringComparator, error) {
+	return ec.unmarshalInputStringComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx context.Context, v interface{}) (*StringComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOStringComparator2bandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalOTag2bandicootᚋpkgᚋgqlᚐTag(ctx context.Context, sel ast.SelectionSet, v Tag) graphql.Marshaler {
@@ -46332,38 +35314,6 @@ func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel as
 	return graphql.MarshalTime(v)
 }
 
-func (ec *executionContext) unmarshalOTime2ᚕᚖtimeᚐTime(ctx context.Context, v interface{}) ([]*time.Time, error) {
-	var vSlice []interface{}
-	if v != nil {
-		if tmp1, ok := v.([]interface{}); ok {
-			vSlice = tmp1
-		} else {
-			vSlice = []interface{}{v}
-		}
-	}
-	var err error
-	res := make([]*time.Time, len(vSlice))
-	for i := range vSlice {
-		res[i], err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOTime2ᚕᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v []*time.Time) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalOTime2ᚖtimeᚐTime(ctx, sel, v[i])
-	}
-
-	return ret
-}
-
 func (ec *executionContext) unmarshalOTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
 	if v == nil {
 		return nil, nil
@@ -46432,6 +35382,18 @@ func (ec *executionContext) marshalOUUID2ᚖgithubᚗcomᚋsatoriᚋgoᚗuuidᚐ
 		return graphql.Null
 	}
 	return ec.marshalOUUID2githubᚗcomᚋsatoriᚋgoᚗuuidᚐUUID(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOUUIDComparator2bandicootᚋpkgᚋgqlᚐUUIDComparator(ctx context.Context, v interface{}) (UUIDComparator, error) {
+	return ec.unmarshalInputUUIDComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOUUIDComparator2ᚖbandicootᚋpkgᚋgqlᚐUUIDComparator(ctx context.Context, v interface{}) (*UUIDComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOUUIDComparator2bandicootᚋpkgᚋgqlᚐUUIDComparator(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalOUser2bandicootᚋpkgᚋgqlᚐUser(ctx context.Context, sel ast.SelectionSet, v User) graphql.Marshaler {

@@ -106,7 +106,7 @@ type AnySlice struct {
 // TODO: improve this and support EncodeBinary
 func (a AnySlice) EncodeText(ci *pgtype.ConnInfo, buf []byte) (newBuf []byte, err error) {
 	if 0 == len(a.Value) {
-		return buf, nil
+		return []byte("{}"), nil
 	}
 	t := reflect2.TypeOf(a.Value[0])
 	switch t.Kind() { // type of the slice element

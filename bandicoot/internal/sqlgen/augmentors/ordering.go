@@ -28,12 +28,18 @@ func (o Ordering) Field(s *ast.Schema, d *ast.FieldDefinition, p *ast.Definition
 	if strings.HasSuffix(namedType, "Aggregate") {
 		return nil
 	}
+
+	orderByInput := fmt.Sprintf("%s_order_by", strcase.ToSnake(namedType))
+	if _, ok := s.Types[orderByInput]; !ok {
+		log.Printf("Not adding order by argument %s to %s", orderByInput, d.Name)
+		return nil
+	}
 	d.Arguments = append(d.Arguments, &ast.ArgumentDefinition{
 		Description: "sort the rows by one or more columns",
 		Name:        sqlgen.OrderByClause,
 		Type: &ast.Type{
 			NamedType: "",
-			Elem:      &ast.Type{NamedType: fmt.Sprintf("%s_order_by", strcase.ToSnake(namedType)), NonNull: true},
+			Elem:      &ast.Type{NamedType: orderByInput, NonNull: true},
 			NonNull:   false},
 	})
 	return nil
@@ -45,7 +51,7 @@ func (o Ordering) Schema(s *ast.Schema) error {
 	for _, t := range s.Types {
 		tc, err := newTypeConfig(t)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		// no directive
 		if tc == nil {

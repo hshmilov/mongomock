@@ -10,6 +10,7 @@ directive @relation(
 
 
 directive @viewFunction(name: String, arguments: [String]) on FIELD_DEFINITION
+directive @sqlgen(skip: Boolean!) on FIELD_DEFINITION
 
 
 enum RelationType {
@@ -17,7 +18,6 @@ enum RelationType {
     ONE_TO_MANY
     MANY_TO_MANY
 }
-
 
 interface Aggregate {
     group: [String!]!
@@ -91,3 +91,5 @@ that uses human-readable text to transmit data objects consisting of attributeâ€
 """
 scalar Map
 
+
+scalar Any

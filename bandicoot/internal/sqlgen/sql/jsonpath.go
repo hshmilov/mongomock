@@ -3,6 +3,7 @@ package sql
 import (
 	"bandicoot/internal/sqlgen"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cast"
 	"reflect"
@@ -33,82 +34,92 @@ func createJsonPathCondition(column string, v map[string]interface{}) (string, [
 	return sb.String(), values
 }
 
-func buildJsonFilter(sb *strings.Builder, v map[string]interface{}, parent string) []interface{} {
-
+func buildJsonFilter(sb *strings.Builder, where map[string]interface{}, parent string) []interface{} {
 	args := make([]interface{}, 0)
 	first := false
-	for k, v := range v {
-		name, cmp := sqlgen.GetComparisonOperation(k)
-		log.Trace().Str("cmp", cmp).Str("name", name).Interface("value", v).Msg("adding condition")
-		// if this isn't the first operation, add && to combine the conditions
-		if first {
-			sb.WriteString(" && ")
-		} else {
-			first = true
-		}
-		var formatter string
-		switch reflect.TypeOf(v).Kind() {
-		case reflect.String:
-			formatter = "\"%I\""
-		default:
-			formatter = "%I"
-		}
-		if parent != "" {
-			name = fmt.Sprintf("%s.%s", parent, name)
-		}
-		switch cmp {
-		case sqlgen.OperationExists:
-			sb.WriteString(fmt.Sprintf("exists(@.%s)", name))
-		case sqlgen.OperationEq:
-			sb.WriteString(fmt.Sprintf("@.%s == %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationNotEq:
-			sb.WriteString(fmt.Sprintf("@.%s != %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationGte:
-			sb.WriteString(fmt.Sprintf("@.%s >= %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationGt:
-			sb.WriteString(fmt.Sprintf("@.%s > %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationLt:
-			sb.WriteString(fmt.Sprintf("@.%s < %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationLte:
-			sb.WriteString(fmt.Sprintf("@.%s <= %s", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationLike:
-			sb.WriteString(fmt.Sprintf("@.%s like_regex \"%%s\"", name))
-			args = append(args, v)
-		case sqlgen.OperationILike:
-			sb.WriteString(fmt.Sprintf("@.%s like_regex \"%%s\" flag \"i\"", name))
-			args = append(args, v)
-		case sqlgen.OperationIn:
-			sb.WriteString(fmt.Sprintf("@.%s == %s[*]", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationNotIn:
-			sb.WriteString(fmt.Sprintf("@.%s != %s[*]", name, formatter))
-			args = append(args, v)
-		case sqlgen.OperationLogicAnd:
-			v, ok := v.([]interface{})
-			if !ok {
-				return nil
-			}
-			args = append(args, buildComplexFilter(sb, v, " && ", name)...)
+	for name, v := range where {
+		switch name {
 		case sqlgen.OperationLogicOr:
 			v, ok := v.([]interface{})
 			if !ok {
 				return nil
 			}
-			args = append(args, buildComplexFilter(sb, v, " || ", name)...)
-		case sqlgen.OperationBoolExp:
-			v, ok := v.(map[string]interface{})
+			args = append(args, buildComplexFilter(sb, v, " || ", parent)...)
+		case sqlgen.OperationLogicAnd:
+			v, ok := v.([]interface{})
 			if !ok {
 				return nil
 			}
-			args = append(args, buildJsonFilter(sb, v, name)...)
+			args = append(args, buildComplexFilter(sb, v, " && ", parent)...)
+		case sqlgen.OperationLogicNot:
+			continue
 		default:
-			log.Warn().Str("op", cmp).Msg("operation not supported")
+			values, ok := v.(map[string]interface{})
+			if !ok {
+				log.Error().Interface("value", values).Msg("value expected map")
+				return nil
+			}
+			name = strcase.ToSnake(name)
+			for cmp, v := range values {
+				log.Trace().Str("cmp", cmp).Str("name", name).Interface("value", v).Msg("adding condition")
+				// if this isn't the first operation, add && to combine the conditions
+				if first {
+					sb.WriteString(" && ")
+				} else {
+					first = true
+				}
+				var formatter string
+				switch reflect.TypeOf(v).Kind() {
+				case reflect.String:
+					formatter = "\"%I\""
+				default:
+					formatter = "%I"
+				}
+				if parent != "" {
+					name = fmt.Sprintf("%s.%s", parent, name)
+				}
+				switch cmp {
+				case sqlgen.OperationExists:
+					sb.WriteString(fmt.Sprintf("exists(@.%s)", name))
+				case sqlgen.OperationEq:
+					sb.WriteString(fmt.Sprintf("@.%s == %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationNotEq:
+					sb.WriteString(fmt.Sprintf("@.%s != %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationGte:
+					sb.WriteString(fmt.Sprintf("@.%s >= %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationGt:
+					sb.WriteString(fmt.Sprintf("@.%s > %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationLt:
+					sb.WriteString(fmt.Sprintf("@.%s < %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationLte:
+					sb.WriteString(fmt.Sprintf("@.%s <= %s", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationLike:
+					sb.WriteString(fmt.Sprintf("@.%s like_regex \"%%s\"", name))
+					args = append(args, v)
+				case sqlgen.OperationILike:
+					sb.WriteString(fmt.Sprintf("@.%s like_regex \"%%s\" flag \"i\"", name))
+					args = append(args, v)
+				case sqlgen.OperationIn:
+					sb.WriteString(fmt.Sprintf("@.%s == %s[*]", name, formatter))
+					args = append(args, v)
+				case sqlgen.OperationNotIn:
+					sb.WriteString(fmt.Sprintf("@.%s != %s[*]", name, formatter))
+					args = append(args, v)
+				default:
+					v, ok := v.(map[string]interface{})
+					if !ok {
+						log.Warn().Str("op", cmp).Msg("operation not supported")
+						return nil
+					}
+					args = append(args, buildJsonFilter(sb, v, name)...)
+				}
+			}
 		}
 	}
 	return args

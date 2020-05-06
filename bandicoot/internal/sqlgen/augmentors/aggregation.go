@@ -34,7 +34,11 @@ func (a Aggregation) Schema(s *ast.Schema) error {
 			if f.Type.Elem == nil {
 				continue
 			}
-			aggregateArgs := buildArguments(s, f)
+
+			if sqlGenSkip(f) {
+				continue
+			}
+				aggregateArgs := buildArguments(s, f)
 			if aggregateArgs == nil {
 				continue
 			}
@@ -75,7 +79,7 @@ func buildAggregate(s *ast.Schema, f *ast.FieldDefinition) string {
 			continue
 		}
 		aggColumnsName := fmt.Sprintf("%s_aggregate_%s_columns", f.Name, af.Name)
-		cols := aggregateColumns(af.Name, s.Types[getNamedType(f)].Fields, allowedTypes)
+		cols := aggregateColumns(af.Name, s.Types[sqlgen.GetNamedType(f)].Fields, allowedTypes)
 		if cols == nil {
 			continue
 		}
@@ -133,7 +137,7 @@ func buildArguments(s *ast.Schema, f *ast.FieldDefinition) ast.ArgumentDefinitio
 	if !ok {
 		return nil
 	}
-	aggregateColumnsDef := aggregateColumns(sqlgen.GroupByClause, s.Types[getNamedType(f)].Fields, allowedTypes)
+	aggregateColumnsDef := aggregateColumns(sqlgen.GroupByClause, s.Types[sqlgen.GetNamedType(f)].Fields, allowedTypes)
 	if aggregateColumnsDef == nil {
 		return nil
 	}

@@ -15,6 +15,7 @@ const (
 	DirectiveJsonPath       = "jsonpath"
 	DirectiveRelation       = "relation"
 	DirectiveViewFunction   = "viewFunction"
+	DirectiveSQLGen 		= "sqlgen"
 )
 
 const (
@@ -66,10 +67,12 @@ const (
 	OperationLogicAnd = "AND"
 	OperationLogicOr  = "OR"
 	OperationLogicNot = "NOT"
+	OperationCompareFields = "compare_fields"
 	// Array filters
 	OperationContains      = "contains"
 	OperationContainedBy   = "contained_by"
 	OperationOverlap       = "overlap"
+	OperationNoOverlap       = "no_overlap"
 	OperationSize          = "size"
 	OperationContainsRegex = "contains_regex"
 	// Object filters
@@ -88,7 +91,7 @@ const (
 type TranslatorFactory func(ctx context.Context, c Config, variables map[string]interface{}, fragments ast.FragmentDefinitionList, logger *zerolog.Logger) Translator
 
 // Config is the configuration struct for creating a Translator.
-type Config struct {
+type Config struct    {
 	// Type of translator we want to create (SQL, CQL, InfluxQL, etc')
 	//Type TranslatorType
 	// GraphQL schema
@@ -96,7 +99,7 @@ type Config struct {
 	// Table name generator
 	GenerateTableName func(int) string
 	// This method hook allows to modify the argument map before translation will occur
-	BeforeTranslation func(context.Context, *ast.Definition, map[string]interface{})
+	BeforeTranslation func(context.Context, string, *ast.Definition, map[string]interface{})
 	// This method allows to modify argument map before clauses are added
 	BeforeClauses func(context.Context, string, *ast.Definition, map[string]interface{})
 }
@@ -111,24 +114,6 @@ type Result struct {
 	Params []interface{}
 }
 
-// GetComparisonOperation finds the name of the field and logical operator type
-func GetComparisonOperation(op string) (string, string) {
-	if op == OperationLogicAnd {
-		return "", OperationLogicAnd
-	}
-	if op == OperationLogicNot {
-		return "", OperationLogicNot
-	}
-	if op == OperationLogicOr {
-		return "", OperationLogicOr
-	}
-
-	s := strings.SplitN(op, "_", 2)
-	if len(s) == 1 {
-		return op, OperationBoolExp
-	}
-	return strcase.ToSnake(s[0]), s[1]
-}
 
 // GetOrderOperation
 func GetOrderOperation(op string) string {
@@ -139,11 +124,10 @@ func GetOrderOperation(op string) string {
 // WhereClauseHasKey checks if given key exists in a common where clause (bool_exp)
 func WhereClauseHasKey(m map[string]interface{}, key string) bool {
 	for k, v := range m {
-		name, cmp := GetComparisonOperation(k)
-		if name == key {
+		if k == key {
 			return true
 		}
-		switch cmp {
+		switch k {
 		case OperationLogicAnd, OperationLogicOr, OperationLogicNot:
 			values, ok := v.([]interface{})
 			if !ok {
@@ -160,3 +144,17 @@ func WhereClauseHasKey(m map[string]interface{}, key string) bool {
 	}
 	return false
 }
+
+// GetNamedType returns the name from an ast.FieldDefinition, if the definition is an array
+// returns the inner element name
+func GetNamedType(f *ast.FieldDefinition) string {
+
+	if f.Type.NamedType != "" {
+		return f.Type.NamedType
+	}
+	if f.Type.Elem == nil {
+		return ""
+	}
+	return f.Type.Elem.NamedType
+}
+

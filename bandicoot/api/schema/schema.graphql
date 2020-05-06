@@ -4,4 +4,46 @@ type Query {
   devices: [Device!]!
   adapterUsers: [AdapterUser!]!
   users: [User!]!
+
+  _wizardFilters(type: String!): ObjectFilter @sqlgen(skip: true)
+}
+
+type ObjectFilter implements Filter {
+  name: String!
+  displayName: String!
+  type: String!
+  description: String
+  filters: [Filter] @sqlgen(skip: true)
+
+}
+
+type UnionFilter implements Filter {
+  name: String!
+  displayName: String!
+  type: String!
+  description: String
+  objects: [ObjectFilter] @sqlgen(skip: true)
+}
+
+type ScalarFilter implements Filter {
+  name: String!
+  displayName: String!
+  description: String
+  type: String!
+  operators: [Operator]! @sqlgen(skip: true)
+}
+
+type Operator implements Filter{
+  name: String!
+  type: String!
+  displayName: String!
+  description: String
+  formatDisplay: String
+}
+
+interface Filter {
+  name: String!
+  description: String
+  type: String!
+  displayName: String!
 }

@@ -126,10 +126,10 @@ func (s translator) Translate(field *ast.Field) (sqlgen.Result, error) {
 	// Find the type of the field in the schema
 	currentType := s.schema.Types[field.Definition.Type.Name()]
 	args := field.ArgumentMap(s.variables)
-	// Check if beforeClauses hook was set, if so call it
+	// Check if beforeTranslation hook was set, if so call it
 	if s.config.BeforeTranslation != nil {
 		log.Trace().Str("field", field.Name).Msg("Called before clauses hook")
-		s.config.BeforeTranslation(s.ctx, currentType, args)
+		s.config.BeforeTranslation(s.ctx, field.Name, currentType, args)
 	}
 	// the table name has to be based on the field name in snake case i.e "usersDevices" -> "user_devices"
 	tableName := strcase.ToSnake(field.Name)
@@ -189,7 +189,7 @@ func (s translator) buildAggregateQuery(field *ast.Field) (sq.SelectBuilder, str
 	// Check if beforeClauses hook was set, if so call it
 	if s.config.BeforeTranslation != nil {
 		log.Trace().Msg("Called before clauses hook")
-		s.config.BeforeTranslation(s.ctx, currentType, args)
+		s.config.BeforeTranslation(s.ctx, field.Name, currentType, args)
 	}
 	tableName := strcase.ToSnake(splitName)
 	queryAgg := sq.StatementBuilder.PlaceholderFormat(sq.Question).Select()
@@ -599,99 +599,108 @@ func (s translator) createConditions(
 	abbrTableName string) []sq.Sqlizer {
 
 	var cond []sq.Sqlizer
-	for k, v := range where {
-		name, cmp := sqlgen.GetComparisonOperation(k)
-		// Use dot notated name
-		columnName := fmt.Sprintf("%s.%s", abbrTableName, name)
-		s.log.Trace().Str("cmp", cmp).Str("name", name).Interface("value", v).Msg("adding condition")
-		switch cmp {
-		case sqlgen.OperationExpr:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s %s", columnName, v)))
-		case sqlgen.OperationExists:
-			if cast.ToBool(v) {
-				cond = append(cond, sq.Expr(fmt.Sprintf("%s IS NOT NULL", columnName)))
-			} else {
-				cond = append(cond, sq.Expr(fmt.Sprintf("%s IS NULL", columnName)))
-			}
-		case sqlgen.OperationNotEq:
-			cond = append(cond, sq.NotEq{columnName: v})
-		case sqlgen.OperationEq:
-			cond = append(cond, sq.Eq{columnName: v})
-		case sqlgen.OperationGt:
-			cond = append(cond, sq.Gt{columnName: v})
-		case sqlgen.OperationGte:
-			cond = append(cond, sq.GtOrEq{columnName: v})
-		case sqlgen.OperationLt:
-			cond = append(cond, sq.Lt{columnName: v})
-		case sqlgen.OperationLte:
-			cond = append(cond, sq.LtOrEq{columnName: v})
-		case sqlgen.OperationPrefix:
-			cond = append(cond, sq.Like{columnName: fmt.Sprintf("%s%%", v)})
-		case sqlgen.OperationSuffix:
-			cond = append(cond, sq.Like{columnName: fmt.Sprintf("%%%s", v)})
-		case sqlgen.OperationLike:
-			cond = append(cond, sq.Like{columnName: v})
-		case sqlgen.OperationNotLike:
-			cond = append(cond, sq.NotLike{columnName: v})
-		case sqlgen.OperationILike:
-			cond = append(cond, sq.ILike{columnName: v})
-		case sqlgen.OperationNotILike:
-			cond = append(cond, sq.NotILike{columnName: v})
-		case sqlgen.OperationIn:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s =  ANY(?)", columnName), AnySlice{cast.ToSlice(v)}))
-		case sqlgen.OperationNotIn:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s =  ANY(?)", columnName), AnySlice{cast.ToSlice(v)}))
-		case sqlgen.OperationContains:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s @> ?", columnName), AnySlice{cast.ToSlice(v)}))
-		case sqlgen.OperationContainedBy:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s <@ ?", columnName), AnySlice{cast.ToSlice(v)}))
-		case sqlgen.OperationOverlap:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s && ?", columnName), AnySlice{cast.ToSlice(v)}))
-		case sqlgen.OperationContainsRegex:
-			cond = append(cond, sq.Like{fmt.Sprintf("arrayToText(%s)", columnName): fmt.Sprintf("%s", v)})
-		case sqlgen.OperationInSubnet:
-			_, ip, err := net.ParseCIDR(cast.ToString(v))
-			if err != nil {
-				log.Err(err).Interface("cidr", v).Msg("Failed to parse cidr")
-			}
-			cond = append(cond, sq.Expr(fmt.Sprintf("? >> any(%s)", columnName), ip))
-		case sqlgen.OperationIPFamily:
-			// This assumes family(inet[]) function exists, see functions.sql
-			cond = append(cond, sq.Expr(fmt.Sprintf("? = any(family(%s))", columnName), cast.ToString(v)[1:]))
-		case sqlgen.OperationDays:
-			cond = append(cond, sq.Expr(fmt.Sprintf("%s >= round(extract('epoch' from (Now() - ? * interval '1 days')) * 1000)::bigint", columnName), v))
-		case sqlgen.OperationLogicOr:
-			v, ok := v.([]interface{})
-			if !ok {
-				return nil
-			}
-			cond = append(cond, sq.Or(s.createMultiConditions(v, currentType, abbrTableName)))
-		case sqlgen.OperationLogicAnd:
-			v, ok := v.([]interface{})
-			if !ok {
-				return nil
-			}
-			cond = append(cond, sq.And(s.createMultiConditions(v, currentType, abbrTableName)))
-		case sqlgen.OperationLogicNot:
-			v, ok := v.(map[string]interface{})
-			if !ok {
-				return nil
-			}
-			cond = append(cond, not(s.createConditions(v, currentType, abbrTableName)))
-		case sqlgen.OperationBoolExp:
-			v, ok := v.(map[string]interface{})
-			if !ok {
-				return nil
-			}
-			selectionDefinition := currentType.Fields.ForName(name)
-			switch getSqlType(selectionDefinition) {
-			case Json:
-				directive := getFieldJsonPathDirective(selectionDefinition)
-				expr, vars := createJsonPathCondition(directive.name, v)
-				cond = append(cond, sq.Expr(expr, vars...))
-			case Relation:
-				cond = append(cond, s.createRelationCondition(v, getFieldRelationDirective(selectionDefinition), abbrTableName))
-			}
+	for name, v := range where {
+		switch name {
+			case sqlgen.OperationLogicOr:
+				v, ok := v.([]interface{})
+				if !ok {
+					return nil
+				}
+				cond = append(cond, sq.Or(s.createMultiConditions(v, currentType, abbrTableName)))
+			case sqlgen.OperationLogicAnd:
+				v, ok := v.([]interface{})
+				if !ok {
+					return nil
+				}
+				cond = append(cond, sq.And(s.createMultiConditions(v, currentType, abbrTableName)))
+			case sqlgen.OperationLogicNot:
+				v, ok := v.(map[string]interface{})
+				if !ok {
+					return nil
+				}
+				cond = append(cond, not(s.createConditions(v, currentType, abbrTableName)))
+			default:
+				values, ok := v.(map[string]interface{})
+				if !ok {
+					log.Error().Interface("value", values).Msg("value expected map")
+					return nil
+				}
+				for cmp, v := range values {
+					// Use dot notated name
+					columnName := fmt.Sprintf("%s.%s", abbrTableName, strcase.ToSnake(name))
+					s.log.Trace().Str("cmp", cmp).Str("name", name).Interface("value", v).Msg("adding condition")
+					switch cmp {
+					case sqlgen.OperationExpr:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s %s", columnName, v)))
+					case sqlgen.OperationExists:
+						if cast.ToBool(v) {
+							cond = append(cond, sq.Expr(fmt.Sprintf("%s IS NOT NULL", columnName)))
+						} else {
+							cond = append(cond, sq.Expr(fmt.Sprintf("%s IS NULL", columnName)))
+						}
+					case sqlgen.OperationNotEq:
+						cond = append(cond, sq.NotEq{columnName: v})
+					case sqlgen.OperationEq:
+						cond = append(cond, sq.Eq{columnName: v})
+					case sqlgen.OperationGt:
+						cond = append(cond, sq.Gt{columnName: v})
+					case sqlgen.OperationGte:
+						cond = append(cond, sq.GtOrEq{columnName: v})
+					case sqlgen.OperationLt:
+						cond = append(cond, sq.Lt{columnName: v})
+					case sqlgen.OperationLte:
+						cond = append(cond, sq.LtOrEq{columnName: v})
+					case sqlgen.OperationPrefix:
+						cond = append(cond, sq.Like{columnName: fmt.Sprintf("%s%%", v)})
+					case sqlgen.OperationSuffix:
+						cond = append(cond, sq.Like{columnName: fmt.Sprintf("%%%s", v)})
+					case sqlgen.OperationLike:
+						cond = append(cond, sq.Like{columnName: v})
+					case sqlgen.OperationNotLike:
+						cond = append(cond, sq.NotLike{columnName: v})
+					case sqlgen.OperationILike:
+						cond = append(cond, sq.ILike{columnName: v})
+					case sqlgen.OperationNotILike:
+						cond = append(cond, sq.NotILike{columnName: v})
+					case sqlgen.OperationIn:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s =  ANY(?)", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationNotIn:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s =  ANY(?)", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationContains:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s @> ?", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationContainedBy:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s <@ ?", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationOverlap:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s && ?", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationNoOverlap:
+						cond = append(cond, sq.Expr(fmt.Sprintf("NOT (%s && ?)", columnName), AnySlice{cast.ToSlice(v)}))
+					case sqlgen.OperationContainsRegex:
+						cond = append(cond, sq.Like{fmt.Sprintf("arrayToText(%s)", columnName): fmt.Sprintf("%s", v)})
+					case sqlgen.OperationSize:
+						cond = append(cond, sq.Eq{fmt.Sprintf("array_length(%s, 1)", columnName): v})
+					case sqlgen.OperationInSubnet:
+						_, ip, err := net.ParseCIDR(cast.ToString(v))
+						if err != nil {
+							log.Err(err).Interface("cidr", v).Msg("Failed to parse cidr")
+						}
+						cond = append(cond, sq.Expr(fmt.Sprintf("? >> any(%s)", columnName), ip))
+					case sqlgen.OperationIPFamily:
+						// This assumes family(inet[]) function exists, see functions.sql
+						cond = append(cond, sq.Expr(fmt.Sprintf("? = any(family(%s))", columnName), cast.ToString(v)[1:]))
+					case sqlgen.OperationDays:
+						cond = append(cond, sq.Expr(fmt.Sprintf("%s >= round(extract('epoch' from (Now() - ? * interval '1 days')) * 1000)::bigint", columnName), v))
+					default:
+						selectionDefinition := currentType.Fields.ForName(name)
+						switch getSqlType(selectionDefinition) {
+						case Json:
+							directive := getFieldJsonPathDirective(selectionDefinition)
+							expr, vars := createJsonPathCondition(directive.name, values)
+							cond = append(cond, sq.Expr(expr, vars...))
+						case Relation:
+							cond = append(cond, s.createRelationCondition(values, getFieldRelationDirective(selectionDefinition), abbrTableName))
+						}
+					}
+				}
 		}
 	}
 	return cond

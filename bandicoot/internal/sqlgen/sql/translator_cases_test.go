@@ -119,13 +119,13 @@ var translationTestCases = []translationTestCase{
 			}`,
 		`{"where": {
 				 "OR": [
-				  {"adapterNames_contains_regex": "%win%"},
+				  {"adapterNames": {"contains_regex": "%win%"}},
 				  {"adapterDevices": {
 					"OR": [
-					  { "hostname_ilike": "%win%" },
-					  { "name_ilike": "%win%" },
-					  { "lastUsedUsers_contains_regex": "%win%"},
-					  { "os": {"type_ilike": "%win%"}}
+					  { "hostname": {"ilike": "%win%" }},
+					  { "name": {"ilike": "%win%" }},
+					  { "lastUsedUsers": {"contains_regex": "%win%"}},
+					  { "os": {"type": {"ilike": "%win%"}}}
 					]
 				  }}
 				]
@@ -150,11 +150,9 @@ var translationTestCases = []translationTestCase{
 		`query {
 				  adapterDevices(
 					where: {
-					  interfaces: {
-						ipAddrs_ip_family: V4,
-						ipAddrs_in_subnet:"10.0.2.0/24" }
-					  }
-				  ) {
+			  			interfaces: {ipAddrs: {ip_family: V4, in_subnet: "10.0.2.0/24"}}
+						}) 
+					{
 					hostname
 					adapterId
 					interfaces {
@@ -178,6 +176,22 @@ var translationTestCases = []translationTestCase{
 			IP:   net.IP{10, 0, 2, 0},
 			Mask: net.IPMask{255, 255, 255, 0},
 		}},
+		"../../../api/generated/augmented_schema.graphql",
+	},
+	{
+		"simpleJsonPathQuery",
+		`query {
+				  adapterDevices(
+					where: {
+					  adapterData: { OR: [{ adCn: { like: "lol" } }, { adCn: { eq: "dd" } }] }
+					}
+				  ) {
+					data
+				  }
+				}`,
+		"",
+		"SELECT (sq1.data) AS data FROM adapter_devices AS sq1 WHERE (data @? format('$ ? ((@.ad_cn like_regex \"%s\" || @.ad_cn == \"%I\"))',$1::text,$2::text)::jsonpath) LIMIT 100 OFFSET 0",
+		[]interface{}{"lol", "dd"},
 		"../../../api/generated/augmented_schema.graphql",
 	},
 }

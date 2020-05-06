@@ -1,0 +1,145 @@
+
+
+input IntComparator {
+    exists: Boolean
+    eq: Int
+    neq: Int
+    lte: Int
+    lt: Int
+    gte: Int
+    gt: Int
+    in: [Int]
+    not_in: [Int]
+}
+
+input IntArrayComparator {
+    exists: Boolean
+    eq: [Int]
+    neq: [Int]
+    contains: [Int]
+    contained_by: [Int]
+    overlap: [Int]
+    size: Int
+}
+
+input StringComparator {
+    exists: Boolean
+    eq: String
+    neq: String
+    in: [String]
+    not_in: [String]
+    like: String
+    ilike: String
+    not_like: String
+    not_ilike: String
+    suffix: String
+    prefix: String
+}
+
+input StringArrayComparator {
+    exists: Boolean
+    eq: [String]
+    neq: [String]
+    contains: [String]
+    contained_by: [String]
+    overlap: [String]
+    no_overlap: [String]
+    size: Int
+    contains_regex: String
+}
+
+input FloatComparator {
+    exists: Boolean
+    eq: Float
+    neq: Float
+    lte: Float
+    lt: Float
+    gte: Float
+    gt: Float
+}
+
+input FloatArrayComparator {
+    exists: Boolean
+    eq: [Float]
+    neq: [Float]
+    contains: [Float]
+    contained_by: [Float]
+    overlap: [Float]
+    size: Int
+}
+
+input BooleanComparator {
+    exists: Boolean
+    eq: Boolean
+    neq: Boolean
+}
+
+input EpochComparator {
+    exists: Boolean
+    eq: Epoch
+    neq: Epoch
+    lte: Epoch
+    lt: Epoch
+    gte: Epoch
+    gt: Epoch
+    days: Int
+}
+
+input EpochArrayComparator {
+    exists: Boolean
+    eq: [Epoch]
+    neq: [Epoch]
+}
+
+input UUIDComparator {
+    exists: Boolean
+    eq: UUID
+    neq: UUID
+    in: [UUID]
+    not_in: [UUID]
+}
+
+input UUIDArrayComparator {
+    exists: Boolean
+    eq: [UUID]
+    neq: [UUID]
+    contains: [UUID]
+    contained_by: [UUID]
+    overlap: [UUID]
+    size: Int
+}
+
+input IPComparator {
+    exists: Boolean
+    eq: IP
+    neq: IP
+}
+
+input IPArrayComparator {
+    exists: Boolean
+    eq: [IP]
+    neq: [IP]
+    contains: [IP]
+    contained_by: [IP]
+    overlap: [IP]
+    size: Int
+    in_subnet: CIDR
+    ip_family: IPFamily
+}
+
+input MacComparator {
+    exists: Boolean
+    eq: Mac
+    neq: Mac
+
+}
+
+input MacArrayComparator {
+    exists: Boolean
+    eq: [Mac]
+    neq: [Mac]
+    contains: [Mac]
+    contained_by: [Mac]
+    overlap: [Mac]
+    size: Mac
+}

@@ -15,20 +15,20 @@ import (
 
 var translatorConfig = sqlgen.Config{
 	Schema:            parsedSchema,
-	BeforeTranslation: nil,
-	BeforeClauses: func(ctx context.Context, tableName string, def *ast.Definition, args map[string]interface{}) {
+	BeforeClauses: nil,
+	BeforeTranslation: func(ctx context.Context, tableName string, def *ast.Definition, args map[string]interface{}) {
 		switch def.Name {
 		case "User", "AdapterUser", "Device", "AdapterDevice", "Interfaces", "FirewallRules":
 			if where, ok := args[sqlgen.WhereClause]; ok {
 				if whereMap, ok := where.(map[string]interface{}); ok {
 					// Inject fetch cycle
-					if sqlgen.WhereClauseHasKey(whereMap, "fetch_cycle") {
+					if sqlgen.WhereClauseHasKey(whereMap, "fetchCycle") {
 						return
 					}
-					whereMap["fetchCycle_eq"] = CurrentCycle
+					whereMap["fetchCycle"] = map[string]interface{}{"eq": CurrentCycle}
 				}
 			} else {
-				args[sqlgen.WhereClause] = map[string]interface{}{"fetchCycle_eq": CurrentCycle}
+				args[sqlgen.WhereClause] = map[string]interface{}{"fetchCycle": map[string]interface{}{"eq": CurrentCycle}}
 			}
 		}
 	},
@@ -82,6 +82,8 @@ func (r *Resolver) Query() QueryResolver {
 }
 
 type queryResolver struct{ *Resolver }
+
+
 
 func (r *queryResolver) Users(ctx context.Context, _, _ *int, _ *UserBoolExp, _ []UserOrderBy) ([]User, error) {
 	var dd []User

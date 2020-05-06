@@ -21,7 +21,7 @@
           :expandable="true"
           :filterable="true"
           :on-click-row="configEntity"
-          :experimental-api="experimentalApi"
+          :experimental-api="isExperimentalAPI"
           @input="updateSelection"
         >
           <slot
@@ -56,11 +56,13 @@
 
 <script>
 import {
-  mapState, mapGetters, mapMutations, mapActions,
+  mapActions, mapGetters, mapMutations, mapState,
 } from 'vuex';
 import { getUserTableColumnGroups } from '@api/user-preferences';
 import _isEmpty from 'lodash/isEmpty';
 import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
+import _get from 'lodash/get';
+
 import XQuery from './query/Query.vue';
 import XTable from '../../neurons/data/Table.vue';
 import XTableData from './TableData.vue';
@@ -92,11 +94,6 @@ export default {
       type: Array,
       default: null,
     },
-    experimentalApi: {
-      type: Boolean,
-      required: false,
-      default: false,
-    },
   },
   data() {
     return {
@@ -121,6 +118,10 @@ export default {
       },
       viewFields(state) {
         return state[this.module].view.fields;
+      },
+      isExperimentalAPI(state) {
+        const featureFlagsConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
+        return (featureFlagsConfigs && featureFlagsConfigs.experimental_api);
       },
     }),
     permissionCategory() {

@@ -22,7 +22,6 @@ type relation struct {
 func (r relation) buildRelationClause(tableName string, relationTableName string) string {
 	clauses := make([]string, 0)
 	for i, fkName := range r.fkNames {
-
 		clauses = append(clauses, fmt.Sprintf("%s.%s = %s.%s", tableName,
 			strcase.ToSnake(fkName), relationTableName, strcase.ToSnake(r.relationFkNames[i])))
 	}

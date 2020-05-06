@@ -9,6 +9,8 @@ from ui_tests.tests import ui_consts
 from ui_tests.tests.test_report_base import TestReportGenerationBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 
+# pylint: disable=E1101
+
 
 #pylint: disable=no-member
 class TestReportGeneration(TestReportGenerationBase):

@@ -94,17 +94,18 @@ export const updateDataContent = (state, payload) => {
   if (!payload.data) {
     return;
   }
-  let payload_data = payload.data;;
-  if (payload.isExperimentalAPI) {
-    payload_data = payload.data.data[payload.module].map((item) => (item._compatibilityAPI || {}))
-	}
+  let payloadData = payload.data;
+  if (payload.isExperimentalAPI && payloadData.data !== undefined) {
+    // eslint-disable-next-line no-underscore-dangle
+    payloadData = payload.data.data[payload.module].map((item) => (item._compatibilityAPI || {}));
+  }
   if (!payload.skip) {
-    content.data = payload_data;
+    content.data = payloadData;
     if (module.count !== undefined && module.count.data > content.data.length) {
       content.data[module.count.data - 1] = null;
     }
-  } else if (payload_data.length) {
-    content.data.splice(payload.skip, payload_data.length, ...payload_data);
+  } else if (payloadData.length) {
+    content.data.splice(payload.skip, payloadData.length, ...payloadData);
   }
 };
 

@@ -23,7 +23,7 @@ type Device @generateInputs(where: "device_bool_exp", orderBy: "device_order_by"
     _compatibilityAPI: Map @goField(forceResolver: true, name: "compatabilityAPI") @deprecated
 }
 
-# columns and relationships of "devices"
+"Adapter device is a single enitity returned from that adapter"
 type AdapterDevice @generateInputs(where: "adapter_device_bool_exp", orderBy: "adapter_device_order_by") {
     "Unique id of adapter device"
     id: UUID!

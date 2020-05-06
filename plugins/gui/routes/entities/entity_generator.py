@@ -22,7 +22,7 @@ from gui.logic.entity_data import (get_entity_data, entity_data_field_csv,
 from gui.logic.generate_csv import get_csv_from_heavy_lifting_plugin
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.entities.views.views_generator import views_generator
-
+from gui.logic.graphql.graphql import allow_experimental
 # pylint: disable=no-member,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -33,6 +33,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
     @gui_category_add_rules(rule, permission_category=permission_category)
     class Entity(views_generator(permission_category)):
 
+        @allow_experimental()
         @historical()
         @paginated()
         @filtered_entities()
@@ -51,6 +52,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 limit,
                 mongo_sort,
                 mongo_projection)
+
             iterable = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                     self.entity_type,
                                     default_sort=self._system_settings.get(
@@ -89,6 +91,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                                      field_filters,
                                                      cell_joiner=self._system_settings.get('cell_joiner'))
 
+        @allow_experimental(count=True)
         @filtered_entities()
         @historical()
         @gui_route_logged_in('count', methods=['GET', 'POST'], required_permission=PermissionValue.get(

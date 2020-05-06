@@ -6,8 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.11.2
 	github.com/Masterminds/squirrel v1.2.0
 	github.com/appleboy/gin-jwt/v2 v2.6.3
-	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
-	github.com/cpuguy83/go-md2man v1.0.10 // indirect
+	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/logger v0.0.2
 	github.com/gin-gonic/gin v1.5.0
 	github.com/go-playground/universal-translator v0.17.0 // indirect
