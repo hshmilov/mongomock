@@ -7,6 +7,7 @@ import (
 	"github.com/iancoleman/strcase"
 	json "github.com/json-iterator/go"
 	"github.com/rs/zerolog/log"
+	uuid "github.com/satori/go.uuid"
 	"reflect"
 	"strings"
 	"time"
@@ -93,7 +94,13 @@ func createFieldMappings(opCtx *graphql.OperationContext, fields []graphql.Colle
 
 func buildCompatibilityField(originalPath []string, parentValue json.Any) interface{} {
 	switch parentValue.ValueType() {
-	case json.StringValue, json.NumberValue, json.BoolValue:
+	case json.StringValue:
+		_, err := uuid.FromString(parentValue.ToString())
+		if err == nil {
+			return strings.ReplaceAll(parentValue.ToString(), "-", "")
+		}
+		fallthrough
+	case json.NumberValue, json.BoolValue:
 		return parentValue.GetInterface()
 	case json.NilValue:
 		return nil

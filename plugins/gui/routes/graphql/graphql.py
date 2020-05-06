@@ -60,6 +60,7 @@ SEARCH_USERS_API = """
             ){
                 adapterCount
                 adapterNames
+                id
                 adapterUsers {
                   username
                   firstName

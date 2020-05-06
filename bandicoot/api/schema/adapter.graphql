@@ -1,6 +1,6 @@
 # columns and relationships of "adapters"
 type Adapter @generateInputs(where: "adapter_bool_exp", orderBy: "adapter_order_by") {
-    id: AdapterType!
+    id: String!
     name: String
     properties: [String]
 }

@@ -1247,6 +1247,7 @@ class PluginBase(Configurable, Feature, ABC):
         """
         return self.request_remote_plugin(f'stop/{job_name}', plugin_name, method='post')
 
+    # pylint: disable=too-many-arguments
     def _trigger_remote_plugin(self, plugin_name: str, job_name: str = 'execute',
                                blocking: bool = True,
                                priority: bool = False,
@@ -1254,7 +1255,8 @@ class PluginBase(Configurable, Feature, ABC):
                                timeout: int = None,
                                stop_on_timeout: bool = False,
                                reschedulable: bool = True,
-                               external_thread: bool = True) -> requests.Response:
+                               external_thread: bool = True,
+                               error_as_warning: bool = False) -> requests.Response:
         """
         Triggers a triggerable plugin
         :param plugin_name: The plugin name to trigger
@@ -1286,7 +1288,10 @@ class PluginBase(Configurable, Feature, ABC):
                         self._stop_triggerable_plugin(plugin_name, job_name)
                 return res
             except Exception:
-                logger.exception(f'Trigger failed on {plugin_name}, {job_name}, {data}')
+                if error_as_warning:
+                    logger.warning(f'Trigger failed on {plugin_name}, {job_name}, {data}')
+                else:
+                    logger.exception(f'Trigger failed on {plugin_name}, {job_name}, {data}')
                 if blocking:
                     raise
 

@@ -110,14 +110,14 @@ func TransferUsers(
 				d.FetchCycle = fetchCycle
 				err := dstRepo.InsertAdapterUser(ctx, d)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to insert user")
+					log.Trace().Err(err).Msg("Failed to insert user")
 					failedCount++
 					continue
 				}
 			}
 		}
 		current += chunkLimit
-		log.Info().Int64("count", current).Msg("Current user status")
+		log.Info().Int64("count", current).Int("failedCount", failedCount).Msg("Current user status")
 		time.Sleep(time.Duration(rate) * time.Second)
 	}
 	elapsed := time.Since(start)

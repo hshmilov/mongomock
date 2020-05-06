@@ -2,27 +2,60 @@ import logging
 from datetime import datetime, timedelta
 
 from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames
+from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-# pylint: disable=useless-super-delegation
+# pylint: disable=useless-super-delegation, no-member
 class FeatureFlags(Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     # pylint: disable=R0201,E0203,no-member
     def _on_config_update(self, config):
-        # In order for core to update all plugins with the new settings (specially fips)
-        if config != self._current_feature_flag_config:
-            logger.info(f'Loading FeatureFlags config: {config}')
-            self._current_feature_flag_config = self.feature_flags_config()
-            resp = self.request_remote_plugin('update_config', 'core', method='POST')
-            if resp.status_code == 200:
-                logger.info('Feature Flags settings updated in all plugins')
+        if config == self._current_feature_flag_config:
+            return
+
+        if config.get(FeatureFlagsNames.Bandicoot, False) != \
+                self._current_feature_flag_config.get(FeatureFlagsNames.Bandicoot, False):
+            if config[FeatureFlagsNames.Bandicoot]:
+                self.start_bandicoot()
             else:
-                logger.error(f'An error occurred while trying to update all feature flags config: {resp.content}')
+                self.stop_bandicoot()
+        # In order for core to update all plugins with the new settings (specially fips)
+        logger.info(f'Loading FeatureFlags config: {config}')
+        # this variable is set in PluginBase
+        self._current_feature_flag_config = self.feature_flags_config()
+        resp = self.request_remote_plugin('update_config', 'core', method='POST')
+        if resp.status_code == 200:
+            logger.info('Feature Flags settings updated in all plugins')
+        else:
+            logger.error(f'An error occurred while trying to update all feature flags config: {resp.content}')
+
+    def start_bandicoot(self):
+        logger.info('Starting bandicoot')
+        try:
+            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:postgres', reschedulable=False,
+                                        blocking=True, error_as_warning=True)
+            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:bandicoot', reschedulable=False,
+                                        blocking=False, error_as_warning=True)
+        # catch any exception, otherwise gui will crash, any error that is raised it already documented in the
+        # trigger functions
+        except BaseException:
+            pass
+
+    def stop_bandicoot(self):
+        logger.info('Stopping bandicoot')
+        try:
+            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'stop:bandicoot', reschedulable=False,
+                                        blocking=False, error_as_warning=True)
+            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'stop:postgres', reschedulable=False,
+                                        blocking=False, error_as_warning=True)
+        # see start bandicoot function
+        except BaseException:
+            pass
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -59,8 +92,13 @@ class FeatureFlags(Configurable):
                     }
                 },
                 {
+                    'name': FeatureFlagsNames.Bandicoot,
+                    'title': 'Run Bandicoot container (results won\'t be available until next cycle)',
+                    'type': 'bool',
+                },
+                {
                     'name': FeatureFlagsNames.ExperimentalAPI,
-                    'title': 'Use experimental API (make sure GraphQL server is running)',
+                    'title': 'Enable search via Postgres (you need to run Bandicoot container first)',
                     'type': 'bool',
                 },
                 {
@@ -128,6 +166,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.ExpiryDate: '',
             FeatureFlagsNames.LockOnExpiry: False,
             FeatureFlagsNames.LockedActions: [],
+            FeatureFlagsNames.Bandicoot: False,
             FeatureFlagsNames.ExperimentalAPI: False,
             FeatureFlagsNames.CloudCompliance: {
                 CloudComplianceNames.Visible: False,

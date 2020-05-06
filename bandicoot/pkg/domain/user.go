@@ -20,7 +20,7 @@ type User struct {
 type AdapterUser struct {
 	Id          uuid.UUID
 	FetchCycle  int
-	AdapterId   AdapterType
+	AdapterId   string
 	AdapterName string
 	Adapter     Adapter
 	Client      AdapterClient

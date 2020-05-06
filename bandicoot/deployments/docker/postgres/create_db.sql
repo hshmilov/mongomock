@@ -217,7 +217,7 @@ CREATE TYPE adapter_type AS ENUM (
 
 CREATE TABLE public.adapters
 (
-    id adapter_type NOT NULL,
+    id text NOT NULL,
     name text COLLATE pg_catalog."default",
     properties text[] COLLATE pg_catalog."default",
     CONSTRAINT adapters_pkey PRIMARY KEY (id)
@@ -239,7 +239,7 @@ CREATE TABLE public.adapter_devices
     type text COLLATE pg_catalog."default",
     domain text COLLATE pg_catalog."default",
     adapter_name text COLLATE pg_catalog."default",
-    adapter_id adapter_type,
+    adapter_id text,
     device_id uuid,
     data jsonb,
     last_seen bigint,
@@ -442,7 +442,7 @@ CREATE TABLE public.adapter_users
     id                      uuid NOT NULL,
     fetch_cycle             int NOT NULL,
     adapter_name            text COLLATE pg_catalog."default",
-    adapter_id              adapter_type,
+    adapter_id              text,
     user_id                 uuid,
     data                    jsonb,
     last_seen               bigint,

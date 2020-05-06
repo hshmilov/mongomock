@@ -175,6 +175,7 @@ SPECIFIC_DATA_PLUGIN_UNIQUE_NAME = f'{SPECIFIC_DATA}.plugin_unique_name'
 class FeatureFlagsNames:
     TrialEnd = 'trial_end'
     LockedActions = 'locked_actions'
+    Bandicoot = 'bandicoot'
     ExperimentalAPI = 'experimental_api'
     CloudCompliance = 'cloud_compliance'
     ExpiryDate = 'expiry_date'

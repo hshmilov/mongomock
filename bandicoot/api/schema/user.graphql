@@ -18,7 +18,7 @@ type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapt
     "Cycle adapter device was fetched"
     fetchCycle: Int!
     "Id of adapter that fetched this device"
-    adapterId: AdapterType!
+    adapterId: String!
     adapter : Adapter @relation(name:"adapters", fkName: ["adapterId"], relationFkName: ["id"], relType: ONE_TO_ONE)
     "Name of adapter that fetched this advice"
     adapterName: String

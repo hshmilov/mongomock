@@ -42,7 +42,7 @@ type AdapterDevice struct {
 	// Name of adapter that scanned this device
 	AdapterName string `json:"adapter_name"`
 	// The adapter id this device was fetched with
-	AdapterId AdapterType `db:"adapter_id" json:"adapter_id"`
+	AdapterId string `db:"adapter_id" json:"adapter_id"`
 	Adapter   Adapter
 	Client    AdapterClient
 

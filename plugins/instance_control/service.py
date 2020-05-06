@@ -100,6 +100,9 @@ class InstanceControlService(Triggerable, PluginBase):
     Responsible on Adapter on Demand - starting and stopping adapters.
     """
 
+    # List of service plugins supported by instance control
+    SUPPORTED_SERVICE_PLUGINS = ['heavy_lifting', 'bandicoot', 'postgres']
+
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
         # pylint: disable=W0511
@@ -155,12 +158,13 @@ class InstanceControlService(Triggerable, PluginBase):
         del parsed_path
 
         with self.__lazy_locker.get_lock([plugin_name]):
-            if 'heavy_lifting' in plugin_name:
+
+            if plugin_name in self.SUPPORTED_SERVICE_PLUGINS:
                 # quick hack
                 if operation_type == 'start':
-                    return self.start_service('heavy_lifting')
+                    return self.start_service(plugin_name)
                 # else - stop
-                return self.stop_service('heavy_lifting')
+                return self.stop_service(plugin_name)
             sh_plugin_name = self.__adapters.get(plugin_name)
             if sh_plugin_name:
                 if operation_type == 'start':

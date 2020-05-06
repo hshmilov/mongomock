@@ -9,6 +9,20 @@ import (
 	"path"
 )
 
+type FilteredWriter struct {
+	w zerolog.LevelWriter
+	level zerolog.Level
+}
+func (w *FilteredWriter) Write(p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+func (w *FilteredWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+	if level >= w.level {
+		return w.w.WriteLevel(level, p)
+	}
+	return len(p), nil
+}
+
 // Configuration for logging
 type Config struct {
 	// Enable console logging
@@ -50,12 +64,24 @@ func Configure(config Config) *zerolog.Logger {
 	if config.ConsoleLoggingEnabled {
 		writers = append(writers, zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+
 	if config.FileLoggingEnabled {
-		writers = append(writers, newRollingFile(config))
+		// Create a logging file that defaults that always info level
+		writers = append(writers, &FilteredWriter{
+			zerolog.MultiLevelWriter(newRollingFile(config, false)),
+			zerolog.InfoLevel},
+		)
 	}
-	mw := io.MultiWriter(writers...)
+
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	if config.Debug {
+		// Add a .debug log file if we are allowing file logging
+		if config.FileLoggingEnabled {
+			writers = append(writers, &FilteredWriter{
+				zerolog.MultiLevelWriter(newRollingFile(config, true)),
+				zerolog.DebugLevel},
+			)
+		}
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	if config.Trace {
@@ -63,6 +89,7 @@ func Configure(config Config) *zerolog.Logger {
 	}
 
 	zerolog.TimestampFieldName = "@timestamp"
+	mw := zerolog.MultiLevelWriter(writers...)
 	logger := zerolog.New(mw).With().Timestamp().Logger()
 
 	logger.Info().
@@ -80,14 +107,17 @@ func Configure(config Config) *zerolog.Logger {
 	return &logger
 }
 
-func newRollingFile(config Config) io.Writer {
+func newRollingFile(config Config, debug bool) io.Writer {
 	if err := os.MkdirAll(config.Directory, 0744); err != nil {
 		log.Error().Err(err).Str("path", config.Directory).Msg("can't create log directory")
 		return nil
 	}
-
+	fileName := config.Filename
+	if debug {
+		fileName += ".debug"
+	}
 	return &lumberjack.Logger{
-		Filename:   path.Join(config.Directory, config.Filename),
+		Filename:   path.Join(config.Directory, fileName),
 		MaxBackups: config.MaxBackups, // files
 		MaxSize:    config.MaxSize,    // megabytes
 		MaxAge:     config.MaxAge,     // days

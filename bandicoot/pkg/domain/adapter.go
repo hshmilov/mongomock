@@ -218,12 +218,12 @@ const (
 	AdapterTypeZscaler                        AdapterType = "ZSCALER"
 )
 
-func GetAdapterTypeByName(a string) AdapterType {
-	return AdapterType(strcase.ToScreamingSnake(strings.TrimSuffix(a, "_adapter")))
+func GetAdapterTypeByName(a string) string {
+	return strcase.ToSnake(strings.TrimSuffix(a, "_adapter"))
 }
 
 type Adapter struct {
-	Id         AdapterType
+	Id         string
 	Name       string
 	Properties []string `pg:",array"`
 	//Clients []AdapterClient

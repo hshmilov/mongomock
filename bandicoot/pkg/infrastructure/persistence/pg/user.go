@@ -30,7 +30,7 @@ func (p *Repo) InsertAdapterUser(ctx context.Context, ud domain.AdapterUser) err
 	}
 	_, err = p.pool.Exec(ctx, sql, args...)
 	if err != nil {
-		log.Error().Str("query", sql).Interface("args", args).Err(err).Msg("Failed to insert user")
+		log.Trace().Str("query", sql).Interface("args", args).Err(err).Msg("Failed to insert user")
 		return err
 	}
 	return nil

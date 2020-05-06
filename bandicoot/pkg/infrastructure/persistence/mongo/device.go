@@ -197,7 +197,7 @@ func (m *Repo) parseDevices(cDeviceId uuid.UUID, aDevice *aggregatedDevice) ([]d
 	tagToDevice := make(map[string][]domain.Tag)
 	for _, tag := range aDevice.Tags {
 		if tag.Type == customData {
-			log.Debug().Str("device", cDeviceId.String()).Msg("Skipping custom data")
+			log.Trace().Str("device", cDeviceId.String()).Msg("Skipping custom data")
 			continue
 		}
 		// Go over associated adapters and add tag for them
