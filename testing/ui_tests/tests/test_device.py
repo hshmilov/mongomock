@@ -2,8 +2,6 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
-import pytest
-
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
@@ -119,7 +117,6 @@ class TestDevice(TestBase):
 
         self.logger.info('finished test_device_enforcement_tasks')
 
-    @pytest.mark.skip('AX-6612')
     def test_device_enforcement_task_sort(self):
         """
         Test for checking the sort order in the enforcement tasks of a device
@@ -139,6 +136,10 @@ class TestDevice(TestBase):
                                                       'tag search test', 'tag search test', 2)
         self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME_SECOND, WINDOWS_QUERY_NAME,
                                                       'second tag search test', 'second tag search test', 1)
+
+        # check in enforcements tasks that all running enforcements were completed
+        wait_until(lambda: self.assert_completed_tasks(expected_completed_count=3))
+
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.wait_for_table_to_load()
@@ -153,6 +154,14 @@ class TestDevice(TestBase):
         assert enforcement_set_id[enforcement_set_id.find('Task'):] == 'Task 2'
         enforcement_set_id = table_info[2][0]
         assert enforcement_set_id[enforcement_set_id.find('Task'):] == 'Task 1'
+
+    def assert_completed_tasks(self, expected_completed_count):
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_for_table_to_load()
+
+        count = len(self.enforcements_page.find_elements_by_xpath(self.enforcements_page.COMPLETED_CELL_XPATH))
+        return count == expected_completed_count
 
     def test_add_predefined_fields_updates_general(self):
         asset_name = 'asset name 123'
