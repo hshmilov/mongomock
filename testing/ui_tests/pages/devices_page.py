@@ -1,6 +1,7 @@
 import re
 import time
 import pytest
+from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
@@ -78,6 +79,11 @@ class DevicesPage(EntitiesPage):
     DELETE_DIALOG_TEXT_REGEX = 'You are about to delete \\d+ devices\\.'
     BASIC_INFO_FIELD_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-tab active\')]' \
                              '//div[preceding-sibling::label[normalize-space(text())=\'{field_title}\']]'
+    TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
+    SPECIFIC_SEARCH_DROPDOWN_ITEM_XPATH = '//div[@id=\'specific_search_select\']' \
+                                          '//div[contains(text(),\'{query_name_text}\')]'
+    SPECIFIC_SEARCH_CLOSE_BUTTON_CSS = '.search-input-badge__remove'
+    SPECIFIC_SEARCH_DROPDOWN_CONTENT_CSS = '#specific_search_select .menu-content .x-menu-item'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -214,6 +220,59 @@ class DevicesPage(EntitiesPage):
             self.FIELD_MAC_NAME,
             search_text=search_text
         ))
+
+    def check_search_text_result(self, text):
+        self.wait_for_table_to_load()
+        all_data = self.get_all_data()
+        assert len(all_data)
+        assert any(text in x for x in all_data)
+
+    def check_search_text_result_in_column(self, text, column_name):
+        self.wait_for_table_to_load()
+        all_data = self.get_all_data_proper()
+        column_data = [x[column_name] for x in all_data]
+        assert len(column_data)
+        assert all(text in x.lower() for x in column_data)
+
+    def find_specific_search_badge(self):
+        return self.driver.find_element_by_css_selector(self.SPECIFIC_SEARCH_CLOSE_BUTTON_CSS)
+
+    def close_specific_search_badge(self):
+        self.find_specific_search_badge().click()
+
+    @retry(wait_fixed=500, stop_max_attempt_number=30)
+    def select_specific_search_by_name(self, query_name):
+        el = self.wait_for_element_present_by_xpath(
+            self.SPECIFIC_SEARCH_DROPDOWN_ITEM_XPATH.format(query_name_text=query_name))
+        el.click()
+
+    def get_specific_search_list(self):
+        return [x.text for x in self.driver.find_elements_by_css_selector(self.SPECIFIC_SEARCH_DROPDOWN_CONTENT_CSS)]
+
+    def select_specific_search(self, name):
+        self.open_search_list()
+        self.select_specific_search_by_name(name)
+        self.wait_for_table_to_load()
+
+    def search(self, value):
+        self.fill_filter(value)
+        self.enter_search()
+        self.wait_for_table_to_load()
+
+    def find_save_as_user_search_default_button(self, search_name=''):
+        if search_name:
+            return self.find_element_by_text(self.SAVE_AS_USER_SEARCH_DEFAULT.format(search_name=search_name))
+        return self.find_element_by_text(self.SAVE_AS_USER_DEFAULT)
+
+    def find_reset_columns_to_user_default_button(self, search=False):
+        if search:
+            return self.find_element_by_text(self.RESET_COLS_USER_SEARCH_DEFAULT_TEXT)
+        return self.find_element_by_text(self.RESET_COLS_USER_DEFAULT_TEXT)
+
+    def find_reset_columns_to_system_default_button(self, search=False):
+        if search:
+            return self.find_element_by_text(self.RESET_COLS_SYSTEM_SEARCH_DEFAULT_TEXT)
+        return self.find_element_by_text(self.RESET_COLS_SYSTEM_DEFAULT_TEXT)
 
     def wait_for_success_tagging_message(self, number=1):
         self.wait_for_success_tagging_message_for_entities(number, self.TAGGING_X_DEVICE_MESSAGE)

@@ -262,12 +262,23 @@ export default {
       }
     },
     value(newValue) {
-      if (!this.searchValue && newValue) {
+      const updatedFromReset = this.searchValue && !newValue;
+      if (updatedFromReset) {
         this.searchValue = newValue;
       }
-      if (!this.isSearchSimple) {
+      const updatesFromLoad = !this.searchValue && newValue;
+      if (updatesFromLoad) {
         this.searchValue = newValue;
       }
+      // this case handle the updates from the query wizard
+      const updatedFromExpressionChanges = !this.isSearchSimple;
+      if (updatedFromExpressionChanges) {
+        this.searchValue = newValue;
+      }
+      // all other updates as:
+      // * specific search searching
+      // * simple searches
+      // need to be discard for inner use of this.searchValue
     },
   },
   created() {

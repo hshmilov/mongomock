@@ -209,6 +209,15 @@ class EntitiesPage(Page):
     EDIT_COLUMN_BUTTON_ID = 'edit_columns'
     RESET_COLS_SYSTEM_BUTTON_ID = 'reset_system_default'
     RESET_COLS_USER_BUTTON_ID = 'reset_user_default'
+    EDIT_COLUMNS_TEXT = 'Edit Columns'
+    RESET_COLS_SYSTEM_DEFAULT_TEXT = 'Reset Columns to System Default'
+    RESET_COLS_SYSTEM_SEARCH_DEFAULT_TEXT = 'Reset Columns to System Search Default'
+    RESET_COLS_USER_DEFAULT_TEXT = 'Reset Columns to User Default'
+
+    RESET_COLS_USER_SEARCH_DEFAULT_TEXT = 'Reset Columns to User Search Default'
+    SAVE_AS_USER_DEFAULT = 'Save as User Default'
+    SAVE_AS_USER_SEARCH_DEFAULT = 'Save as User Search Default ({search_name})'
+
     ADD_NOTES_BUTTON_TEXT = 'Add Note'
     EDIT_NOTES_TEXTBOX_CSS = '.text-input'
 
@@ -409,6 +418,9 @@ class EntitiesPage(Page):
 
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
+
+    def get_query_search_input_attribute(self, attribute):
+        return self.find_query_search_input().get_attribute(attribute)
 
     def fill_filter(self, filter_string):
         self.fill_text_field_by_css_selector(self.QUERY_SEARCH_INPUT_CSS, filter_string)
@@ -823,8 +835,12 @@ class EntitiesPage(Page):
     def close_edit_columns(self):
         self.click_button('Done')
 
-    def close_edit_columns_save_default(self):
-        self.click_button('Save as User Default')
+    def close_edit_columns_save_default(self, specific_search_name=''):
+        if specific_search_name:
+            self.click_button(
+                self.SAVE_AS_USER_SEARCH_DEFAULT.format(search_name=specific_search_name))
+        else:
+            self.click_button(self.SAVE_AS_USER_DEFAULT)
 
     def edit_columns(self, add_col_names: list = None, remove_col_names: list = None, adapter_title: str = None):
         self.open_edit_columns()

@@ -146,3 +146,11 @@ class Account:
 class Reports:
     test_report_no_email = 'test_report_no_email'
     test_report_with_email = 'test_report_with_email'
+
+
+SPECIFIC_SEARCH_TYPES = {
+    'host_name': 'Host Name',
+    'last_used_users': 'Last Used Users',
+    'ip_address': 'IP Address',
+    'installed_software_name': 'Installed Software Name',
+}
