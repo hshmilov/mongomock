@@ -125,7 +125,8 @@ class Login:
         if request and request.referrer and 'localhost' not in request.referrer \
                 and '127.0.0.1' not in request.referrer \
                 and 'diag-l.axonius.com' not in request.referrer \
-                and is_axonius_role(role):
+                and 'insider.axonius.lan' not in request.referrer \
+                and not is_axonius_role(role):
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
