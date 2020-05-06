@@ -1,5 +1,7 @@
 import time
 import datetime
+import re
+from decimal import Decimal, getcontext
 import pytest
 
 from retrying import retry
@@ -103,6 +105,9 @@ class DashboardPage(Page):
     LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
     LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
 
+    TOGGLE_LEGEND_CSS = '.toggle-legend'
+    CHART_LEGEND_CSS = '.x-chart-legend'
+
     COLOR_DANGEROUS = '#FA6400'
     COLOR_VERYDANGEROUS = '#D0021C'
     COLOR_INFO = '#3498DB'
@@ -110,6 +115,9 @@ class DashboardPage(Page):
     NEW_CARD_CHART_CSS = '.x-tab.active .x-card.chart-new'
     EXPLORER_RESULTS_CSS = '.explorer-results'
     TRIAL_BANNER_CSS = '.x-trial-banner'
+
+    TOOLTIP_HEADER_CONTENT_CSS = '.x-tooltip .header-content'
+    TOOLTIP_BODY_CONTENT_CSS = '.x-tooltip .body-content'
 
     @property
     def root_page_css(self):
@@ -146,6 +154,51 @@ class DashboardPage(Page):
         sl_cycle = self.get_cycle_from_card(sl_card)
         ActionChains(self.driver).move_to_element(sl_cycle).perform()
         assert self.get_lifecycle_tooltip()
+
+    def hover_over_histogram_bar(self, histogram_chart, index):
+        self.hover_over_element(self.get_histogram_bar_from_histogram(histogram_chart, index))
+
+    def hover_over_histogram_title(self, histogram_chart, index):
+        self.hover_over_element(self.get_histogram_title_from_histogram(histogram_chart, index))
+
+    def hover_over_histogram_line(self, histogram_chart, index):
+        self.hover_over_element(self.get_histogram_line_from_histogram(histogram_chart, index))
+
+    def hover_over_pie_chart_slice(self, pie_chart, index):
+        self.hover_over_element(self.get_histogram_line_from_histogram(pie_chart, index))
+
+    def get_tooltip_title(self, card):
+        return card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .name').text
+
+    def get_tooltip_header_value(self, card):
+        return card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .value').text
+
+    def get_tooltip_header_percentage(self, card):
+        percentage_element = card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .percentage')
+        return self.get_percentage_number(percentage_element.get_attribute('textContent'))
+
+    def get_tooltip_body_value(self, card):
+        return card.find_element_by_css_selector(f'{self.TOOLTIP_BODY_CONTENT_CSS} .value').text
+
+    def get_tooltip_body_percentage(self, card):
+        percentage_element = card.find_element_by_css_selector(f'{self.TOOLTIP_BODY_CONTENT_CSS} .percentage')
+        return self.get_percentage_number(percentage_element.get_attribute('textContent'))
+
+    def get_tooltip_body_component_names(self, card):
+        return card.find_elements_by_css_selector(f'{self.TOOLTIP_BODY_CONTENT_CSS} .body-component-name')
+
+    @staticmethod
+    def get_percentage_number(percentage_text, precision=3):
+        getcontext().prec = precision
+        result = ''
+        match = re.search(r'^\((\d+.\d+)%\)$', percentage_text)
+        if match:
+            result = Decimal(match.group(1))
+        else:
+            match = re.search(r'^\((\d+).+$', percentage_text)
+            if match:
+                result = Decimal(match.group(1))
+        return result
 
     def get_lifecycle_tooltip_table_data(self):
         table_data = []
@@ -599,13 +652,21 @@ class DashboardPage(Page):
     def get_histogram_line_from_histogram(histogram, number):
         return histogram.find_element_by_css_selector(f'div:nth-child({number}) > .item-bar div.quantity')
 
+    @staticmethod
+    def get_histogram_bar_from_histogram(histogram, number):
+        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > .item-bar div.bar.growing-x')
+
+    @staticmethod
+    def get_histogram_title_from_histogram(histogram, number):
+        return histogram.find_element_by_css_selector(f'div:nth-child({number}) > div.item-title')
+
     def get_count_histogram_lines_from_histogram(self, histogram):
         return len(histogram.find_elements_by_css_selector(self.HISTOGRAM_ITEMS))
 
     def get_histogram_items_on_pagination(self, histogram):
         return histogram.find_elements_by_css_selector(self.HISTOGRAM_ITEMS)
 
-    def get_histogram_items_title_on_pagination(self, histogram):
+    def get_histogram_current_page_item_titles(self, histogram):
         histogram_items_title = []
         histogram_items = self.get_histogram_items_on_pagination(histogram)
         for line_item in histogram_items:
@@ -623,6 +684,21 @@ class DashboardPage(Page):
         for i in range(count):
             histogram_data.append(self.get_histogram_line_from_histogram(histogram, i + 1).text)
         return histogram_data
+
+    @staticmethod
+    def get_pie_chart_slices(pie_chart):
+        return pie_chart.find_elements_by_css_selector('.wrapper svg g')
+
+    @staticmethod
+    def get_pie_chart_legend_rows_data(pie_chart):
+        legend_grid_cells = pie_chart.find_elements_by_css_selector('.x-chart-legend .legend-grid *')
+
+        rows_data = []
+        for i in range(0, len(legend_grid_cells), 4):
+            row_data = {'name_element': legend_grid_cells[i + 1], 'name': legend_grid_cells[i + 1].text,
+                        'value': legend_grid_cells[i + 2].text, 'percentage': legend_grid_cells[i + 3].text}
+            rows_data.append(row_data)
+        return rows_data
 
     def get_paginator_num_of_items(self, histogram):
         return histogram.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
@@ -1015,6 +1091,20 @@ class DashboardPage(Page):
 
     def get_card_search_input_text(self, card):
         return card.find_element_by_css_selector(self.CARD_SEARCH_INPUT_CSS).text
+
+    def click_legend_toggle(self, card):
+        return card.find_element_by_css_selector(self.TOGGLE_LEGEND_CSS).click()
+
+    def verify_legend_toggle_absent(self, card):
+        card_id = card.get_attribute('id')
+        self.assert_element_absent_by_css_selector(f'#{card_id} {self.TOGGLE_LEGEND_CSS}')
+
+    def verify_legend_absent(self, card):
+        card_id = card.get_attribute('id')
+        self.assert_element_absent_by_css_selector(f'#{card_id} {self.CHART_LEGEND_CSS}')
+
+    def get_legend(self, card):
+        card.find_elements_by_css_selector(self.CHART_LEGEND_CSS)
 
     def get_search_insights_tables(self):
         return self.find_elements_by_css(self.TABLE_CONTAINER_CSS)

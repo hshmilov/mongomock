@@ -1218,5 +1218,9 @@ class Page:
         header_columns = headers.find_elements_by_css_selector(self.TABLE_HEADER_CELLS_CSS)
         return [self._get_column_title(head) for head in header_columns if self._get_column_title(head)]
 
+    @retry(stop_max_delay=10000, wait_fixed=500)
+    def hover_over_element(self, element):
+        ActionChains(self.driver).move_to_element(element).perform()
+
     def assert_screen_is_restricted(self):
         assert self.is_switch_button_disabled()

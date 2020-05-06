@@ -102,7 +102,7 @@ class TestDashboard(TestBase):
             title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
             view_name='')
         # create reference to the histogram within the card
-        value = self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart)[0]
+        value = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)[0]
         self.dashboard_page.get_histogram_line_from_histogram(histograms_chart, 1).click()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.get_table_count() == 1
@@ -302,7 +302,7 @@ class TestDashboard(TestBase):
         num_of_pages = ceil(total_num_of_items / limit)
         # iterate incrementaly on all the pages (next)
         for page_number in range(1, num_of_pages + 1):
-            histogram_items_title.append(self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart))
+            histogram_items_title.append(self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart))
             if page_number == 1:
                 self.dashboard_page.click_to_next_page(histograms_chart)
             elif page_number == num_of_pages:
@@ -429,7 +429,7 @@ class TestDashboard(TestBase):
                                                                      num_of_items,
                                                                      total_num_of_items,
                                                                      limit)
-            histogram_items_title.append(self.dashboard_page.get_histogram_items_title_on_pagination(histograms_chart))
+            histogram_items_title.append(self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart))
             if page_number == 1:
                 self._test_paginator_state_first_page(histograms_chart, page_number, to_val)
             elif page_number == num_of_pages:
