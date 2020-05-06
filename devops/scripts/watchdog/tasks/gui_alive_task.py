@@ -8,7 +8,8 @@ import urllib3
 from scripts.watchdog.watchdog_task import WatchdogTask
 
 from axonius.consts.system_consts import CORTEX_PATH, NODE_MARKER_PATH
-from axonius.utils.host_utils import check_installer_locks
+from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
+    GUIALIVE_WATCHDOG_IN_PROGRESS
 
 SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
@@ -52,6 +53,10 @@ class GuiAliveTask(WatchdogTask):
                 self.report_info('upgrade is in progress...')
                 continue
 
+            if check_watchdog_action_in_progress():
+                self.report_info(f'Other watchdog action in progress...')
+                continue
+
             self.report_info(f'{self.name} is running')
             try:
                 response = requests.get(f'https://localhost:{INTERNAL_PORT}/api/signup', verify=False, timeout=(10, 20))
@@ -64,6 +69,7 @@ class GuiAliveTask(WatchdogTask):
 
             if self.now() - self.last_time_gui_alive > GUI_IS_DEAD_THRESH:
                 try:
+                    GUIALIVE_WATCHDOG_IN_PROGRESS.touch()
                     self.report_info(SHUTTING_DOWN_THE_SYSTEM_MGS)
                     self.report_info(f'Stopping mongo')
                     mongo = self.docker_client.containers.get('mongo')
@@ -125,6 +131,9 @@ class GuiAliveTask(WatchdogTask):
                     time.sleep(30)
                     os.system('reboot')
                     self.report_error(f'Reboot command sent')
+                finally:
+                    if GUIALIVE_WATCHDOG_IN_PROGRESS.is_file():
+                        GUIALIVE_WATCHDOG_IN_PROGRESS.unlink()
 
 
 if __name__ == '__main__':
