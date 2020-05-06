@@ -25,7 +25,7 @@ POWER_STATE_MAP = {
 
 
 class AzureStackHubProxySettings(Enum):
-    DoNotUseProxy = 'Do Not Use Proxy'
-    ProxyOnlyAuth = 'Proxy Authentication'
-    ProxyOnlyAzureStackHub = 'Proxy Azure Stack Hub'
-    ProxyAll = 'Proxy All'
+    DoNotUseProxy = 'Do not use proxy'
+    ProxyOnlyAuth = 'proxy authentication only'
+    ProxyOnlyAzureStackHub = 'Proxy Azure Stack Hub only'
+    ProxyAll = 'Proxy all'

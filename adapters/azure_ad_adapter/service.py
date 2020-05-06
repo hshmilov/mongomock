@@ -143,16 +143,17 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
+                    'name': 'azure_region',
+                    'title': 'Cloud Environment',
+                    'type': 'string',
+                    'enum': ['Global', 'China'],
+                    'default': 'Global'
+                },
+                {
                     'name': AZURE_AUTHORIZATION_CODE,
                     'title': 'Azure Oauth Authorization Code',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': 'account_tag',
-                    'title': 'Account Tag',
-                    'type': 'string'
-
                 },
                 {
                     'name': 'is_azure_ad_b2c',
@@ -160,15 +161,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
-                    'name': 'azure_region',
-                    'title': 'Azure Cloud',
-                    'type': 'string',
-                    'enum': ['Global', 'China'],
-                    'default': 'Global'
-                },
-                {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'name': 'account_tag',
+                    'title': 'Account Tag',
                     'type': 'string'
                 },
                 {
@@ -176,12 +170,18 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'title': 'Verify SSL',
                     'type': 'bool',
                     'default': True
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
+                'azure_region',
                 AZURE_VERIFY_SSL,
                 'is_azure_ad_b2c'
             ],

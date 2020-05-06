@@ -146,17 +146,11 @@ class AzureAdapter(AdapterBase):
                     'title': 'Azure Stack Hub Proxy Settings',
                     'type': 'string',
                     'enum': [x.value for x in AzureStackHubProxySettings],
-                    'default': AzureStackHubProxySettings.ProxyOnlyAuth.value
+                    'default': AzureStackHubProxySettings.DoNotUseProxy.value
                 },
                 {
                     'name': 'account_tag',
                     'title': 'Account Tag',
-                    'type': 'string'
-
-                },
-                {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
                     'type': 'string'
                 },
                 {
@@ -164,6 +158,11 @@ class AzureAdapter(AdapterBase):
                     'title': 'Verify SSL',
                     'type': 'bool',
                     'default': True
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -171,6 +170,7 @@ class AzureAdapter(AdapterBase):
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
+                AZURE_CLOUD_ENVIRONMENT,
                 AZURE_VERIFY_SSL,
                 AZURE_STACK_HUB_PROXY_SETTINGS
             ],
