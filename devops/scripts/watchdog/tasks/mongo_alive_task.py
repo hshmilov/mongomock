@@ -7,7 +7,8 @@ import pymongo
 import pytz
 
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
-from axonius.utils.host_utils import check_installer_locks
+from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
+    MONGOALIVE_WATCHDOG_IN_PROGRESS
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
 
@@ -41,6 +42,10 @@ class MongoAliveTask(WatchdogTask):
 
                 if check_installer_locks():
                     self.report_info('upgrade is in progress...')
+                    continue
+
+                if check_watchdog_action_in_progress():
+                    self.report_info(f'Other watchdog action in progress...')
                     continue
 
                 try:
@@ -87,6 +92,7 @@ class MongoAliveTask(WatchdogTask):
                         break
 
                 if not fixed:
+                    MONGOALIVE_WATCHDOG_IN_PROGRESS.touch()
                     self.report_info(f'Restarting mongo and gui')
                     with open('/home/ubuntu/helper.log', 'a') as helper:
                         subprocess.check_call('./se.sh re mongo'.split(),
@@ -103,6 +109,9 @@ class MongoAliveTask(WatchdogTask):
                     time.sleep(60 * 10)     # Avoid infinite loop of restarting
             except Exception as e:
                 self.report_info(f'Error - Exception {e}')
+            finally:
+                if MONGOALIVE_WATCHDOG_IN_PROGRESS.is_file():
+                    MONGOALIVE_WATCHDOG_IN_PROGRESS.unlink()
 
 
 if __name__ == '__main__':
