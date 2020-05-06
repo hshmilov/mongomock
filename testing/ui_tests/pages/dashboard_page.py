@@ -162,6 +162,25 @@ class DashboardPage(Page):
 
         return table_data
 
+    def get_lifecycle_card_info(self) -> dict:
+        """
+        {   'System Lifecycle': 'STABLE',
+            'Last cycle started at:': '2020-02-05 16:05:00',
+            'Last cycle completed at:': '2020-02-05 16:05:13',
+            'Next cycle starts in:': '24 hours'
+        }
+        :return: dict
+        """
+        sl_card = self.find_system_lifecycle_card()
+        assert self.get_title_from_card(sl_card) == self.SYSTEM_LIFECYCLE
+        lst = sl_card.text.split('\n')
+
+        return {lst[i].lstrip(): lst[i + 1]
+                for i in range(0, len(lst))
+                if i < len(lst) and
+                lst[i].lstrip().startswith(('System', 'Last', 'Next')) and not
+                lst[i + 1].lstrip().startswith(('System', 'Last', 'Next'))}
+
     def find_system_lifecycle_card(self):
         return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
 

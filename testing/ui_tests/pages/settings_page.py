@@ -100,6 +100,7 @@ class SettingsPage(Page):
     AMAZON_BUCKET_NAME_FIELD = 'bucket_name'
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
+    DATE_FORMAT_CSS = 'label[for="datetime_format"]~.x-dropdown.x-select'
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
     XPATH_BY_CLASS_NAME = '//*[contains(@class, \'{name}\')]'
     DATEPICKER_CLASS_NAME = 'x-date-edit'
@@ -1268,6 +1269,11 @@ class SettingsPage(Page):
         self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
                                               time_value=time_of_day,
                                               negative_flow=negative_flow)
+
+    def set_date_format(self, date_format):
+        self.select_option_without_search(self.DATE_FORMAT_CSS,
+                                          self.SELECT_OPTION_CSS,
+                                          date_format)
 
     def _set_discovery_schedule_settings(self, mode='', time_value=0, negative_flow=False):
         self.switch_to_page()

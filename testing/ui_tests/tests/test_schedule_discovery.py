@@ -24,25 +24,6 @@ class TestDiscoverySchedule(TestBase):
         timepicker_input = current_utc + timedelta(minutes=minutes)
         return timepicker_input.time().strftime('%I:%M%p').lower()
 
-    def get_lifecycle_card_info(self) -> dict:
-        """
-        {   'System Lifecycle': 'STABLE',
-            'Last cycle started at:': '2020-02-05 16:05:00',
-            'Last cycle completed at:': '2020-02-05 16:05:13',
-            'Next cycle starts in:': '24 hours'
-        }
-        :return: dict
-        """
-        sl_card = self.dashboard_page.find_system_lifecycle_card()
-        assert self.dashboard_page.get_title_from_card(sl_card) == self.dashboard_page.SYSTEM_LIFECYCLE
-        lst = sl_card.text.split('\n')
-
-        return {lst[i].lstrip(): lst[i + 1]
-                for i in range(0, len(lst))
-                if i < lst.__len__() and
-                lst[i].lstrip().startswith(('System', 'Last', 'Next')) and not
-                lst[i + 1].lstrip().startswith(('System', 'Last', 'Next'))}
-
     def check_next_cycle_start_in_min(self, time_unit='minute', time_in_min=0):
         return self.check_next_cycle_start_in(time_unit, time_value=time_in_min)
 
@@ -51,12 +32,12 @@ class TestDiscoverySchedule(TestBase):
 
     def check_next_cycle_start_in(self, time_unit, time_value=0):
         self.dashboard_page.switch_to_page()
-        cycle_into = self.get_lifecycle_card_info()
+        cycle_into = self.dashboard_page.get_lifecycle_card_info()
         return f'{time_value} {time_unit}' in cycle_into.get(NEXT_CYCLE_START_IN)
 
     def check_last_cycle_completed(self):
         self.dashboard_page.switch_to_page()
-        cycle_into = self.get_lifecycle_card_info()
+        cycle_into = self.dashboard_page.get_lifecycle_card_info()
         try:
             started = datetime.strptime(cycle_into.get(LAST_CYCLE_STARTED_AT), '%Y-%m-%d %H:%M:%S')
             completed = datetime.strptime(cycle_into.get(LAST_CYCLE_COMPLETED_AT), '%Y-%m-%d %H:%M:%S')
