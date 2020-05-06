@@ -47,7 +47,7 @@ class Audit:
             timestamp = activity.get('timestamp')
             if not timestamp:
                 return ''
-            return timestamp.strftime(DTFMT) if format_date else str(timestamp)
+            return timestamp.strftime(DTFMT) if format_date else timestamp
 
         def _get_user_from_id(activity: dict):
             user_id = activity.get('user')
@@ -88,7 +88,8 @@ class Audit:
         matching_activities = []
         for activity in self._fetch_audit():
             formatted_activity = self._format_activity(activity, format_date)
-            stringified_activity = ','.join(formatted_activity.values()).lower()
+            stringified_activity = ','.join([value for value
+                                             in formatted_activity.values() if isinstance(value, str)]).lower()
             if search in stringified_activity:
                 matching_activities.append(formatted_activity)
 
