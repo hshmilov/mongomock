@@ -274,8 +274,8 @@ class TestDashboardActions(TestBase):
             self.fill_card_search(card, 'avigdor')
 
             self.assert_current_page_and_total_items_histogram_chart(card, ['5', '600'])
-            histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
             for _ in range(12):
+                histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
                 self.dashboard_page.click_to_next_page(histogram_chart)
             # check for total number wont change after fetch more data
             self.assert_current_page_and_total_items_histogram_chart(card, ['61-65', '600'], False)
