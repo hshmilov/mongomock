@@ -111,7 +111,7 @@ export default {
           />);
         }
         panelActions.push(<x-action-item
-            className="action-reset-password"
+            class="action-reset-password"
             title="Reset Password"
             onClick={() => this.displayResetPasswordModal(this.userId, this.lastSavedEmail)}
             size="20"

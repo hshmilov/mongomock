@@ -216,6 +216,16 @@ class SettingsPage(Page):
         ],
     }
 
+    RESET_PASSWORD_FORM_CSS = '.reset-password__form'
+    RESET_PASSWORD_FORM_EMAIL_INPUT_CSS = f'{RESET_PASSWORD_FORM_CSS} .email__input'
+    SEND_EMAIL_BUTTON_TEXT = 'Send Email'
+    PASSWORD_LINK_SEND_TOASTER = 'Password link was sent successfully'
+    PASSWORD_LINK_COPY_TOASTER = 'Password link was copied to Clipboard'
+    RESET_PASSWORD_MODAL_CLOSE_BUTTON_CSS = '.modal-header .x-button'
+    RESET_PASSWORD_ACTION_ICON_CSS = '.action-reset-password'
+    RESET_PASSWORD_COPY_TO_CLIPBOARD_ICON_CSS = '.copy-to-clipboard-icon'
+    RESET_PASSWORD_LINK_INPUT_CSS = '.reset-link__input'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -288,9 +298,13 @@ class SettingsPage(Page):
     def fill_first_name(self, first_name):
         self.fill_text_field_by_css_selector('.first-name__input', first_name)
 
-    def fill_new_user_details(self, username, password, first_name=None, last_name=None, role_name=None):
+    def fill_new_user_details(self, username, password, first_name=None, last_name=None, role_name=None,
+                              generate_password=False):
         self.fill_text_field_by_css_selector('.username__input', username)
-        self.fill_text_field_by_css_selector('.password__input', password)
+        if generate_password:
+            self.driver.find_element_by_css_selector('.auto-generated-password__input').click()
+        else:
+            self.fill_text_field_by_css_selector('.password__input', password)
         if first_name:
             self.fill_first_name(first_name)
         if last_name:
@@ -362,11 +376,12 @@ class SettingsPage(Page):
         return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
 
     def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
-                        wait_for_toaster=True):
+                        wait_for_toaster=True, generate_password=False):
         self.wait_for_table_to_load()
         self.click_new_user()
         self.wait_for_new_user_panel()
-        self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name)
+        self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name,
+                                   generate_password=generate_password)
         self.click_create_user()
         if wait_for_toaster:
             self.wait_for_user_created_toaster()
@@ -498,6 +513,32 @@ class SettingsPage(Page):
             self.select_role(role_name)
         self.click_update_user()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+
+    def get_user_reset_password_link(self, username):
+        self.click_edit_user(username)
+        self.click_reset_password_button()
+        return self.get_reset_password_link()
+
+    def click_reset_password_button(self):
+        self.driver.find_element_by_css_selector(self.RESET_PASSWORD_ACTION_ICON_CSS).click()
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+
+    def get_reset_password_link(self):
+        self.driver.find_element_by_css_selector(self.RESET_PASSWORD_COPY_TO_CLIPBOARD_ICON_CSS).click()
+        self.wait_for_toaster(self.PASSWORD_LINK_COPY_TOASTER)
+        return self.driver.find_element_by_css_selector(self.RESET_PASSWORD_LINK_INPUT_CSS).get_attribute('value')
+
+    def close_reset_password_modal(self):
+        self.driver.find_element_by_css_selector(self.RESET_PASSWORD_MODAL_CLOSE_BUTTON_CSS).click()
+
+    def fill_email_and_click_reset_password_link(self, recipient):
+        self.fill_text_by_element(
+            self.driver.find_element_by_css_selector(self.RESET_PASSWORD_FORM_EMAIL_INPUT_CSS), recipient)
+        self.click_button(self.SEND_EMAIL_BUTTON_TEXT)
+        self.wait_for_toaster(self.PASSWORD_LINK_SEND_TOASTER)
+
+    def wait_for_reset_password_form(self):
+        self.wait_for_element_present_by_css(self.RESET_PASSWORD_FORM_CSS)
 
     def add_user_with_duplicated_role(self, username, password, first_name=None, last_name=None,
                                       role_to_duplicate: str = None):

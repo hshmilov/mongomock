@@ -14,7 +14,7 @@
       />
       <div class="reset-password__form">
         <!-- password reset link -->
-        <div class="item form__name">
+        <div class="item form__link">
           <h5>Password reset link has been generated </h5> (valid for {{ validForHours }} hours)
           <input
             v-model="link"
@@ -31,7 +31,7 @@
         </div>
 
         <!-- email -->
-        <div class="item form__first-name">
+        <div class="item form__email">
           <h5>Email reset password link to:</h5>
           <input
             v-model="$v.email.$model"

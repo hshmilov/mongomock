@@ -49,11 +49,7 @@ class MaildiranasaurusService(SmtpService):
            CMD ["/go/src/github.com/flashmob/maildiranasaurus/maildiranasaurus", "serve"]
            '''[1:]
 
-    def get_email_first_csv_content(self, recipient):
-        """
-        Get the first csv attachment content of the mail that was sent
-        :return:
-        """
+    def get_mail_folder(self):
         mail_name, _, _ = self.get_folder_content_from_container('/tmp/mail_dir/new')
         file_name = mail_name.decode('utf-8').strip()
         out, _, _ = self.get_file_contents_from_container(f'/tmp/mail_dir/new/{file_name}')
@@ -66,7 +62,14 @@ class MaildiranasaurusService(SmtpService):
         with open(local_file_name, 'wb') as file:
             file.write(out)
 
-        m = mailbox.Maildir('/tmp/mail_dir')
+        return mailbox.Maildir('/tmp/mail_dir')
+
+    def get_email_first_csv_content(self, recipient):
+        """
+        Get the first csv attachment content of the mail that was sent
+        :return:
+        """
+        m = self.get_mail_folder()
         payload = None
         for key in m.iterkeys():
             message = m.get_message(key)
@@ -76,6 +79,22 @@ class MaildiranasaurusService(SmtpService):
                 if attachment.get_content_type() == 'text/csv':
                     payload = attachment.get_payload(decode=True)
                     break
+        m.clear()
+        return payload
+
+    def get_email_body(self, recipient: str) -> list:
+        """
+        Get the body content of the mail that was sent
+        :return: the body in a list
+        """
+        m = self.get_mail_folder()
+        payload = None
+        for key in m.iterkeys():
+            message = m.get_message(key)
+            if message.get('To') != recipient:
+                continue
+            payload = message.get_payload()
+            break
         m.clear()
         return payload
 
