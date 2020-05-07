@@ -9,13 +9,29 @@ from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
                                                 AXONIUS_SETTINGS_HOST_PATH,
-                                                WEAVE_NETWORK_SUBNET_KEY)
+                                                WEAVE_NETWORK_SUBNET_KEY,
+                                                DOCKER_NETWORK_SUBNET_KEY)
 from services.standalone_services.core_proxy_service import CoreProxyService
 from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
-
+DEFAULT_DOCKER_SUBNET_IP_RANGE = '174.17.0.0/16'
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
+DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
+DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
+
+
+def get_docker_subnet_ip_range():
+    conf = get_customer_conf_json()
+
+    docker_subnet = conf.get(DOCKER_NETWORK_SUBNET_KEY, DEFAULT_DOCKER_SUBNET_IP_RANGE)
+
+    if DOCKER_NETWORK_SUBNET_KEY in conf:
+        print(f'Found custom docker network ip range: {docker_subnet}')
+    else:
+        print(f'Using default docker ip range {docker_subnet}')
+
+    return docker_subnet
 
 
 def get_weave_subnet_ip_range():

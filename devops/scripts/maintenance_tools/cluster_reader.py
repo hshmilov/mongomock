@@ -4,6 +4,7 @@ import subprocess
 from axonius.utils.network.docker_network import run_cmd_in_container
 from axonius.consts.instance_control_consts import InstanceControlConsts
 from scripts.instances.instances_consts import MASTER_ADDR_HOST_PATH
+from services.weave_service import is_using_weave
 
 
 def read_cluster_data():
@@ -15,7 +16,8 @@ def read_cluster_data():
         cluster['master_ip'] = MASTER_ADDR_HOST_PATH.read_text()
     else:
         cluster['instance_type'] = 'master'
-    cluster['network'] = subprocess.check_output('weave status connections'.split(), timeout=60).decode()
+    if is_using_weave():
+        cluster['network'] = subprocess.check_output('weave status connections'.split(), timeout=60).decode()
     return json.dumps(cluster)
 
 

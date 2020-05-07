@@ -16,6 +16,7 @@ from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.mongo_administration import get_collection_storage_size, create_capped_collection
+from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 from services.plugin_service import API_KEY_HEADER, PluginService
 from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH
@@ -23,7 +24,7 @@ from axonius.consts.gui_consts import USERS_COLLECTION
 import requests
 
 
-class AggregatorService(PluginService, UpdatablePluginMixin):
+class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
 
     def __init__(self):
         super().__init__('aggregator')

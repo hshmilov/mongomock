@@ -2,6 +2,7 @@ import requests
 from retrying import retry
 from axonius.consts.scheduler_consts import Phases, SchedulerState
 from services.plugin_service import PluginService, API_KEY_HEADER
+from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
 DEAFULT_SYSTEM_RESEARCH_RATE = 12
@@ -17,7 +18,7 @@ DEFAULT_SYSTEM_RESEARCH_MODE = DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME
 DEFAULT_SYSTEM_RESEARCH_MODE_ATTRIB_NAME = 'conditional'
 
 
-class SystemSchedulerService(PluginService, UpdatablePluginMixin):
+class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('system-scheduler')
 

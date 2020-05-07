@@ -21,6 +21,7 @@ from flask import jsonify, request
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
+from retrying import retry
 
 from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL, CLIENT_ID
 from axonius.consts.metric_consts import Adapters
@@ -166,6 +167,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self.__is_realtime = config.get('realtime_adapter', False)
 
         # pylint: disable=R0201
+
     def outside_reason_to_live(self) -> bool:
         """
         Override this to provide more reasons to live
@@ -467,6 +469,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # This needs to be implemented by the adapter. However, if it is not implemented, don't
         # crash the system.
         return []
+
     # pylint: enable=R0201
 
     def _parse_users_raw_data_hook(self, raw_users):
@@ -519,6 +522,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
 
         return []
+
     # pylint: enable=R0201
 
     # End of users
@@ -591,7 +595,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 except Exception as e2:
                     # No connection to attempt querying
                     error_msg = f'Adapter {self.plugin_name} had connection error' \
-                        f' to server with the ID {client_name}. Error is {str(e2)}'
+                                f' to server with the ID {client_name}. Error is {str(e2)}'
                     self.create_notification(error_msg)
                     self.send_external_info_log(error_msg)
                     self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {
@@ -930,6 +934,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return return_error('Invalid data received')
         return jsonify(self._parse_correlation_results(data['result'], data['os']))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def _update_action_data(self, action_id, status, output=None):
         """ A function for updating the EC on new action status.
 
@@ -942,6 +947,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self.request_remote_plugin('action_update/{0}'.format(action_id),
                                    plugin_unique_name='execution',
                                    method='POST',
+                                   timeout=10,
                                    data=json.dumps({'status': status, 'output': output or {}}))
 
     def _run_action_thread(self, func, device_data, action_id, **kwargs):
@@ -958,10 +964,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param **kwargs: Another parameters needed for this specific action (retrieved from the request body)
         """
         # Sending update that this action has started
-        self._update_action_data(action_id,
-                                 status='started',
-                                 output={'result': 'In Progress', 'product': 'In Progress'})
-
+        try:
+            self._update_action_data(action_id,
+                                     status='started',
+                                     output={'result': 'In Progress', 'product': 'In Progress'})
+        except Exception:
+            logger.warning(f'Error updating action status. action id:{action_id}', exc_info=True)
         try:
             # Running the function, it should block until action is finished
             result = func(device_data, **kwargs)
@@ -1027,6 +1035,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     def delete_files(self, device_data, files_path):
         raise RuntimeError('Not implemented yet')
+
     # pylint: enable=R0201
 
     @add_rule('get_client_id', methods=['POST'])
@@ -1159,6 +1168,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     # pylint: disable=no-self-use
     def _refetch_device(self, client_id, client_data, device_id):
         raise Exception('Not implemented in adapter')
+
     # pylint: enable=no-self-use
 
     # pylint: disable=R0201
@@ -1172,6 +1182,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: adapter dependant
         """
         return []
+
     # pylint: enable=R0201
 
     def __is_old_entity(self, parsed_entity, cutoff: Tuple[date, date]) -> bool:
@@ -1307,6 +1318,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: Raw and parsed data list if fetched successfully, whether immediately or with fresh connection
         :raises Exception: If client connection or client data query errored 3 times
         """
+
         def _get_raw_and_parsed_data():
             mapping = {
                 EntityType.Devices: (self._route_query_devices_by_client(), self._parse_devices_raw_data_hook),
@@ -1450,6 +1462,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: shell commands that help collerations
         """
         return {}
+
     # pylint: enable=R0201
 
     # pylint: disable=R0201
@@ -1463,6 +1476,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return:
         """
         raise adapter_exceptions.AdapterException('Not Supported')
+
     # pylint: enable=R0201
 
     def _get_clients_config(self):

@@ -1,3 +1,5 @@
+import logging
+
 from bson import ObjectId
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
@@ -6,6 +8,8 @@ from dataclasses_json import DataClassJsonMixin
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.utils.revving_cache import rev_cached
 from axonius.consts.gui_consts import (UPDATED_BY_FIELD, PREDEFINED_PLACEHOLDER)
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 @dataclass(frozen=True)

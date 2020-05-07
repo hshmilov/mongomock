@@ -179,15 +179,14 @@ class ExecutionService(PluginBase):
             return
 
         request_content = self.get_request_data_as_object()
-
         # Updating the db on the new status and other parameters changed
         action_data = {'status': request_content['status']}
-        if 'output' in request_content:
+        if 'output' in request_content and isinstance(request_content['output'], dict):
             action_data['product'] = request_content['output'].get('product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
         action_data_status = action_data['status']
-        action_data_result = action_data.get('resulpt')
+        action_data_result = action_data.get('result')
         logger.info(f'Got action update on action {action_id}. status is {action_data_status},'
                     f'action result is {action_data_result}')
 

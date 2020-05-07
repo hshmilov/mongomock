@@ -11,7 +11,7 @@ import requests
 from pymongo.collection import Collection
 from pymongo import UpdateOne
 
-from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH
+from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
     PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION
@@ -22,10 +22,11 @@ from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils import datetime
 from axonius.utils.encryption.mongo_encrypt import MONGO_MASTER_KEY_SIZE
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
+from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
 
-class CoreService(PluginService, UpdatablePluginMixin):
+class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('core')
 
@@ -912,6 +913,7 @@ class CoreService(PluginService, UpdatablePluginMixin):
         """
         if not DB_KEY_PATH.is_file():
             try:
+                AXONIUS_SETTINGS_PATH.mkdir(exist_ok=True)
                 with open(DB_KEY_PATH, 'wb') as f:
                     key = os.urandom(MONGO_MASTER_KEY_SIZE)
                     f.write(base64.b64encode(key))

@@ -41,6 +41,8 @@ class SeleniumService(WeaveService):
         if not is_weave_up():
             extra_flags.append(f'--link=gui:gui.{AXONIUS_DNS_SUFFIX}')
 
+        extra_flags.append(f'--link=gui:okta.{AXONIUS_DNS_SUFFIX}')
+
         start_time = time.time()
 
         super().start(mode=mode,

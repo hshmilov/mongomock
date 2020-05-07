@@ -10,7 +10,7 @@ from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 BOOTED_FOR_PRODUCTION_MARKER_PATH,
                                                 CORTEX_PATH)
 from services.axonius_service import get_service
-from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL
+from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL, USING_WEAVE_PATH
 
 
 def shut_down_system():
@@ -76,6 +76,7 @@ def setup_node(connection_string):
     init_name = init_name.strip()
     shut_down_system()
     update_weave_connection_params(weave_pass, master_ip)
+    USING_WEAVE_PATH.touch()
     connect_to_master(master_ip, weave_pass)
     NODE_MARKER_PATH.touch()
     db_pass = get_db_pass_from_core()

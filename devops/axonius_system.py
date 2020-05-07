@@ -251,7 +251,8 @@ def system_entry_point(args):
                                            standalone_services_names=standalone_services, system_config=system_config)
     elif args.mode == 'weave_recover':
         print(f'Starting weave recover')
-        services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
+        services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics'] + \
+            internal_services
         adapters = [name for name, variable in axonius_system.get_all_adapters()]
         axonius_system.recover_weave_network(adapters, services, standalone_services)
 

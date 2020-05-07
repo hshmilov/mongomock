@@ -24,7 +24,7 @@ from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, WEAVE_PATH, DB_KEY_PATH
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
@@ -44,7 +44,6 @@ from test_helpers.log_tester import LogTester
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
-WEAVE_API_URL = 'http://127.0.0.1:6784'
 
 
 class PluginService(WeaveService):
@@ -138,6 +137,11 @@ class PluginService(WeaveService):
         return requests.request(method, url='{0}/{1}'.format(self.req_url, endpoint),
                                 headers=headers, *vargs, **kwargs)
 
+    @retry(stop_max_attempt_number=5, wait_fixed=5000)
+    def retry_request(self, method, endpoint, headers, session, *vargs, **kwargs):
+        self.__ask_core_to_raise_adapter(self.unique_name)
+        return self.__perform_request(method, endpoint, headers, session, *vargs, **kwargs)
+
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, verify_is_up: bool = True,
                 **kwargs):
         if verify_is_up:
@@ -165,8 +169,7 @@ class PluginService(WeaveService):
             return self.__perform_request(method, endpoint, headers, session, *vargs, **kwargs)
         except Exception:
             if verify_is_up:
-                self.__ask_core_to_raise_adapter(self.unique_name)
-                return self.__perform_request(method, endpoint, headers, session, *vargs, **kwargs)
+                return self.retry_request(method, endpoint, headers, session, *vargs, **kwargs)
             raise
 
     def get(self, endpoint, *vargs, **kwargs):
@@ -243,37 +246,7 @@ class PluginService(WeaveService):
         # as the adapters name, since the dns resolving otherwise sometimes does not work.
 
         if self.docker_network == WEAVE_NETWORK:
-            # Remove old dns entry from weave
-            dns_remove_command = shlex.split(f'{WEAVE_PATH} dns-remove {self.id}')
-            subprocess.check_call(dns_remove_command)
-
-            # Check that we have removed the dns entries. If we still have a dns entry associated with that hostname,
-            # it must be an old dead container. see:
-            # * https://github.com/weaveworks/weave/issues/3432
-            # * https://axonius.atlassian.net/browse/AX-4731
-            dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-            response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
-
-            if response:
-                # We should not have any other ip associated with this hostname. Lets remove it.
-                for ip in response.splitlines():
-                    print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
-                    for _ in range(3):
-                        # Try 3 times, because weave is not always working
-                        requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
-                        # We do not raise for status or fail, as this is too risky.
-
-            # Add new unique dns entry to weave
-            dns_add_command = shlex.split(
-                f'{WEAVE_PATH} dns-add {self.id} -h {self.fqdn}')
-
-            subprocess.check_call(dns_add_command)
-
-            dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-            response = subprocess.check_output(dns_check_command).strip()
-            if not response:
-                print(f'Error looking up dns {self.fqdn}. Retrying...', file=sys.stderr)
-                raise ValueError(f'Error looking up dns {self.fqdn} after registration.')
+            self.add_weave_dns_entry()
         else:
             # Remove container with old dns entry from network
             disconnect_to_network_command = f'docker network disconnect {self.docker_network} {self.container_name}'

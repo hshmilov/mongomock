@@ -16,7 +16,6 @@ from dateutil.parser import parser
 
 import docker.models
 import pymongo
-import requests
 import pytz
 
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -127,7 +126,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                                                                })
         if weave_container:
             # we're under weave
-            logger.info('Running under weave')
+            logger.info('Weave is running')
             self.__docker_axonius_network = None
 
             # This is not used anymore
@@ -449,6 +448,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
             if self.__docker_axonius_network is not None:
                 # Currently, AOD is disabled on dev machines :(
+                logger.debug('AOD is disabled on dev machines')
                 return ''
                 return self.__handle_plugin_up_down_dev(operation_type, plugin_entity)
 

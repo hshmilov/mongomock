@@ -14,6 +14,7 @@ from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
                                        USERS_PREFERENCES_COLLECTION)
 from services.ports import DOCKER_PORTS
+from services.system_service import SystemService
 from services.weave_service import WeaveService
 
 # Ideally, the replicaSet would be specified here (the same way it does in plugin_base.py)
@@ -31,7 +32,7 @@ connection_line = 'mongodb://{user}:{password}@{addr}:{port}'.format(user='ax_us
 MONGO_STOP_GRACE_PERIOD = 600
 
 
-class MongoService(WeaveService):
+class MongoService(SystemService, WeaveService):
     # The reason we're using just one client is that you must'nt have many instance of the client
     # because mongo is buggy as hell and opens 600 threads and crashes your app
     client = pymongo.MongoClient(connection_line)

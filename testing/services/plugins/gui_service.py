@@ -40,13 +40,14 @@ from axonius.utils.permissions_helper import (PermissionCategory, PermissionActi
                                               serialize_db_permissions)
 from gui.logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
+from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
 logger = logging.getLogger(f'axonius.{__name__}')
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
 
-class GuiService(PluginService, UpdatablePluginMixin):
+class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('gui')
         self._session = requests.Session()

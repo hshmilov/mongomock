@@ -13,12 +13,13 @@ import pytest
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          NODE_MARKER_PATH, WEAVE_NETWORK,
+                                          NODE_MARKER_PATH,
                                           WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.network_utils import (get_encryption_key,
-                                             restore_master_connection, get_weave_subnet_ip_range)
+                                             restore_master_connection, get_weave_subnet_ip_range,
+                                             get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugin_service import AdapterService, PluginService
@@ -34,7 +35,7 @@ from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.plugins.master_proxy_service import MasterProxyService
-from services.weave_service import is_weave_up
+from services.weave_service import is_weave_up, is_using_weave
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
@@ -48,7 +49,7 @@ def get_service():
 # pylint: disable=too-many-instance-attributes
 
 class AxoniusService:
-    _NETWORK_NAME = WEAVE_NETWORK if 'linux' in sys.platform.lower() else AXONIUS_NETWORK
+    _DOCKER_NETWORK_NAME = AXONIUS_NETWORK
 
     def __init__(self):
         self.db = MongoService()
@@ -81,43 +82,38 @@ class AxoniusService:
             self.axonius_services.append(self.instance_control)
 
     @classmethod
-    def get_is_network_exists(cls):
-        if cls._NETWORK_NAME == WEAVE_NETWORK:
-            return is_weave_up()
-
-        return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
-                                                             f'name={cls._NETWORK_NAME}']).decode('utf-8')
+    def get_is_docker_network_exists(cls):
+        return cls._DOCKER_NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
+                                                                    f'name={cls._DOCKER_NETWORK_NAME}']).decode('utf-8')
 
     @classmethod
     def create_network(cls):
-        if cls.get_is_network_exists():
-            return
-
-        subnet_ip_range = get_weave_subnet_ip_range()
-
-        if 'linux' in sys.platform.lower():
+        if not is_weave_up() and 'linux' in sys.platform.lower():
+            weave_subnet_ip_range = get_weave_subnet_ip_range()
             # Getting network encryption key.
             if NODE_MARKER_PATH.is_file():
                 print(f'Running on node. Refreshing master connection')
                 restore_master_connection()
             else:
                 print(f'Running on master')
-                AxoniusService.create_weave_network(subnet_ip_range)
-        else:
+                AxoniusService.create_weave_network(weave_subnet_ip_range)
+        if not cls.get_is_docker_network_exists():
             print(f'Creating regular axonius network')
-            subprocess.check_call(['docker', 'network', 'create', f'--subnet={subnet_ip_range}', cls._NETWORK_NAME],
-                                  stdout=subprocess.PIPE)
+            docker_subnet_ip_range = get_docker_subnet_ip_range()
+            subprocess.check_call(
+                ['docker', 'network', 'create', f'--subnet={docker_subnet_ip_range}',
+                 '--opt', f'com.docker.network.bridge.name={DOCKER_BRIDGE_INTERFACE_NAME}',
+                 cls._DOCKER_NETWORK_NAME],
+                stdout=subprocess.PIPE)
 
     @classmethod
     def delete_network(cls):
-        if not cls.get_is_network_exists():
-            return
-
-        print('Deleting docker network')
         if 'linux' in sys.platform.lower() and is_weave_up():
+            print('Deleting weave network')
             subprocess.check_call([WEAVE_PATH, 'reset'], stdout=subprocess.PIPE)
-        else:
-            subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
+        if cls.get_is_docker_network_exists():
+            print('Deleting docker network')
+            subprocess.check_call(['docker', 'network', 'rm', cls._DOCKER_NETWORK_NAME], stdout=subprocess.PIPE)
 
     @staticmethod
     def create_weave_network(subnet_ip_range: str):

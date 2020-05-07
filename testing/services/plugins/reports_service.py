@@ -10,10 +10,11 @@ from axonius.consts.report_consts import (
     ACTIONS_POST_FIELD, ACTIONS_SUCCESS_FIELD, LAST_TRIGGERED_FIELD,
     LAST_UPDATE_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD)
 from services.plugin_service import PluginService
+from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
 
-class ReportsService(PluginService, UpdatablePluginMixin):
+class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('reports')
 

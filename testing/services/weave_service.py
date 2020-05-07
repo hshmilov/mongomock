@@ -5,10 +5,11 @@ import sys
 import time
 from abc import abstractmethod
 
+import requests
 from retrying import retry
 
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, WEAVE_PATH)
+                                          WEAVE_NETWORK, WEAVE_PATH, USING_WEAVE_PATH)
 from axonius.consts.plugin_consts import UWSGI_RECOVER_SCRIPT_PATH
 from axonius.utils.debug import COLOR
 from services.axon_service import TimeoutException
@@ -16,6 +17,7 @@ from services.docker_service import DockerService, retry_if_timeout
 
 MAX_NUMBER_OF_RUN_TRIES = 10
 RETRY_SLEEP_TIME = 30
+WEAVE_API_URL = 'http://127.0.0.1:6784'
 
 
 def is_weave_up():
@@ -30,6 +32,10 @@ def is_weave_up():
         return p.wait() == 0
 
     return False
+
+
+def is_using_weave():
+    return USING_WEAVE_PATH.is_file()
 
 
 def get_dns_search_list():
@@ -57,7 +63,8 @@ class WeaveService(DockerService):
 
     @property
     def docker_network(self):
-        return WEAVE_NETWORK if 'linux' in sys.platform.lower() and is_weave_up() else AXONIUS_NETWORK
+        return WEAVE_NETWORK if is_using_weave() and 'linux' in sys.platform.lower() and is_weave_up() \
+            else AXONIUS_NETWORK
 
     @abstractmethod
     def is_up(self, *args, **kwargs):
@@ -83,16 +90,16 @@ class WeaveService(DockerService):
             time.sleep(RETRY_SLEEP_TIME)
         if self._number_of_tries > MAX_NUMBER_OF_RUN_TRIES:
             raise Exception(f'Failed to run {self.container_name} after ')
-        weave_is_up = is_weave_up()
-        extra_flags = extra_flags or []
 
-        if weave_is_up:
-            dns_search_list = [AXONIUS_DNS_SUFFIX]
+        extra_flags = extra_flags or []
+        dns_search_list = [AXONIUS_DNS_SUFFIX]
+
+        if 'linux' in sys.platform.lower():
             dns_search_list.extend(get_dns_search_list())
             extra_flags.extend([f'--dns-search={dns_search_entry}' for dns_search_entry in dns_search_list])
 
         my_env = os.environ.copy()
-        if weave_is_up:
+        if is_using_weave() and is_weave_up():
             my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
 
         try:
@@ -142,7 +149,7 @@ class WeaveService(DockerService):
 
             my_env = os.environ.copy()
 
-            if 'linux' in sys.platform.lower() and is_weave_up():
+            if 'linux' in sys.platform.lower() and is_using_weave() and is_weave_up():
                 my_env['DOCKER_HOST'] = 'unix:///var/run/weave/weave.sock'
 
             docker_run_process = subprocess.Popen(command, cwd=self.service_dir, stdout=subprocess.PIPE,
@@ -196,3 +203,52 @@ class WeaveService(DockerService):
                 print('Restarting container due to wait TimeoutException on wait.')
                 self.restart()
             raise
+
+    def add_weave_dns_entry(self):
+        """
+        Add dns entry to weave network
+        :return:
+        """
+        # Remove old dns entry from weave
+        dns_remove_command = shlex.split(f'{WEAVE_PATH} dns-remove {self.id}')
+        subprocess.check_call(dns_remove_command)
+
+        # Check that we have removed the dns entries. If we still have a dns entry associated with that hostname,
+        # it must be an old dead container. see:
+        # * https://github.com/weaveworks/weave/issues/3432
+        # * https://axonius.atlassian.net/browse/AX-4731
+        dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
+        response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
+
+        if response:
+            # We should not have any other ip associated with this hostname. Lets remove it.
+            for ip in response.splitlines():
+                print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
+                for _ in range(3):
+                    # Try 3 times, because weave is not always working
+                    requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
+                    # We do not raise for status or fail, as this is too risky.
+
+        # Add new unique dns entry to weave
+        dns_add_command = shlex.split(
+            f'{WEAVE_PATH} dns-add {self.id} -h {self.fqdn}')
+
+        subprocess.check_call(dns_add_command)
+
+        dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
+        response = subprocess.check_output(dns_check_command).strip()
+        if not response:
+            print(f'Error looking up dns {self.fqdn}. Retrying...', file=sys.stderr)
+            raise ValueError(f'Error looking up dns {self.fqdn} after registration.')
+
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
+    def connect_to_weave_network(self):
+        """
+        Connect existing docker to weave network by running weave attach
+        :return:
+        """
+        if not is_weave_up():
+            raise Exception(f'Weave is down')
+        weave_attach_command = shlex.split(f'{WEAVE_PATH} attach {self.id}')
+        subprocess.check_call(weave_attach_command)
+        self.add_weave_dns_entry()
