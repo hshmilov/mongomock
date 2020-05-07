@@ -591,11 +591,13 @@ class TestDevicesQueryAdvancedCases(TestBase):
                     pass
                 self._perform_query_scenario(**conf)
             self.devices_page.click_search()
-        self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
+
+            self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
+            self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
+            self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
+
         self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
-        self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
         self.wait_for_adapter_down(self.ESX_PLUGIN_NAME)
-        self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
         self.wait_for_adapter_down(self.CYCLANCE_PLUGIN_NAME)
 
         self.devices_page.switch_to_page()
@@ -717,7 +719,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
             assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
             self.devices_page.click_search()
 
-        self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME, delete_associated_entities=True)
+            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
         self.wait_for_adapter_down(AWS_ADAPTER)
 
     # pylint: disable=R0915
@@ -784,3 +786,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
                                                    clear_filter=True)
             results_count = len(self.devices_page.get_all_data())
             assert results_count == 0
+            self.devices_page.refresh()
+            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
+
+        self.wait_for_adapter_down(AWS_ADAPTER)
