@@ -1,13 +1,13 @@
 <template>
   <div class="x-chart-metric">
-    <x-select-symbol
+    <XSelectSymbol
       :value="entity"
       :options="entities"
       type="icon"
       placeholder="module..."
       @input="updateEntity"
     />
-    <x-select
+    <XSelect
       v-model="view"
       :options="views[entity]"
       :searchable="true"
@@ -15,54 +15,95 @@
       class="view-name grid-span2"
     />
     <label>Segment by</label>
-    <x-select-typed-field
+    <XSelectTypedField
       v-model="fieldName"
       :options="fieldOptions"
       class="grid-span2"
     />
     <template>
       <label class="filter-by-label">Filter by</label>
-      <x-filter-contains
+      <XFilterContains
         v-model="filters"
         class="grid-span2"
         :options="filterFields"
         :min="1"
       />
     </template>
-    <x-checkbox
+
+    <XCheckbox
       v-model="includeEmpty"
       :read-only="isAllowIncludeEmpty"
       label="Include entities with no value"
-      class="grid-span2"
+      class="grid-span3"
     />
+
+    <XChartSortSelector
+      v-if="showSortOptions"
+      class="grid-span3"
+      :available-sort-types="availableSortTypes"
+      :available-sort-orders="availableSortOrders"
+      :sort-type.sync="sortType"
+      :sort-order.sync="sortOrder"
+    />
+
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
-import xSelect from '../../../axons/inputs/select/Select.vue';
-import xSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
-import xSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue';
+import _get from 'lodash/get';
+import XSelect from '../../../axons/inputs/select/Select.vue';
+import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
+import XSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue';
 import XFilterContains from '../../../neurons/schema/query/FilterContains.vue';
-import xCheckbox from '../../../axons/inputs/Checkbox.vue';
+import XCheckbox from '../../../axons/inputs/Checkbox.vue';
 import chartMixin from './chart';
-import { getParentFromField, isObjectListField } from '../../../../constants/utils';
+import {
+  getParentFromField,
+  isObjectListField,
+} from '../../../../constants/utils';
 
-import { GET_MODULE_SCHEMA, GET_DATA_SCHEMA_BY_NAME } from '../../../../store/getters';
+import {
+  GET_MODULE_SCHEMA,
+  GET_DATA_SCHEMA_BY_NAME,
+} from '../../../../store/getters';
+import {
+  ChartSortTypeEnum,
+  ChartSortOrderEnum,
+  ChartSortOrderLabelEnum, ChartViewEnum,
+} from '../../../../constants/dashboard';
+import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
 
 export default {
   name: 'XChartSegment',
   components: {
-    xSelect, xSelectSymbol, xSelectTypedField, xCheckbox, XFilterContains,
+    XSelect,
+    XSelectSymbol,
+    XSelectTypedField,
+    XCheckbox,
+    XFilterContains,
+    XChartSortSelector,
   },
   mixins: [chartMixin],
+  data() {
+    return {
+      ChartSortTypeEnum,
+      ChartSortOrderEnum,
+      ChartSortOrderLabelEnum,
+    };
+  },
   computed: {
     ...mapGetters({
-      getModuleSchema: GET_MODULE_SCHEMA, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      getModuleSchema: GET_MODULE_SCHEMA,
+      getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
     }),
     initConfig() {
       return {
-        entity: '', view: '', field: { name: '' }, filters: [{ name: '', value: '' }],
+        entity: '',
+        view: '',
+        field: { name: '' },
+        filters: [{ name: '', value: '' }],
+        sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
     entity: {
@@ -102,7 +143,9 @@ export default {
         if (Array.isArray(this.config.value_filter)) {
           return this.config.value_filter;
         }
-        return [{ name: this.config.field.name, value: this.config.value_filter }];
+        return [
+          { name: this.config.field.name, value: this.config.value_filter },
+        ];
       },
       set(filters) {
         this.config = {
@@ -120,13 +163,36 @@ export default {
         this.config = { ...this.config, include_empty: includeEmpty };
       },
     },
+    sortType: {
+      get() {
+        return _get(this.config, 'sort.sort_by', ChartSortTypeEnum.value);
+      },
+      set(sortType) {
+        const sort = { ...this.config.sort };
+        sort.sort_by = sortType;
+        this.config = { ...this.config, sort };
+      },
+    },
+    sortOrder: {
+      get() {
+        return _get(this.config, 'sort.sort_order', ChartSortOrderEnum.desc);
+      },
+      set(sortOrder) {
+        const sort = { ...this.config.sort };
+        sort.sort_order = sortOrder;
+        this.config = { ...this.config, sort };
+      },
+    },
     fieldOptions() {
       if (!this.entity) return [];
       return this.getModuleSchema(this.entity).map((category) => ({
         ...category,
         fields: category.fields.filter((field) => {
           if (field.name === 'labels') return true;
-          if (!field.name.startsWith('specific_data') && !field.name.startsWith('adapters_data')) {
+          if (
+            !field.name.startsWith('specific_data')
+            && !field.name.startsWith('adapters_data')
+          ) {
             return false;
           }
           return !isObjectListField(field);
@@ -162,6 +228,25 @@ export default {
     isFiltersValid() {
       return !this.filters.find((item) => !!item.name !== !!item.value);
     },
+    availableSortTypes() {
+      return [ChartSortTypeEnum.value, ChartSortTypeEnum.name];
+    },
+    availableSortOrders() {
+      return [ChartSortOrderEnum.desc, ChartSortOrderEnum.asc];
+    },
+    showSortOptions() {
+      return this.chartView === ChartViewEnum.histogram;
+    },
+  },
+  watch: {
+    chartView(view) {
+      if (view !== ChartViewEnum.histogram && this.config.sort) {
+        this.config.sort = {
+          sort_by: ChartSortTypeEnum.value,
+          sort_order: ChartSortOrderEnum.desc,
+        };
+      }
+    },
   },
   methods: {
     validate() {
@@ -176,25 +261,28 @@ export default {
           name: '',
         },
         value_filter: [{ name: '', value: '' }],
+        sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
     isFieldFilterable(field) {
       const isFieldChildOfComplexObject = field.branched;
       const isFieldNotDateOrArrayOfDates = field.format !== 'date-time'
-                                          && (!field.items || field.items.format !== 'date-time');
-      return !isFieldChildOfComplexObject
-              && isFieldNotDateOrArrayOfDates
-              && !isObjectListField(field);
+        && (!field.items || field.items.format !== 'date-time');
+      return (
+        !isFieldChildOfComplexObject
+        && isFieldNotDateOrArrayOfDates
+        && !isObjectListField(field)
+      );
     },
   },
 };
 </script>
 
 <style lang="scss">
-  .x-chart-metric {
-    .filter-by-label {
-      align-self: flex-start;
-      margin-top: 14px;
-    }
+.x-chart-metric {
+  .filter-by-label {
+    align-self: flex-start;
+    margin-top: 14px;
   }
+}
 </style>

@@ -21,7 +21,8 @@ from flask import request, session, g
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
-    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS
+    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS,\
+    SortType, SortOrder
 
 from axonius.entities import EntitiesNamespace
 
@@ -292,6 +293,37 @@ def sorted_endpoint():
             except Exception as e:
                 return return_error('Could not create mongo sort. Details: {0}'.format(e), 400)
             return func(self, mongo_sort=sort_obj, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def sorted_by_method_endpoint():
+    """
+    Decorator stating that the view supports ?sort_by=<sort_type>&sort_order=<desc/asc>
+    """
+
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            try:
+                content = self.get_request_data_as_object() if request.method == 'POST' else request.args
+                sort_by_param = content.get('sort_by', None)
+                sort_order_param = content.get('sort_order', None)
+                panel_id = request.view_args['panel_id']
+
+                if panel_id is None:
+                    return return_error('Could not create chart sort, panel id is missing.', 400)
+
+                # validate params.
+                sort_by_options = [item.value for item in SortType]
+                sort_order_options = [item.value for item in SortOrder]
+                sort_by = None if sort_by_param not in sort_by_options else sort_by_param
+                sort_order = None if sort_order_param not in sort_order_options else sort_order_param
+
+            except Exception as e:
+                return return_error('Could not create chart sort. Details: {0}'.format(e), 400)
+            return func(self, sort_by=sort_by, sort_order=sort_order, *args, **kwargs)
 
         return actual_wrapper
 

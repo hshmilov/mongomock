@@ -288,3 +288,19 @@ EXCLUDED_CSRF_ENDPOINTS = ('api/login', 'api/signup', 'api/login/ldap', 'api/log
 
 ACTIVITY_PARAMS_ARG = 'activity_params'
 SKIP_ACTIVITY_ARG = 'skip_activity'
+
+
+class SortType(Enum):
+    """
+    Sort type to sort the dashboard chart data by.
+    """
+    VALUE = 'value'
+    NAME = 'name'
+
+
+class SortOrder(Enum):
+    """
+    Sort order to sort the dashboard chart data by.
+    """
+    DESC = 'desc'
+    ASC = 'asc'

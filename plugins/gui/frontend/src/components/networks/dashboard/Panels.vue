@@ -15,6 +15,7 @@
       :key="chart.uuid"
       :chart="chart"
       :draggable="true"
+      :current-space="currentSpace"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
     />
@@ -187,6 +188,7 @@ export default {
           view: panel.view,
           config: panel.config,
           updated: panel.last_updated,
+          selectedSort: panel.selectedSort,
         },
       });
     },

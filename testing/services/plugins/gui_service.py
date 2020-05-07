@@ -1,10 +1,10 @@
 import json
-import os
-from collections import defaultdict
-import secrets
 import logging
+import os
 import re
+import secrets
 from typing import List
+from collections import defaultdict
 
 import requests
 from funcy import chunks
@@ -41,6 +41,7 @@ from axonius.utils.permissions_helper import (PermissionCategory, PermissionActi
 from gui.logic.filter_utils import filter_archived
 from services.plugin_service import PluginService
 from services.updatable_service import UpdatablePluginMixin
+
 logger = logging.getLogger(f'axonius.{__name__}')
 MAINTENANCE_FILTER = {'type': MAINTENANCE_TYPE}
 
@@ -1158,7 +1159,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
         # for it to not be mounted.
 
         published_ports = [
-            '--publish', '443:1443',            # external customer-facing web server. host:443 -> gui:1443
+            '--publish', '443:1443',  # external customer-facing web server. host:443 -> gui:1443
         ]
         if not self._system_config.get('https-only'):
             published_ports.extend(['--publish', '80:80'])
@@ -1167,7 +1168,7 @@ class GuiService(PluginService, UpdatablePluginMixin):
             internal_web_server = ['--publish', '4433:443']
         else:
             internal_web_server = ['--publish', '127.0.0.1:4433:443']
-        published_ports.extend(internal_web_server)     # do not expose to 0.0.0.0 in prod!
+        published_ports.extend(internal_web_server)  # do not expose to 0.0.0.0 in prod!
 
         return published_ports
 

@@ -8,11 +8,14 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_service
 from services.axon_service import TimeoutException
+from test_helpers.dashboard_helper import assert_asc_sort_by_value, assert_desc_sort_by_value,\
+    assert_asc_sort_by_name, assert_desc_sort_by_name
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from ui_tests.tests.ui_consts import (READ_WRITE_USERNAME, READ_ONLY_USERNAME, NEW_PASSWORD,
                                       FIRST_NAME, LAST_NAME, JSON_ADAPTER_NAME,
                                       STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER,
-                                      MANAGED_DEVICES_QUERY_NAME, DEVICES_MODULE, AD_PRIMARY_GROUP_ID_OPTION_NAME)
+                                      MANAGED_DEVICES_QUERY_NAME, DEVICES_MODULE, AD_PRIMARY_GROUP_ID_OPTION_NAME,
+                                      AD_MISSING_AGENTS_QUERY_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 
 # pylint: disable=no-member
@@ -30,6 +33,7 @@ class TestDashboard(TestBase):
     FIRST_LIFECYCLE_STAGE_TEXT = 'Fetch Devices...'
     LIFECYCLE_ADAPTER_FETCHING_STATUS = 'Fetching...'
     LIFECYCLE_ADAPTER_NOT_START_STATUS = 'Not Started'
+    TEST_CHART_SORT = 'test chart sort'
 
     DASHBOARD_EXACT_SEARCH_TERM = 'TestDomain'
 
@@ -185,7 +189,7 @@ class TestDashboard(TestBase):
         assert quantities[0][0] + quantities[1][0] == quantities[2][0]
         assert quantities[2][0] >= quantities[3][0]
 
-    def _create_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name):
+    def _create_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name, sort=None):
         self.dashboard_page.switch_to_page()
         if run_discovery:
             self.base_page.run_discovery()
@@ -193,7 +197,8 @@ class TestDashboard(TestBase):
                                                   field=field,
                                                   title=title,
                                                   view_name=view_name,
-                                                  partial_text=False)
+                                                  partial_text=False,
+                                                  sort_config=sort)
         # create reference to the segmentation card with title
         segmentation_card = self.dashboard_page.get_card(title)
         # create reference to the histogram within the card
@@ -648,3 +653,116 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8'
         assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 3
         assert all(quantity != '0' for quantity in self.dashboard_page.find_quantity_in_card_string(last_card))
+
+    def _create_segmentation_chart_with_sort(self, sort_by='value', sort_order='desc'):
+        sort = {
+            'sort_by': sort_by,
+            'sort_order': sort_order
+        }
+        return self._create_get_paginator_segmentation_card(
+            run_discovery=False,
+            module='Devices',
+            field='Host Name',
+            title=self.TEST_CHART_SORT,
+            view_name='',
+            sort=sort)
+
+    def _test_dashboard_segmentation_default_sort_by_value(self):
+        histograms_chart = self._create_segmentation_chart_with_sort()
+        chart_values = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(histograms_chart))
+        assert_desc_sort_by_value(chart_values)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+        histograms_chart = self._create_segmentation_chart_with_sort(sort_order='asc')
+        chart_values = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(histograms_chart))
+        assert_asc_sort_by_value(chart_values)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+    def _test_dashboard_segmentation_default_sort_by_name(self):
+        histograms_chart = self._create_segmentation_chart_with_sort(sort_by='name')
+        chart_items = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)
+        assert_desc_sort_by_name(chart_items)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+        histograms_chart = self._create_segmentation_chart_with_sort(sort_by='name', sort_order='asc')
+        chart_items = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)
+        assert_asc_sort_by_name(chart_items)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+    def test_dashboard_segmentation_default_sort(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        self._test_dashboard_segmentation_default_sort_by_value()
+        self._test_dashboard_segmentation_default_sort_by_name()
+
+    def _test_dashboard_segmentation_sort_value_change(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        histograms_chart = self._create_segmentation_chart_with_sort()
+        chart_items = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(histograms_chart))
+        assert_desc_sort_by_value(chart_items)
+
+        card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
+        self.dashboard_page.select_chart_sort(card, 'value', 'asc')
+        time.sleep(1)
+
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card)
+        chart_items = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(histograms_chart))
+        assert_asc_sort_by_value(chart_items)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+    def _test_dashboard_segmentation_sort_name_change(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        histograms_chart = self._create_segmentation_chart_with_sort(sort_by='name')
+        chart_items = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)
+        assert_desc_sort_by_name(chart_items)
+
+        card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
+        self.dashboard_page.select_chart_sort(card, 'name', 'asc')
+        time.sleep(1)
+
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card)
+        chart_items = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)
+        assert_asc_sort_by_name(chart_items)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+    def test_dashboard_segmentation_sort_change(self):
+        self._test_dashboard_segmentation_sort_value_change()
+        self._test_dashboard_segmentation_sort_name_change()
+
+    def test_dashboard_comparison_edit_sort_change(self):
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': AD_MISSING_AGENTS_QUERY_NAME},
+                                                 {'module': 'Devices', 'query': MANAGED_DEVICES_QUERY_NAME}],
+                                                self.TEST_CHART_SORT)
+        card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
+        chart = self.dashboard_page.get_histogram_chart_from_card(card)
+        chart_values = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(chart))
+        assert_desc_sort_by_value(chart_values)
+
+        self.dashboard_page.edit_card(self.TEST_CHART_SORT)
+        self.dashboard_page.edit_dashboard_chart_default_sort('value', 'asc')
+        card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
+        chart = self.dashboard_page.get_histogram_chart_from_card(card)
+        chart_values = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(chart))
+        assert_asc_sort_by_value(chart_values)
+        self.dashboard_page.remove_card(self.TEST_CHART_SORT)
+
+    def test_dashboard_comparison_wizard_sort_absence(self):
+        self.dashboard_page.open_new_card_wizard()
+        self.dashboard_page.select_chart_metric('Query Comparison')
+
+        wait_until(self.dashboard_page.has_sort_options)
+        self.driver.find_element_by_css_selector(f'#pie').click()
+        wait_until(lambda: not self.dashboard_page.has_sort_options())
+
+    def test_dashboard_comparison_menu_sort_absence(self):
+        self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': AD_MISSING_AGENTS_QUERY_NAME},
+                                                 {'module': 'Devices', 'query': MANAGED_DEVICES_QUERY_NAME}],
+                                                self.TEST_CHART_SORT, 'pie')
+        card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
+        self.dashboard_page.open_close_card_menu(card)
+        self.dashboard_page.wait_for_element_absent_by_id(self.dashboard_page.CHART_PANEL_SORT_ACTION_ID, interval=1)

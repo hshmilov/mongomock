@@ -31,6 +31,7 @@
           <PanelActions
             :chart="chart"
             :editable="canUserUpdatePanels && chart.user_id !== '*'"
+            :sortable="isSortable(chart)"
             :has-drop-down-menu="draggable && canUserUpdatePanels"
             :is-chart-filterable="isChartFilterable"
             v-on="$listeners"
@@ -42,7 +43,7 @@
 
         <div class="body">
           <div
-            v-if="chart.metric !== 'timeline'"
+            v-if="chart.metric !== ChartTypesEnum.timeline"
             class="card-history"
           >
             <div class="x-card-header">
@@ -77,7 +78,7 @@
             v-else-if="!isChartEmpty(chart)"
             :data="chart.data"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
-            @fetch="(skip) => fetchMorePanel(chart.uuid, skip, chart.historical)"
+            @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
             @legend-data-modified="onlegendDataModified"
           />
           <div
@@ -128,6 +129,7 @@ import {
 import _debounce from 'lodash/debounce';
 import _uniq from 'lodash/uniq';
 import _merge from 'lodash/merge';
+import _isNil from 'lodash/isNil';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import XCard from '../../axons/layout/Card.vue';
@@ -139,6 +141,9 @@ import XLine from '../../axons/charts/Line.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XChartLegend from '../../axons/charts/ChartLegend.vue';
 import PanelActions from './PanelActions.vue';
+import {
+  ChartTypesEnum, ChartViewEnum,
+} from '../../../constants/dashboard';
 
 export default {
   name: 'XPanel',
@@ -162,6 +167,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    currentSpace: {
+      type: String,
+      default: null,
+    },
   },
   data() {
     return {
@@ -178,7 +187,7 @@ export default {
         if (!this.chart.config) {
           return {};
         }
-        if (this.chart.metric === 'compare') {
+        if (this.chart.metric === ChartTypesEnum.compare) {
           const modules = this.chart.config.views.map((view) => view.entity);
           return _uniq(modules).reduce((acc, curr) => {
             _merge(acc, state.constants.allowedDates[curr]);
@@ -213,7 +222,8 @@ export default {
       },
     },
     isChartFilterable() {
-      return this.chart.view === 'histogram' && this.chart.metric === 'segment';
+      return this.chart.view === ChartViewEnum.histogram
+              && this.chart.metric === ChartTypesEnum.segment;
     },
     legendIcon() {
       return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
@@ -221,6 +231,9 @@ export default {
   },
   mounted() {
     this.filter = this.chart.search || '';
+  },
+  created() {
+    this.ChartTypesEnum = ChartTypesEnum;
   },
   methods: {
     ...mapMutations({
@@ -234,21 +247,11 @@ export default {
       if (selectedDate === chart.historical) {
         return;
       }
-      this.fetchDashboardPanel({
-        uuid: chart.uuid,
-        spaceId: this.currentSpace,
-        skip: 0,
-        limit: 100,
-        historical: selectedDate,
-        search: this.filter,
-      });
+      this.fetchChartData(chart.uuid, 0, selectedDate, true, this.filter);
     },
     linkToQueryResults(queryInd, historical) {
       const query = this.chart.data[queryInd];
-      if (!this.$canViewEntity(query.module)
-              || query.view === undefined
-              || query.view === null
-      ) {
+      if (!this.$canViewEntity(query.module) || _isNil(query.view)) {
         return;
       }
       this.updateView({
@@ -257,7 +260,7 @@ export default {
           ...query.view,
           historical: this.allowedDates[historical],
         } : query.view,
-        name: this.chart.metric === 'compare' ? query.name : undefined,
+        name: this.chart.metric === ChartTypesEnum.compare ? query.name : undefined,
         uuid: null,
       });
       this.$router.push({ path: query.module });
@@ -268,27 +271,20 @@ export default {
               || (this.chart.data.length === 1 && this.chart.data[0].value === 0)
       );
     },
-    fetchMorePanel(uuid, skip, historical, refresh) {
-      this.fetchDashboardPanel({
+    fetchChartData(uuid, skip, historical, refresh, search) {
+      return this.fetchDashboardPanel({
         uuid,
         spaceId: this.currentSpace,
         skip,
         limit: 100,
         historical,
-        search: this.filter,
+        search: search || this.filter,
         refresh,
       });
     },
     // eslint-disable-next-line func-names
     fetchFilteredPanel: _debounce(function () {
-      this.fetchDashboardPanel({
-        uuid: this.chart.uuid,
-        spaceId: this.currentSpace,
-        skip: 0,
-        limit: 100,
-        historical: this.chart.historical,
-        search: this.filter,
-      });
+      this.fetchChartData(this.chart.uuid, 0, this.chart.historical, true, this.filter);
     }, 300),
     editPanel() {
       this.filter = '';
@@ -308,6 +304,10 @@ export default {
     },
     toggleShowSearch() {
       this.showSearch = !this.showSearch;
+    },
+    isSortable(chart) {
+      return (chart.metric === ChartTypesEnum.segment || chart.metric === ChartTypesEnum.compare)
+              && chart.view === ChartViewEnum.histogram;
     },
   },
 };

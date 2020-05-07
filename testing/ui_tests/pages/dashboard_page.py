@@ -104,6 +104,12 @@ class DashboardPage(Page):
     NO_DATA_FOUND_SPINNER_CSS = '.no-data-found'
     LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
     LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
+    WIZARD_SORT_BY = '#sort_by_{sort_by}'
+    WIZARD_SORT_ORDER = '#sort_order_{sort_order}'
+    WIZARD_SORT_CONTAINER_CSS = '.sort-container'
+    CHART_PANEL_SORT_ACTION_ID = 'sort_chart'
+    CHART_PANEL_SORT_BY_ID = 'chart_sort_by_{sort_by}'
+    CHART_PANEL_SORT_ORDER_ID = 'chart_sort_order_{sort_by}_{sort_order}'
 
     TOGGLE_LEGEND_CSS = '.toggle-legend'
     CHART_LEGEND_CSS = '.x-chart-legend'
@@ -387,7 +393,7 @@ class DashboardPage(Page):
     def get_views_list_add_button(self):
         return self.driver.find_element_by_id(self.SELECT_VIEWS_ADD_BUTTON)
 
-    def add_comparison_card(self, module_query_list, title, chart_type='histogram'):
+    def add_comparison_card(self, module_query_list, title, chart_type='histogram', sort_by='value', sort_order='desc'):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Comparison')
         views_list = self.get_views_list()
@@ -400,6 +406,11 @@ class DashboardPage(Page):
             self.select_chart_view_name_by_index(module_query['query'], index)
 
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+
+        if chart_type == 'histogram':
+            self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()
+            self.driver.find_element_by_css_selector(self.WIZARD_SORT_ORDER.format(sort_order=sort_order)).click()
+
         self.click_card_save()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()
@@ -444,7 +455,15 @@ class DashboardPage(Page):
         return self.is_save_button_disabled()
 
     def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True,
-                              include_empty: bool = True, value_filter: str = ''):
+                              include_empty: bool = True, value_filter: str = '', sort_config=None):
+
+        if sort_config is None:
+            sort_by = 'value'
+            sort_order = 'desc'
+        else:
+            sort_by = sort_config.get('sort_by', 'value')
+            sort_order = sort_config.get('sort_order', 'desc')
+
         try:
             self.open_new_card_wizard()
             self.select_chart_metric('Field Segmentation')
@@ -458,6 +477,11 @@ class DashboardPage(Page):
             if value_filter:
                 self.fill_chart_segment_filter(field, value_filter)
             self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+
+            if chart_type == 'histogram':
+                self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()
+                self.driver.find_element_by_css_selector(self.WIZARD_SORT_ORDER.format(sort_order=sort_order)).click()
+
             self.click_card_save()
             self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
             self.wait_for_card_spinner_to_end()
@@ -1116,3 +1140,28 @@ class DashboardPage(Page):
     def assert_users_explorer_results_exists(self):
         assert self.find_element_by_text('Users',
                                          self.driver.find_element_by_css_selector(self.EXPLORER_RESULTS_CSS))
+
+    def select_chart_sort(self, card, sort_by, sort_order):
+        self.open_close_card_menu(card)
+        actions = ActionChains(self.driver)
+        actions.move_to_element(self.driver.find_element_by_id(self.CHART_PANEL_SORT_ACTION_ID)).perform()
+        actions.move_to_element(self.driver.find_element_by_id(self.CHART_PANEL_SORT_BY_ID.format(
+            sort_by=sort_by))).perform()
+        actions.click(self.driver.find_element_by_id(
+            self.CHART_PANEL_SORT_ORDER_ID.format(sort_by=sort_by, sort_order=sort_order))).perform()
+
+    def edit_dashboard_chart_default_sort(self, sort_by, sort_order):
+        self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()
+        self.driver.find_element_by_css_selector(self.WIZARD_SORT_ORDER.format(sort_order=sort_order)).click()
+        self.click_card_save()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+        self.wait_for_card_spinner_to_end()
+
+    def has_sort_options(self):
+        try:
+            self.driver.find_element_by_css_selector(self.WIZARD_SORT_CONTAINER_CSS)
+            return True
+        except NoSuchElementException:
+            # Good, it is missing
+            return False
+        return True

@@ -69,11 +69,12 @@
       <div
         v-if="message"
         class="grid-span2 error-text"
-      >{{ message }}</div>
+      >
+        {{ message }}
+      </div>
     </div>
   </XFeedbackModal>
 </template>
-
 
 <script>
 import { mapActions, mapGetters } from 'vuex';
@@ -94,6 +95,7 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules
 import { DASHBOARD_CREATED } from '../../../constants/getting-started';
 import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
+import { ChartViewEnum, ChartTypesEnum } from '../../../constants/dashboard';
 
 const dashboard = {
   metric: '', view: '', name: '', config: null,
@@ -137,27 +139,35 @@ export default {
     },
     metricOptions() {
       return [
-        { name: 'intersect', title: 'Query Intersection' },
-        { name: 'compare', title: 'Query Comparison' },
-        { name: 'segment', title: 'Field Segmentation' },
-        { name: 'abstract', title: 'Field Summary' },
-        { name: 'timeline', title: 'Query Timeline' },
+        { name: ChartTypesEnum.intersect, title: 'Query Intersection' },
+        { name: ChartTypesEnum.compare, title: 'Query Comparison' },
+        { name: ChartTypesEnum.segment, title: 'Field Segmentation' },
+        { name: ChartTypesEnum.abstract, title: 'Field Summary' },
+        { name: ChartTypesEnum.timeline, title: 'Query Timeline' },
       ];
     },
     availableViews() {
-      if (this.dashboard.metric === 'compare' || this.dashboard.metric === 'segment') {
-        return ['histogram', 'pie'];
+      if (
+        this.dashboard.metric === ChartTypesEnum.compare
+        || this.dashboard.metric === ChartTypesEnum.segment
+      ) {
+        return [ChartViewEnum.histogram, ChartViewEnum.pie];
       }
-      if (this.dashboard.metric === 'intersect') {
-        return ['pie'];
+      if (this.dashboard.metric === ChartTypesEnum.intersect) {
+        return [ChartViewEnum.pie];
       }
-      if (this.dashboard.metric === 'timeline') {
-        return ['line'];
+      if (this.dashboard.metric === ChartTypesEnum.timeline) {
+        return [ChartViewEnum.line];
       }
-      return ['summary'];
+      return [ChartViewEnum.summary];
     },
     isDisabled() {
-      return (!this.dashboard.name || !this.dashboard.metric || !this.dashboardView || !this.configValid);
+      return (
+        !this.dashboard.name
+        || !this.dashboard.metric
+        || !this.dashboardView
+        || !this.configValid
+      );
     },
     message() {
       if (!this.isDisabled) return '';
@@ -195,6 +205,7 @@ export default {
     },
     saveNewDashboard() {
       if (this.panel && this.panel.uuid) {
+        this.$emit('update', this.panel.uuid);
         return this.changeDashboard({
           panelId: this.panel.uuid,
           spaceId: this.space,
@@ -217,55 +228,90 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-chart-wizard {
-        display: grid;
-        grid-template-columns: 160px auto;
-        grid-gap: 16px 8px;
+.x-chart-wizard {
+  display: grid;
+  grid-template-columns: 160px auto;
+  grid-gap: 16px 8px;
 
-        .dashboard-view {
-            display: flex;
-            align-items: center;
+  .dashboard-view {
+    display: flex;
+    align-items: center;
 
-            .type-label {
-                cursor: pointer;
-                margin-right: 24px;
-                margin-bottom: 0;
+    .type-label {
+      cursor: pointer;
+      margin-right: 24px;
+      margin-bottom: 0;
 
-                .svg-icon {
-                    margin-left: 8px;
+      .svg-icon {
+        margin-left: 8px;
 
-                    .svg-fill {
-                        fill: $grey-4;
-                    }
-
-                    .svg-stroke {
-                        stroke: $grey-4;
-                    }
-                }
-
-                &:hover {
-                    .svg-fill {
-                        fill: $theme-black;
-                    }
-                }
-            }
-
-            input {
-                cursor: pointer;
-            }
+        .svg-fill {
+          fill: $grey-4;
         }
 
-        .x-chart-metric {
-            display: grid;
-            grid-template-columns: 160px auto 20px;
-            grid-gap: 16px 8px;
-            min-width: 0;
-            align-items: center;
+        .svg-stroke {
+          stroke: $grey-4;
         }
+      }
 
-        .ant-btn-link {
-            margin: auto;
+      &:hover {
+        .svg-fill {
+          fill: $theme-black;
         }
+      }
     }
 
+    input {
+      cursor: pointer;
+    }
+  }
+
+  .x-chart-metric {
+    display: grid;
+    grid-template-columns: 160px auto 20px;
+    grid-gap: 16px 8px;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .ant-btn-link {
+    margin: auto;
+  }
+
+  .sort-radio-group {
+    /*margin-top: 0px;*/
+    /*display: flex;*/
+     label {
+       font-size: 14px;
+     }
+  }
+
+  .sort-view {
+    display: flex;
+    align-items: center;
+
+    .type-label {
+      cursor: pointer;
+      margin-right: 30px;
+      margin-bottom: 0;
+    }
+
+    input {
+      cursor: pointer;
+    }
+  }
+
+  .sort-label {
+    align-self: flex-start
+  }
+
+  .sort-radio {
+    white-space:nowrap;
+  }
+
+  .sort-col {
+    padding-top: 0px;
+    max-width: 145px;
+  }
+}
 </style>

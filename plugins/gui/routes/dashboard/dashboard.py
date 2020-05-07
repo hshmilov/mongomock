@@ -20,7 +20,7 @@ from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
 from axonius.mixins.triggerable import (TriggerStates)
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (entity_fields, get_connected_user_id,
-                                       paginated, historical_range, search_filter)
+                                       paginated, historical_range, search_filter, sorted_by_method_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.revving_cache import rev_cached, WILDCARD_ARG, NoCacheException
 from gui.logic.dashboard_data import (adapter_data, fetch_chart_segment, fetch_chart_segment_historical,
@@ -238,7 +238,9 @@ class Dashboard(Notifications):
     @historical_range()
     @search_filter()
     @gui_route_logged_in('<space_id>/panels/<panel_id>', methods=['GET'])
-    def get_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime, search: str):
+    @sorted_by_method_endpoint()
+    def get_dashboard_panel(self, space_id, panel_id, skip, limit, from_date: datetime, to_date: datetime,
+                            search: str, sort_by=None, sort_order=None):
         """
         GET partial data of the Dashboard Panel
 
@@ -250,22 +252,26 @@ class Dashboard(Notifications):
         :param search: a string to filter the data
         :param to_date: the latest date to get the data
         :param from_date: the earlier date to start get the data
+        :param sort_by: sort for specific charts like segmentation. sort by value or segment.
+        :param sort_order desc/asc
         """
-
         panel_id = ObjectId(panel_id)
         if request.args.get('refresh', False):
-            generate_dashboard.clean_cache([panel_id])
-            generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+            generate_dashboard.clean_cache([panel_id, sort_by, sort_order])
+            generate_dashboard_historical.clean_cache([panel_id, sort_by, sort_order, WILDCARD_ARG, WILDCARD_ARG])
 
         if from_date and to_date:
-            generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date)
+            generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date,
+                                                                sort_by=sort_by, sort_order=sort_order)
         else:
             try:
                 if request.args.get('refresh', False):
                     # we want to wait for a fresh data
-                    generated_dashboard = generate_dashboard.wait_for_cache(panel_id, wait_time=REQUEST_MAX_WAIT_TIME)
+                    generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
+                                                                            sort_order=sort_order,
+                                                                            wait_time=REQUEST_MAX_WAIT_TIME)
                 else:
-                    generated_dashboard = generate_dashboard(panel_id)
+                    generated_dashboard = generate_dashboard(panel_id, sort_by=sort_by, sort_order=sort_order)
             except (TimeoutError, NoCacheException):
                 # the dashboard is still being calculated
                 logger.debug(f'Dashboard {panel_id} is not ready')
@@ -281,6 +287,7 @@ class Dashboard(Notifications):
                               if search.lower() in self.get_string_value(data['name']).lower()]
         if not skip:
             return jsonify(self._process_initial_dashboard_data(dashboard_data))
+
         return jsonify({
             'data': dashboard_data[skip: skip + limit],
             'count': len(dashboard_data)
@@ -476,14 +483,14 @@ class Dashboard(Notifications):
                     if generated_dashboard:
                         yield {
                             **generated_dashboard,
-                            **self._process_initial_dashboard_data(generated_dashboard.get('data', []))
+                            **self._process_initial_dashboard_data(generated_dashboard.get('data', [])),
                         }
                 if not generate_data or not generated_dashboard:
                     yield {
                         'uuid': str(dashboard['_id']),
                         'name': dashboard['name'],
                         'data': [],
-                        'loading': True
+                        'loading': True,
                     }
             except Exception:
                 # Since there is no data, not adding this chart to the list

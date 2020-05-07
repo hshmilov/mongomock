@@ -1,50 +1,117 @@
 <template>
   <div class="x-chart-compare">
     <h5>Select queries for comparison:</h5>
-    <x-select-views
+    <XSelectViews
       v-model="selectedViews"
       :entities="entities"
       :views="views"
       :min="1"
     />
+
+    <XChartSortSelector
+      v-if="showSortOptions"
+      class="grid-span3"
+      :available-sort-types="availableSortTypes"
+      :available-sort-orders="availableSortOrders"
+      :sort-type.sync="sortType"
+      :sort-order.sync="sortOrder"
+    />
+
   </div>
 </template>
 
 <script>
-  import chartMixin from './chart'
-  import xSelectViews from '../../../neurons/inputs/SelectViews.vue'
+import _get from 'lodash/get';
+import chartMixin from './chart';
+import XSelectViews from '../../../neurons/inputs/SelectViews.vue';
+import {
+  ChartSortOrderEnum,
+  ChartSortOrderLabelEnum,
+  ChartSortTypeEnum, ChartViewEnum,
+} from '../../../../constants/dashboard';
+import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
 
-  const dashboardView = { name: '', entity: '' }
-  export default {
-    name: 'XChartCompare',
-    components: {
-      xSelectViews
+const dashboardView = { name: '', entity: '' };
+export default {
+  name: 'XChartCompare',
+  components: {
+    XSelectViews, XChartSortSelector,
+  },
+  mixins: [chartMixin],
+  data() {
+    return {
+      ChartSortTypeEnum,
+      ChartSortOrderEnum,
+      ChartSortOrderLabelEnum,
+    };
+  },
+  computed: {
+    initConfig() {
+      return {
+        views: [{ ...dashboardView }, { ...dashboardView }],
+        sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
+      };
     },
-    mixins: [chartMixin],
-    data () {
-      return {}
-    },
-    computed: {
-      initConfig () {
-        return {
-          views: [{ ...dashboardView }, { ...dashboardView }]
-        }
+    selectedViews: {
+      get() {
+        return this.config.views;
       },
-      selectedViews: {
-        get () {
-          return this.config.views
-        },
-        set (views) {
-          this.config = { ...this.config, views}
-        }
+      set(views) {
+        this.config = { ...this.config, views };
+      },
+    },
+    availableSortTypes() {
+      return [ChartSortTypeEnum.value, ChartSortTypeEnum.name];
+    },
+    availableSortOrders() {
+      return [ChartSortOrderEnum.desc, ChartSortOrderEnum.asc];
+    },
+    sortType: {
+      get() {
+        return _get(this.config, 'sort.sort_by', ChartSortTypeEnum.value);
+      },
+      set(sortType) {
+        const sort = { ...this.config.sort };
+        sort.sort_by = sortType;
+        this.config = { ...this.config, sort };
+      },
+    },
+    sortOrder: {
+      get() {
+        return _get(this.config, 'sort.sort_order', ChartSortOrderEnum.desc);
+      },
+      set(sortOrder) {
+        const sort = { ...this.config.sort };
+        sort.sort_order = sortOrder;
+        this.config = { ...this.config, sort };
+      },
+    },
+    showSortOptions() {
+      return this.chartView === ChartViewEnum.histogram;
+    },
+  },
+  watch: {
+    chartView(view) {
+      if (view !== ChartViewEnum.histogram && this.config.sort) {
+        this.config.sort = {
+          sort_by: ChartSortTypeEnum.value,
+          sort_order: ChartSortOrderEnum.desc,
+        };
       }
     },
-    methods: {
-      validate () {
-        this.$emit('validate', !this.selectedViews.filter(view => view.name === '').length)
-      }
-    }
-  }
+  },
+  methods: {
+    validate() {
+      this.$emit(
+        'validate',
+        !this.selectedViews.filter((view) => view.name === '').length,
+      );
+    },
+    getSortTitle(type) {
+      return `Sort by ${type}`;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

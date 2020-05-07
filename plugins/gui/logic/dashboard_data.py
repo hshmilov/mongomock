@@ -10,9 +10,8 @@ from bson import ObjectId
 from dateutil.parser import parse as parse_date
 
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
-                                       ADAPTERS_DATA, SPECIFIC_DATA,
-                                       RANGE_UNIT_DAYS,
-                                       DASHBOARD_COLLECTION, LABELS_FIELD)
+                                       ADAPTERS_DATA, SPECIFIC_DATA, RANGE_UNIT_DAYS,
+                                       DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
@@ -78,13 +77,17 @@ def adapter_data(entity_type: EntityType):
     return adapter_entities
 
 
-def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
+def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
+                        selected_sort_by=None, selected_sort_order=None) -> List:
     """
     Iterate given views, fetch each one's filter from the appropriate query collection, according to its module,
     and execute the filter on the appropriate entity collection.
 
     :param chart_view:
     :param views: List of views to fetch data by for comparing results
+    :param sort default chart sort in db
+    :param selected_sort_by selected sort type in ui session
+    :param selected_sort_order selected sort order asc/desc in ui session
     :return:
     """
     if not views:
@@ -124,10 +127,8 @@ def fetch_chart_compare(chart_view: ChartViews, views: List) -> List:
         data.append(data_item)
         total += data_item['value']
 
-    def val(element):
-        return element.get('value', 0)
+    data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
 
-    data.sort(key=val, reverse=True)
     if chart_view == ChartViews.pie:
         return_data = []
         if total:
@@ -435,8 +436,9 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
 
 
 # pylint: disable-msg=too-many-branches
-def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, value_filter: list = None,
-                        include_empty: bool = False, for_date=None) -> List:
+def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, sort, value_filter: list = None,
+                        include_empty: bool = False, for_date=None,
+                        selected_sort_by=None, selected_sort_order=None) -> List:
     """
     Perform aggregation which matching given view's filter and grouping by given fields, in order to get the
     number of results containing each available value of the field.
@@ -509,7 +511,8 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
                 }
             }
         })
-    data = sorted(data, key=lambda x: x['value'], reverse=True)
+
+    data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
     if chart_view == ChartViews.pie:
         total = sum([x['value'] for x in data])
         return [{**x, 'value': x['value'] / total, 'numericValue': x['value']} for x in data]
@@ -978,7 +981,7 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
 
 
 @dashboard_call_limit(10)
-def generate_dashboard_uncached(dashboard_id: ObjectId):
+def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
     See _get_dashboard
     """
@@ -987,7 +990,6 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
         '_id': dashboard_id
     })
     # pylint: enable=protected-access
-
     handler_by_metric = {
         ChartMetrics.compare: fetch_chart_compare,
         ChartMetrics.intersect: fetch_chart_intersect,
@@ -996,13 +998,22 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
         ChartMetrics.timeline: fetch_chart_timeline
     }
     config = {**dashboard['config']}
+
+    def call_dashboard_handler(metric):
+        if metric in [ChartMetrics.segment, ChartMetrics.compare]:
+            return handler_by_metric[metric](ChartViews[dashboard['view']],
+                                             selected_sort_by=sort_by,
+                                             selected_sort_order=sort_order,
+                                             **config)
+        return handler_by_metric[metric](ChartViews[dashboard['view']], **config)
+
     try:
         dashboard_metric = ChartMetrics[dashboard['metric']]
         if config.get('entity') and ChartMetrics.compare != dashboard_metric:
             # _fetch_chart_compare crashed in the wild because it got entity as a param.
             # We don't understand how such a dashboard chart was created. But at least we won't crash now
             config['entity'] = EntityType(dashboard['config']['entity'])
-        dashboard['data'] = handler_by_metric[dashboard_metric](ChartViews[dashboard['view']], **config)
+        dashboard['data'] = call_dashboard_handler(dashboard_metric)
         if dashboard['data'] is None:
             dashboard['data'] = []
             logger.error(f'Problematic queries in dashboard {dashboard}')
@@ -1015,11 +1026,11 @@ def generate_dashboard_uncached(dashboard_id: ObjectId):
 
 # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
 @rev_cached(ttl=3600 * 6, blocking=False)
-def generate_dashboard(dashboard_id: ObjectId):
+def generate_dashboard(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
     See _get_dashboard
     """
-    return generate_dashboard_uncached(dashboard_id)
+    return generate_dashboard_uncached(dashboard_id, sort_by=sort_by, sort_order=sort_order)
 
 
 def fetch_latest_date(entity: EntityType, from_given_date: datetime, to_given_date: datetime):
@@ -1050,13 +1061,14 @@ def fetch_chart_intersect_historical(card, from_given_date, to_given_date):
     return fetch_chart_intersect(ChartViews[card['view']], **config, for_date=latest_date)
 
 
-def fetch_chart_compare_historical(card, from_given_date, to_given_date):
+def fetch_chart_compare_historical(card, from_given_date, to_given_date, selected_sort_by, selected_sort_order):
     """
     Finds the latest saved result from the given view list (from card) that are in the given date range
     """
     if not card.get('view') or not card.get('config') or not card['config'].get('views'):
         return []
     historical_views = []
+    default_sort = {**card['config']}.get('sort', None)
     for view in card['config']['views']:
         view_name = view.get('name')
         if not view.get('entity') or not view_name:
@@ -1072,10 +1084,12 @@ def fetch_chart_compare_historical(card, from_given_date, to_given_date):
             continue
     if not historical_views:
         return []
-    return fetch_chart_compare(ChartViews[card['view']], historical_views)
+    return fetch_chart_compare(ChartViews[card['view']], historical_views, sort=default_sort,
+                               selected_sort_by=selected_sort_by, selected_sort_order=selected_sort_order)
 
 
-def fetch_chart_segment_historical(card, from_given_date, to_given_date):
+def fetch_chart_segment_historical(card, from_given_date, to_given_date, selected_sort_by=None,
+                                   selected_sort_order=None):
     """
     Get historical data for card of metric 'segment'
     """
@@ -1085,7 +1099,8 @@ def fetch_chart_segment_historical(card, from_given_date, to_given_date):
     latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
     if not latest_date:
         return []
-    return fetch_chart_segment(ChartViews[card['view']], **config, for_date=latest_date)
+    return fetch_chart_segment(ChartViews[card['view']], **config, for_date=latest_date,
+                               selected_sort_by=selected_sort_by, selected_sort_order=selected_sort_order)
 
 
 def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
@@ -1100,7 +1115,8 @@ def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
 
 
 @dashboard_call_limit(5)
-def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime):
+def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
+                                  sort_by=None, sort_order=None):
     # pylint: disable=protected-access
     dashboard = PluginBase.Instance._get_collection(DASHBOARD_COLLECTION).find_one({
         '_id': dashboard_id
@@ -1122,7 +1138,15 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
             ChartMetrics.segment: fetch_chart_segment_historical,
             ChartMetrics.abstract: fetch_chart_abstract_historical,
         }
-        dashboard['data'] = handler_by_metric[dashboard_metric](dashboard, from_date, to_date)
+
+        def call_dashboard_handler(metric):
+            if metric in [ChartMetrics.segment, ChartMetrics.compare]:
+                return handler_by_metric[dashboard_metric](dashboard, from_date, to_date,
+                                                           selected_sort_by=sort_by,
+                                                           selected_sort_order=sort_order)
+            return handler_by_metric[dashboard_metric](dashboard, from_date, to_date)
+
+        dashboard['data'] = call_dashboard_handler(dashboard_metric)
         if dashboard['data'] is None:
             dashboard['data'] = []
             logger.error(f'Problematic queries in dashboard {dashboard}')
@@ -1134,5 +1158,18 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
 
 
 @rev_cached(ttl=3600 * 24 * 365)
-def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, to_date: datetime):
-    return dashboard_historical_uncached(dashboard_id, from_date, to_date)
+def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
+                                  sort_by=None, sort_order=None):
+    return dashboard_historical_uncached(dashboard_id, from_date, to_date, sort_by, sort_order)
+
+
+def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_chart_sort):
+    # If nothing received from client, get the default sorting from chart config, If exists.
+    sort_by = selected_sort_by or (default_chart_sort.get('sort_by', SortType.VALUE.value)
+                                   if default_chart_sort else SortType.VALUE.value)
+    sort_order = selected_sort_order or (default_chart_sort.get('sort_order', SortOrder.DESC.value)
+                                         if default_chart_sort else SortOrder.DESC.value)
+    should_reverse = sort_order == SortOrder.DESC.value
+
+    return sorted(data, key=lambda x: x['value'], reverse=should_reverse) if sort_by == SortType.VALUE.value \
+        else sorted(data, key=lambda x: str(x['name']).upper(), reverse=should_reverse)

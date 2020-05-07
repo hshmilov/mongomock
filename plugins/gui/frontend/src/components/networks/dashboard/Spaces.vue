@@ -78,6 +78,7 @@
       :space="wizard.space"
       :panel="wizard.panel"
       @close="closeWizard"
+      @update="updateDashboard"
     />
     <MoveOrCopy
       v-if="moveOrCopyActive"
@@ -97,7 +98,7 @@ import MoveOrCopy from './MoveOrCopy.vue';
 
 import {
   SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
-  SET_CURRENT_SPACE,
+  SET_CURRENT_SPACE, RESET_DASHBOARD_SORT,
 } from '../../../store/modules/dashboard';
 
 export default {
@@ -156,6 +157,7 @@ export default {
   methods: {
     ...mapMutations({
       selectSpace: SET_CURRENT_SPACE,
+      resetDashboardSort: RESET_DASHBOARD_SORT,
     }),
     ...mapActions({
       saveSpace: SAVE_DASHBOARD_SPACE,
@@ -188,6 +190,9 @@ export default {
           this.processing = false;
         });
       });
+    },
+    updateDashboard(uuid) {
+      this.resetDashboardSort({ uuid });
     },
   },
 };

@@ -41,6 +41,7 @@ export const MOVE_OR_COPY_TOGGLE = 'MOVE_OR_COPY_TOGGLE';
 export const MOVE_PANEL = 'MOVE_PANEL';
 export const COPY_PANEL = 'COPY_PANEL';
 export const RESET_DASHBOARD_STATE = 'RESET_DASHBOARD_STATE';
+export const RESET_DASHBOARD_SORT = 'RESET_DASHBOARD_SORT';
 
 export const dashboard = {
   state: {
@@ -120,7 +121,7 @@ export const dashboard = {
           const dataTail = item.data_tail;
           if (payload.skip + index < state.panels.data.length) {
             const oldItem = state.panels.data[payload.skip + index];
-            if (oldItem.historical || oldItem.search) return;
+            if (oldItem.historical || oldItem.search || oldItem.selectedSort) return;
             if (!oldItem.data.length) {
               if (dataTail && dataTail.length) {
                 newItem.data[newItem.count - 1] = null;
@@ -191,6 +192,7 @@ export const dashboard = {
         }
         panel.search = payload.search;
       }
+
       const response = payload.data;
       if (!response) {
         return;
@@ -244,6 +246,13 @@ export const dashboard = {
         state.currentSpace = defaultSpace.uuid;
       }
     },
+    [RESET_DASHBOARD_SORT](state, payload) {
+      const panel = state.panels.data.find((item) => item.uuid === payload.uuid);
+      if (!panel) {
+        return;
+      }
+      panel.selectedSort = null;
+    },
   },
   actions: {
     [FETCH_LIFECYCLE]({ dispatch, commit, state }) {
@@ -292,9 +301,11 @@ export const dashboard = {
     },
     [FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       const {
-        spaceId, uuid, historical, skip, limit, search, refresh,
+        spaceId, uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
       } = payload;
-      let rule = `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
+      let rule = sortBy && sortOrder ? `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`
+        + `&sort_by=${sortBy}&sort_order=${sortOrder}`
+        : `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
 
       if (!skip) {
         commit(UPDATE_DASHBOARD_PANEL, {
@@ -305,6 +316,8 @@ export const dashboard = {
             data: [],
           },
           loading: true,
+          sortBy,
+          sortOrder,
         });
       }
 
