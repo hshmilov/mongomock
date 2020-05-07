@@ -1,14 +1,18 @@
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
-from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME,
-                                      STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER,
-                                      AD_MISSING_AGENTS_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME)
+from services.adapters.crowd_strike_service import CrowdStrikeService
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
+
+from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import (AWS_ADAPTER_NAME,
+                                      STRESSTEST_ADAPTER_NAME, STRESSTEST_ADAPTER,
+                                      AD_MISSING_AGENTS_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME, AD_ADAPTER_NAME,
+                                      CROWD_STRIKE_ADAPTER_NAME, CROWD_STRIKE_ADAPTER)
 from test_credentials.test_aws_credentials import client_details
+from test_credentials.test_crowd_strike_credentials import client_details as crowd_strike_client_details
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -17,6 +21,7 @@ class TestDevicesTable(TestEntitiesTable):
     QUERY_FIELDS = 'adapters,specific_data.data.hostname,specific_data.data.name,specific_data.data.last_seen,' \
                    'specific_data.data.os.type,specific_data.data.network_interfaces.ips,' \
                    'specific_data.data.network_interfaces.mac,labels'
+    TARGET_HOSTNAME = '22AD'
 
     def test_devices_save_query(self):
         self.settings_page.switch_to_page()
@@ -337,3 +342,28 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.reset_query()
 
         assert self.devices_page.find_search_value() == ''
+
+    def test_device_expand_row(self):
+        with CrowdStrikeService().contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(CROWD_STRIKE_ADAPTER_NAME)
+            self.adapters_page.create_new_adapter_connection(CROWD_STRIKE_ADAPTER_NAME, crowd_strike_client_details)
+            self.base_page.run_discovery(wait=True)
+            self.devices_page.switch_to_page()
+            self.devices_page.query_hostname_contains(self.TARGET_HOSTNAME)
+            self.devices_page.click_expand_row(index=1)
+            # The value from all adapters seperated by \n
+            device_host_name = self.devices_page.get_column_data_expand_row(self.devices_page.FIELD_HOSTNAME_TITLE)
+            # Make sure all values are not ''
+            assert device_host_name and all(x != '' for x in device_host_name[0].split('\n'))
+            assert self.devices_page.NAME_ADAPTERS_AD in self.devices_page.get_column_data_adapter_names()
+            assert CROWD_STRIKE_ADAPTER in self.devices_page.get_column_data_adapter_names()
+            self.devices_page.edit_columns(add_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
+                                           remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
+                                           adapter_title=[AD_ADAPTER_NAME])
+            assert device_host_name != self.devices_page.get_column_data_expand_row(
+                self.devices_page.FIELD_HOSTNAME_TITLE
+            )
+
+        # Cleanup
+        self.adapters_page.clean_adapter_servers(CROWD_STRIKE_ADAPTER_NAME, delete_associated_entities=True)
+        self.wait_for_adapter_down(CROWD_STRIKE_ADAPTER)
