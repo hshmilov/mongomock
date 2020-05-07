@@ -216,6 +216,9 @@ class MongoService(WeaveService):
     def get_databases(self):
         return self.client.list_database_names()
 
+    def get_database(self, db_name):
+        return self.client[db_name]
+
     def get_entity_db(self, entity_type: EntityType):
         if entity_type == EntityType.Users:
             return self.client[AGGREGATOR_PLUGIN_NAME]['users_db']

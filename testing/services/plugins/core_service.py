@@ -14,7 +14,7 @@ from pymongo import UpdateOne
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
-    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, NotificationHookType, LINK_REGEX
 from axonius.entities import EntityType
@@ -49,7 +49,10 @@ class CoreService(PluginService, UpdatablePluginMixin):
         if self.db_schema_version < 15:
             self._update_schema_version_15()
 
-        if self.db_schema_version != 15:
+        if self.db_schema_version < 16:
+            self._update_schema_version_16()
+
+        if self.db_schema_version != 16:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -821,6 +824,32 @@ class CoreService(PluginService, UpdatablePluginMixin):
 
         except Exception as e:
             print(f'Exception while upgrading schema to version 15. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_16(self):
+        print('Upgrade to schema 16 - Audit max size and documents')
+        try:
+            max_documents = 100000
+            core_db = self.db.get_database('core')
+            new_audit_collection = core_db.create_collection('audit_temp', capped=True, size=100000000,
+                                                             max=max_documents)
+            if AUDIT_COLLECTION in core_db.list_collection_names():
+                old_audit_collection = self.db.get_collection(self.plugin_name, AUDIT_COLLECTION)
+                old_audit_collection.aggregate([
+                    {'$match': {}},
+                    {'$sort': {'timestamp': -1}},
+                    {'$limit': max_documents},
+                    {'$merge': {'into': 'audit_temp'}}
+                ], allowDiskUse=True)
+                old_audit_collection.drop()
+
+            new_audit_collection.rename(AUDIT_COLLECTION)
+
+            self.db_schema_version = 16
+
+        except Exception as e:
+            print(f'Exception while upgrading schema to version 16. Details: {e}')
             traceback.print_exc()
             raise
 
