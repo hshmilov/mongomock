@@ -36,8 +36,10 @@ class TestReportGeneration(TestReportGenerationBase):
             text = ' '.join(texts)
             assert 'Device Discovery' in text
             assert 'User Discovery' in text
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_saved_views_data_pdf_links(self):
         stress = stresstest_service.StresstestService()
@@ -69,8 +71,10 @@ class TestReportGeneration(TestReportGenerationBase):
                 if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
                     assert page.extractText().count('avigdor') == 10
 
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_multiple_saved_queries(self):
         stress = stresstest_service.StresstestService()
@@ -106,8 +110,11 @@ class TestReportGeneration(TestReportGenerationBase):
             assert self.TEST_REPORT_QUERY_NAME in text
             assert self.TEST_REPORT_QUERY_NAME1 not in text
             assert self.TEST_REPORT_QUERY_NAME2 in text
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_report_cover_and_toc_chart_legend(self):
         stress = stresstest_service.StresstestService()
@@ -136,8 +143,11 @@ class TestReportGeneration(TestReportGenerationBase):
             dashboard_chart_page = doc.pages[3]
 
             assert dashboard_chart_page.extractText().count(MANAGED_DEVICES_QUERY_NAME) == 2
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_multiple_reports_generated(self):
         stress = stresstest_service.StresstestService()
@@ -181,8 +191,11 @@ class TestReportGeneration(TestReportGenerationBase):
 
                 wait_until(lambda: self._new_generated_date(f'{self.REPORT_NAME}_{i}', current_date),
                            total_timeout=60 * 3, interval=2)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def _test_reports_dashboard_placeholder(self):
         self.reports_page.switch_to_page()
@@ -221,8 +234,11 @@ class TestReportGeneration(TestReportGenerationBase):
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert self.TEST_REPORT_SPACES in text
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def _new_generated_date(self, report_name, current_date):
         generated_date_str = self.reports_page.get_report_generated_date(report_name)

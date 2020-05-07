@@ -57,8 +57,11 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             assert 'top 10 results of 10' in text
             assert 'Device Discovery' not in text
             assert 'User Discovery' not in text
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_dashboard_data_with_trailing_space(self):
         stress = stresstest_service.StresstestService()
@@ -74,8 +77,11 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             text = ' '.join(texts)
             assert 'Device Discovery' in text
             assert 'User Discovery' in text
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_report_with_hebrew_name_and_text(self):
         smtp_service = MaildiranasaurusService()
@@ -144,8 +150,11 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             mail_content = smtp_service.get_email_first_csv_content(recipient)
             assert tag_name in mail_content.decode('utf-8')
             self.logger.info('We are done with test_report_with_hebrew_name_and_text test')
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def test_report_histogram_total(self):
         stress = stresstest_service.StresstestService()
@@ -222,8 +231,10 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             if int(total_items) > 6:
                 assert f'Top 6 of {total_items}' in custom_charts_page.extractText()
 
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def _get_outline_titles(self, outlines):
         outline_titles = []

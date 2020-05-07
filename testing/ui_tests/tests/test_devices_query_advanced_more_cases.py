@@ -30,7 +30,7 @@ from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       TANIUM_ASSET_ADAPTER,
                                       TANIUM_DISCOVERY_ADAPTER,
                                       TANIUM_SQ_ADAPTER, WINDOWS_QUERY_NAME,
-                                      JSON_ADAPTER_NAME)
+                                      JSON_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_SCANNER_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -239,8 +239,11 @@ class TestDevicesQueryAdvancedCases(TestBase):
                     assert len(set(os_types_values).intersection(set(os_types))) > 0
                 else:
                     assert os_types_values in os_types
-        self.wait_for_adapter_down(STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(STRESSTEST_SCANNER_ADAPTER)
 
     @pytest.mark.skip('AX-7287')
     def test_connection_label_query_with_same_client_id(self):

@@ -53,7 +53,7 @@ CSV_PLUGIN_NAME = 'csv_adapter'
 STRESSTEST_ADAPTER = 'stresstest_adapter'
 STRESSTEST_ADAPTER_NAME = 'Test adapters'
 STRESSTEST_SCANNER_ADAPTER = 'stresstest_scanner_adapter'
-
+STRESSTEST_SCANNER_ADAPTER_NAME = 'Test adapters for scanners'
 ALERTLOGIC_ADAPTER = 'alertlogic_adapter'
 ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
 

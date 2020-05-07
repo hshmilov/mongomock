@@ -456,6 +456,13 @@ class TestBase:
             PLUGIN_NAME: adapter_name
         })['status'] == 'down'
 
+    def wait_for_stress_adapter_down(self, adapter_name):
+        try:
+            self.wait_for_adapter_down(adapter_name)
+        except AssertionError:
+            pass
+        self.wait_for_adapter_down(adapter_name)
+
     def _add_action_to_role_and_login_with_user(self, permissions, category, add_action, role, user_name, password):
         self.login_page.logout_and_login_with_admin()
         if not permissions.get(category):

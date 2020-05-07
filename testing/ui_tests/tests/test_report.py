@@ -363,8 +363,11 @@ class TestReport(TestBase):
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
             self._test_csv(recipient, smtp_service)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_ADAPTER)
-        self.wait_for_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
+        self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def _test_csv(self, recipient, smtp_service):
         mail_content = smtp_service.get_email_first_csv_content(recipient)
