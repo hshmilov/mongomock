@@ -1356,6 +1356,7 @@ class SettingsPage(Page):
         return current_settings.json().get('config', None)
 
     def toggle_root_master(self, toggle_value):
+        self.wait_for_element_present_by_text(self.USE_ROOT_MASTER)
         toggle = self.find_checkbox_by_label(self.USE_ROOT_MASTER)
         self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
 

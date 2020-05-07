@@ -31,12 +31,14 @@ from ui_tests.tests.ui_test_base import TestBase
 INVALID_EMAIL_HOST = 'dada...$#@'
 AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
 AXONIUS_BACKUP_FILENAME = 'axonius_backup.tar.gz'
-S3_BACKUP_PRESHARED_KEY = '1234567812345678'
 S3_BACKUP_FILE_PATTERN = 'Completed S3 backup file name: (.*)\\.gpg'
 S3_FILES_LOCAL_DIRECTORY = 'tmp_backup_files'
 
 
 class TestGlobalSettings(TestBase):
+
+    s3_passphrase = None
+
     def test_email_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
@@ -233,7 +235,11 @@ class TestGlobalSettings(TestBase):
             self.settings_page.find_correlation_hours_error()
         assert not self.settings_page.is_save_button_disabled()
 
-    def _enable_s3_integration(self):
+    @staticmethod
+    def _generate_random_passphrase():
+        return ''.join(str(random.randint(0, 9)) for _ in range(16))
+
+    def _enable_s3_integration(self, passphrase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         self.settings_page.wait_for_spinner_to_end()
@@ -243,12 +249,13 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_s3_access_key(EC2_ECS_EKS_READONLY_ACCESS_KEY_ID)
         self.settings_page.fill_s3_secret_key(EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
         self.settings_page.set_s3_backup_settings_enabled()
-        self.settings_page.fill_s3_preshared_key(S3_BACKUP_PRESHARED_KEY)
+        self.settings_page.fill_s3_preshared_key(passphrase)
         self.settings_page.save_and_wait_for_toaster()
 
     def test_s3_backup(self):
         local_dir = _get_backup_files_local_dir()
-        self._enable_s3_integration()
+        self.s3_passphrase = self._generate_random_passphrase()
+        self._enable_s3_integration(self.s3_passphrase)
 
         # Backup files will be added after discovery cycle is done.
         self.base_page.run_discovery()
@@ -257,7 +264,7 @@ class TestGlobalSettings(TestBase):
 
         if file_name:
             try:
-                files = _get_s3_backup_file_content(file_name, local_dir)
+                files = _get_s3_backup_file_content(file_name, local_dir, self.s3_passphrase)
                 devices_file_name = files.get(S3_DEVICES_BACKUP_FILE_NAME, None)
                 users_file_name = files.get(S3_USERS_BACKUP_FILE_NAME, None)
 
@@ -299,10 +306,10 @@ class TestGlobalSettings(TestBase):
         self.settings_page.toggle_root_master(toggle_value)
         self.settings_page.save_and_wait_for_toaster()
 
-    @pytest.mark.skip('AX-7190')
     def test_s3_restore(self):
         local_dir = _get_backup_files_local_dir()
-        self._enable_s3_integration()
+        self.s3_passphrase = self._generate_random_passphrase()
+        self._enable_s3_integration(self.s3_passphrase)
 
         # Backup files will be added after discovery cycle is done.
         self.base_page.run_discovery()
@@ -311,7 +318,7 @@ class TestGlobalSettings(TestBase):
 
         if file_name:
             try:
-                files = _get_s3_backup_file_content(file_name, local_dir)
+                files = _get_s3_backup_file_content(file_name, local_dir, self.s3_passphrase)
                 devices_file_name = files.get(S3_DEVICES_BACKUP_FILE_NAME, None)
                 users_file_name = files.get(S3_USERS_BACKUP_FILE_NAME, None)
 
@@ -338,7 +345,7 @@ class TestGlobalSettings(TestBase):
                 # Start restore process after backup data is ready for comparison.
                 self._toggle_root_master(True)
 
-                self._enable_s3_integration()
+                self._enable_s3_integration(self.s3_passphrase)
 
                 # Clean adapters connection so only backup data will be inserted.
                 self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
@@ -384,14 +391,14 @@ def _get_backup_files_local_dir():
 def _get_s3_backup_file_name():
     # get latest backup file name
     wait_until(lambda: LogTester(SYSTEM_SCHEDULER_LOG_PATH).is_pattern_in_log(S3_BACKUP_FILE_PATTERN,
-                                                                              10))
+                                                                              10), 60 * 10)
     log_rows = LogTester(SYSTEM_SCHEDULER_LOG_PATH).get_pattern_lines_from_log(S3_BACKUP_FILE_PATTERN, 10)
     # e.g: log_rows =
     # ["Completed S3 backup file name: axonius_backup_Master_None__2020-04-21_08:31:25.524785.tar.gz.gpg"]
     return log_rows[len(log_rows) - 1].split(':', 1)[1].strip()
 
 
-def _get_s3_backup_file_content(file_name, backup_local_directory):
+def _get_s3_backup_file_content(file_name, backup_local_directory, passphrase):
     Path(backup_local_directory).mkdir(parents=True, exist_ok=True)
 
     backup_local_file_path = backup_local_directory / file_name
@@ -406,7 +413,7 @@ def _get_s3_backup_file_content(file_name, backup_local_directory):
     print(file_name)
     client.download_file(AXONIUS_CI_TESTS_BUCKET, str(file_name), str(backup_local_file_path))
 
-    os.system(f'echo {S3_BACKUP_PRESHARED_KEY} | gpg --batch --yes --passphrase-fd 0 --output'
+    os.system(f'echo {passphrase} | gpg --batch --yes --passphrase-fd 0 --output'
               f' {decrypted_backup_local_file}'
               f' --decrypt {backup_local_file_path}')
 
