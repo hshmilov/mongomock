@@ -30,7 +30,6 @@
     "promise": "8.0.2",
     "shortid": "2.2.14",
     "vue": "2.6.10",
-    "vue-analytics": "5.16.4",
     "vue-cookies": "1.5.13",
     "vue-filepond": "6.0.2",
     "vue-google-charts": "0.3.2",

@@ -3,7 +3,6 @@ import Vue from 'vue';
 import VueWorker from 'vue-worker';
 import VueCookies from 'vue-cookies';
 import Vuelidate from 'vuelidate';
-import VueAnalytics from 'vue-analytics';
 import {
   MdSwitch,
   MdDatepicker,
@@ -52,12 +51,6 @@ Vue.use(MessageModalPlugin);
 Vue.use(RoleGatewayPlugin);
 
 Vue.use(svgicon, { tagName: 'SvgIcon' });
-
-Vue.use(VueAnalytics, {
-  id: 'UA-123123123-0', // set in backend
-  router,
-  customResourceURL: '/src/analytics.js',
-});
 
 new Vue({
   el: '#app',

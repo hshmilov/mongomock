@@ -236,12 +236,10 @@ export default {
 
     }),
     startResearchNow() {
-      this.$ga.event('research', 'start-now', '', 1);
       this.researchStatusLocal = 'starting';
       this.startResearch().catch(() => this.researchStatusLocal = '');
     },
     stopResearchNow() {
-      this.$ga.event('research', 'stop-now', '', 1);
       this.researchStatusLocal = 'stopping';
       this.stopResearch().catch(() => this.researchStatusLocal = 'running');
     },
