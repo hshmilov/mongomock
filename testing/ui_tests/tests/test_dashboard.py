@@ -728,6 +728,7 @@ class TestDashboard(TestBase):
         assert_asc_sort_by_name(chart_items)
         self.dashboard_page.remove_card(self.TEST_CHART_SORT)
 
+    @pytest.mark.skip('AX-7397')
     def test_dashboard_segmentation_sort_change(self):
         self._test_dashboard_segmentation_sort_value_change()
         self._test_dashboard_segmentation_sort_name_change()
