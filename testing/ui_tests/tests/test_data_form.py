@@ -84,8 +84,8 @@ class TestDataForm(TestBase):
             self.sync_on_server_connection_failure(AWS_ADAPTER_NAME, adapter_input.get('region_name'))
             self.verify_adapter_connection_and_cancel(adapter_input)
 
-        # Cleanup.
-        self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
+            # Cleanup.
+            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
         self.wait_for_adapter_down(AWS_ADAPTER)
 
     @pytest.mark.skip('AX-5367')
