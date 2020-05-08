@@ -1,5 +1,4 @@
 import pytest
-from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import DISTINCT_ADAPTERS_COUNT_FIELD, ADAPTER_CONNECTIONS_FIELD
@@ -7,16 +6,16 @@ from axonius.utils.parsing import normalize_adapter_device, NORMALIZED_HOSTNAME,
     ips_do_not_contradict_or_mac_intersection
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from services.adapters.carbonblack_defense_service import CarbonblackDefenseService
+from services.adapters.json_service import JsonService
 from services.adapters.csv_service import CsvService
-from services.adapters.esx_service import EsxService
-from services.adapters.nexpose_service import NexposeService
-from test_credentials.test_esx_credentials import client_details as esx_client_details
+import test_credentials.json_file_credentials
 from test_credentials.test_carbonblack_defense_credentials import client_details as carbonblack_defence_client_details
-from test_credentials.test_nexpose_credentials import client_details as nexpose_client_details
 from test_credentials.test_csv_credentials import \
     client_details as csv_client_details, USERS_CLIENT_FILES
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import CSV_PLUGIN_NAME, CSV_NAME
+from ui_tests.tests.ui_consts import CSV_PLUGIN_NAME, CSV_NAME, JSON_ADAPTER_PLUGIN_NAME
+from testing.test_credentials.test_csv_credentials import CSV_FIELDS
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 AD_NAME = 'Microsoft Active Directory (AD)'
 JSON_NAME = 'JSON File'
@@ -43,11 +42,12 @@ LAST_SEEN_THRESHOLD_HOURS = '21600'
 
 class TestAdapters(TestBase):
     # Sometimes upload file to CSV adapter does not work
-    @flaky(max_runs=2)
     def test_upload_csv_file(self):
         try:
             with CsvService().contextmanager(take_ownership=True):
                 self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
+                self.adapters_page.wait_for_data_collection_toaster_start()
+                self.adapters_page.wait_for_data_collection_toaster_absent()
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
                 self.devices_page.fill_filter(self.adapters_page.CSV_ADAPTER_QUERY)
@@ -60,46 +60,48 @@ class TestAdapters(TestBase):
             self.adapters_page.clean_adapter_servers(CSV_NAME)
             self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
-    def test_esx_nexpose_correlation(self):
-        esx_adapter = EsxService()
-        nexpose_adapter = NexposeService()
-        with esx_adapter.contextmanager(take_ownership=True):
-            with nexpose_adapter.contextmanager(take_ownership=True):
-                print('Raised esx and nexpose.')
-                # Raise a system with esx + nexpose
-                self.adapters_page.wait_for_adapter(ESX_NAME)
-                # Sometimes this page is flaky
-                self.adapters_page.click_adapter(ESX_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.fill_creds(**esx_client_details[0][0])
-                self.adapters_page.click_save()
-                self.adapters_page.wait_for_spinner_to_end()
-                print('Saved esx client.')
+    def test_json_csv_correlation(self):
+        json_adapter = JsonService()
+        csv_adapter = CsvService()
+        with json_adapter.contextmanager(take_ownership=True):
+            with csv_adapter.contextmanager(take_ownership=True):
 
                 self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(NEXPOSE_NAME)
-                self.adapters_page.click_adapter(NEXPOSE_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.fill_creds(**nexpose_client_details)
-                self.adapters_page.click_save()
-                print('Saved nexpose client.')
+                self.adapters_page.wait_for_adapter(CSV_NAME)
 
+                mac_address = test_credentials.json_file_credentials.DEVICE_MAC
+                ip_address = test_credentials.json_file_credentials.DEVICE_FIRST_IP
+                hostname = test_credentials.json_file_credentials.DEVICE_FIRST_HOSTNAME
+                client_details = {
+                    'user_id': 'user',
+                    # an array of char
+                    'file_path': FileForCredentialsMock(
+                        'file_path',
+                        ','.join(CSV_FIELDS) +
+                        f'\n{hostname},Serial2,Windows,{mac_address},Office,2020-04-01 02:13:24.485Z, {ip_address}'
+                        '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
+                }
+                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
+                self.adapters_page.wait_for_data_collection_toaster_start()
+                self.adapters_page.wait_for_data_collection_toaster_absent()
+
+                self.adapters_page.switch_to_page()
+
+                print('Raised json and csv.')
+
+                self.adapters_page.wait_for_adapter(JSON_NAME)
                 # Activate discovery phase
                 self.base_page.run_discovery()
                 print('Finished discovery.')
 
                 # Expected result:
-                # 1. There are devices correlated between esx and nexpose
-                query = '(adapters_data.esx_adapter.id == ({"$exists":true,"$ne": ""})) and ' \
-                        '(adapters_data.nexpose_adapter.id == ({"$exists":true,"$ne": ""}))'
+                # 1. There are devices correlated between json file and csv
+                query = '(adapters_data.json_file_adapter.id == ({"$exists":true,"$ne": ""})) and ' \
+                        '(adapters_data.csv_adapter.id == ({"$exists":true,"$ne": ""}))'
                 self.devices_page.switch_to_page()
                 self.devices_page.run_filter_query(query)
                 assert self.devices_page.count_entities() > 0
-                print('Filtered esx and nexpose devices.')
+                print('Filtered json and csv devices.')
 
                 # Take one device that has both adapters
                 # Check if they really have the same hostname or MAC
@@ -109,35 +111,31 @@ class TestAdapters(TestBase):
                 })
                 adapters = device['adapters']
                 assert len(adapters) >= 2
-                esx_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == ESX_PLUGIN_NAME), None)
-                nexpose_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == NEXPOSE_PLUGIN_NAME),
-                                                   None)
-                print('Got an esx and a nexpose device.')
+                csv_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == CSV_PLUGIN_NAME), None)
+                json_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == JSON_ADAPTER_PLUGIN_NAME),
+                                                None)
+                print('Got a json and a csv device.')
 
-                assert esx_adapter_from_device
-                assert nexpose_adapter_from_device
-                normalize_adapter_device(nexpose_adapter_from_device)
-                normalize_adapter_device(esx_adapter_from_device)
+                assert csv_adapter_from_device
+                assert json_adapter_from_device
+                normalize_adapter_device(csv_adapter_from_device)
+                normalize_adapter_device(json_adapter_from_device)
 
                 # either hostname equals
-                hostname_equals = (nexpose_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) and
-                                   nexpose_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) ==
-                                   esx_adapter_from_device['data'].get(NORMALIZED_HOSTNAME))
+                hostname_equals = (csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) and
+                                   csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) ==
+                                   json_adapter_from_device['data'].get(NORMALIZED_HOSTNAME))
 
                 #  and no ip contradiction
-                mac_equals_ip_no_contradict = ips_do_not_contradict_or_mac_intersection(nexpose_adapter_from_device,
-                                                                                        esx_adapter_from_device)
+                mac_equals_ip_no_contradict = ips_do_not_contradict_or_mac_intersection(csv_adapter_from_device,
+                                                                                        json_adapter_from_device)
 
                 print('Got hostname or mac ip contradiction.')
                 assert hostname_equals or mac_equals_ip_no_contradict
 
                 self.adapters_page.switch_to_page()
-                self.adapters_page.clean_adapter_servers(ESX_NAME)
-                self.adapters_page.clean_adapter_servers(NEXPOSE_NAME)
-                print('Cleaned esx and nexpose clients.')
-
-        self.wait_for_adapter_down(ESX_PLUGIN_NAME)
-        self.wait_for_adapter_down(NEXPOSE_PLUGIN_NAME)
+                self.adapters_page.clean_adapter_servers(CSV_NAME)
+                print('Cleaned csv clients.')
 
     def test_adapter_clients_label(self):
         """

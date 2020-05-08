@@ -438,10 +438,11 @@ class PluginService(WeaveService):
         assert response.status_code == 500, str(response)  # this is the legitimate response here
 
     @contextmanager
-    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=True):
+    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=True, **kwargs):
         with super().contextmanager(should_delete=should_delete,
                                     take_ownership=take_ownership,
-                                    allow_restart=allow_restart):
+                                    allow_restart=allow_restart,
+                                    **kwargs):
             self.register_unique_dns()
             yield self
 

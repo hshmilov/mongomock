@@ -374,11 +374,14 @@ class AdaptersPage(EntitiesPage):
 
     def upload_csv(self, csv_file_name, csv_data, is_user_file=False):
         self.open_add_edit_server(CSV_NAME)
+        self.fill_upload_csv_form_with_csv(csv_file_name, csv_data, is_user_file)
+        self.click_save()
+
+    def fill_upload_csv_form_with_csv(self, csv_file_name, csv_data, is_user_file=False):
         self.upload_file_by_id(self.CSV_INPUT_ID, csv_data[csv_file_name].file_contents)
         self.fill_creds(user_id=csv_file_name, connectionLabel=csv_file_name)
         if is_user_file:
             self.find_checkbox_by_label('File contains users information').click()
-        self.click_save()
 
     def open_add_edit_server(self, adapter_name, row_position=0):
         self.wait_for_adapter(adapter_name)

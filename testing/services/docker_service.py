@@ -540,14 +540,15 @@ class DockerService(AxonService):
         """
 
     @contextmanager
-    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=False):
+    def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=False,
+                       stop_grace_period=STOP_GRACE_PERIOD):
         if take_ownership:
             self.take_process_ownership()
         try:
             self.start_and_wait(allow_restart=allow_restart)
             yield self
         finally:
-            self.stop(should_delete=should_delete)
+            self.stop(should_delete=should_delete, grace_period=STOP_GRACE_PERIOD)
 
     def set_system_config(self, system_config):
         if system_config:
