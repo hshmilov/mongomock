@@ -1,3 +1,4 @@
+import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
@@ -723,6 +724,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.wait_for_adapter_down(AWS_ADAPTER)
 
     # pylint: disable=R0915
+    @pytest.mark.skip('AX-7287')
     def test_connection_label_query(self):
         """
         USE CASES :  add new AWS client with connection label
