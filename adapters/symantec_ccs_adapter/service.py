@@ -201,7 +201,7 @@ class SymantecCcsAdapter(AdapterBase):
                     ip_addresses = ip_addresses.split(',')
 
                 ip_addresses = [ip.strip() for ip in ip_addresses]
-                ip_addresses = [ip[:-3].strip() for ip in ip_addresses if '%' in ip]
+                ip_addresses = [ip[:-3].strip() if '%' in ip else ip for ip in ip_addresses]
 
                 device.add_nic(ips=ip_addresses)
             except Exception:
