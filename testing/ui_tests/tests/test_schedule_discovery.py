@@ -93,10 +93,10 @@ class TestDiscoverySchedule(TestBase):
         self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=1))
         # before discovery
         wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
-                   total_timeout=60 * 3, interval=0.1)
+                   total_timeout=60 * 10, interval=0.1)
         # discovery started , verify next cycle timestamp update
         wait_until(lambda: self.check_next_cycle_start_in_hours(time_in_hours=24),
-                   total_timeout=60 * 5)
+                   total_timeout=60 * 10)
 
     def _test_lifecycle_next_scan_interval_scheduled(self):
         interval_value = 0.1 / 6
@@ -112,10 +112,10 @@ class TestDiscoverySchedule(TestBase):
         self.settings_page.save_system_interval_schedule_settings(interval_value)
 
         wait_until(verify_schedule_interval_update,
-                   total_timeout=60 * 3, interval=0.1)
+                   total_timeout=60 * 10, interval=0.1)
 
         wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
-                   total_timeout=60 * 3, interval=0.1)
+                   total_timeout=60 * 10, interval=0.1)
 
     def test_schedule_lifecycle_next_scan(self):
         self._test_lifecycle_next_scan_daily_scheduled()
