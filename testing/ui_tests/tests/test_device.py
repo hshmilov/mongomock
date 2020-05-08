@@ -138,7 +138,7 @@ class TestDevice(TestBase):
                                                       'second tag search test', 'second tag search test', 1)
 
         # check in enforcements tasks that all running enforcements were completed
-        wait_until(lambda: self.assert_completed_tasks(expected_completed_count=3))
+        wait_until(lambda: self.assert_completed_tasks(expected_completed_count=3), total_timeout=60 * 5)
 
         self.devices_page.switch_to_page()
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
