@@ -1,8 +1,7 @@
-import docker
-
 from retrying import retry
 
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
+from services.plugins.master_proxy_service import MasterProxyService
 from services.ports import DOCKER_PORTS
 from ui_tests.tests.instances_test_base import TestInstancesBase
 
@@ -15,10 +14,9 @@ class TestInstanceMasterDockerRestart(TestInstancesBase):
         self.join_node()
 
         # restart docker service and terminate master-node conn
-        environment = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
-        client = docker.from_env(environment=environment)
-        master_proxy = client.containers.get(MASTER_PROXY_PLUGIN_NAME)
-        master_proxy.restart()
+        master_proxy = MasterProxyService()
+        master_proxy.take_process_ownership()
+        master_proxy.start(allow_restart=True)
 
         self.check_proxy_tunnel()
 

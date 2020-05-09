@@ -11,6 +11,7 @@ from axonius.consts.system_consts import NODE_MARKER_PATH
 from scripts.instances.instances_consts import (AXONIUS_SETTINGS_HOST_PATH,
                                                 PROXY_DATA_HOST_PATH)
 from services.ports import DOCKER_PORTS
+from services.system_service import SystemService
 from services.weave_service import WeaveService
 
 CONF_TEMPLATE_FILE = Path('tinyproxy.conf.in')
@@ -47,7 +48,7 @@ def read_proxy_data():
         return None
 
 
-class MasterProxyService(WeaveService):
+class MasterProxyService(SystemService, WeaveService):
 
     def start(self, *args, **kwargs):  # pylint: disable=arguments-differ
         if NODE_MARKER_PATH.is_file():
