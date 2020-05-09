@@ -207,7 +207,7 @@ class TestAdAdapter(AdapterTestBase):
             assert "S-1-5-19" in sids  # NT Authority - Local Service
             assert "S-1-5-20" in sids  # NT Authority - Network Service
 
-        try_until_not_thrown(15, 10, check_execute_wmi_results)
+        try_until_not_thrown(30, 10, check_execute_wmi_results)
 
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
@@ -330,7 +330,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
 
-        try_until_not_thrown(15, 10, check_put_files_results)
+        try_until_not_thrown(30, 10, check_put_files_results)
 
         # 2. Get the files
         action_id = self.axonius_system.execution.make_action("get_files",
@@ -348,7 +348,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] == "abcd" and action_data["product"][1]["data"] == "efgh"
 
-        try_until_not_thrown(15, 10, check_get_files_results)
+        try_until_not_thrown(30, 10, check_get_files_results)
 
         # 3. Delete the files
         action_id = self.axonius_system.execution.make_action("delete_files",
@@ -366,7 +366,7 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
             assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
 
-        try_until_not_thrown(15, 10, check_delete_files_results)
+        try_until_not_thrown(30, 10, check_delete_files_results)
 
         # 4. Try to get the files again. This should fail
         # 3. Delete the files
