@@ -108,10 +108,17 @@ retry timeout 20 add-apt-repository \
    $(lsb_release -cs) \
    stable"
 
+echo "Adding Golang Repository"
+curl -sSk https://nexus.pub.axonius.com/ppa_certs/golang.key | apt-key add -
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/golang $(lsb_release -cs) main"
+echo "Adding Python2.7 Repository"
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs) main"
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs)-security main"
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs) universe"
 echo "Installing python3.6"
 curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add -
 source /etc/lsb-release
-add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 ${DISTRIB_CODENAME} main"
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 $(lsb_release -cs) main"
 cd $SCRIPT_DIR
 cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update
@@ -141,9 +148,8 @@ pip3 install --upgrade setuptools
 pip3 install ipython
 pip3 install netifaces==0.10.9
 pip3 install python-crontab==2.4.0
+
 echo "Installing golang"
-add-apt-repository ppa:longsleep/golang-backports
-_wait_for_apt update
 _wait_for_apt install -yq golang-go
 echo "Installing docker-ce..."
 _wait_for_apt install -yq docker-ce=5:19.03.5~3-0~ubuntu-xenial containerd.io=1.2.10-3

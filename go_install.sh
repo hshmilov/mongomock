@@ -17,6 +17,9 @@ function _wait_for_apt {
 
 }
 
-add-apt-repository ppa:longsleep/golang-backports
+# add-apt-repository ppa:longsleep/golang-backports
+echo "Adding Golang Repository"
+curl -sSk https://nexus.pub.axonius.com/ppa_certs/golang.key | apt-key add -
+add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/golang $(lsb_release -cs) main"
 _wait_for_apt update
 _wait_for_apt install -yq golang-go
