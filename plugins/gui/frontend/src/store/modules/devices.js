@@ -86,7 +86,7 @@ const getDefaultState = () => ({
           filter: '', expressions: [],
         },
         sort: {
-          field: 'recipe_name', desc: true,
+          field: 'uuid', desc: true,
         },
       },
     },

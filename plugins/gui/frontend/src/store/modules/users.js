@@ -70,7 +70,7 @@ const getDefaultState = () => ({
           filter: '', expressions: [],
         },
         sort: {
-          field: '', desc: true,
+          field: 'uuid', desc: true,
         },
       },
     },
