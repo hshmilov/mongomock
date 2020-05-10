@@ -3,6 +3,7 @@
 # pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 # pylint: disable=no-name-in-module, import-error, invalid-name, global-statement
 import logging
+import traceback
 from multiprocessing.pool import ThreadPool
 
 import pytest
@@ -19,6 +20,8 @@ from test_credentials.test_ad_credentials import ad_client1_details
 from testing.test_credentials.test_gui_credentials import DEFAULT_USER
 from testing.tests.conftest import axonius_fixture
 
+
+logger = logging.getLogger(f'axonius.{__name__}')
 MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3  # the amount of time we expect a cycle to end, without async plugins in bg
 
 
@@ -40,27 +43,44 @@ def axonius_system(axonius_fixture, general_info_fixture, device_control_fixture
 ERROR = False
 
 
-def test_api(axonius_system):
+# We don't want to run this for the meanwhile
+def _test_api(axonius_system):
+    client = RESTExample('https://127.0.0.1',
+                         auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
+                         verify=False)
+
+    for name in client.get_examples():
+        logger.info(f'Calling api function "{name}"')
+        callback = getattr(client, name)
+        callback()
+        logger.info('\n\n')
+
+
+def test_api_in_parallel(axonius_system):
     client = RESTExample('https://127.0.0.1',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
 
     def run_specific_configuration(client, name):
         try:
-            logging.info(f'Calling api function "{name}"')
+            global ERROR
+            if ERROR:
+                # we don't need to run more tests since we already failed
+                return
+            logger.info(f'Calling api function "{name}"')
             callback = getattr(client, name)
             callback()
-            logging.info('\n\n')
+            logger.info('\n\n')
         except Exception:
-            global ERROR
             ERROR = True
-            logging.exception(None)
+            logger.exception(None)
+            print(f'Error in in test_api for name {name}: \n {traceback.format_exc()}')
             raise
 
     to_run = ((client, name)
               for name in client.get_examples())
 
-    with ThreadPool(10) as pool:
+    with ThreadPool(50) as pool:
         pool.starmap_async(run_specific_configuration, to_run).wait(timeout=60 * 60 * 3)
 
     global ERROR
