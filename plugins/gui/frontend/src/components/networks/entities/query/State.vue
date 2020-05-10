@@ -137,7 +137,9 @@ export default {
         return state.constants.allowedDates[this.module];
       },
       selectedView(state) {
-        const uuid = state[this.module].selectedView;
+        // Notice that if there is no selected view, the "short circuit evaluation" trick simply
+        // returns an empty value for the uuid as a fallback mechanism.
+        const { uuid } = state[this.module].selectedView || {};
         if (!uuid) return null;
         return state[this.module].views.saved.content.data.find((view) => view.uuid === uuid);
       },

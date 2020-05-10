@@ -116,8 +116,8 @@ export const updateDataView = (state, payload) => {
   if (payload.view) {
     module.view = { ...module.view, ...payload.view };
   }
-  if (payload.uuid !== undefined) {
-    state[payload.module] = { ...module, selectedView: payload.uuid };
+  if (payload.selectedView !== undefined) {
+    state[payload.module] = { ...module, selectedView: payload.selectedView };
   }
   if (payload.name !== undefined) {
     const matchingView = module.views.saved.content.data.find((view) => view.name === payload.name);

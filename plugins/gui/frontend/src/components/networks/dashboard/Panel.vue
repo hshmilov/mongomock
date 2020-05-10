@@ -261,7 +261,7 @@ export default {
           historical: this.allowedDates[historical],
         } : query.view,
         name: this.chart.metric === ChartTypesEnum.compare ? query.name : undefined,
-        uuid: null,
+        selectedView: null,
       });
       this.$router.push({ path: query.module });
     },

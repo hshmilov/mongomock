@@ -420,3 +420,65 @@ class TestSavedQuery(TestBase):
         assert self.devices_queries_page\
                    .get_query_expression_eval_message() == self.devices_queries_page.EXPRESSION_UNSUPPORTED_MSG
         self.devices_queries_page.close_saved_query_panel()
+
+    def test_saved_query_recompile(self):
+        """
+        Test that the predefined query that gets run from the saved queries page
+        doesn't get recompiled if no changes were made and vice versa.
+        1- Choose the 'Devices seen in last 7 days' from the saved queries page
+           and check that it doesn't get recompiled when opening the wizard.
+           Also make sure that if we change the expression, the query is edited
+           and table is reloaded, and if we revert our change, there is no edit and reload.
+        2- Choose the 'Devices seen in last 7 days' from the dropdown
+           and check that it doesn't get recompiled when opening the wizard.
+           Also make sure that if we change the expression, the query is edited
+           and table is reloaded, and if we revert our change, there is no edit and reload.
+        3- Change the 'Devices seen in last 7 days' filter and save the query
+           ( This query's expression and filter doesn't match )
+           Reset the query and then choose it from the list and check that it recompiles.
+           That's because this query is NOT predefined and it SHOULD be recompiled due to the
+           difference between the filter and the expression.
+        """
+
+        # Check 1
+        self.devices_queries_page.switch_to_page()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
+        self.devices_queries_page.click_query_row_by_name(self.devices_page.AD_PREDEFINED_QUERY_NAME)
+        self.devices_queries_page.run_query()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_NEXT_DAYS)
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS)
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
+        self.devices_page.click_search()
+
+        # Check 2
+        self.devices_page.switch_to_page()
+        self.devices_page.execute_saved_query(self.devices_page.AD_PREDEFINED_QUERY_NAME)
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_NEXT_DAYS)
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS)
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
+
+        # Check 3
+        self.devices_page.click_search()
+        self.devices_page.fill_filter('random filter')
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_load()
+        query_save_name = 'user saved query'
+        self.devices_page.open_actions_query()
+        self.devices_page.save_query_as(query_save_name)
+        self.devices_page.reset_query()
+        self.devices_page.execute_saved_query(query_save_name)
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS

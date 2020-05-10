@@ -273,7 +273,7 @@
               expressions: [],
               filter
             }
-          }, uuid: null
+          }, selectedView: null,
         })
         this.$router.push({ path: `/${this.triggerView.entity}` })
       }

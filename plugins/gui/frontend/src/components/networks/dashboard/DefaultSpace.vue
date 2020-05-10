@@ -146,7 +146,7 @@ export default {
             filter, expressions: [],
           },
         },
-        uuid: null,
+        selectedView: null,
       });
       this.$router.push({ path: module });
     },

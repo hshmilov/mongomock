@@ -129,7 +129,7 @@ export default {
           },
         },
         name: this.data.rule,
-        uuid: null,
+        selectedView: null,
       });
       this.$router.push({ path: `/${query.module}` });
     },

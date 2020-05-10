@@ -334,7 +334,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
         module, uuid: response.data, ...data,
       });
       if (!predefined) {
-        commit(UPDATE_DATA_VIEW, { module, uuid: response.data });
+        commit(UPDATE_DATA_VIEW, { module, selectedView: { uuid: response.data } });
       }
     }
   }).catch(console.log.bind(console));

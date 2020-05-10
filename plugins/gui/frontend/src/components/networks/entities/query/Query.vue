@@ -74,6 +74,16 @@ export default {
       view(state) {
         return state[this.module].view;
       },
+      selectedView(state) {
+        return state[this.module].selectedView;
+      },
+      isPredefined(state) {
+        const { uuid } = this.selectedView || {};
+        if (!uuid) return false;
+        const currentView = state[this.module].views.saved.content.data
+          .find((view) => view.uuid === uuid);
+        return currentView && currentView.predefined;
+      },
     }),
     ...mapGetters({
       autoQuery: AUTO_QUERY,
@@ -165,14 +175,41 @@ export default {
         enforcementFilter: this.enforcementFilter,
         searchTemplate: undefined,
       };
+
       const filterShouldRecompile = force || this.autoQuery;
+
       let filter;
+      let selectedView;
       // Check if the calculation is forced
       // (using the search button) or the autoQuery value is chosen
       let resultFilters = {};
       if (filterShouldRecompile) {
-        resultFilters = this.compileFilter(query, filter, queryMeta);
-        filter = resultFilters.resultFilter;
+        let recompiledFilter;
+        resultFilters = this.compileFilter(query, recompiledFilter, queryMeta);
+        recompiledFilter = resultFilters.resultFilter;
+
+        // Only if the user selected a predefined query
+        // It can be either from the devices/users queries or from the saved queries page
+        if (this.selectedView && this.isPredefined) {
+          // If this is the first time recompiling this query, and a pre-existing filter was chosen,
+          // We set the newly recompiled filter as our original one.
+          // Otherwise we take the existing one
+          const originalRecompiledFilter = !this.selectedView.recompiledFilter
+                                           && this.selectedView.filter
+            ? recompiledFilter : this.selectedView.recompiledFilter;
+
+          // If the recompiled filter is equal to the original recompiled filter,
+          // The filter value should be the original filter.
+          // Otherwise, we set the newly recompiled filter.
+          filter = originalRecompiledFilter === recompiledFilter
+            ? this.selectedView.filter : recompiledFilter;
+
+          selectedView = { ...this.selectedView, recompiledFilter: originalRecompiledFilter };
+        // Otherwise, we maintain the original behavior of the code, simply taking the recompiled
+        // filter, and not updating anything related to the selected view
+        } else {
+          filter = recompiledFilter;
+        }
       }
 
       let selectIds = [];
@@ -196,6 +233,7 @@ export default {
           },
           page: 0,
         },
+        selectedView,
       });
 
       // Fetch the entities only if the filter has changed
@@ -218,7 +256,7 @@ export default {
             search: null,
           },
         },
-        uuid: null,
+        selectedView: null,
       });
       this.$emit('done');
     },

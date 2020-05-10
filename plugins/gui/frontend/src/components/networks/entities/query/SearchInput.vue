@@ -331,6 +331,7 @@ export default {
         }
         this.searchValue = '';
       }
+
       this.updateView({
         module: this.module,
         view: {
@@ -339,7 +340,10 @@ export default {
           ...(userDefinedFields) && { fields: userDefinedFields },
           page: 0,
         },
-        uuid,
+        selectedView: {
+          uuid,
+          filter: view.query.filter,
+        },
       });
       if (!this.querySearch) {
         this.searchValue = view.query.filter;

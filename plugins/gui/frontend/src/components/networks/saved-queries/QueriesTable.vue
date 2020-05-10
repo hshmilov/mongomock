@@ -232,8 +232,12 @@ export default {
       this.updateView({
         module: this.namespace,
         view: { ...selectedView.view, enforcement: null },
-        uuid: selectedView.uuid,
+        selectedView: {
+          uuid: selectedView.uuid,
+          filter: selectedView.view.query.filter,
+        },
       });
+
       this.$router.push({ path: `/${this.namespace}` });
     },
     createEnforcement(queryName) {
