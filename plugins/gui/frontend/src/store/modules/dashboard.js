@@ -286,7 +286,7 @@ export const dashboard = {
     [FETCH_DASHBOARD_PANELS]({ dispatch }, payload) {
       const { skip = 0, limit = 2 } = payload || {};
       return dispatch(REQUEST_API, {
-        rule: `dashboard/panels?skip=${skip}&limit=${limit}`,
+        rule: `dashboard/charts?skip=${skip}&limit=${limit}`,
         type: UPDATE_DASHBOARD_PANELS,
         payload: { ...payload, skip, limit },
       }).then((response) => {
@@ -301,11 +301,11 @@ export const dashboard = {
     },
     [FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       const {
-        spaceId, uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
+        uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
       } = payload;
-      let rule = sortBy && sortOrder ? `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`
+      let rule = sortBy && sortOrder ? `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`
         + `&sort_by=${sortBy}&sort_order=${sortOrder}`
-        : `dashboard/${spaceId}/panels/${uuid}?skip=${skip}&limit=${limit}`;
+        : `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`;
 
       if (!skip) {
         commit(UPDATE_DASHBOARD_PANEL, {
@@ -343,7 +343,7 @@ export const dashboard = {
     [SAVE_REORDERED_PANELS]({ dispatch, commit }, payload) {
       commit(UPDATE_DASHBOARDS_ORDER, payload);
       return dispatch(REQUEST_API, {
-        rule: `dashboard/${payload.spaceId}/panels/reorder`,
+        rule: `dashboard/reorder/${payload.spaceId}`,
         method: 'POST',
         data: payload,
       }).then((response) => {
@@ -399,8 +399,8 @@ export const dashboard = {
     },
     [SAVE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `dashboard/${payload.space}/panels`,
-        method: 'POST',
+        rule: `dashboard/charts/${payload.space}`,
+        method: 'PUT',
         data: payload.data,
       }).then((response) => {
         if (response.status === 200 && response.data) {
@@ -418,7 +418,7 @@ export const dashboard = {
     },
     [CHANGE_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `dashboard/${payload.spaceId}/panels/${payload.panelId}`,
+        rule: `dashboard/charts/${payload.panelId}`,
         method: 'POST',
         data: payload.data,
       }).then((response) => {
@@ -442,7 +442,7 @@ export const dashboard = {
         return false;
       }
       return dispatch(REQUEST_API, {
-        rule: `dashboard/${payload.spaceId}/panels/${payload.panelId}`,
+        rule: `dashboard/charts/${payload.panelId}`,
         method: 'DELETE',
         data: payload,
       }).then((response) => {
@@ -459,7 +459,7 @@ export const dashboard = {
       });
     },
     [FETCH_CHART_SEGMENTS_CSV]({ dispatch }, { uuid, name, historical }) {
-      let rule = `dashboard/panels/${uuid}/csv`;
+      let rule = `dashboard/charts/${uuid}/csv`;
       if (historical) {
         const encodedDate = encodeURI(historical);
         rule = `${rule}?date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`;
@@ -475,7 +475,7 @@ export const dashboard = {
       if (state.currentSpace === payload.space) return;
       const currentPanelUuid = state.currentPanel.uuid;
       await dispatch(REQUEST_API, {
-        rule: `dashboard/${state.currentSpace}/panels/${state.currentPanel.uuid}/move`,
+        rule: `dashboard/charts/move/${state.currentPanel.uuid}`,
         method: 'PUT',
         data: { destinationSpace: payload.space },
       });

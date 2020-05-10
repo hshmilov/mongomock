@@ -277,7 +277,7 @@ class TestDashboard(TestBase):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(f'https://127.0.0.1/api/dashboard/panels/{panel_id}/csv')
+        return session.get(f'https://127.0.0.1/api/dashboard/charts/{panel_id}/csv')
 
     def grab_all_host_names_from_csv(self, panel_id):
         result = self.generate_csv_from_segmentation_graph(panel_id)

@@ -209,13 +209,25 @@ class Labels:
 
             'audit.dashboard': 'Dashboard',
             'audit.dashboard.delete': 'Delete Space',
-            'audit.dashboard.delete.template': 'Deleted dashboard space {name}',
+            'audit.dashboard.delete.template': 'Deleted dashboard space {space_name}',
             'audit.dashboard.post': 'Add Space',
             'audit.dashboard.post.template': 'Added dashboard space {name}',
             'audit.dashboard.put': 'Edit Space',
-            'audit.dashboard.put.template': 'Edited dashboard space {name}',
-            'audit.dashboard.panels': 'Update Chart',
-            'audit.dashboard.panels.template': 'Updated chart {name}',
+            'audit.dashboard.put.template': 'Edited dashboard space {before_space_name} to {space_name}',
+            'audit.dashboard.reorder': 'Reorder Space',
+            'audit.dashboard.reorder.template': 'Reordered charts on space {space_name}',
+            'audit.dashboard.charts': 'Dashboard',
+            'audit.dashboard.charts.put': 'Add Chart',
+            'audit.dashboard.charts.put.template':
+                'Added chart {chart_name} of type {chart_type} on space {space_name}',
+            'audit.dashboard.charts.post': 'Edit Chart',
+            'audit.dashboard.charts.post.template': 'Edited chart {chart_name} on space {space_name}',
+            'audit.dashboard.charts.delete': 'Delete Chart',
+            'audit.dashboard.charts.delete.template': 'Deleted chart {chart_name} from space {space_name}',
+
+            'audit.dashboard.charts.move': 'Move Chart',
+            'audit.dashboard.charts.move.template':
+                'Moved chart {chart_name} from space {source_space_name} to space {target_space_name}',
 
             'audit.devices': 'Devices',
             'audit.devices.enforce': 'Run Enforcement',

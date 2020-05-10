@@ -17,7 +17,7 @@ import dateutil
 import pymongo
 
 from bson import ObjectId
-from flask import request, session, g
+from flask import request, session, g, Response
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
@@ -155,13 +155,19 @@ def log_activity_rule(rule: str,
                 return response
 
             is_response_tuple = isinstance(response, tuple)
-            if is_response_tuple and (response[1] < 200 or response[1] > 204):
+            is_response_object = isinstance(response, Response)
+
+            status_code = response[1] if is_response_tuple else response.status_code if is_response_object else 200
+
+            if status_code < 200 or status_code > 204:
                 return response
 
             try:
                 activity_action = get_clean_rule(rule) or request.method.lower()
                 activity_params = get_activity_params(activity_param_names, kwargs, self.get_request_data_as_object(),
-                                                      response[0] if is_response_tuple else response)
+                                                      response[0] if is_response_tuple else
+                                                      response.data if is_response_object else response)
+
                 self.log_activity_user_default(activity_category, activity_action, activity_params)
             except Exception:
                 logger.info(f'Failed to log: category {activity_category}, rule {rule}, method {request.method}')
