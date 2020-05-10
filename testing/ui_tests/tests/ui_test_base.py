@@ -11,7 +11,6 @@ from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
 import selenium.common.exceptions
-from urllib3.util import parse_url
 
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
@@ -322,8 +321,6 @@ class TestBase:
         self.password = DEFAULT_USER['password']
         self.axonius_system = get_service()
 
-        self._add_server_name_to_db()
-
         self.login()
         self.base_page.wait_for_run_research()
         logger.info(f'finishing setup_method {method.__name__}')
@@ -471,6 +468,3 @@ class TestBase:
         permissions[category].append(add_action)
         self.settings_page.update_role(role, permissions, True)
         self.login_page.logout_and_login_with_user(user_name, password=password)
-
-    def _add_server_name_to_db(self):
-        self.axonius_system.set_system_server_name(parse_url(self.base_url).host)
