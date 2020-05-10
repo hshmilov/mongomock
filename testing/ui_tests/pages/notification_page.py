@@ -102,6 +102,14 @@ class NotificationPage(Page):
             self.NOTIFICATION_PEEK_TIMESTAMP_CSS)
         return [element.text for element in elements]
 
+    def get_timestamps_list_from_peek_notifications(self):
+        self.click_notification_peek()
+        elements = self.driver.find_elements_by_css_selector(
+            self.NOTIFICATION_PEEK_TIMESTAMP_CSS)
+        timestamps = [element.text for element in elements]
+        self.click_notification_peek()
+        return timestamps
+
     def get_rows_from_notification_table(self):
         rows = self.driver.find_elements_by_css_selector('tr.x-table-row.clickable')
         return [line.text for line in rows]

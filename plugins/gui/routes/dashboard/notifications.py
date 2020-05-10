@@ -38,7 +38,8 @@ class Notifications:
             if should_aggregate:
                 pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
                                         'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
-                            {'$addFields': {'title': '$_id'}}]
+                            {'$addFields': {'title': '$_id'}},
+                            {'$sort': {'date': pymongo.DESCENDING}}]
                 notifications = []
                 for n in notification_collection.aggregate(pipeline):
                     n['_id'] = n['date']

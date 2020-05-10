@@ -48,6 +48,7 @@ class SettingsPage(Page):
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
     EXACT_SEARCH_LABEL = 'Use exact match for assets search'
+    NOTIFY_ON_ADAPTERS_FETCH_LABEL = 'Notify on adapters fetch'
     SAML_LOGINS_LABEL = 'Allow SAML-based logins'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     EMAIL_PORT_ID = 'smtpPort'
@@ -839,6 +840,9 @@ class SettingsPage(Page):
     def find_allow_okta_logins_toggle(self):
         return self.find_checkbox_by_label(self.OKTA_LOGINS_LABEL)
 
+    def find_notify_on_adapters_fetch_toggle(self):
+        return self.find_checkbox_by_label(self.NOTIFY_ON_ADAPTERS_FETCH_LABEL)
+
     def fill_dc_address(self, dc_address):
         self.fill_text_field_by_element_id(self.DC_ADDRESS, dc_address)
 
@@ -1379,3 +1383,12 @@ class SettingsPage(Page):
 
     def fill_s3_preshared_key(self, value):
         self.fill_text_field_by_element_id('preshared_key', value)
+
+    def set_notify_on_adapters_fetch(self, enable=True):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.wait_for_spinner_to_end()
+        toggle = self.find_notify_on_adapters_fetch_toggle()
+        self.click_toggle_button(toggle, make_yes=enable, scroll_to_toggle=True)
+        self.click_save_button()
+        self.wait_for_saved_successfully_toaster()
