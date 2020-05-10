@@ -50,15 +50,46 @@ USERS_CSV_DATA = [
     ]
 ]
 
+CSV_LIST = [
+    {
+        'name': 'John',
+        'csv_Serial': 'Serial1',
+        'csv_OS': 'Windows',
+        'csv_MAC_Address': '11:22:22:33:11:33',
+        'csv_Office': 'Office',
+        'csv_Last_Seen': '2020-01-03 02:13:24.485Z',
+        'csv_IP': '127.0.0.2'
+    },
+    {
+        'name': 'John',
+        'csv_Serial': 'Serial2',
+        'csv_OS': 'Windows',
+        'csv_MAC_Address': '11:22:22:33:11:33',
+        'csv_Office': 'Office',
+        'csv_Last_Seen': '2020-04-01 02:13:24.485Z',
+        'csv_IP': '127.0.0.2'
+    },
+    {
+        'name': 'James',
+        'csv_Serial': 'Serial3',
+        'csv_OS': 'Linux',
+        'csv_MAC_Address': '11:22:22:33:11:33',
+        'csv_Office': 'Office',
+        'csv_Last_Seen': '2020-01-03 02:13:24.485Z',
+    }
+]
+
+
+def list_dict_to_csv(csv_list):
+    return '\n'.join([','.join(row.values()) for row in csv_list])
+
+
 client_details = {
     'user_id': 'user',
     # an array of char
     'file_path': FileForCredentialsMock(
         'csv_name',
-        ','.join(CSV_FIELDS) +
-        '\nJohn,Serial1,Windows,11:22:22:33:11:33,Office,2020-01-03 02:13:24.485Z, 127.0.0.2'
-        '\nJohn,Serial2,Windows,11:22:22:33:11:33,Office,2020-04-01 02:13:24.485Z, 127.0.0.2'
-        '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
+        ','.join(CSV_FIELDS) + '\n' + list_dict_to_csv(CSV_LIST))
 }
 
 USERS_CLIENT_FILES = [
