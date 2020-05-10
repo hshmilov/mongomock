@@ -168,6 +168,10 @@ class CloudHealthAdapter(AdapterBase):
             device.name = device_raw.get('name')
             device.hostname = device_raw.get('private_dns')
 
+            ips = device_raw.get('private_ip') or []
+            if isinstance(ips, str):
+                ips = [ips]
+
             public_ips = device_raw.get('ip')
             if not public_ips:
                 public_ips = []
@@ -176,7 +180,10 @@ class CloudHealthAdapter(AdapterBase):
             if public_ips:
                 for ip in public_ips:
                     if ip:
+                        ips.append(ip)
                         device.add_public_ip(ip)
+
+            device.add_ips_and_macs(ips=ips)
 
             try:
                 os_string = (device_raw.get('architecture') or '') + ' ' + \
