@@ -247,7 +247,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
                   if field['name'] == field_name)
     field_by_name = {
         field['name']: field for field in fields
-        if not isinstance(field.get('items'), list)
+        if field.get('type') != 'array' or field.get('items').get('type') != 'array'
     }
     entity_field_data = merge_entities_fields(
         parse_entity_fields(entity, [field_name_full], field_filters=field_filters).get(field_name_full, []),

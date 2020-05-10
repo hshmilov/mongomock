@@ -1,8 +1,8 @@
 import codecs
+import logging
 import re
 import time
 import typing
-import logging
 
 import requests
 from retrying import retry
@@ -1124,8 +1124,8 @@ class EntitiesPage(Page):
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True):
         self.assert_csv_match_ui_data_with_content(result, ui_data, ui_headers, sort_columns)
 
-    # pylint: disable=too-many-locals
-    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None, sort_columns=True):
+    @staticmethod
+    def handle_bom(content):
         had_bom = 0
         while isinstance(content, bytes) and content.startswith(codecs.BOM_UTF8):
             had_bom += 1
@@ -1134,6 +1134,11 @@ class EntitiesPage(Page):
             had_bom += 1
             content = content[len(codecs.BOM_UTF8.decode('utf-8')):]
             assert had_bom == 2
+        return content
+
+    # pylint: disable=too-many-locals, too-many-branches
+    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None, sort_columns=True):
+        content = self.handle_bom(content)
         all_csv_rows = content.decode('utf-8').split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
         csv_data_rows = all_csv_rows[1:-1]
@@ -1157,14 +1162,11 @@ class EntitiesPage(Page):
             ui_headers_cmp = sorted(ui_headers_cmp)
             csv_headers_cmp = sorted(csv_headers_cmp)
 
-        for idx, ui_header in enumerate(ui_headers_cmp):
-            csv_header = csv_headers_cmp[idx]
-            assert ui_header == csv_header
+        if any(csv_data_rows) or any(ui_data_rows):
+            for idx, ui_header in enumerate(csv_headers_cmp):
+                csv_header = ui_headers_cmp[idx]
+                assert ui_header == csv_header
 
-        # if sort_columns:
-        #     assert sorted(ui_headers_cmp) == sorted(csv_headers)
-        # else:
-        #     assert ui_headers_cmp == csv_headers
         # for every cell in the ui_data_rows we check if its in the csv_data_row
         # the reason we check it is because the csv have more columns with data
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)

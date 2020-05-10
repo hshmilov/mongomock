@@ -291,7 +291,6 @@ class TestDevicesTable(TestEntitiesTable):
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
         self.wait_for_adapter_down(STRESSTEST_ADAPTER)
 
-    @pytest.mark.skip('Currently not working. AX-6386')
     def test_device_network_interfaces_csv_search(self):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
