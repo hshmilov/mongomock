@@ -84,6 +84,7 @@ class InMeeting(SmartJsonClass):
     record_play_voice = Field(bool, 'Record Play Voice')
     feedback = Field(bool, 'Feedback')
     co_host = Field(bool, 'Co Host')
+    data_center_regions = ListField(str, 'Data Center Regions')
     polling = Field(bool, 'Polling')
     attendee_on_hold = Field(bool, 'Attendee On Hold')
     annotation = Field(bool, 'Annotation')
@@ -248,6 +249,7 @@ class ZoomAdapter(AdapterBase):
                                     record_play_voice=in_meeting.get('record_play_voice'),
                                     feedback=in_meeting.get('feedback'),
                                     co_host=in_meeting.get('co_host'),
+                                    data_center_regions=in_meeting.get('data_center_regions'),
                                     polling=in_meeting.get('polling'),
                                     attendee_on_hold=in_meeting.get('attendee_on_hold'),
                                     annotation=in_meeting.get('annotation'),
