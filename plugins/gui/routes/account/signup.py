@@ -55,7 +55,8 @@ class Signup:
             return return_error('Passwords do not match', 400)
 
         self._users_collection.update_one({'user_name': 'admin'},
-                                          {'$set': {'password': bcrypt.hash(new_password)}})
+                                          {'$set': {'password': bcrypt.hash(new_password),
+                                                    'email': signup_data.get(gui_consts.Signup.ContactEmailField)}})
 
         # we don't want to store creds openly
         signup_data[gui_consts.Signup.NewPassword] = ''
