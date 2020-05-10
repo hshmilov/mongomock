@@ -221,7 +221,7 @@ export const actionsMeta = {
         items: ['block_fw_paloalto']
     },
     create_cmdb_computer: {
-        title: 'Create CMDB Computer',
+        title: 'Manage CMDB Computer',
         items: ['create_service_now_computer', 'update_cherwell_computer']
     },
     manage_directory: {
