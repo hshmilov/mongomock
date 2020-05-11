@@ -89,7 +89,7 @@ class TestUserPermissions(PermissionsTestBase):
                                                                    ]
                                                                })
 
-        self.login_page.switch_user(ui_consts.RESTRICTED_ENTITY_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_ENTITY_USERNAME, ui_consts.NEW_PASSWORD, '/devices')
 
         self.users_page.assert_screen_is_restricted()
         self.devices_page.switch_to_page()

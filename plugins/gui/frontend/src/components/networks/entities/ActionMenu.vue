@@ -35,11 +35,13 @@
       </div>
     </XActionMenuItem>
     <XActionMenuItem
-      v-if="!enforcementRestricted"
       title="Enforce"
+      :disabled="enforcementRestricted"
+      :disable-link="enforcementRestricted"
       :handle-save="enforceEntities"
       :message="`Enforcement is running. View in Enforcements -> Tasks`"
       action-text="Run"
+      disabled-description="You don't have permission to run enforcements"
     >
       <div class="mb-8">
         There are {{ selectionCount }} {{ module }} selected. Select the Enforcement Set:
@@ -55,7 +57,8 @@
       :message="`${module} were filtered out`"
       :disable-link="isAllSelected"
       :disabled="totalSelectedCharactersForFilterOut >= 10000"
-      disabled-description="Select all is not applicable. Please use the query wizard to filter the query"
+      disabled-description="Select all is not applicable
+      . Please use the query wizard to filter the query"
       action-text="Yes"
     >
       <div
@@ -131,7 +134,9 @@ export default {
       },
       enforcementRestricted() {
         return this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.View);
+          this.$permissionConsts.actions.View)
+        || this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.Run);
       },
       view(state) {
         return state[this.module].view;

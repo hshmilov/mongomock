@@ -61,10 +61,7 @@ export default {
       return entities.filter((entity) => this.$canViewEntity(entity.name));
     },
     isExperimentalAPI() {
-      if (!this.featureFlags || !this.featureFlags.experimental_api) {
-        return false;
-      }
-      return true;
+      return !(!this.featureFlags || !this.featureFlags.experimental_api);
     },
     defaultFields() {
       return defaultFieldsExplorer;

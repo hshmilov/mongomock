@@ -19,13 +19,12 @@
               :read-only="!canUpdateSettings"
               api-upload="settings/plugins/system_scheduler"
               @validate="updateSchedulerValidity"
-              @select=""
             />
 
             <div class="place-left">
               <XButton
-                type="primary"
                 id="research-settings-save"
+                type="primary"
                 :disabled="isResearchDisabled"
                 @click="saveSchedulerSettings"
               >Save</XButton>
@@ -53,8 +52,8 @@
                 :read-only="!canUpdateSettings"
               />
               <XButton
-                type="primary"
                 id="global-settings-save"
+                type="primary"
                 :disabled="!coreComplete || !canUpdateSettings || !validPasswordPolicy
                   || !validPasswordResetSettings || !validPasswordProtection"
                 @click="saveGlobalSettings"
@@ -78,8 +77,8 @@
             />
             <div class="place-left">
               <XButton
-                type="primary"
                 id="gui-settings-save"
+                type="primary"
                 :disabled="!guiComplete || !canUpdateSettings"
                 @click="saveGuiSettings"
               >Save</XButton>
@@ -134,6 +133,8 @@
 </template>
 
 <script>
+/* eslint-disable camelcase */
+
 import { mapState, mapActions, mapMutations } from 'vuex';
 import _cloneDeep from 'lodash/cloneDeep';
 import _findIndex from 'lodash/findIndex';
@@ -170,6 +171,19 @@ export default {
     XUsersManagement,
     XRolesTable,
   },
+  data() {
+    return {
+      schedulerSettings: {},
+      coreSettings: {},
+      guiSettings: {},
+      featureFlags: {},
+      coreComplete: true,
+      guiComplete: true,
+      schedulerComplete: true,
+      message: '',
+      systemInfo: {},
+    };
+  },
   computed: {
     ...mapState({
       schedulerSettingsFromState(state) {
@@ -199,7 +213,7 @@ export default {
     validResearchRate() {
       if (!this.schedulerSettings.config) return 12;
       return this.validNumber(
-        this.schedulerSettings.config.discovery_settings.system_research_rate
+        this.schedulerSettings.config.discovery_settings.system_research_rate,
       );
     },
     validResearchDate() {
@@ -211,7 +225,7 @@ export default {
         return false;
       }
       return this.validNumber(
-        this.coreSettings.config.password_reset_password.reset_password_link_expiration
+        this.coreSettings.config.password_reset_password.reset_password_link_expiration,
       );
     },
     validPasswordPolicy() {
@@ -244,12 +258,10 @@ export default {
         return true;
       }
 
-      const { password_max_allowed_tries, password_lockout_minutes } = this.coreSettings.config.password_brute_force_protection;
+      const { password_max_allowed_tries, password_lockout_minutes } = this.coreSettings
+        .config.password_brute_force_protection;
 
       return password_max_allowed_tries >= 5 && password_lockout_minutes > 0;
-    },
-    isContionalDate() {
-      return (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date');
     },
     isResearchDisabled() {
       if (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date') {
@@ -265,27 +277,6 @@ export default {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.Update, this.$permissionConsts.categories.Roles);
     },
-  },
-  data() {
-    return {
-      schedulerSettings: {},
-      coreSettings: {},
-      guiSettings: {},
-      featureFlags: {},
-      coreComplete: true,
-      guiComplete: true,
-      schedulerComplete: true,
-      message: '',
-      systemInfo: {},
-      createUserActive: false,
-      userForm: {
-        user_name: '',
-        password: '',
-        first_name: '',
-        last_name: '',
-      },
-      userToRemove: null,
-    };
   },
   async created() {
     await this.loadPluginConfig({
@@ -331,6 +322,7 @@ export default {
       getUser: GET_USER,
     }),
     validNumber(value) {
+      // eslint-disable-next-line no-restricted-globals
       return !(value === undefined || isNaN(value) || value <= 0);
     },
     saveGlobalSettings() {
@@ -416,32 +408,6 @@ export default {
         this.message = 'Saved Successfully.';
       } else {
         this.message = `Error: ${response.data.message}`;
-      }
-    },
-    validateSendTime(isSendTimeValid) {
-      const c = this.schedulerSettings.error;
-      // .field === this.schedulerSettings.config.discovery_settings.system_research_date);
-      if (!isSendTimeValid) {
-        // Add error the the validity fields if the time is invalid
-        this.validity.error = 'Send time is invalid';
-        const sendTimePickerError = this.validity.fields.find(getTimePickerError);
-        if (!sendTimePickerError) {
-          if (!sendTimePickerError) {
-            this.validity.fields.push({
-              field: 'send_time',
-              error: this.validity.error,
-            });
-          }
-        } else {
-          // If the send time is valid and there is an error than removed it
-          const sendTimeError = this.validity.fields.find(getTimePickerError);
-          if (sendTimeError) {
-            this.validity.fields = this.validity.fields.filter((error) => error.field !== sendTimeError.field);
-            if (this.validity.fields.length === 0) {
-              this.validity.error = '';
-            }
-          }
-        }
       }
     },
   },
@@ -542,4 +508,3 @@ export default {
     }
   }
 </style>
-<x></x>

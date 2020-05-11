@@ -59,8 +59,8 @@
       <div slot="body">How to connect a new node<br><br>
         1. Deploy another Axonius machine on the required subnet.<br>
         2. Log in to that machine via ssh with these credentials: node_maker:M@ke1tRain<br>
-        3. Paste a connection string that looks like (with spaces): {{ hostIP }} {{ connectionEncriptionKey }}
-        &lt;User-Nickname&gt;
+        3. Paste a connection string that looks like (with spaces)
+        : {{ hostIP }} {{ connectionEncriptionKey }} &lt;User-Nickname&gt;
       </div>
       <div slot="footer">
         <XButton
@@ -76,7 +76,7 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapActions } from 'vuex';
+import { mapMutations, mapActions } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTableWrapper from '../axons/tables/TableWrapper.vue';
 import XTable from '../axons/tables/Table.vue';
@@ -109,7 +109,7 @@ export default {
   },
   computed: {
     canEditInstances() {
-        return this.$can(this.$permissionConsts.categories.Instances,
+      return this.$can(this.$permissionConsts.categories.Instances,
         this.$permissionConsts.actions.Update);
     },
     fields() {
@@ -134,8 +134,9 @@ export default {
     },
     showActivationOption() {
       if (!this.selectedInstance || this.selectedInstance.length !== 1) return '';
-      const selected_instance = this.instances.find((instance) => instance.node_id === this.selectedInstance[0]);
-      return selected_instance.status;
+      const selectedInstance = this.instances
+        .find((instance) => instance.node_id === this.selectedInstance[0]);
+      return selectedInstance.status;
     },
     instanceDetailsSchema() {
       const items = this.instanceDetails.isMaster ? MASTER_DETAILS_SCHEMA : NODE_DETAILS_SCHEMA;

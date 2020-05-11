@@ -143,7 +143,7 @@ const withDynamicData = (params) => {
         );
       },
     },
-    render(h) {
+    render() {
       const passedProps = this.$props;
       if (this.renderLabel) {
         return this.renderWrapperAndLabel(passedProps);

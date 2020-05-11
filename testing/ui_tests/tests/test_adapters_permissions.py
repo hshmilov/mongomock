@@ -25,7 +25,7 @@ class TestAdaptersPermissions(PermissionsTestBase):
             ]
         }
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.adapters_page.switch_to_page()
         self.adapters_page.click_adapter(JSON_ADAPTER_NAME)
         self.adapters_page.assert_new_server_button_is_disabled()

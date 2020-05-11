@@ -43,10 +43,16 @@ import XButton from '../axons/inputs/Button.vue';
 
 import { REMOVE_REPORTS, FETCH_REPORT } from '../../store/modules/reports';
 
-
 export default {
   name: 'XReports',
   components: { XPage, XTable, XButton },
+  data() {
+    return {
+      selection: {
+        ids: [], include: true,
+      },
+    };
+  },
   computed: {
     ...mapState({
       isReadOnly(state) {
@@ -79,13 +85,6 @@ export default {
     numberOfSelections() {
       return this.selection.ids ? this.selection.ids.length : 0;
     },
-  },
-  data() {
-    return {
-      selection: {
-        ids: [], include: true,
-      },
-    };
   },
   methods: {
     ...mapActions({

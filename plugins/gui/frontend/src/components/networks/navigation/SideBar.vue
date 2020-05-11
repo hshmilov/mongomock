@@ -13,50 +13,52 @@
           title="Logout"
           @click="onLogout"
         >
-          <svg-icon
+          <SvgIcon
             name="navigation/logout"
             height="16"
             :original="true"
           />
         </a>
-        <router-link
+        <RouterLink
           :to="{name: 'My Account'}"
           active-class="active"
           title="My Account"
           @click.native="$emit('click')"
         >
-          <svg-icon
+          <SvgIcon
             name="navigation/settings"
             height="16"
             :original="true"
           />
-        </router-link>
+        </RouterLink>
       </div>
     </div>
-    <x-nav v-if="isFeatureFlagsLoaded">
-      <x-nav-item
+    <XNav v-if="isFeatureFlagsLoaded">
+      <XNavItem
         v-bind="navigationProps('Dashboard', 'dashboard')"
         :exact="true"
       />
-      <x-nav-item
-        v-bind="navigationProps('Devices', 'devices', null, $permissionConsts.categories.DevicesAssets)"
+      <XNavItem
+        v-bind="navigationProps('Devices', 'devices', null,
+                                $permissionConsts.categories.DevicesAssets)"
       />
-      <x-nav-item
+      <XNavItem
         v-bind="navigationProps('Users', 'users', null, $permissionConsts.categories.UsersAssets)"
       />
-      <x-nav-item
+      <XNavItem
         v-if="isComplianceVisible"
         v-bind="navigationProps('Cloud Asset Compliance', 'compliance', 'Cloud Compliance')"
       />
-      <x-nav-item v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
-      <x-nav-item v-bind="navigationProps('Adapters', 'adapters')" />
-      <x-nav-item v-bind="navigationProps('Reports', 'reports')" />
-      <x-nav-item
+      <XNavItem v-bind="navigationProps('Enforcements', 'enforcements', 'Enforcement Center')" />
+      <XNavItem v-bind="navigationProps('Adapters', 'adapters')" />
+      <XNavItem v-bind="navigationProps('Reports', 'reports')" />
+      <XNavItem
         v-bind="navigationProps('Activity Logs', 'audit', null,
-        $permissionConsts.categories.Settings, $permissionConsts.categories.Audit)"
+                                $permissionConsts.categories.Settings,
+                                $permissionConsts.categories.Audit)"
       />
-      <x-nav-item v-bind="navigationProps('Instances', 'instances')" />
-    </x-nav>
+      <XNavItem v-bind="navigationProps('Instances', 'instances')" />
+    </XNav>
   </aside>
 </template>
 
@@ -65,19 +67,18 @@ import { mapState, mapActions, mapMutations } from 'vuex';
 import _invert from 'lodash/invert';
 import _get from 'lodash/get';
 import { REMOVE_TOASTER } from '@store/mutations';
-import xNav from '../../axons/menus/Nav.vue';
-import xNavItem from '../../axons/menus/NavItem.vue';
+import XNav from '../../axons/menus/Nav.vue';
+import XNavItem from '../../axons/menus/NavItem.vue';
 import { LOGOUT } from '../../../store/modules/auth';
 
 
 export default {
   name: 'XSideBar',
-  components: { xNav, xNavItem },
+  components: { XNav, XNavItem },
   computed: {
     ...mapState({
       featureFlags(state) {
-        const featureFlasConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
-        return featureFlasConfigs;
+        return _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
       },
       userDetails(state) {
         return {
@@ -187,7 +188,7 @@ export default {
             }
 
             .x-user-actions {
-                padding: 4px 0px;
+                padding: 4px 0;
                 position: relative;
                 text-align: center;
 

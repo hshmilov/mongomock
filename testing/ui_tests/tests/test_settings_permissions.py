@@ -20,7 +20,7 @@ class TestSettingsPermissions(PermissionsTestBase):
                                                                      ui_consts.FIRST_NAME,
                                                                      ui_consts.LAST_NAME,
                                                                      self.settings_page.RESTRICTED_ROLE)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.dashboard_page.switch_to_page()
         self.settings_page.assert_screen_is_restricted()
         self.login_page.logout_and_login_with_admin()
@@ -124,7 +124,7 @@ class TestSettingsPermissions(PermissionsTestBase):
         settings_permissions['settings'].append('View user accounts and roles')
 
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.settings_page.switch_to_page()
         assert self.settings_page.is_users_and_roles_enabled()
         self.settings_page.click_manage_roles_settings()
@@ -216,7 +216,7 @@ class TestSettingsPermissions(PermissionsTestBase):
         settings_permissions = {'settings': []}
         settings_permissions['settings'].append('View system settings')
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         assert self.base_page.is_run_research_disabled()
         self.account_page.switch_to_page()
         assert not self.account_page.is_reset_key_displayed()

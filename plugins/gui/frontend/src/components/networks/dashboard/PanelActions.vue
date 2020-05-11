@@ -19,7 +19,6 @@
     >
       <span
         class="ant-dropdown-link card_menu"
-        href="#"
       >
         <VIcon
           size="15"
@@ -49,7 +48,7 @@
           v-if="chart.metric==='segment'"
           id="export_chart"
           key="2"
-          @click="() => exportCSV(chart.uuid, chart.name, chart.historical)"
+          @click="exportCSV"
         >
           Export to CSV
         </AMenuItem>
@@ -63,7 +62,7 @@
         <AMenuItem
           id="refresh_chart"
           key="4"
-          @click="(skip) => fetchChartData(chart.uuid, 0, chart.historical, true)"
+          @click="fetchMorePanel"
         >
           Refresh
         </AMenuItem>
@@ -204,7 +203,9 @@ import { Menu, Dropdown } from 'ant-design-vue';
 import _get from 'lodash/get';
 import _capitalize from 'lodash/capitalize';
 import {
-  MOVE_OR_COPY_TOGGLE, FETCH_DASHBOARD_PANEL, FETCH_CHART_SEGMENTS_CSV
+  MOVE_OR_COPY_TOGGLE,
+  FETCH_DASHBOARD_PANEL,
+  FETCH_CHART_SEGMENTS_CSV,
 } from '../../../store/modules/dashboard';
 import {
   ChartSortTypeEnum,
@@ -275,24 +276,24 @@ export default {
         currentPanel: this.chart,
       });
     },
-    fetchChartData(uuid, skip, historical, refresh, search) {
+    fetchMorePanel() {
       this.fetchDashboardPanel({
-        uuid,
+        uuid: this.chart.uuid,
         spaceId: this.currentSpace,
-        skip,
+        skip: 0,
         limit: 100,
-        historical,
-        search: search || this.filter,
-        refresh,
+        historical: this.chart.historical,
+        search: this.filter,
+        refresh: true,
         sortBy: this.sortType,
         sortOrder: this.sortOrder,
       });
     },
-    exportCSV(uuid, name, historical) {
+    exportCSV() {
       this.fetchChartSegmentsCSV({
-        uuid,
-        name,
-        historical,
+        uuid: this.chart.uuid,
+        name: this.chart.name,
+        historical: this.chart.historical,
       });
     },
     isSortMethodActive(type) {

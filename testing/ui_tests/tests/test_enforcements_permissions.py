@@ -78,7 +78,7 @@ class TestEnforcementsPermissions(PermissionsTestBase):
 
     def _test_enforcements_with_only_view_permission(self, settings_permissions, user_role, enforcement_name):
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         assert self.enforcements_page.is_view_tasks_button_disabled()

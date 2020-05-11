@@ -18,7 +18,7 @@
     >
       <template
         v-if="querySearchTemplate"
-        v-slot:badge
+        #badge
       >
         <div class="search-input-badge">
           <VIcon
@@ -353,14 +353,14 @@ export default {
       this.closeInput();
     },
     incQueryMenuIndex() {
-      this.queryMenuIndex++;
+      this.queryMenuIndex += 1;
       if (this.queryMenuIndex >= this.queryMenuCount) {
         this.queryMenuIndex = -1;
         this.focusInput();
       }
     },
     decQueryMenuIndex() {
-      this.queryMenuIndex--;
+      this.queryMenuIndex -= 1;
       if (this.queryMenuIndex < -1) {
         this.queryMenuIndex = this.queryMenuCount - 1;
       } else if (this.queryMenuIndex === -1) {

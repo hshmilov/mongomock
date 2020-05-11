@@ -25,6 +25,7 @@
     </template>
 
     <div
+      v-if="canRunDiscovery"
       :key="3"
       slot="post"
       class="x-card chart-lifecycle print-exclude"
@@ -69,10 +70,8 @@
 import {
   mapState, mapMutations, mapGetters,
 } from 'vuex';
-import _get from 'lodash/get';
 import XPanels from './Panels.vue';
 import XDataDiscoveryCard from '../../neurons/cards/DataDiscoveryCard.vue';
-import XCard from '../../axons/layout/Card.vue';
 import XCycle from '../../axons/charts/Cycle.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
@@ -82,7 +81,7 @@ import { formatDate } from '../../../constants/utils';
 export default {
   name: 'XDefaultSpace',
   components: {
-    XPanels, XDataDiscoveryCard, XCard, XCycle,
+    XPanels, XDataDiscoveryCard, XCycle,
   },
   props: {
     panels: {
@@ -91,6 +90,7 @@ export default {
     },
     panelsOrder: {
       type: Array,
+      default: null,
     },
   },
   computed: {
@@ -130,6 +130,10 @@ export default {
         return formatDate(this.lifecycle.lastFinishedTime, undefined, this.dateFormat);
       }
       return ' ';
+    },
+    canRunDiscovery() {
+      return this.$can(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.RunManualDiscovery);
     },
   },
   methods: {

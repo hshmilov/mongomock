@@ -27,6 +27,7 @@
       </h5>
       <div
         v-for="notification in notificationAggregatedList"
+        :key="notification.uuid"
         class="notification"
         :class="{ bold: !notification.seen }"
         @click="navigateNotification(notification.uuid)"
@@ -82,7 +83,10 @@ import XButton from '../axons/inputs/Button.vue';
 import XDropdown from '../axons/popover/Dropdown.vue';
 
 import {
-  FETCH_NOTIFICATIONS_UNSEEN_COUNT, FETCH_AGGREGATE_NOTIFICATIONS, UPDATE_NOTIFICATIONS_SEEN, FETCH_NOTIFICATION,
+  FETCH_NOTIFICATIONS_UNSEEN_COUNT,
+  FETCH_AGGREGATE_NOTIFICATIONS,
+  UPDATE_NOTIFICATIONS_SEEN,
+  FETCH_NOTIFICATION,
 } from '../../store/modules/notifications';
 
 export default {
@@ -96,12 +100,25 @@ export default {
       notificationAggregatedList(state) {
         return state.notifications.aggregatedList.data;
       },
-      isReadOnly(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Dashboard === 'ReadOnly';
-      },
     }),
+    canResetNotifications() {
+      return this.$can(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.View);
+    },
+  },
+  created() {
+    const loadNotifications = () => {
+      Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
+        .then(() => {
+          // eslint-disable-next-line no-underscore-dangle
+          if (this._isDestroyed) return;
+          this.timer = setTimeout(loadNotifications, 9000);
+        });
+    };
+    loadNotifications();
+  },
+  beforeDestroy() {
+    clearTimeout(this.timer);
   },
   methods: {
     ...mapActions({
@@ -126,26 +143,13 @@ export default {
       this.$router.push({ path: `/notifications/${notificationId}` });
     },
     clearNotifications() {
-      if (this.isReadOnly) return;
+      if (!this.canResetNotifications) return;
       this.updateNotificationsSeen([]);
     },
     navigateNotifications() {
       this.$refs.notifications.close();
       this.$router.push({ name: 'Notifications' });
     },
-  },
-  created() {
-    const loadNotifications = () => {
-      Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
-        .then(() => {
-          if (this._isDestroyed) return;
-          this.timer = setTimeout(loadNotifications, 9000);
-        });
-    };
-    loadNotifications();
-  },
-  beforeDestroy() {
-    clearTimeout(this.timer);
   },
 };
 </script>

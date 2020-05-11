@@ -73,6 +73,7 @@ BUTTON_DEFAULT_CLASS = 'x-button'
 BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
+TOGGLE_CHECKED_CLASSES = ['x-checkbox', 'checked']
 TOGGLE_CHECKED_CLASS = 'x-checkbox checked'
 TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and text()=\'{toast_text}\']'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
@@ -626,6 +627,10 @@ class Page:
                 return
             time.sleep(interval)
         raise TimeoutException(f'Timeout while waiting for {text} to disappear')
+
+    @staticmethod
+    def is_toggle_has_selected_classes(toggle):
+        return all([toggle_class in toggle.get_attribute('class') for toggle_class in TOGGLE_CHECKED_CLASSES])
 
     @staticmethod
     def is_toggle_selected(toggle):

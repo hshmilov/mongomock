@@ -309,7 +309,7 @@ class TestSavedQuery(TestBase):
                                                                        'Create saved query',
                                                                    ]
                                                                })
-        self.login_page.switch_user(UPDATE_USERNAME, UPDATE_PASSWORD)
+        self.login_page.switch_user(UPDATE_USERNAME, UPDATE_PASSWORD, '/devices')
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_1, date_str, self.username, self.ADMIN_NAME)
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(self.CUSTOM_QUERY_SAVE_NAME_2, self.devices_page.JSON_ADAPTER_FILTER)

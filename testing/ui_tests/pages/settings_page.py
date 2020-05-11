@@ -218,6 +218,10 @@ class SettingsPage(Page):
         ],
     }
 
+    ONLY_REPORTS_PERMISSIONS = {
+        'reports': 'all'
+    }
+
     RESET_PASSWORD_FORM_CSS = '.reset-password__form'
     RESET_PASSWORD_FORM_EMAIL_INPUT_CSS = f'{RESET_PASSWORD_FORM_CSS} .email__input'
     SEND_EMAIL_BUTTON_TEXT = 'Send Email'
@@ -405,11 +409,18 @@ class SettingsPage(Page):
         self.click_new_role()
         self.wait_for_role_panel_present()
         self.fill_role_name(name)
+        self.clear_permissions()
         self.select_permissions(permissions)
 
         self.click_create_role()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
         self.wait_for_role_successfully_created_toaster()
+
+    def clear_permissions(self):
+        self.get_button('Expand All').click()
+        for checkbox in self.find_elements_by_css('.v-expansion-panel-content .x-checkbox'):
+            if self.is_toggle_has_selected_classes(checkbox):
+                self.click_toggle_button(checkbox, make_yes=False)
 
     def select_permissions(self, permissions):
         for permissionCategory in permissions:

@@ -6,8 +6,6 @@ import _isNull from 'lodash/isNull';
 import _stubTrue from 'lodash/stubTrue';
 import _cond from 'lodash/cond';
 import _isEmpty from 'lodash/isEmpty';
-import _find from 'lodash/find';
-import _matchesProperty from 'lodash/matchesProperty';
 
 import xFilter from '@neurons/schema/query/Filter.vue';
 import xStringView from '@neurons/schema/types/string/StringView.vue';
@@ -79,7 +77,9 @@ export default {
         lastUpdate: {
           name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
         },
-        updatedBy: { name: 'updated_by', title: 'Updated By', type: 'string', format: 'user' },
+        updatedBy: {
+          name: 'updated_by', title: 'Updated By', type: 'string', format: 'user',
+        },
       },
       entityTags: [],
       existingQueriesNamesList: new Set(),
@@ -175,7 +175,9 @@ export default {
       const updated = {
         ...this.query,
         ...(_isNull(this.queryFieldsProxies.name) ? false : { name: this.queryFieldsProxies.name }),
-        ...(_isNull(this.queryFieldsProxies.description) ? false : { description: this.queryFieldsProxies.description }),
+        ...(_isNull(this.queryFieldsProxies.description) ? false : {
+          description: this.queryFieldsProxies.description,
+        }),
         ...(_isNull(this.queryFieldsProxies.tags) ? false : { tags: this.queryFieldsProxies.tags }),
       };
 
@@ -289,11 +291,14 @@ export default {
         }
       };
     },
+    onTagsSelections(selections) {
+      this.tags = selections;
+    },
     genTagsMarkup() {
       if (this.editingMode && !_isEmpty(this.entityTags)) {
         return (<x-combobox
                     value={this.tags}
-                    onInput={(selections) => this.tags = selections}
+                    onInput={this.onTagsSelections}
                     items={this.entityTags}
                     multiple
                     menuProps={{ maxWidth: 744 }}
@@ -389,7 +394,7 @@ export default {
   created() {
     this.fetchQueriesNames();
   },
-  render(h) {
+  render() {
     // renderExpression is a function that will return the expression markup
     // based on a givven conditions (valid, empty, not supporteds)
     const renderExpression = _cond([

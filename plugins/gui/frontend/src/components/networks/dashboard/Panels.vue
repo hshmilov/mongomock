@@ -10,7 +10,7 @@
     :move="checkMove"
   >
     <XPanel
-      v-for="(chart, chartInd) in orderedPanels"
+      v-for="(chart) in orderedPanels"
       :id="chart.uuid"
       :key="chart.uuid"
       :chart="chart"

@@ -71,11 +71,11 @@ import capitalize from 'lodash/capitalize';
 
 import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
+import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 import XUsersPanel from './side-panels/user-panel.vue';
 import XActionsMenu from './actions-menu.vue';
 import XModalAssignRole from './modal-assign-role.vue';
 import XModalResetPassword from './modal-reset-password.vue';
-import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export default {
   name: 'XUsersManagement',

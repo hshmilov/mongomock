@@ -10,7 +10,7 @@
     <XSafeguard />
     <XMessageModal />
     <!--Link for downloading files-->
-    <a id="file-auto-download-link" />
+    <a id="file-auto-download-link"></a>
     <!-- Nested navigation linking to routes defined in router/index.js -->
     <template v-if="userName && isSessionCookieValid()">
       <XSideBar
@@ -56,6 +56,7 @@ import {
 } from 'vuex';
 import _get from 'lodash/get';
 import { FETCH_FETURE_FLAGS } from '@store/modules/settings';
+import { FETCH_ADAPTERS } from '@store/modules/adapters';
 import { SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import XTopBar from './networks/navigation/TopBar.vue';
 import XBottomBar from './networks/navigation/BottomBar.vue';
@@ -67,7 +68,6 @@ import sessionTimeoutMixin from '../mixins/session_timeout';
 
 import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
-import { FETCH_ADAPTERS } from '@store/modules/adapters';
 
 import {
   FETCH_SYSTEM_CONFIG,
@@ -175,6 +175,21 @@ export default {
       }
     },
   },
+  async mounted() {
+    GettingStartedPubSub.$on(
+      'getting-started-open-state',
+      this.changeChecklistOpenState,
+    );
+
+    GettingStartedPubSub.$on(
+      'getting-started-login',
+      () => {
+        this.justLoggedIn = true;
+      },
+    );
+    this.handleExpiration();
+    this.getUser();
+  },
   methods: {
     ...mapMutations({
       showToasterMessage: SHOW_TOASTER_MESSAGE,
@@ -226,21 +241,6 @@ export default {
         this.$router.push('/');
       }
     },
-  },
-  async mounted() {
-    GettingStartedPubSub.$on(
-      'getting-started-open-state',
-      this.changeChecklistOpenState,
-    );
-
-    GettingStartedPubSub.$on(
-      'getting-started-login',
-      () => {
-        this.justLoggedIn = true;
-      },
-    );
-    this.handleExpiration();
-    this.getUser();
   },
 };
 </script>

@@ -9,4 +9,4 @@ class PermissionsTestBase(TestBase):
             permissions[category] = []
         permissions[category].append(add_action)
         self.settings_page.update_role(role, permissions, True)
-        self.login_page.logout_and_login_with_user(user_name, password=password)
+        self.login_page.switch_user(user_name, password)

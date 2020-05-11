@@ -148,7 +148,7 @@ export default {
       for (let i = this.customSpaces.length - 1; i >= 0; i--) {
         const matches = this.customSpaces[i].name.match('Space (\\d+)');
         if (matches && matches.length > 1) {
-          return `Space ${parseInt(matches[1]) + 1}`;
+          return `Space ${parseInt(matches[1], 10) + 1}`;
         }
       }
       return 'Space 1';

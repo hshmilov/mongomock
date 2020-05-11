@@ -36,7 +36,7 @@ class TestDashboardPermissions(PermissionsTestBase):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.add_new_space(self.TEST_RENAME_SPACE_NAME)
 
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
 
         settings_permissions = {
             'dashboard': [],

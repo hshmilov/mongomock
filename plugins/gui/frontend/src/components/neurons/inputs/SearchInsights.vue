@@ -29,6 +29,11 @@ import { entities } from '../../../constants/entities';
 export default {
   name: 'XSearchInsights',
   components: { XButton, XSearchInput, XAccessModal },
+  data() {
+    return {
+      blockedComponent: '',
+    };
+  },
   computed: {
     ...mapState({
       entitiesView(state) {
@@ -46,11 +51,6 @@ export default {
         this.updateSearchValue(value);
       },
     },
-  },
-  data() {
-    return {
-      blockedComponent: '',
-    };
   },
   methods: {
     ...mapMutations({

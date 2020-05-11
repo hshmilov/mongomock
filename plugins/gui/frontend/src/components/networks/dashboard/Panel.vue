@@ -202,16 +202,6 @@ export default {
         this.$permissionConsts.actions.Update,
         this.$permissionConsts.categories.Charts);
     },
-    headerClass() {
-      return {
-        'x-card-header': true,
-        hidden: false,
-        // hidden: !this.headerVisible,
-      };
-    },
-    headerVisible() {
-      return this.isChartFilterable() || this.dataFilter || this.chart.historical;
-    },
     dataFilter: {
       get() {
         return this.filter;

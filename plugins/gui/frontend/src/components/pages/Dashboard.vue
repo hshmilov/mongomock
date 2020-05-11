@@ -26,7 +26,11 @@ import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
 import XSpaces from '../networks/dashboard/Spaces.vue';
 
 import {
-  FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_SPACES, FETCH_DASHBOARD_PANELS, FETCH_DASHBOARD_FIRST_USE, GET_PANEL_MAP,
+  FETCH_DISCOVERY_DATA,
+  FETCH_DASHBOARD_SPACES,
+  FETCH_DASHBOARD_PANELS,
+  FETCH_DASHBOARD_FIRST_USE,
+  GET_PANEL_MAP,
 } from '../../store/modules/dashboard';
 import { IS_EXPIRED } from '../../store/getters';
 import { SAVE_VIEW } from '../../store/actions';

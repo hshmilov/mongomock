@@ -16,7 +16,8 @@
       />
       <div class="page-content main">
         <div class="report-title">
-          The report will be generated as a PDF file, every Discovery Cycle<span v-if="isLatestReport">, {{ lastGenerated }}</span>
+          The report will be generated as a PDF file, every Discovery Cycle
+          <span v-if="isLatestReport">, {{ lastGenerated }}</span>
         </div>
         <div class="item">
           <label class="report-name-label">Report name</label>
@@ -44,12 +45,12 @@
           <XCheckbox
             v-model="report.include_dashboard"
             value="IncludeDashboard"
-            :read-only="cannotEditReport"
+            :read-only="cannotEditReport || !canViewDashboard"
             label="Include dashboard charts"
             class="item"
           />
           <div
-            v-if="report.include_dashboard"
+            v-if="canViewDashboard && report.include_dashboard"
             class="dashboard-spaces"
           >
             <XArrayEdit
@@ -63,7 +64,7 @@
           <XCheckbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
-            :read-only="cannotEditReport"
+            :read-only="cannotEditReport || entityOptions.length === 0"
             label="Include Saved Queries data"
             class="item"
             @change="validateSavedQueries"
@@ -91,7 +92,7 @@
                     :options="entityOptions"
                     type="icon"
                     placeholder="mod"
-                    :read-only="cannotEditReport"
+                    :read-only="!canEditSavedView(i)"
                     minimal
                     @input="onEntityChange($event, i)"
                   />
@@ -100,7 +101,7 @@
                     :options="viewOptions(i)"
                     searchable
                     placeholder="query name"
-                    :read-only="cannotEditReport"
+                    :read-only="!canEditSavedView(i)"
                     class="query-name"
                     @input="onQueryNameChange($event, i)"
                   />
@@ -277,17 +278,21 @@ export default {
         return state.reports.current.fetching;
       },
       dashboardSpaces(state) {
-        const custom_spaces = state.dashboard.spaces.data.filter((space) => space.type === 'custom');
-        const default_space = state.dashboard.spaces.data.find((space) => space.type === 'default');
-        if (default_space) {
-          custom_spaces.unshift(default_space);
+        const customSpaces = state.dashboard.spaces.data.filter((space) => space.type === 'custom');
+        const defaultSpace = state.dashboard.spaces.data.find((space) => space.type === 'default');
+        if (defaultSpace) {
+          customSpaces.unshift(defaultSpace);
         }
-        return custom_spaces.map((space) => ({ name: space.uuid, title: space.name }));
+        return customSpaces.map((space) => ({ name: space.uuid, title: space.name }));
       },
     }),
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
+    canViewDashboard() {
+      return this.$can(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.View);
+    },
     cannotEditReport() {
       return this.$cannot(this.$permissionConsts.categories.Reports,
         this.$permissionConsts.actions.Update) && this.id !== 'new';
@@ -431,20 +436,17 @@ export default {
       },
     },
   },
-  created() {
+  async created() {
     this.loading = true;
-    this.fetchDashboard().then(() => {
-      if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
-        this.loading = true;
-        this.fetchReport(this.id).then(() => {
-          this.initData();
-          this.loading = false;
-        });
-      } else {
-        this.initData();
-        this.loading = false;
-      }
-    });
+    if (this.canViewDashboard) {
+      await this.fetchDashboard();
+    }
+    if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
+      this.loading = true;
+      await this.fetchReport(this.id);
+    }
+    this.initData();
+    this.loading = false;
   },
   mounted() {
     if (this.$refs.name) {
@@ -488,11 +490,9 @@ export default {
           this.report.mail_properties.mailMessage = '';
         }
 
-        if (this.report.spaces.length > 0) {
-          const validDashboardSpaces = this.dashboardSpaces.reduce((map, space) => {
-            map[space.name] = space.title;
-            return map;
-          }, {});
+        if (this.report.spaces.length > 0 && this.canViewDashboard) {
+          const validDashboardSpaces = this.dashboardSpaces
+            .reduce((map, space) => ({ ...map, [space.name]: space.title }), {});
           this.report.spaces = this.report.spaces.filter((space) => validDashboardSpaces[space]);
           if (this.report.spaces.length === 0) {
             this.report.include_dashboard = false;
@@ -616,12 +616,33 @@ export default {
       this.$forceUpdate();
       this.validateSavedQueries();
     },
+    canEditSavedView(index) {
+      if (this.cannotEditReport) {
+        return false;
+      }
+      if (this.report.views[index] && this.report.views[index].entity) {
+        return Boolean(this.views[this.report.views[index].entity]);
+      }
+      return true;
+    },
     viewOptions(index) {
-      if (!this.views && !this.report.views[index].entity) return;
-      const views = (this.report.views && this.report.views[index]) ? this.views[this.report.views[index].entity] : [];
-      if (this.report.views && this.report.views > length > 0 && this.report.views[index].name && !views.some((view) => view.name === this.report.views[index].name)) {
+      if (!this.views || !this.report.views[index].entity) {
+        return [];
+      }
+      if (this.report.views[index].entity && !this.views[this.report.views[index].entity]) {
+        return [{
+          name: this.report.views[index].name,
+          title: this.report.views[index].name,
+        }];
+      }
+      const views = (this.report.views
+        && this.report.views[index]) ? this.views[this.report.views[index].entity] : [];
+      if (this.report.views
+        && this.report.views.length > 0
+        && this.report.views[index].name
+        && !views.some((view) => view.name === this.report.views[index].name)) {
         views.push({
-          name: this.report.view[index].name, title: `${this.report.views[0].name} (deleted)`,
+          name: this.report.views[index].name, title: `${this.report.views[0].name} (deleted)`,
         });
       }
       return views;
@@ -687,7 +708,8 @@ export default {
         // If the send time is valid and there is an error than removed it
         const sendTimeError = this.validity.fields.find(getTimePickerError);
         if (sendTimeError) {
-          this.validity.fields = this.validity.fields.filter((error) => error.field !== sendTimeError.field);
+          this.validity.fields = this.validity
+            .fields.filter((error) => error.field !== sendTimeError.field);
           if (this.validity.fields.length === 0) {
             this.validity.error = '';
           }

@@ -721,6 +721,7 @@ class TestDashboard(TestBase):
 
         card = self.dashboard_page.get_card(self.TEST_CHART_SORT)
         self.dashboard_page.select_chart_sort(card, 'name', 'asc')
+        self.dashboard_page.close_dropdown()
         time.sleep(1)
 
         histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card)

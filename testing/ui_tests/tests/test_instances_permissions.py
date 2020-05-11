@@ -23,7 +23,7 @@ class TestInstancesPermissions(PermissionsTestBase):
             ]
         }
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.instances_page.switch_to_page()
         self.instances_page.click_query_row_by_name('Master')
         assert not self.instances_page.find_instance_name_textbox().is_enabled()

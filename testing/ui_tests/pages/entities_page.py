@@ -236,6 +236,7 @@ class EntitiesPage(Page):
     TAG_COMBOBOX_CSS = '.x-combobox_results-card--keep-open.v-card'
 
     EDIT_TAGS_BUTTON_TEXT = 'Edit Tags'
+    ENTITIES_ACTIONS_DROPDOWN_CSS = '.ant-dropdown-menu'
 
     @property
     def url(self):
@@ -914,6 +915,10 @@ class EntitiesPage(Page):
 
     def click_actions_enforce_button(self):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE).click()
+
+    def is_enforce_button_disabled(self):
+        return self.is_element_has_disabled_class(
+            self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE))
 
     def open_edit_tags(self):
         self.click_button(self.EDIT_TAGS_BUTTON_TEXT)
@@ -1620,3 +1625,7 @@ class EntitiesPage(Page):
 
     def fill_tags_input_text(self, text):
         self.fill_text_by_element(self.get_tags_input(), text)
+
+    def close_actions_dropdown(self):
+        el = self.driver.find_element_by_css_selector(self.ENTITIES_ACTIONS_DROPDOWN_CSS)
+        ActionChains(self.driver).move_to_element_with_offset(el, 250, 100).click().perform()

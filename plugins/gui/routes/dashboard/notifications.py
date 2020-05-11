@@ -6,7 +6,6 @@ from flask import (jsonify,
                    request)
 
 from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint)
-from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 # pylint: disable=no-member,no-else-return,inconsistent-return-statements
@@ -20,56 +19,58 @@ class Notifications:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_route_logged_in(methods=['POST', 'GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Dashboard), skip_activity=True)
+    @gui_route_logged_in(methods=['GET'], enforce_permissions=False, skip_activity=True)
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
         :param limit: limit for pagination
         :param skip: start index for pagination
+        :param mongo_filter: the filter of the notifications
+        :param mongo_sort: the sort of the notifications
         :return:
         """
         db = self._get_db_connection()
         notification_collection = db['core']['notifications']
 
-        # GET
-        if request.method == 'GET':
-            should_aggregate = request.args.get('aggregate', False)
-            if should_aggregate:
-                pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
-                                        'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
-                            {'$addFields': {'title': '$_id'}},
-                            {'$sort': {'date': pymongo.DESCENDING}}]
-                notifications = []
-                for n in notification_collection.aggregate(pipeline):
-                    n['_id'] = n['date']
-                    notifications.append(beautify_db_entry(n))
-            else:
-                sort = []
-                for field, direction in mongo_sort.items():
-                    sort.append(('_id' if field == 'date_fetched' else field, direction))
-                if not sort:
-                    sort.append(('_id', pymongo.DESCENDING))
-                notifications = [beautify_db_entry(n) for n in notification_collection.find(
-                    mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
-                                              'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
+        should_aggregate = request.args.get('aggregate', False)
+        if should_aggregate:
+            pipeline = [{'$group': {'_id': '$title', 'count': {'$sum': 1}, 'date': {'$last': '$_id'},
+                                    'severity': {'$last': '$severity'}, 'seen': {'$last': '$seen'}}},
+                        {'$addFields': {'title': '$_id'}},
+                        {'$sort': {'date': pymongo.DESCENDING}}]
+            notifications = []
+            for n in notification_collection.aggregate(pipeline):
+                n['_id'] = n['date']
+                notifications.append(beautify_db_entry(n))
+        else:
+            sort = []
+            for field, direction in mongo_sort.items():
+                sort.append(('_id' if field == 'date_fetched' else field, direction))
+            if not sort:
+                sort.append(('_id', pymongo.DESCENDING))
+            notifications = [beautify_db_entry(n) for n in notification_collection.find(
+                mongo_filter, projection={'_id': 1, 'who': 1, 'plugin_name': 1, 'type': 1, 'title': 1,
+                                          'seen': 1, 'severity': 1}).sort(sort).skip(skip).limit(limit)]
 
-            return jsonify(notifications)
-        # POST
-        elif request.method == 'POST':
-            # if no ID is sent all notifications will be changed to seen.
-            notifications_to_see = request.get_json(silent=True)
-            if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
-                update_result = notification_collection.update_many(
-                    {'seen': False}, {'$set': {'seen': notifications_to_see.get('seen', True)}})
-            else:
-                update_result = notification_collection.update_many(
-                    {'_id': {'$in': [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
-                     }, {'$set': {'seen': True}})
-            return str(update_result.modified_count), 200
+        return jsonify(notifications)
+
+    @gui_route_logged_in(methods=['POST'], enforce_permissions=False, skip_activity=True)
+    def update_notifications(self):
+        db = self._get_db_connection()
+        notification_collection = db['core']['notifications']
+        # if no ID is sent all notifications will be changed to seen.
+        notifications_to_see = request.get_json(silent=True)
+        if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
+            update_result = notification_collection.update_many(
+                {'seen': False}, {'$set': {'seen': notifications_to_see.get('seen', True)}})
+        else:
+            update_result = notification_collection.update_many(
+                {'_id': {'$in': [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
+                 }, {'$set': {'seen': True}})
+        return str(update_result.modified_count), 200
 
     @filtered()
-    @gui_route_logged_in('count', methods=['GET'])
+    @gui_route_logged_in('count', methods=['GET'], enforce_permissions=False)
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -81,7 +82,7 @@ class Notifications:
         notification_collection = db['core']['notifications']
         return str(notification_collection.count_documents(mongo_filter))
 
-    @gui_route_logged_in('<notification_id>', methods=['GET'])
+    @gui_route_logged_in('<notification_id>', methods=['GET'], enforce_permissions=False)
     def notifications_by_id(self, notification_id):
         """
         Get all notification data

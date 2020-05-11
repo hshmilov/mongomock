@@ -141,6 +141,9 @@ class TestSaml(TestBase):
     # pylint: disable=R0915
     def test_saml_same_username(self):
         saml_devices_permissions = {
+            'dashboard': [
+                'View dashboard',
+            ],
             'settings': [
                 'Reset API Key',
             ],
@@ -155,6 +158,9 @@ class TestSaml(TestBase):
         }
 
         saml_users_permissions = {
+            'dashboard': [
+                'View dashboard',
+            ],
             'settings': [
                 'Reset API Key',
             ],

@@ -192,7 +192,7 @@ export default {
       );
     },
   },
-  render(h) {
+  render() {
     return (
       <x-side-panel
         value={this.data !== null}

@@ -101,16 +101,6 @@ export default {
       }
       return role;
     },
-    roleNameErrorMsg() {
-      const { name } = this.$v;
-      let errMsg = '';
-      if (!name.required) {
-        errMsg = 'Name is a required field';
-      } else if (!name.uniqueRoleName) {
-        errMsg = 'Name already exists. Please enter a different Name.';
-      }
-      return errMsg;
-    },
     isFormInvalid() {
       return this.$v.$invalid;
     },
@@ -393,7 +383,7 @@ export default {
       this.expandedCategories = [];
     },
   },
-  render(h) {
+  render() {
     return (
         <XSidePanel
             value={this.value}

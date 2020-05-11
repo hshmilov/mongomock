@@ -209,7 +209,7 @@ export default {
         this.passwordForm.confirmNewPassword = null;
         this.passwordForm = { ...this.passwordForm };
       }).catch((error) => {
-        if (error.response.status == 403) {
+        if (error.response.status === 403) {
           this.error = error.response.data.message;
         } else {
           this.message = JSON.parse(error.request.response).message;
@@ -245,10 +245,10 @@ export default {
       const copySecretKey = document.getElementsByClassName('secret-key visible')[0];
       copySecretKey.select();
       navigator.clipboard.writeText(copySecretKey.value).then(
-        (response) => {
+        () => {
           this.showToasterMessage({ message: 'Key was copied to Clipboard' });
         },
-        (error) => {
+        () => {
           this.showToasterMessage({ message: 'Key was not copied to Clipboard' });
         },
       );

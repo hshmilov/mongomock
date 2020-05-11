@@ -49,6 +49,9 @@ class TestEntitiesPermissions(PermissionsTestBase):
         settings_permissions = {
             'devices_assets': [
                 'View devices'
+            ],
+            'enforcements': [
+                'View Enforcement Center'
             ]
         }
         self._test_entities_with_only_view_permission(settings_permissions, user_role, self.devices_page)
@@ -60,6 +63,8 @@ class TestEntitiesPermissions(PermissionsTestBase):
                                                      ui_consts.RESTRICTED_USERNAME,
                                                      ui_consts.NEW_PASSWORD)
         self._test_entities_with_edit_permission(self.devices_page)
+
+        self._test_run_enforcement_permission(self.devices_page, settings_permissions, user_role)
 
     def test_devices_saved_queries(self):
         self.devices_page.switch_to_page()
@@ -89,7 +94,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
             ]
         }
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
 
         self._test_saved_queries_without_any_permission(self.devices_page,
                                                         self.devices_queries_page,
@@ -227,7 +232,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
         }
 
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
 
         self._test_saved_queries_without_any_permission(self.users_page,
                                                         self.users_queries_page,
@@ -288,7 +293,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
 
     def _test_entities_with_only_view_permission(self, settings_permissions, user_role, entities_page):
         self.settings_page.update_role(user_role, settings_permissions, True)
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         entities_page.switch_to_page()
         entities_page.wait_for_table_to_load()
         assert entities_page.is_row_checkbox_absent()
@@ -487,3 +492,22 @@ class TestEntitiesPermissions(PermissionsTestBase):
         self.devices_page.click_task_name(enforcement_set_id)
         self.enforcements_page.wait_for_action_result()
         assert self.enforcements_page.get_task_name() == enforcement_set_id
+
+    def _test_run_enforcement_permission(self, entities_page, settings_permissions, user_role):
+        entities_page.switch_to_page()
+        entities_page.wait_for_table_to_load()
+        entities_page.click_row_checkbox(make_yes=True)
+        entities_page.open_actions_menu()
+        assert self.devices_page.is_enforce_button_disabled()
+        entities_page.close_actions_dropdown()
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'enforcements',
+                                                     'Run Enforcement',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+        entities_page.switch_to_page()
+        entities_page.wait_for_table_to_load()
+        entities_page.click_row_checkbox(make_yes=True)
+        entities_page.open_actions_menu()
+        assert not entities_page.is_enforce_button_disabled()

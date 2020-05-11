@@ -8,7 +8,7 @@
       />
       <div class="actions">
         <XButton
-          v-if="selectedNotes && selectedNotes.length"
+          v-if="selection && selection.length"
           type="link"
           @click="confirmRemoveNotes"
         >Remove</XButton>
@@ -20,7 +20,7 @@
       </div>
     </div>
     <XTable
-      v-model="userCannotEditDevices? undefined : selectedNotes"
+      v-model="selectedNotes"
       :data="noteData"
       :fields="noteFields"
       :sort="sort"
@@ -35,7 +35,7 @@
       @close="closeRemoveNotesModal"
     >
       <div slot="body">
-        You are about to remove {{ selectedNotes.length }} notes. Are you sure?
+        You are about to remove {{ selection.length }} notes. Are you sure?
       </div>
     </XModal>
     <XModal
@@ -95,6 +95,25 @@ export default {
       default: false,
     },
   },
+  data() {
+    return {
+      searchValue: '',
+      sort: {
+        field: 'accurate_for_datetime',
+        desc: false,
+      },
+      selection: [],
+      configNoteModal: {
+        active: false,
+        id: '',
+        note: '',
+      },
+      removeNoteModal: {
+        active: false,
+      },
+      toastMessage: '',
+    };
+  },
   computed: {
     ...mapState({
       currentUser(state) {
@@ -103,11 +122,19 @@ export default {
           admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin',
         };
       },
-      userCannotEditDevices() {
-        return this.readOnly || this.$cannot(getEntityPermissionCategory(this.module),
-          this.$permissionConsts.actions.Update);
-      },
     }),
+    userCannotEditDevices() {
+      return this.readOnly || this.$cannot(getEntityPermissionCategory(this.module),
+        this.$permissionConsts.actions.Update);
+    },
+    selectedNotes: {
+      get() {
+        return this.userCannotEditDevices ? undefined : this.selection;
+      },
+      set(value) {
+        this.selection = value;
+      },
+    },
     noteData() {
       return this.notes.filter((item) => {
         if (!this.searchValue) return true;
@@ -160,32 +187,13 @@ export default {
         .map((note) => note.uuid);
     },
   },
-  data() {
-    return {
-      searchValue: '',
-      sort: {
-        field: 'accurate_for_datetime',
-        desc: false,
-      },
-      selectedNotes: [],
-      configNoteModal: {
-        active: false,
-        id: '',
-        note: '',
-      },
-      removeNoteModal: {
-        active: false,
-      },
-      toastMessage: '',
-    };
-  },
   methods: {
     ...mapActions({ saveDataNote: SAVE_DATA_NOTE, removeDataNote: REMOVE_DATA_NOTE }),
     createNote() {
       this.configNoteModal.active = true;
     },
     editNote(noteId) {
-      if (this.selectedNotes.length) return;
+      if (this.selection.length) return;
       this.configNoteModal.active = true;
       this.configNoteModal.id = noteId;
       this.configNoteModal.note = this.noteById[noteId].note;
@@ -200,10 +208,10 @@ export default {
       this.responseWrapper(this.removeDataNote({
         module: this.module,
         entityId: this.entityId,
-        noteIdList: this.selectedNotes,
+        noteIdList: this.selection,
       }).then(() => {
         this.toastMessage = 'Notes were removed';
-        this.selectedNotes = [];
+        this.selection = [];
         this.closeRemoveNotesModal();
       }));
     },

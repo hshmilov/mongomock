@@ -59,9 +59,23 @@ class Dashboard(Charts, Notifications):
         }, upsert=True)
         return result.upserted_id
 
-    def _get_system_lifecycle(self):
-        """Added for public API support."""
-        return self._lifecycle()
+    @gui_route_logged_in('first_use', methods=['GET'], enforce_trial=False)
+    def dashboard_first(self):
+        """
+        __is_first_time_use maintains whether any adapter was connected with a client.
+        Otherwise, user should be offered to take a walkthrough of the system.
+
+        :return: Whether this is the first use of the system
+        """
+        return jsonify(self._is_system_first_use)
+
+    @gui_route_logged_in('first_historical_date', methods=['GET'], enforce_permissions=False)
+    def get_first_historical_date(self):
+        return jsonify(first_historical_date())
+
+    @gui_route_logged_in('get_allowed_dates', enforce_permissions=False)
+    def all_historical_dates(self):
+        return jsonify(all_historical_dates())
 
     @gui_route_logged_in(methods=['GET'], enforce_trial=False)
     def get_dashboards(self):
@@ -131,24 +145,6 @@ class Dashboard(Charts, Notifications):
             SPACE_ID: space_id,
             SPACE_NAME: delete_result.get('name', '')
         })
-
-    @gui_route_logged_in('first_use', methods=['GET'], enforce_trial=False)
-    def dashboard_first(self):
-        """
-        __is_first_time_use maintains whether any adapter was connected with a client.
-        Otherwise, user should be offered to take a walkthrough of the system.
-
-        :return: Whether this is the first use of the system
-        """
-        return jsonify(self._is_system_first_use)
-
-    @gui_route_logged_in('first_historical_date', methods=['GET'])
-    def get_first_historical_date(self):
-        return jsonify(first_historical_date())
-
-    @gui_route_logged_in('get_allowed_dates')
-    def all_historical_dates(self):
-        return jsonify(all_historical_dates())
 
     @gui_route_logged_in(methods=['POST'], enforce_trial=False, required_permission=PermissionValue.get(
         PermissionAction.Add, PermissionCategory.Dashboard, PermissionCategory.Spaces))
@@ -390,7 +386,9 @@ class Dashboard(Charts, Notifications):
             'status': nice_state.name
         }
 
-    @gui_route_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'], enforce_trial=False)
+    @gui_route_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'], enforce_trial=False,
+                         required_permission_values={PermissionValue.get(PermissionAction.RunManualDiscovery,
+                                                                         PermissionCategory.Settings)})
     def get_system_lifecycle(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
@@ -402,6 +400,10 @@ class Dashboard(Charts, Notifications):
          - The time next cycle is scheduled to run
         """
         return jsonify(self._get_system_lifecycle())
+
+    def _get_system_lifecycle(self):
+        """Added for public API support."""
+        return self._lifecycle()
 
     ################################################
     #           REORDER

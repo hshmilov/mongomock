@@ -54,7 +54,7 @@
           v-else-if="researchStatusLocal !== 'running'"
           id="run_research"
           class="item-link research-link"
-          :disabled="cannotRunDiscovert"
+          :disabled="cannotRunDiscovery"
           @click="startResearchNow"
         >
           <MdIcon md-src="/src/assets/icons/action/start.svg" />
@@ -64,7 +64,7 @@
           v-else-if="researchStatusLocal === 'running'"
           id="stop_research"
           class="item-link research-link"
-          :disabled="cannotRunDiscovert"
+          :disabled="cannotRunDiscovery"
           @click="stopResearchNow"
         >
           <MdIcon md-src="/src/assets/icons/action/stop.svg" />
@@ -114,7 +114,8 @@
         />
         <XTipInfo
           v-if="isEmptySetting('serviceNow')"
-          content="In order to create a ServiceNow computer or incident, configure it under settings"
+          content="In order to create a ServiceNow computer or incident
+          , configure it under settings"
           @dismiss="dismissEmptySetting('serviceNow')"
         />
         <XTipInfo
@@ -175,11 +176,6 @@ export default {
       researchStatus(state) {
         return state.dashboard.lifecycle.data.status;
       },
-      isSettingsRestricted(state) {
-        const user = state.auth.currentUser.data;
-        if (!user || !user.permissions) return true;
-        return user.permissions.Settings === 'Restricted';
-      },
       userPermissions(state) {
         return state.auth.currentUser.data.permissions;
       },
@@ -190,10 +186,10 @@ export default {
     cannotViewSettings() {
       return this.$cannot(
         this.$permissionConsts.categories.Settings,
-        this.$permissionConsts.actions.View
+        this.$permissionConsts.actions.View,
       );
     },
-    cannotRunDiscovert() {
+    cannotRunDiscovery() {
       return this.$cannot(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.RunManualDiscovery);
     },
@@ -204,6 +200,7 @@ export default {
   mounted() {
     const updateLifecycle = () => {
       this.fetchLifecycle().then(() => {
+        // eslint-disable-next-line no-underscore-dangle
         if (this._isDestroyed) return;
         if (this.expired) return;
         if ((this.researchStatusLocal !== ''
@@ -219,7 +216,9 @@ export default {
         this.timer = setTimeout(updateLifecycle, 3000);
       });
     };
-    updateLifecycle();
+    if (!this.cannotRunDiscovery) {
+      updateLifecycle();
+    }
   },
   beforeDestroy() {
     clearTimeout(this.timer);
@@ -237,10 +236,12 @@ export default {
     }),
     startResearchNow() {
       this.researchStatusLocal = 'starting';
+      // eslint-disable-next-line no-return-assign
       this.startResearch().catch(() => this.researchStatusLocal = '');
     },
     stopResearchNow() {
       this.researchStatusLocal = 'stopping';
+      // eslint-disable-next-line no-return-assign
       this.stopResearch().catch(() => this.researchStatusLocal = 'running');
     },
     navigateSettings() {
@@ -266,10 +267,8 @@ export default {
     },
     dismissAllSettings() {
       this.updateEmptyState({
-        settings: Object.keys(this.emptySettings).reduce((map, setting) => {
-          map[setting] = false;
-          return map;
-        }, {}),
+        settings: Object.keys(this.emptySettings)
+          .reduce((map, setting) => ({ ...map, [setting]: false }), {}),
       });
     },
   },

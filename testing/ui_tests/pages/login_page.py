@@ -63,10 +63,13 @@ class LoginPage(Page):
         self.wait_for_login_page_to_load()
         self.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
 
-    def logout_and_login_with_user(self, user_name, password):
+    def switch_user(self, user_name, user_password, set_new_path=None):
         self.logout()
         self.wait_for_login_page_to_load()
-        self.login(user_name, password)
+        if set_new_path:
+            self.change_current_tab_url(self.current_url + set_new_path)
+            self.wait_for_login_page_to_load()
+        self.login(username=user_name, password=user_password)
 
     def find_invalid_login_message(self):
         return self.find_element_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)
@@ -112,11 +115,6 @@ class LoginPage(Page):
 
     def find_failed_ad_login_msg_group(self, group_name):
         return self.wait_for_element_present_by_text(f'The provided user is not in the group ' + group_name)
-
-    def switch_user(self, user_name, user_password):
-        self.logout()
-        self.wait_for_login_page_to_load()
-        self.login(username=user_name, password=user_password)
 
     def make_getting_started_disappear(self):
         try:

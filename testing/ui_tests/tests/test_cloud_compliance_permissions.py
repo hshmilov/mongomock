@@ -32,7 +32,7 @@ class TestInstancesPermissions(PermissionsTestBase):
                                                                      ui_consts.LAST_NAME,
                                                                      self.settings_page.RESTRICTED_ROLE)
 
-        self.login_page.logout_and_login_with_user(ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         self.dashboard_page.switch_to_page()
         self.compliance_page.assert_screen_is_restricted()
         settings_permissions = {}

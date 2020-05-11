@@ -278,14 +278,11 @@ export default {
       getClientsMap: 'getClientsMap',
       getInstancesMap: 'getInstancesMap',
       requireConnectionLabel: REQUIRE_CONNECTION_LABEL,
-      getConnectionLabel: GET_CONNECTION_LABEL
+      getConnectionLabel: GET_CONNECTION_LABEL,
     }),
     ...mapState({
       loading(state) {
         return state.adapters.adapters.fetching;
-      },
-      allClients(state) {
-        return state.adapters.clients;
       },
       isCyberarkVault(state) {
         return _get(state, 'configuration.data.global.cyberark_vault', false);
@@ -339,15 +336,13 @@ export default {
     },
     instances() {
       const instancesIds = _get(this.currentAdapter, 'instances', []);
-      const res = instancesIds.map((instance) => {
+      return instancesIds.map((instance) => {
         const i = this.getInstancesMap.get(instance);
         return {
           name: i.node_id,
           title: i.node_name,
         };
       });
-
-      return res;
     },
     instanceDefaultName() {
       if (!this.instances.length) return '';
@@ -441,9 +436,9 @@ export default {
           valid: true,
         };
         if (client.error && client.error !== '' && client.error.startsWith('cyberark_vault_error')) {
-          const result = parseVaultError(client.error);
-          this.serverModal.serverData[result[1]].error = result[2];
-          this.serverModal.error = result[2];
+          const [, name, value] = parseVaultError(client.error);
+          this.serverModal.serverData[name].error = value;
+          this.serverModal.error = value;
         }
       }
       this.toggleServerModal();
@@ -452,7 +447,9 @@ export default {
       this.deleting = true;
     },
     async doRemoveServers() {
+      // eslint-disable-next-line no-restricted-syntax
       for (const serverId of this.selectedServers) {
+        // eslint-disable-next-line no-await-in-loop
         await this.archiveServer({
           nodeId: this.adapterClients.find((client) => (client.uuid === serverId)).node_id,
           adapterId: this.adapterId,
@@ -561,7 +558,9 @@ export default {
     toggleSettings() {
       if (this.advancedSettings) {
         this.$refs.tabs.$el.classList.add('shrinking-y');
-        setTimeout(() => this.advancedSettings = false, 1000);
+        setTimeout(() => {
+          this.advancedSettings = false;
+        }, 1000);
       } else {
         this.advancedSettings = true;
       }

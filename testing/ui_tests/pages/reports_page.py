@@ -132,7 +132,8 @@ class ReportsPage(EntitiesPage):
         self.find_element_by_text(self.INCLUDE_DASHBOARD_CHECKBOX).click()
 
     def is_include_dashboard(self):
-        return self.is_toggle_selected(self.find_element_preceding_by_text(self.INCLUDE_DASHBOARD_CHECKBOX))
+        return self.is_toggle_has_selected_classes(
+            self.find_checkbox_with_label_by_label(self.INCLUDE_DASHBOARD_CHECKBOX))
 
     def click_add_query(self):
         self.driver.find_element_by_css_selector(self.QUERY_ADD_CLASS).click()

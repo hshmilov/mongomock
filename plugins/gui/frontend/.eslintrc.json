@@ -23,7 +23,8 @@
       "ignores": ["x-button", "v-btn", "div", "md-icon", "span", "XButton"],
       "allowEmptyLines": false
     }],
-    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }]
+    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+    "no-underscore-dangle": ["error", { "allowAfterThis": true }]
   },
   "overrides": [
     {

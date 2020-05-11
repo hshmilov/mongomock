@@ -70,7 +70,6 @@
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
 import { mdiFilter } from '@mdi/js';
-import _get from 'lodash/get';
 import _debounce from 'lodash/debounce';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
@@ -110,14 +109,6 @@ export default {
     ...mapState({
       savedQueries(state) {
         return state[this.namespace].views.saved.content.data;
-      },
-      isEnforcementsWrite(state) {
-        const user = _get(state, 'auth.currentUser.data');
-        const noUserOrPermissionsDefined = !user || !user.permissions;
-        const userEnforcementsPermissionsLevel = _get(user, 'permissions.Enforcements');
-        const isUserAdminRole = user.admin;
-
-        return userEnforcementsPermissionsLevel === 'ReadWrite' || noUserOrPermissionsDefined || isUserAdminRole;
       },
       permissionCategory() {
         return getEntityPermissionCategory(this.namespace);
@@ -164,7 +155,7 @@ export default {
           name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
         },
         {
-          name: 'updated_by', title: 'Updated By', type: 'string', format: 'user'
+          name: 'updated_by', title: 'Updated By', type: 'string', format: 'user',
         },
       ];
     },
@@ -176,10 +167,6 @@ export default {
         queryStringParts.push(`tags in ["${this.filterTags.join('","')}"]`);
       }
       return queryStringParts.join(' and ');
-    },
-    selectedName() {
-      return this.savedQueries.filter((v) => v)
-        .find((view) => this.selection.ids[0] === view.uuid).name;
     },
     filterIcon() {
       return this.filterTags.length ? mdiFilter : '';
@@ -367,7 +354,7 @@ export default {
         width: 45%;
 
         .input-icon {
-          top: 0px;
+          top: 0;
           left: 4px;
         }
       }
