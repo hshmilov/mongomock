@@ -196,12 +196,17 @@ def install(first_time, no_research):
 
 if __name__ == '__main__':
     with AutoOutputFlush():
+        SUCCESS = False
         try:
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 print(f'Install is already in progress')
             else:
                 PYTHON_INSTALLER_LOCK_FILE.touch()
                 main()
+                SUCCESS = True
         finally:
+            STATUS = 'success' if SUCCESS else 'failure'
+            print(f'Upgrader completed - {STATUS}')
+
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()
