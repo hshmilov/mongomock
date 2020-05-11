@@ -174,8 +174,8 @@ class BuildsInstance(BuildsAPI):
         return self.get_file('/tmp/tmp.tar')
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
-    def terminate(self):
-        self.post(f'instances/{self.cloud}/{self.id}/delete')
+    def terminate(self, async_=False):
+        self.post(f'instances/{self.cloud}/{self.id}/delete' + '?async=true' if async_ else '')
 
 
 class Builds(BuildsAPI):

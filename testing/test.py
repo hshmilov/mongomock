@@ -371,6 +371,13 @@ class InstanceManager:
             })
             jobs_left.pop(job_name)
             print(f'Jobs left: {jobs_left.keys()}')
+            with free_instances_lock:
+                redundant_instances = []
+                for _ in range(len(free_instances) - len(jobs_left)):
+                    redundant_instances.append(free_instances.pop())
+            print(f'Removing {len(redundant_instances)} redundant instances.')
+            for instance_to_delete in redundant_instances:
+                instance_to_delete.terminate(async_=True)
             with TC.block(f'job {job_name} ({overall_time_nice})'):
                 with TC.block('output'):
                     print(str(output))  # output could also be of type Exception
