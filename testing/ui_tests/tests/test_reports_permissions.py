@@ -1,14 +1,16 @@
 import pytest
 
-from ui_tests.pages.reports_page import ReportConfig
+from services.adapters import stresstest_service, stresstest_scanner_service
+from services.standalone_services.smtp_service import generate_random_valid_email, SmtpService
+from ui_tests.pages.reports_page import ReportConfig, ReportFrequency
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 # pylint: disable=no-member
 
 
-class TestReportsPermissions(TestBase):
+class TestReportsPermissions(PermissionsTestBase):
     DATA_QUERY = 'specific_data.data.name == regex(\' no\', \'i\')'
 
     TEST_REPORT_READ_ONLY_QUERY = 'query for read only test'
@@ -17,6 +19,7 @@ class TestReportsPermissions(TestBase):
     TEST_REPORT_CAN_EDIT_NAME = 'report name can EDIT'
 
     TEST_USERS_QUERY = 'query for users'
+    REPORT_SUBJECT = 'axonius read only report subject'
 
     def test_report_permissions(self):
         self.reports_page.switch_to_page()
@@ -200,3 +203,60 @@ class TestReportsPermissions(TestBase):
         self.reports_page.click_report(self.TEST_REPORT_READ_ONLY_NAME)
         assert self.reports_page.is_form_disabled()
         assert self.reports_page.is_save_button_disabled()
+
+    def test_new_read_only_user_for_reports(self):
+        smtp_service = SmtpService()
+        stress = stresstest_service.StresstestService()
+        stress_scanner = stresstest_scanner_service.StresstestScannerService()
+        with smtp_service.contextmanager(take_ownership=True), stress.contextmanager(take_ownership=True),\
+                stress_scanner.contextmanager(take_ownership=True):
+            device_dict = {'device_count': 10, 'name': 'blah'}
+            stress.add_client(device_dict)
+            stress_scanner.add_client(device_dict)
+            self.base_page.run_discovery()
+            self.settings_page.switch_to_page()
+            self.settings_page.click_global_settings()
+            toggle = self.settings_page.find_send_emails_toggle()
+            self.settings_page.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
+            self.settings_page.fill_email_host(smtp_service.fqdn)
+            self.settings_page.fill_email_port(smtp_service.port)
+            self.settings_page.save_and_wait_for_toaster()
+
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(self.DATA_QUERY)
+            self.devices_page.enter_search()
+            self.devices_page.click_save_query()
+            self.devices_page.fill_query_name(self.TEST_REPORT_READ_ONLY_QUERY)
+            self.devices_page.click_save_query_save_button()
+            self.devices_page.wait_for_table_to_load()
+            recipient = generate_random_valid_email()
+            queries = [{'entity': 'Devices', 'name': self.TEST_REPORT_READ_ONLY_QUERY}]
+            self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_READ_ONLY_NAME,
+                                                         add_dashboard=True, queries=queries, add_scheduling=True,
+                                                         email_subject=self.REPORT_SUBJECT,
+                                                         emails=[recipient], period=ReportFrequency.weekly))
+            self.reports_page.wait_for_table_to_load()
+
+            # to fill up devices and users
+            self.base_page.run_discovery()
+
+            self.settings_page.switch_to_page()
+            self.settings_page.click_manage_users_settings()
+            self.settings_page.create_new_user(ui_consts.READ_ONLY_USERNAME,
+                                               ui_consts.NEW_PASSWORD,
+                                               ui_consts.FIRST_NAME,
+                                               ui_consts.LAST_NAME,
+                                               self.settings_page.VIEWER_ROLE)
+
+            self.settings_page.wait_for_user_created_toaster()
+
+            self.login_page.logout()
+            self.login_page.wait_for_login_page_to_load()
+            self.login_page.login(username=ui_consts.READ_ONLY_USERNAME, password=ui_consts.NEW_PASSWORD)
+
+            self.reports_page.switch_to_page()
+            self.reports_page.is_disabled_new_report_button()
+            self.reports_page.click_report(self.TEST_REPORT_READ_ONLY_NAME)
+            self.reports_page.wait_for_spinner_to_end()
+
+            assert self.reports_page.is_form_disabled()

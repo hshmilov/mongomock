@@ -4,13 +4,13 @@ from selenium.common.exceptions import NoSuchElementException
 from axonius.consts.gui_consts import DASHBOARD_SPACE_PERSONAL
 from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 # pylint: disable=no-member
 
 
-class TestDashboardPermissions(TestBase):
+class TestDashboardPermissions(PermissionsTestBase):
 
     TEST_EMPTY_TITLE = 'test empty'
     OSX_OPERATING_SYSTEM_NAME = 'OS X Operating System'

@@ -6,12 +6,12 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 # pylint: disable=no-member
 
 
-class TestEntitiesPermissions(TestBase):
+class TestEntitiesPermissions(PermissionsTestBase):
     NOTE_TEXT = 'note text'
     TAG_NAME = 'test tag'
 

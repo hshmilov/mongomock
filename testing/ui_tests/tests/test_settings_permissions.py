@@ -2,13 +2,13 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 # pylint: disable=no-member
 
 
-class TestSettingsPermissions(TestBase):
+class TestSettingsPermissions(PermissionsTestBase):
 
     def test_settings_users_permissions(self):
         self.settings_page.switch_to_page()

@@ -4,13 +4,13 @@ from selenium.common.exceptions import NoSuchElementException
 from services.standalone_services.smtp_service import generate_random_valid_email
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME, EmailSettings
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 # pylint: disable=no-member
 
 
-class TestEnforcementsPermissions(TestBase):
+class TestEnforcementsPermissions(PermissionsTestBase):
 
     def test_enforcements_permissions(self):
         self.settings_page.switch_to_page()
