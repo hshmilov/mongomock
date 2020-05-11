@@ -633,10 +633,13 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.get_title_from_card(sl_card) == self.dashboard_page.SYSTEM_LIFECYCLE
 
         self.dashboard_page.wait_for_element_present_by_text('6 minutes', sl_card)
-
         self.dashboard_page.wait_for_element_present_by_text('Less than 1 minute', sl_card, interval=12)
-
         self.dashboard_page.wait_for_element_present_by_text('6 minutes', sl_card, interval=6)
+
+        # resetting scheduler configurations.
+        self.settings_page.switch_to_page()
+        self.settings_page.fill_schedule_rate(12)
+        self.settings_page.save_and_wait_for_toaster()
 
     def test_dashboard_multi_page_query_comparison(self):
         self.dashboard_page.switch_to_page()
