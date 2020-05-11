@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import format_ip
 from infoblox_netmri_adapter.connection import InfobloxNetmriConnection
 from infoblox_netmri_adapter.client_id import get_client_id
 from infoblox_netmri_adapter.structures import InfobloxNetmriDeviceInstance
@@ -179,15 +180,26 @@ class InfobloxNetmriAdapter(AdapterBase):
             device.device_manufacturer = device_raw.get('DeviceVendor') or device_raw.get('DeviceOUI')
             try:
                 device.figure_os(device_raw.get('DeviceVersion'))
-            except Exception as e:
+            except Exception:
                 logger.warning(f'Failed to parse OS for {device_name}', exc_info=True)
             device.device_managed_by = device_raw.get('DeviceSysContact')
-            device_ip = [device_raw.get('DeviceIPDotted')] or [device_raw.get('DeviceIPNumeric')] or None
-            device_mac = [device_raw.get('DeviceMAC')] or None
-            try:
-                device.add_ips_and_macs(ips=device_ip, macs=device_mac)
-            except Exception as e:
-                logger.warning(f'Failed to parse ip {device_ip} and mac {device_mac}: {str(e)}')
+
+            device_mac = device_raw.get('DeviceMAC') or None  # Can be output as empty string
+            ip_dotted = device_raw.get('DeviceIPDotted') or None  # can be an empty string
+            device_ip = None
+            if ip_dotted:
+                device_ip = ip_dotted
+            else:
+                # If we failed to get a dotted IP, then either the server has a bug (which can happen!)
+                # or there's no ip registered. So try to get a numeric IP.
+                # They should be the same IP.
+                try:
+                    ip_numeric = int(device_raw.get('DeviceIPNumeric'))
+                    device_ip = (format_ip(ip_numeric))
+                except Exception:
+                    logger.exception(f'Failed to find IP for {device_raw}')
+            device.add_nic(device_mac, ips=[device_ip])
+
             # Now parse specific fields
             self._fill_infoblox_netmri_device_fields(device_raw, device)
             device.set_raw(device_raw)
