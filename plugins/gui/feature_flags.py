@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
+from axonius.utils.build_modes import get_build_mode, BuildModes
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -178,5 +179,5 @@ class FeatureFlags(Configurable):
             },
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
-            FeatureFlagsNames.EnableFIPS: False
+            FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.FED.value
         }

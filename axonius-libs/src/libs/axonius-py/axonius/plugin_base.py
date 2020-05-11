@@ -124,6 +124,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.build_modes import get_build_mode
 from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
@@ -693,6 +694,10 @@ class PluginBase(Configurable, Feature, ABC):
             'default': ThreadPoolExecutorReusable(self._common_executor)
         })
         self.cached_operation_scheduler.start()
+
+        self.build_mode = get_build_mode()
+        if self.build_mode:
+            logger.info('Running on {self.build_mode} mode')
 
         run_and_forget(self.__call_delayed_initialization)
 
