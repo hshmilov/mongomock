@@ -179,5 +179,5 @@ class FeatureFlags(Configurable):
             },
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
-            FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.FED.value
+            FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value
         }
