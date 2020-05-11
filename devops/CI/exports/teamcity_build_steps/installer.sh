@@ -5,8 +5,8 @@ set +o xtrace
 set -e
 
 echo "Generating installer files."
-echo PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step installer --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" installer --fork $FORK --branch $BRANCH --name $NAME --output installer.py --git-hash-file git_hash.txt
-PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step installer --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" installer --fork $FORK --branch $BRANCH --name $NAME --output installer.py --git-hash-file git_hash.txt
+echo PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step installer --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" installer --fork $FORK --branch $BRANCH --name $NAME --output installer.py --git-hash-file git_hash.txt --mode "$MODE"
+PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step installer --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" installer --fork $FORK --branch $BRANCH --name $NAME --output installer.py --git-hash-file git_hash.txt --mode "$MODE"
 
 echo "##teamcity[setParameter name='installer_git_hash' value='`tail -n 1 git_hash.txt`']"
 

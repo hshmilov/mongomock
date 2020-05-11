@@ -1,5 +1,6 @@
 # Use axonius-base-image. This gets is from a private repository in docker hub, use docker login to login!
-FROM nexus.pub.axonius.com/axonius/axonius-base-image
+ARG BASE_IMAGE_TAG=latest
+FROM nexus.pub.axonius.com/axonius/axonius-base-image:$BASE_IMAGE_TAG
 
 WORKDIR /home/axonius/app
 ENV HOME /home/axonius

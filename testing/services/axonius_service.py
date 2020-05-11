@@ -600,11 +600,13 @@ class AxoniusService:
         tunneler_image = f'{DOCKERHUB_URL}alpine/socat'
         return self._pull_image(tunneler_image, repull, show_print)
 
-    def pull_base_image(self, repull=False, show_print=True):
+    def pull_base_image(self, repull=False, tag=None, show_print=True):
         base_image = f'{DOCKERHUB_URL}axonius/axonius-base-image'
+        if tag:
+            base_image = f'{base_image}:{tag}'
         return self._pull_image(base_image, repull, show_print)
 
-    def build_libs(self, rebuild=False, show_print=True):
+    def build_libs(self, rebuild=False, base_image_tag=None, show_print=True):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         image_exists = image_name in output
@@ -613,7 +615,10 @@ class AxoniusService:
                 print('Image axonius-libs already built - skipping build step')
             return image_name
         runner = ParallelRunner()
-        runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
+        args = ['docker', 'build', '.', '-t', image_name]
+        if base_image_tag:
+            args.extend(['--build-arg', f'BASE_IMAGE_TAG={base_image_tag}'])
+        runner.append_single('axonius-libs', args,
                              cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
         assert runner.wait_for_all() == 0
         return image_name

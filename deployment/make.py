@@ -47,6 +47,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--out', type=str, default='axonius_{version}.py')
     parser.add_argument('--version', type=str, default='')
+    parser.add_argument('--mode', type=str, default='', help='Installer mode, will be used as base-image tag')
     parser.add_argument('--override', action='store_true', default=False, help='Override output file if already exists')
     parser.add_argument('--pull', action='store_true', default=False, help='Pull base image before rebuild')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild images')
@@ -68,10 +69,11 @@ def main():
         if not args.override:
             raise Exception('Output path already exists, pass --override to override the file')
 
-    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, True, args.winpip)
+    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, True, args.winpip, args.mode)
 
 
-def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False):
+def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False,
+                   tag=None):
     """
     The file created (axonius_install{version}.py) is a zip file with the following structure:
     axonius_install{version}.py (zip file):
@@ -102,7 +104,7 @@ with AutoOutputFlush():
     metadata = get_metadata(version=version)
     download_artifacts()
     download_packages(winpip)
-    images_tar = get_images_tar(pull, rebuild, exclude, prod)
+    images_tar = get_images_tar(pull, rebuild, exclude, prod, tag)
     try:
         with open(output_path, 'wb') as output_file:
             output_file.write(b'#!/usr/bin/env python3.6\n')
@@ -122,9 +124,9 @@ with AutoOutputFlush():
     print_state(f'Done, took {int(time.time() - start)} seconds - saved to {output_path}')
 
 
-def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True):
+def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     images_tar = tempfile.mktemp(prefix='axonius_images_')
-    images = build_images(pull, rebuild, exclude, prod)
+    images = build_images(pull, rebuild, exclude, prod, tag)
     print_state(f'Compiling {len(images)} images')
     print('  ' + '\n  '.join(images))
     print_state('  Saving images to temp file')
@@ -141,7 +143,7 @@ def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True):
         raise
 
 
-def build_images(pull=False, rebuild=False, exclude=None, prod=True):
+def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     axonius_system = get_service()
     axonius_system.take_process_ownership()
     images = []
@@ -152,12 +154,12 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
             pull = True
     if pull:
         rebuild = True
-    images.append(axonius_system.pull_base_image(pull, show_print=False))
+    images.append(axonius_system.pull_base_image(pull, tag, show_print=False))
     images.append(axonius_system.pull_tunneler(pull, show_print=False))
     images.append(axonius_system.pull_curl_image(pull, show_print=False))
     images.extend(axonius_system.pull_weave_images(pull, show_print=False))
     print_state(f'Building all images')
-    images.append(axonius_system.build_libs(rebuild, show_print=False))
+    images.append(axonius_system.build_libs(rebuild, base_image_tag=tag, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]
     adapters = [name for name, variable in axonius_system.get_all_adapters()]
     standalone_services = ['mockingbird']

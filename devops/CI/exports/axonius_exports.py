@@ -63,6 +63,7 @@ def main():
                                   default=None, required=False,
                                   help='Will use axonius_[name]_git_hash.txt where name is the argument given as name if not specified. This file contains the commit hash of the resulting installer.')
     installer_parser.add_argument('--zip-output', type=pathlib.Path, default=None)
+    installer_parser.add_argument('--mode', type=str, help='Export mode, will be used as base-image tag')
     installer_parser.set_defaults(entrypoint=installer)
 
     cloud_parser = subparsers.add_parser('cloud')
@@ -142,6 +143,7 @@ def installer(args, notify):
                     '-var', f'git_hash_file={git_hash_file}',
                     '-var', f'fork={args.fork}',
                     '-var', f'branch={args.branch}',
+                    '-var', f'build_mode={args.mode}',
                     '-var', f'version_password={password}',
                     '-var', f'zip_installer_path={zip_installer_path}',
                     installer_packer_file],
