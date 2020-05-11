@@ -2,7 +2,9 @@ import logging
 from datetime import datetime
 
 import pytest
+import pytz
 
+from axonius.utils.parsing import parse_date_with_timezone
 from ui_tests.tests.ui_test_base import TestBase
 
 logging.basicConfig(level=logging.INFO)
@@ -50,3 +52,15 @@ class TestGUISettings(TestBase):
             self.settings_page.click_gui_settings()
             self.settings_page.set_date_format(DEFAULT_DATE_FORMAT)
             self.settings_page.click_save_gui_settings()
+
+    def test_datetime_in_localtime(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.switch_to_page()
+        cycle_card = self.dashboard_page.get_lifecycle_card_info()
+        complete_cycle_date = cycle_card['Last cycle completed at:'].strip()
+        # Make sure the lifecacle completed less then a minute ago in localtime
+        israel_timezone = pytz.timezone('Israel')
+        assert abs(
+            (datetime.now(israel_timezone) - parse_date_with_timezone(complete_cycle_date, 'Israel')).total_seconds()
+        ) < 60
