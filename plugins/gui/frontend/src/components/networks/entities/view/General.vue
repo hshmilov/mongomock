@@ -89,7 +89,7 @@ export default {
     },
     basicSchema() {
       if (!this.fields.generic) return null;
-      const items = !this.$isAxoniusUser() ? this.fields.generic : this.schemaGenericFields;
+      const items = this.$isAxoniusUser() ? this.fields.generic : this.schemaGenericFields;
       return {
         type: 'array',
         items,
