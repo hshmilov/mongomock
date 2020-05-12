@@ -537,7 +537,10 @@ def main():
                                            'test_sysaid.py', 'test_tenable_io.py', 'test_nessus.py', 'test_medigate.py',
                                            'test_spacewalk.py', 'test_logicmonitor.py', 'test_ansible_tower.py',
                                            'test_symantec_ccs.py', 'test_cisco_meraki.py', 'test_netbrain.py',
-                                           'test_mobileiron.py', 'test_bigid.py', 'test_observeit.py']
+                                           'test_mobileiron.py', 'test_bigid.py', 'test_observeit.py',
+                                           'test_absolute.py', 'test_carbonblack_defense.py', 'test_aws.py',
+                                           'test_prisma_cloud.py'
+                                           ]
 
                 for t in reversed(priority_tests_parallel):
                     if t not in parallel_tests:
