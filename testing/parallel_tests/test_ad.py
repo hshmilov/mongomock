@@ -401,3 +401,6 @@ class TestAdAdapter(AdapterTestBase):
             pass  # some adapters return 200, and some an error
         wait_until(lambda: self.log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                                             value='.*'))
+
+    def test_adapter_is_up(self):
+        assert self.adapter_service.is_up()

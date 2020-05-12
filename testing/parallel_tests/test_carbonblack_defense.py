@@ -20,3 +20,7 @@ class TestCarbonblackDefenseAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @pytest.mark.skip("Slow")
+    def test_check_reachability(self):
+        pass
