@@ -436,6 +436,7 @@ class AdapterTestBase:
         assert len(get_users_by_id(self.adapter_service.plugin_name, out_id)) == 0
         self.adapter_service.trigger_clean_db()
 
+    @pytest.mark.skip('Slow and not important')
     def test_bad_client(self):
         try:
             self.adapter_service.add_client(FAKE_CLIENT_DETAILS)

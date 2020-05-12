@@ -9,6 +9,10 @@ from test_credentials.test_ad_credentials import *
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
 from services.plugins.device_control_service import device_control_fixture
+from test_credentials.test_bad_credentials import FAKE_CLIENT_DETAILS
+from axonius.utils.wait import wait_until
+from axonius.consts.metric_consts import Adapters
+
 
 pytestmark = pytest.mark.sanity
 
@@ -389,3 +393,11 @@ class TestAdAdapter(AdapterTestBase):
             assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
         try_until_not_thrown(30, 10, check_get_files_after_delete_results)
+
+    def test_bad_client(self):
+        try:
+            self.adapter_service.add_client(FAKE_CLIENT_DETAILS)
+        except AssertionError:
+            pass  # some adapters return 200, and some an error
+        wait_until(lambda: self.log_tester.is_metric_in_log(metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
+                                                            value='.*'))
