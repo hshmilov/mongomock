@@ -114,7 +114,7 @@ def get_encryption_key():
 
         AXONIUS_SETTINGS_HOST_PATH.mkdir(exist_ok=True)
         ENCRYPTION_KEY_HOST_PATH.write_text(encryption_key)
-        ENCRYPTION_KEY_HOST_PATH.chmod(0o646)
+        ENCRYPTION_KEY_HOST_PATH.chmod(0o600)
         return encryption_key
 
 

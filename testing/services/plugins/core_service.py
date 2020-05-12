@@ -917,7 +917,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 with open(DB_KEY_PATH, 'wb') as f:
                     key = os.urandom(MONGO_MASTER_KEY_SIZE)
                     f.write(base64.b64encode(key))
-                DB_KEY_PATH.chmod(0o646)
+                DB_KEY_PATH.chmod(0o600)
             except Exception as e:
                 print(f'Error writing db encryption key: {e}')
                 if DB_KEY_PATH.is_file():
