@@ -119,7 +119,11 @@ def allow_experimental(count=False):
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             if not content.get('experimental', False):
                 return func(self, *args, **kwargs)
-            logger.info(f'Using experimental API')
+            # fallback... fallback to minas... mongodb...
+            if content.get('sort') is not None:
+                return func(self, *args, **kwargs)
+
+            logger.info(f'Using experimental API count={count}')
             try:
                 aql = content.get('filter')
                 if not aql:
@@ -129,10 +133,10 @@ def allow_experimental(count=False):
                                      aql=aql, offset=content.get('offset', 0), limit=content.get('limit', 0),
                                      fields_query=content.get('fields'),
                                      count=count)
-                time2 = time.time()
-                logger.info('GraphQL Request function took {:.3f} ms'.format((time2 - time1) * 1000.0))
                 if resp.status_code != 200:
                     raise ValueError(f'Query failed. Response: {resp.json()}')
+                time2 = time.time()
+                logger.info('GraphQL Request function took {:.3f} ms'.format((time2 - time1) * 1000.0))
                 return resp.text
             except (ValueError, NotImplementedError, Exception) as err:
                 logger.warning('failed to use GraphQL using Mongo. Reason: %s', err)
@@ -147,13 +151,14 @@ def execute_query(translator, entity_type, aql: typing.AnyStr, limit: int, offse
     vars_ = {
         "where": translator.translate(aql) if aql else {},
         "limit": limit,
-        "offset": offset
+        "offset": offset,
+        "orderBy": ['adapterCount_DESC'],
     }
     logger.debug(f'Translating AQL {aql} -> {vars_["where"]}')
 
     if fields_query:
         query = translator.build_gql(fields_query)
-        logger.debug(f'built GraphQL project query {query}')
+        logger.debug(f'built GraphQL project query {fields_query} -> {query}')
     else:
         query = API_QUERY[entity_type][count]
     return requests.post("https://bandicoot.axonius.local:9090/query",

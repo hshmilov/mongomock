@@ -35,6 +35,11 @@ type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapt
     "Username"
     username: String
 
+    displayName: String
+    description: String
+    domain: String
+    userSid: String
+
     "User first name"
     firstName: String
     "User last name"
@@ -47,11 +52,11 @@ type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapt
     "User entity is local "
     local: Boolean
     "User account is a delegated admin"
-    delegated_admin: Boolean
+    delegatedAdmin: Boolean
     "User account has multi-factor authentication enforced"
-    mfa_enforced: Boolean
+    mfaEnforced: Boolean
     "User account is enrollled in multi-factor authenticaton"
-    mfa_enrolled: Boolean
+    mfaEnrolled: Boolean
     "User account is suspended"
     suspended: Boolean
     "User account has been locked"

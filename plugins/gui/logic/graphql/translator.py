@@ -84,17 +84,32 @@ class GqlField(str):
     pass
 
 
+class GqlNotSupported(str):
+    """
+    GqlNotSupported will skip the field but won't crash the query
+    """
+
+
 BUILDER_CONVERTERS = {
     'adapterDevices': GqlObject('adapterDevices'),
-    'adapterUsers': GqlObject('adapterDevices'),
+    'adapterUsers': GqlObject('adapterUsers'),
     'adapters': GqlField('adapterNames'),
     'os': GqlObject('os'),
     'network_interfaces': GqlObject('interfaces'),
-    'labels': GqlObject('tags.name'),
+    # For now until labels are supported for both users and devices
+    'labels': GqlNotSupported('tags.name'),
     'tags': GqlObject('tags'),
-    'isAdmin': GqlField('admin'),
+    'is_admin': GqlField('admin'),
+    'is_suspended': GqlField('suspended'),
+    'is_local': GqlField('local'),
+    'is_delegated_admin': GqlField('delegatedAdmin'),
+    'is_mfa_enforced': GqlField('mfaEnforced'),
+    'is_mfa_enrolled': GqlField('mfaEnrolled'),
+    'is_disabled': GqlField('disabled'),
+    'is_locked': GqlField('locked'),
     'ips': GqlField('ipAddrs'),
     'mac': GqlField('macAddr'),
+    'image': GqlNotSupported('image'),
 }
 
 
@@ -102,6 +117,7 @@ class Translator:
     def __init__(self, entity_type: EntityType):
         self._entity_type = entity_type
         self._specific_data_converter = 'adapterDevices' if entity_type == EntityType.Devices else 'adapterUsers'
+        self._bool_exp_type = 'device' if entity_type == EntityType.Devices else 'user'
 
     @cached(cache=LFUCache(maxsize=64), key=lambda _, aql: hash(aql))
     def translate(self, aql):
@@ -114,9 +130,13 @@ class Translator:
         fields = fields_query.split(',')
         gql = GqlQuery().query(
             name=self._entity_type.name.lower(),
-            input={'where': '$where', 'limit': '$limit', 'offset': '$offset'})
+            input={'where': '$where', 'limit': '$limit', 'offset': '$offset', 'orderBy': '$orderBy'})
         gql = gql.operation('query', name="GQLQuery",
-                            input={'$where': 'device_bool_exp!', '$limit': 'Int = 20', '$offset': 'Int = 0'})
+                            input={'$where': f'{self._bool_exp_type}_bool_exp!',
+                                   '$limit': 'Int = 20',
+                                   '$offset': 'Int = 0',
+                                   '$orderBy': f'[{self._bool_exp_type}_order_by!]'}
+                            )
         gql.add_fields('adapterCount', 'id', '_compatibilityAPI')
         created_gql = {}
         for field in fields:
@@ -124,7 +144,6 @@ class Translator:
         return gql.generate()
 
     def _parse_field(self, field: str, created_gql: dict, current: GqlQuery):
-
         if field.startswith('specific_data.data'):
             field = field.replace('specific_data.data', self._specific_data_converter)
 
@@ -133,14 +152,17 @@ class Translator:
             gql_field = BUILDER_CONVERTERS.get(field, GqlField(field))
             if isinstance(gql_field, GqlObject):
                 self._parse_field(gql_field, created_gql, current)
-            else:
-                current.add_fields(_to_lower_camel_case(gql_field))
+                return
+            if isinstance(gql_field, GqlNotSupported):
+                return
+            current.add_fields(_to_lower_camel_case(gql_field))
             return
 
         _type, rest = field.split('.', 1)
         gql_field = BUILDER_CONVERTERS.get(_type)
         if not gql_field:
             raise NotImplementedError(f'Unknown {_type}')
+
         gql = created_gql.get(gql_field)
         if not gql:
             gql = GqlQuery(name=gql_field)
@@ -176,7 +198,7 @@ class Translator:
         method = KEY_NAME_METHODS.get(key)
         if method:
             return method(key, value)
-        return {TERM_CONVERTER.get(key, key): _build_value(value)}
+        return {TERM_CONVERTER.get(key, _to_lower_camel_case(key)): _build_value(value)}
 
     def _build_adapter_comparison(self, key, value):
         adapter_type, prop = key.split('.')
@@ -218,5 +240,5 @@ def _build_value(value, operator_override=None, reverse=False):
 
 def _value_converter(x):
     if isinstance(x, datetime.datetime):
-        return x.timestamp() * 1000
+        return int(x.timestamp() * 1000)
     return x

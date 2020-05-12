@@ -28,6 +28,13 @@ var mappingConversions = map[string]string{
 	"tags":           "label_details",
 	"id":             "internal_axon_id",
 	"admin": 		  "is_admin",
+	"local": 		  "is_local",
+	"delegatedAdmin": "is_delegated_admin",
+	"mfaEnforced": 	  "is_mfa_enforced",
+	"mfaEnrolled": 	  "is_mfa_enrolled",
+	"suspended": 	  "is_suspended",
+	"locked": 		  "is_locked",
+	"disabled": 	  "is_disabled",
 }
 
 var pathFolding = map[string]string{

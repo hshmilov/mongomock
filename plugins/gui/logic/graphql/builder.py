@@ -2,7 +2,6 @@
 Builder taken from https://github.com/youyo/gql-query-builder/tree/master/gql_query_builder
 converted to support term changing (field name changing etc')
 """
-
 # pylint: disable=line-too-long, invalid-string-quote, no-self-use, redefined-builtin, dangerous-default-value, bad-option-value
 # coding: utf-8
 from typing import Dict, List, Union

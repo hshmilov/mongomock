@@ -20,7 +20,7 @@ class BandicootService(WeaveService):
     @property
     def _additional_parameters(self):
         return ['api',  '--mgHostname=mongo.axonius.local', '--pgHostname=postgres.axonius.local', '--pgPort=5432',
-                '--verbose=true',  '--apiAddr=0.0.0.0', '--enableConsoleLog=true', '--logDirectory=/home/axonius/logs',
+                '--verbose=true',  '--apiAddr=0.0.0.0', '--logDirectory=/home/axonius/logs',
                 '--apiSSLCert=/etc/ssl/certs/nginx-selfsigned.crt', '--apiSSLKey=/etc/ssl/private/nginx-selfsigned.key']
 
     def get_dockerfile(self, *args, **kwargs):

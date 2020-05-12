@@ -11,15 +11,16 @@
   duration: 30
 
   # number of open connections to the server
-  open_connections: 1000
+  open_connections: 30
 
   # the servers to be benchmarked, their dir and urls
   candidates:
     - name: bandicoot_local
-      url: http://host.docker.internal:9091/query
+      url: https://host.docker.internal:9090/query
       query: DevicesQuery
       queries_file: query.graphql
 
   # Requests/sec
   rps:
-    - 10000
+    - 200
+    - 400

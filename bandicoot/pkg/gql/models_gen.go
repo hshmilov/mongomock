@@ -4,7 +4,6 @@ package gql
 
 import (
 	"bandicoot/internal"
-	"bandicoot/pkg/domain"
 	"fmt"
 	"io"
 	"net"
@@ -108,9 +107,9 @@ type ActiveDirectoryData struct {
 func (ActiveDirectoryData) IsAdapterData() {}
 
 type Adapter struct {
-	ID         domain.AdapterType ` json:"id"`
-	Name       *string            ` json:"name"`
-	Properties []*string          ` json:"properties"`
+	ID         string    ` json:"id"`
+	Name       *string   ` json:"name"`
+	Properties []*string ` json:"properties"`
 }
 
 // Adapter device is a single enitity returned from that adapter
@@ -120,8 +119,8 @@ type AdapterDevice struct {
 	// Cycle adapter device was fetched
 	FetchCycle int ` json:"fetch_cycle"`
 	// Idadas of adapter that fetched this device
-	AdapterID domain.AdapterType ` json:"adapter_id"`
-	Adapter   *Adapter           ` json:"adapter"`
+	AdapterID string   ` json:"adapter_id"`
+	Adapter   *Adapter ` json:"adapter"`
 	// Name of adapter that fetched this advice
 	AdapterName *string ` json:"adapter_name"`
 	// Correlated device id
@@ -197,26 +196,14 @@ type AdapterDeviceUser struct {
 	Interpreter    *string         ` json:"interpreter"`
 }
 
-// Enum filter expression for AdapterType
-type AdapterTypeComparator struct {
-	// eq comparison operator
-	Eq *domain.AdapterType ` json:"eq"`
-	// neq comparison operator
-	Neq *domain.AdapterType ` json:"neq"`
-	// in comparison operator
-	In []*domain.AdapterType ` json:"in"`
-	// not_in comparison operator
-	NotIn []*domain.AdapterType ` json:"not_in"`
-}
-
 type AdapterUser struct {
 	// Unique id of adapter device
 	ID uuid.UUID ` json:"id"`
 	// Cycle adapter device was fetched
 	FetchCycle int ` json:"fetch_cycle"`
 	// Id of adapter that fetched this device
-	AdapterID domain.AdapterType ` json:"adapter_id"`
-	Adapter   *Adapter           ` json:"adapter"`
+	AdapterID string   ` json:"adapter_id"`
+	Adapter   *Adapter ` json:"adapter"`
 	// Name of adapter that fetched this advice
 	AdapterName *string ` json:"adapter_name"`
 	// Correlated device id
@@ -230,7 +217,11 @@ type AdapterUser struct {
 	// Last time device was seen by adapter in Unix time
 	LastSeen *internal.Epoch ` json:"last_seen"`
 	// Username
-	Username *string ` json:"username"`
+	Username    *string ` json:"username"`
+	DisplayName *string ` json:"display_name"`
+	Description *string ` json:"description"`
+	Domain      *string ` json:"domain"`
+	UserSid     *string ` json:"user_sid"`
 	// User first name
 	FirstName *string ` json:"first_name"`
 	// User last name
@@ -688,7 +679,7 @@ type AdapterUsersAggregate struct {
 // Boolean filter expression for Adapter
 type AdapterBoolExp struct {
 	// filter by id
-	ID *AdapterTypeComparator ` json:"id"`
+	ID *StringComparator ` json:"id"`
 	// filter by name
 	Name *StringComparator ` json:"name"`
 	// filter by properties
@@ -799,7 +790,7 @@ type AdapterDeviceBoolExp struct {
 	// filter by fetchCycle
 	FetchCycle *IntComparator ` json:"fetch_cycle"`
 	// filter by adapterId
-	AdapterID *AdapterTypeComparator ` json:"adapter_id"`
+	AdapterID *StringComparator ` json:"adapter_id"`
 	// filter by adapter
 	Adapter *AdapterBoolExp ` json:"adapter"`
 	// filter by adapterName
@@ -897,7 +888,7 @@ type AdapterUserBoolExp struct {
 	// filter by fetchCycle
 	FetchCycle *IntComparator ` json:"fetch_cycle"`
 	// filter by adapterId
-	AdapterID *AdapterTypeComparator ` json:"adapter_id"`
+	AdapterID *StringComparator ` json:"adapter_id"`
 	// filter by adapter
 	Adapter *AdapterBoolExp ` json:"adapter"`
 	// filter by adapterName
@@ -912,6 +903,14 @@ type AdapterUserBoolExp struct {
 	LastSeen *EpochComparator ` json:"last_seen"`
 	// filter by username
 	Username *StringComparator ` json:"username"`
+	// filter by displayName
+	DisplayName *StringComparator ` json:"display_name"`
+	// filter by description
+	Description *StringComparator ` json:"description"`
+	// filter by domain
+	Domain *StringComparator ` json:"domain"`
+	// filter by userSid
+	UserSid *StringComparator ` json:"user_sid"`
 	// filter by firstName
 	FirstName *StringComparator ` json:"first_name"`
 	// filter by lastName
@@ -922,11 +921,11 @@ type AdapterUserBoolExp struct {
 	Admin *BooleanComparator ` json:"admin"`
 	// filter by local
 	Local *BooleanComparator ` json:"local"`
-	// filter by delegated_admin
+	// filter by delegatedAdmin
 	DelegatedAdmin *BooleanComparator ` json:"delegated_admin"`
-	// filter by mfa_enforced
+	// filter by mfaEnforced
 	MfaEnforced *BooleanComparator ` json:"mfa_enforced"`
-	// filter by mfa_enrolled
+	// filter by mfaEnrolled
 	MfaEnrolled *BooleanComparator ` json:"mfa_enrolled"`
 	// filter by suspended
 	Suspended *BooleanComparator ` json:"suspended"`
@@ -1189,14 +1188,15 @@ type InstalledSoftwareBoolExp struct {
 }
 
 type InterfacesAggregate struct {
-	Group      []string               ` json:"group"`
-	Distinct   []string               ` json:"distinct"`
-	Count      *int                   ` json:"count"`
-	Sum        map[string]interface{} ` json:"sum"`
-	Avg        map[string]interface{} ` json:"avg"`
-	Min        map[string]interface{} ` json:"min"`
-	Max        map[string]interface{} ` json:"max"`
-	Interfaces []*NetworkInterface    ` json:"interfaces"`
+	Group    []string               ` json:"group"`
+	Distinct []string               ` json:"distinct"`
+	Count    *int                   ` json:"count"`
+	Sum      map[string]interface{} ` json:"sum"`
+	Avg      map[string]interface{} ` json:"avg"`
+	Min      map[string]interface{} ` json:"min"`
+	Max      map[string]interface{} ` json:"max"`
+	// Unique set of network interfaces collected by all adapter devices
+	Interfaces []*NetworkInterface ` json:"interfaces"`
 }
 
 // Boolean filter expression for NetworkInterface
@@ -1236,7 +1236,7 @@ type OperatingSystemBoolExp struct {
 	Minor *IntComparator ` json:"minor"`
 	// filter by build
 	Build *StringComparator ` json:"build"`
-	// filter by RawName
+	// filter by rawName
 	RawName *StringComparator        ` json:"raw_name"`
 	And     []OperatingSystemBoolExp ` json:"and"`
 	Or      []OperatingSystemBoolExp ` json:"or"`
@@ -1286,7 +1286,8 @@ type TagsAggregate struct {
 	Avg      map[string]interface{} ` json:"avg"`
 	Min      map[string]interface{} ` json:"min"`
 	Max      map[string]interface{} ` json:"max"`
-	Tags     []*Tag                 ` json:"tags"`
+	// Unique set tags given to all adapter devices
+	Tags []*Tag ` json:"tags"`
 }
 
 // Boolean filter expression for User
@@ -1889,6 +1890,8 @@ const (
 	AdapterDevicesAggregateColumnsID AdapterDevicesAggregateColumns = "id"
 	// groupBy by fetchCycle
 	AdapterDevicesAggregateColumnsFetchCycle AdapterDevicesAggregateColumns = "fetchCycle"
+	// groupBy by adapterId
+	AdapterDevicesAggregateColumnsAdapterID AdapterDevicesAggregateColumns = "adapterId"
 	// groupBy by adapterName
 	AdapterDevicesAggregateColumnsAdapterName AdapterDevicesAggregateColumns = "adapterName"
 	// groupBy by deviceId
@@ -1930,6 +1933,7 @@ const (
 var AllAdapterDevicesAggregateColumns = []AdapterDevicesAggregateColumns{
 	AdapterDevicesAggregateColumnsID,
 	AdapterDevicesAggregateColumnsFetchCycle,
+	AdapterDevicesAggregateColumnsAdapterID,
 	AdapterDevicesAggregateColumnsAdapterName,
 	AdapterDevicesAggregateColumnsDeviceID,
 	AdapterDevicesAggregateColumnsFetchTime,
@@ -1952,7 +1956,7 @@ var AllAdapterDevicesAggregateColumns = []AdapterDevicesAggregateColumns{
 
 func (e AdapterDevicesAggregateColumns) IsValid() bool {
 	switch e {
-	case AdapterDevicesAggregateColumnsID, AdapterDevicesAggregateColumnsFetchCycle, AdapterDevicesAggregateColumnsAdapterName, AdapterDevicesAggregateColumnsDeviceID, AdapterDevicesAggregateColumnsFetchTime, AdapterDevicesAggregateColumnsHostname, AdapterDevicesAggregateColumnsName, AdapterDevicesAggregateColumnsLastSeen, AdapterDevicesAggregateColumnsOsID, AdapterDevicesAggregateColumnsPrettyID, AdapterDevicesAggregateColumnsDomain, AdapterDevicesAggregateColumnsAgentVersion, AdapterDevicesAggregateColumnsAgentStatus, AdapterDevicesAggregateColumnsAgentName, AdapterDevicesAggregateColumnsModel, AdapterDevicesAggregateColumnsManufacturer, AdapterDevicesAggregateColumnsSerial, AdapterDevicesAggregateColumnsFamily, AdapterDevicesAggregateColumnsBiosVersion, AdapterDevicesAggregateColumnsBiosSerial:
+	case AdapterDevicesAggregateColumnsID, AdapterDevicesAggregateColumnsFetchCycle, AdapterDevicesAggregateColumnsAdapterID, AdapterDevicesAggregateColumnsAdapterName, AdapterDevicesAggregateColumnsDeviceID, AdapterDevicesAggregateColumnsFetchTime, AdapterDevicesAggregateColumnsHostname, AdapterDevicesAggregateColumnsName, AdapterDevicesAggregateColumnsLastSeen, AdapterDevicesAggregateColumnsOsID, AdapterDevicesAggregateColumnsPrettyID, AdapterDevicesAggregateColumnsDomain, AdapterDevicesAggregateColumnsAgentVersion, AdapterDevicesAggregateColumnsAgentStatus, AdapterDevicesAggregateColumnsAgentName, AdapterDevicesAggregateColumnsModel, AdapterDevicesAggregateColumnsManufacturer, AdapterDevicesAggregateColumnsSerial, AdapterDevicesAggregateColumnsFamily, AdapterDevicesAggregateColumnsBiosVersion, AdapterDevicesAggregateColumnsBiosSerial:
 		return true
 	}
 	return false
@@ -1986,6 +1990,8 @@ const (
 	AdapterDevicesAggregateMaxColumnsID AdapterDevicesAggregateMaxColumns = "id"
 	// max by fetchCycle
 	AdapterDevicesAggregateMaxColumnsFetchCycle AdapterDevicesAggregateMaxColumns = "fetchCycle"
+	// max by adapterId
+	AdapterDevicesAggregateMaxColumnsAdapterID AdapterDevicesAggregateMaxColumns = "adapterId"
 	// max by adapterName
 	AdapterDevicesAggregateMaxColumnsAdapterName AdapterDevicesAggregateMaxColumns = "adapterName"
 	// max by deviceId
@@ -2027,6 +2033,7 @@ const (
 var AllAdapterDevicesAggregateMaxColumns = []AdapterDevicesAggregateMaxColumns{
 	AdapterDevicesAggregateMaxColumnsID,
 	AdapterDevicesAggregateMaxColumnsFetchCycle,
+	AdapterDevicesAggregateMaxColumnsAdapterID,
 	AdapterDevicesAggregateMaxColumnsAdapterName,
 	AdapterDevicesAggregateMaxColumnsDeviceID,
 	AdapterDevicesAggregateMaxColumnsFetchTime,
@@ -2049,7 +2056,7 @@ var AllAdapterDevicesAggregateMaxColumns = []AdapterDevicesAggregateMaxColumns{
 
 func (e AdapterDevicesAggregateMaxColumns) IsValid() bool {
 	switch e {
-	case AdapterDevicesAggregateMaxColumnsID, AdapterDevicesAggregateMaxColumnsFetchCycle, AdapterDevicesAggregateMaxColumnsAdapterName, AdapterDevicesAggregateMaxColumnsDeviceID, AdapterDevicesAggregateMaxColumnsFetchTime, AdapterDevicesAggregateMaxColumnsHostname, AdapterDevicesAggregateMaxColumnsName, AdapterDevicesAggregateMaxColumnsLastSeen, AdapterDevicesAggregateMaxColumnsOsID, AdapterDevicesAggregateMaxColumnsPrettyID, AdapterDevicesAggregateMaxColumnsDomain, AdapterDevicesAggregateMaxColumnsAgentVersion, AdapterDevicesAggregateMaxColumnsAgentStatus, AdapterDevicesAggregateMaxColumnsAgentName, AdapterDevicesAggregateMaxColumnsModel, AdapterDevicesAggregateMaxColumnsManufacturer, AdapterDevicesAggregateMaxColumnsSerial, AdapterDevicesAggregateMaxColumnsFamily, AdapterDevicesAggregateMaxColumnsBiosVersion, AdapterDevicesAggregateMaxColumnsBiosSerial:
+	case AdapterDevicesAggregateMaxColumnsID, AdapterDevicesAggregateMaxColumnsFetchCycle, AdapterDevicesAggregateMaxColumnsAdapterID, AdapterDevicesAggregateMaxColumnsAdapterName, AdapterDevicesAggregateMaxColumnsDeviceID, AdapterDevicesAggregateMaxColumnsFetchTime, AdapterDevicesAggregateMaxColumnsHostname, AdapterDevicesAggregateMaxColumnsName, AdapterDevicesAggregateMaxColumnsLastSeen, AdapterDevicesAggregateMaxColumnsOsID, AdapterDevicesAggregateMaxColumnsPrettyID, AdapterDevicesAggregateMaxColumnsDomain, AdapterDevicesAggregateMaxColumnsAgentVersion, AdapterDevicesAggregateMaxColumnsAgentStatus, AdapterDevicesAggregateMaxColumnsAgentName, AdapterDevicesAggregateMaxColumnsModel, AdapterDevicesAggregateMaxColumnsManufacturer, AdapterDevicesAggregateMaxColumnsSerial, AdapterDevicesAggregateMaxColumnsFamily, AdapterDevicesAggregateMaxColumnsBiosVersion, AdapterDevicesAggregateMaxColumnsBiosSerial:
 		return true
 	}
 	return false
@@ -2083,6 +2090,8 @@ const (
 	AdapterDevicesAggregateMinColumnsID AdapterDevicesAggregateMinColumns = "id"
 	// min by fetchCycle
 	AdapterDevicesAggregateMinColumnsFetchCycle AdapterDevicesAggregateMinColumns = "fetchCycle"
+	// min by adapterId
+	AdapterDevicesAggregateMinColumnsAdapterID AdapterDevicesAggregateMinColumns = "adapterId"
 	// min by adapterName
 	AdapterDevicesAggregateMinColumnsAdapterName AdapterDevicesAggregateMinColumns = "adapterName"
 	// min by deviceId
@@ -2124,6 +2133,7 @@ const (
 var AllAdapterDevicesAggregateMinColumns = []AdapterDevicesAggregateMinColumns{
 	AdapterDevicesAggregateMinColumnsID,
 	AdapterDevicesAggregateMinColumnsFetchCycle,
+	AdapterDevicesAggregateMinColumnsAdapterID,
 	AdapterDevicesAggregateMinColumnsAdapterName,
 	AdapterDevicesAggregateMinColumnsDeviceID,
 	AdapterDevicesAggregateMinColumnsFetchTime,
@@ -2146,7 +2156,7 @@ var AllAdapterDevicesAggregateMinColumns = []AdapterDevicesAggregateMinColumns{
 
 func (e AdapterDevicesAggregateMinColumns) IsValid() bool {
 	switch e {
-	case AdapterDevicesAggregateMinColumnsID, AdapterDevicesAggregateMinColumnsFetchCycle, AdapterDevicesAggregateMinColumnsAdapterName, AdapterDevicesAggregateMinColumnsDeviceID, AdapterDevicesAggregateMinColumnsFetchTime, AdapterDevicesAggregateMinColumnsHostname, AdapterDevicesAggregateMinColumnsName, AdapterDevicesAggregateMinColumnsLastSeen, AdapterDevicesAggregateMinColumnsOsID, AdapterDevicesAggregateMinColumnsPrettyID, AdapterDevicesAggregateMinColumnsDomain, AdapterDevicesAggregateMinColumnsAgentVersion, AdapterDevicesAggregateMinColumnsAgentStatus, AdapterDevicesAggregateMinColumnsAgentName, AdapterDevicesAggregateMinColumnsModel, AdapterDevicesAggregateMinColumnsManufacturer, AdapterDevicesAggregateMinColumnsSerial, AdapterDevicesAggregateMinColumnsFamily, AdapterDevicesAggregateMinColumnsBiosVersion, AdapterDevicesAggregateMinColumnsBiosSerial:
+	case AdapterDevicesAggregateMinColumnsID, AdapterDevicesAggregateMinColumnsFetchCycle, AdapterDevicesAggregateMinColumnsAdapterID, AdapterDevicesAggregateMinColumnsAdapterName, AdapterDevicesAggregateMinColumnsDeviceID, AdapterDevicesAggregateMinColumnsFetchTime, AdapterDevicesAggregateMinColumnsHostname, AdapterDevicesAggregateMinColumnsName, AdapterDevicesAggregateMinColumnsLastSeen, AdapterDevicesAggregateMinColumnsOsID, AdapterDevicesAggregateMinColumnsPrettyID, AdapterDevicesAggregateMinColumnsDomain, AdapterDevicesAggregateMinColumnsAgentVersion, AdapterDevicesAggregateMinColumnsAgentStatus, AdapterDevicesAggregateMinColumnsAgentName, AdapterDevicesAggregateMinColumnsModel, AdapterDevicesAggregateMinColumnsManufacturer, AdapterDevicesAggregateMinColumnsSerial, AdapterDevicesAggregateMinColumnsFamily, AdapterDevicesAggregateMinColumnsBiosVersion, AdapterDevicesAggregateMinColumnsBiosSerial:
 		return true
 	}
 	return false
@@ -2272,6 +2282,8 @@ const (
 	AdapterUsersAggregateColumnsID AdapterUsersAggregateColumns = "id"
 	// groupBy by fetchCycle
 	AdapterUsersAggregateColumnsFetchCycle AdapterUsersAggregateColumns = "fetchCycle"
+	// groupBy by adapterId
+	AdapterUsersAggregateColumnsAdapterID AdapterUsersAggregateColumns = "adapterId"
 	// groupBy by adapterName
 	AdapterUsersAggregateColumnsAdapterName AdapterUsersAggregateColumns = "adapterName"
 	// groupBy by userId
@@ -2282,6 +2294,14 @@ const (
 	AdapterUsersAggregateColumnsLastSeen AdapterUsersAggregateColumns = "lastSeen"
 	// groupBy by username
 	AdapterUsersAggregateColumnsUsername AdapterUsersAggregateColumns = "username"
+	// groupBy by displayName
+	AdapterUsersAggregateColumnsDisplayName AdapterUsersAggregateColumns = "displayName"
+	// groupBy by description
+	AdapterUsersAggregateColumnsDescription AdapterUsersAggregateColumns = "description"
+	// groupBy by domain
+	AdapterUsersAggregateColumnsDomain AdapterUsersAggregateColumns = "domain"
+	// groupBy by userSid
+	AdapterUsersAggregateColumnsUserSid AdapterUsersAggregateColumns = "userSid"
 	// groupBy by firstName
 	AdapterUsersAggregateColumnsFirstName AdapterUsersAggregateColumns = "firstName"
 	// groupBy by lastName
@@ -2293,11 +2313,16 @@ const (
 var AllAdapterUsersAggregateColumns = []AdapterUsersAggregateColumns{
 	AdapterUsersAggregateColumnsID,
 	AdapterUsersAggregateColumnsFetchCycle,
+	AdapterUsersAggregateColumnsAdapterID,
 	AdapterUsersAggregateColumnsAdapterName,
 	AdapterUsersAggregateColumnsUserID,
 	AdapterUsersAggregateColumnsFetchTime,
 	AdapterUsersAggregateColumnsLastSeen,
 	AdapterUsersAggregateColumnsUsername,
+	AdapterUsersAggregateColumnsDisplayName,
+	AdapterUsersAggregateColumnsDescription,
+	AdapterUsersAggregateColumnsDomain,
+	AdapterUsersAggregateColumnsUserSid,
 	AdapterUsersAggregateColumnsFirstName,
 	AdapterUsersAggregateColumnsLastName,
 	AdapterUsersAggregateColumnsMail,
@@ -2305,7 +2330,7 @@ var AllAdapterUsersAggregateColumns = []AdapterUsersAggregateColumns{
 
 func (e AdapterUsersAggregateColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateColumnsID, AdapterUsersAggregateColumnsFetchCycle, AdapterUsersAggregateColumnsAdapterName, AdapterUsersAggregateColumnsUserID, AdapterUsersAggregateColumnsFetchTime, AdapterUsersAggregateColumnsLastSeen, AdapterUsersAggregateColumnsUsername, AdapterUsersAggregateColumnsFirstName, AdapterUsersAggregateColumnsLastName, AdapterUsersAggregateColumnsMail:
+	case AdapterUsersAggregateColumnsID, AdapterUsersAggregateColumnsFetchCycle, AdapterUsersAggregateColumnsAdapterID, AdapterUsersAggregateColumnsAdapterName, AdapterUsersAggregateColumnsUserID, AdapterUsersAggregateColumnsFetchTime, AdapterUsersAggregateColumnsLastSeen, AdapterUsersAggregateColumnsUsername, AdapterUsersAggregateColumnsDisplayName, AdapterUsersAggregateColumnsDescription, AdapterUsersAggregateColumnsDomain, AdapterUsersAggregateColumnsUserSid, AdapterUsersAggregateColumnsFirstName, AdapterUsersAggregateColumnsLastName, AdapterUsersAggregateColumnsMail:
 		return true
 	}
 	return false
@@ -2339,6 +2364,8 @@ const (
 	AdapterUsersAggregateMaxColumnsID AdapterUsersAggregateMaxColumns = "id"
 	// max by fetchCycle
 	AdapterUsersAggregateMaxColumnsFetchCycle AdapterUsersAggregateMaxColumns = "fetchCycle"
+	// max by adapterId
+	AdapterUsersAggregateMaxColumnsAdapterID AdapterUsersAggregateMaxColumns = "adapterId"
 	// max by adapterName
 	AdapterUsersAggregateMaxColumnsAdapterName AdapterUsersAggregateMaxColumns = "adapterName"
 	// max by userId
@@ -2349,6 +2376,14 @@ const (
 	AdapterUsersAggregateMaxColumnsLastSeen AdapterUsersAggregateMaxColumns = "lastSeen"
 	// max by username
 	AdapterUsersAggregateMaxColumnsUsername AdapterUsersAggregateMaxColumns = "username"
+	// max by displayName
+	AdapterUsersAggregateMaxColumnsDisplayName AdapterUsersAggregateMaxColumns = "displayName"
+	// max by description
+	AdapterUsersAggregateMaxColumnsDescription AdapterUsersAggregateMaxColumns = "description"
+	// max by domain
+	AdapterUsersAggregateMaxColumnsDomain AdapterUsersAggregateMaxColumns = "domain"
+	// max by userSid
+	AdapterUsersAggregateMaxColumnsUserSid AdapterUsersAggregateMaxColumns = "userSid"
 	// max by firstName
 	AdapterUsersAggregateMaxColumnsFirstName AdapterUsersAggregateMaxColumns = "firstName"
 	// max by lastName
@@ -2360,11 +2395,16 @@ const (
 var AllAdapterUsersAggregateMaxColumns = []AdapterUsersAggregateMaxColumns{
 	AdapterUsersAggregateMaxColumnsID,
 	AdapterUsersAggregateMaxColumnsFetchCycle,
+	AdapterUsersAggregateMaxColumnsAdapterID,
 	AdapterUsersAggregateMaxColumnsAdapterName,
 	AdapterUsersAggregateMaxColumnsUserID,
 	AdapterUsersAggregateMaxColumnsFetchTime,
 	AdapterUsersAggregateMaxColumnsLastSeen,
 	AdapterUsersAggregateMaxColumnsUsername,
+	AdapterUsersAggregateMaxColumnsDisplayName,
+	AdapterUsersAggregateMaxColumnsDescription,
+	AdapterUsersAggregateMaxColumnsDomain,
+	AdapterUsersAggregateMaxColumnsUserSid,
 	AdapterUsersAggregateMaxColumnsFirstName,
 	AdapterUsersAggregateMaxColumnsLastName,
 	AdapterUsersAggregateMaxColumnsMail,
@@ -2372,7 +2412,7 @@ var AllAdapterUsersAggregateMaxColumns = []AdapterUsersAggregateMaxColumns{
 
 func (e AdapterUsersAggregateMaxColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateMaxColumnsID, AdapterUsersAggregateMaxColumnsFetchCycle, AdapterUsersAggregateMaxColumnsAdapterName, AdapterUsersAggregateMaxColumnsUserID, AdapterUsersAggregateMaxColumnsFetchTime, AdapterUsersAggregateMaxColumnsLastSeen, AdapterUsersAggregateMaxColumnsUsername, AdapterUsersAggregateMaxColumnsFirstName, AdapterUsersAggregateMaxColumnsLastName, AdapterUsersAggregateMaxColumnsMail:
+	case AdapterUsersAggregateMaxColumnsID, AdapterUsersAggregateMaxColumnsFetchCycle, AdapterUsersAggregateMaxColumnsAdapterID, AdapterUsersAggregateMaxColumnsAdapterName, AdapterUsersAggregateMaxColumnsUserID, AdapterUsersAggregateMaxColumnsFetchTime, AdapterUsersAggregateMaxColumnsLastSeen, AdapterUsersAggregateMaxColumnsUsername, AdapterUsersAggregateMaxColumnsDisplayName, AdapterUsersAggregateMaxColumnsDescription, AdapterUsersAggregateMaxColumnsDomain, AdapterUsersAggregateMaxColumnsUserSid, AdapterUsersAggregateMaxColumnsFirstName, AdapterUsersAggregateMaxColumnsLastName, AdapterUsersAggregateMaxColumnsMail:
 		return true
 	}
 	return false
@@ -2406,6 +2446,8 @@ const (
 	AdapterUsersAggregateMinColumnsID AdapterUsersAggregateMinColumns = "id"
 	// min by fetchCycle
 	AdapterUsersAggregateMinColumnsFetchCycle AdapterUsersAggregateMinColumns = "fetchCycle"
+	// min by adapterId
+	AdapterUsersAggregateMinColumnsAdapterID AdapterUsersAggregateMinColumns = "adapterId"
 	// min by adapterName
 	AdapterUsersAggregateMinColumnsAdapterName AdapterUsersAggregateMinColumns = "adapterName"
 	// min by userId
@@ -2416,6 +2458,14 @@ const (
 	AdapterUsersAggregateMinColumnsLastSeen AdapterUsersAggregateMinColumns = "lastSeen"
 	// min by username
 	AdapterUsersAggregateMinColumnsUsername AdapterUsersAggregateMinColumns = "username"
+	// min by displayName
+	AdapterUsersAggregateMinColumnsDisplayName AdapterUsersAggregateMinColumns = "displayName"
+	// min by description
+	AdapterUsersAggregateMinColumnsDescription AdapterUsersAggregateMinColumns = "description"
+	// min by domain
+	AdapterUsersAggregateMinColumnsDomain AdapterUsersAggregateMinColumns = "domain"
+	// min by userSid
+	AdapterUsersAggregateMinColumnsUserSid AdapterUsersAggregateMinColumns = "userSid"
 	// min by firstName
 	AdapterUsersAggregateMinColumnsFirstName AdapterUsersAggregateMinColumns = "firstName"
 	// min by lastName
@@ -2427,11 +2477,16 @@ const (
 var AllAdapterUsersAggregateMinColumns = []AdapterUsersAggregateMinColumns{
 	AdapterUsersAggregateMinColumnsID,
 	AdapterUsersAggregateMinColumnsFetchCycle,
+	AdapterUsersAggregateMinColumnsAdapterID,
 	AdapterUsersAggregateMinColumnsAdapterName,
 	AdapterUsersAggregateMinColumnsUserID,
 	AdapterUsersAggregateMinColumnsFetchTime,
 	AdapterUsersAggregateMinColumnsLastSeen,
 	AdapterUsersAggregateMinColumnsUsername,
+	AdapterUsersAggregateMinColumnsDisplayName,
+	AdapterUsersAggregateMinColumnsDescription,
+	AdapterUsersAggregateMinColumnsDomain,
+	AdapterUsersAggregateMinColumnsUserSid,
 	AdapterUsersAggregateMinColumnsFirstName,
 	AdapterUsersAggregateMinColumnsLastName,
 	AdapterUsersAggregateMinColumnsMail,
@@ -2439,7 +2494,7 @@ var AllAdapterUsersAggregateMinColumns = []AdapterUsersAggregateMinColumns{
 
 func (e AdapterUsersAggregateMinColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateMinColumnsID, AdapterUsersAggregateMinColumnsFetchCycle, AdapterUsersAggregateMinColumnsAdapterName, AdapterUsersAggregateMinColumnsUserID, AdapterUsersAggregateMinColumnsFetchTime, AdapterUsersAggregateMinColumnsLastSeen, AdapterUsersAggregateMinColumnsUsername, AdapterUsersAggregateMinColumnsFirstName, AdapterUsersAggregateMinColumnsLastName, AdapterUsersAggregateMinColumnsMail:
+	case AdapterUsersAggregateMinColumnsID, AdapterUsersAggregateMinColumnsFetchCycle, AdapterUsersAggregateMinColumnsAdapterID, AdapterUsersAggregateMinColumnsAdapterName, AdapterUsersAggregateMinColumnsUserID, AdapterUsersAggregateMinColumnsFetchTime, AdapterUsersAggregateMinColumnsLastSeen, AdapterUsersAggregateMinColumnsUsername, AdapterUsersAggregateMinColumnsDisplayName, AdapterUsersAggregateMinColumnsDescription, AdapterUsersAggregateMinColumnsDomain, AdapterUsersAggregateMinColumnsUserSid, AdapterUsersAggregateMinColumnsFirstName, AdapterUsersAggregateMinColumnsLastName, AdapterUsersAggregateMinColumnsMail:
 		return true
 	}
 	return false
@@ -2564,6 +2619,10 @@ const (
 	AdapterDeviceOrderByFetchCycleAsc AdapterDeviceOrderBy = "fetchCycle_ASC"
 	// Order by fetchCycle in a descending order
 	AdapterDeviceOrderByFetchCycleDesc AdapterDeviceOrderBy = "fetchCycle_DESC"
+	// Order by adapterId in an ascending order
+	AdapterDeviceOrderByAdapterIDAsc AdapterDeviceOrderBy = "adapterId_ASC"
+	// Order by adapterId in a descending order
+	AdapterDeviceOrderByAdapterIDDesc AdapterDeviceOrderBy = "adapterId_DESC"
 	// Order by adapterName in an ascending order
 	AdapterDeviceOrderByAdapterNameAsc AdapterDeviceOrderBy = "adapterName_ASC"
 	// Order by adapterName in a descending order
@@ -2633,6 +2692,8 @@ const (
 var AllAdapterDeviceOrderBy = []AdapterDeviceOrderBy{
 	AdapterDeviceOrderByFetchCycleAsc,
 	AdapterDeviceOrderByFetchCycleDesc,
+	AdapterDeviceOrderByAdapterIDAsc,
+	AdapterDeviceOrderByAdapterIDDesc,
 	AdapterDeviceOrderByAdapterNameAsc,
 	AdapterDeviceOrderByAdapterNameDesc,
 	AdapterDeviceOrderByFetchTimeAsc,
@@ -2669,7 +2730,7 @@ var AllAdapterDeviceOrderBy = []AdapterDeviceOrderBy{
 
 func (e AdapterDeviceOrderBy) IsValid() bool {
 	switch e {
-	case AdapterDeviceOrderByFetchCycleAsc, AdapterDeviceOrderByFetchCycleDesc, AdapterDeviceOrderByAdapterNameAsc, AdapterDeviceOrderByAdapterNameDesc, AdapterDeviceOrderByFetchTimeAsc, AdapterDeviceOrderByFetchTimeDesc, AdapterDeviceOrderByHostnameAsc, AdapterDeviceOrderByHostnameDesc, AdapterDeviceOrderByNameAsc, AdapterDeviceOrderByNameDesc, AdapterDeviceOrderByLastSeenAsc, AdapterDeviceOrderByLastSeenDesc, AdapterDeviceOrderByPrettyIDAsc, AdapterDeviceOrderByPrettyIDDesc, AdapterDeviceOrderByDomainAsc, AdapterDeviceOrderByDomainDesc, AdapterDeviceOrderByAgentVersionAsc, AdapterDeviceOrderByAgentVersionDesc, AdapterDeviceOrderByAgentStatusAsc, AdapterDeviceOrderByAgentStatusDesc, AdapterDeviceOrderByAgentNameAsc, AdapterDeviceOrderByAgentNameDesc, AdapterDeviceOrderByModelAsc, AdapterDeviceOrderByModelDesc, AdapterDeviceOrderByManufacturerAsc, AdapterDeviceOrderByManufacturerDesc, AdapterDeviceOrderBySerialAsc, AdapterDeviceOrderBySerialDesc, AdapterDeviceOrderByFamilyAsc, AdapterDeviceOrderByFamilyDesc, AdapterDeviceOrderByBiosVersionAsc, AdapterDeviceOrderByBiosVersionDesc, AdapterDeviceOrderByBiosSerialAsc, AdapterDeviceOrderByBiosSerialDesc:
+	case AdapterDeviceOrderByFetchCycleAsc, AdapterDeviceOrderByFetchCycleDesc, AdapterDeviceOrderByAdapterIDAsc, AdapterDeviceOrderByAdapterIDDesc, AdapterDeviceOrderByAdapterNameAsc, AdapterDeviceOrderByAdapterNameDesc, AdapterDeviceOrderByFetchTimeAsc, AdapterDeviceOrderByFetchTimeDesc, AdapterDeviceOrderByHostnameAsc, AdapterDeviceOrderByHostnameDesc, AdapterDeviceOrderByNameAsc, AdapterDeviceOrderByNameDesc, AdapterDeviceOrderByLastSeenAsc, AdapterDeviceOrderByLastSeenDesc, AdapterDeviceOrderByPrettyIDAsc, AdapterDeviceOrderByPrettyIDDesc, AdapterDeviceOrderByDomainAsc, AdapterDeviceOrderByDomainDesc, AdapterDeviceOrderByAgentVersionAsc, AdapterDeviceOrderByAgentVersionDesc, AdapterDeviceOrderByAgentStatusAsc, AdapterDeviceOrderByAgentStatusDesc, AdapterDeviceOrderByAgentNameAsc, AdapterDeviceOrderByAgentNameDesc, AdapterDeviceOrderByModelAsc, AdapterDeviceOrderByModelDesc, AdapterDeviceOrderByManufacturerAsc, AdapterDeviceOrderByManufacturerDesc, AdapterDeviceOrderBySerialAsc, AdapterDeviceOrderBySerialDesc, AdapterDeviceOrderByFamilyAsc, AdapterDeviceOrderByFamilyDesc, AdapterDeviceOrderByBiosVersionAsc, AdapterDeviceOrderByBiosVersionDesc, AdapterDeviceOrderByBiosSerialAsc, AdapterDeviceOrderByBiosSerialDesc:
 		return true
 	}
 	return false
@@ -2768,6 +2829,10 @@ func (e AdapterDeviceUserOrderBy) MarshalGQL(w io.Writer) {
 type AdapterOrderBy string
 
 const (
+	// Order by id in an ascending order
+	AdapterOrderByIDAsc AdapterOrderBy = "id_ASC"
+	// Order by id in a descending order
+	AdapterOrderByIDDesc AdapterOrderBy = "id_DESC"
 	// Order by name in an ascending order
 	AdapterOrderByNameAsc AdapterOrderBy = "name_ASC"
 	// Order by name in a descending order
@@ -2775,13 +2840,15 @@ const (
 )
 
 var AllAdapterOrderBy = []AdapterOrderBy{
+	AdapterOrderByIDAsc,
+	AdapterOrderByIDDesc,
 	AdapterOrderByNameAsc,
 	AdapterOrderByNameDesc,
 }
 
 func (e AdapterOrderBy) IsValid() bool {
 	switch e {
-	case AdapterOrderByNameAsc, AdapterOrderByNameDesc:
+	case AdapterOrderByIDAsc, AdapterOrderByIDDesc, AdapterOrderByNameAsc, AdapterOrderByNameDesc:
 		return true
 	}
 	return false
@@ -2816,6 +2883,10 @@ const (
 	AdapterUserOrderByFetchCycleAsc AdapterUserOrderBy = "fetchCycle_ASC"
 	// Order by fetchCycle in a descending order
 	AdapterUserOrderByFetchCycleDesc AdapterUserOrderBy = "fetchCycle_DESC"
+	// Order by adapterId in an ascending order
+	AdapterUserOrderByAdapterIDAsc AdapterUserOrderBy = "adapterId_ASC"
+	// Order by adapterId in a descending order
+	AdapterUserOrderByAdapterIDDesc AdapterUserOrderBy = "adapterId_DESC"
 	// Order by adapterName in an ascending order
 	AdapterUserOrderByAdapterNameAsc AdapterUserOrderBy = "adapterName_ASC"
 	// Order by adapterName in a descending order
@@ -2832,6 +2903,22 @@ const (
 	AdapterUserOrderByUsernameAsc AdapterUserOrderBy = "username_ASC"
 	// Order by username in a descending order
 	AdapterUserOrderByUsernameDesc AdapterUserOrderBy = "username_DESC"
+	// Order by displayName in an ascending order
+	AdapterUserOrderByDisplayNameAsc AdapterUserOrderBy = "displayName_ASC"
+	// Order by displayName in a descending order
+	AdapterUserOrderByDisplayNameDesc AdapterUserOrderBy = "displayName_DESC"
+	// Order by description in an ascending order
+	AdapterUserOrderByDescriptionAsc AdapterUserOrderBy = "description_ASC"
+	// Order by description in a descending order
+	AdapterUserOrderByDescriptionDesc AdapterUserOrderBy = "description_DESC"
+	// Order by domain in an ascending order
+	AdapterUserOrderByDomainAsc AdapterUserOrderBy = "domain_ASC"
+	// Order by domain in a descending order
+	AdapterUserOrderByDomainDesc AdapterUserOrderBy = "domain_DESC"
+	// Order by userSid in an ascending order
+	AdapterUserOrderByUserSidAsc AdapterUserOrderBy = "userSid_ASC"
+	// Order by userSid in a descending order
+	AdapterUserOrderByUserSidDesc AdapterUserOrderBy = "userSid_DESC"
 	// Order by firstName in an ascending order
 	AdapterUserOrderByFirstNameAsc AdapterUserOrderBy = "firstName_ASC"
 	// Order by firstName in a descending order
@@ -2849,6 +2936,8 @@ const (
 var AllAdapterUserOrderBy = []AdapterUserOrderBy{
 	AdapterUserOrderByFetchCycleAsc,
 	AdapterUserOrderByFetchCycleDesc,
+	AdapterUserOrderByAdapterIDAsc,
+	AdapterUserOrderByAdapterIDDesc,
 	AdapterUserOrderByAdapterNameAsc,
 	AdapterUserOrderByAdapterNameDesc,
 	AdapterUserOrderByFetchTimeAsc,
@@ -2857,6 +2946,14 @@ var AllAdapterUserOrderBy = []AdapterUserOrderBy{
 	AdapterUserOrderByLastSeenDesc,
 	AdapterUserOrderByUsernameAsc,
 	AdapterUserOrderByUsernameDesc,
+	AdapterUserOrderByDisplayNameAsc,
+	AdapterUserOrderByDisplayNameDesc,
+	AdapterUserOrderByDescriptionAsc,
+	AdapterUserOrderByDescriptionDesc,
+	AdapterUserOrderByDomainAsc,
+	AdapterUserOrderByDomainDesc,
+	AdapterUserOrderByUserSidAsc,
+	AdapterUserOrderByUserSidDesc,
 	AdapterUserOrderByFirstNameAsc,
 	AdapterUserOrderByFirstNameDesc,
 	AdapterUserOrderByLastNameAsc,
@@ -2867,7 +2964,7 @@ var AllAdapterUserOrderBy = []AdapterUserOrderBy{
 
 func (e AdapterUserOrderBy) IsValid() bool {
 	switch e {
-	case AdapterUserOrderByFetchCycleAsc, AdapterUserOrderByFetchCycleDesc, AdapterUserOrderByAdapterNameAsc, AdapterUserOrderByAdapterNameDesc, AdapterUserOrderByFetchTimeAsc, AdapterUserOrderByFetchTimeDesc, AdapterUserOrderByLastSeenAsc, AdapterUserOrderByLastSeenDesc, AdapterUserOrderByUsernameAsc, AdapterUserOrderByUsernameDesc, AdapterUserOrderByFirstNameAsc, AdapterUserOrderByFirstNameDesc, AdapterUserOrderByLastNameAsc, AdapterUserOrderByLastNameDesc, AdapterUserOrderByMailAsc, AdapterUserOrderByMailDesc:
+	case AdapterUserOrderByFetchCycleAsc, AdapterUserOrderByFetchCycleDesc, AdapterUserOrderByAdapterIDAsc, AdapterUserOrderByAdapterIDDesc, AdapterUserOrderByAdapterNameAsc, AdapterUserOrderByAdapterNameDesc, AdapterUserOrderByFetchTimeAsc, AdapterUserOrderByFetchTimeDesc, AdapterUserOrderByLastSeenAsc, AdapterUserOrderByLastSeenDesc, AdapterUserOrderByUsernameAsc, AdapterUserOrderByUsernameDesc, AdapterUserOrderByDisplayNameAsc, AdapterUserOrderByDisplayNameDesc, AdapterUserOrderByDescriptionAsc, AdapterUserOrderByDescriptionDesc, AdapterUserOrderByDomainAsc, AdapterUserOrderByDomainDesc, AdapterUserOrderByUserSidAsc, AdapterUserOrderByUserSidDesc, AdapterUserOrderByFirstNameAsc, AdapterUserOrderByFirstNameDesc, AdapterUserOrderByLastNameAsc, AdapterUserOrderByLastNameDesc, AdapterUserOrderByMailAsc, AdapterUserOrderByMailDesc:
 		return true
 	}
 	return false
@@ -4597,10 +4694,10 @@ const (
 	OperatingSystemOrderByBuildAsc OperatingSystemOrderBy = "build_ASC"
 	// Order by build in a descending order
 	OperatingSystemOrderByBuildDesc OperatingSystemOrderBy = "build_DESC"
-	// Order by RawName in an ascending order
-	OperatingSystemOrderByRawNameAsc OperatingSystemOrderBy = "RawName_ASC"
-	// Order by RawName in a descending order
-	OperatingSystemOrderByRawNameDesc OperatingSystemOrderBy = "RawName_DESC"
+	// Order by rawName in an ascending order
+	OperatingSystemOrderByRawNameAsc OperatingSystemOrderBy = "rawName_ASC"
+	// Order by rawName in a descending order
+	OperatingSystemOrderByRawNameDesc OperatingSystemOrderBy = "rawName_DESC"
 )
 
 var AllOperatingSystemOrderBy = []OperatingSystemOrderBy{

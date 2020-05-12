@@ -15,7 +15,7 @@ func (r *adapterDeviceResolver) AdapterData(ctx context.Context, obj *AdapterDev
 	if err != nil {
 		return nil, err
 	}
-	switch obj.AdapterID {
+	switch domain.AdapterType(obj.AdapterID) {
 	case domain.AdapterTypeActiveDirectory:
 		var result ActiveDirectoryData
 		if err := jsoniter.Unmarshal(jsonBody, &result); err != nil {
@@ -29,7 +29,7 @@ func (r *adapterDeviceResolver) AdapterData(ctx context.Context, obj *AdapterDev
 		}
 		return result, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("adapter type not found %d", obj.AdapterID))
+		return nil, errors.New(fmt.Sprintf("adapter type not found %s", obj.AdapterID))
 	}
 }
 
@@ -40,7 +40,7 @@ func (r *adapterUserResolver) AdapterData(ctx context.Context, obj *AdapterUser,
 	if err != nil {
 		return nil, err
 	}
-	switch obj.AdapterID {
+	switch domain.AdapterType(obj.AdapterID) {
 	case domain.AdapterTypeActiveDirectory:
 		var result ActiveDirectoryData
 		if err := jsoniter.Unmarshal(jsonBody, &result); err != nil {
@@ -54,6 +54,6 @@ func (r *adapterUserResolver) AdapterData(ctx context.Context, obj *AdapterUser,
 		}
 		return result, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("adapter type not found %d", obj.AdapterID))
+		return nil, errors.New(fmt.Sprintf("adapter type not found %s", obj.AdapterID))
 	}
 }

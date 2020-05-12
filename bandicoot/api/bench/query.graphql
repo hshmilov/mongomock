@@ -1,5 +1,5 @@
 query DevicesQuery {
-    devices {
+    devices(limit: 1) {
         hostnames
     }
 }
