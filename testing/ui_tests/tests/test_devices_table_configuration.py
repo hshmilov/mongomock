@@ -10,7 +10,7 @@ from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_INFO_ADAPTER
 
 
-class TestDevicesTable(TestEntitiesTable):
+class TestDevicesTableMoreCases(TestEntitiesTable):
     def _update_device_field(self, field_name, from_value, to_value):
         self.axonius_system.db.get_entity_db(EntityType.Devices).update_one({
             f'adapters.data.{field_name}': from_value

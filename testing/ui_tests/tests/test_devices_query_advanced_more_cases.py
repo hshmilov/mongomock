@@ -34,7 +34,7 @@ from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
 from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestDevicesQueryAdvancedCases(TestBase):
+class TestDevicesQueryAdvancedMoreCases(TestBase):
 
     def test_devices_id_contains_query(self):
         self.dashboard_page.switch_to_page()

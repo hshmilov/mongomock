@@ -10,6 +10,10 @@ class TestReportGenerationBase(TestBase):
     REPORT_NAME = 'test_report_gen'
     TEST_REPORT_QUERY_NAME = 'test report query name'
     DATA_QUERY = 'specific_data.data.name == regex(\'avigdor no\', \'i\')'
+    DATA_QUERY1 = 'specific_data.data.name == regex(\'avigdor\', \'i\')'
+    DATA_QUERY2 = 'specific_data.data.name == regex(\'avig\', \'i\')'
+    TEST_REPORT_QUERY_NAME1 = 'test report query name1'
+    TEST_REPORT_QUERY_NAME2 = 'test report query name2'
 
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()
