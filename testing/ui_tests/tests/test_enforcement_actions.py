@@ -450,7 +450,17 @@ class TestEnforcementActions(TestBase):
                                                 TAG_ALL_COMMENT,
                                                 THIRD_PUSH,
                                                 ACTION_TAG_SELECT)
-        self.check_tag_added(Enforcements.enforcement_query_1, TAG_ALL_COMMENT)
+        self.wait_until_tag_added(Enforcements.enforcement_query_1, TAG_ALL_COMMENT)
+
+    def wait_until_tag_added(self, query, tag):
+        def single_tag_check():
+            self.devices_page.refresh()
+            self.devices_page.wait_for_table_to_be_responsive()
+            self.check_tag_added(query, tag)
+        wait_until(func=single_tag_check,
+                   total_timeout=60 * 5,
+                   tolerated_exceptions_list=[AssertionError],
+                   check_return_value=False)
 
     def check_tag_added(self, query, tag):
         # go to device page and check if the tag added
