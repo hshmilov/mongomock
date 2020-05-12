@@ -374,7 +374,17 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.email = assigned_to.get('email')
                     device.assigned_to_country = assigned_to.get('country')
                     device.assigned_to_division = assigned_to.get('u_division')
-                    device.assigned_to_business_unit = assigned_to.get('u_business_unit')
+                    try:
+                        assigned_to_business_unit = assigned_to.get('u_business_unit')
+                        if isinstance(assigned_to_business_unit, str):
+                            device.assigned_to_business_unit = assigned_to_business_unit
+                        elif isinstance(assigned_to_business_unit, dict):
+                            assigned_to_business_unit_value = assigned_to_business_unit.get('value')
+                            if assigned_to_business_unit_value:
+                                assgined_to_bus_value = companies_table_dict.get(assigned_to_business_unit_value)
+                                device.assigned_to_business_unit = assgined_to_bus_value
+                    except Exception:
+                        logger.exception(f'Problem with business unit')
                     try:
                         manager_value = (assigned_to.get('manager') or {}).get('value')
                         manager_raw = users_table_dict.get(users_username_dict.get(manager_value)) or {}

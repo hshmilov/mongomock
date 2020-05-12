@@ -78,6 +78,16 @@ class JamfAdapter(AdapterBase, Configurable):
         extension_attributes = ListField(JamfExtensionAttribute, 'Extension Attributes')
         disk_encryption_configuration = Field(str, 'Disk Encryption Configuration')
         jamf_groups = ListField(str, 'Jamf Groups')
+        is_purchased = Field(bool, 'Is Purchased')
+        is_leased = Field(bool, 'Is Leased')
+        po_date = Field(datetime.datetime, 'PO Data')
+        warranty_expires = Field(datetime.datetime, 'Warranty Expires')
+        life_expectancy = Field(int, 'Life Expectancy')
+        lease_expires = Field(datetime.datetime, 'Lease Expires')
+        os_maintenance_expires = Field(datetime.datetime, 'OS Maintenance Expires')
+        purchase_price = Field(str, 'Purchase Price')
+        purchasing_account = Field(str, 'Purchasing Account')
+        purchasing_contact = Field(str, 'Purchasing Contact')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -236,6 +246,34 @@ class JamfAdapter(AdapterBase, Configurable):
                 if not general_info.get('name'):
                     continue
                 device.name = general_info.get('name')
+                try:
+                    purchasing_raw = device_raw.get('purchasing')
+                    if not isinstance(purchasing_raw, dict):
+                        purchasing_raw = {}
+                    is_purchased = purchasing_raw.get('is_purchased')
+                    if is_purchased == 'true':
+                        device.is_purchased = True
+                    elif is_purchased == 'false':
+                        device.is_purchased = False
+                    is_leased = purchasing_raw.get('is_leased')
+                    if is_leased == 'true':
+                        device.is_leased = True
+                    elif is_leased == 'false':
+                        device.is_leased = False
+                    device.po_date = parse_date(purchasing_raw.get('po_date'))
+                    device.purchase_price = purchasing_raw.get('purchase_price')
+                    device.purchasing_account = purchasing_raw.get('purchasing_account')
+                    device.purchasing_contact = purchasing_raw.get('purchasing_contact')
+                    device.warranty_expires = parse_date(purchasing_raw.get('warranty_expires'))
+                    device.lease_expires = parse_date(purchasing_raw.get('lease_expires'))
+                    device.os_maintenance_expires = parse_date(purchasing_raw.get('os_maintenance_expires'))
+                    try:
+                        device.life_expectancy = int(purchasing_raw.get('life_expectancy'))
+                    except Exception:
+                        pass
+
+                except Exception:
+                    logger.exception(f'Problem with purchasing data')
                 try:
                     jamf_location_raw = device_raw.get('location')
                     if isinstance(jamf_location_raw, dict):

@@ -91,6 +91,7 @@ def is_only_host_adapter(adapter_device):
                                               'cloud_health_adapter',
                                               'symantec_ee_adapter',
                                               'arsenal_adapter',
+                                              'sccm_adapter',
                                               'guardium_adapter',
                                               'datadog_adapter',
                                               'observium_adapter',
@@ -117,10 +118,14 @@ def is_cherwell_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'cherwell_adapter'
 
 
+def is_zscaler_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'zscaler_adapter'
+
+
 def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
-        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device)
+        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)
 
 
 def is_only_host_adapter_not_localhost(adapter_device):

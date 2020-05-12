@@ -173,7 +173,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             device.uuid = raw_device_data.get('biosGUID')
 
         # Parse all raw data
-        device.figure_os(raw_device_data.get('os'))
+        if raw_device_data.get('os'):
+            device.figure_os(raw_device_data.get('os'))
+        elif raw_device_data.get('osCPE'):
+            device.figure_os(raw_device_data.get('osCPE'))
         ip_list_raw = raw_device_data.get('ip', [])
         if isinstance(ip_list_raw, str):
             # maybe we have a couple of ip's. we don't know since we don't have it in the api docs.
