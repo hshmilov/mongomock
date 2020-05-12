@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
@@ -15,7 +16,7 @@ from airwave_adapter.consts import CLIENT_TYPE, AP_TYPE
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class AirwaveAdapter(AdapterBase):
+class AirwaveAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         airwave_type = Field(str, 'Airwave Device Type', enum=[CLIENT_TYPE, AP_TYPE])
@@ -29,6 +30,8 @@ class AirwaveAdapter(AdapterBase):
         controller_id = Field(str, 'Controller ID')
         icmp_address = Field(str, 'ICMP Address')
         ssid = Field(str, 'SSID')
+        ap_folder_id = Field(str, 'AP Folder')
+        ap_version = Field(str, 'AP Version')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -69,8 +72,7 @@ class AirwaveAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -81,7 +83,7 @@ class AirwaveAdapter(AdapterBase):
         """
         connection, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid = client_data
         with connection:
-            for device_raw in connection.get_device_list():
+            for device_raw in connection.get_device_list(view_name=self.__view_name):
                 yield device_raw, wireless_ssid_exclude_list, wireless_ssid_white_list, exclude_no_ssid
 
     @staticmethod
@@ -189,6 +191,7 @@ class AirwaveAdapter(AdapterBase):
     def _create_ap_device(self, device_raw):
         try:
             device = self._new_device_adapter()
+            device.ap_folder_id = (device_raw.get('ap_folder_id') or {}).get('value')
             name = (device_raw.get('name') or {}).get('value')
             if name is None:
                 logger.warning(f'Bad device with no Name {device_raw}')
@@ -196,6 +199,11 @@ class AirwaveAdapter(AdapterBase):
             device.id = name
             device.name = name
             device.add_nic(mac=name.strip('*'))
+            lan_mac = (device_raw.get('lan_mac') or {}).get('value')
+            if lan_mac:
+                device.add_nic(mac=lan_mac)
+            device.device_serial = (device_raw.get('device_serial') or {}).get('value')
+            device.ap_version = (device_raw.get('version') or {}).get('value')
             icmp_address = (device_raw.get('icmp_address') or {}).get('value')
             if icmp_address:
                 device.icmp_address = icmp_address
@@ -235,3 +243,28 @@ class AirwaveAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'view_name',
+                    'title': 'View Name',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Airwave Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'view_name': None
+        }
+
+    def _on_config_update(self, config):
+        self.__view_name = config['view_name']

@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -26,6 +27,7 @@ class CloudpassageAdapter(AdapterBase):
         primary_ip_address = Field(str, 'Primary IP Address')
         connecting_ip_address = Field(str, 'Connecting IP Address')
         group_name = Field(str, 'Group Name')
+        last_state_change = Field(datetime.datetime, 'Last State Change')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

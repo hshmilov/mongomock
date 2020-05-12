@@ -404,6 +404,7 @@ class ShareData(SmartJsonClass):
     name = Field(str, 'Name')
     description = Field(str, 'Description')
     path = Field(str, 'Path')
+    status = Field(str, 'Status')
 
 
 class DeviceTagKeyValue(SmartJsonClass):

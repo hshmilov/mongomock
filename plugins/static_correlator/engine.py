@@ -732,7 +732,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_hostname_only_host_adapter(self, adapters_to_correlate, csv_full_hostname):
+    # pylint: disable=invalid-name
+    def _correlate_hostname_only_host_adapter(self, adapters_to_correlate, csv_full_hostname,
+                                              allow_global_hostname_correlation):
         logger.info('Starting to correlate on Hostname-only')
         filtered_adapters_list = filter(get_normalized_hostname_str, adapters_to_correlate)
         # pylint: disable=line-too-long
@@ -745,14 +747,19 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             inner_compare.append(compare_hostname)
         else:
             inner_compare.append(if_csv_compare_full_path)
+        if allow_global_hostname_correlation:
+            one_pair = []
+        else:
+            one_pair = [is_only_host_adapter_or_host_only_force]
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
-                                      [is_only_host_adapter_or_host_only_force],
+                                      one_pair,
                                       inner_compare,
                                       {'Reason': 'They have the same hostname and from specifc adapters'},
                                       CorrelationReason.StaticAnalysis)
 
+    # pylint: enable=invalid-name
     def _correlate_serial(self, adapters_to_correlate):
         logger.info('Starting to correlate on Serial')
         filtered_adapters_list = filter(get_serial, adapters_to_correlate)
@@ -1141,7 +1148,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         csv_full_hostname = bool(self._correlation_config and
                                  self._correlation_config.get('csv_full_hostname') is True)
-        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate, csv_full_hostname)
+        allow_global_hostname_correlation = bool(self._correlation_config and
+                                                 self._correlation_config.get('global_hostname_correlation') is True)
+        yield from self._correlate_hostname_only_host_adapter(adapters_to_correlate, csv_full_hostname,
+                                                              allow_global_hostname_correlation)
 
         # Correlating mac must happen after all the other correlations are DONE.
         # the actual linking is happend in _process_correlation_result in other thread,

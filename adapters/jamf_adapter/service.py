@@ -215,6 +215,22 @@ class JamfAdapter(AdapterBase, Configurable):
                                     device.add_installed_software(name='Rapid7 Insight Agent',
                                                                   vendor='Rapid7',
                                                                   version=rapid7_version)
+                                if extension_attribute_raw.get('name') == 'Admin Accounts' \
+                                        and extension_attribute_raw.get('value'):
+                                    admin_value = extension_attribute_raw.get('value')
+                                    if ':' in admin_value:
+                                        user_name = admin_value.split(':')[0].strip()
+                                        user_profile = admin_value.split(':')[1]
+                                        if ',' in user_profile:
+                                            user_type = user_profile.split(',')[0].strip()
+                                            user_location = user_profile.split(',')[1].strip()
+                                            if user_type == 'Admin':
+                                                device.add_local_admin(admin_type='Admin User',
+                                                                       admin_name=user_name)
+                                                if user_location == 'Local':
+                                                    device.local_admins_local_users.append(user_name)
+                                                elif user_location == 'Domain':
+                                                    device.local_admins_domain_users.append(user_name)
                 except Exception:
                     logger.exception(f'Probelm with extensions')
                 if not general_info.get('name'):

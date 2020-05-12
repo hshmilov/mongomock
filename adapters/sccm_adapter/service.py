@@ -13,7 +13,8 @@ from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string, is_valid_ipv6
+from axonius.utils.parsing import get_organizational_units_from_dn,\
+    get_exception_string, is_valid_ipv6, normalize_var_name
 import sccm_adapter.consts as consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -66,6 +67,13 @@ class SccmVm(SmartJsonClass):
     vm_timestamp = Field(str, 'VM Timestamp')
 
 
+class SccmGroupData(SmartJsonClass):
+    group_name = Field(str, 'Group Name')
+    groups = ListField(str, 'Groups')
+    local_users = ListField(str, 'Local Users')
+    doomain_users = ListField(str, 'Domain Users')
+
+
 class SccmAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         resource_id = Field(str, 'Resource ID')
@@ -93,6 +101,7 @@ class SccmAdapter(AdapterBase, Configurable):
         drivers_data = ListField(DriverData, 'Drivers Data')
         network_drivers_data = ListField(DriverData, 'Network Drivers Data')
         bios_release_date = Field(datetime.datetime, 'Bios Release Date')
+        sccm_groups_data = ListField(SccmGroupData, 'Groups Data')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -152,18 +161,33 @@ class SccmAdapter(AdapterBase, Configurable):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
 
+            shares_dict = dict()
+            try:
+                for share_data in client_data.query(self._wrap_query_with_resource_id(consts.SHARES_QUERY, device_id)):
+                    asset_id = share_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in shares_dict:
+                        shares_dict[asset_id] = []
+                    shares_dict[asset_id].append(share_data)
+            except Exception:
+                logger.warning(f'Problem getting Shares', exc_info=True)
+
             local_admins_dict = dict()
+            local_groups_dict = dict()
             try:
                 for local_admin_data \
                         in client_data.query(self._wrap_query_with_resource_id(consts.LOCAL_ADMIN_QUERY, device_id)):
                     asset_id = local_admin_data.get('ResourceID')
                     if not asset_id:
                         continue
-                    if local_admin_data.get('name0') != 'Administrators':
-                        continue
-                    if asset_id not in local_admins_dict:
-                        local_admins_dict[asset_id] = []
-                    local_admins_dict[asset_id].append(local_admin_data)
+                    if local_admin_data.get('name0') == 'Administrators':
+                        if asset_id not in local_admins_dict:
+                            local_admins_dict[asset_id] = []
+                        local_admins_dict[asset_id].append(local_admin_data)
+                    if asset_id not in local_groups_dict:
+                        local_groups_dict[asset_id] = []
+                    local_groups_dict[asset_id].append(local_admin_data)
             except Exception:
                 logger.warning(f'Problem getting local admins dict', exc_info=True)
 
@@ -479,7 +503,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
                     clients_dict, os_dict, nics_dict, collections_dict,\
                     collections_data_dict, compliance_dict, local_admins_dict,\
-                    drivers_dict, ram_dict, network_drivers_dict, new_software_dict
+                    drivers_dict, ram_dict, network_drivers_dict, new_software_dict,\
+                    local_groups_dict, shares_dict
 
     def _clients_schema(self):
         return {
@@ -516,7 +541,8 @@ class SccmAdapter(AdapterBase, Configurable):
             os_dict,
             nics_dict,
             collections_dict, collections_data_dict, compliance_dict,
-            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict, new_software_dict
+            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict,
+            new_software_dict, local_groups_dict, shares_dict
         ) in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
@@ -692,6 +718,23 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting top user data dor {device_raw}')
 
                 try:
+                    if isinstance(shares_dict.get(device_raw.get('ResourceID')), list):
+                        for share_data in shares_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                share_path = share_data.get('Path0')
+                                share_name = share_data.get('Name0')
+                                share_description = share_data.get('Description0')
+                                share_status = share_data.get('Status0')
+                                device.add_share(path=share_path,
+                                                 description=share_description,
+                                                 status=share_status,
+                                                 name=share_name)
+                            except Exception:
+                                logger.exception(f'Problem with drivers data {network_drivers_data}')
+                except Exception:
+                    logger.exception(f'Problem getting shares data dor {device_raw}')
+
+                try:
                     if isinstance(network_drivers_dict.get(device_raw.get('ResourceID')), list):
                         for network_drivers_data in network_drivers_dict.get(device_raw.get('ResourceID')):
                             try:
@@ -764,6 +807,41 @@ class SccmAdapter(AdapterBase, Configurable):
                                 logger.exception(f'Problem with local admin data {local_admin_data}')
                 except Exception:
                     logger.exception(f'Problem getting vm data dor {device_raw}')
+                try:
+                    groups_dict = dict()
+                    if isinstance(local_groups_dict.get(device_raw.get('ResourceID')), list):
+                        for group_data in local_groups_dict.get(device_raw.get('ResourceID')):
+                            try:
+                                account_name = group_data.get('account0')
+                                domain_name = group_data.get('domain0')
+                                category = group_data.get('Category0')
+                                group_name = group_data.get('name0')
+                                if group_name:
+                                    if group_name not in groups_dict:
+                                        groups_dict[group_name] = []
+                                    groups_dict[group_name].append((account_name, domain_name, category))
+                            except Exception:
+                                logger.exception(f'Problem with group raw {group_data}')
+                    for group_name, group_data in groups_dict.items():
+                        group_groups = []
+                        group_domain_users = []
+                        group_local_users = []
+                        for (account_name, domain_name, category) in group_data:
+                            if category == 'UserAccount':
+                                hostname_start_lower = device_full_hostname.split('.')[0].lower()
+                                domain_start_lower = domain_name.split('.')[0].lower()
+                                if hostname_start_lower != domain_start_lower:
+                                    group_domain_users.append(account_name)
+                                else:
+                                    group_local_users.append(account_name)
+                            elif category == 'Group':
+                                group_groups.append(account_name)
+                        device.sccm_groups_data.append(SccmGroupData(groups=group_groups,
+                                                                     local_users=group_local_users,
+                                                                     doomain_users=group_domain_users,
+                                                                     group_name=group_name))
+                except Exception:
+                    logger.exception(f'Problem getting groups data')
                 try:
                     if isinstance(nics_dict.get(device_raw.get('ResourceID')), list):
                         for nic_data in nics_dict.get(device_raw.get('ResourceID')):

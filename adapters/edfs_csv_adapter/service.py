@@ -110,12 +110,12 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': 'edfs_vuln_status_label',
-                    'title': 'External Amdocs assets CSV file name',
+                    'title': 'External Amdocs assets vulns CSV file name',
                     'type': 'string'
                 },
                 {
                     'name': 'edfs_vuln_status_csv',
-                    'title': 'External Amdocs assets CSV file',
+                    'title': 'External Amdocs assets vulns CSV file',
                     'type': 'file',
                     'description': 'The binary contents of the csv',
                 }

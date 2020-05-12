@@ -186,11 +186,12 @@ class NexposeV3Client(NexposeClient):
                         item['vulnerability_details_full'] = []
                         item['scans_raw'] = []
                         try:
-                            for scan_item in item['history']:
-                                if scan_item.get('scanId'):
-                                    scan_id = scan_item.get('scanId')
-                                    if scans_dict.get(scan_id):
-                                        item['scans_raw'].append(scans_dict.get(scan_id))
+                            if item.get('history'):
+                                for scan_item in item['history']:
+                                    if scan_item.get('scanId'):
+                                        scan_id = scan_item.get('scanId')
+                                        if scans_dict.get(scan_id):
+                                            item['scans_raw'].append(scans_dict.get(scan_id))
                         except Exception:
                             logger.exception(f'Problem parsing history')
                     if fetch_vulnerabilities:
@@ -466,7 +467,7 @@ class NexposeV3Client(NexposeClient):
             if software and isinstance(software, list):
                 for software_data in software:
                     try:
-                        sw_name = software_data.get('product')
+                        sw_name = (software_data.get('product') or '').strip()
                         sw_version = software_data.get('version')
                         sw_vendor = software_data.get('vendor')
                         if not sw_name:

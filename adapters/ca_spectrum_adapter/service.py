@@ -120,9 +120,7 @@ class CaSpectrumAdapter(AdapterBase):
             device_raw_dict['id'] = device_raw.attrib.get('mh')
             for xml_attrib in device_raw:
                 try:
-                    if xml_attrib.tag != 'attribute':
-                        continue
-                    attrib_id = xml_attrib.attrib.get('id')
+                    attrib_id = str(xml_attrib.attrib.get('id'))
                     if attrib_id not in XML_ATTRIB_CODES:
                         continue
                     device_raw_dict[XML_ATTRIB_CODES[attrib_id]] = xml_attrib.text

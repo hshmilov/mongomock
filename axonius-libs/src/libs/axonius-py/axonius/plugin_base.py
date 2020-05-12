@@ -74,7 +74,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                          GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY,
+                                          GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY, CORRELATE_GLOBALY_ON_HOSTNAME,
                                           MAX_WORKERS,
                                           NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
@@ -3080,6 +3080,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
         self._correlate_public_ip_only = config[CORRELATION_SETTINGS].get(CORRELATE_PUBLIC_IP_ONLY, False)
+        self._global_hostname_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_GLOBALY_ON_HOSTNAME, False)
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
@@ -3732,6 +3733,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': CORRELATE_PUBLIC_IP_ONLY,
                             'type': 'bool',
                             'title': 'Correlate devices based on public IP only'
+                        },
+                        {
+                            'name': CORRELATE_GLOBALY_ON_HOSTNAME,
+                            'type': 'bool',
+                            'title': 'Correlate Globally based on Hostname only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
@@ -3739,6 +3745,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
+                                 CORRELATE_GLOBALY_ON_HOSTNAME,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
                 {
@@ -3964,7 +3971,8 @@ class PluginBase(Configurable, Feature, ABC):
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
                 CORRELATE_BY_AZURE_AD_NAME_ONLY: False,
-                CORRELATE_PUBLIC_IP_ONLY: False
+                CORRELATE_PUBLIC_IP_ONLY: False,
+                CORRELATE_GLOBALY_ON_HOSTNAME: False
             },
             CORRELATION_SCHEDULE: {
                 CORRELATION_SCHEDULE_ENABLED: False,

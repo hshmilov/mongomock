@@ -22,6 +22,9 @@ class CloudpassageConnection(RESTConnection):
         if not self._username or not self._password:
             raise RESTException('Missing key id or key secret')
         self._refresh_token()
+        self._get('v1/servers',
+                  url_params={'per_page': DEVICE_PER_PAGE,
+                              'page': 1})
 
     def _refresh_token(self):
         if self._session_refresh and self._session_refresh > datetime.datetime.now():

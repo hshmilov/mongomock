@@ -1,5 +1,4 @@
-THROTTLESIZE_MAX = 100000
-THROTTLESIZE_MIN = 100
+THROTTLESIZE_MIN = 5
 XML_ATTRIB_CODES = {'0x1006e': 'Model Name',
                     '0x12d7f': 'Network_Address',
                     '0x11564': 'Notes',

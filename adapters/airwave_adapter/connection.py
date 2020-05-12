@@ -60,18 +60,23 @@ class AirwaveConnection(RESTConnection):
             raise RESTException('No username or password')
         self._last_refresh = None
         self._refresh_token()
-        self._get('api/list_view.json', url_params={'list': 'client_all', 'fv_id': '0', 'page_length': DEVICE_PER_PAGE})
+        self._get('api/list_view.json', url_params={'list': 'client_all', 'fv_id': '0', 'expand_all': '1',
+                                                    'page_length': DEVICE_PER_PAGE})
 
-    def _get_api_endpoint(self, api_endpoint):
+    def _get_api_endpoint(self, api_endpoint, fv_id=None):
+        if not fv_id:
+            fv_id = '0'
         self._refresh_token()
         response = self._get('api/list_view.json',
                              url_params={'list': api_endpoint,
-                                         'fv_id': '0',
+                                         'fv_id': fv_id,
+                                         'expand_all': '1',
                                          'page_length': DEVICE_PER_PAGE})
         yield from response.get('records')
         total_count = self._get('api/total_count.json',
                                 url_params={'list': api_endpoint,
-                                            'fv_id': '0'}
+                                            'expand_all': '1',
+                                            'fv_id': fv_id}
                                 ).get('total_count')
         total_count = int(total_count)
         logger.info(f'Total Count of {api_endpoint} is {total_count}')
@@ -82,7 +87,8 @@ class AirwaveConnection(RESTConnection):
                 self._refresh_token()
                 response = self._get('api/list_view.json',
                                      url_params={'list': api_endpoint,
-                                                 'fv_id': '0',
+                                                 'fv_id': fv_id,
+                                                 'expand_all': '1',
                                                  'page_length': DEVICE_PER_PAGE,
                                                  'start_row': offset})
                 yield from response.get('records')
@@ -92,8 +98,18 @@ class AirwaveConnection(RESTConnection):
                 logger.exception(f'Problem with offset {offset}')
             offset += DEVICE_PER_PAGE
 
-    def get_device_list(self):
-        for device_raw in self._get_api_endpoint('ap_list'):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, view_name):
+        fv_id = '0'
+        try:
+            filter_list = self._get(f'api/filtered_view.json?list=ap_list')['all_filtered_views']
+            for filter_raw in filter_list:
+                if filter_raw['name'] == view_name:
+                    fv_id = str(filter_raw['id'])
+        except Exception:
+            logger.exception(f'Can not get filter views')
+
+        for device_raw in self._get_api_endpoint('ap_list', fv_id):
             yield device_raw, AP_TYPE
 
         mac_extra_data_dict = dict()

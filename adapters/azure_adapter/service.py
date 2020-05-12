@@ -57,6 +57,8 @@ class AzureAdapter(AdapterBase):
         admin_username = Field(str, 'Admin Username')
         vm_id = Field(str, 'VM ID')
         azure_firewall_rules = ListField(AzureNetworkSecurityGroupRule, 'Azure Firewall Rules')
+        resources_group = Field(str, 'Resource Group')
+        custom_image_name = Field(str, 'Custom Image Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -188,6 +190,10 @@ class AzureAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
             device.id = device_raw['id']
+            device_id = device_raw['id']
+            if device_id and '/resourceGroups/' in device_id:
+                device.resources_group = device_id[device_id.find('/resourceGroups/') +
+                                                   len('/resourceGroups/'):].split('/')[0]
             device.cloud_id = device_raw['id']
             device.cloud_provider = 'Azure'
             device.name = device_raw['name']
@@ -210,7 +216,11 @@ class AzureAdapter(AdapterBase):
                 device.add_hd(total_size=os_disk.get('disk_size_gb'))
                 os_info.append(os_disk.get('os_type'))
             if image is not None:
-                device.image = AzureImage(publisher=image.get('publisher'), offer=image.get('offer'),
+                image_id = image.get('id')
+                if image_id and '/images/' in image_id:
+                    device.custom_image_name = image_id[image_id.find('/images/') + len('/images/'):].split('/')[0]
+                device.image = AzureImage(publisher=image.get('publisher'),
+                                          offer=image.get('offer'),
                                           sku=image.get('sku'), version=image.get('version'))
                 os_info.extend([image.get('offer'), image.get('sku')])
             device.figure_os(' '.join([v for v in os_info if v is not None]))

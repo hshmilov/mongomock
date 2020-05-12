@@ -96,7 +96,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                                                       'correlate_azure_ad_name_only':
                                                                           self._correlate_azure_ad_name_only,
                                                                       'correlate_public_ip_only':
-                                                                          self._correlate_public_ip_only})
+                                                                          self._correlate_public_ip_only,
+                                                                      'global_hostname_correlation':
+                                                                          self._global_hostname_correlation})
 
     # pylint: enable=arguments-differ
 
