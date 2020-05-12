@@ -80,7 +80,7 @@ class Login:
         log_metric(logger, SystemMetric.LOGIN_MARKER, 0)
         user_name = user.get('user_name')
         source = user.get('source')
-        if self.is_axonius_user():
+        if not self.is_axonius_user():
             self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'enabled'):
