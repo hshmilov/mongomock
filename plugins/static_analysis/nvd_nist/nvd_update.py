@@ -26,6 +26,8 @@ CURRENT_STATE_FILE = os.path.join(CURRENT_DIR, 'nvd_current_state.json')
 ARTIFACT_FOLDER = os.path.join(CURRENT_DIR, 'artifacts')
 
 # pylint: disable=invalid-triple-quote, pointless-string-statement
+
+
 @retry(stop_max_attempt_number=MAX_RETRY_FOR_INTERNET_OPERATIONS)
 def get_nvd_sha256_for_version(version):
     """

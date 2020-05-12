@@ -114,6 +114,7 @@ def allow_experimental(count=False):
             EntityType.Users: Translator(EntityType.Users),
             EntityType.Devices: Translator(EntityType.Devices)
         }
+
         @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
