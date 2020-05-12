@@ -363,6 +363,10 @@ export default {
             border: none;
           }
 
+          &.legend {
+            height: auto;
+          }
+
           &:not(.legend) {
             border-width: 0 0 0 1px;
             border-style: solid;

@@ -18,7 +18,7 @@
       v-if="showPaginator"
       :from.sync="legendFrom"
       :to.sync="legendTo"
-      :limit="8"
+      :limit="10"
       :count="data.length"
       :show-top="false"
     />
@@ -107,7 +107,7 @@ export default {
       grid-row-gap: 8px;
 
       .column-color {
-        margin-top: 1px;
+        align-self: center;
         display: inline-block;
         height: 16px;
         width: 16px;
@@ -120,6 +120,9 @@ export default {
         text-overflow: ellipsis;
         overflow: hidden;
         margin-right: 4px;
+        white-space: nowrap;
+        height: 24px;
+        line-height: 24px;
       }
 
       .column-value {
@@ -129,16 +132,19 @@ export default {
         overflow: hidden;
         text-overflow: ellipsis;
         border-left: 1px solid $grey-2;
+        line-height: 24px;
       }
 
       .column-percentage {
         text-align: end;
+        line-height: 24px;
       }
     }
 
     .x-paginator {
       flex-grow: 1;
       align-items: flex-end;
+      margin-bottom: -14px;
     }
   }
 

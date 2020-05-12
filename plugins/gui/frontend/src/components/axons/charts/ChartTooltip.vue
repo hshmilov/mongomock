@@ -79,7 +79,17 @@ export default {
   methods: {
     showTooltip(e) {
       this.$refs.tooltip.$el.style.top = `${e.clientY + 10}px`;
-      this.$refs.tooltip.$el.style.left = `${e.clientX + 10}px`;
+
+      const rect = this.$refs.tooltip.$el.getBoundingClientRect();
+      let tooltipX = e.clientX + 10;
+      const tooltipWidth = rect.width || 335;
+
+      if (tooltipX + tooltipWidth > window.innerWidth) {
+        tooltipX = window.innerWidth - tooltipWidth - 30;
+      }
+
+      this.$refs.tooltip.$el.style.left = `${tooltipX}px`;
+
       this.show = true;
     },
   },
@@ -101,6 +111,7 @@ export default {
       min-width: 20ch;
       position: fixed;
       padding: 0;
+      line-height: 24px;
 
       .percentage {
         font-size: small;
@@ -116,7 +127,7 @@ export default {
         color: $theme-white;
         display: flex;
         justify-content: space-between;
-        padding: 0 8px;
+        padding: 4px 8px 0 8px;
         opacity: 0.8;
 
         &.pie-fill-1 {
@@ -129,7 +140,7 @@ export default {
       }
 
       .body-content {
-        padding: 0 8px;
+        padding: 4px 8px;
         display: flex;
         justify-content: space-between;
 
