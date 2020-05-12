@@ -531,7 +531,22 @@ def main():
                     for test_module in parallel_tests:
                         print(test_module)
 
-                parallel_jobs = dict()
+                priority_tests_parallel = ['test_code.py', 'test_ad.py', 'test_sentinelone.py',
+                                           'test_service_now.py', 'test_cybereason.py',
+                                           'test_tenable_security_center.py',
+                                           'test_sysaid.py', 'test_tenable_io.py', 'test_nessus.py', 'test_medigate.py',
+                                           'test_spacewalk.py', 'test_logicmonitor.py', 'test_ansible_tower.py',
+                                           'test_symantec_ccs.py', 'test_cisco_meraki.py', 'test_netbrain.py',
+                                           'test_mobileiron.py', 'test_bigid.py', 'test_observeit.py']
+
+                for t in reversed(priority_tests_parallel):
+                    if t not in parallel_tests:
+                        print(f'Expected to find test {t}')
+                    else:
+                        parallel_tests.remove(t)
+                        parallel_tests.insert(0, t)
+
+                parallel_jobs = OrderedDict()
                 for i in range(0, len(parallel_tests), args.max_parallel_builder_tasks):
                     job_name = 'parallel_' + '_'.join([
                         file_path.split('.py')[0]
@@ -582,7 +597,11 @@ def main():
             if args.target in ['integ', 'all']:
                 jobs.update(get_integ_tests_jobs())
             if args.target in ['parallel', 'all']:
-                jobs.update(get_parallel_tests_jobs())
+                parallel_tests_jobs = get_parallel_tests_jobs()
+                priority_parallel = list(parallel_tests_jobs.keys())[:2]
+                jobs.update(parallel_tests_jobs)
+                jobs.move_to_end(priority_parallel[0], last=False)
+                jobs.move_to_end(priority_parallel[1], last=False)
 
             # Priority tests
             priority_tests = [
@@ -606,13 +625,6 @@ def main():
                 'ui_test_session',
                 'integ_test_system'
             ]
-
-            test_code_name = [x for x in jobs.keys() if 'test_code' in x]
-            if test_code_name:
-                # test_code == pylint test.
-                priority_tests.extend(test_code_name)
-            else:
-                print(f'Warning: Could not find test_code.')
 
             for priority_test in priority_tests:
                 try:
