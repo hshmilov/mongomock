@@ -26,12 +26,7 @@ class TestPrepareReportSettings(TestBase):
         self.settings_page.save_and_wait_for_toaster()
 
     def test_report_with_email_settings(self):
-        self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        self.settings_page.set_send_emails_toggle()
-        self.settings_page.fill_email_host(EmailSettings.host)
-        self.settings_page.fill_email_port(EmailSettings.port)
-        self.settings_page.save_and_wait_for_toaster()
+        self.settings_page.add_email_server(EmailSettings.host, EmailSettings.port)
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_table_to_load()
         self.reports_page.click_new_report()
@@ -40,5 +35,6 @@ class TestPrepareReportSettings(TestBase):
         self.reports_page.fill_email_subject(Reports.test_report_with_email)
         self.reports_page.click_include_dashboard()
         self.reports_page.fill_email(VALID_EMAIL)
+        self.reports_page.fill_email_subject(self.reports_page.UPGRADE_EMAIL_SUBJECT_ID)
         self.reports_page.select_frequency(ReportFrequency.weekly)
         self.reports_page.click_save()

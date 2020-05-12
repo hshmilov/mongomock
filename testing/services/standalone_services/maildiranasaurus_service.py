@@ -64,9 +64,9 @@ class MaildiranasaurusService(SmtpService):
 
         return mailbox.Maildir('/tmp/mail_dir')
 
-    def get_email_first_csv_content(self, recipient):
+    def get_mail_message(self, recipient):
         """
-        Get the first csv attachment content of the mail that was sent
+        Get the whole mail message for the recipient
         :return:
         """
         m = self.get_mail_folder()
@@ -75,28 +75,29 @@ class MaildiranasaurusService(SmtpService):
             message = m.get_message(key)
             if message.get('To') != recipient:
                 continue
-            for attachment in message.get_payload():
-                if attachment.get_content_type() == 'text/csv':
-                    payload = attachment.get_payload(decode=True)
-                    break
-        m.clear()
-        return payload
-
-    def get_email_body(self, recipient: str) -> list:
-        """
-        Get the body content of the mail that was sent
-        :return: the body in a list
-        """
-        m = self.get_mail_folder()
-        payload = None
-        for key in m.iterkeys():
-            message = m.get_message(key)
-            if message.get('To') != recipient:
-                continue
-            payload = message.get_payload()
+            payload = message
             break
         m.clear()
         return payload
+
+    def get_email_subject(self, recipient):
+        message = self.get_mail_message(recipient)
+        return message['subject']
+
+    def get_email_first_csv_content(self, recipient):
+        """
+        Get the first csv attachment content of the mail that was sent
+        :return:
+        """
+        message = self.get_mail_message(recipient)
+        if message:
+            for attachment in message.get_payload():
+                if attachment.get_content_type() == 'text/csv':
+                    return attachment.get_payload(decode=True)
+        return None
+
+    def get_email_body(self, recipient: str) -> list:
+        return self.get_mail_message(recipient).get_payload()
 
     @property
     def is_unique_image(self):

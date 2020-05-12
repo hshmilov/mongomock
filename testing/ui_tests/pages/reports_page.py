@@ -46,6 +46,7 @@ class ReportsPage(EntitiesPage):
     REPORT_GENERATED_XPATH = '//td[.//text()=\'{report_name}\']/following::td/div'
     REPORT_TR_XPATH = '//td[.//text()=\'{report_name}\']/parent::tr'
     EMAIL_SUBJECT_ID = 'mailSubject'
+    UPGRADE_EMAIL_SUBJECT_ID = 'Upgrade mail subject'
     SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'
     SELECT_VIEW_ENTITY_CSS = '.saved-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_ELEMENT_CSS = '.saved-query .query-name'
@@ -423,3 +424,9 @@ class ReportsPage(EntitiesPage):
 
     def is_name_already_exists_error_appear(self):
         return self.is_report_error(self.REPORT_NAME_DUPLICATE_ERROR)
+
+    def open_report(self, report_name):
+        self.switch_to_page()
+        self.wait_for_spinner_to_end()
+        self.click_report(report_name)
+        self.wait_for_spinner_to_end()
