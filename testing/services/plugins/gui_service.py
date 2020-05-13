@@ -1124,6 +1124,30 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 31. Details: {e}')
 
+    def _update_schema_version_32(self):
+        """
+        For 3.4 - Add a default value for a new feature flag in Axonius system:
+        Query time-line range
+        Set default to False for existing customers
+        :return:
+        """
+        print('Upgrade to schema 32')
+        try:
+            self._set_query_timeline_feature_flag()
+            self.db_schema_version = 32
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 32. Details: {e}')
+
+    def _set_query_timeline_feature_flag(self):
+        """
+        Set a default value for the Query Time-Line range FeatureFlag to be False for existing customers
+        """
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            'config_name': FEATURE_FLAGS_CONFIG
+        }, {
+            'config.query_timeline_range': True
+        })
+
     def _update_default_locked_actions(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of

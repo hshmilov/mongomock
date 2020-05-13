@@ -183,6 +183,7 @@ class FeatureFlagsNames:
     ReenterCredentials = 'reenter_credentials'
     RefetchAssetEntityAction = 'refetch_action'
     EnableFIPS = 'enable_fips'
+    QueryTimelineRange = 'query_timeline_range'
 
 
 class CloudComplianceNames:

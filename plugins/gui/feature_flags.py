@@ -74,6 +74,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.QueryTimelineRange,
+                    'title': 'Enable unlimited query timeline range',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.RefetchAssetEntityAction,
                     'title': 'Allow Refetch Asset Entity Action',
                     'type': 'bool'
@@ -154,7 +159,8 @@ class FeatureFlags(Configurable):
                     ],
                 }
             ],
-            'required': ['is_trial', 'experimental_api',  FeatureFlagsNames.LockOnExpiry],
+            'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
+                         FeatureFlagsNames.QueryTimelineRange],
             'name': 'feature_flags',
             'title': 'Feature Flags',
             'type': 'array'
@@ -179,5 +185,6 @@ class FeatureFlags(Configurable):
             },
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
-            FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value
+            FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
+            FeatureFlagsNames.QueryTimelineRange: False
         }

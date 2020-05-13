@@ -13,7 +13,9 @@
           "@pages/*": ["./src/components/pages/*"],
           "@api/*": ["./src/api/*"],
           "@store/*": ["./src/store/*"],
-          "@mixins/*": ["./src/mixins/*"]
+          "@mixins/*": ["./src/mixins/*"],
+          "@constants/*": ["./src/constants/*"],
+
       }
     },
     "exclude": ["node_modules"]

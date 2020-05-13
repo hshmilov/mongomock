@@ -30,6 +30,7 @@
   import xSelectViews from '../../../neurons/inputs/SelectViews.vue'
   import xSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue'
   import chartMixin from './chart'
+  import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
 
   const dashboardView = { name: '', entity: '' }
   export default {
@@ -43,7 +44,7 @@
         return {
           views: [{ ...dashboardView }],
           timeframe: {
-            type: 'absolute', from: null, to: null
+            type: TimelineTimeframesTypesEnum.relative, unit: TimelineTimeframesUnitsEnum.days.name, count: 7,
           },
           intersection: false
         }

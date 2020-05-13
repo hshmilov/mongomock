@@ -1,55 +1,72 @@
 <template>
   <div class="x-select-timeframe">
-    <input
-      id="range_absolute"
-      v-model="type"
-      type="radio"
-      value="absolute"
+    <div
+      v-if="isUnlimitedHistory"
+      class="x-select-timeframe_config--unlimited"
     >
-    <label for="range_absolute">Show results in date range</label>
-    <template v-if="isRangeAbsolute">
-      <x-date-edit
-        v-model="from"
-        :check-disabled="checkDateAvailabilityFrom"
-        :format="false"
-        :clearable="false"
-        label="From"
+      <input
+        id="range_relative"
+        v-model="type"
+        type="radio"
+        :value="TimelineTimeframesTypesEnum.relative"
+      >
+      <label for="range_relative">Show results in the last</label>
+      <template v-if="!isRangeAbsolute">
+        <input
+          v-model.number="count"
+          type="number"
+          @keypress="validateNumber"
+        >
+        <x-select
+          v-model="unit"
+          :options="relativeRangeUnits"
+          placeholder="Units"
+        />
+      </template>
+      <div
+        v-else
+        class="grid-span2"
       />
-      <x-date-edit
-        v-model="to"
-        :check-disabled="checkDateAvailabilityTo"
-        :format="false"
-        :clearable="false"
-        label="To"
+      <input
+        id="range_absolute"
+        v-model="type"
+        type="radio"
+        :value="TimelineTimeframesTypesEnum.absolute"
+      >
+      <label for="range_absolute">Show results in date range</label>
+      <template v-if="isRangeAbsolute">
+        <x-date-edit
+          v-model="from"
+          :check-disabled="checkDateAvailabilityFrom"
+          :format="false"
+          :clearable="false"
+          label="From"
+        />
+        <x-date-edit
+          v-model="to"
+          :check-disabled="checkDateAvailabilityTo"
+          :format="false"
+          :clearable="false"
+          label="To"
+        />
+      </template>
+      <div
+        v-else
+        class="grid-span2"
       />
-    </template>
+    </div>
     <div
       v-else
-      class="grid-span2"
-    />
-    <input
-      id="range_relative"
-      v-model="type"
-      type="radio"
-      value="relative"
+      class="x-select-timeframe_config--limited"
     >
-    <label for="range_relative">Show results in the last</label>
-    <template v-if="!isRangeAbsolute">
+      <label for="range_relative">Show results in the last (days)</label>
       <input
         v-model.number="count"
         type="number"
+        :max="maxDaysForLimitedQuery"
         @keypress="validateNumber"
       >
-      <x-select
-        v-model="unit"
-        :options="relativeRangeUnits"
-        placeholder="Units"
-      />
-    </template>
-    <div
-      v-else
-      class="grid-span2"
-    />
+    </div>
   </div>
 </template>
 
@@ -58,7 +75,9 @@
   import xDateEdit from '../schema/types/string/DateEdit.vue'
   import {validateNumber} from '../../../constants/validations'
 
-  import { mapState } from 'vuex'
+  import { mapState, mapGetters } from 'vuex'
+  import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
+  import { FeatureFlagsEnum } from '@constants/feature_flags';
 
   export default {
     name: 'XSelectTimeframe',
@@ -71,25 +90,34 @@
         default: () => {}
       }
     },
+    data() {
+      return { TimelineTimeframesTypesEnum, maxDaysForLimitedQuery: 30 };
+    },
     computed: {
       ...mapState({
+        ...mapGetters({
+          featureFlags: 'featureFlags',
+        }),
         firstHistoricalDate (state) {
           return Object.values(state.constants.firstHistoricalDate)
             .map(dateStr => new Date(dateStr))
             .reduce((a, b) => {
               return (a < b) ? a : b
             }, new Date())
-        }
-      }),
+        },
+        isUnlimitedHistory() {
+          return this.featureFlags[FeatureFlagsEnum.query_timeline_range];
+        },
+       }),
       type: {
         get () {
           return this.value.type
         },
         set (type) {
-          this.$emit('input', (type === 'absolute') ? {
+          this.$emit('input', (type === TimelineTimeframesTypesEnum.absolute) ? {
             type, from: null, to: null
           } : {
-            type, unit: 'day', count: 7
+            type, unit: TimelineTimeframesUnitsEnum.days.name, count: 7,
           })
         }
       },
@@ -122,19 +150,25 @@
           return this.value.count
         },
         set (count) {
-          this.$emit('input', {...this.value, count})
+          let daysCount = count;
+          if (!this.isUnlimitedHistory) {
+            if (Number.parseInt(daysCount, 10) > this.maxDaysForLimitedQuery) {
+              daysCount = this.maxDaysForLimitedQuery;
+            }
+          } 
+          this.$emit('input', { ...this.value, count: daysCount });
         }
       },
       isRangeAbsolute () {
-        return this.type === 'absolute'
+        return this.type === TimelineTimeframesTypesEnum.absolute
       },
       relativeRangeUnits () {
         return [
-          { name: 'day', title: 'Days' },
-          { name: 'week', title: 'Weeks' },
-          { name: 'month', title: 'Months' },
-          { name: 'year', title: 'Years' }
-        ]
+          TimelineTimeframesUnitsEnum.days,
+          TimelineTimeframesUnitsEnum.week,
+          TimelineTimeframesUnitsEnum.month,
+          TimelineTimeframesUnitsEnum.year,
+        ];
       },
       isValid () {
         return (this.from != null && this.to !== null) || (this.count > 0 && this.unit)
@@ -162,17 +196,25 @@
 
 <style lang="scss">
     .x-select-timeframe {
+      .x-select-timeframe_config--unlimited {
         margin-top: 12px;
         display: grid;
         grid-template-columns: 20px 180px auto auto;
         grid-gap: 8px;
         align-items: center;
-        grid-template-rows: 32px;
+        grid-template-rows: 32px 32px;
         min-width: 0;
 
         .x-select-trigger {
             line-height: 24px;
             height: 24px;
         }
+      }
+      .x-select-timeframe_config--limited {
+        margin-top: 12px;
+        label {
+          margin-right: 16px;
+        }
+      }
     }
 </style>

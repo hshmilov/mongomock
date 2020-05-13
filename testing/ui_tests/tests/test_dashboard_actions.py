@@ -1,7 +1,8 @@
 import time
 from contextlib import contextmanager
 import pytest
-
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
 from axonius.entities import EntityType
 from axonius.utils import datetime
 from services.adapters import stresstest_service
@@ -46,6 +47,14 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.assert_timeline_svg_exist(card, assert_data)
 
     def test_dashboard_chart_edit(self):
+
+        # enable unlimited timeline range feature flag
+        gui_configs_collection = self.axonius_system.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
+        gui_configs_collection.update_one(filter={'config_name': FEATURE_FLAGS_CONFIG},
+                                          update={'$set': {'config.query_timeline_range': True}}, upsert=True)
+
+        self.base_page.refresh()
+
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
@@ -111,6 +120,7 @@ class TestDashboardActions(TestBase):
         assert self.dashboard_page.is_chart_save_disabled()
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)
         self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
+
         self.dashboard_page.select_chart_result_range_last()
         self.dashboard_page.click_card_save()
 
@@ -184,9 +194,9 @@ class TestDashboardActions(TestBase):
         with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS, self.TIMELINE_CHART_TYPE):
             self.dashboard_page.toggle_comparison_intersection_switch()
             self.dashboard_page.select_chart_result_range_date()
-            self.dashboard_page.select_chart_wizard_datepicker(1, datetime.datetime.now() + datetime.timedelta(-30))
+            self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now() + datetime.timedelta(-30))
             self.dashboard_page.close_datepicker()
-            self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now())
+            self.dashboard_page.select_chart_wizard_datepicker(3, datetime.datetime.now())
             self.dashboard_page.close_datepicker()
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])
