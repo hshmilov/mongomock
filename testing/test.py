@@ -618,19 +618,16 @@ def main():
                 'ui_test_instances_before_join',
                 'ui_test_tasks',
                 'ui_test_user_permissions',
-                'ui_test_devices_table_sanity',
                 'ui_test_report',
                 'ui_test_cyberark_vault_integration',
                 'ui_test_users_table',
-                'ui_test_report_special_cases',
                 'ui_test_saved_query',
                 'ui_test_devices_query_advanced_cases',
                 'ui_test_session',
                 'integ_test_system',
-                'test_report_generation_more_cases',
-                'test_report_generation_special_cases'
-                'test_settings_permissions',
-
+                'ui_test_report_generation_more_cases',
+                'ui_test_report_generation_special_cases',
+                'ui_test_settings_permissions',
             ]
 
             for priority_test in priority_tests:

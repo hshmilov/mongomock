@@ -51,3 +51,7 @@ class TestTenableIoAdapter(AdapterTestBase):
     @pytest.mark.skip('Not working')
     def test_removing_adapter_creds_with_users(self):
         pass
+
+    @pytest.mark.skip('Slow')
+    def test_check_reachability(self):
+        pass
