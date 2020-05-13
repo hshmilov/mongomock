@@ -36,6 +36,7 @@ class TestDevice(TestBase):
             - Create another predefined field & Save
                 - Verify new data also exists
         """
+        print('starting test_add_predefined_fields_on_device')
         # === Step 1 === #
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -64,8 +65,7 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
     def test_device_enforcement_tasks(self):
-
-        self.logger.info('starting test_device_enforcement_tasks')
+        print('starting test_device_enforcement_tasks')
 
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.enforcements_page.switch_to_page()
@@ -131,6 +131,7 @@ class TestDevice(TestBase):
             - In the enforcement tasks table of a certain windows device, check that the tasks are sorted
             - The sort is according to the enforcement set id in a DESCENDING order
         """
+        print('starting test_device_enforcement_task_sort')
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
@@ -166,6 +167,7 @@ class TestDevice(TestBase):
         return count == expected_completed_count
 
     def test_add_predefined_fields_updates_general(self):
+        print('starting test_add_predefined_fields_updates_general')
         asset_name = 'asset name 123'
         host_name = 'host name 123'
         self.dashboard_page.switch_to_page()
@@ -204,6 +206,7 @@ class TestDevice(TestBase):
             - Press the expand data button of the first row
             - Make sure that the details table is sorted decreasingly by last seen field
         """
+        print('starting test_last_seen_expanded_cell_sort')
         with CsvService().contextmanager(take_ownership=True):
             first_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
             second_date = (datetime.today() - timedelta(days=2)).strftime('%Y-%m-%d')
