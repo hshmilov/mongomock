@@ -42,7 +42,7 @@
           <XButton
             type="link"
             class="header"
-            :disabled="cannotOpenAdvancesSettings"
+            :disabled="cannotOpenAdvancedSettings"
             @click="toggleSettings"
           >
             <AIcon
@@ -53,33 +53,11 @@
             Advanced Settings
           </XButton>
           <div class="content">
-            <XTabs
+            <XAdapterAdvancedSettings
               v-if="currentAdapter && advancedSettings"
-              ref="tabs"
-              class="growing-y"
-            >
-              <XTab
-                v-for="(config, configName, i) in currentAdapter.config"
-                :id="configName"
-                :key="i"
-                :title="config.schema.pretty_name || configName"
-                :selected="!i"
-              >
-                <div class="configuration">
-                  <XForm
-                    v-model="config.config"
-                    :schema="config.schema"
-                    @validate="validateConfig"
-                  />
-                  <XButton
-                    type="primary"
-                    tabindex="1"
-                    :disabled="!configValid"
-                    @click="saveConfig(configName, config.config)"
-                  >Save Config</XButton>
-                </div>
-              </XTab>
-            </XTabs>
+              :adapter-unique-name="pluginUniqueName"
+              @save="saveConfig"
+            />
           </div>
         </div>
         <XModal
@@ -124,6 +102,7 @@
               :schema="adapterSchema"
               :api-upload="uploadFileEndpoint"
               :error="connectionLabelError"
+              :passwords-vault-enabled="isCyberarkVault"
               @submit="saveServer"
               @validate="validateServer"
             />
@@ -209,25 +188,26 @@ import _get from 'lodash/get';
 import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
-import XTabs from '@axons/tabs/Tabs.vue';
-import XTab from '@axons/tabs/Tab.vue';
 import XModal from '@axons/popover/Modal/index.vue';
 import XButton from '@axons/inputs/Button.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XToast from '@axons/popover/Toast.vue';
 import { parseVaultError } from '@constants/utils';
 import { FETCH_SYSTEM_CONFIG } from '@store/actions';
-import XForm from '@neurons/schema/Form.vue';
-import { Icon } from 'ant-design-vue';
-
 import {
+  FETCH_ADAPTER_CONNECTIONS,
   ARCHIVE_CLIENT,
   LAZY_FETCH_ADAPTERS,
   HINT_ADAPTER_UP,
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
   LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
-} from '../../store/modules/adapters';
+} from '@store/modules/adapters';
+import XForm from '@neurons/schema/Form.vue';
+import XAdapterAdvancedSettings from '@networks/adapters/adapter-advanced-settings.vue';
+import { Icon } from 'ant-design-vue';
+
+
 import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
@@ -238,8 +218,6 @@ export default {
     XPage,
     XTableWrapper,
     XTable,
-    XTabs,
-    XTab,
     XForm,
     XModal,
     XButton,
@@ -247,6 +225,7 @@ export default {
     XToast,
     XInstancesSelect,
     AIcon: Icon,
+    XAdapterAdvancedSettings,
   },
   data() {
     return {
@@ -260,13 +239,13 @@ export default {
         uuid: null,
         valid: false,
       },
+      loading: true,
       connectionLabelError: '',
       showConnectionLabelBorder: false,
       selectedServers: [],
       message: '',
       toastTimeout: 60000,
       advancedSettings: false,
-      configValid: true,
       deleting: false, // whether or not the modal for deleting confirmation is displayed
       deleteEntities: false, // if 'deleting = true' and deleting was confirmed this means that
       // also the entities of the associated users should be deleted
@@ -275,14 +254,13 @@ export default {
   computed: {
     ...mapGetters({
       getAdapterById: 'getAdapterById',
-      getClientsMap: 'getClientsMap',
       getInstancesMap: 'getInstancesMap',
       requireConnectionLabel: REQUIRE_CONNECTION_LABEL,
       getConnectionLabel: GET_CONNECTION_LABEL,
     }),
     ...mapState({
-      loading(state) {
-        return state.adapters.adapters.fetching;
+      connections(state) {
+        return _get(state, `adapters.clients.${this.adapterId}`, []);
       },
       isCyberarkVault(state) {
         return _get(state, 'configuration.data.global.cyberark_vault', false);
@@ -290,8 +268,12 @@ export default {
       connectionLabelValid() {
         return !this.requireConnectionLabel || this.serverModal.connectionLabel;
       },
+      adapterSchema(state) {
+        const schema = _get(state, `adapters.adapterSchemas.${this.adapterId}`);
+        return schema;
+      },
     }),
-    cannotOpenAdvancesSettings() {
+    cannotOpenAdvancedSettings() {
       return this.$cannot(this.$permissionConsts.categories.Adapters,
         this.$permissionConsts.actions.Update);
     },
@@ -309,6 +291,9 @@ export default {
     currentAdapter() {
       return this.getAdapterById(this.adapterId) || {};
     },
+    pluginUniqueName() {
+      return this.currentAdapter.pluginUniqueName;
+    },
     title() {
       return this.currentAdapter.title;
     },
@@ -316,10 +301,8 @@ export default {
       return this.currentAdapter.link;
     },
     adapterClients() {
-      const clients = _get(this.currentAdapter, 'clients', []);
       const instances = this.getInstancesMap;
-      return clients.map((c) => {
-        const client = this.getClientsMap.get(c);
+      return this.connections.map((client) => {
         // eslint-disable-next-line camelcase
         const { node_id } = client;
         const instance = instances.get(node_id);
@@ -348,11 +331,6 @@ export default {
       if (!this.instances.length) return '';
       const instance = this.instances.find((i) => i.title === 'Master') || this.instances[0];
       return instance.name;
-    },
-    adapterSchema() {
-      const currentSchema = _get(this.currentAdapter, 'schema', null);
-      if (currentSchema) currentSchema.useVault = this.isCyberarkVault;
-      return currentSchema;
     },
     tableFields() {
       if (!this.adapterSchema || !this.adapterSchema.items) return [];
@@ -393,11 +371,15 @@ export default {
     this.fetchConfig();
     this.hintAdapterUp(this.adapterId);
     await this.lazyFetchAdapters();
+    await this.fetchAdapterConnections(this.adapterId);
+    this.loading = false;
     await this.lazyFetchConnectionLabels();
     this.setDefaultInstance();
   },
+
   methods: {
     ...mapActions({
+      fetchAdapterConnections: FETCH_ADAPTER_CONNECTIONS,
       lazyFetchAdapters: LAZY_FETCH_ADAPTERS,
       updateServer: SAVE_ADAPTER_CLIENT,
       testAdapter: TEST_ADAPTER_SERVER,
@@ -541,10 +523,8 @@ export default {
       this.serverModal.open = !this.serverModal.open;
       if (!this.serverModal.open) this.serverModal.connectionLabel = '';
     },
-    validateConfig(valid) {
-      this.configValid = valid;
-    },
-    saveConfig(configName, config) {
+
+    saveConfig({ configName, config }) {
       this.updatePluginConfig({
         prefix: 'adapters',
         pluginId: this.adapterId,
@@ -556,14 +536,7 @@ export default {
       });
     },
     toggleSettings() {
-      if (this.advancedSettings) {
-        this.$refs.tabs.$el.classList.add('shrinking-y');
-        setTimeout(() => {
-          this.advancedSettings = false;
-        }, 1000);
-      } else {
-        this.advancedSettings = true;
-      }
+      this.advancedSettings = !this.advancedSettings;
     },
     setDefaultInstance() {
       this.serverModal.instanceId = this.instanceDefaultName;
@@ -626,23 +599,8 @@ export default {
           margin-right: 8px;
         }
       }
-
       > .content {
         overflow: hidden;
-
-        .x-tabs {
-          overflow: hidden;
-          width: 60vw;
-
-          &.shrinking-y {
-            transform: translateY(-100%);
-          }
-
-          .configuration {
-            width: calc(60vw - 72px);
-            padding: 24px;
-          }
-        }
       }
     }
 

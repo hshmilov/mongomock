@@ -55,7 +55,16 @@ class TestCyberarkIntegration(TestBase):
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_new_server()
-        element = self.adapters_page.driver.find_element_by_id('cyberark-button')
+
+        element = None
+        try:
+            element = self.adapters_page.driver.find_element_by_id('cyberark-button')
+        except NoSuchElementException:
+            # dismiss the connection modal
+            if element is None:
+                self.adapters_page.click_cancel()
+                raise
+
         assert element is not None
 
     @staticmethod

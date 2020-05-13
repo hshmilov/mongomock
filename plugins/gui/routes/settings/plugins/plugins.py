@@ -272,7 +272,6 @@ class Plugins:
                     return return_error(f'Current client certificate can not be validated by the uploaded CA', 400)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
-        self._adapters.clean_cache()
         return ''
 
     @staticmethod

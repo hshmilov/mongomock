@@ -169,7 +169,7 @@
           // An array, no need to handle recursively
           return
         }
-        if (this.data[item.name] !== undefined && this.data[item.name] !== null && !this.schema.useVault) {
+        if (this.data[item.name] !== undefined && this.data[item.name] !== null && !this.useVault) {
           // Value exists, no need to process
           return
         }
@@ -177,7 +177,7 @@
           this.data[item.name] = false
           updateData = true
         }
-        if (item.format && item.format === "password" && this.schema.useVault){
+        if (item.format && item.format === "password" && this.useVault){
           item.type = 'XVaultEdit'
         }
         if (!item.default) {

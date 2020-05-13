@@ -14,7 +14,19 @@
         class="md-primary"
       >Configured Only ({{ configuredAdaptersCount }})</md-switch>
     </div>
-    <div class="adapters-table">
+    <div
+      v-if="!adaptersData.length"
+      class="adapters-loader"
+    >
+      <PulseLoader
+        color="#FF7D46"
+        loading
+      />
+    </div>
+    <div
+      v-else
+      class="adapters-table"
+    >
       <table class="table">
         <thead>
           <tr class="table-row">
@@ -77,6 +89,7 @@
     import xPage from '../axons/layout/Page.vue'
     import xTitle from '../axons/layout/Title.vue'
     import xSearchInput from '../neurons/inputs/SearchInput.vue'
+    import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
     import {mapState, mapActions} from 'vuex'
     import {FETCH_ADAPTERS} from '../../store/modules/adapters'
@@ -85,7 +98,7 @@
 
     function getConfiguredAdapters(adapter) {
         // configured adapter is one that has at least 1 client configured
-        return adapter.clients.length
+        return adapter.clientsCount;
     }
 
     function getConnectedAdapters(adapter) {
@@ -94,7 +107,7 @@
 
     export default {
         name: 'XAdapters',
-        components: {xPage, xTitle, xSearchInput},
+        components: {xPage, xTitle, xSearchInput, PulseLoader },
         computed: {
             ...mapState({
                 adaptersData(state) {
@@ -172,6 +185,13 @@
         width: 20%;
         padding: 5px 0;
       }
+    }
+    .adapters-loader {
+      height: calc(100% - 42px);
+      width: 100%;
+      display: flex;
+      align-content: center;
+      justify-content: center;
     }
 
     .adapters-table {

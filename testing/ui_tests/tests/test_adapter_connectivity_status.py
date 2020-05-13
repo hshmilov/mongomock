@@ -38,7 +38,7 @@ class TestAdaptersConnectivityStatus(AdapterTestBase):
             assert self.adapters_page.find_status_symbol(status_type=SUCCESS)
             assert self.adapters_page.find_status_count(status_type=SUCCESS) == '1'
 
-            self._insert_bad_client_to_ad()
+            self._insert_bad_client_to_ad(dc_name=self.AD_DC_NAME)
             assert self.adapters_page.find_status_symbol(status_type=ERROR)
 
             self._go_to_adapters_and_search_ad()

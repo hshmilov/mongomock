@@ -199,6 +199,7 @@ class Dashboard(Charts, Notifications):
         entity_fields.clean_cache()
         self._lifecycle.clean_cache()
         self._adapters.clean_cache()
+        self._adapters_v2.clean_cache()
 
     def _init_all_dashboards(self):
         """

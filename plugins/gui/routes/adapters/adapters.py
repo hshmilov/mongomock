@@ -44,11 +44,11 @@ class Adapters(Connections):
                                                                                             pymongo.DESCENDING)])
         if clients_value is None:
             return {}
-        return {'clients': clients_value.get('schema')}
+        return {'schema': clients_value.get('schema')}
 
     @gui_route_logged_in()
     def adapters(self):
-        return jsonify(self._adapters())
+        return jsonify(self._adapters_v2())
 
     @gui_route_logged_in('hint_raise/<plugin_name>', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters), skip_activity=True)
@@ -83,6 +83,136 @@ class Adapters(Connections):
             run_and_forget(lambda: self.request_remote_plugin('version', plugin_unique_name=unique_name))
         return ''
 
+    @gui_route_logged_in('<plugin_name>/advanced_settings', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Adapters))
+    def get_adapter_advanced_settings_schema(self, plugin_name):
+        return jsonify(self._adapter_advanced_config_schema(plugin_name))
+
+    @gui_route_logged_in('<plugin_name>/connections', methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Adapters))
+    def get_adapter_connections_data(self, plugin_name):
+
+        return jsonify(self._get_adapter_connections_data(plugin_name))
+
+    @rev_cached(ttl=10, remove_from_cache_ttl=60)
+    def _adapters_v2(self):
+        """
+        Get lean structure of adapters
+        :return:
+        """
+        db_connection = self._get_db_connection()
+        core_db = db_connection[CORE_UNIQUE_NAME]
+
+        instances_metadata_db = core_db['nodes_metadata']
+
+        # get all registered adapters from core
+        registered_adapters = core_db['configs'].find({
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+            'hidden': {
+                '$ne': True
+            }
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+
+        adapters_result = defaultdict(list)
+
+        for adapter in registered_adapters:
+
+            # adapter_unique_name is the name in which this instance registered to core
+            adapter_unique_name = adapter[PLUGIN_UNIQUE_NAME]
+            adapter_name = adapter['plugin_name']
+
+            current_adapter_db = db_connection[adapter_unique_name]
+
+            adapter_instance_id = adapter[NODE_ID]
+            instance_metadata = instances_metadata_db.find_one({
+                NODE_ID: adapter_instance_id
+            })
+
+            # skip deactivated nodes.
+            if instance_metadata and instance_metadata.get('status', ACTIVATED_NODE_STATUS) == DEACTIVATED_NODE_STATUS:
+                continue
+
+            node_name = '' if instance_metadata is None else instance_metadata.get(NODE_NAME)
+
+            # get all adapter instance clients
+            adapter_clients_success = current_adapter_db['clients'].count_documents({'status': 'success'})
+            adapter_clients_count = current_adapter_db['clients'].count_documents({})
+
+            # add the adapter into the response dict
+            adapters_result[adapter_name].append({
+                'plugin_name': adapter['plugin_name'],
+                'unique_plugin_name': adapter_unique_name,
+                'status': adapter.get('status', ''),
+                'supported_features': adapter['supported_features'],
+                'clients_count': adapter_clients_count,
+                'success_clients': adapter_clients_success,
+                NODE_NAME: node_name,
+                NODE_ID: adapter[NODE_ID]
+            })
+
+        return adapters_result
+
+    @rev_cached(ttl=10, remove_from_cache_ttl=60)
+    def _adapter_advanced_config_schema(self, adapter_unique_name):
+        db_connection = self._get_db_connection()
+        return self.__extract_configs_and_schemas(db_connection, adapter_unique_name)
+
+    @rev_cached(ttl=10, remove_from_cache_ttl=60)
+    def _get_adapter_connections_data(self, plugin_name):
+        db_connection = self._get_db_connection()
+        core_db = db_connection[CORE_UNIQUE_NAME]
+        instances_metadata_db = core_db['nodes_metadata']
+
+        registered_adapter_instances = core_db['configs'].find({
+            'plugin_name': plugin_name,
+            'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
+            'hidden': {
+                '$ne': True
+            }
+        }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+
+        clients_result = []
+        schema = None
+        for adapter in registered_adapter_instances:
+
+            # adapter_unique_name is the name in which this instance registered to core
+            adapter_unique_name = adapter[PLUGIN_UNIQUE_NAME]
+            adapter_instance_db = db_connection[adapter_unique_name]
+
+            adapter_instance_id = adapter[NODE_ID]
+            instance_metadata = instances_metadata_db.find_one({
+                NODE_ID: adapter_instance_id
+            })
+
+            # skip deactivated nodes.
+            if instance_metadata and instance_metadata.get('status', ACTIVATED_NODE_STATUS) == DEACTIVATED_NODE_STATUS:
+                continue
+
+            client_configuration_schema = self._get_plugin_schemas(db_connection, adapter_unique_name).get('schema')
+
+            # skip clients not properly configured or missing schema.
+            if not client_configuration_schema:
+                continue
+
+            if not schema:
+                # we take the first schema found, as it is the same for all instances of the same adapter.
+                schema = client_configuration_schema
+
+            node_name = '' if instance_metadata is None else instance_metadata.get(NODE_NAME)
+
+            for client_data in adapter_instance_db['clients'].find({}):
+                client = beautify_db_entry(client_data)
+
+                self._decrypt_client_config(client['client_config'])
+                client['client_config'] = clear_passwords_fields(client['client_config'], client_configuration_schema)
+                client[NODE_ID] = adapter_instance_id
+                client[NODE_NAME] = node_name
+                client['adapter_name'] = adapter[PLUGIN_NAME]
+
+                clients_result.append(client)
+
+        return {'schema': schema, 'clients': clients_result}
+
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters(self):
         """
@@ -100,7 +230,7 @@ class Adapters(Connections):
         for adapter in adapters_from_db:
             adapter_name = adapter[PLUGIN_UNIQUE_NAME]
 
-            schema = self._get_plugin_schemas(db_connection, adapter_name).get('clients')
+            schema = self._get_plugin_schemas(db_connection, adapter_name).get('schema')
             nodes_metadata_collection = db_connection['core']['nodes_metadata']
 
             node_name = nodes_metadata_collection.find_one({
@@ -133,7 +263,6 @@ class Adapters(Connections):
 
             adapters_to_return.append({
                 'plugin_name': adapter['plugin_name'],
-                'unique_plugin_name': adapter_name,
                 'status': status,
                 'supported_features': adapter['supported_features'],
                 'schema': schema,
@@ -251,6 +380,7 @@ class Adapters(Connections):
                          activity_params=['adapter_name', 'config_name'])
     def update_adapter(self, adapter_name, config_name):
         response = self._save_plugin_config(adapter_name, config_name)
+        self._adapter_advanced_config_schema.clean_cache()
         if response != '':
             return response
         unique_names = self.request_remote_plugin(f'find_plugin_unique_name/nodes/None/plugins/{adapter_name}').json()

@@ -123,7 +123,9 @@ class Connections:
 
         if request.method == 'DELETE':
             self._adapters.clean_cache()
+            self._adapters_v2.clean_cache()
             self.clients_labels.clean_cache()
+            self._get_adapter_connections_data.clean_cache()
             return json.dumps({'client_id': client_id}), 200
 
         if not connection_data.get('connection'):
@@ -140,7 +142,9 @@ class Connections:
             adapter_unique_name = self._get_adapter_unique_name(adapter_name, instance_id)
 
         self._adapters.clean_cache()
+        self._adapters_v2.clean_cache()
         self.clients_labels.clean_cache()
+        self._get_adapter_connections_data.clean_cache()
         return self._query_connection_for_devices(adapter_unique_name, connection_data)
 
     def _remove_connection_assets(self, plugin_name, client_id):
@@ -243,6 +247,8 @@ class Connections:
         response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=connection_data,
                                               raise_on_network_error=True)
         self._adapters.clean_cache()
+        self._adapters_v2.clean_cache()
+        self._get_adapter_connections_data.clean_cache()
         self.clients_labels.clean_cache()
 
         if response.status_code == 200:

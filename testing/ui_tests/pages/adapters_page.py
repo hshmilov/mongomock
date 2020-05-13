@@ -107,7 +107,8 @@ class AdaptersPage(EntitiesPage):
         self.is_element_disabled(self.get_button(self.SAVE_AND_CONNECT_BUTTON))
 
     def click_cancel(self):
-        self.click_button(self.CANCEL_BUTTON, button_class='x-button link')
+        context_element = self.wait_for_element_present_by_css('.x-modal.config-server')
+        self.click_button(self.CANCEL_BUTTON, context=context_element)
 
     def click_test_connectivity(self):
         self.click_button(self.TEST_CONNECTIVITY)

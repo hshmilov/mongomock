@@ -1,5 +1,4 @@
 import shortid from 'shortid';
-import _omit from 'lodash/omit';
 import _size from 'lodash/size';
 import _get from 'lodash/get';
 import { pluginMeta } from '../../constants/plugin_meta';
@@ -7,6 +6,9 @@ import { REQUEST_API } from '../actions';
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP';
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS';
+export const FETCH_ADAPTER_CONNECTIONS = 'FETCH_ADAPTER_CONNECTIONS';
+export const SET_ADAPTER_CONNECTIONS = 'SET_ADAPTER_CONNECTIONS';
+export const SET_ADAPTER_SCHEMA = 'SET_ADAPTER_SCHEMA';
 export const LAZY_FETCH_ADAPTERS = 'LAZY_FETCH_ADAPTERS';
 export const SET_ADAPTERS = 'SET_ADAPTERS';
 export const FETCH_ADAPTERS_CLIENT_LABELS = 'FETCH_ADAPTERS_CLIENT_LABELS';
@@ -23,7 +25,6 @@ export const ADD_NEW_CLIENT = 'ADD_NEW_CLIENT';
 
 export const CLEAR_ADAPTERS_STATE = 'CLEAR_ADAPTERS_STATE';
 
-export const UPDATE_ADAPTER_STATUS = 'UPDATE_ADAPTER_STATUS';
 
 export const adapters = {
   state: {
@@ -32,8 +33,9 @@ export const adapters = {
       data: [],
       error: '',
     },
+    adapterSchemas: {},
     instances: [],
-    clients: [],
+    clients: {},
     connectionLabels: [],
   },
   mutations: {
@@ -44,39 +46,18 @@ export const adapters = {
       // that is added to adapters list
 
       const newStateAdapters = [];
-      const newStateInstances = [];
-      let newStateClients = [];
-
-      function getAllClientsData(aggregatedInstanceData, currentInstance) {
-        const { clients: currentInstanceClients } = currentInstance;
-        const currentInstanceClientsCount = currentInstanceClients.length;
-
-        let instanceSuccessClients = 0;
-        let instanceFailClients = 0;
-
-
-        currentInstanceClients.forEach((c) => {
-          const { status } = c;
-          instanceSuccessClients = status === 'success' ? instanceSuccessClients + 1 : instanceSuccessClients;
-          instanceFailClients = status === 'error' ? instanceFailClients + 1 : instanceFailClients;
-        });
-
-        const {
-          countClients, successClients, errorClients, clients,
-        } = aggregatedInstanceData;
-        return {
-          clients: [...clients, ...currentInstanceClients],
-          countClients: countClients + currentInstanceClientsCount,
-          errorClients: errorClients + instanceFailClients,
-          successClients: successClients + instanceSuccessClients,
-        };
-      }
-
+      const newStateInstances = new Map();
 
       const { data, fetching, error } = payload;
       state.adapters.fetching = fetching;
 
+      if (error) {
+        state.adapters.error = payload.error;
+        return;
+      }
+
       if (data) {
+        // eslint-disable-next-line no-restricted-syntax
         for (const [name, currentAdapter] of Object.entries(data)) {
           let adapter = {};
           let instance = {};
@@ -84,56 +65,54 @@ export const adapters = {
           const adapterMetaData = pluginMeta[name] || {};
 
 
-          // get all clients data from all Instances
-          const aggregatedClientsData = currentAdapter.reduce(getAllClientsData, {
-            clients: [],
-            successClients: 0,
-            errorClients: 0,
-            countClients: 0,
-          });
+          const adapterInstancesIds = currentAdapter.map((adapterInstance) => adapterInstance.node_id);
+          const adaptersClients = currentAdapter.reduce((clientsStat, adapterData) => ({
+            count: clientsStat.count + adapterData.clients_count,
+            success: clientsStat.success + adapterData.success_clients,
+          }), { count: 0, success: 0 });
 
-          const {
-            countClients, successClients, errorClients, clients: clientsList,
-          } = aggregatedClientsData;
+          let adapterStatus;
+          if (adaptersClients.count) {
+            adapterStatus = adaptersClients.count === adaptersClients.success ? 'success' : 'warning';
+          }
 
           // Itterate through Instances
+          // eslint-disable-next-line no-loop-func
           currentAdapter.forEach((a) => {
             const {
-              config, node_id, node_name, schema, status, supported_features,
+              config, node_id: instanceId, node_name: instanceName, schema, supported_features, unique_plugin_name
             } = a;
             adapter = {
               id: name,
+              status: adapterStatus,
               title: adapterMetaData.title || name,
               description: adapterMetaData.description || '',
               link: adapterMetaData.link,
               config,
-              status: countClients && countClients === successClients ? 'success' : countClients ? 'warning' : '',
               schema,
               supported_features,
-              clients: clientsList.map((c) => c.uuid),
-              countClients,
-              successClients,
-              errorClients,
-              instances: currentAdapter.map((a) => a.node_id),
+              instances: adapterInstancesIds,
+              successClients: adaptersClients.success,
+              errorClients: adaptersClients.count - adaptersClients.success,
+              clientsCount: adaptersClients.count,
+              pluginUniqueName: unique_plugin_name,
             };
 
             instance = {
-              node_id,
-              node_name,
+              node_id: instanceId,
+              node_name: instanceName,
             };
 
-            if (!newStateInstances.find((i) => i.node_id === node_id)) {
-              newStateInstances.push(instance);
+            if (!newStateInstances.has(instanceId)) {
+              newStateInstances.set(instanceName, instance);
             }
-            newStateClients = [...newStateClients, ...clientsList];
           });
           newStateAdapters.push(adapter);
         }
 
         // It is essential to replace the data in the state here so it is not accumulated
         state.adapters.data = newStateAdapters;
-        state.instances = newStateInstances;
-        state.clients = newStateClients;
+        state.instances = Array.from(newStateInstances.values());
 
         state.adapters.data.sort((first, second) => {
           // Sort by adapters plugin name (the one that is shown in the gui).
@@ -144,97 +123,57 @@ export const adapters = {
           return 0;
         });
       }
+    },
+    [SET_ADAPTER_CONNECTIONS](state, payload) {
+      const { connections, adapterName } = payload;
+      state.clients = {
+        ...state.clients,
+        [adapterName]: connections,
+      };
+    },
+    [SET_ADAPTER_SCHEMA](state, payload) {
+      const { schema, adapterName } = payload;
 
-      if (error) {
-        state.adapters.error = payload.error;
+      if (!state.adapterSchemas[adapterName]) {
+        state.adapterSchemas = {
+          ...state.adapterSchemas,
+          [adapterName]: schema,
+        };
       }
     },
     [ADD_NEW_CLIENT](state, payload) {
       const { adapterId, ...newClient } = payload;
 
-      const newAdaptersList = state.adapters.data.map((adapter) => {
-        if (adapterId !== adapter.id) {
-          return adapter;
-        }
-        return {
-          ...adapter,
-          client: adapter.clients.push(newClient.uuid),
-          status: 'warning',
-        };
-      });
-      newClient.adapter_name = adapterId;
-      state.adapters.data = newAdaptersList;
-      state.clients.push(newClient);
+      const currentAdapterClientsList = state.clients[adapterId] || [];
+      state.clients = {
+        ...state.clients,
+        [adapterId]: [...currentAdapterClientsList, { ...newClient, adapter_name: adapterId }],
+      };
     },
     [UPDATE_EXISTING_CLIENT](state, payload) {
       // update exsiting client
       const { adapterId, uuidToSwap = payload.uuid, ...updatedClient } = payload;
-      const clientStatus = updatedClient.status;
-      const newAdaptersList = state.adapters.data.map((adapter) => {
-        if (adapterId !== adapter.id) {
-          return adapter;
-        }
-
-        const { clients } = adapter;
-
-        const replaceClientAtIndex = clients.findIndex((c) => uuidToSwap === c);
-        const newClientsList = clients.map((c, index) => {
-          if (index !== replaceClientAtIndex) {
-            return c;
-          }
-          return updatedClient.uuid;
-        });
-
-        const { errorClients, successClients } = adapter;
-        return {
-          ...adapter,
-          countClients: adapter.countClients + 1,
-          errorClients: clientStatus !== 'success' ? errorClients + 1 : errorClients,
-          successClients: successClients === 'success' ? successClients + 1 : successClients,
-          clients: newClientsList,
-        };
-      });
-
-      state.adapters.data = newAdaptersList;
-      _omit(updatedClient, ['uuidToSwap']);
-      updatedClient.adapter_name = adapterId;
-      state.clients = state.clients.map((client) => {
+      const adapterClientsList = state.clients[adapterId].map((client) => {
         if (client.uuid === uuidToSwap) {
-          return updatedClient;
+          return {
+            ...updatedClient,
+            adapter_name: adapterId,
+          };
         }
         return client;
       });
+      state.clients = {
+        ...state.clients,
+        [adapterId]: adapterClientsList,
+      };
     },
     [REMOVE_CLIENT](state, { clientId, adapterId }) {
-      const newAdaptersList = state.adapters.data.map((adapter) => {
-        if (adapterId !== adapter.id) {
-          return adapter;
-        }
+      const adapterClientsList = state.clients[adapterId].filter((c) => c.uuid !== clientId);
 
-        const { clients } = adapter;
-
-        const replaceClientAtIndex = clients.findIndex((c) => clientId === c);
-        const newClientsList = clients.filter((c, index) => index !== replaceClientAtIndex);
-
-        return {
-          ...adapter,
-          clients: newClientsList,
-        };
-      });
-
-      state.adapters.data = newAdaptersList;
-      state.clients = state.clients.filter((c) => c.uuid !== clientId);
-    },
-    [UPDATE_ADAPTER_STATUS](state, adapterId) {
-      state.adapters.data = state.adapters.data.map((adapter) => {
-        if (adapter.id !== adapterId) {
-          return adapter;
-        }
-        return {
-          ...adapter,
-          status: 'warning',
-        };
-      });
+      state.clients = {
+        ...state.clients,
+        [adapterId]: adapterClientsList,
+      };
     },
     [SET_ADAPTERS_CLIENT_LABELS](state, payload) {
       const { data } = payload;
@@ -255,6 +194,20 @@ export const adapters = {
         type: SET_ADAPTERS,
       });
     },
+    [FETCH_ADAPTER_CONNECTIONS]({ dispatch, commit }, adapterName) {
+      return new Promise((resolve, reject) => {
+        dispatch(REQUEST_API, {
+          rule: `adapters/${adapterName}/connections`,
+          payload: { adapterName },
+        })
+          .then((res) => {
+            commit(SET_ADAPTER_CONNECTIONS, { adapterName, connections: res.data.clients || [] });
+            commit(SET_ADAPTER_SCHEMA, { schema: res.data.schema, adapterName });
+            resolve(res.data);
+          })
+          .catch((ex) => reject(ex));
+      });
+    },
     [LAZY_FETCH_ADAPTERS]({ dispatch, state }) {
       const adaptersData = _get(state, 'adapters.data', []);
       if (_size(adaptersData)) {
@@ -270,7 +223,8 @@ export const adapters = {
         return Promise.resolve();
       }
       const { serverData, instanceId, instanceIdPrev } = payload;
-      const instance = getters.getInstancesMap.get(instanceId);
+
+      const newAssociatedInstance = getters.getInstancesMap.get(instanceIdPrev || instanceId);
       const isNewClient = payload.uuid === 'new';
       const uniqueTmpId = isNewClient ? shortid.generate() : null;
 
@@ -286,29 +240,28 @@ export const adapters = {
         connectionLabel: payload.connectionLabel,
         uuid: isNewClient ? uniqueTmpId : payload.uuid,
         status: 'warning',
-        node_id: instance.node_id,
+        node_id: newAssociatedInstance.node_id,
         error: null,
       };
 
-      if (isNewClient) {
-        commit(ADD_NEW_CLIENT, client);
-      } else {
-        commit(UPDATE_EXISTING_CLIENT, client);
-      }
+      commit(isNewClient ? ADD_NEW_CLIENT : UPDATE_EXISTING_CLIENT, client);
 
       const baseRulePath = 'adapters/connections';
-      return dispatch(REQUEST_API, {
-        rule: isNewClient ? baseRulePath : `${baseRulePath}/${payload.uuid}`,
-        method: isNewClient ? 'PUT' : 'POST',
-        data: {
-          adapter: payload.adapterId,
-          connection: payload.serverData,
-          connection_label: payload.connectionLabel,
-          instance: instanceId,
-          instance_prev: instanceIdPrev,
-        },
-      })
-        .then((response) => {
+
+      return new Promise(async (resolve, reject) => {
+        try {
+          const response = await dispatch(REQUEST_API, {
+            rule: isNewClient ? baseRulePath : `${baseRulePath}/${payload.uuid}`,
+            method: isNewClient ? 'PUT' : 'POST',
+            data: {
+              adapter: payload.adapterId,
+              connection: payload.serverData,
+              connection_label: payload.connectionLabel,
+              instance: newAssociatedInstance.node_id,
+              instance_prev: instanceIdPrev,
+            },
+          });
+
           commit(UPDATE_EXISTING_CLIENT, {
             client_id: response.data.client_id,
             adapterId: payload.adapterId,
@@ -316,12 +269,18 @@ export const adapters = {
             uuidToSwap: isNewClient ? uniqueTmpId : payload.uuid,
             uuid: response.data.id,
             status: response.data.status,
-            node_id: instance.node_id,
+            node_id: newAssociatedInstance.node_id,
+            node_name: newAssociatedInstance.node_name,
             error: response.data.error,
           });
+
           dispatch(FETCH_ADAPTERS_CLIENT_LABELS);
-          return response;
-        });
+
+          resolve(response);
+        } catch (err) {
+          reject(err);
+        }
+      });
     },
     [TEST_ADAPTER_SERVER]({ dispatch }, payload) {
       // Call API to test connectivity to given connection configuration
@@ -399,10 +358,6 @@ export const adapters = {
 
       return byId;
     },
-    getClientsMap: (state) => state.clients.reduce((map, client) => {
-      map.set(client.uuid, client);
-      return map;
-    }, new Map()),
     getInstancesMap: (state) => state.instances.reduce((map, instance) => {
       map.set(instance.node_id, instance);
       return map;

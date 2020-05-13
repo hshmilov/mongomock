@@ -9,6 +9,7 @@
           :schema="schema"
           :api-upload="apiUpload"
           :read-only="readOnly"
+          :use-vault="passwordsVaultEnabled"
           @validate="onValidate"
           @remove-validate="onRemoveValidate"
   />
@@ -52,6 +53,10 @@
       apiUpload: {},
       readOnly: {},
       silent: {
+        type: Boolean,
+        default: false,
+      },
+      passwordsVaultEnabled: {
         type: Boolean,
         default: false,
       },
