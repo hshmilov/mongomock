@@ -1,8 +1,10 @@
-from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
+from services.adapters import csv_service
+from test_credentials.test_csv_credentials import USERS_CLIENT_FILES
+from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestEntityResultsPerPage(TestBase):
+class TestEntityResults(TestBase):
     TWENTY_RESULTS_PER_PAGE = '20'
     FIFTY_RESULTS_PER_PAGE = '50'
     HUNDRED_RESULTS_PER_PAGE = '100'
@@ -64,3 +66,22 @@ class TestEntityResultsPerPage(TestBase):
                                            self.users_queries_page,
                                            self.users_page.ADMIN_QUERY_NAME,
                                            self.users_page.FILTER_IS_ADMIN)
+
+    def test_entities_table_adapter_order(self):
+        csv = csv_service.CsvService()
+        with csv.contextmanager(take_ownership=True):
+            for position, client in enumerate(USERS_CLIENT_FILES, start=1):
+                self.adapters_page.upload_csv(list(client.keys())[0], client, True)
+                self.adapters_page.wait_for_server_green(position)
+            self.dashboard_page.switch_to_page()
+            self.base_page.run_discovery()
+            self.users_page.switch_to_page()
+            self.users_page.wait_for_table_to_load()
+            self.users_page.run_filter_query('avidor')
+            self.users_page.hover_over_entity_adapter_icon(index=0)
+            adapters_popup_table_data = [x['Name'] for x in self.users_page.get_adapters_popup_table_data()]
+            self.users_page.click_expand_row()
+            adapters_expanded_data = self.users_page.get_column_data_adapter_title_tooltip()
+            assert adapters_popup_table_data == adapters_expanded_data
+            self.adapters_page.clean_adapter_servers(CSV_NAME)
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)

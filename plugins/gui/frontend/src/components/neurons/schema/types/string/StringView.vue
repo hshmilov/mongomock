@@ -12,6 +12,7 @@
     :key="value"
     :src="require(`Logos/adapters/${value}.png`)"
     :alt="value"
+    :title="title"
     height="24"
     class="logo md-image"
   >

@@ -1,80 +1,88 @@
 <template>
   <div class="array inline">
-    <component
+    <Component
       :is="itemWrapper"
       v-for="{schema, data} in dataSchemaItems"
       :key="schema.name"
       class="item"
       :class="schema.format || format"
     >
-      <component
+      <Component
         :is="schema.type"
         :schema="schema"
         :value="data"
+        :title="title"
       />
-    </component>
+    </Component>
   </div>
 </template>
 
 <script>
-  import string from '../string/StringView.vue'
-  import number from '../numerical/NumberView.vue'
-  import integer from '../numerical/IntegerView.vue'
-  import bool from '../boolean/BooleanView.vue'
-  import file from './FileView.vue'
-  import array from './ArrayRawView.vue'
+import _get from 'lodash/get';
+import { isObjectListField } from '@constants/utils';
+import string from '../string/StringView.vue';
+import number from '../numerical/NumberView.vue';
+import integer from '../numerical/IntegerView.vue';
+import bool from '../boolean/BooleanView.vue';
+import file from './FileView.vue';
+import array from './ArrayRawView.vue';
 
-  import arrayMixin from '../../../../../mixins/array'
-  import { isObjectListField } from '../../../../../constants/utils'
-  import _get from 'lodash/get'
+import arrayMixin from '../../../../../mixins/array';
 
-  export default {
-    name: 'XArrayTableView',
-    components: {
-      string, number, integer, bool, file, array
+export default {
+  name: 'XArrayTableView',
+  components: {
+    string, number, integer, bool, file, array,
+  },
+  mixins: [arrayMixin],
+  props: {
+    title: {
+      // this props is for passing the title down to child element
+      type: String,
+      default: null,
     },
-    mixins: [arrayMixin],
-    data () {
-      return {
-        inHoverRemainder: false,
-        position: {
-          top: false,
-          left: false
-        }
-      }
+  },
+  data() {
+    return {
+      inHoverRemainder: false,
+      position: {
+        top: false,
+        left: false,
+      },
+    };
+  },
+  computed: {
+    format() {
+      return this.schema.format;
     },
-    computed: {
-      format () {
-        return this.schema.format
-      },
-      isRaw () {
-        return isObjectListField(this.schema)
-      },
-      isTag () {
-        return _get(this.schema, 'items.format') === 'tag'
-      },
-      wrapChip () {
-        const isSeparatedList = this.dataSchemaItems.length > 1 && this.schema.name !=='adapters'
-        return isSeparatedList || this.isTag || this.isRaw
-      },
-      itemWrapper () {
-        return this.wrapChip ? 'v-chip' : 'div'
-      },
-      processedData () {
-        if (this.isOrderedObject) {
-          return this.data
-        }
-        let items = Object.values(this.data)
-        if (this.schema.sort) {
-          items.sort()
-        }
-        if (this.schema.unique) {
-          items = Array.from(new Set(items))
-        }
-        return items
+    isRaw() {
+      return isObjectListField(this.schema);
+    },
+    isTag() {
+      return _get(this.schema, 'items.format') === 'tag';
+    },
+    wrapChip() {
+      const isSeparatedList = this.dataSchemaItems.length > 1 && this.schema.name !== 'adapters';
+      return isSeparatedList || this.isTag || this.isRaw;
+    },
+    itemWrapper() {
+      return this.wrapChip ? 'v-chip' : 'div';
+    },
+    processedData() {
+      if (this.isOrderedObject) {
+        return this.data;
       }
-    }
-  }
+      let items = Object.values(this.data);
+      if (this.schema.sort) {
+        items.sort();
+      }
+      if (this.schema.unique) {
+        items = Array.from(new Set(items));
+      }
+      return items;
+    },
+  },
+};
 </script>
 
 <style lang="scss">

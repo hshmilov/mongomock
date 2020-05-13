@@ -767,10 +767,16 @@ class EntitiesPage(Page):
                                         data_position=col_position)))
 
     def get_column_data_adapter_names(self):
+        return self.get_column_data_adapter_attribute('alt')
+
+    def get_column_data_adapter_title_tooltip(self):
+        return self.get_column_data_adapter_attribute('title')
+
+    def get_column_data_adapter_attribute(self, attribute):
         col_position = self.count_sort_column(ADAPTER_CONNECTIONS_FIELD)
-        return [el.get_attribute('alt') for el in
+        return [el.get_attribute(attribute) for el in
                 self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
-                if el.get_attribute('alt')]
+                if el.get_attribute(attribute)]
 
     def get_field_table_data_with_ids(self):
         return [[data_cell.text for data_cell in data_row.find_elements_by_tag_name('td')]

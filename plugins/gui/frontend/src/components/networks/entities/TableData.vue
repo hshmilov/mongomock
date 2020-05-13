@@ -77,13 +77,15 @@
 <script>
 import _isEmpty from 'lodash/isEmpty';
 import _orderBy from 'lodash/orderBy';
+import _map from 'lodash/map';
+import _extend from 'lodash/extend';
 import { mapState, mapGetters } from 'vuex';
-import XTable from '../../axons/tables/Table.vue';
-import XTableData from '../../neurons/data/TableData';
-import XTooltip from '../../axons/popover/Tooltip.vue';
-import { pluginMeta } from '../../../constants/plugin_meta';
+import { pluginMeta } from '@constants/plugin_meta';
+import { GET_CONNECTION_LABEL } from '@store/getters';
+import XTable from '@axons/tables/Table.vue';
+import XTableData from '@neurons/data/TableData';
+import XTooltip from '@axons/popover/Tooltip.vue';
 
-import { GET_CONNECTION_LABEL } from '../../../store/getters';
 
 export default {
   name: 'XEntityTableData',
@@ -168,9 +170,27 @@ export default {
         clientId: this.data['meta_data.client_used'][index],
       })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));
     },
+    adaptersDetailsData() {
+      return _orderBy(this.adaptersDetailsWithClientIdList.map((adapter) => {
+        const connectionLabel = this.getConnectionLabel(adapter.clientId, {
+          plugin_name: adapter.pluginName[0],
+        });
+        let name = pluginMeta[adapter.pluginName[0]]
+          ? pluginMeta[adapter.pluginName[0]].title
+          : adapter.pluginName[0];
+        if (connectionLabel !== '') {
+          name = `${name} - ${connectionLabel}`;
+        }
+        return {
+          [this.fieldName]: adapter.pluginName,
+          name,
+        };
+      }), [this.fieldName]);
+    },
     details() {
       if (this.isAdaptersField) {
-        return this.adaptersList;
+        // pass list of adapters with title and logo flag
+        return _map(this.adaptersDetailsData, (item) => _extend({}, item, { formatTitle: () => `${item.name}` }));
       }
       // auto generated fields that are not saved in the db (Like _preferred fields) dont have _details
       if (this.data[`${this.fieldName}_details`] !== undefined) {
@@ -188,6 +208,7 @@ export default {
         data: this.details.map((detail, i) => ({
           [this.adaptersFieldName]: this.adaptersList[i],
           [this.fieldName]: detail,
+          formatTitle: () => `${this.adaptersDetailsData[i].name}`,
         })),
         colFilters: {
           [this.schema.name]: this.filter,
@@ -222,21 +243,7 @@ export default {
           this.schema, {
             name: 'name', title: 'Name', type: 'string',
           }],
-        data: _orderBy(this.adaptersDetailsWithClientIdList.map((adapter) => {
-          const connectionLabel = this.getConnectionLabel(adapter.clientId, {
-            plugin_name: adapter.pluginName[0],
-          });
-          let name = pluginMeta[adapter.pluginName[0]]
-            ? pluginMeta[adapter.pluginName[0]].title
-            : adapter.pluginName[0];
-          if (connectionLabel !== '') {
-            name = `${name} - ${connectionLabel}`;
-          }
-          return {
-            [this.fieldName]: adapter.pluginName,
-            name,
-          };
-        }), [this.fieldName]),
+        data: this.adaptersDetailsData,
         colFilters: {
           [this.schema.name]: this.filter,
         },

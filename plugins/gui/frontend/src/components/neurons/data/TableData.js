@@ -1,7 +1,6 @@
+import xTableData from '@axons/tables/TableData';
+import { isObject, includesIgnoreCase, formatStringTemplate } from '@constants/utils';
 import xSlice from '../schema/Slice.vue';
-import xTableData from '../../axons/tables/TableData.js';
-
-import { isObject, includesIgnoreCase, formatStringTemplate } from '../../../constants/utils';
 
 function hasFilter(data, filter) {
   if (!data) {
@@ -63,10 +62,11 @@ export default {
     },
   },
   render(createElement, { props }) {
-    let {
-      data, schema, filter, sort,
+    const {
+      data, filter, sort,
     } = props;
-    schema = { ...schema };
+    const schema = { ...props.schema };
+    const formatTitle = data ? data.formatTitle : undefined;
     if (schema.link) {
       schema.hyperlinks = () => ({
         href: formatStringTemplate(schema.link, data),
@@ -82,7 +82,8 @@ export default {
         },
       });
     }
-    // Wrapping list data with a component limiting the items displayed, with a tooltip presenting entire list
+    // Wrapping list data with a component limiting the items displayed,
+    // with a tooltip presenting entire list
     return createElement(xSlice, {
       props: {
         schema,
@@ -93,6 +94,7 @@ export default {
           props: {
             schema,
             data: sliced,
+            formatTitle,
           },
         }),
       },
