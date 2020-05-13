@@ -276,6 +276,12 @@ type BooleanComparator struct {
 	Neq    *bool ` json:"neq"`
 }
 
+type CIDRComparator struct {
+	Exists *bool      ` json:"exists"`
+	Eq     *net.IPNet ` json:"eq"`
+	Neq    *net.IPNet ` json:"neq"`
+}
+
 type CPU struct {
 	ID          int     ` json:"id"`
 	Name        string  ` json:"name"`
@@ -516,6 +522,30 @@ type NetworkInterface struct {
 	DeviceID *uuid.UUID ` json:"device_id"`
 	MacAddr  *string    ` json:"mac_addr"`
 	IPAddrs  []net.IP   ` json:"ip_addrs"`
+	// Interface name
+	Name *string ` json:"name"`
+	// Manufacturer
+	Manufacturer *string ` json:"manufacturer"`
+	// A list of subnets in ip format, that correspond the ipAddrs
+	Subnets []*net.IPNet ` json:"subnets"`
+	// Operational Status
+	OperationalStatus *string ` json:"operational_status"`
+	// Admin Status
+	AdminStatus *string                 ` json:"admin_status"`
+	PortType    *string                 ` json:"port_type"`
+	Mtu         *string                 ` json:"mtu"`
+	Gateway     *net.IP                 ` json:"gateway"`
+	Port        *string                 ` json:"port"`
+	Vlans       []*NetworkInterfaceVlan ` json:"vlans"`
+	// Returns aggregate of vlans
+	VlansAggregate []VlansAggregate ` json:"vlans_aggregate"`
+}
+
+type NetworkInterfaceVlan struct {
+	MacAddr *string ` json:"mac_addr"`
+	Name    *string ` json:"name"`
+	TagID   *int    ` json:"tag_id"`
+	Tagged  *bool   ` json:"tagged"`
 }
 
 type ObjectFilter struct {
@@ -654,15 +684,14 @@ type User struct {
 }
 
 type AdapterDevicesAggregate struct {
-	Group    []string               ` json:"group"`
-	Distinct []string               ` json:"distinct"`
-	Count    *int                   ` json:"count"`
-	Sum      map[string]interface{} ` json:"sum"`
-	Avg      map[string]interface{} ` json:"avg"`
-	Min      map[string]interface{} ` json:"min"`
-	Max      map[string]interface{} ` json:"max"`
-	// Adapter devices that are correlated to this device
-	AdapterDevices []*AdapterDevice ` json:"adapter_devices"`
+	Group          []string               ` json:"group"`
+	Distinct       []string               ` json:"distinct"`
+	Count          *int                   ` json:"count"`
+	Sum            map[string]interface{} ` json:"sum"`
+	Avg            map[string]interface{} ` json:"avg"`
+	Min            map[string]interface{} ` json:"min"`
+	Max            map[string]interface{} ` json:"max"`
+	AdapterDevices []*AdapterDevice       ` json:"adapter_devices"`
 }
 
 type AdapterUsersAggregate struct {
@@ -1188,15 +1217,14 @@ type InstalledSoftwareBoolExp struct {
 }
 
 type InterfacesAggregate struct {
-	Group    []string               ` json:"group"`
-	Distinct []string               ` json:"distinct"`
-	Count    *int                   ` json:"count"`
-	Sum      map[string]interface{} ` json:"sum"`
-	Avg      map[string]interface{} ` json:"avg"`
-	Min      map[string]interface{} ` json:"min"`
-	Max      map[string]interface{} ` json:"max"`
-	// Unique set of network interfaces collected by all adapter devices
-	Interfaces []*NetworkInterface ` json:"interfaces"`
+	Group      []string               ` json:"group"`
+	Distinct   []string               ` json:"distinct"`
+	Count      *int                   ` json:"count"`
+	Sum        map[string]interface{} ` json:"sum"`
+	Avg        map[string]interface{} ` json:"avg"`
+	Min        map[string]interface{} ` json:"min"`
+	Max        map[string]interface{} ` json:"max"`
+	Interfaces []*NetworkInterface    ` json:"interfaces"`
 }
 
 // Boolean filter expression for NetworkInterface
@@ -1206,10 +1234,43 @@ type NetworkInterfaceBoolExp struct {
 	// filter by macAddr
 	MacAddr *MacComparator ` json:"mac_addr"`
 	// filter by ipAddrs
-	IPAddrs *IPArrayComparator        ` json:"ip_addrs"`
-	And     []NetworkInterfaceBoolExp ` json:"and"`
-	Or      []NetworkInterfaceBoolExp ` json:"or"`
-	Not     []NetworkInterfaceBoolExp ` json:"not"`
+	IPAddrs *IPArrayComparator ` json:"ip_addrs"`
+	// filter by name
+	Name *StringComparator ` json:"name"`
+	// filter by manufacturer
+	Manufacturer *StringComparator ` json:"manufacturer"`
+	// filter by operationalStatus
+	OperationalStatus *StringComparator ` json:"operational_status"`
+	// filter by adminStatus
+	AdminStatus *StringComparator ` json:"admin_status"`
+	// filter by portType
+	PortType *StringComparator ` json:"port_type"`
+	// filter by mtu
+	Mtu *StringComparator ` json:"mtu"`
+	// filter by gateway
+	Gateway *IPComparator ` json:"gateway"`
+	// filter by port
+	Port *StringComparator ` json:"port"`
+	// filter by vlans
+	Vlans *NetworkInterfaceVlanBoolExp ` json:"vlans"`
+	And   []NetworkInterfaceBoolExp    ` json:"and"`
+	Or    []NetworkInterfaceBoolExp    ` json:"or"`
+	Not   []NetworkInterfaceBoolExp    ` json:"not"`
+}
+
+// Boolean filter expression for NetworkInterfaceVlan
+type NetworkInterfaceVlanBoolExp struct {
+	// filter by macAddr
+	MacAddr *MacComparator ` json:"mac_addr"`
+	// filter by name
+	Name *StringComparator ` json:"name"`
+	// filter by tagId
+	TagID *IntComparator ` json:"tag_id"`
+	// filter by tagged
+	Tagged *BooleanComparator            ` json:"tagged"`
+	And    []NetworkInterfaceVlanBoolExp ` json:"and"`
+	Or     []NetworkInterfaceVlanBoolExp ` json:"or"`
+	Not    []NetworkInterfaceVlanBoolExp ` json:"not"`
 }
 
 // Boolean filter expression for OperatingSystem
@@ -1286,8 +1347,7 @@ type TagsAggregate struct {
 	Avg      map[string]interface{} ` json:"avg"`
 	Min      map[string]interface{} ` json:"min"`
 	Max      map[string]interface{} ` json:"max"`
-	// Unique set tags given to all adapter devices
-	Tags []*Tag ` json:"tags"`
+	Tags     []*Tag                 ` json:"tags"`
 }
 
 // Boolean filter expression for User
@@ -1320,6 +1380,17 @@ type UsersAggregate struct {
 	Min      map[string]interface{} ` json:"min"`
 	Max      map[string]interface{} ` json:"max"`
 	Users    []*User                ` json:"users"`
+}
+
+type VlansAggregate struct {
+	Group    []string                ` json:"group"`
+	Distinct []string                ` json:"distinct"`
+	Count    *int                    ` json:"count"`
+	Sum      map[string]interface{}  ` json:"sum"`
+	Avg      map[string]interface{}  ` json:"avg"`
+	Min      map[string]interface{}  ` json:"min"`
+	Max      map[string]interface{}  ` json:"max"`
+	Vlans    []*NetworkInterfaceVlan ` json:"vlans"`
 }
 
 type AccessType string
@@ -4528,16 +4599,40 @@ const (
 	InterfacesAggregateColumnsDeviceID InterfacesAggregateColumns = "deviceId"
 	// groupBy by macAddr
 	InterfacesAggregateColumnsMacAddr InterfacesAggregateColumns = "macAddr"
+	// groupBy by name
+	InterfacesAggregateColumnsName InterfacesAggregateColumns = "name"
+	// groupBy by manufacturer
+	InterfacesAggregateColumnsManufacturer InterfacesAggregateColumns = "manufacturer"
+	// groupBy by operationalStatus
+	InterfacesAggregateColumnsOperationalStatus InterfacesAggregateColumns = "operationalStatus"
+	// groupBy by adminStatus
+	InterfacesAggregateColumnsAdminStatus InterfacesAggregateColumns = "adminStatus"
+	// groupBy by portType
+	InterfacesAggregateColumnsPortType InterfacesAggregateColumns = "portType"
+	// groupBy by mtu
+	InterfacesAggregateColumnsMtu InterfacesAggregateColumns = "mtu"
+	// groupBy by gateway
+	InterfacesAggregateColumnsGateway InterfacesAggregateColumns = "gateway"
+	// groupBy by port
+	InterfacesAggregateColumnsPort InterfacesAggregateColumns = "port"
 )
 
 var AllInterfacesAggregateColumns = []InterfacesAggregateColumns{
 	InterfacesAggregateColumnsDeviceID,
 	InterfacesAggregateColumnsMacAddr,
+	InterfacesAggregateColumnsName,
+	InterfacesAggregateColumnsManufacturer,
+	InterfacesAggregateColumnsOperationalStatus,
+	InterfacesAggregateColumnsAdminStatus,
+	InterfacesAggregateColumnsPortType,
+	InterfacesAggregateColumnsMtu,
+	InterfacesAggregateColumnsGateway,
+	InterfacesAggregateColumnsPort,
 }
 
 func (e InterfacesAggregateColumns) IsValid() bool {
 	switch e {
-	case InterfacesAggregateColumnsDeviceID, InterfacesAggregateColumnsMacAddr:
+	case InterfacesAggregateColumnsDeviceID, InterfacesAggregateColumnsMacAddr, InterfacesAggregateColumnsName, InterfacesAggregateColumnsManufacturer, InterfacesAggregateColumnsOperationalStatus, InterfacesAggregateColumnsAdminStatus, InterfacesAggregateColumnsPortType, InterfacesAggregateColumnsMtu, InterfacesAggregateColumnsGateway, InterfacesAggregateColumnsPort:
 		return true
 	}
 	return false
@@ -4571,16 +4666,40 @@ const (
 	InterfacesAggregateMaxColumnsDeviceID InterfacesAggregateMaxColumns = "deviceId"
 	// max by macAddr
 	InterfacesAggregateMaxColumnsMacAddr InterfacesAggregateMaxColumns = "macAddr"
+	// max by name
+	InterfacesAggregateMaxColumnsName InterfacesAggregateMaxColumns = "name"
+	// max by manufacturer
+	InterfacesAggregateMaxColumnsManufacturer InterfacesAggregateMaxColumns = "manufacturer"
+	// max by operationalStatus
+	InterfacesAggregateMaxColumnsOperationalStatus InterfacesAggregateMaxColumns = "operationalStatus"
+	// max by adminStatus
+	InterfacesAggregateMaxColumnsAdminStatus InterfacesAggregateMaxColumns = "adminStatus"
+	// max by portType
+	InterfacesAggregateMaxColumnsPortType InterfacesAggregateMaxColumns = "portType"
+	// max by mtu
+	InterfacesAggregateMaxColumnsMtu InterfacesAggregateMaxColumns = "mtu"
+	// max by gateway
+	InterfacesAggregateMaxColumnsGateway InterfacesAggregateMaxColumns = "gateway"
+	// max by port
+	InterfacesAggregateMaxColumnsPort InterfacesAggregateMaxColumns = "port"
 )
 
 var AllInterfacesAggregateMaxColumns = []InterfacesAggregateMaxColumns{
 	InterfacesAggregateMaxColumnsDeviceID,
 	InterfacesAggregateMaxColumnsMacAddr,
+	InterfacesAggregateMaxColumnsName,
+	InterfacesAggregateMaxColumnsManufacturer,
+	InterfacesAggregateMaxColumnsOperationalStatus,
+	InterfacesAggregateMaxColumnsAdminStatus,
+	InterfacesAggregateMaxColumnsPortType,
+	InterfacesAggregateMaxColumnsMtu,
+	InterfacesAggregateMaxColumnsGateway,
+	InterfacesAggregateMaxColumnsPort,
 }
 
 func (e InterfacesAggregateMaxColumns) IsValid() bool {
 	switch e {
-	case InterfacesAggregateMaxColumnsDeviceID, InterfacesAggregateMaxColumnsMacAddr:
+	case InterfacesAggregateMaxColumnsDeviceID, InterfacesAggregateMaxColumnsMacAddr, InterfacesAggregateMaxColumnsName, InterfacesAggregateMaxColumnsManufacturer, InterfacesAggregateMaxColumnsOperationalStatus, InterfacesAggregateMaxColumnsAdminStatus, InterfacesAggregateMaxColumnsPortType, InterfacesAggregateMaxColumnsMtu, InterfacesAggregateMaxColumnsGateway, InterfacesAggregateMaxColumnsPort:
 		return true
 	}
 	return false
@@ -4614,16 +4733,40 @@ const (
 	InterfacesAggregateMinColumnsDeviceID InterfacesAggregateMinColumns = "deviceId"
 	// min by macAddr
 	InterfacesAggregateMinColumnsMacAddr InterfacesAggregateMinColumns = "macAddr"
+	// min by name
+	InterfacesAggregateMinColumnsName InterfacesAggregateMinColumns = "name"
+	// min by manufacturer
+	InterfacesAggregateMinColumnsManufacturer InterfacesAggregateMinColumns = "manufacturer"
+	// min by operationalStatus
+	InterfacesAggregateMinColumnsOperationalStatus InterfacesAggregateMinColumns = "operationalStatus"
+	// min by adminStatus
+	InterfacesAggregateMinColumnsAdminStatus InterfacesAggregateMinColumns = "adminStatus"
+	// min by portType
+	InterfacesAggregateMinColumnsPortType InterfacesAggregateMinColumns = "portType"
+	// min by mtu
+	InterfacesAggregateMinColumnsMtu InterfacesAggregateMinColumns = "mtu"
+	// min by gateway
+	InterfacesAggregateMinColumnsGateway InterfacesAggregateMinColumns = "gateway"
+	// min by port
+	InterfacesAggregateMinColumnsPort InterfacesAggregateMinColumns = "port"
 )
 
 var AllInterfacesAggregateMinColumns = []InterfacesAggregateMinColumns{
 	InterfacesAggregateMinColumnsDeviceID,
 	InterfacesAggregateMinColumnsMacAddr,
+	InterfacesAggregateMinColumnsName,
+	InterfacesAggregateMinColumnsManufacturer,
+	InterfacesAggregateMinColumnsOperationalStatus,
+	InterfacesAggregateMinColumnsAdminStatus,
+	InterfacesAggregateMinColumnsPortType,
+	InterfacesAggregateMinColumnsMtu,
+	InterfacesAggregateMinColumnsGateway,
+	InterfacesAggregateMinColumnsPort,
 }
 
 func (e InterfacesAggregateMinColumns) IsValid() bool {
 	switch e {
-	case InterfacesAggregateMinColumnsDeviceID, InterfacesAggregateMinColumnsMacAddr:
+	case InterfacesAggregateMinColumnsDeviceID, InterfacesAggregateMinColumnsMacAddr, InterfacesAggregateMinColumnsName, InterfacesAggregateMinColumnsManufacturer, InterfacesAggregateMinColumnsOperationalStatus, InterfacesAggregateMinColumnsAdminStatus, InterfacesAggregateMinColumnsPortType, InterfacesAggregateMinColumnsMtu, InterfacesAggregateMinColumnsGateway, InterfacesAggregateMinColumnsPort:
 		return true
 	}
 	return false
@@ -4647,6 +4790,136 @@ func (e *InterfacesAggregateMinColumns) UnmarshalGQL(v interface{}) error {
 }
 
 func (e InterfacesAggregateMinColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Order for NetworkInterface
+type NetworkInterfaceOrderBy string
+
+const (
+	// Order by name in an ascending order
+	NetworkInterfaceOrderByNameAsc NetworkInterfaceOrderBy = "name_ASC"
+	// Order by name in a descending order
+	NetworkInterfaceOrderByNameDesc NetworkInterfaceOrderBy = "name_DESC"
+	// Order by manufacturer in an ascending order
+	NetworkInterfaceOrderByManufacturerAsc NetworkInterfaceOrderBy = "manufacturer_ASC"
+	// Order by manufacturer in a descending order
+	NetworkInterfaceOrderByManufacturerDesc NetworkInterfaceOrderBy = "manufacturer_DESC"
+	// Order by operationalStatus in an ascending order
+	NetworkInterfaceOrderByOperationalStatusAsc NetworkInterfaceOrderBy = "operationalStatus_ASC"
+	// Order by operationalStatus in a descending order
+	NetworkInterfaceOrderByOperationalStatusDesc NetworkInterfaceOrderBy = "operationalStatus_DESC"
+	// Order by adminStatus in an ascending order
+	NetworkInterfaceOrderByAdminStatusAsc NetworkInterfaceOrderBy = "adminStatus_ASC"
+	// Order by adminStatus in a descending order
+	NetworkInterfaceOrderByAdminStatusDesc NetworkInterfaceOrderBy = "adminStatus_DESC"
+	// Order by portType in an ascending order
+	NetworkInterfaceOrderByPortTypeAsc NetworkInterfaceOrderBy = "portType_ASC"
+	// Order by portType in a descending order
+	NetworkInterfaceOrderByPortTypeDesc NetworkInterfaceOrderBy = "portType_DESC"
+	// Order by mtu in an ascending order
+	NetworkInterfaceOrderByMtuAsc NetworkInterfaceOrderBy = "mtu_ASC"
+	// Order by mtu in a descending order
+	NetworkInterfaceOrderByMtuDesc NetworkInterfaceOrderBy = "mtu_DESC"
+	// Order by port in an ascending order
+	NetworkInterfaceOrderByPortAsc NetworkInterfaceOrderBy = "port_ASC"
+	// Order by port in a descending order
+	NetworkInterfaceOrderByPortDesc NetworkInterfaceOrderBy = "port_DESC"
+)
+
+var AllNetworkInterfaceOrderBy = []NetworkInterfaceOrderBy{
+	NetworkInterfaceOrderByNameAsc,
+	NetworkInterfaceOrderByNameDesc,
+	NetworkInterfaceOrderByManufacturerAsc,
+	NetworkInterfaceOrderByManufacturerDesc,
+	NetworkInterfaceOrderByOperationalStatusAsc,
+	NetworkInterfaceOrderByOperationalStatusDesc,
+	NetworkInterfaceOrderByAdminStatusAsc,
+	NetworkInterfaceOrderByAdminStatusDesc,
+	NetworkInterfaceOrderByPortTypeAsc,
+	NetworkInterfaceOrderByPortTypeDesc,
+	NetworkInterfaceOrderByMtuAsc,
+	NetworkInterfaceOrderByMtuDesc,
+	NetworkInterfaceOrderByPortAsc,
+	NetworkInterfaceOrderByPortDesc,
+}
+
+func (e NetworkInterfaceOrderBy) IsValid() bool {
+	switch e {
+	case NetworkInterfaceOrderByNameAsc, NetworkInterfaceOrderByNameDesc, NetworkInterfaceOrderByManufacturerAsc, NetworkInterfaceOrderByManufacturerDesc, NetworkInterfaceOrderByOperationalStatusAsc, NetworkInterfaceOrderByOperationalStatusDesc, NetworkInterfaceOrderByAdminStatusAsc, NetworkInterfaceOrderByAdminStatusDesc, NetworkInterfaceOrderByPortTypeAsc, NetworkInterfaceOrderByPortTypeDesc, NetworkInterfaceOrderByMtuAsc, NetworkInterfaceOrderByMtuDesc, NetworkInterfaceOrderByPortAsc, NetworkInterfaceOrderByPortDesc:
+		return true
+	}
+	return false
+}
+
+func (e NetworkInterfaceOrderBy) String() string {
+	return string(e)
+}
+
+func (e *NetworkInterfaceOrderBy) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = NetworkInterfaceOrderBy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid network_interface_order_by", str)
+	}
+	return nil
+}
+
+func (e NetworkInterfaceOrderBy) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+// Order for NetworkInterfaceVlan
+type NetworkInterfaceVlanOrderBy string
+
+const (
+	// Order by name in an ascending order
+	NetworkInterfaceVlanOrderByNameAsc NetworkInterfaceVlanOrderBy = "name_ASC"
+	// Order by name in a descending order
+	NetworkInterfaceVlanOrderByNameDesc NetworkInterfaceVlanOrderBy = "name_DESC"
+	// Order by tagId in an ascending order
+	NetworkInterfaceVlanOrderByTagIDAsc NetworkInterfaceVlanOrderBy = "tagId_ASC"
+	// Order by tagId in a descending order
+	NetworkInterfaceVlanOrderByTagIDDesc NetworkInterfaceVlanOrderBy = "tagId_DESC"
+)
+
+var AllNetworkInterfaceVlanOrderBy = []NetworkInterfaceVlanOrderBy{
+	NetworkInterfaceVlanOrderByNameAsc,
+	NetworkInterfaceVlanOrderByNameDesc,
+	NetworkInterfaceVlanOrderByTagIDAsc,
+	NetworkInterfaceVlanOrderByTagIDDesc,
+}
+
+func (e NetworkInterfaceVlanOrderBy) IsValid() bool {
+	switch e {
+	case NetworkInterfaceVlanOrderByNameAsc, NetworkInterfaceVlanOrderByNameDesc, NetworkInterfaceVlanOrderByTagIDAsc, NetworkInterfaceVlanOrderByTagIDDesc:
+		return true
+	}
+	return false
+}
+
+func (e NetworkInterfaceVlanOrderBy) String() string {
+	return string(e)
+}
+
+func (e *NetworkInterfaceVlanOrderBy) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = NetworkInterfaceVlanOrderBy(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid network_interface_vlan_order_by", str)
+	}
+	return nil
+}
+
+func (e NetworkInterfaceVlanOrderBy) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
@@ -5480,5 +5753,223 @@ func (e *UsersAggregateSumColumns) UnmarshalGQL(v interface{}) error {
 }
 
 func (e UsersAggregateSumColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VlansAggregateAvgColumns string
+
+const (
+	// avg by tagId
+	VlansAggregateAvgColumnsTagID VlansAggregateAvgColumns = "tagId"
+)
+
+var AllVlansAggregateAvgColumns = []VlansAggregateAvgColumns{
+	VlansAggregateAvgColumnsTagID,
+}
+
+func (e VlansAggregateAvgColumns) IsValid() bool {
+	switch e {
+	case VlansAggregateAvgColumnsTagID:
+		return true
+	}
+	return false
+}
+
+func (e VlansAggregateAvgColumns) String() string {
+	return string(e)
+}
+
+func (e *VlansAggregateAvgColumns) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VlansAggregateAvgColumns(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid vlans_aggregate_avg_columns", str)
+	}
+	return nil
+}
+
+func (e VlansAggregateAvgColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VlansAggregateColumns string
+
+const (
+	// groupBy by macAddr
+	VlansAggregateColumnsMacAddr VlansAggregateColumns = "macAddr"
+	// groupBy by name
+	VlansAggregateColumnsName VlansAggregateColumns = "name"
+	// groupBy by tagId
+	VlansAggregateColumnsTagID VlansAggregateColumns = "tagId"
+)
+
+var AllVlansAggregateColumns = []VlansAggregateColumns{
+	VlansAggregateColumnsMacAddr,
+	VlansAggregateColumnsName,
+	VlansAggregateColumnsTagID,
+}
+
+func (e VlansAggregateColumns) IsValid() bool {
+	switch e {
+	case VlansAggregateColumnsMacAddr, VlansAggregateColumnsName, VlansAggregateColumnsTagID:
+		return true
+	}
+	return false
+}
+
+func (e VlansAggregateColumns) String() string {
+	return string(e)
+}
+
+func (e *VlansAggregateColumns) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VlansAggregateColumns(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid vlans_aggregate_columns", str)
+	}
+	return nil
+}
+
+func (e VlansAggregateColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VlansAggregateMaxColumns string
+
+const (
+	// max by macAddr
+	VlansAggregateMaxColumnsMacAddr VlansAggregateMaxColumns = "macAddr"
+	// max by name
+	VlansAggregateMaxColumnsName VlansAggregateMaxColumns = "name"
+	// max by tagId
+	VlansAggregateMaxColumnsTagID VlansAggregateMaxColumns = "tagId"
+)
+
+var AllVlansAggregateMaxColumns = []VlansAggregateMaxColumns{
+	VlansAggregateMaxColumnsMacAddr,
+	VlansAggregateMaxColumnsName,
+	VlansAggregateMaxColumnsTagID,
+}
+
+func (e VlansAggregateMaxColumns) IsValid() bool {
+	switch e {
+	case VlansAggregateMaxColumnsMacAddr, VlansAggregateMaxColumnsName, VlansAggregateMaxColumnsTagID:
+		return true
+	}
+	return false
+}
+
+func (e VlansAggregateMaxColumns) String() string {
+	return string(e)
+}
+
+func (e *VlansAggregateMaxColumns) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VlansAggregateMaxColumns(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid vlans_aggregate_max_columns", str)
+	}
+	return nil
+}
+
+func (e VlansAggregateMaxColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VlansAggregateMinColumns string
+
+const (
+	// min by macAddr
+	VlansAggregateMinColumnsMacAddr VlansAggregateMinColumns = "macAddr"
+	// min by name
+	VlansAggregateMinColumnsName VlansAggregateMinColumns = "name"
+	// min by tagId
+	VlansAggregateMinColumnsTagID VlansAggregateMinColumns = "tagId"
+)
+
+var AllVlansAggregateMinColumns = []VlansAggregateMinColumns{
+	VlansAggregateMinColumnsMacAddr,
+	VlansAggregateMinColumnsName,
+	VlansAggregateMinColumnsTagID,
+}
+
+func (e VlansAggregateMinColumns) IsValid() bool {
+	switch e {
+	case VlansAggregateMinColumnsMacAddr, VlansAggregateMinColumnsName, VlansAggregateMinColumnsTagID:
+		return true
+	}
+	return false
+}
+
+func (e VlansAggregateMinColumns) String() string {
+	return string(e)
+}
+
+func (e *VlansAggregateMinColumns) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VlansAggregateMinColumns(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid vlans_aggregate_min_columns", str)
+	}
+	return nil
+}
+
+func (e VlansAggregateMinColumns) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VlansAggregateSumColumns string
+
+const (
+	// sum by tagId
+	VlansAggregateSumColumnsTagID VlansAggregateSumColumns = "tagId"
+)
+
+var AllVlansAggregateSumColumns = []VlansAggregateSumColumns{
+	VlansAggregateSumColumnsTagID,
+}
+
+func (e VlansAggregateSumColumns) IsValid() bool {
+	switch e {
+	case VlansAggregateSumColumnsTagID:
+		return true
+	}
+	return false
+}
+
+func (e VlansAggregateSumColumns) String() string {
+	return string(e)
+}
+
+func (e *VlansAggregateSumColumns) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VlansAggregateSumColumns(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid vlans_aggregate_sum_columns", str)
+	}
+	return nil
+}
+
+func (e VlansAggregateSumColumns) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

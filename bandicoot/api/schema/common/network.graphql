@@ -1,7 +1,32 @@
 
 "Network interface is a system's interface between two pieces of equipment or protocol layers in a computer network."
-type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "networkInterface_order_by") {
+type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "network_interface_order_by") {
     deviceId: UUID
     macAddr: Mac
     ipAddrs: [IP!]
+    "Interface name"
+    name: String
+    "Manufacturer"
+    manufacturer: String
+    "A list of subnets in ip format, that correspond the ipAddrs"
+    subnets: [CIDR]
+    "Operational Status"
+    operationalStatus: String
+    "Admin Status"
+    adminStatus: String
+    portType: String
+    mtu: String
+    gateway: IP
+    port: String
+    vlans: [NetworkInterfaceVlan]  @relation(name:"network_interfaces_vlan", fkName: ["macAddr", "fetch_cycle"],
+        relationFkName: ["macAddr", "fetch_cycle"], relType: ONE_TO_MANY)
 }
+
+
+type NetworkInterfaceVlan @generateInputs(where: "network_interface_vlan_bool_exp", orderBy: "network_interface_vlan_order_by") {
+    macAddr: Mac
+    name: String
+    tagId: Int
+    tagged: Boolean
+}
+

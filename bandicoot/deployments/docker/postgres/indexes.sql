@@ -23,9 +23,9 @@ CREATE INDEX lifecycle_fetch_time_idx ON public.lifecycle USING btree (fetch_tim
 
 CREATE INDEX os_type_trgm_idx ON public.adapter_users USING gin (mail COLLATE pg_catalog."default" gin_trgm_ops);
 
-CREATE INDEX ON adapter_devices_last_seen ON public.adapter_devices (last_seen DESC);
+CREATE INDEX adapter_devices_last_seen_idx ON public.adapter_devices (last_seen DESC);
 
-CREATE INDEX ON adapter_devices ON public.adapter_devices using brin (os_id);
+CREATE INDEX adapter_devices ON public.adapter_devices using brin (os_id);
 
-CREATE INDEX ON adapter_devices_adapter_name ON public.adapter_devices  using brin (adapter_name DESC);
-CREATE INDEX ON user_devices_adapter_name ON public.adapter_users  using brin (adapter_name DESC);
+CREATE INDEX adapter_devices_adapter_name ON public.adapter_devices  using brin (adapter_name DESC);
+CREATE INDEX user_devices_adapter_name ON public.adapter_users  using brin (adapter_name DESC);

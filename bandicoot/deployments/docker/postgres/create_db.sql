@@ -1,3 +1,11 @@
+--  TODO: Execute this on all tables to order columns in an optimal way
+-- SELECT a.attname, t.typname, t.typalign, t.typlen
+-- FROM pg_class c
+--          JOIN pg_attribute a ON (a.attrelid = c.oid)
+--          JOIN pg_type t ON (t.oid = a.atttypid)
+-- WHERE c.relname = 'adapter_devices'
+--   AND a.attnum >= 0
+-- ORDER BY t.typlen DESC
 
 -- Extensions:
 CREATE EXTENSION pg_trgm;
@@ -208,7 +216,9 @@ CREATE TYPE adapter_type AS ENUM (
     'WEBSCAN',
     'WSUS',
     'ZABBIX',
-    'ZSCALER'
+    'ZSCALER',
+    'NOZOMI_GUARDIAN',
+    'FORCEPOINT_CSV'
 );
 
 -- Table: public.adapters
@@ -315,11 +325,35 @@ CREATE TABLE public.network_interfaces
     fetch_cycle int NOT NULL ,
     mac_addr macaddr,
     ip_addrs inet[],
+    name text COLLATE pg_catalog."default",
+    manufacturer text COLLATE pg_catalog."default",
+    subnets cidr[],
+    operational_status text COLLATE pg_catalog."default",
+    admin_status text COLLATE pg_catalog."default",
+    port_type text COLLATE pg_catalog."default",
+    mtu text COLLATE pg_catalog."default",
+    gateway inet,
+    port smallint,
     CONSTRAINT device_mac UNIQUE (device_id, fetch_cycle, mac_addr)
 
 ) PARTITION BY LIST (fetch_cycle);
 
 ALTER TABLE public.network_interfaces
+    OWNER to postgres;
+
+CREATE TABLE IF NOT EXISTS public.network_interfaces_vlan
+(
+    device_id uuid NOT NULL,
+    fetch_cycle int NOT NULL ,
+    tagId int,
+    tagged boolean,
+    mac_addr macaddr,
+    name text,
+    CONSTRAINT network_interface_vlan UNIQUE (device_id, fetch_cycle, mac_addr, name)
+
+) PARTITION BY LIST (fetch_cycle);
+
+ALTER TABLE public.network_interfaces_vlan
     OWNER to postgres;
 
 -- Table: public.operating_systems

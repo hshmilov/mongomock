@@ -278,9 +278,27 @@ type ComplexityRoot struct {
 	}
 
 	NetworkInterface struct {
-		DeviceID func(childComplexity int) int
-		IPAddrs  func(childComplexity int) int
-		MacAddr  func(childComplexity int) int
+		AdminStatus       func(childComplexity int) int
+		DeviceID          func(childComplexity int) int
+		Gateway           func(childComplexity int) int
+		IPAddrs           func(childComplexity int) int
+		MacAddr           func(childComplexity int) int
+		Manufacturer      func(childComplexity int) int
+		Mtu               func(childComplexity int) int
+		Name              func(childComplexity int) int
+		OperationalStatus func(childComplexity int) int
+		Port              func(childComplexity int) int
+		PortType          func(childComplexity int) int
+		Subnets           func(childComplexity int) int
+		Vlans             func(childComplexity int, limit *int, offset *int, where *NetworkInterfaceVlanBoolExp) int
+		VlansAggregate    func(childComplexity int, groupBy []VlansAggregateColumns, distinctOn []VlansAggregateColumns, orderBy []AggregateOrdering, limit *int, offset *int, where *NetworkInterfaceVlanBoolExp) int
+	}
+
+	NetworkInterfaceVlan struct {
+		MacAddr func(childComplexity int) int
+		Name    func(childComplexity int) int
+		TagID   func(childComplexity int) int
+		Tagged  func(childComplexity int) int
 	}
 
 	ObjectFilter struct {
@@ -528,6 +546,17 @@ type ComplexityRoot struct {
 		Min      func(childComplexity int, column []UsersAggregateMinColumns) int
 		Sum      func(childComplexity int, column []UsersAggregateSumColumns) int
 		Users    func(childComplexity int, limit *int, offset *int, where *UserBoolExp) int
+	}
+
+	VlansAggregate struct {
+		Avg      func(childComplexity int, column []VlansAggregateAvgColumns) int
+		Count    func(childComplexity int) int
+		Distinct func(childComplexity int) int
+		Group    func(childComplexity int) int
+		Max      func(childComplexity int, column []VlansAggregateMaxColumns) int
+		Min      func(childComplexity int, column []VlansAggregateMinColumns) int
+		Sum      func(childComplexity int, column []VlansAggregateSumColumns) int
+		Vlans    func(childComplexity int, limit *int, offset *int, where *NetworkInterfaceVlanBoolExp) int
 	}
 }
 
@@ -1959,12 +1988,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.InstalledSoftware.Version(childComplexity), true
 
+	case "NetworkInterface.adminStatus":
+		if e.complexity.NetworkInterface.AdminStatus == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.AdminStatus(childComplexity), true
+
 	case "NetworkInterface.deviceId":
 		if e.complexity.NetworkInterface.DeviceID == nil {
 			break
 		}
 
 		return e.complexity.NetworkInterface.DeviceID(childComplexity), true
+
+	case "NetworkInterface.gateway":
+		if e.complexity.NetworkInterface.Gateway == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Gateway(childComplexity), true
 
 	case "NetworkInterface.ipAddrs":
 		if e.complexity.NetworkInterface.IPAddrs == nil {
@@ -1979,6 +2022,107 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.NetworkInterface.MacAddr(childComplexity), true
+
+	case "NetworkInterface.manufacturer":
+		if e.complexity.NetworkInterface.Manufacturer == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Manufacturer(childComplexity), true
+
+	case "NetworkInterface.mtu":
+		if e.complexity.NetworkInterface.Mtu == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Mtu(childComplexity), true
+
+	case "NetworkInterface.name":
+		if e.complexity.NetworkInterface.Name == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Name(childComplexity), true
+
+	case "NetworkInterface.operationalStatus":
+		if e.complexity.NetworkInterface.OperationalStatus == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.OperationalStatus(childComplexity), true
+
+	case "NetworkInterface.port":
+		if e.complexity.NetworkInterface.Port == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Port(childComplexity), true
+
+	case "NetworkInterface.portType":
+		if e.complexity.NetworkInterface.PortType == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.PortType(childComplexity), true
+
+	case "NetworkInterface.subnets":
+		if e.complexity.NetworkInterface.Subnets == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterface.Subnets(childComplexity), true
+
+	case "NetworkInterface.vlans":
+		if e.complexity.NetworkInterface.Vlans == nil {
+			break
+		}
+
+		args, err := ec.field_NetworkInterface_vlans_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.NetworkInterface.Vlans(childComplexity, args["limit"].(*int), args["offset"].(*int), args["where"].(*NetworkInterfaceVlanBoolExp)), true
+
+	case "NetworkInterface.vlans_aggregate":
+		if e.complexity.NetworkInterface.VlansAggregate == nil {
+			break
+		}
+
+		args, err := ec.field_NetworkInterface_vlans_aggregate_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.NetworkInterface.VlansAggregate(childComplexity, args["groupBy"].([]VlansAggregateColumns), args["distinctOn"].([]VlansAggregateColumns), args["orderBy"].([]AggregateOrdering), args["limit"].(*int), args["offset"].(*int), args["where"].(*NetworkInterfaceVlanBoolExp)), true
+
+	case "NetworkInterfaceVlan.macAddr":
+		if e.complexity.NetworkInterfaceVlan.MacAddr == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterfaceVlan.MacAddr(childComplexity), true
+
+	case "NetworkInterfaceVlan.name":
+		if e.complexity.NetworkInterfaceVlan.Name == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterfaceVlan.Name(childComplexity), true
+
+	case "NetworkInterfaceVlan.tagId":
+		if e.complexity.NetworkInterfaceVlan.TagID == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterfaceVlan.TagID(childComplexity), true
+
+	case "NetworkInterfaceVlan.tagged":
+		if e.complexity.NetworkInterfaceVlan.Tagged == nil {
+			break
+		}
+
+		return e.complexity.NetworkInterfaceVlan.Tagged(childComplexity), true
 
 	case "ObjectFilter.description":
 		if e.complexity.ObjectFilter.Description == nil {
@@ -3509,6 +3653,87 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UsersAggregate.Users(childComplexity, args["limit"].(*int), args["offset"].(*int), args["where"].(*UserBoolExp)), true
 
+	case "vlansAggregate.avg":
+		if e.complexity.VlansAggregate.Avg == nil {
+			break
+		}
+
+		args, err := ec.field_vlansAggregate_avg_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.VlansAggregate.Avg(childComplexity, args["column"].([]VlansAggregateAvgColumns)), true
+
+	case "vlansAggregate.count":
+		if e.complexity.VlansAggregate.Count == nil {
+			break
+		}
+
+		return e.complexity.VlansAggregate.Count(childComplexity), true
+
+	case "vlansAggregate.distinct":
+		if e.complexity.VlansAggregate.Distinct == nil {
+			break
+		}
+
+		return e.complexity.VlansAggregate.Distinct(childComplexity), true
+
+	case "vlansAggregate.group":
+		if e.complexity.VlansAggregate.Group == nil {
+			break
+		}
+
+		return e.complexity.VlansAggregate.Group(childComplexity), true
+
+	case "vlansAggregate.max":
+		if e.complexity.VlansAggregate.Max == nil {
+			break
+		}
+
+		args, err := ec.field_vlansAggregate_max_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.VlansAggregate.Max(childComplexity, args["column"].([]VlansAggregateMaxColumns)), true
+
+	case "vlansAggregate.min":
+		if e.complexity.VlansAggregate.Min == nil {
+			break
+		}
+
+		args, err := ec.field_vlansAggregate_min_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.VlansAggregate.Min(childComplexity, args["column"].([]VlansAggregateMinColumns)), true
+
+	case "vlansAggregate.sum":
+		if e.complexity.VlansAggregate.Sum == nil {
+			break
+		}
+
+		args, err := ec.field_vlansAggregate_sum_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.VlansAggregate.Sum(childComplexity, args["column"].([]VlansAggregateSumColumns)), true
+
+	case "vlansAggregate.vlans":
+		if e.complexity.VlansAggregate.Vlans == nil {
+			break
+		}
+
+		args, err := ec.field_vlansAggregate_vlans_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.VlansAggregate.Vlans(childComplexity, args["limit"].(*int), args["offset"].(*int), args["where"].(*NetworkInterfaceVlanBoolExp)), true
+
 	}
 	return 0, false
 }
@@ -3560,7 +3785,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	&ast.Source{Name: "../../api/generated/augmented_schema.graphql", Input: `# Code generated by go generate; DO NOT EDIT THIS FILE. 
-# This file was generated at 2020-05-07T11:35:03+03:00
+# This file was generated at 2020-05-12T12:53:21+03:00
 directive @generateInputs(where: String, orderBy: String) on OBJECT | UNION
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
@@ -4388,6 +4613,11 @@ input BooleanComparator {
 IPv4 and IPv6 networks
 """
 scalar CIDR
+input CIDRComparator {
+	exists: Boolean
+	eq: CIDR
+	neq: CIDR
+}
 type CPU {
 	id: Int!
 	name: String!
@@ -4883,10 +5113,72 @@ scalar Map
 """
 Network interface is a system's interface between two pieces of equipment or protocol layers in a computer network.
 """
-type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "networkInterface_order_by") {
+type NetworkInterface @generateInputs(where: "network_interface_bool_exp", orderBy: "network_interface_order_by") {
 	deviceId: UUID
 	macAddr: Mac
 	ipAddrs: [IP!]
+	"""
+	Interface name
+	"""
+	name: String
+	"""
+	Manufacturer
+	"""
+	manufacturer: String
+	"""
+	A list of subnets in ip format, that correspond the ipAddrs
+	"""
+	subnets: [CIDR]
+	"""
+	Operational Status
+	"""
+	operationalStatus: String
+	"""
+	Admin Status
+	"""
+	adminStatus: String
+	portType: String
+	mtu: String
+	gateway: IP
+	port: String
+	vlans("""
+	limit the number of rows returned.
+	"""
+	limit: Int = 100, """
+	skip the first n rows.
+	"""
+	offset: Int = 0, """
+	filter the rows returned
+	"""
+	where: network_interface_vlan_bool_exp): [NetworkInterfaceVlan] @relation(name: "network_interfaces_vlan", fkName: ["macAddr","fetch_cycle"], relationFkName: ["macAddr","fetch_cycle"], relType: ONE_TO_MANY)
+	"""
+	Returns aggregate of vlans
+	"""
+	vlans_aggregate("""
+	group by columns
+	"""
+	groupBy: [vlans_aggregate_columns!], """
+	distinct on columns
+	"""
+	distinctOn: [vlans_aggregate_columns!], """
+	order by aggregation columns
+	"""
+	orderBy: [AggregateOrdering!], """
+	limit the number of rows returned.
+	"""
+	limit: Int = 100, """
+	skip the first n rows.
+	"""
+	offset: Int = 0, """
+	filter the rows returned
+	"""
+	where: network_interface_vlan_bool_exp): [vlansAggregate!] @relation(name: "network_interfaces_vlan", fkName: ["macAddr","fetch_cycle"], relationFkName: ["macAddr","fetch_cycle"], relType: ONE_TO_MANY)
+}
+type NetworkInterfaceVlan @generateInputs(where: "network_interface_vlan_bool_exp", orderBy: "network_interface_vlan_order_by") {
+	macAddr: Mac
+	name: String
+	tagId: Int
+	tagged: Boolean
 }
 type ObjectFilter implements Filter {
 	name: String!
@@ -5236,9 +5528,6 @@ type adapterDevicesAggregate {
 	Aggregate functions compute a single result value from a set of input values
 	"""
 	column: [adapterDevices_aggregate_max_columns!]!): Map
-	"""
-	Adapter devices that are correlated to this device
-	"""
 	adapterDevices("""
 	limit the number of rows returned.
 	"""
@@ -5248,7 +5537,7 @@ type adapterDevicesAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: adapter_device_bool_exp): [AdapterDevice] @relation(name: "adapter_devices", fkName: ["id","fetch_cycle"], relationFkName: ["device_id","fetch_cycle"], relType: ONE_TO_MANY)
+	where: adapter_device_bool_exp): [AdapterDevice]
 }
 enum adapterDevices_aggregate_avg_columns {
 	"""
@@ -7879,9 +8168,6 @@ type interfacesAggregate {
 	Aggregate functions compute a single result value from a set of input values
 	"""
 	column: [interfaces_aggregate_max_columns!]!): Map
-	"""
-	Unique set of network interfaces collected by all adapter devices
-	"""
 	interfaces("""
 	limit the number of rows returned.
 	"""
@@ -7891,7 +8177,7 @@ type interfacesAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: network_interface_bool_exp): [NetworkInterface] @viewFunction(name: "device_network_interfaces", arguments: ["id","fetch_cycle"])
+	where: network_interface_bool_exp): [NetworkInterface] @relation(name: "network_interfaces", fkName: ["id","fetch_cycle"], relationFkName: ["deviceId","fetch_cycle"], relType: ONE_TO_MANY)
 }
 enum interfaces_aggregate_columns {
 	"""
@@ -7902,6 +8188,38 @@ enum interfaces_aggregate_columns {
 	groupBy by macAddr
 	"""
 	macAddr
+	"""
+	groupBy by name
+	"""
+	name
+	"""
+	groupBy by manufacturer
+	"""
+	manufacturer
+	"""
+	groupBy by operationalStatus
+	"""
+	operationalStatus
+	"""
+	groupBy by adminStatus
+	"""
+	adminStatus
+	"""
+	groupBy by portType
+	"""
+	portType
+	"""
+	groupBy by mtu
+	"""
+	mtu
+	"""
+	groupBy by gateway
+	"""
+	gateway
+	"""
+	groupBy by port
+	"""
+	port
 }
 enum interfaces_aggregate_max_columns {
 	"""
@@ -7912,6 +8230,38 @@ enum interfaces_aggregate_max_columns {
 	max by macAddr
 	"""
 	macAddr
+	"""
+	max by name
+	"""
+	name
+	"""
+	max by manufacturer
+	"""
+	manufacturer
+	"""
+	max by operationalStatus
+	"""
+	operationalStatus
+	"""
+	max by adminStatus
+	"""
+	adminStatus
+	"""
+	max by portType
+	"""
+	portType
+	"""
+	max by mtu
+	"""
+	mtu
+	"""
+	max by gateway
+	"""
+	gateway
+	"""
+	max by port
+	"""
+	port
 }
 enum interfaces_aggregate_min_columns {
 	"""
@@ -7922,6 +8272,38 @@ enum interfaces_aggregate_min_columns {
 	min by macAddr
 	"""
 	macAddr
+	"""
+	min by name
+	"""
+	name
+	"""
+	min by manufacturer
+	"""
+	manufacturer
+	"""
+	min by operationalStatus
+	"""
+	operationalStatus
+	"""
+	min by adminStatus
+	"""
+	adminStatus
+	"""
+	min by portType
+	"""
+	portType
+	"""
+	min by mtu
+	"""
+	mtu
+	"""
+	min by gateway
+	"""
+	gateway
+	"""
+	min by port
+	"""
+	port
 }
 """
 Boolean filter expression for NetworkInterface
@@ -7939,9 +8321,151 @@ input network_interface_bool_exp {
 	filter by ipAddrs
 	"""
 	ipAddrs: IPArrayComparator
+	"""
+	filter by name
+	"""
+	name: StringComparator
+	"""
+	filter by manufacturer
+	"""
+	manufacturer: StringComparator
+	"""
+	filter by operationalStatus
+	"""
+	operationalStatus: StringComparator
+	"""
+	filter by adminStatus
+	"""
+	adminStatus: StringComparator
+	"""
+	filter by portType
+	"""
+	portType: StringComparator
+	"""
+	filter by mtu
+	"""
+	mtu: StringComparator
+	"""
+	filter by gateway
+	"""
+	gateway: IPComparator
+	"""
+	filter by port
+	"""
+	port: StringComparator
+	"""
+	filter by vlans
+	"""
+	vlans: network_interface_vlan_bool_exp
 	AND: [network_interface_bool_exp!]
 	OR: [network_interface_bool_exp!]
 	NOT: [network_interface_bool_exp!]
+}
+"""
+Order for NetworkInterface
+"""
+enum network_interface_order_by {
+	"""
+	Order by name in an ascending order
+	"""
+	name_ASC
+	"""
+	Order by name in a descending order
+	"""
+	name_DESC
+	"""
+	Order by manufacturer in an ascending order
+	"""
+	manufacturer_ASC
+	"""
+	Order by manufacturer in a descending order
+	"""
+	manufacturer_DESC
+	"""
+	Order by operationalStatus in an ascending order
+	"""
+	operationalStatus_ASC
+	"""
+	Order by operationalStatus in a descending order
+	"""
+	operationalStatus_DESC
+	"""
+	Order by adminStatus in an ascending order
+	"""
+	adminStatus_ASC
+	"""
+	Order by adminStatus in a descending order
+	"""
+	adminStatus_DESC
+	"""
+	Order by portType in an ascending order
+	"""
+	portType_ASC
+	"""
+	Order by portType in a descending order
+	"""
+	portType_DESC
+	"""
+	Order by mtu in an ascending order
+	"""
+	mtu_ASC
+	"""
+	Order by mtu in a descending order
+	"""
+	mtu_DESC
+	"""
+	Order by port in an ascending order
+	"""
+	port_ASC
+	"""
+	Order by port in a descending order
+	"""
+	port_DESC
+}
+"""
+Boolean filter expression for NetworkInterfaceVlan
+"""
+input network_interface_vlan_bool_exp {
+	"""
+	filter by macAddr
+	"""
+	macAddr: MacComparator
+	"""
+	filter by name
+	"""
+	name: StringComparator
+	"""
+	filter by tagId
+	"""
+	tagId: IntComparator
+	"""
+	filter by tagged
+	"""
+	tagged: BooleanComparator
+	AND: [network_interface_vlan_bool_exp!]
+	OR: [network_interface_vlan_bool_exp!]
+	NOT: [network_interface_vlan_bool_exp!]
+}
+"""
+Order for NetworkInterfaceVlan
+"""
+enum network_interface_vlan_order_by {
+	"""
+	Order by name in an ascending order
+	"""
+	name_ASC
+	"""
+	Order by name in a descending order
+	"""
+	name_DESC
+	"""
+	Order by tagId in an ascending order
+	"""
+	tagId_ASC
+	"""
+	Order by tagId in a descending order
+	"""
+	tagId_DESC
 }
 """
 Boolean filter expression for OperatingSystem
@@ -8241,9 +8765,6 @@ type tagsAggregate {
 	Aggregate functions compute a single result value from a set of input values
 	"""
 	column: [tags_aggregate_max_columns!]!): Map
-	"""
-	Unique set tags given to all adapter devices
-	"""
 	tags("""
 	limit the number of rows returned.
 	"""
@@ -8253,7 +8774,7 @@ type tagsAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: tag_bool_exp): [Tag] @viewFunction(name: "device_tags", arguments: ["id","fetch_cycle"])
+	where: tag_bool_exp): [Tag] @relation(name: "adapter_device_tags", fkName: ["id"], relationFkName: ["adapter_device_id"], relType: MANY_TO_MANY, manyToManyTableName: "tags", joinOn: ["name"])
 }
 enum tags_aggregate_columns {
 	"""
@@ -8474,6 +8995,91 @@ enum users_aggregate_sum_columns {
 	sum by lastSeen
 	"""
 	lastSeen
+}
+type vlansAggregate {
+	group: [String!]!
+	distinct: [String!]!
+	count: Int
+	sum("""
+	Aggregate functions compute a single result value from a set of input values
+	"""
+	column: [vlans_aggregate_sum_columns!]!): Map
+	avg("""
+	Aggregate functions compute a single result value from a set of input values
+	"""
+	column: [vlans_aggregate_avg_columns!]!): Map
+	min("""
+	Aggregate functions compute a single result value from a set of input values
+	"""
+	column: [vlans_aggregate_min_columns!]!): Map
+	max("""
+	Aggregate functions compute a single result value from a set of input values
+	"""
+	column: [vlans_aggregate_max_columns!]!): Map
+	vlans("""
+	limit the number of rows returned.
+	"""
+	limit: Int = 100, """
+	skip the first n rows.
+	"""
+	offset: Int = 0, """
+	filter the rows returned
+	"""
+	where: network_interface_vlan_bool_exp): [NetworkInterfaceVlan] @relation(name: "network_interfaces_vlan", fkName: ["macAddr","fetch_cycle"], relationFkName: ["macAddr","fetch_cycle"], relType: ONE_TO_MANY)
+}
+enum vlans_aggregate_avg_columns {
+	"""
+	avg by tagId
+	"""
+	tagId
+}
+enum vlans_aggregate_columns {
+	"""
+	groupBy by macAddr
+	"""
+	macAddr
+	"""
+	groupBy by name
+	"""
+	name
+	"""
+	groupBy by tagId
+	"""
+	tagId
+}
+enum vlans_aggregate_max_columns {
+	"""
+	max by macAddr
+	"""
+	macAddr
+	"""
+	max by name
+	"""
+	name
+	"""
+	max by tagId
+	"""
+	tagId
+}
+enum vlans_aggregate_min_columns {
+	"""
+	min by macAddr
+	"""
+	macAddr
+	"""
+	min by name
+	"""
+	name
+	"""
+	min by tagId
+	"""
+	tagId
+}
+enum vlans_aggregate_sum_columns {
+	"""
+	sum by tagId
+	"""
+	tagId
 }
 `, BuiltIn: false},
 }
@@ -9581,6 +10187,90 @@ func (ec *executionContext) field_GoogleCloudData_GCETags_args(ctx context.Conte
 	var arg2 *GceTagsBoolExp
 	if tmp, ok := rawArgs["where"]; ok {
 		arg2, err = ec.unmarshalOgce_tags_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐGceTagsBoolExp(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["where"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_NetworkInterface_vlans_aggregate_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []VlansAggregateColumns
+	if tmp, ok := rawArgs["groupBy"]; ok {
+		arg0, err = ec.unmarshalOvlans_aggregate_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["groupBy"] = arg0
+	var arg1 []VlansAggregateColumns
+	if tmp, ok := rawArgs["distinctOn"]; ok {
+		arg1, err = ec.unmarshalOvlans_aggregate_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["distinctOn"] = arg1
+	var arg2 []AggregateOrdering
+	if tmp, ok := rawArgs["orderBy"]; ok {
+		arg2, err = ec.unmarshalOAggregateOrdering2ᚕbandicootᚋpkgᚋgqlᚐAggregateOrderingᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["orderBy"] = arg2
+	var arg3 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		arg3, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg3
+	var arg4 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		arg4, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg4
+	var arg5 *NetworkInterfaceVlanBoolExp
+	if tmp, ok := rawArgs["where"]; ok {
+		arg5, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["where"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_NetworkInterface_vlans_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg1
+	var arg2 *NetworkInterfaceVlanBoolExp
+	if tmp, ok := rawArgs["where"]; ok {
+		arg2, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -11205,6 +11895,92 @@ func (ec *executionContext) field_usersAggregate_users_args(ctx context.Context,
 	var arg2 *UserBoolExp
 	if tmp, ok := rawArgs["where"]; ok {
 		arg2, err = ec.unmarshalOuser_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐUserBoolExp(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["where"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_vlansAggregate_avg_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []VlansAggregateAvgColumns
+	if tmp, ok := rawArgs["column"]; ok {
+		arg0, err = ec.unmarshalNvlans_aggregate_avg_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["column"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_vlansAggregate_max_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []VlansAggregateMaxColumns
+	if tmp, ok := rawArgs["column"]; ok {
+		arg0, err = ec.unmarshalNvlans_aggregate_max_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["column"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_vlansAggregate_min_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []VlansAggregateMinColumns
+	if tmp, ok := rawArgs["column"]; ok {
+		arg0, err = ec.unmarshalNvlans_aggregate_min_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMinColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["column"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_vlansAggregate_sum_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []VlansAggregateSumColumns
+	if tmp, ok := rawArgs["column"]; ok {
+		arg0, err = ec.unmarshalNvlans_aggregate_sum_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateSumColumnsᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["column"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_vlansAggregate_vlans_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["offset"]; ok {
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["offset"] = arg1
+	var arg2 *NetworkInterfaceVlanBoolExp
+	if tmp, ok := rawArgs["where"]; ok {
+		arg2, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -17794,6 +18570,557 @@ func (ec *executionContext) _NetworkInterface_ipAddrs(ctx context.Context, field
 	return ec.marshalOIP2ᚕnetᚐIPᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _NetworkInterface_name(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_manufacturer(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Manufacturer, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_subnets(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Subnets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*net.IPNet)
+	fc.Result = res
+	return ec.marshalOCIDR2ᚕᚖnetᚐIPNet(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_operationalStatus(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OperationalStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_adminStatus(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AdminStatus, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_portType(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PortType, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_mtu(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Mtu, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_gateway(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Gateway, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*net.IP)
+	fc.Result = res
+	return ec.marshalOIP2ᚖnetᚐIP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_port(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Port, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_vlans(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_NetworkInterface_vlans_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Vlans, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			name, err := ec.unmarshalNString2string(ctx, "network_interfaces_vlan")
+			if err != nil {
+				return nil, err
+			}
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*NetworkInterfaceVlan); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.NetworkInterfaceVlan`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*NetworkInterfaceVlan)
+	fc.Result = res
+	return ec.marshalONetworkInterfaceVlan2ᚕᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterface_vlans_aggregate(ctx context.Context, field graphql.CollectedField, obj *NetworkInterface) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterface",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_NetworkInterface_vlans_aggregate_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.VlansAggregate, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			name, err := ec.unmarshalNString2string(ctx, "network_interfaces_vlan")
+			if err != nil {
+				return nil, err
+			}
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]VlansAggregate); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []bandicoot/pkg/gql.VlansAggregate`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]VlansAggregate)
+	fc.Result = res
+	return ec.marshalOvlansAggregate2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterfaceVlan_macAddr(ctx context.Context, field graphql.CollectedField, obj *NetworkInterfaceVlan) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterfaceVlan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MacAddr, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOMac2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterfaceVlan_name(ctx context.Context, field graphql.CollectedField, obj *NetworkInterfaceVlan) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterfaceVlan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterfaceVlan_tagId(ctx context.Context, field graphql.CollectedField, obj *NetworkInterfaceVlan) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterfaceVlan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TagID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NetworkInterfaceVlan_tagged(ctx context.Context, field graphql.CollectedField, obj *NetworkInterfaceVlan) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "NetworkInterfaceVlan",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Tagged, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _ObjectFilter_name(ctx context.Context, field graphql.CollectedField, obj *ObjectFilter) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -21383,44 +22710,8 @@ func (ec *executionContext) _adapterDevicesAggregate_adapterDevices(ctx context.
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.AdapterDevices, nil
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			name, err := ec.unmarshalNString2string(ctx, "adapter_devices")
-			if err != nil {
-				return nil, err
-			}
-			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"device_id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
-			if err != nil {
-				return nil, err
-			}
-			if ec.directives.Relation == nil {
-				return nil, errors.New("directive relation is not implemented")
-			}
-			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, err
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*AdapterDevice); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.AdapterDevice`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.AdapterDevices, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -24061,18 +25352,26 @@ func (ec *executionContext) _interfacesAggregate_interfaces(ctx context.Context,
 			return obj.Interfaces, nil
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			name, err := ec.unmarshalOString2ᚖstring(ctx, "device_network_interfaces")
+			name, err := ec.unmarshalNString2string(ctx, "network_interfaces")
 			if err != nil {
 				return nil, err
 			}
-			arguments, err := ec.unmarshalOString2ᚕᚖstring(ctx, []interface{}{"id", "fetch_cycle"})
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id", "fetch_cycle"})
 			if err != nil {
 				return nil, err
 			}
-			if ec.directives.ViewFunction == nil {
-				return nil, errors.New("directive viewFunction is not implemented")
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"deviceId", "fetch_cycle"})
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.ViewFunction(ctx, obj, directive0, name, arguments)
+			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
 		}
 
 		tmp, err := directive1(rctx)
@@ -24914,18 +26213,34 @@ func (ec *executionContext) _tagsAggregate_tags(ctx context.Context, field graph
 			return obj.Tags, nil
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			name, err := ec.unmarshalOString2ᚖstring(ctx, "device_tags")
+			name, err := ec.unmarshalNString2string(ctx, "adapter_device_tags")
 			if err != nil {
 				return nil, err
 			}
-			arguments, err := ec.unmarshalOString2ᚕᚖstring(ctx, []interface{}{"id", "fetch_cycle"})
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id"})
 			if err != nil {
 				return nil, err
 			}
-			if ec.directives.ViewFunction == nil {
-				return nil, errors.New("directive viewFunction is not implemented")
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"adapter_device_id"})
+			if err != nil {
+				return nil, err
 			}
-			return ec.directives.ViewFunction(ctx, obj, directive0, name, arguments)
+			relType, err := ec.unmarshalNRelationType2string(ctx, "MANY_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			manyToManyTableName, err := ec.unmarshalOString2ᚖstring(ctx, "tags")
+			if err != nil {
+				return nil, err
+			}
+			joinOn, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []interface{}{"name"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, manyToManyTableName, joinOn)
 		}
 
 		tmp, err := directive1(rctx)
@@ -25241,6 +26556,331 @@ func (ec *executionContext) _usersAggregate_users(ctx context.Context, field gra
 	return ec.marshalOUser2ᚕᚖbandicootᚋpkgᚋgqlᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _vlansAggregate_group(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Group, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_distinct(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Distinct, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_count(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_sum(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_vlansAggregate_sum_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Sum, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_avg(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_vlansAggregate_avg_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Avg, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_min(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_vlansAggregate_min_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Min, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_max(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_vlansAggregate_max_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Max, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _vlansAggregate_vlans(ctx context.Context, field graphql.CollectedField, obj *VlansAggregate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "vlansAggregate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_vlansAggregate_vlans_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.Vlans, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			name, err := ec.unmarshalNString2string(ctx, "network_interfaces_vlan")
+			if err != nil {
+				return nil, err
+			}
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"macAddr", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*NetworkInterfaceVlan); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.NetworkInterfaceVlan`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*NetworkInterfaceVlan)
+	fc.Result = res
+	return ec.marshalONetworkInterfaceVlan2ᚕᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx, field.Selections, res)
+}
+
 // endregion **************************** field.gotpl *****************************
 
 // region    **************************** input.gotpl *****************************
@@ -25374,6 +27014,36 @@ func (ec *executionContext) unmarshalInputBooleanComparator(ctx context.Context,
 		case "neq":
 			var err error
 			it.Neq, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCIDRComparator(ctx context.Context, obj interface{}) (CIDRComparator, error) {
+	var it CIDRComparator
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "exists":
+			var err error
+			it.Exists, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "eq":
+			var err error
+			it.Eq, err = ec.unmarshalOCIDR2ᚖnetᚐIPNet(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "neq":
+			var err error
+			it.Neq, err = ec.unmarshalOCIDR2ᚖnetᚐIPNet(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -27621,6 +29291,60 @@ func (ec *executionContext) unmarshalInputnetwork_interface_bool_exp(ctx context
 			if err != nil {
 				return it, err
 			}
+		case "name":
+			var err error
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "manufacturer":
+			var err error
+			it.Manufacturer, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "operationalStatus":
+			var err error
+			it.OperationalStatus, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "adminStatus":
+			var err error
+			it.AdminStatus, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "portType":
+			var err error
+			it.PortType, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "mtu":
+			var err error
+			it.Mtu, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "gateway":
+			var err error
+			it.Gateway, err = ec.unmarshalOIPComparator2ᚖbandicootᚋpkgᚋgqlᚐIPComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "port":
+			var err error
+			it.Port, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "vlans":
+			var err error
+			it.Vlans, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "AND":
 			var err error
 			it.And, err = ec.unmarshalOnetwork_interface_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceBoolExpᚄ(ctx, v)
@@ -27636,6 +29360,60 @@ func (ec *executionContext) unmarshalInputnetwork_interface_bool_exp(ctx context
 		case "NOT":
 			var err error
 			it.Not, err = ec.unmarshalOnetwork_interface_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceBoolExpᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputnetwork_interface_vlan_bool_exp(ctx context.Context, obj interface{}) (NetworkInterfaceVlanBoolExp, error) {
+	var it NetworkInterfaceVlanBoolExp
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "macAddr":
+			var err error
+			it.MacAddr, err = ec.unmarshalOMacComparator2ᚖbandicootᚋpkgᚋgqlᚐMacComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+			it.Name, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "tagId":
+			var err error
+			it.TagID, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "tagged":
+			var err error
+			it.Tagged, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "AND":
+			var err error
+			it.And, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExpᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "OR":
+			var err error
+			it.Or, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExpᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "NOT":
+			var err error
+			it.Not, err = ec.unmarshalOnetwork_interface_vlan_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExpᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -28730,6 +30508,58 @@ func (ec *executionContext) _NetworkInterface(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._NetworkInterface_macAddr(ctx, field, obj)
 		case "ipAddrs":
 			out.Values[i] = ec._NetworkInterface_ipAddrs(ctx, field, obj)
+		case "name":
+			out.Values[i] = ec._NetworkInterface_name(ctx, field, obj)
+		case "manufacturer":
+			out.Values[i] = ec._NetworkInterface_manufacturer(ctx, field, obj)
+		case "subnets":
+			out.Values[i] = ec._NetworkInterface_subnets(ctx, field, obj)
+		case "operationalStatus":
+			out.Values[i] = ec._NetworkInterface_operationalStatus(ctx, field, obj)
+		case "adminStatus":
+			out.Values[i] = ec._NetworkInterface_adminStatus(ctx, field, obj)
+		case "portType":
+			out.Values[i] = ec._NetworkInterface_portType(ctx, field, obj)
+		case "mtu":
+			out.Values[i] = ec._NetworkInterface_mtu(ctx, field, obj)
+		case "gateway":
+			out.Values[i] = ec._NetworkInterface_gateway(ctx, field, obj)
+		case "port":
+			out.Values[i] = ec._NetworkInterface_port(ctx, field, obj)
+		case "vlans":
+			out.Values[i] = ec._NetworkInterface_vlans(ctx, field, obj)
+		case "vlans_aggregate":
+			out.Values[i] = ec._NetworkInterface_vlans_aggregate(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var networkInterfaceVlanImplementors = []string{"NetworkInterfaceVlan"}
+
+func (ec *executionContext) _NetworkInterfaceVlan(ctx context.Context, sel ast.SelectionSet, obj *NetworkInterfaceVlan) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, networkInterfaceVlanImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NetworkInterfaceVlan")
+		case "macAddr":
+			out.Values[i] = ec._NetworkInterfaceVlan_macAddr(ctx, field, obj)
+		case "name":
+			out.Values[i] = ec._NetworkInterfaceVlan_name(ctx, field, obj)
+		case "tagId":
+			out.Values[i] = ec._NetworkInterfaceVlan_tagId(ctx, field, obj)
+		case "tagged":
+			out.Values[i] = ec._NetworkInterfaceVlan_tagged(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -30119,6 +31949,50 @@ func (ec *executionContext) _usersAggregate(ctx context.Context, sel ast.Selecti
 			out.Values[i] = ec._usersAggregate_max(ctx, field, obj)
 		case "users":
 			out.Values[i] = ec._usersAggregate_users(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var vlansAggregateImplementors = []string{"vlansAggregate"}
+
+func (ec *executionContext) _vlansAggregate(ctx context.Context, sel ast.SelectionSet, obj *VlansAggregate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, vlansAggregateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("vlansAggregate")
+		case "group":
+			out.Values[i] = ec._vlansAggregate_group(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "distinct":
+			out.Values[i] = ec._vlansAggregate_distinct(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "count":
+			out.Values[i] = ec._vlansAggregate_count(ctx, field, obj)
+		case "sum":
+			out.Values[i] = ec._vlansAggregate_sum(ctx, field, obj)
+		case "avg":
+			out.Values[i] = ec._vlansAggregate_avg(ctx, field, obj)
+		case "min":
+			out.Values[i] = ec._vlansAggregate_min(ctx, field, obj)
+		case "max":
+			out.Values[i] = ec._vlansAggregate_max(ctx, field, obj)
+		case "vlans":
+			out.Values[i] = ec._vlansAggregate_vlans(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -32748,6 +34622,10 @@ func (ec *executionContext) unmarshalNnetwork_interface_bool_exp2bandicootᚋpkg
 	return ec.unmarshalInputnetwork_interface_bool_exp(ctx, v)
 }
 
+func (ec *executionContext) unmarshalNnetwork_interface_vlan_bool_exp2bandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx context.Context, v interface{}) (NetworkInterfaceVlanBoolExp, error) {
+	return ec.unmarshalInputnetwork_interface_vlan_bool_exp(ctx, v)
+}
+
 func (ec *executionContext) unmarshalNoperating_system_bool_exp2bandicootᚋpkgᚋgqlᚐOperatingSystemBoolExp(ctx context.Context, v interface{}) (OperatingSystemBoolExp, error) {
 	return ec.unmarshalInputoperating_system_bool_exp(ctx, v)
 }
@@ -33481,6 +35359,283 @@ func (ec *executionContext) marshalNusers_aggregate_sum_columns2ᚕbandicootᚋp
 	return ret
 }
 
+func (ec *executionContext) marshalNvlansAggregate2bandicootᚋpkgᚋgqlᚐVlansAggregate(ctx context.Context, sel ast.SelectionSet, v VlansAggregate) graphql.Marshaler {
+	return ec._vlansAggregate(ctx, sel, &v)
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_avg_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumns(ctx context.Context, v interface{}) (VlansAggregateAvgColumns, error) {
+	var res VlansAggregateAvgColumns
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_avg_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumns(ctx context.Context, sel ast.SelectionSet, v VlansAggregateAvgColumns) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_avg_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumnsᚄ(ctx context.Context, v interface{}) ([]VlansAggregateAvgColumns, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]VlansAggregateAvgColumns, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNvlans_aggregate_avg_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumns(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_avg_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumnsᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregateAvgColumns) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlans_aggregate_avg_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateAvgColumns(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateColumns(ctx context.Context, v interface{}) (VlansAggregateColumns, error) {
+	var res VlansAggregateColumns
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateColumns(ctx context.Context, sel ast.SelectionSet, v VlansAggregateColumns) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_max_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumns(ctx context.Context, v interface{}) (VlansAggregateMaxColumns, error) {
+	var res VlansAggregateMaxColumns
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_max_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumns(ctx context.Context, sel ast.SelectionSet, v VlansAggregateMaxColumns) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_max_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumnsᚄ(ctx context.Context, v interface{}) ([]VlansAggregateMaxColumns, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]VlansAggregateMaxColumns, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNvlans_aggregate_max_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumns(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_max_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumnsᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregateMaxColumns) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlans_aggregate_max_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMaxColumns(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_min_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMinColumns(ctx context.Context, v interface{}) (VlansAggregateMinColumns, error) {
+	var res VlansAggregateMinColumns
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_min_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMinColumns(ctx context.Context, sel ast.SelectionSet, v VlansAggregateMinColumns) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_min_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMinColumnsᚄ(ctx context.Context, v interface{}) ([]VlansAggregateMinColumns, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]VlansAggregateMinColumns, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNvlans_aggregate_min_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMinColumns(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_min_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateMinColumnsᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregateMinColumns) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlans_aggregate_min_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateMinColumns(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_sum_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateSumColumns(ctx context.Context, v interface{}) (VlansAggregateSumColumns, error) {
+	var res VlansAggregateSumColumns
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_sum_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateSumColumns(ctx context.Context, sel ast.SelectionSet, v VlansAggregateSumColumns) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNvlans_aggregate_sum_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateSumColumnsᚄ(ctx context.Context, v interface{}) ([]VlansAggregateSumColumns, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]VlansAggregateSumColumns, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNvlans_aggregate_sum_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateSumColumns(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNvlans_aggregate_sum_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateSumColumnsᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregateSumColumns) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlans_aggregate_sum_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateSumColumns(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) unmarshalOAccessType2bandicootᚋpkgᚋgqlᚐAccessType(ctx context.Context, v interface{}) (AccessType, error) {
 	var res AccessType
 	return res, res.UnmarshalGQL(v)
@@ -34172,6 +36327,38 @@ func (ec *executionContext) unmarshalOCIDR2netᚐIPNet(ctx context.Context, v in
 
 func (ec *executionContext) marshalOCIDR2netᚐIPNet(ctx context.Context, sel ast.SelectionSet, v net.IPNet) graphql.Marshaler {
 	return MarshalCIDRScalar(v)
+}
+
+func (ec *executionContext) unmarshalOCIDR2ᚕᚖnetᚐIPNet(ctx context.Context, v interface{}) ([]*net.IPNet, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*net.IPNet, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalOCIDR2ᚖnetᚐIPNet(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCIDR2ᚕᚖnetᚐIPNet(ctx context.Context, sel ast.SelectionSet, v []*net.IPNet) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOCIDR2ᚖnetᚐIPNet(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOCIDR2ᚖnetᚐIPNet(ctx context.Context, v interface{}) (*net.IPNet, error) {
@@ -34902,6 +37089,18 @@ func (ec *executionContext) unmarshalOIPArrayComparator2ᚖbandicootᚋpkgᚋgql
 	return &res, err
 }
 
+func (ec *executionContext) unmarshalOIPComparator2bandicootᚋpkgᚋgqlᚐIPComparator(ctx context.Context, v interface{}) (IPComparator, error) {
+	return ec.unmarshalInputIPComparator(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOIPComparator2ᚖbandicootᚋpkgᚋgqlᚐIPComparator(ctx context.Context, v interface{}) (*IPComparator, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOIPComparator2bandicootᚋpkgᚋgqlᚐIPComparator(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOIPFamily2bandicootᚋpkgᚋgqlᚐIPFamily(ctx context.Context, v interface{}) (IPFamily, error) {
 	var res IPFamily
 	return res, res.UnmarshalGQL(v)
@@ -35214,6 +37413,57 @@ func (ec *executionContext) marshalONetworkInterface2ᚖbandicootᚋpkgᚋgqlᚐ
 		return graphql.Null
 	}
 	return ec._NetworkInterface(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalONetworkInterfaceVlan2bandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx context.Context, sel ast.SelectionSet, v NetworkInterfaceVlan) graphql.Marshaler {
+	return ec._NetworkInterfaceVlan(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalONetworkInterfaceVlan2ᚕᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx context.Context, sel ast.SelectionSet, v []*NetworkInterfaceVlan) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalONetworkInterfaceVlan2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalONetworkInterfaceVlan2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlan(ctx context.Context, sel ast.SelectionSet, v *NetworkInterfaceVlan) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._NetworkInterfaceVlan(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOObjectFilter2bandicootᚋpkgᚋgqlᚐObjectFilter(ctx context.Context, sel ast.SelectionSet, v ObjectFilter) graphql.Marshaler {
@@ -37421,6 +39671,38 @@ func (ec *executionContext) unmarshalOnetwork_interface_bool_exp2ᚖbandicootᚋ
 	return &res, err
 }
 
+func (ec *executionContext) unmarshalOnetwork_interface_vlan_bool_exp2bandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx context.Context, v interface{}) (NetworkInterfaceVlanBoolExp, error) {
+	return ec.unmarshalInputnetwork_interface_vlan_bool_exp(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOnetwork_interface_vlan_bool_exp2ᚕbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExpᚄ(ctx context.Context, v interface{}) ([]NetworkInterfaceVlanBoolExp, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]NetworkInterfaceVlanBoolExp, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNnetwork_interface_vlan_bool_exp2bandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalOnetwork_interface_vlan_bool_exp2ᚖbandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx context.Context, v interface{}) (*NetworkInterfaceVlanBoolExp, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOnetwork_interface_vlan_bool_exp2bandicootᚋpkgᚋgqlᚐNetworkInterfaceVlanBoolExp(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOoperating_system_bool_exp2bandicootᚋpkgᚋgqlᚐOperatingSystemBoolExp(ctx context.Context, v interface{}) (OperatingSystemBoolExp, error) {
 	return ec.unmarshalInputoperating_system_bool_exp(ctx, v)
 }
@@ -37965,6 +40247,106 @@ func (ec *executionContext) marshalOusers_aggregate_columns2ᚕbandicootᚋpkg�
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNusers_aggregate_columns2bandicootᚋpkgᚋgqlᚐUsersAggregateColumns(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOvlansAggregate2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregate) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlansAggregate2bandicootᚋpkgᚋgqlᚐVlansAggregate(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalOvlans_aggregate_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateColumnsᚄ(ctx context.Context, v interface{}) ([]VlansAggregateColumns, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]VlansAggregateColumns, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNvlans_aggregate_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateColumns(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOvlans_aggregate_columns2ᚕbandicootᚋpkgᚋgqlᚐVlansAggregateColumnsᚄ(ctx context.Context, sel ast.SelectionSet, v []VlansAggregateColumns) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNvlans_aggregate_columns2bandicootᚋpkgᚋgqlᚐVlansAggregateColumns(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

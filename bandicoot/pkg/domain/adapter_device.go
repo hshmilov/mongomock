@@ -87,6 +87,23 @@ type NetworkInterface struct {
 	DeviceId uuid.UUID
 	IpAddrs  []net.IP `pg:",array" json:"ip_addrs"`
 	MacAddr  *string
+	Name *string
+	Subnets []*net.IPNet
+	OperationalStatus *string
+	AdminStatus *string
+	PortType *string
+	Mtu *string
+	Gateway *string
+	Port *string
+	Vlans []NetworkInterfaceVlan
+}
+
+type NetworkInterfaceVlan struct {
+	deviceId uuid.UUID
+	MacAddr  *string
+	Name string
+	TagId int
+	Tagged bool
 }
 
 type InstalledSoftware struct {

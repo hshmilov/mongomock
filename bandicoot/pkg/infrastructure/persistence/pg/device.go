@@ -46,13 +46,53 @@ func (p *Repo) InsertAdapterDevice(ctx context.Context, ad domain.AdapterDevice)
 
 	return nil
 }
+
+func(p *Repo) insertNetworkInterfacesVlans(ctx context.Context, deviceId uuid.UUID, fetchCycle int, interfaces []domain.NetworkInterfaceVlan) error {
+
+	query := sq.Insert("network_interfaces_vlans").Columns(
+		"device_id", "mac_addr", "fetch_cycle", "name", "tag_id", "tagged",
+	).PlaceholderFormat(sq.Dollar).Suffix("ON CONFLICT DO NOTHING")
+
+	for _, i := range interfaces {
+		query = query.Values(deviceId, i.MacAddr, fetchCycle, i.MacAddr, i.Name, i.TagId, i.Tagged)
+	}
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to build adapter device interfaces insert query")
+		return err
+	}
+	_, err = p.pool.Exec(ctx, sql, args...)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to insert adapter device interfaces")
+		return err
+	}
+
+	return nil
+
+}
+
 func (p *Repo) insertAdapterDeviceInterfaces(ctx context.Context, deviceId uuid.UUID, fetchCycle int, interfaces []domain.NetworkInterface) error {
 	if len(interfaces) == 0 {
 		return nil
 	}
-	query := sq.Insert("network_interfaces").Columns("device_id", "fetch_cycle", "ip_addrs", "mac_addr").PlaceholderFormat(sq.Dollar).Suffix("ON CONFLICT DO NOTHING")
+	query := sq.Insert("network_interfaces").Columns(
+		"device_id", "fetch_cycle", "ip_addrs", "mac_addr", "name",
+		"subnets", "gateway", "admin_status", "operational_status", "port", "port_type", "mtu",
+		).PlaceholderFormat(sq.Dollar).Suffix("ON CONFLICT DO NOTHING")
+
+
 	for _, i := range interfaces {
-		query = query.Values(deviceId, fetchCycle, i.IpAddrs, i.MacAddr)
+		query = query.Values(deviceId, fetchCycle, i.IpAddrs, i.MacAddr, i.Name, i.Subnets,
+			i.Gateway, i.AdminStatus, i.OperationalStatus, i.Port, i.PortType, i.Mtu)
+
+		// insert interface vlans
+		if len(i.Vlans) > 0 {
+			err := p.insertNetworkInterfacesVlans(ctx, deviceId, fetchCycle, i.Vlans)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	sql, args, err := query.ToSql()
 	if err != nil {
@@ -64,6 +104,7 @@ func (p *Repo) insertAdapterDeviceInterfaces(ctx context.Context, deviceId uuid.
 		log.Error().Err(err).Msg("Failed to insert adapter device interfaces")
 		return err
 	}
+
 	return nil
 }
 

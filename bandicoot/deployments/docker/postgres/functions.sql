@@ -103,6 +103,8 @@ RETURN NEW;
 END
 $func$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_device on adapter_devices;
+
 CREATE TRIGGER trigger_update_device
     AFTER UPDATE OF device_id OR INSERT ON adapter_devices
     FOR EACH ROW
@@ -151,6 +153,7 @@ RETURN NEW;
 END
 $func$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_user on adapter_users;
 
 CREATE TRIGGER trigger_update_user
     AFTER UPDATE OF user_id OR INSERT ON adapter_users
@@ -161,9 +164,9 @@ CREATE TRIGGER trigger_update_user
 -- This sql creates a table function view allowing to access a table with params
 
 CREATE OR REPLACE FUNCTION device_network_interfaces(_deviceId uuid, _fetchCycle int)
-  RETURNS TABLE (deviceId uuid, fetch_cycle int, mac_addr macaddr, ip_addrs inet[]) AS
+  RETURNS SETOF network_interfaces  AS
 $func$
-    SELECT distinct on (ip_addrs, mac_addr) * from network_interfaces
+    SELECT distinct on (ip_addrs, mac_addr, name) * from network_interfaces
     where device_id = ANY(select id from adapter_devices where device_id = $1 and fetch_cycle = $2) and fetch_cycle = $2;
 $func$ LANGUAGE sql;
 

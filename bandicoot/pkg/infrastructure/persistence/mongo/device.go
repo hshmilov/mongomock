@@ -115,9 +115,24 @@ type adapterData struct {
 	//Processors 	      []domain.Processor `bson:"cpus" json:"cpus"`
 }
 
+type networkInterfaceVlan struct {
+	Name string
+	TagId int
+	Tagged *string
+
+}
 type networkInterface struct {
 	Mac string
 	Ips []string
+	Subnets []string
+	Name *string
+	OperationalStatus *string `bson:"operational_status" json:"operational_status"`
+	AdminStatus *string `bson:"admin_status" json:"admin_status"`
+	PortType *string  `bson:"port_type" json:"port_type"`
+	Mtu *string `bson:"mtu" json:"mtu"`
+	Gateway *string  `bson:"gateway" json:"gateway"`
+	Port *string `bson:"port" json:"port"`
+	Vlans []networkInterfaceVlan
 }
 
 func (n networkInterface) convert() domain.NetworkInterface {
@@ -128,11 +143,50 @@ func (n networkInterface) convert() domain.NetworkInterface {
 		}
 		ips = append(ips, net.ParseIP(ip))
 	}
+	var subnets []*net.IPNet
+	for _, ip := range n.Subnets {
+		if ip == "" {
+			continue
+		}
+		_, ipNet, err :=  net.ParseCIDR(ip)
+		if err != nil || ipNet == nil {
+			continue
+		}
+		subnets = append(subnets, ipNet)
+	}
+
 	var mac *string
 	if n.Mac != "" {
 		mac = &n.Mac
 	}
-	return domain.NetworkInterface{IpAddrs: ips, MacAddr: mac}
+	// convert vlans
+	vlans := make([]domain.NetworkInterfaceVlan, len(n.Vlans))
+	for i, vlan := range n.Vlans {
+		var tagged bool
+		if vlan.Tagged != nil && *vlan.Tagged == "Tagged" {
+			tagged = true
+		} else {
+			tagged = false
+		}
+		vlans[i] = domain.NetworkInterfaceVlan{
+			Name: vlan.Name,
+			TagId: vlan.TagId,
+			Tagged: tagged,
+		}
+	}
+
+	return domain.NetworkInterface{
+		IpAddrs: ips,
+		MacAddr: mac,
+		Subnets: subnets,
+		Name: n.Name,
+		OperationalStatus: n.OperationalStatus,
+		AdminStatus: n.AdminStatus,
+		Port: n.Port,
+		PortType: n.PortType,
+		Mtu: n.Mtu,
+		Gateway: n.Gateway,
+	}
 }
 
 func (m *Repo) CountDevices(ctx context.Context) int64 {

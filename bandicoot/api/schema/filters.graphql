@@ -143,3 +143,10 @@ input MacArrayComparator {
     overlap: [Mac]
     size: Mac
 }
+
+
+input CIDRComparator {
+    exists: Boolean
+    eq: CIDR
+    neq: CIDR
+}
