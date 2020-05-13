@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
+import pytest
+
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
@@ -236,8 +238,9 @@ class TestDevice(TestBase):
             last_seen_rows_copy.sort(key=lambda date: datetime.strptime(date, '%Y-%m-%d %H:%M:%S'), reverse=True)
             assert last_seen_rows == last_seen_rows_copy
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
-            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
+    @pytest.mark.skip('Too many tests, might hang')
     def test_last_seen_table_sort(self):
         with CsvService().contextmanager(take_ownership=True):
             first_date = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')

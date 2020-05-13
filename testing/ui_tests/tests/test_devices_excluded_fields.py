@@ -10,6 +10,7 @@ from ui_tests.tests.ui_test_base import TestBase
 CORRELATION_REASONS_TITLE = 'Correlation Reasons'
 
 
+@pytest.mark.skip('not using mock, waiting improperly for plugins')
 class TestDevicesExcludedFields(TestBase):
     def test_correlation_reasons_not_shown_to_user(self):
         with EsxService().contextmanager(take_ownership=True):
