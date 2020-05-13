@@ -1636,3 +1636,8 @@ class EntitiesPage(Page):
     def close_actions_dropdown(self):
         el = self.driver.find_element_by_css_selector(self.ENTITIES_ACTIONS_DROPDOWN_CSS)
         ActionChains(self.driver).move_to_element_with_offset(el, 250, 100).click().perform()
+
+    @staticmethod
+    def wait_for_csv_to_update_cache():
+        # wait for heavy lifting to clear its 60 seconds cache
+        time.sleep(61)

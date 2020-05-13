@@ -126,11 +126,13 @@ class TestUsersTable(TestEntitiesTable):
         self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER, 'name:',
                                          self.users_page.FIELD_USERNAME_TITLE)
 
-    @pytest.mark.skip('AX-7465')
     def test_user_export_csv(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
+
+        self.users_page.wait_for_csv_to_update_cache()
+
         # filter the ui to fit the QUERY_FILTER_USERNAME of the csv
         self.users_page.query_user_name_contains('m')
         result = self.users_page.generate_csv('users',
