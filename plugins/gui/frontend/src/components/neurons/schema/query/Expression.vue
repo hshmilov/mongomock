@@ -15,14 +15,14 @@
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-bracket-left"
-      :active="expression.leftBracket"
+      :on="expression.leftBracket"
       @click="toggleLeftBracket"
     >(</x-button>
     <x-button
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-not"
-      :active="expression.not"
+      :on="expression.not"
       @click="toggleNot"
     >NOT</x-button>
     <x-select
@@ -46,7 +46,7 @@
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-bracket-right"
-      :active="expression.rightBracket"
+      :on="expression.rightBracket"
       @click="toggleRightBracket"
     >)</x-button>
     <x-button
@@ -194,7 +194,6 @@ export default {
 
     .checkbox-label {
       margin-bottom: 0;
-      cursor: pointer;
       font-size: 12px;
       padding: 0;
       height: 32px;

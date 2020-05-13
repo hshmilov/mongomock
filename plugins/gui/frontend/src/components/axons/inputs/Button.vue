@@ -1,6 +1,6 @@
 <template>
   <AButton
-    :class="{'x-button': true, active}"
+    :class="{'x-button': true, on}"
     v-bind="$props"
     v-on="$listeners"
   >
@@ -16,7 +16,7 @@ export default {
   components: { AButton },
   props: {
     ...AButton.props,
-    active: {
+    on: {
       type: Boolean,
       default: false,
     },
@@ -83,7 +83,7 @@ export default {
       height: 30px;
       line-height: 24px;
       padding: 4px 0;
-      &.active, &.active:hover, &.active:focus {
+      &.on, &.on:hover, &.on:focus {
           background-color: $theme-black;
           color: $grey-2;
       }
