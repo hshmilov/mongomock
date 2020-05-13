@@ -20,9 +20,7 @@
               v-if="hasSelection"
               type="link"
               @click="remove"
-            >
-              Remove
-            </XButton>
+            >Delete</XButton>
             <XButton
               id="report_new"
               type="primary"
@@ -97,12 +95,12 @@ export default {
     remove() {
       this.$safeguard.show({
         text: `
-                  The selected ${this.numberOfSelections > 1 ? 'reports' : 'report'} will be completely removed
+                  The selected ${this.numberOfSelections > 1 ? 'reports' : 'report'} will be completely deleted
                   from the system.<br/>
-                  Removing the ${this.numberOfSelections > 1 ? 'reports' : 'report'} is an irreversible action.<br/>
+                  Deleting the ${this.numberOfSelections > 1 ? 'reports' : 'report'} is an irreversible action.<br/>
                   Do you wish to continue?
                   `,
-        confirmText: 'Remove Reports',
+        confirmText: 'Delete Reports',
         onConfirm: () => {
           this.removeReports(this.selection);
           this.selection = { ids: [], include: true };

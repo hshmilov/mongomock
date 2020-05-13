@@ -41,9 +41,7 @@
           id="remove_chart"
           key="1"
           @click="$emit('remove')"
-        >
-          Remove
-        </AMenuItem>
+        >Delete</AMenuItem>
         <AMenuItem
           v-if="chart.metric==='segment'"
           id="export_chart"

@@ -1064,7 +1064,7 @@ class Page:
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
 
     def remove_selected_with_safeguard(self, confirmation_label=None, confirmation_label_multi=None):
-        self.click_button(self.REMOVE_BUTTON)
+        self.click_button(self.DELETE_BUTTON)
         # Opening animation
         time.sleep(0.5)
         if confirmation_label:

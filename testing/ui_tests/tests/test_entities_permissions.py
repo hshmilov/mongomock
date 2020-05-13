@@ -407,7 +407,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
         queries_page.remove_selected_queries(True)
         queries_page.click_query_row_by_name(new_query_name)
         queries_page.get_remove_panel_action().click()
-        queries_page.safeguard_click_confirm('Remove Saved Query')
+        queries_page.safeguard_click_confirm(queries_page.SAFEGUARD_REMOVE_BUTTON_SINGLE)
 
     def _test_saved_queries_with_add_enforcement(self, entities_page, queries_page, query_name):
         entities_page.switch_to_page()

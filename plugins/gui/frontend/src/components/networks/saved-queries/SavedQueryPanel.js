@@ -355,7 +355,7 @@ export default {
         if (this.userCanDeleteSavedQueries) {
           actions.push(<x-action-item
             class="action-remove"
-            title="Remove"
+            title="Delete"
             onClick={this.removeQuery}
             size="20"
             color="#fff"

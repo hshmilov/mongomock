@@ -1010,10 +1010,11 @@ class EntitiesPage(Page):
         self.wait_for_table_to_load()
 
     def remove_selected(self):
-        self.click_button(self.REMOVE_BUTTON)
+        self.click_button(self.DELETE_BUTTON)
 
     def approve_remove_selected(self):
-        self.click_button(self.DELETE_BUTTON)
+        safeguard_modal = self.driver.find_element_by_css_selector('.x-modal')
+        self.click_button(self.DELETE_BUTTON, context=safeguard_modal)
 
     def click_enforcement_tasks_tab(self):
         self.click_tab(self.ENFORCEMENT_DATA_TAB_TITLE)

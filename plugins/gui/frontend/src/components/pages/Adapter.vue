@@ -20,7 +20,7 @@
               v-if="canDelete && selectedServers && selectedServers.length"
               type="link"
               @click="removeConnection"
-            >Remove</XButton>
+            >Delete</XButton>
             <XButton
               type="primary"
               id="new_connection"

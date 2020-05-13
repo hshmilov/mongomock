@@ -102,7 +102,7 @@ class SettingsPage(Page):
     VALUES_COUNT_PER_COLUMN_DROPDOWN_CSS = 'label[for="defaultColumnLimit"]~.x-dropdown.x-select'
     VALUES_COUNT_ENTITIES_PER_PAGE_CSS = 'label[for="defaultNumOfEntitiesPerPage"]~.x-dropdown.x-select'
     DATE_FORMAT_CSS = 'label[for="datetime_format"]~.x-dropdown.x-select'
-    SAFEGUARD_REMOVE_BUTTON_TEXT = 'Remove Role'
+    SAFEGUARD_REMOVE_BUTTON_TEXT = 'Delete Role'
     XPATH_BY_CLASS_NAME = '//*[contains(@class, \'{name}\')]'
     DATEPICKER_CLASS_NAME = 'x-date-edit'
     # sorry - but it's not my fault

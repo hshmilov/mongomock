@@ -55,13 +55,13 @@
       v-if="removed"
       :key="10000"
       size="lg"
-      approve-text="Remove Chart"
+      approve-text="Delete Chart"
       @confirm="confirmRemovePanel"
       @close="cancelRemovePanel"
     >
       <div slot="body">
-        <div>This chart will be completely removed from the system.</div>
-        <div>Removing the chart is an irreversible action.</div>
+        <div>This chart will be completely deleted from the system.</div>
+        <div>Deleting the chart is an irreversible action.</div>
         <div>Do you want to continue?</div>
       </div>
     </XModal>

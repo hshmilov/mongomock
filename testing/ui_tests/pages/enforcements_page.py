@@ -127,8 +127,8 @@ class EnforcementsPage(EntitiesPage):
     USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL = 'Use stored credentials from the Active Directory adapter'
 
     CLICKABLE_TABLE_ROW = '.x-table-row.clickable'
-    CONFIRM_REMOVE_SINGLE = 'Remove Enforcement Set'
-    CONFIRM_REMOVE_MULTI = 'Remove Enforcement Sets'
+    CONFIRM_REMOVE_SINGLE = 'Delete Enforcement Set'
+    CONFIRM_REMOVE_MULTI = 'Delete Enforcement Sets'
     ADDED_ACTION_XPATH = './/div[@class=\'content\' and .//text()=\'{action_name}\']'
 
     SPECIAL_TAG_ACTION = 'Special Tag Action'

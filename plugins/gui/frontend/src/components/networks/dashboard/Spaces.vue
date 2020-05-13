@@ -9,7 +9,7 @@
           v-if="spaces.length"
           ref="tabs"
           :extendable="canAdd"
-          remove-text="Remove Space"
+          remove-text="Delete Space"
           @add="addNewSpace"
           @rename="renameSpace"
           @remove="removeSpace"
@@ -66,9 +66,9 @@
             />
           </XTab>
           <div slot="remove_confirm">
-            <div>This space will be completely removed from the system and</div>
+            <div>This space will be completely deleted from the system and</div>
             <div>no other user will be able to use it.</div>
-            <div>Removing the space is an irreversible action.</div>
+            <div>Deleting the space is an irreversible action.</div>
           </div>
         </XTabs>
       </template>

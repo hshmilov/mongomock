@@ -27,9 +27,7 @@
               v-if="hasSelection && canDelete"
               type="link"
               @click="remove"
-            >
-              Remove
-            </XButton>
+            >Delete</XButton>
             <XButton
               id="enforcement_new"
               type="primary"
@@ -139,12 +137,12 @@ export default {
       const numberPostfix = this.numberOfSelections > 1 ? 'Sets' : 'Set';
       this.$safeguard.show({
         text: `
-            The selected Enforcement ${numberPostfix} will be completely removed from the system.
+            The selected Enforcement ${numberPostfix} will be completely deleted from the system.
             <br />
-            Removing the Enforcement ${numberPostfix} is an irreversible action.
+            Deleting the Enforcement ${numberPostfix} is an irreversible action.
             <br />Do you wish to continue?
           `,
-        confirmText: this.numberOfSelections > 1 ? 'Remove Enforcement Sets' : 'Remove Enforcement Set',
+        confirmText: this.numberOfSelections > 1 ? 'Delete Enforcement Sets' : 'Delete Enforcement Set',
         onConfirm: () => {
           this.removeEnforcements(this.selection);
           this.selection = { ids: [], include: true };

@@ -367,7 +367,7 @@ export default {
         && !this.isPredefined && this.mode === FormMode.ViewRole) {
         actions.push(<x-action-item
           class="action-remove"
-          title="Remove"
+          title="Delete"
           onClick={this.deleteRole}
           size="20"
           color="#fff"

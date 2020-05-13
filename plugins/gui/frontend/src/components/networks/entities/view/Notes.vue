@@ -11,7 +11,7 @@
           v-if="selection && selection.length"
           type="link"
           @click="confirmRemoveNotes"
-        >Remove</XButton>
+        >Delete</XButton>
         <XButton
           type="primary"
           :disabled="userCannotEditDevices"
@@ -35,7 +35,7 @@
       @close="closeRemoveNotesModal"
     >
       <div slot="body">
-        You are about to remove {{ selection.length }} notes. Are you sure?
+        You are about to delete {{ selection.length }} notes. Are you sure?
       </div>
     </XModal>
     <XModal

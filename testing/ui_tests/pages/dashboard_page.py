@@ -63,9 +63,10 @@ class DashboardPage(Page):
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
     CARD_MENU_BTN_CSS = '.card_menu'
     CARD_CLOSE_BTN_ID = 'remove_chart'
-    CARD_CLOSE_BTN_TEXT = 'Remove Chart'
+    CARD_CLOSE_BTN_TEXT = 'Delete Chart'
     CARD_EDIT_BTN_ID = 'edit_chart'
     CARD_EDIT_BTN_TEXT = 'Edit Chart'
+    SPACE_DELETE_BTN_TEXT = 'Delete Space'
     CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
     CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
@@ -975,7 +976,7 @@ class DashboardPage(Page):
         ActionChains(self.driver).move_to_element(space_header).perform()
         space_header.find_element_by_css_selector('.x-button.ant-btn-link').click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
-        self.click_button('Remove Space')
+        self.click_button(self.SPACE_DELETE_BTN_TEXT)
         self.wait_for_element_absent_by_text(space_header_text)
 
     def is_missing_space(self, space_name):

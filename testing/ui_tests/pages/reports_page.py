@@ -28,9 +28,9 @@ class ReportConfig(DataClassJsonMixin):
 
 class ReportsPage(EntitiesPage):
     NEW_REPORT_BUTTON = 'Add Report'
-    REMOVE_REPORTS_BUTTON = 'Remove'
-    SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE = 'Remove Report'
-    SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI = 'Remove Reports'
+    REMOVE_REPORTS_BUTTON = 'Delete'
+    SAFEGUARD_REMOVE_REPORTS_BUTTON_SINGLE = 'Delete Report'
+    SAFEGUARD_REMOVE_REPORTS_BUTTON_MULTI = 'Delete Reports'
     REPORT_CSS = '.x-report'
     REPORT_NAME_ID = 'report_name'
     REPORT_FREQUENCY = 'report_frequency'

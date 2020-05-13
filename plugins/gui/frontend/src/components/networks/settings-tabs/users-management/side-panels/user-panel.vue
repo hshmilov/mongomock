@@ -103,7 +103,7 @@ export default {
         if (this.canDeleteUser && this.systemAdminUuid !== this.userId) {
           panelActions.push(<x-action-item
             class="action-remove"
-            title="Remove"
+            title="Delete"
             onClick={this.callDeleteUser}
             size="20"
             color="#fff"

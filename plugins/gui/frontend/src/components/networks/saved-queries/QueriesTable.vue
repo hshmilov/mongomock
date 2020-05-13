@@ -61,7 +61,7 @@
           type="link"
           :disabled="userCannotDeleteSavedQueries"
           @click="handleSelectedQueriesDeletion"
-        >Remove</XButton>
+        >Delete</XButton>
       </template>
     </XTable>
   </div>
@@ -253,13 +253,13 @@ export default {
       }
       this.$safeguard.show({
         text: `
-            The selected Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} will be completely removed from the
+            The selected Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} will be completely deleted from the
             system and no other user will be able to use it.
             <br />
-            Removing the Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} is an irreversible action.
+            Deleting the Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} is an irreversible action.
             <br />Do you wish to continue?
           `,
-        confirmText: this.numberOfSelections > 1 ? 'Remove Saved Queries' : 'Remove Saved Query',
+        confirmText: this.numberOfSelections > 1 ? 'Delete Saved Queries' : 'Delete Saved Query',
         onConfirm: async () => {
           try {
             await this.removeData({
