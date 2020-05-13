@@ -18,6 +18,7 @@ class TestDevicesTable(TestEntitiesTable):
     QUERY_FILTER_DEVICES = 'specific_data.data.hostname == regex("w", "i")'
     TARGET_HOSTNAME = '22AD'
 
+    @pytest.mark.skip('AX-7465')
     def test_devices_export_csv(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

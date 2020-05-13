@@ -126,6 +126,7 @@ class TestUsersTable(TestEntitiesTable):
         self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER, 'name:',
                                          self.users_page.FIELD_USERNAME_TITLE)
 
+    @pytest.mark.skip('AX-7465')
     def test_user_export_csv(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

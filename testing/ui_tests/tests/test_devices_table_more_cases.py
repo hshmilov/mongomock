@@ -1,3 +1,5 @@
+import pytest
+
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER
@@ -6,6 +8,7 @@ from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAP
 class TestDevicesTableMoreCases(TestEntitiesTable):
     QUERY_FILTER_LAST_SEEN = '(specific_data.data.last_seen >= date("NOW - 7d"))'
 
+    @pytest.mark.skip('AX-7465')
     def test_devices_last_seen_export_csv(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
