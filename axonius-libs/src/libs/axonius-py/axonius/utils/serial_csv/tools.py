@@ -138,7 +138,7 @@ def get_simple_process(field: dict) -> str:
     return PROCESS_UNKNOWN
 
 
-def build_canon_name(name: dict) -> str:
+def build_canon_name(name: str) -> str:
     """Build a canonical name of a field or adapter name."""
     return ' '.join(name.replace('_adapter', '').split('_')).title()
 
