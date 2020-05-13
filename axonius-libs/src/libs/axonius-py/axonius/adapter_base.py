@@ -588,6 +588,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     self._decrypt_client_config(current_client.get('client_config'))
                     self._clean_unneeded_client_config_fields(current_client.get('client_config'))
                     if current_client.get('status') != 'success':
+                        self._log_activity_connection_failure(client_name, e)
                         raise
                 try:
                     with self._clients_lock:
@@ -598,11 +599,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                 f' to server with the ID {client_name}. Error is {str(e2)}'
                     self.create_notification(error_msg)
                     self.send_external_info_log(error_msg)
-                    self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {
-                        'adapter': self.plugin_name,
-                        'client_id': client_name,
-                        'error': str(e2)
-                    }, AuditType.Error)
+                    self._log_activity_connection_failure(client_name, e2)
                     if self.mail_sender and self._adapter_errors_mail_address:
                         email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
                                                            self._adapter_errors_mail_address.split(','))
@@ -1654,3 +1651,23 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'last_seen_prioritized': cls.DEFAULT_LAST_SEEN_PRIORITIZED,
             'realtime_adapter': False
         }
+
+    def _log_activity_connection_failure(self, client_id: str, connection_exception: Exception):
+        """
+        audit logger for ConnectionException base events
+        i.e , connection timeout, dns resolve, ssl errors
+        :param client_id: adapter client connection id
+        :param connection_exception: <T extend ConnectionException >
+        """
+
+        if isinstance(connection_exception.__context__, adapter_exceptions.ClientConnectionException):
+            error_msg = str(connection_exception.__context__).strip()
+            error = error_msg[6:] if error_msg.startswith('Error:') else error_msg
+        else:
+            error = 'fatal error during client connection'
+
+        self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {
+            'adapter': self.plugin_name,
+            'client_id': client_id,
+            'error': error
+        }, AuditType.Error)

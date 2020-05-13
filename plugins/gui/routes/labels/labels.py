@@ -84,6 +84,8 @@ class Labels:
             'audit.session.login.template': 'Login {status}',
             'audit.session.logout': 'Logout',
             'audit.session.logout.template': 'Logged out',
+            'audit.session.failure': 'Login Failed',
+            'audit.session.failure.template': 'Login failure attempt by {user_name}',
 
             'audit.settings.users': 'User Management',
             'audit.settings.users.put': 'Add User',
@@ -176,6 +178,10 @@ class Labels:
             'audit.adapters.connections.post.template': 'Edited adapter {adapter} with connection ID {client_id}',
             'audit.adapters.connections.delete': 'Delete Connection',
             'audit.adapters.connections.delete.template': 'Deleted adapter {adapter} with connection ID {client_id}',
+
+            'audit.adapters.failure': 'Connection Failure',
+            'audit.adapters.failure.template':
+                'Connection failure for adapter {adapter} with connection ID {client_id}. Error: {error}',
 
             'audit.enforcements': 'Enforcements',
             'audit.enforcements.put': 'Add Enforcement',

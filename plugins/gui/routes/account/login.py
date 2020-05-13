@@ -24,7 +24,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           GUI_PLUGIN_NAME)
-from axonius.logging.audit_helper import AuditCategory, AuditAction
+from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
@@ -113,13 +113,13 @@ class Login:
         if user_from_db is None:
             logger.info(f'Unknown user {user_name} tried logging in')
             self.send_external_info_log(f'Unknown user {user_name} tried logging in')
-            self._log_activity_login_failure()
+            self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
 
         if not bcrypt.verify(password, user_from_db['password']):
             self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
-            self._log_activity_login_failure()
+            self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
         role = self._roles_collection.find_one({'_id': user_from_db.get('role_id')})
         if request and request.referrer and 'localhost' not in request.referrer \
@@ -137,13 +137,15 @@ class Login:
         self._add_expiration_timeout_cookie(response)
         return response
 
-    def _log_activity_login_failure(self):
+    def _log_activity_login_failure(self, user_name):
         if request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
                                              or 'diag-l.axonius.com' in request.referrer):
             return
-        self.log_activity(AuditCategory.UserSession, AuditAction.Login, {
-            'status': 'failure'
-        })
+
+        self.log_activity_default(AuditCategory.UserSession.value,
+                                  AuditAction.Failure.value,
+                                  {'user_name': user_name},
+                                  AuditType.Info)
 
     def _log_activity_login(self):
         self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {
@@ -238,8 +240,6 @@ class Login:
                 oidc.claims.get('family_name', ''),
                 oidc.claims['email']
             )
-        else:
-            self._log_activity_login_failure()
 
         redirect_response = redirect('/', code=302)
         self._add_expiration_timeout_cookie(redirect_response)
@@ -288,8 +288,9 @@ class Login:
             if not ldap_login['enabled']:
                 return return_error('LDAP login is disabled', 400)
 
-            def _log_return_error(message):
-                self._log_activity_login_failure()
+            def _log_return_error(message, login_user=None):
+                if login_user:
+                    self._log_activity_login_failure(login_user)
                 return return_error(message)
 
             try:
@@ -307,14 +308,14 @@ class Login:
                 return _log_return_error('Failed logging into AD: Connection to DC failed.')
             except LdapException:
                 logger.exception('Failed login')
-                return _log_return_error('Failed logging into AD')
+                return _log_return_error('Failed logging into AD', user_name)
             except Exception:
                 logger.exception('Unexpected exception')
                 return _log_return_error('Failed logging into AD')
 
             result = conn.get_user(user_name)
             if not result:
-                return _log_return_error('Failed login')
+                return _log_return_error('Failed login', user_name)
             user, groups, groups_dn = result
 
             needed_group = ldap_login['group_cn']
@@ -482,6 +483,7 @@ class Login:
 
                 if not name_id:
                     logger.info(f'SAML Login failure, attributes are {attributes}')
+                    self._log_activity_login_failure(str(email) if email else str(name_id))
                     raise ValueError(f'Error! SAML identity provider did not respond with attribute "name"')
 
                 # Some of these attributes can come back as a list. If that is the case we just make things look nicer
