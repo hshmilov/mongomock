@@ -386,9 +386,10 @@ class PluginBase(Configurable, Feature, ABC):
         self.irequests = IRequests()
         run_memory_tracing()
 
+        # https://jira.mongodb.org/browse/PYTHON-986
         self.mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
                                         username=self.db_user, password=self.db_password,
-                                        localthresholdms=1000)
+                                        localthresholdms=1000, connect=False)
 
         PluginBase.Instance = self
         super().__init__(*args, **kwargs)
