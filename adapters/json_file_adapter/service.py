@@ -38,9 +38,8 @@ class JsonFileAdapter(AdapterBase):
         for k, v in dct.items():
             if k in TIME_BASE_FIELD:
                 dct[k] = parse_date(v)
-                return dct
-        else:
-            return dct
+                continue
+        return dct
 
     class MyDeviceAdapter(DeviceAdapter):
 
