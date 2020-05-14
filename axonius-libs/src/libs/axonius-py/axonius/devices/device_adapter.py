@@ -793,7 +793,10 @@ class DeviceAdapter(SmartJsonClass):
     def generate_direct_connected_devices(self):
         try:
             for connected_device in self.connected_devices:
-                if connected_device.connection_type == ConnectionType.Direct.name:
+                if (hasattr(connected_device, 'connection_type') and
+                        connected_device.connection_type == ConnectionType.Direct.name) or \
+                        (isinstance(connected_device, 'dict') and 'connection_type' in connected_device and
+                         connected_device['connection_type'] == ConnectionType.Direct.name):
                     self.direct_connected_devices.append(connected_device)
         except Exception:
             logger.exception('Failed to generate direct connected devices')
