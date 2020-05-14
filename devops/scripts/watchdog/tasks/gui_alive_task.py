@@ -20,7 +20,7 @@ REBOOTING_MSG = 'rebooting_now'
 
 INTERNAL_PORT = 4433  # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
 
-GUI_IS_DEAD_THRESH = 60 * 30    # 30 minutes
+GUI_IS_DEAD_THRESH = 60 * 30  # 30 minutes
 
 
 class GuiAliveTask(WatchdogTask):
@@ -29,8 +29,7 @@ class GuiAliveTask(WatchdogTask):
         super().__init__()
         self.last_time_gui_alive = None
         self.mark_gui_alive()
-        environment = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
-        self.docker_client = docker.from_env(environment=environment)
+        self.docker_client = docker.from_env()
 
     def now(self):
         return time.time()
@@ -129,7 +128,7 @@ class GuiAliveTask(WatchdogTask):
                     self.report_error(f'Failed during the restore procedure - restarting: {e}')
                     self.report_metric(metric_name=REBOOTING_MSG, metric_value=f'{e}')
                     time.sleep(30)
-                    os.system('reboot')
+                    os.system('reboot --force')
                     self.report_error(f'Reboot command sent')
                 finally:
                     if GUIALIVE_WATCHDOG_IN_PROGRESS.is_file():
