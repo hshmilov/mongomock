@@ -52,32 +52,57 @@ CHMOD_FILES = [
 ]
 
 
+def check_lock_file(path):
+    """
+    checks if lock file exists and not older than LOCK_TOO_OLD_THRESH. If it is, it deletes it.
+    :return:
+    """
+    if not path.is_file():
+        return False
+    if time.time() - path.stat().st_ctime > 5 * 60 * 60:
+        path.unlink()
+        return False
+    return True
+
+
 def main():
+    with AutoOutputFlush():
+        success = False
+        try:
+            if check_lock_file(PYTHON_INSTALLER_LOCK_FILE):
+                print(f'Install is already in progress')
+            else:
+                PYTHON_INSTALLER_LOCK_FILE.touch()
+                success = start_install_flow()
+        finally:
+            status = 'success' if success else 'failure'
+            print(f'Upgrader completed - {status}')
+
+            if PYTHON_INSTALLER_LOCK_FILE.is_file():
+                PYTHON_INSTALLER_LOCK_FILE.unlink()
+
+
+def start_install_flow():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
     parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
     parser.add_argument('--do-not-verify-storage', action='store_true', default=False, help='Skip storage verification')
-
     try:
         args = parser.parse_args()
     except AttributeError:
         print(parser.usage())
-        sys.exit(1)
-
+        return True
     start = time.time()
     no_research = args.no_research
     do_not_verify_storage = args.do_not_verify_storage
-
     if not do_not_verify_storage:
         verify_storage_requirements()
-
     if os.geteuid() != 0:
-        # we are not root
         print(f'Please run as root!')
-        return
-
+        return False
     install(args.first_time, no_research)
     print_state(f'Done, took {int(time.time() - start)} seconds')
+    return True
 
 
 def push_old_instances_settings():
@@ -141,10 +166,11 @@ def install_requirements():
 def validate_old_state():
     if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
         name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
-        print(f'{name} folder wasn\'t found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)')
-        sys.exit(-1)
-    else:
-        chown_folder(AXONIUS_DEPLOYMENT_PATH)
+        msg = f'{name} folder wasn\'t found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)'
+        print(msg)
+        raise Exception(msg)
+
+    chown_folder(AXONIUS_DEPLOYMENT_PATH)
 
     if not os.path.exists(WEAVE_PATH):
         name = os.path.basename(WEAVE_PATH)
@@ -195,18 +221,6 @@ def install(first_time, no_research):
 
 
 if __name__ == '__main__':
+    # important note: This is not called during the install phase. The actual entrypoint is the function main
     with AutoOutputFlush():
-        SUCCESS = False
-        try:
-            if PYTHON_INSTALLER_LOCK_FILE.is_file():
-                print(f'Install is already in progress')
-            else:
-                PYTHON_INSTALLER_LOCK_FILE.touch()
-                main()
-                SUCCESS = True
-        finally:
-            STATUS = 'success' if SUCCESS else 'failure'
-            print(f'Upgrader completed - {STATUS}')
-
-            if PYTHON_INSTALLER_LOCK_FILE.is_file():
-                PYTHON_INSTALLER_LOCK_FILE.unlink()
+        main()
