@@ -30,23 +30,34 @@ def main():
             print(f'adding creds on {adapter.plugin_name}')
 
             if adapter_data_from_db['status'] == 'down':
+                # pinging core to start it.
+                # TODO : replace to blocking false after plugin_service fix. After pytest fix is approved.
                 system.core.trigger(f'start:{adapter_data_from_db[PLUGIN_UNIQUE_NAME]}', blocking=True)
 
             if len(adapter.clients()) > 0:
                 print('A Client Already exists')
+                return
+
             try:
                 test_adapter_module = import_module(f'parallel_tests.test_{name}')
             except ModuleNotFoundError as ex:
                 print(f'Could not find test service for {name}')
                 return
+            test_adapter_service = None
             for atter, value in test_adapter_module.__dict__.items():
                 if hasattr(value, 'some_client_details'):
                     test_adapter_service = value()
-            if isinstance(test_adapter_service.some_client_details, list):
-                for client in test_adapter_service.some_client_details:
-                    adapter.add_client(client[0])
-            else:
-                adapter.add_client(test_adapter_service.some_client_details)
+
+            if test_adapter_service:
+                # If we actually have creds to put we wait for it to be up.
+                adapter.wait_for_service()
+
+                if isinstance(test_adapter_service.some_client_details, list):
+                    for client in test_adapter_service.some_client_details:
+                        adapter.add_client(client[0])
+                else:
+                    adapter.add_client(test_adapter_service.some_client_details)
+
         except Exception as e:
             print(f'Error: {e} on {name}')
 
