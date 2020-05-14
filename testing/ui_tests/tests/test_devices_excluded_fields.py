@@ -1,20 +1,20 @@
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
-from services.adapters.esx_service import EsxService
+from services.adapters.json_file_service import JsonFileService
 from test_credentials.test_gui_credentials import AXONIUS_USER, AXONIUS_RO_USER
-from test_credentials.test_esx_credentials import client_details as esx_client_details
-from ui_tests.tests.test_adapters import ESX_NAME, ESX_PLUGIN_NAME
+from test_credentials.test_esx_credentials import esx_json_file_mock_devices
+from ui_tests.tests.test_adapters import JSON_NAME
+from ui_tests.tests.ui_consts import JSON_ADAPTER_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 CORRELATION_REASONS_TITLE = 'Correlation Reasons'
 
 
-@pytest.mark.skip('not using mock, waiting improperly for plugins')
 class TestDevicesExcludedFields(TestBase):
     def test_correlation_reasons_not_shown_to_user(self):
-        with EsxService().contextmanager(take_ownership=True):
-            self.adapters_page.add_server(ad_client=esx_client_details[0][0], adapter_name=ESX_NAME)
+        with JsonFileService().contextmanager(take_ownership=True):
+            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
             self.base_page.run_discovery()
 
             self.devices_page.switch_to_page()
@@ -58,6 +58,5 @@ class TestDevicesExcludedFields(TestBase):
             self.devices_page.click_general_tab()
             # Only _axonius user should be able to see that field
             assert self.devices_page.find_element_by_text(CORRELATION_REASONS_TITLE)
-
-        self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
-        self.wait_for_adapter_down(ESX_PLUGIN_NAME)
+            self.adapters_page.clean_adapter_servers(JSON_NAME, delete_associated_entities=True)
+        self.wait_for_adapter_down(JSON_ADAPTER_PLUGIN_NAME)
