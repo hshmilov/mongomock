@@ -137,6 +137,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_under_40(self):
         if self.db_schema_version < 31:
             self._update_schema_version_31()
+        if self.db_schema_version < 32:
+            self._update_schema_version_32()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1145,7 +1147,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
             'config_name': FEATURE_FLAGS_CONFIG
         }, {
-            'config.query_timeline_range': True
+            '$set': {'config.query_timeline_range': True}
         })
 
     def _update_default_locked_actions(self, new_actions):
