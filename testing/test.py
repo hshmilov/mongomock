@@ -531,20 +531,18 @@ def main():
                     for test_module in parallel_tests:
                         print(test_module)
 
-                priority_tests_parallel = ['test_code.py', 'test_ad.py', 'test_sentinelone.py',
+                priority_tests_parallel = ['test_code.py', 'test_ad.py', 'test_carbonblack_defense.py',
+                                           'test_sentinelone.py', 'test_aws.py',
                                            'test_service_now.py', 'test_cybereason.py',
                                            'test_tenable_security_center.py',
-                                           'test_sysaid.py', 'test_tenable_io.py', 'test_nessus.py', 'test_medigate.py',
-                                           'test_spacewalk.py', 'test_logicmonitor.py', 'test_ansible_tower.py',
-                                           'test_symantec_ccs.py', 'test_cisco_meraki.py', 'test_netbrain.py',
-                                           'test_mobileiron.py', 'test_bigid.py', 'test_observeit.py',
-                                           'test_absolute.py', 'test_carbonblack_defense.py', 'test_aws.py',
-                                           'test_prisma_cloud.py'
+                                           'test_tenable_io.py',
+                                           'test_ansible_tower.py',
+                                           'test_symantec_ccs.py', 'test_cisco_meraki.py',
                                            ]
 
                 for t in reversed(priority_tests_parallel):
                     if t not in parallel_tests:
-                        print(f'Expected to find test {t}')
+                        print(f'Warning: Expected to find test {t}')
                     else:
                         parallel_tests.remove(t)
                         parallel_tests.insert(0, t)
@@ -568,17 +566,6 @@ def main():
 
             def get_ui_tests_jobs():
                 ui_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['ui']))
-
-                slow_modules = ['test_instances_after_join.py',
-                                'test_instances_before_join.py',
-                                'test_instances_upgrade.py']
-                for slow in slow_modules[:]:
-                    if slow in ui_tests:
-                        ui_tests.remove(slow)
-                    else:
-                        print(f'{slow} is not found in slow_modules!')
-                        slow_modules.remove(slow)
-                ui_tests = slow_modules + ui_tests
 
                 with TC.block('Collected ui tests modules'):
                     for test_module in ui_tests:
