@@ -8,6 +8,7 @@
     size="xl"
     :arrow="false"
     @activated="$emit('activated')"
+    :no-border-radius="true"
   >
     <XButton
       id="query_wizard"

@@ -23,6 +23,7 @@
             arrow: {default: true},
             readOnly: {default: false},
             overflow: {default: true},
+            noBorderRadius: {default: false},
         },
         computed: {
             sizeClass() {
@@ -74,13 +75,17 @@
                 styles[this.overflow ? 'min-width' : 'max-width'] = `${boundingRect.width}px`;
                 const dropdownInputBottom = boundingRect.top + this.$el.offsetHeight;
 
+                  if (this.noBorderRadius) {
+                    styles['border-radius'] = '0px';
+                  }
+
                 if (!this.alignAgile){
                     styles['max-height'] = `calc(100% - ${dropdownInputBottom}px)`;
                     styles.overflow = 'auto';
                     this.contentStyle = styles;
                     return;
                 }
-                
+
                 const contentBottomPosition = dropdownInputBottom + this.$refs.content.offsetHeight;
                 let top;
                 if (contentBottomPosition > window.innerHeight) {
