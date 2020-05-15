@@ -22,6 +22,7 @@ class TestReportsPermissions(PermissionsTestBase):
     REPORT_SUBJECT = 'axonius read only report subject'
 
     def test_report_permissions(self):
+        print('starting test_report_permissions')
         self.reports_page.switch_to_page()
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
@@ -79,6 +80,7 @@ class TestReportsPermissions(PermissionsTestBase):
         self._test_reports_with_delete_permission()
 
     def test_reports_without_dashboard_permissions(self):
+        print('starting test_reports_without_dashboard_permissions')
         self.reports_page.switch_to_page()
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
@@ -111,6 +113,7 @@ class TestReportsPermissions(PermissionsTestBase):
         assert self.reports_page.is_include_dashboard()
 
     def test_reports_entities_permissions(self):
+        print('starting test_reports_entities_permissions')
         self.reports_page.switch_to_page()
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
@@ -235,6 +238,7 @@ class TestReportsPermissions(PermissionsTestBase):
         assert self.reports_page.is_save_button_disabled()
 
     def test_new_read_only_user_for_reports(self):
+        print('starting test_new_read_only_user_for_reports')
         smtp_service = SmtpService()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
