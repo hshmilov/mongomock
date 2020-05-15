@@ -215,7 +215,7 @@ class TestAdapters(TestBase):
             query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 1)'
             self.devices_page.run_filter_query(query)
             assert self.devices_page.count_entities() > 0
-            query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 10)'
+            query = '(adapters_data.carbonblack_defense_adapter.adapter_count > 50)'
             self.devices_page.run_filter_query(query)
             assert self.devices_page.count_entities() == 0
             self.adapters_page.switch_to_page()
