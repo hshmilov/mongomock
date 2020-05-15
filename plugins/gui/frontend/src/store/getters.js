@@ -153,11 +153,12 @@ export const configuredAdaptersFields = (state) => (entity, customFieldsToInclud
   // entity can be 'devices' either 'users'
   const entityState = state[entity];
 
-  const genericFields = entityState.fields.data.generic.map((f) => f.name);
-  const adaptersSpecificFields = entityState.fields.data.specific;
+  const genericFields = _get(entityState, 'fields.data.generic', [])
+    .map((f) => f.name);
+  const adaptersSpecificFields = _get(entityState, 'fields.data.specific', {});
 
-  const configuredAdaptesSchemas = Object.values(adaptersSpecificFields);
-  const specificFields = configuredAdaptesSchemas.reduce((fields, currentAdaptersFields) => [
+  const configuredAdaptersSchemas = Object.values(adaptersSpecificFields);
+  const specificFields = configuredAdaptersSchemas.reduce((fields, currentAdaptersFields) => [
     ...fields,
     ...currentAdaptersFields.map((field) => field.name),
   ], Object.keys(adaptersSpecificFields));

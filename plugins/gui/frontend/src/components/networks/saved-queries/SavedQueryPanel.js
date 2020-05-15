@@ -1,6 +1,6 @@
 import { required, maxLength } from 'vuelidate/lib/validators';
 
-import { mapGetters } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import _get from 'lodash/get';
 import _isNull from 'lodash/isNull';
 import _stubTrue from 'lodash/stubTrue';
@@ -14,6 +14,7 @@ import xSelectBox from '@axons/inputs/select/SelectBox.vue';
 import xSidePanel from '@networks/side-panel/SidePanel.vue';
 import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import xCombobox from '@axons/inputs/combobox/index.vue';
+import { LAZY_FETCH_DATA_FIELDS } from '@store/actions';
 
 import { mdiPencil, mdiDelete } from '@mdi/js';
 
@@ -167,6 +168,9 @@ export default {
     },
   },
   methods: {
+    ...mapActions({
+      fetchDataFields: LAZY_FETCH_DATA_FIELDS,
+    }),
     saveChanges() {
       // validate on submission
       this.$v.$touch();
@@ -393,6 +397,7 @@ export default {
   },
   created() {
     this.fetchQueriesNames();
+    this.fetchDataFields({ module: this.namespace });
   },
   render() {
     // renderExpression is a function that will return the expression markup
