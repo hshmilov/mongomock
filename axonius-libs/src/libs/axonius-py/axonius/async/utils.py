@@ -98,7 +98,7 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
         except ClientConnectorError as e:
             if not retry_on_error:
                 raise e
-            logger.warning(f'Got error on http request, retry: {retries}')
+            logger.warning(f'Got error on http request, retry: {retries} - {str(e)}')
             if retries == MAX_RETRIES:
                 logger.error('Max retries exceeded for async request')
                 raise e

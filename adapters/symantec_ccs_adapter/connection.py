@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import List
 
 import funcy
 
@@ -36,7 +37,7 @@ class SymantecCcsConnection(RESTConnection):
         self._token = response['access_token']
         self._session_headers['Authorization'] = f'Bearer {self._token}'
         self._last_refresh = datetime.datetime.now()
-        self._expires_in = int(response['expires_in']) - 30
+        self._expires_in = int(int(response['expires_in']) / 2)
 
     def _connect(self):
         if not self._username or not self._password:
@@ -87,12 +88,44 @@ class SymantecCcsConnection(RESTConnection):
                 logger.exception(f'Problem with page {page}')
                 break
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ, too-many-nested-blocks
+    def get_device_list(self, evaluation_checks: List[str] = None):
         self._refresh_token()
+        total_devices = 0
         for device_ids in funcy.chunks(ASYNC_CHUNKS, self._get_device_ids()):
+            total_devices += ASYNC_CHUNKS
+            if total_devices % (ASYNC_CHUNKS * 5) == 0:
+                logger.info(f'Got {total_devices} by now')
             try:
                 async_requests = [{'name': f'Assets/{device_id}'} for device_id in device_ids]
-                yield from self._async_get_only_good_response(async_requests, chunks=ASYNC_CHUNKS)
+                devices = {
+                    device['ID']: device
+                    for device in self._async_get_only_good_response(async_requests, chunks=ASYNC_CHUNKS)
+                }
+                self._refresh_token()
+                async_requests = []
+                for device_id in devices.keys():
+                    for check in (evaluation_checks or []):
+                        async_requests.append(
+                            {
+                                'name': 'Results',
+                                'body_params': {'AssetID': device_id, 'StandardID': check}
+                            }
+                        )
+
+                for async_request, check_response in zip(async_requests, self._async_post(async_requests)):
+                    if self._is_async_response_good(check_response):
+                        device_id = async_request['body_params']['AssetID']
+                        standard_id = async_request['body_params']['StandardID']
+
+                        if 'standards' not in devices[device_id]:
+                            devices[device_id]['standards'] = {}
+                        devices[device_id]['standards'][standard_id] = check_response
+                    else:
+                        logger.debug(f'Got a bad async response: {check_response}')
+
+                yield from devices.values()
+
             except Exception:
                 logger.exception(f'Problem getting data for {str(device_ids)}')
             finally:

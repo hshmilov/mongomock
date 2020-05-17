@@ -1,9 +1,13 @@
+import datetime
 import logging
+from typing import Optional, List
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.fields import Field
+from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import is_domain_valid, parse_bool_from_raw, float_or_none, int_or_none
 from axonius.clients.rest.connection import RESTException
@@ -15,8 +19,32 @@ from symantec_ccs_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class SyamntecCcsStandardCheck(SmartJsonClass):
+    access_complexity = Field(str, 'Access Complexity')
+    access_vector = Field(str, 'Access Vector')
+    authentication = Field(str, 'Authentication')
+    availability = Field(str, 'Availability')
+    check_name = Field(str, 'Check Name')
+    check_status = Field(str, 'Check Status')
+    check_id = Field(str, 'Check ID')
+    confidentiality = Field(str, 'Confidentiality')
+    integrity = Field(str, 'Integrity')
+    risk = Field(str, 'Risk')
+
+
+class SymantecCcsStandard(SmartJsonClass):
+    stanard_id = Field(str, 'Standard ID')
+    standard_name = Field(str, 'Standard Name')
+    data_collected_on_date = Field(datetime.datetime, 'Data collected on date')
+    checks_to_be_manually_reviewed = ListField(SyamntecCcsStandardCheck, 'Checks to be manually reviewed')
+    exempted_checks = ListField(SyamntecCcsStandardCheck, 'Exempted Checks')
+    failed_checks = ListField(SyamntecCcsStandardCheck, 'Failed Checks')
+    not_applicable_checks = ListField(SyamntecCcsStandardCheck, 'Not Applicable Checks')
+    passed_checks = ListField(SyamntecCcsStandardCheck, 'Passed Checks')
+
+
 # pylint: disable=too-many-statements, too-many-branches
-class SymantecCcsAdapter(AdapterBase):
+class SymantecCcsAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Device Type')
@@ -46,6 +74,7 @@ class SymantecCcsAdapter(AdapterBase):
         asset_iis_version = Field(str, 'IIS Version')
         asset_vmware_vcenter_server = Field(str, 'VMWare vCenter Server')
         asset_apache_tomcat_server = Field(str, 'Apache Tomcat Server')
+        ccs_standards = ListField(SymantecCcsStandard, 'Evaluation Results')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -79,8 +108,7 @@ class SymantecCcsAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -90,7 +118,7 @@ class SymantecCcsAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(self._standard_ids)
 
     @staticmethod
     def _clients_schema():
@@ -137,8 +165,7 @@ class SymantecCcsAdapter(AdapterBase):
             'type': 'array'
         }
 
-    @staticmethod
-    def _create_device(device_raw, device: MyDeviceAdapter):
+    def _create_device(self, device_raw, device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('ID')
             if device_id is None:
@@ -280,11 +307,73 @@ class SymantecCcsAdapter(AdapterBase):
                 device_raw.get('symc-csm-AssetSystem-Asset-AssetBase-MaxRiskScores')
             )
 
+            try:
+                for standard_id, standard_raw in (device_raw.get('standards') or {}).items():
+                    standard_raw = standard_raw.get('RawEvaluationResult')
+                    if not standard_raw:
+                        continue
+
+                    device.ccs_standards.append(
+                        SymantecCcsStandard(
+                            stanard_id=standard_id,
+                            standard_name=standard_raw.get('Standard Name'),
+                            data_collected_on_date=parse_date(
+                                (standard_raw.get('Compliance Statistics') or {}).get('Data collected on date')
+                            ),
+                            checks_to_be_manually_reviewed=self._parse_checks(
+                                standard_raw.get('Checks to be manually reviewed')
+                            ),
+                            exempted_checks=self._parse_checks(
+                                standard_raw.get('Exempted Checks')
+                            ),
+                            failed_checks=self._parse_checks(
+                                standard_raw.get('Failed Checks')
+                            ),
+                            not_applicable_checks=self._parse_checks(
+                                standard_raw.get('NotApplicable Checks')
+                            ),
+                            passed_checks=self._parse_checks(
+                                standard_raw.get('Passed Checks')
+                            ),
+                        )
+                    )
+
+            except Exception:
+                logger.exception(f'Could not parse evaluation results')
+
+            device_raw.pop('standards', None)
             device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching SymantecCcs Device for {device_raw}')
             return None
+
+    def _parse_checks(self, checks_list: list) -> Optional[List[SyamntecCcsStandardCheck]]:
+        try:
+            if not checks_list or not isinstance(checks_list, list):
+                return None
+            final_checks = [self._parse_check(check) for check in checks_list]
+            return [check for check in final_checks if check]
+        except Exception:
+            logger.exception(f'Problem parsing standard rules')
+
+    @staticmethod
+    def _parse_check(check_dict: dict) -> Optional[SyamntecCcsStandardCheck]:
+        try:
+            return SyamntecCcsStandardCheck(
+                access_complexity=check_dict.get('AccessComplexity'),
+                access_vector=check_dict.get('AccessVector'),
+                authentication=check_dict.get('Authentication'),
+                availability=check_dict.get('Availability'),
+                check_name=check_dict.get('Check name'),
+                check_status=check_dict.get('Check status'),
+                check_id=check_dict.get('CheckID'),
+                confidentiality=check_dict.get('Confidentiality'),
+                integrity=check_dict.get('Integrity'),
+                risk=check_dict.get('Risk')
+            )
+        except Exception:
+            logger.exception(f'Problem parsing standard {check_dict}')
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -295,3 +384,30 @@ class SymantecCcsAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        items = [
+            {
+                'name': 'standard_ids',
+                'title': 'Evaluation standard ids to fetch information from',
+                'type': 'string'
+            }
+        ]
+
+        return {
+            'items': items,
+            'required': ['standard_ids'],
+            'pretty_name': 'Symantec CCS Configuration',
+            'type': 'array',
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'standard_ids': ''
+        }
+
+    def _on_config_update(self, config):
+        sids = config.get('standard_ids')
+        self._standard_ids = [sid.strip() for sid in sids.split(',')] if sids else None
