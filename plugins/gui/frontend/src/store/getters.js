@@ -66,9 +66,12 @@ export const getModuleSchema = (state) => (module, objectView = false, filterPlu
 
 export const GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL = 'GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL';
 export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView = false, filterPlugins = false) => {
-  const fields = _get(state[module], 'fields.data', {});
-  return getModuleSchemaFields(fields.specific, [CONNECTION_LABEL_SCHEMA,
-    ...fields.generic], fields.schema, objectView, filterPlugins);
+  const generic = _get(state[module], 'fields.data.generic', []);
+  const specific = _get(state[module], 'fields.data.specific', []);
+  const schema = _get(state[module], 'fields.data.schema', {});
+
+  return getModuleSchemaFields(specific, [CONNECTION_LABEL_SCHEMA,
+    ...generic], schema, objectView, filterPlugins);
 };
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
