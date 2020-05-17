@@ -5,7 +5,6 @@ from axonius.utils.parsing import normalize_adapter_device, NORMALIZED_HOSTNAME,
     ips_do_not_contradict_or_mac_intersection
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from services.adapters.carbonblack_defense_service import CarbonblackDefenseService
-from services.adapters.json_service import JsonService
 from services.adapters.csv_service import CsvService
 import test_credentials.json_file_credentials
 from test_credentials.test_carbonblack_defense_credentials import client_details as carbonblack_defence_client_details
@@ -42,99 +41,91 @@ LAST_SEEN_THRESHOLD_HOURS = '21600'
 class TestAdapters(TestBase):
     # Sometimes upload file to CSV adapter does not work
     def test_upload_csv_file(self):
-        try:
-            with CsvService().contextmanager(take_ownership=True):
-                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-                self.adapters_page.wait_for_data_collection_toaster_start()
-                self.adapters_page.wait_for_data_collection_toaster_absent()
-                self.base_page.run_discovery()
-                self.devices_page.switch_to_page()
-                self.devices_page.fill_filter(self.adapters_page.CSV_ADAPTER_QUERY)
-                self.devices_page.enter_search()
-                self.devices_page.wait_for_table_to_load()
-                assert self.devices_page.count_entities() > 0
-                self.adapters_page.switch_to_page()
-                self.adapters_page.clean_adapter_servers(CSV_NAME, True)
-        finally:
+        with CsvService().contextmanager(take_ownership=True):
+            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
+            self.adapters_page.wait_for_data_collection_toaster_start()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+            self.devices_page.fill_filter(self.adapters_page.CSV_ADAPTER_QUERY)
+            self.devices_page.enter_search()
+            self.devices_page.wait_for_table_to_load()
+            assert self.devices_page.count_entities() > 0
+            self.adapters_page.switch_to_page()
             self.adapters_page.clean_adapter_servers(CSV_NAME)
-            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
     def test_json_csv_correlation(self):
-        json_adapter = JsonService()
         csv_adapter = CsvService()
-        with json_adapter.contextmanager(take_ownership=True):
-            with csv_adapter.contextmanager(take_ownership=True):
+        with csv_adapter.contextmanager(take_ownership=True):
 
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(CSV_NAME)
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(CSV_NAME)
 
-                mac_address = test_credentials.json_file_credentials.DEVICE_MAC
-                ip_address = test_credentials.json_file_credentials.DEVICE_FIRST_IP
-                hostname = test_credentials.json_file_credentials.DEVICE_FIRST_HOSTNAME
-                client_details = {
-                    'user_id': 'user',
-                    # an array of char
-                    'file_path': FileForCredentialsMock(
-                        'file_path',
-                        ','.join(CSV_FIELDS) +
-                        f'\n{hostname},Serial2,Windows,{mac_address},Office,2020-04-01 02:13:24.485Z, {ip_address}'
-                        '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
-                }
-                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
-                self.adapters_page.wait_for_data_collection_toaster_start()
-                self.adapters_page.wait_for_data_collection_toaster_absent()
+            mac_address = test_credentials.json_file_credentials.DEVICE_MAC
+            ip_address = test_credentials.json_file_credentials.DEVICE_FIRST_IP
+            hostname = test_credentials.json_file_credentials.DEVICE_FIRST_HOSTNAME
+            client_details = {
+                'user_id': 'user',
+                # an array of char
+                'file_path': FileForCredentialsMock(
+                    'file_path',
+                    ','.join(CSV_FIELDS) +
+                    f'\n{hostname},Serial2,Windows,{mac_address},Office,2020-04-01 02:13:24.485Z, {ip_address}'
+                    '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
+            }
+            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
+            self.adapters_page.wait_for_data_collection_toaster_start()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
 
-                self.adapters_page.switch_to_page()
+            self.adapters_page.switch_to_page()
+            # Activate discovery phase
+            self.base_page.run_discovery()
+            print('Finished discovery.')
 
-                print('Raised json and csv.')
+            # Expected result:
+            # 1. There are devices correlated between json file and csv
+            query = '(adapters_data.json_file_adapter.id == ({"$exists":true,"$ne": ""})) and ' \
+                    '(adapters_data.csv_adapter.id == ({"$exists":true,"$ne": ""}))'
+            self.devices_page.switch_to_page()
+            self.devices_page.run_filter_query(query)
+            assert self.devices_page.count_entities() > 0
+            print('Filtered json and csv devices.')
 
-                self.adapters_page.wait_for_adapter(JSON_NAME)
-                # Activate discovery phase
-                self.base_page.run_discovery()
-                print('Finished discovery.')
+            # Take one device that has both adapters
+            # Check if they really have the same hostname or MAC
+            internal_axon_id = self.devices_page.click_row()
+            device = self.axonius_system.get_devices_db().find_one({
+                'internal_axon_id': internal_axon_id
+            })
+            adapters = device['adapters']
+            assert len(adapters) >= 2
+            csv_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == CSV_PLUGIN_NAME), None)
+            json_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == JSON_ADAPTER_PLUGIN_NAME),
+                                            None)
+            print('Got a json and a csv device.')
 
-                # Expected result:
-                # 1. There are devices correlated between json file and csv
-                query = '(adapters_data.json_file_adapter.id == ({"$exists":true,"$ne": ""})) and ' \
-                        '(adapters_data.csv_adapter.id == ({"$exists":true,"$ne": ""}))'
-                self.devices_page.switch_to_page()
-                self.devices_page.run_filter_query(query)
-                assert self.devices_page.count_entities() > 0
-                print('Filtered json and csv devices.')
+            assert csv_adapter_from_device
+            assert json_adapter_from_device
+            normalize_adapter_device(csv_adapter_from_device)
+            normalize_adapter_device(json_adapter_from_device)
 
-                # Take one device that has both adapters
-                # Check if they really have the same hostname or MAC
-                internal_axon_id = self.devices_page.click_row()
-                device = self.axonius_system.get_devices_db().find_one({
-                    'internal_axon_id': internal_axon_id
-                })
-                adapters = device['adapters']
-                assert len(adapters) >= 2
-                csv_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == CSV_PLUGIN_NAME), None)
-                json_adapter_from_device = next((x for x in adapters if x[PLUGIN_NAME] == JSON_ADAPTER_PLUGIN_NAME),
-                                                None)
-                print('Got a json and a csv device.')
+            # either hostname equals
+            hostname_equals = (csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) and
+                               csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) ==
+                               json_adapter_from_device['data'].get(NORMALIZED_HOSTNAME))
 
-                assert csv_adapter_from_device
-                assert json_adapter_from_device
-                normalize_adapter_device(csv_adapter_from_device)
-                normalize_adapter_device(json_adapter_from_device)
+            #  and no ip contradiction
+            mac_equals_ip_no_contradict = ips_do_not_contradict_or_mac_intersection(csv_adapter_from_device,
+                                                                                    json_adapter_from_device)
 
-                # either hostname equals
-                hostname_equals = (csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) and
-                                   csv_adapter_from_device['data'].get(NORMALIZED_HOSTNAME) ==
-                                   json_adapter_from_device['data'].get(NORMALIZED_HOSTNAME))
+            print('Got hostname or mac ip contradiction.')
+            assert hostname_equals or mac_equals_ip_no_contradict
 
-                #  and no ip contradiction
-                mac_equals_ip_no_contradict = ips_do_not_contradict_or_mac_intersection(csv_adapter_from_device,
-                                                                                        json_adapter_from_device)
-
-                print('Got hostname or mac ip contradiction.')
-                assert hostname_equals or mac_equals_ip_no_contradict
-
-                self.adapters_page.switch_to_page()
-                self.adapters_page.clean_adapter_servers(CSV_NAME)
-                print('Cleaned csv clients.')
+            self.adapters_page.switch_to_page()
+            self.adapters_page.clean_adapter_servers(CSV_NAME)
+            print('Cleaned csv clients.')
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
     def test_adapter_clients_label(self):
         """
@@ -171,7 +162,7 @@ class TestAdapters(TestBase):
             self.adapters_page.click_save()
             self.check_for_connection_labels()
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
-            self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
     def check_for_connection_labels(self):
         self.base_page.run_discovery()
