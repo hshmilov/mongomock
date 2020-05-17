@@ -30,6 +30,7 @@
       <ACheckbox
         id="create_panel_copy"
         :checked="copy"
+        :disabled="isPersonalSpaceSelected"
         @change="onChangeCopy"
       >
         Create a copy
@@ -55,6 +56,7 @@
 
 <script>
 import { mapMutations, mapActions, mapState } from 'vuex';
+import _find from 'lodash/find';
 import { Modal, Checkbox, Select } from 'ant-design-vue';
 import XButton from '../../axons/inputs/Button.vue';
 import { MOVE_OR_COPY_TOGGLE, MOVE_PANEL, COPY_PANEL } from '../../../store/modules/dashboard';
@@ -82,7 +84,16 @@ export default {
       currentSpace(state) {
         return state.dashboard.currentSpace;
       },
+      personalSpace(state) {
+        return _find(state.dashboard.spaces.data, (space) => space.type === 'personal');
+      },
+      currentPanel(state) {
+        return state.dashboard.currentPanel;
+      },
     }),
+    isPersonalSpaceSelected() {
+      return this.space === this.personalSpace.uuid;
+    },
   },
   mounted() {
     this.space = this.currentSpace;
@@ -100,6 +111,9 @@ export default {
     },
     onChangeSpace(space) {
       this.space = space;
+      if (this.isPersonalSpaceSelected) {
+        this.copy = true;
+      }
     },
     handleApprove() {
       if (this.copy) {

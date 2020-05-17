@@ -125,6 +125,7 @@ class DashboardPage(Page):
 
     TOOLTIP_HEADER_CONTENT_CSS = '.x-tooltip .header-content'
     TOOLTIP_BODY_CONTENT_CSS = '.x-tooltip .body-content'
+    MOVE_OR_COPY_MODAL_ID = 'move_or_copy'
 
     @property
     def root_page_css(self):
@@ -565,7 +566,7 @@ class DashboardPage(Page):
 
     def open_close_card_menu(self, panel):
         panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS).click()
-        time.sleep(0.1)  # wait for menu to open
+        time.sleep(0.5)  # wait for menu to open or close
 
     def close_card_menu(self, panel):
         el = panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS)
@@ -582,8 +583,21 @@ class DashboardPage(Page):
         dropdown = self.driver.find_element_by_css_selector('.ant-select-dropdown')
         self.find_element_by_text(text_option, element=dropdown).click()
 
+    def find_move_or_copy_checkbox(self):
+        return self.driver.find_element_by_id('create_panel_copy')
+
     def toggle_move_or_copy_checkbox(self):
-        return self.driver.find_element_by_id('create_panel_copy').click()
+        return self.find_move_or_copy_checkbox().click()
+
+    def is_move_or_copy_checkbox_disabled(self):
+        return self.is_element_disabled(self.find_move_or_copy_checkbox())
+
+    def close_move_or_copy_dialog(self):
+        self.get_cancel_button(self.driver.find_element_by_id(self.MOVE_OR_COPY_MODAL_ID)).click()
+        self.wait_for_move_or_copy_dialog_to_be_absent()
+
+    def wait_for_move_or_copy_dialog_to_be_absent(self):
+        self.wait_for_element_absent_by_id(self.MOVE_OR_COPY_MODAL_ID)
 
     def find_search_insights(self):
         return self.driver.find_element_by_css_selector(self.SEARCH_INSIGHTS_CSS)

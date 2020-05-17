@@ -67,7 +67,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 31:
+        if self.db_schema_version != 32:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -1136,9 +1136,28 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         print('Upgrade to schema 32')
         try:
             self._set_query_timeline_feature_flag()
+            self._fix_space_id_in_panels()
             self.db_schema_version = 32
         except Exception as e:
             print(f'Exception while upgrading gui db to version 32. Details: {e}')
+
+    def _fix_space_id_in_panels(self):
+        dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+        dashboard_collection = self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)
+        panels = dashboard_collection.find({})
+        panels_map = {str(panel.get('_id')): panel for panel in panels}
+        for space in dashboard_spaces_collection.find(filter=filter_archived()):
+            panels_order = space.get('panels_order')
+            space_id = space.get('_id')
+            for panel_id in panels_order:
+                if str(panels_map[panel_id].get('space')) != space_id:
+                    dashboard_collection.update_one({
+                        '_id': ObjectId(panel_id)
+                    }, {
+                        '$set': {
+                            'space': space_id
+                        }
+                    })
 
     def _set_query_timeline_feature_flag(self):
         """

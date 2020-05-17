@@ -8,7 +8,8 @@ from bson import ObjectId
 from flask import jsonify, make_response, request
 
 from axonius.consts.gui_consts import (FILE_NAME_TIMESTAMP_FORMAT,
-                                       LAST_UPDATED_FIELD, ChartViews)
+                                       LAST_UPDATED_FIELD, ChartViews,
+                                       DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.entities import EntityType
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, historical_range,
@@ -260,13 +261,17 @@ class Charts:
         """
         :param panel_id: The mongo id of the panel to handle
         """
-
         destination_space_id = self.get_request_data_as_object().get('destinationSpace')
 
         chart = self._dashboard_collection.find_one({'_id': ObjectId(panel_id)}, {'name': 1, 'space': 1})
 
         if not chart:
             return return_error(f'No chart by the id {str(panel_id)}', 400)
+        personal_space = self._dashboard_spaces_collection.find_one({'type': DASHBOARD_SPACE_TYPE_PERSONAL},
+                                                                    {'_id': 1})
+        if personal_space.get('_id') == destination_space_id:
+            return return_error(f'Can not move panels to {personal_space.get("name")}',
+                                400)
 
         target_space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(destination_space_id)
@@ -283,6 +288,9 @@ class Charts:
                 'panels_order': str(panel_id)
             }
         })
+
+        self._dashboard_collection.find_one_and_update(
+            {'_id': ObjectId(panel_id)}, {'$set': {'space': ObjectId(destination_space_id)}})
 
         return jsonify({
             SOURCE_SPACE_NAME: source_space.get('name', ''),
