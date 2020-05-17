@@ -88,18 +88,19 @@ class SendCsvToShare(ActionTypeAlert):
             csv_data = io.BytesIO(csv_string.getvalue().encode('utf-8'))
             share_username = self._config.get('csv_share_username')
             share_password = self._config.get('csv_share_password')
-            if not share_password or not share_username:
-                share_password = None
-                share_username = None
-            share_path = self._config.get('csv_share')
-            share_path = share_path[2:]
+            share_path = self._config.get('csv_share')[2:]
             share_path = share_path.replace('\\', '/')
+            if share_username is not None:
+                share_username = share_username.replace('\\', ';')
             if share_username and share_password:
                 share_path = f'{urllib.parse.quote(share_username)}:' \
                              f'{urllib.parse.quote(share_password)}@{share_path}'
-            share_path = 'smb://' + share_path
+            elif share_username:
+                # support guest or password-less smb auth
+                share_path = f'{urllib.parse.quote(share_username)}@{share_path}'
+            final_path = f'smb://{share_path}'
             opener = urllib.request.build_opener(get_smb_handler(use_nbns=self._config.get('use_nbns')))
-            fh = opener.open(share_path, data=csv_data)
+            fh = opener.open(final_path, data=csv_data)
             fh.close()
 
             return AlertActionResult(True, 'Wrote to Share')
