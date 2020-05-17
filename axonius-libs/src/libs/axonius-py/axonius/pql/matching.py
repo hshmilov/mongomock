@@ -29,6 +29,8 @@ from calendar import timegm
 
 from astor.source_repr import split_lines
 
+from axonius.consts.system_consts import MULTI_COMPARE_MAGIC_STRING, COMPARE_MAGIC_STRING
+
 
 def parse_date_custom(str_date: str) -> datetime:
     """
@@ -141,9 +143,65 @@ class Parser(AstHandler):
         if len(compare.comparators) != 1:
             raise ParseError('Invalid number of comparators: {0}'.format(len(compare.comparators)),
                              col_offset=compare.comparators[1].col_offset)
-        return self._operator_map.handle(left=compare.left,
-                                         operator=compare.ops[0],
-                                         right=compare.comparators[0])
+        try:
+            return self._operator_map.handle(left=compare.left,
+                                             operator=compare.ops[0],
+                                             right=compare.comparators[0])
+        except ParseError as err:
+            if err.message.startswith('Unsupported syntax'):
+                return self.handle_field_comparison(compare)
+            raise
+
+    def handle_field_comparison(self, compare: ast.Compare) -> dict:
+        """
+        Gets a compare object, parse its contents to 2 full field names, operators and returns it in an organized
+        structured dict
+        :param compare: _ast.compare object containing the parsed ast data of the query
+        :return: A dict with a specific structure to be processed later
+         """
+        if hasattr(compare.left, 'left'):
+            # Its a date comparision with operator query (<Days)
+            # Example Query: adapter1.last_seen + 1 < adapter2.last_seen
+            main_operator = str(compare.ops[0].__class__).split('.')[-1][:-2]
+            sub_operator = str(compare.left.op.__class__).split('.')[-1][:-2]
+            first_field = self.attribute2str(compare.left.left)
+            second_field = self.attribute2str(compare.comparators[0])
+            final_compare = compare.left.right.n
+            return {MULTI_COMPARE_MAGIC_STRING: {main_operator: final_compare, sub_operator: [first_field, second_field]}}
+        if hasattr(compare.comparators[0], 'left'):
+            # Its a date comparision with operator query (>Days)
+            # Example Query: adapter1.last_seen > adapter2.last_seen + 1
+            main_operator = str(compare.ops[0].__class__).split('.')[-1][:-2]
+            sub_operator = str(compare.comparators[0].op.__class__).split('.')[-1][:-2]
+            first_field = self.attribute2str(compare.left)
+            second_field = self.attribute2str(compare.comparators[0].left)
+            final_compare = compare.comparators[0].right.n
+            return {MULTI_COMPARE_MAGIC_STRING: {main_operator: final_compare, sub_operator: [first_field, second_field]}}
+        # Regular Fields comparison
+        first_field = self.attribute2str(compare.left)
+        second_field = self.attribute2str(compare.comparators[0])
+        operator = str(compare.ops[0].__class__).split('.')[-1][:-2]
+        return {COMPARE_MAGIC_STRING: {operator: [first_field, second_field]}}
+
+    @staticmethod
+    def attribute2str(attr: ast.Attribute) -> str:
+        """
+        Get an Attribute object and returns the full field name (adapter_data.data.blah.blah)
+        Works only for adapter_data Attributes
+        :param attr: Attribute object representing a field
+        :return: The full field name as a string
+        """
+        try:
+            v = [attr.attr]
+        except AttributeError:
+            v = [attr.id]
+        while hasattr(attr, 'value'):
+            if hasattr(attr.value, 'attr'):
+                v.insert(0, attr.value.attr)
+            else:
+                v.insert(0, attr.value.id)
+            attr = attr.value
+        return ".".join(v)
 
 
 class SchemaFreeParser(Parser):

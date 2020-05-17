@@ -37,11 +37,13 @@ class EntitiesPage(Page):
     QUERY_EXPRESSIONS_CSS = '.x-filter .x-expression'
     QUERY_CONDITIONS_CSS = '.x-condition__child'
     QUERY_FIELD_DROPDOWN_CSS = '.x-select.field-select'
+    QUERY_CONDITIONS_OPTIONS_CSS = '.x-select-options'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
     QUERY_DATE_PICKER_CSS = '.x-condition-function .argument .md-datepicker .md-input'
     QUERY_VALUE_COMPONENT_INPUT_CSS = '.x-condition-function .argument input'
     QUERY_VALUE_COMPONENT_CSS = '.x-condition-function .argument'
+    QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS = '.x-condition-function-field-comparison .argument'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     EXPRESSION_INPUT_INT_TRIGGER_CSS = '.x-condition-function .argument .x-select-trigger'
     EXP1_TRIGGER_CSS = '.x-condition-function .argument > .trigger.arrow'
@@ -52,7 +54,7 @@ class EntitiesPage(Page):
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
-    QUERY_NEST_EXPRESSION_CSS = '.x-filter .x-expression .x-button.expression-nest'
+    QUERY_NEST_EXPRESSION_CSS = '.x-expression .expression-nest'
     QUERY_BRACKET_LEFT_CSS = '.expression-bracket-left'
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
@@ -250,13 +252,14 @@ class EntitiesPage(Page):
         time.sleep(0.3)
         self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click()
 
-    def select_query_field(self, text, parent=None, partial_text=True):
+    def select_query_field(self, text, parent=None, partial_text=True, select_num=0):
         self.select_option(self.QUERY_FIELD_DROPDOWN_CSS,
                            self.DROPDOWN_TEXT_BOX_CSS,
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text,
                            parent=parent,
-                           partial_text=partial_text)
+                           partial_text=partial_text,
+                           select_num=select_num)
 
     def get_all_fields_in_field_selection(self):
         self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).click()
@@ -269,12 +272,13 @@ class EntitiesPage(Page):
     def get_query_field(self):
         return self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).text
 
-    def select_query_adapter(self, text, parent=None):
+    def select_query_adapter(self, text, parent=None, select_num=0):
         self.select_option(self.QUERY_ADAPTER_DROPDOWN_CSS,
                            self.DROPDOWN_TEXT_BOX_CSS,
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            text,
-                           parent=parent)
+                           parent=parent,
+                           select_num=select_num)
 
     def open_query_adapters_list(self, parent=None):
         if not parent:
@@ -374,6 +378,9 @@ class EntitiesPage(Page):
 
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS, text, context=parent)
+
+    def fill_field_comparison_query_value(self, text, parent=None):
+        self.fill_text_field_by_css_selector(self.QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS, text, context=parent)
 
     def select_query_value(self, text, parent=None):
         self.select_option(self.QUERY_VALUE_COMPONENT_CSS,
@@ -524,6 +531,12 @@ class EntitiesPage(Page):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           'Asset Entity',
+                                          parent=expression_element)
+
+    def select_context_cmp(self, expression_element):
+        self.select_option_without_search(self.QUERY_CONTEXT_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS,
+                                          'Field Comparison',
                                           parent=expression_element)
 
     def select_asset_entity_adapter(self, expression_element, adapter_title):

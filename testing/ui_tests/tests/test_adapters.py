@@ -1,5 +1,4 @@
 import pytest
-from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import DISTINCT_ADAPTERS_COUNT_FIELD, ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.parsing import normalize_adapter_device, NORMALIZED_HOSTNAME, \
@@ -238,6 +237,7 @@ class TestAdapters(TestBase):
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() > 0
-        with pytest.raises(NoSuchElementException) as exception_info:
+        # Index error means there were no elements found (Changed because of #5320)
+        with pytest.raises(IndexError) as exception_info:
             self.devices_page.select_custom_data_field(ADAPTER_CONNECTIONS_FIELD)
-        assert exception_info.match('Message: no such element:.*')
+        assert exception_info.match('list index out of range')

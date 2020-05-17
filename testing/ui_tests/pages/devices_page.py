@@ -51,6 +51,7 @@ class DevicesPage(EntitiesPage):
     FIELD_PART_OF_DOMAIN = 'Part Of Domain'
     FIELD_TAGS = 'Tags'
     FIELD_ADAPTER_TAGS = 'Adapter Tags'
+    FIELD_ADAPTER_PROPERTIES = 'Adapter Properties'
     FIELD_LAST_SEEN = 'Last Seen'
     FIELD_HOSTNAME_TITLE = 'Host Name'
     FIELD_HOSTNAME_NAME = 'hostname'

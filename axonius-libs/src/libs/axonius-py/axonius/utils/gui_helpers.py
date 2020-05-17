@@ -557,7 +557,7 @@ def get_historized_filter(entities_filter, history_date: datetime):
     return entities_filter
 
 
-def is_adapter_count_query(query):
+def is_where_count_query(query):
     return '\'$where\': ' in str(query)
 
 
@@ -574,15 +574,15 @@ def get_entities_count(
     processed_filter = entities_filter
     if is_date_filter_required:
         processed_filter = get_historized_filter(entities_filter, history_date)
-    is_adapter_count = is_adapter_count_query(processed_filter)
-    if quick and is_adapter_count:
+    is_adapter_where_query = is_where_count_query(processed_filter)
+    if quick and is_adapter_where_query:
         return entity_collection.count(processed_filter, limit=1000)
-    if quick and not is_adapter_count:
+    if quick and not is_adapter_where_query:
         return entity_collection.count_documents(processed_filter, limit=1000)
 
     if not processed_filter:
         return entity_collection.estimated_document_count()
-    if is_adapter_count:
+    if is_adapter_where_query:
         return entity_collection.count(processed_filter)
     return entity_collection.count_documents(processed_filter)
 

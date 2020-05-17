@@ -12,6 +12,7 @@ from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
     SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
+from axonius.consts.system_consts import MULTI_COMPARE_MAGIC_STRING, COMPARE_MAGIC_STRING
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
 import axonius.pql
@@ -372,6 +373,9 @@ def parse_filter_uncached(filter_str: str, history_date=None) -> frozendict:
     res = translate_filter_not(axonius.pql.find(filter_str)) if filter_str else {}
     post_process_filter(res, include_outdated)
     convert_to_main_db(res)
+    res = process_compare_sub_queries(res)
+    res = process_multicompare_sub_queries(res)
+
     res = {
         '$and': [res]
     }
@@ -382,6 +386,245 @@ def parse_filter_uncached(filter_str: str, history_date=None) -> frozendict:
             }
         })
     return frozendict(res)
+
+
+def process_compare_sub_queries(query: dict) -> dict:
+    """
+    This function receives a query, check whether COMPARE_MAGIC_STRING is in the received query dict.
+    It does that by running through the whole dict recursively (only by the types that can actually appear in this dict)
+    if it finds the desired magic string, it passes it on to `process_compare_query` to process the special query,
+    update the result from `process_compare_query` and return the new process query to the system.
+    :param query: a dictionary with the query the user entered
+    :return: a processed query that can handle regular field comparison queries in the mongoDB
+    """
+    if COMPARE_MAGIC_STRING in query:
+        return process_compare_query(query[COMPARE_MAGIC_STRING])
+    for k, v in query.items():
+        if isinstance(v, dict):
+            query[k] = process_compare_sub_queries(v)
+        if isinstance(v, list):
+            for i, list_value in enumerate(v):
+                if isinstance(list_value, (list, dict)) and COMPARE_MAGIC_STRING in list_value:
+                    v[i] = process_compare_query(list_value[COMPARE_MAGIC_STRING])
+        if k == COMPARE_MAGIC_STRING:
+            query.update(process_compare_query(v))
+            del k
+    return query
+
+
+def process_multicompare_sub_queries(query: dict) -> dict:
+    """
+    This function receives a query, check whether MULTI_COMPARE_MAGIC_STRING is in the received query dict.
+    It does that by running through the whole dict recursively (only by the types that can actually appear in this dict)
+    if it finds the desired magic string, it passes it on to `process_compare_query` to process the special query,
+    update the result from `process_compare_query` and return the new process query to the system.
+    :param query: a dictionary with the query the user entered
+    :return: a processed query that can handle complex field comparison queries in the mongoDB
+    """
+    if MULTI_COMPARE_MAGIC_STRING in query:
+        return process_multi_compare_query(query[MULTI_COMPARE_MAGIC_STRING])
+    for k, v in query.items():
+        if isinstance(v, dict):
+            query[k] = process_multicompare_sub_queries(v)
+        if isinstance(v, list):
+            for i, list_value in enumerate(v):
+                if isinstance(list_value, (list, dict)) and MULTI_COMPARE_MAGIC_STRING in list_value:
+                    v[i] = process_multi_compare_query(list_value[MULTI_COMPARE_MAGIC_STRING])
+        if k == MULTI_COMPARE_MAGIC_STRING:
+            query.update(process_multi_compare_query(v))
+            del k
+    return query
+
+
+def process_multi_compare_query(compare_statement: dict) -> dict:
+    """
+    This function gets a dict that represent a complex field comparison query.
+    The dict should look like the following:
+    {
+        Operator (<,>,==): Days_Addition_or_Decline_number,
+        Sub_Operator (+,-): [
+            first_field_full_name,
+            second_field_full_name
+        ]
+    }
+    Which can be translated to that query (for better understanding):
+    first_field_full_name + 1 < second_field_full_name
+    first_field_full_name > second_field_full_name + 1
+    Just like in reverse polish notation
+    The function analyze each component of the query and put it in a JS filter query to be used by the mongoDB.
+    :param compare_statement: A part of the whole query which needs to be handled
+    :return: the replacement of the received statement that mongoDB can handle
+    """
+    if 'Gt' in compare_statement:
+        main_operator = '>'
+        check_number = compare_statement['Gt']
+        del compare_statement['Gt']
+    elif 'Lt' in compare_statement:
+        main_operator = '<'
+        check_number = compare_statement['Lt']
+        del compare_statement['Lt']
+    if 'Add' in compare_statement:
+        sub_operator = '+'
+    elif 'Sub' in compare_statement:
+        sub_operator = '-'
+    # Extracting the two fields from the received dict
+    first_field, second_field = [(compare_statement[stmt][0], compare_statement[stmt][1])
+                                 for stmt in compare_statement][0]
+    # Extract the adapter name field path from the full field name
+    # For example adapters_data.esx_adapter.os.distribution
+    #                  ^            ^          ^
+    #              Redundant     Adapter Name  Field Path
+    #                 ()         (esx_adapter) ['os', 'distribution']
+    _, first_adapter_name, *first_field_path = first_field.split('.')
+    _, second_adapter_name, *second_field_path = second_field.split('.')
+    # Joining the field path from list to string again
+    first_field_path = '.'.join(first_field_path)
+    second_field_path = '.'.join(second_field_path)
+    return {
+        '$where': f'''
+        function() {{
+            firstValue = "";
+            secondValue = "";
+            this.adapters.forEach(adapter => {{
+                if (adapter.plugin_name == '{first_adapter_name}') {{
+                    if ("{first_field_path}".split('.').length > 1) {{
+                        tmpVal = adapter.data;
+                        "{first_field_path}".split('.').forEach(key => {{
+                            if (firstValue === "" && tmpVal[key] !== undefined) tmpVal = tmpVal[key];
+                            else {{
+                                firstValue = false;
+                            }}
+                        }})
+                    }}
+                    else if (adapter.data.{first_field_path} !== undefined && typeof(adapter.data.{first_field_path}.getDay) == "function") {{
+                        firstValue = adapter.data.{first_field_path};
+                    }}
+                }}
+                if (adapter.plugin_name == '{second_adapter_name}') {{
+                    if ("{second_field_path}".split('.').length > 1) {{
+                        tmpVal = adapter.data;
+                        "{second_field_path}".split('.').forEach(key => {{
+                            if (secondValue === "" && tmpVal[key] !== undefined) tmpVal = tmpVal[key];
+                            else {{
+                                secondValue = false;
+                            }}
+                        }})
+                    }}
+                    else if (adapter.data.{second_field_path} !== undefined && typeof(adapter.data.{second_field_path}.getDay) == "function") {{
+                        secondValue = adapter.data.{second_field_path};
+                    }}
+                }}
+            }})
+            if (!firstValue || !secondValue) return false;
+            firstValue.setHours(0,0,0,0);
+            secondValue.setHours(0,0,0,0);
+            if ("{main_operator}" == ">") {{
+                return firstValue.getTime() {main_operator} secondValue.setDate(secondValue.getDate() {sub_operator} {check_number});
+            }}
+            return firstValue.setDate(firstValue.getDate() {sub_operator} {check_number}) {main_operator} secondValue.getTime();
+        }}
+        '''
+    }
+
+
+def process_compare_query(compare_statement: dict) -> dict:
+    """
+    This function gets a dict that represent a regular field comparison query.
+    The dict should look like the following:
+    {
+        Operator (<,>,==): [
+            first_field_full_name,
+            second_field_full_name
+        ]
+    }
+    Which can be translated to that query (for better understanding): first_field_full_name > second_field_full_name
+    Just like in reverse polish notation
+    The function analyze each component of the query and put it in a JS filter query to be used by the mongoDB.
+    :param compare_statement: A part of the whole query which needs to be handled
+    :return: the replacement of the received statement that mongoDB can handle
+    """
+    # Translating the main operator
+    if 'Eq' in compare_statement:
+        operator = '=='
+    elif 'Gt' in compare_statement:
+        operator = '>'
+    elif 'Lt' in compare_statement:
+        operator = '<'
+    elif 'NotEq' in compare_statement:
+        operator = '!='
+    elif 'GtE' in compare_statement:
+        operator = '>='
+    elif 'LtE' in compare_statement:
+        operator = '<='
+    # Extracting the two fields from the received dict
+    first_field, second_field = [(compare_statement[stmt][0], compare_statement[stmt][1])
+                                 for stmt in compare_statement][0]
+    # Extract the adapter name field path from the full field name
+    # For example adapters_data.esx_adapter.os.distribution
+    #                  ^            ^          ^
+    #              Redundant     Adapter Name  Field Path
+    #                 ()         (esx_adapter) ['os', 'distribution']
+    _, first_adapter_name, *first_field_path = first_field.split('.')
+    _, second_adapter_name, *second_field_path = second_field.split('.')
+    # Joining the field path from list to string again
+    first_field_path = '.'.join(first_field_path)
+    second_field_path = '.'.join(second_field_path)
+    return {
+        '$where': f'''
+        function() {{
+            firstValue = "";
+            secondValue = "";
+            this.adapters.forEach(adapter => {{
+                if (adapter.plugin_name == '{first_adapter_name}') {{
+                    if ("{first_field_path}".split('.').length > 1) {{
+                        tmpVal = adapter.data;
+                        "{first_field_path}".split('.').forEach(key => {{
+                            if (firstValue === "" && tmpVal[key] !== undefined) tmpVal = tmpVal[key];
+                            else {{
+                                firstValue = null;
+                            }}
+                        }})
+                    }}
+                    if (firstValue === "" && adapter.data.{first_field_path} !== undefined && typeof(adapter.data.{first_field_path}.getDay) == 'function') {{
+                        firstValue = adapter.data.{first_field_path};
+                        firstValue.setHours(0,0,0,0);
+                        firstValue = firstValue.getTime()
+                    }}
+                    else if (firstValue === "" && adapter.data.{first_field_path} !== undefined) {{
+                        firstValue = adapter.data.{first_field_path};
+                    }}
+                }}
+                if (adapter.plugin_name == '{second_adapter_name}') {{
+                    if ("{second_field_path}".split('.').length > 1) {{
+                        tmpVal = adapter.data;
+                        "{second_field_path}".split('.').forEach(key => {{
+                            if (secondValue === "" && tmpVal[key] !== undefined) tmpVal = tmpVal[key];
+                            else {{
+                                secondValue = null;
+                            }}
+                        }})
+                    }}
+                    if (secondValue === "" && adapter.data.{second_field_path} !== undefined && typeof(adapter.data.{second_field_path}.getDay) == 'function') {{
+                        secondValue = adapter.data.{second_field_path};
+                        secondValue.setHours(0,0,0,0);
+                        secondValue = secondValue.getTime()
+                    }}
+                    else if (secondValue === "" && adapter.data.{second_field_path} !== undefined) {{
+                        secondValue = adapter.data.{second_field_path};
+                    }}
+                }}
+            }})
+            if (firstValue == null || secondValue == null) {{
+                return false;
+            }}
+            if (typeof(firstValue) === "boolean" && typeof(secondValue) === "boolean") {{
+                return firstValue == secondValue;
+            }}
+            if (!firstValue || !secondValue) return false;
+            return firstValue {operator} secondValue;
+        }}
+        '''
+    }
 
 
 @cachetools.cached(cachetools.LRUCache(maxsize=100), lock=Lock())

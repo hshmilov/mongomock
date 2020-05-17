@@ -17,7 +17,7 @@ const Expression = function (expression, condition, isFirst) {
      * @returns {{error: string}|{filter: string, bracketWeight: number}}
      */
   const compileExpression = () => {
-    if (!expression.field || (expression.context && !childExpressionCond())) {
+    if (!expression.field || (expression.context && !childExpressionCond() && expression.context !== 'CMP')) {
       return { filter: '', bracketWeight: 0 };
     }
     const error = checkErrors();
@@ -44,7 +44,31 @@ const Expression = function (expression, condition, isFirst) {
         const childExpression = getMatchExpression(expression.field, childExpressionCond());
         filterStack.push('({val})'.replace(/{val}/g, getExcludedAdaptersFilter(expression.fieldType,
           expression.field, expression.filteredAdapters, childExpression)));
-      } else {
+      } else if (expression.context === 'CMP' && expression.value !== '') {
+        switch (expression.compOp) {
+          case 'equals':
+            filterStack.push(`${expression.field} == ${expression.value}`);
+            break;
+          case '>':
+            filterStack.push(`${expression.field} > ${expression.value}`);
+            break;
+          case '<':
+            filterStack.push(`${expression.field} < ${expression.value}`);
+            break;
+          case '>=':
+            filterStack.push(`${expression.field} >= ${expression.value}`);
+            break;
+          case '<=':
+            filterStack.push(`${expression.field} <= ${expression.value}`);
+            break;
+          case '<Days':
+            if (!isNaN(expression.subvalue)) filterStack.push(`${expression.field} ${expression.subvalue < 0 ? '-' : '+'} ${expression.subvalue < 0 ? expression.subvalue * -1 : expression.subvalue} ${expression.compOp[0]} ${expression.value}`);
+            break;
+          case '>Days':
+            if (!isNaN(expression.subvalue)) filterStack.push(`${expression.field} ${expression.compOp[0]} ${expression.value} ${expression.subvalue < 0 ? '-' : '+'} ${expression.subvalue < 0 ? expression.subvalue * -1 : expression.subvalue}`);
+            break;
+        }
+      } else if (expression.context !== 'CMP') {
         const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`;
         filterStack.push(getMatchExpression('specific_data', adapterChildExpression));
       }

@@ -108,10 +108,9 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
           }
           return;
         }
-
         if (expression.context) {
           if (expression.context === 'OBJ') {
-            expression.children.forEach(child => {
+            expression.children.forEach((child) => {
               if (child.expression.field) {
                 const childFieldSchema = _find(fieldSchema.items.items, _matchesProperty('name', child.expression.field));
                 child.condition = compileCondition(child.expression, childFieldSchema);
@@ -169,7 +168,6 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
       && meta.filterOutExpression.value
       && !meta.filterOutExpression.showIds) {
       filter = addFilterOutExpression(onlyExpressionsFilter);
-
     } else {
       filter = onlyExpressionsFilter;
     }

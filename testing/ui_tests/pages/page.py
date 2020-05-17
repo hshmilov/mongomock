@@ -663,10 +663,11 @@ class Page:
                       selected_option_css_selector,
                       choice,
                       parent=None,
-                      partial_text=True):
+                      partial_text=True,
+                      select_num=0):
         if not parent:
             parent = self.driver
-        parent.find_element_by_css_selector(dropdown_css_selector).click()
+        parent.find_elements_by_css_selector(dropdown_css_selector)[select_num].click()
         text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
         self.send_keys(text_box, choice)
         if partial_text:

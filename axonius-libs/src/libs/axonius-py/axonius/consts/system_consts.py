@@ -38,3 +38,6 @@ WEAVE_PATH = '/usr/local/bin/weave'
 DOCKERHUB_USER = 'nexus.pub.axonius.com/axonius'
 WEAVE_VERSION = '2.6.0'
 DOCKERHUB_URL = 'nexus.pub.axonius.com/'
+
+COMPARE_MAGIC_STRING = 'compare'
+MULTI_COMPARE_MAGIC_STRING = 'multicompare'

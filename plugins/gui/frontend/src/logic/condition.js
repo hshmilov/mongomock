@@ -81,11 +81,11 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
   };
 
   const formatVersion = () => {
-    let rawVersion = convertVersionToRaw(value);
+    const rawVersion = convertVersionToRaw(value);
     if (rawVersion.length === 0) {
       return 'Invalid version format, must be <optional>:<period>.<separated>.<numbers>';
     }
-    processedValue = '\'' + rawVersion + '\'';
+    processedValue = `'${rawVersion}'`;
     return '';
   };
 
@@ -95,13 +95,13 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
     }
     let values = value.match(/(\\,|[^,])+/g);
     if (field === 'adapters') {
-      values = values.map(adapter => pluginTitlesToNames[adapter.trim()]).filter(value => value);
+      values = values.map((adapter) => pluginTitlesToNames[adapter.trim()]).filter((value) => value);
     }
     if (['integer', 'number'].includes(fieldSchema.type)) {
-      processedValue = values.map(value => parseFloat(value)).filter(value => !isNaN(value)).join(',');
+      processedValue = values.map((value) => parseFloat(value)).filter((value) => !isNaN(value)).join(',');
       if (!processedValue) return 'Only numbers allowed in this filter';
     } else {
-      processedValue = '"' + values.join('","') + '"';
+      processedValue = `"${values.join('","')}"`;
     }
     processedValue = processedValue.replace('\\\\,', ',');
     return '';
@@ -113,7 +113,7 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       cond = operator.replace(/{field}/g, field);
     }
 
-    let val = processedValue ? processedValue : value;
+    const val = processedValue || value;
     let iVal = Array.isArray(val) ? -1 : undefined;
     return cond.replace(/{val}/g, () => {
       if (iVal === undefined) return val;
@@ -164,11 +164,10 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
   const composeCondition = () => {
     if (!field) return '';
 
-    let error = getError(field, fieldSchema, compOp, value);
+    const error = getError(field, fieldSchema, compOp, value);
     if (error) {
       throw error;
     }
-
     return `(${getExcludedAdaptersFilter(adapter, field,
       filteredAdapters, getConditionExpression())})`;
   };
@@ -179,22 +178,19 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
   };
 };
 
-export const schemaEnumFind = (schema, value) => {
-  return schema.enum.find((item, index) => {
-    if (schema.type === 'integer' && isNaN(item)) {
-      return index + 1 === value;
-    } else {
-      return (item.name || item) === value;
-    }
-  });
-};
+export const schemaEnumFind = (schema, value) => schema.enum.find((item, index) => {
+  if (schema.type === 'integer' && isNaN(item)) {
+    return index + 1 === value;
+  }
+  return (item.name || item) === value;
+});
 
 const extendVersionField = (val) => {
   let extended = '';
   for (let i = 0; i < 8 - val.length; i++) {
-    extended = '0' + extended;
+    extended = `0${extended}`;
   }
-  extended = extended + val;
+  extended += val;
   return extended;
 };
 
@@ -205,7 +201,7 @@ const convertVersionToRaw = (version) => {
       if (version.includes('.') && version.indexOf(':') > version.indexOf('.')) {
         return '';
       }
-      let epoch_split = version.split(':');
+      const epoch_split = version.split(':');
       converted = epoch_split[0];
       version = epoch_split[1];
     }
@@ -220,8 +216,8 @@ const convertVersionToRaw = (version) => {
       if (split_version[i].length > 8) {
         split_version[i] = split_version[i].substring(0, 9);
       }
-      let extended = extendVersionField(split_version[i]);
-      converted = converted + extended;
+      const extended = extendVersionField(split_version[i]);
+      converted += extended;
     }
     return converted;
   } catch (err) {
@@ -241,10 +237,10 @@ export const getError = (field, fieldSchema, compOp, value) => {
   if (!field) {
     return '';
   }
-  let opsMap = getOpsMap(fieldSchema);
+  const opsMap = getOpsMap(fieldSchema);
   if (getOpsList(opsMap).length && (!compOp || !opsMap[compOp])) {
     return 'Comparison operator is needed to add expression to the filter';
-  } else if (checkShowValue(fieldSchema, compOp) && (typeof value !== 'number' || isNaN(value))
+  } if (checkShowValue(fieldSchema, compOp) && (typeof value !== 'number' || isNaN(value))
     && (!value || !value.length)) {
     return 'A value to compare is needed to add expression to the filter';
   }
@@ -258,10 +254,10 @@ export const getError = (field, fieldSchema, compOp, value) => {
  * @returns {*|boolean|number}
  */
 export const checkShowValue = (fieldSchema, compOp) => {
-  let opsMap = getOpsMap(fieldSchema);
-  return (fieldSchema && (fieldSchema.format === 'predefined' ||
-    (compOp && getOpsList(opsMap).length && opsMap[compOp] && opsMap[compOp].includes('{val}')))) ||
-    !fieldSchema;
+  const opsMap = getOpsMap(fieldSchema);
+  return (fieldSchema && (fieldSchema.format === 'predefined'
+    || (compOp && getOpsList(opsMap).length && opsMap[compOp] && opsMap[compOp].includes('{val}'))))
+    || !fieldSchema;
 };
 
 /**
@@ -272,9 +268,9 @@ export const checkShowValue = (fieldSchema, compOp) => {
 export const getOpsMap = (schema) => {
   if (!schema || !schema) return {};
   let ops = {};
-  let parentSchema = schema;
+  const parentSchema = schema;
   if (schema.type === 'array') {
-    ops = compOps[`array_${schema.format}`] || compOps['array'];
+    ops = compOps[`array_${schema.format}`] || compOps.array;
     schema = schema.items;
   }
   if (schema.enum && schema.format !== 'predefined' && schema.format !== 'tag') {
@@ -290,7 +286,7 @@ export const getOpsMap = (schema) => {
     ops = { ...ops, ...compOps[schema.type] };
   }
   if (parentSchema.type === 'array') {
-    ops.exists = compOps[parentSchema.type].exists
+    ops.exists = compOps[parentSchema.type].exists;
   }
   if (schema.type === 'array' && ops.exists) {
     ops.exists = `(${ops.exists} and {field} != [])`;
@@ -306,14 +302,10 @@ export const getOpsMap = (schema) => {
  * @param {object} opsMap - the operator map of the current schema
  * @returns {{name: string, title: string}[]} - a operator list for display
  */
-export const getOpsList = (opsMap) => {
-  return Object.keys(opsMap).map((op) => {
-    return {
-      name: op,
-      title: opTitleTranslation[op] ? opTitleTranslation[op].toLowerCase() : op.toLowerCase(),
-    };
-  });
-};
+export const getOpsList = (opsMap) => Object.keys(opsMap).map((op) => ({
+  name: op,
+  title: opTitleTranslation[op] ? opTitleTranslation[op].toLowerCase() : op.toLowerCase(),
+}));
 
 const isExpectedValueString = (schema, compOp) => {
   const typesExpectingString = ['string', 'integer', 'number', 'array'];
@@ -328,7 +320,7 @@ const isExpectedValueItems = (schema, compOp) => {
 };
 
 const isExpectedValueInteger = (schema, compOp) => {
-  const opsExpectingInteger = ['days','next_days'];
+  const opsExpectingInteger = ['days', 'next_days'];
   const isSchemaDate = schema.format && schema.format === 'date-time';
   return isSchemaDate && opsExpectingInteger.includes(compOp);
 };

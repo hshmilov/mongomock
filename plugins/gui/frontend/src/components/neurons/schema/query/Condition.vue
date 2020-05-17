@@ -22,6 +22,7 @@
 import ALL from './ConditionAggregatedData.vue';
 import OBJ from './ConditionComplexField.vue';
 import ENT from './ConditionAssetEntity.vue';
+import CMP from './ConditionFieldComparison.vue';
 import XButton from '../../../axons/inputs/Button.vue';
 
 import { calcMaxIndex } from '../../../../constants/utils';
@@ -33,6 +34,7 @@ export default {
     ALL,
     OBJ,
     ENT,
+    CMP,
     XButton,
   },
   model: {

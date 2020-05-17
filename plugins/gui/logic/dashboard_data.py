@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import logging
 from collections import defaultdict, Counter
 from datetime import date, datetime, timedelta
@@ -17,7 +18,7 @@ from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
 from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value,
-                                       is_adapter_count_query)
+                                       is_where_count_query)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
@@ -120,7 +121,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         # if we have a date and we don't have an historical collection, count using filter on all historical_col
         if for_date and is_date_filter_required:
             query_filter.append({'accurate_for_datetime': for_date})
-        if is_adapter_count_query(query_filter):
+        if is_where_count_query(query_filter):
             data_item['value'] = entity_collection.count({'$and': query_filter})
         else:
             data_item['value'] = entity_collection.count_documents({'$and': query_filter})
@@ -139,6 +140,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
 # pylint: disable=R0914
 
 
+# pylint: disable=too-many-branches,too-many-statements
 def fetch_chart_intersect(
         _: ChartViews,
         entity: EntityType,
@@ -177,7 +179,10 @@ def fetch_chart_intersect(
         base_queries.append({'accurate_for_datetime': for_date})
 
     data = []
-    total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
+    if is_where_count_query(base_queries if base_queries else {}):
+        total = data_collection.count({'$and': base_queries})
+    else:
+        total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
     if not total:
         return [{'name': base or 'ALL', 'value': 0, 'remainder': True,
                  'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
@@ -192,9 +197,14 @@ def fetch_chart_intersect(
     if len(intersecting) == 1:
         # Fetch the only child, intersecting with parent
         child1_view['query']['filter'] = f'{base_filter}({child1_filter})'
-        numeric_value = data_collection.count_documents({
-            '$and': base_queries + [child1_query]
-        })
+        if is_where_count_query(base_queries) or is_where_count_query(child1_query):
+            numeric_value = data_collection.count({
+                '$and': base_queries + [child1_query]
+            })
+        else:
+            numeric_value = data_collection.count_documents({
+                '$and': base_queries + [child1_query]
+            })
         data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
                      'numericValue': numeric_value,
                      'value': numeric_value / total})
@@ -207,22 +217,42 @@ def fetch_chart_intersect(
 
         # Child1 + Parent - Intersection
         child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
-        numeric_value = data_collection.count_documents({
-            '$and': base_queries + [
-                child1_query,
-                {
-                    '$nor': [child2_query]
-                }
-            ]
-        })
+        if is_where_count_query(base_queries) or \
+                is_where_count_query(child1_query) or \
+                is_where_count_query(child2_query):
+            numeric_value = data_collection.count({
+                '$and': base_queries + [
+                    child1_query,
+                    {
+                        '$nor': [child2_query]
+                    }
+                ]
+            })
+        else:
+            numeric_value = data_collection.count_documents({
+                '$and': base_queries + [
+                    child1_query,
+                    {
+                        '$nor': [child2_query]
+                    }
+                ]
+            })
         data.append({'name': intersecting[0], 'numericValue': numeric_value,
                      'value': numeric_value / total, 'module': entity.value, 'view': child1_view})
 
         # Intersection
-        numeric_value = data_collection.count_documents({
-            '$and': base_queries + [
-                child1_query, child2_query
-            ]})
+        if is_where_count_query(base_filter) or \
+                is_where_count_query(child1_query) or \
+                is_where_count_query(child2_query):
+            numeric_value = data_collection.count({
+                '$and': base_queries + [
+                    child1_query, child2_query
+                ]})
+        else:
+            numeric_value = data_collection.count_documents({
+                '$and': base_queries + [
+                    child1_query, child2_query
+                ]})
         data.append(
             {'name': ' + '.join(intersecting),
              'intersection': True,
@@ -233,14 +263,27 @@ def fetch_chart_intersect(
 
         # Child2 + Parent - Intersection
         child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
-        numeric_value = data_collection.count_documents({
-            '$and': base_queries + [
-                child2_query,
-                {
-                    '$nor': [child1_query]
-                }
-            ]
-        })
+
+        if is_where_count_query(base_queries) or \
+                is_where_count_query(child1_query) or \
+                is_where_count_query(child2_query):
+            numeric_value = data_collection.count({
+                '$and': base_queries + [
+                    child2_query,
+                    {
+                        '$nor': [child1_query]
+                    }
+                ]
+            })
+        else:
+            numeric_value = data_collection.count_documents({
+                '$and': base_queries + [
+                    child2_query,
+                    {
+                        '$nor': [child1_query]
+                    }
+                ]
+            })
         data.append({'name': intersecting[1], 'numericValue': numeric_value,
                      'value': numeric_value / total, 'module': entity.value, 'view': child2_view})
 
@@ -319,7 +362,9 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
     query = [
         # match base queries
         {
-            '$match': base_query
+            '$match': base_query if not is_where_count_query(base_query) else
+            # pylint: disable=C0330
+            {'_id': {'$in': [x['_id'] for x in data_collection.find(base_query, projection={'_id': True})]}}
         },
         # filter old data from adapters
         {
@@ -933,10 +978,17 @@ def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_rang
             collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(group_date, entity_type)
             base_filter = parse_filter(match_filter, group_date)
             if is_date_filter_required:
-                historical_counts[group_date] = collection.count_documents(
-                    {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
+                if is_where_count_query(base_filter) or is_where_count_query(group_date):
+                    historical_counts[group_date] = collection.count(
+                        {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
+                else:
+                    historical_counts[group_date] = collection.count_documents(
+                        {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
             else:
-                historical_counts[group_date] = collection.count_documents(base_filter)
+                if is_where_count_query(base_filter):
+                    historical_counts[group_date] = collection.count(base_filter)
+                else:
+                    historical_counts[group_date] = collection.count_documents(base_filter)
         return historical_counts
     # pylint: enable=protected-access
     points = {}

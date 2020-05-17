@@ -1,7 +1,7 @@
 <template>
   <div class="x-expression">
     <!-- Choice of logical operator, available from second expression --->
-    <x-select
+    <XSelect
       v-if="!first"
       v-model="logicOp"
       :options="logicOps"
@@ -11,21 +11,21 @@
     />
     <div v-else />
     <!-- Option to add '(', to negate expression and choice of field to filter -->
-    <x-button
+    <XButton
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-bracket-left"
       :on="expression.leftBracket"
       @click="toggleLeftBracket"
-    >(</x-button>
-    <x-button
+    >(</XButton>
+    <XButton
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-not"
       :on="expression.not"
       @click="toggleNot"
-    >NOT</x-button>
-    <x-select
+    >NOT</XButton>
+    <XSelect
       v-model="context"
       :options="contextOptions"
       present-selection-value
@@ -34,7 +34,7 @@
       :class="{selected: contextSelected}"
       class="expression-context"
     />
-    <x-condition
+    <XCondition
       v-model="expressionCond"
       :module="module"
       :context="context"
@@ -42,34 +42,34 @@
     />
 
     <!-- Option to add ')' and to remove the expression -->
-    <x-button
+    <XButton
       :disabled="disabled"
       type="light"
       class="checkbox-label expression-bracket-right"
       :on="expression.rightBracket"
       @click="toggleRightBracket"
-    >)</x-button>
-    <x-button
+    >)</XButton>
+    <XButton
       v-if="!disabled"
       type="link"
       class="expression-remove"
       @click="$emit('remove')"
-    >x</x-button>
+    >x</XButton>
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
-import xSelect from '../../../axons/inputs/select/Select.vue';
-import xCondition from './Condition.vue';
-import xButton from '../../../axons/inputs/Button.vue';
+import XSelect from '../../../axons/inputs/select/Select.vue';
+import XCondition from './Condition.vue';
+import XButton from '../../../axons/inputs/Button.vue';
 
 import { AUTO_QUERY } from '../../../../store/getters';
 
 export default {
   name: 'XExpression',
   components: {
-    xSelect, xCondition, xButton,
+    XSelect, XCondition, XButton,
   },
   model: {
     prop: 'expression',
@@ -90,7 +90,7 @@ export default {
     },
     disabled: {
       type: Boolean,
-      default: false
+      default: false,
     },
   },
   data() {
@@ -101,6 +101,8 @@ export default {
         title: 'Complex Field', name: 'OBJ',
       }, {
         title: 'Asset Entity', name: 'ENT',
+      }, {
+        title: 'Field Comparison', name: 'CMP',
       }],
     };
   },
@@ -121,6 +123,7 @@ export default {
           field: this.expression.field,
           compOp: this.expression.compOp,
           value: this.expression.value,
+          subvalue: this.expression.subvalue,
           filteredAdapters: this.expression.filteredAdapters,
           fieldType: this.expression.fieldType,
           children: this.expression.children,

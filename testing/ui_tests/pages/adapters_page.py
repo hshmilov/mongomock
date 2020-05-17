@@ -54,6 +54,7 @@ class AdaptersPage(EntitiesPage):
 
     DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID = 'deleteEntitiesCheckbox'
     AD_SERVER_SEARCH_FIELD = ('dc_name', 'DC Address')
+    JSON_FILE_SERVER_SEARCH_FIELD = ('file_name', 'Name')
     ADAPTER_INSTANCE_CONFIG_CSS_SELECTOR = '.config-server'
     EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
     INSTANCE_DROPDOWN_CSS = '#serverInstance div.trigger-text'
