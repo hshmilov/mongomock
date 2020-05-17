@@ -1,8 +1,9 @@
 import datetime
-import ipaddress
 import logging
 import os
 import re
+import socket
+import struct
 
 from axonius.smart_json_class import SmartJsonClass
 
@@ -233,9 +234,11 @@ class WsusAdapter(AdapterBase):
                     if device_raw.get('IPAddress'):
                         # logger.info(f'XXXX IPAddress: {device_raw.get("IPAddress")}')
                         if device_raw.get('IPAddress').get('Address'):
-                            ip_obj = ipaddress.ip_address(device_raw.get('IPAddress').get('Address'))
+                            # NOTE: Wsus retrieves the IP in network byte order, we must convert it to host byte order
+                            network_byte_order_ip = device_raw.get('IPAddress').get('Address')
+                            host_byte_order_ip = socket.inet_ntoa(struct.pack('<L', network_byte_order_ip))
                             # logger.info(f'XXXX Got IP: {device_raw.get("IPAddress").get("Address")}')
-                            device.add_nic(ips=[str(ip_obj)])
+                            device.add_nic(ips=[str(host_byte_order_ip)])
                 except Exception as e:
                     logger.warning(f'Failed to parse IP info: {str(e)}')
                 try:
