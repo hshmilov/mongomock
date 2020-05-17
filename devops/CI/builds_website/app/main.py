@@ -235,10 +235,11 @@ def instances():
         is_public = data.get('public') is True
         num = int(data.get('num')) if data.get('num') else 1
         config = data.get('config') or {}
+        force_custom_code_to_run = data.get('force_custom_code_to_run') or False
 
         config_code = None
         post_script = config.get('post_script') or ''
-        if instance_image is None:
+        if instance_image is None or force_custom_code_to_run:
             if config.get('empty') is True:
                 config_code = STARTUP_SCRIPT_TEMPLATE.format(install_system_line='', post_script=post_script)
 

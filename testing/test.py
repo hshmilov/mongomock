@@ -189,11 +189,15 @@ class InstanceManager:
         else:
             raise ValueError(f'Invalid cloud {self.cloud}')
 
+        # ubuntu-test-machine-2 is just an image of bare ubuntu, used to control disk size and other future
+        # possible optimizations.
         self.__instances, group_name_from_builds = self.__builds.create_instances(
             group_name,
             self.instance_type,
             self.number_of_instances,
-            instance_cloud=cloud
+            instance_cloud=cloud,
+            instance_image='ubuntu-test-machine-2',
+            force_password_change=True
         )
         TC.set_environment_variable(BUILDS_GROUP_NAME_ENV, group_name_from_builds)
 
