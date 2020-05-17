@@ -3,25 +3,17 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.azure.consts import AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, \
+    AZURE_CLOUD_ENVIRONMENT, AZURE_VERIFY_SSL, AZURE_STACK_HUB_PROXY_SETTINGS, AzureStackHubProxySettings, \
+    AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_URL, AZURE_ACCOUNT_TAG, AZURE_HTTPS_PROXY
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
-from azure_adapter.consts import POWER_STATE_MAP, AzureStackHubProxySettings
+from azure_adapter.consts import POWER_STATE_MAP
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-
-AZURE_SUBSCRIPTION_ID = 'subscription_id'
-AZURE_CLIENT_ID = 'client_id'
-AZURE_CLIENT_SECRET = 'client_secret'
-AZURE_TENANT_ID = 'tenant_id'
-AZURE_VERIFY_SSL = 'verify_ssl'
-AZURE_CLOUD_ENVIRONMENT = 'cloud_environment'
-AZURE_STACK_HUB_URL = 'azure_stack_hub_url'
-AZURE_STACK_HUB_RESOURCE = 'azure_stack_hub_resource'
-AZURE_STACK_HUB_PROXY_SETTINGS = 'azure_stack_hub_proxy_settings'
 
 
 class AzureImage(SmartJsonClass):
@@ -87,12 +79,12 @@ class AzureAdapter(AdapterBase):
                                      azure_stack_hub_resource=client_config.get(AZURE_STACK_HUB_RESOURCE),
                                      azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
                                      azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
-                                     https_proxy=client_config.get('https_proxy'),
+                                     https_proxy=client_config.get(AZURE_HTTPS_PROXY),
                                      verify_ssl=client_config.get(AZURE_VERIFY_SSL))
             connection.test_connection()
             metadata_dict = dict()
-            if client_config.get('account_tag'):
-                metadata_dict['account_tag'] = client_config.get('account_tag')
+            if client_config.get(AZURE_ACCOUNT_TAG):
+                metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
             return connection, metadata_dict
         except Exception as e:
             message = 'Error connecting to azure with subscription_id {0}, reason: {1}'.format(
@@ -151,7 +143,7 @@ class AzureAdapter(AdapterBase):
                     'default': AzureStackHubProxySettings.DoNotUseProxy.value
                 },
                 {
-                    'name': 'account_tag',
+                    'name': AZURE_ACCOUNT_TAG,
                     'title': 'Account Tag',
                     'type': 'string'
                 },
@@ -162,7 +154,7 @@ class AzureAdapter(AdapterBase):
                     'default': True
                 },
                 {
-                    'name': 'https_proxy',
+                    'name': AZURE_HTTPS_PROXY,
                     'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
@@ -352,7 +344,7 @@ class AzureAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Failed to parse network security group, continuing')
             self._fill_power_state(device, device_raw)
-            device.account_tag = metadata.get('account_tag')
+            device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
             device.set_raw(device_raw)
             yield device
 

@@ -103,7 +103,7 @@ class AWSCISGenerator:
                     except Exception:
                         logger.exception(f'Could not get results in cloud-compliance')
 
-                    logger.info(f'Finished report for "{account_name}" ({account_id} '
+                    logger.info(f'Finished AWS-CIS report for "{account_name}" ({account_id} '
                                 f'in {time.time() - start_time} seconds.')
 
             logger.info(f'Done parsing client_config {client_config_id}')

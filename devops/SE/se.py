@@ -68,7 +68,7 @@ def usage():
     {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
     {name} s3_backup - Trigger s3 backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
-    {name} compliance run - Run Compliance Report
+    {name} compliance run (aws/azure) - Run Compliance Report
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     '''
 
@@ -161,9 +161,13 @@ def main():
         print(f'Response: {res.json().get("devices_cleared")} errors found')
 
     elif component == 'compliance':
+        compliance_name = sys.argv[3] if len(sys.argv) > 3 else None
+
+        post_json = {'report': compliance_name.lower()} if compliance_name else None
+
         if action == 'run':
             print(f'Running compliance report generation...')
-            cs.trigger('execute_force', True)
+            cs.trigger('execute_force', True, post_json=post_json)
         else:
             print(f'Invalid action {action}')
             return -1

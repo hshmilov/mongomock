@@ -11,7 +11,7 @@ import boto3
 
 from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.utils.datetime import parse_date
-from compliance.aws_cis.account_report import AccountReport, RuleStatus
+from compliance.utils.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import bad_api_response, good_api_response, get_api_error, aws_cis_rule, \
     AWS_CIS_DEFAULT_REGION, get_api_data, errors_to_gui
 

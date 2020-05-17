@@ -1,5 +1,4 @@
 import re
-from enum import Enum
 
 from axonius.devices.device_adapter import DeviceRunningState
 
@@ -22,10 +21,3 @@ POWER_STATE_MAP = {
     'PowerState/deallocated': DeviceRunningState.TurnedOff,
     'PowerState/deallocating': DeviceRunningState.ShuttingDown,
 }
-
-
-class AzureStackHubProxySettings(Enum):
-    DoNotUseProxy = 'Do not use proxy'
-    ProxyOnlyAuth = 'proxy authentication only'
-    ProxyOnlyAzureStackHub = 'Proxy Azure Stack Hub only'
-    ProxyAll = 'Proxy all'

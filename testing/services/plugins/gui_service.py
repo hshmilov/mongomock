@@ -1238,8 +1238,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         volumes.extend([f'{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro'
                         for fn in os.listdir(self.service_dir) if fn.endswith('.py')])
 
-        volumes.extend([f'{self.service_dir}/logic/{fn}:/home/axonius/app/{self.package_name}/logic/{fn}:ro'
-                        for fn in os.listdir(f'{self.service_dir}/logic') if fn.endswith('.py')])
+        volumes.extend([f'{self.service_dir}/logic:/home/axonius/app/{self.package_name}/logic:ro'])
 
         # extend and share the routes folder
         volumes.extend([f'{self.service_dir}/routes/:/home/axonius/app/{self.package_name}/routes/:ro'])

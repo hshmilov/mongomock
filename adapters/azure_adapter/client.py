@@ -8,8 +8,9 @@ from azure.mgmt.compute.models import VirtualMachine, VirtualMachineScaleSetVM
 from azure.mgmt.network import NetworkManagementClient
 from msrestazure import azure_cloud as azure
 
+from axonius.clients.azure.consts import AzureStackHubProxySettings
 from axonius.clients.rest.connection import RESTConnection
-from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG, AzureStackHubProxySettings
+from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

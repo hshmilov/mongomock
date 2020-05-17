@@ -9,7 +9,7 @@ import boto3
 from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.entities import EntityType
-from compliance.aws_cis.account_report import AccountReport, RuleStatus
+from compliance.utils.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import aws_cis_rule, bad_api_response, good_api_response, \
     get_api_error, get_api_data, get_count_incompliant_cis_rule, errors_to_gui
 

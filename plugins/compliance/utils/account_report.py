@@ -7,6 +7,7 @@ from typing import Tuple, Optional
 
 logger = logging.getLogger(f'axonius.{__name__}')
 AWS_CIS_RULES_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_cis_rules.json')
+AZURE_CIS_RULES_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'azure_cis_rules.json')
 
 
 class RuleStatus(Enum):
@@ -19,7 +20,9 @@ class AccountReport:
         self.rules = []
         self.sections_added = []
         with open(AWS_CIS_RULES_FILE, 'rt') as f:
-            self.rules_by_section = json.loads(f.read())
+            self.aws_rules_by_section = json.loads(f.read())
+        with open(AZURE_CIS_RULES_FILE, 'rt') as f:
+            self.azure_rules_by_section = json.loads(f.read())
 
     def add_rule(
             self,
@@ -29,12 +32,15 @@ class AccountReport:
             affected_entities: int,
             entities_results: str,
             entities_results_query: Optional[dict] = None,
+            cis_json_dict: Optional[dict] = None    # has to be last
     ):
+        if cis_json_dict is None:
+            cis_json_dict = self.aws_rules_by_section
         if section in self.sections_added:
             logger.critical(f'section {section} has already been added, not continuing')
             return
 
-        rule_text = self.rules_by_section.get(section) or {}
+        rule_text = cis_json_dict.get(section) or {}
         new_rule = {
             'status': status.value,
             'section': section,
@@ -57,12 +63,17 @@ class AccountReport:
     def add_rule_error(
             self,
             section: str,
-            error: Optional[str] = None):
+            error: Optional[str] = None,
+            cis_json_dict: Optional[dict] = None    # has to be last
+    ):
+        if cis_json_dict is None:
+            cis_json_dict = self.aws_rules_by_section
+
         if section in self.sections_added:
             logger.critical(f'section {section} has already been added, not continuing')
             return
 
-        rule_text = self.rules_by_section.get(section) or {}
+        rule_text = cis_json_dict.get(section) or {}
         new_rule = {
             'status': 'No Data',
             'section': section,

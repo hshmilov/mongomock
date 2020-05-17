@@ -1,6 +1,8 @@
 import asyncio
 import http.client
 import logging
+import time
+
 import math
 import threading
 from abc import ABC, abstractmethod
@@ -285,7 +287,7 @@ class RESTConnection(ABC):
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
                     do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None, extra_headers=None,
-                    raise_for_status=True, files_param=None):
+                    raise_for_status=True, files_param=None, alternative_proxies=None):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -334,10 +336,12 @@ class RESTConnection(ABC):
             if extra_headers:
                 headers_for_request.update(extra_headers)
 
+            proxies = alternative_proxies if alternative_proxies is not None else self._proxies
+
             response = self._session.request(method, url, params=url_params,
                                              headers=headers_for_request, verify=self._verify_ssl,
                                              json=request_json, data=request_data,
-                                             timeout=self._session_timeout, proxies=self._proxies,
+                                             timeout=self._session_timeout, proxies=proxies,
                                              auth=auth_dict, files=files_param)
         except requests.HTTPError as e:
             self._handle_http_error(e)
@@ -454,6 +458,19 @@ class RESTConnection(ABC):
         """
         req = self.create_async_dict(request, method)
         return async_http_request(session, **req)
+
+    @staticmethod
+    def handle_sync_429_default(response: requests.Response):
+        sleep_time = DEFAULT_429_SLEEP_TIME
+        retry_after = response.headers.get('Retry-After')
+        try:
+            if retry_after:
+                sleep_time = int(retry_after)
+        except Exception:
+            logger.warning(f'handle_sync_429: Bad retry-after value: {str(retry_after)}')
+
+        logger.info(f'Got 429. Sleeping for {sleep_time} seconds')
+        time.sleep(sleep_time)
 
     async def handle_429(self, response: aiohttp.ClientResponse):
         """

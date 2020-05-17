@@ -5,7 +5,7 @@ import logging
 from typing import Tuple
 
 from axonius.clients.aws.aws_clients import get_boto3_session, get_boto3_client_by_session
-from compliance.aws_cis.account_report import AccountReport
+from compliance.utils.account_report import AccountReport
 from compliance.aws_cis.aws_cis_rules import generate_rules, generate_failed_report
 from compliance.aws_cis.aws_cis_utils import AWS_CIS_DEFAULT_REGION
 

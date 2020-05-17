@@ -6,6 +6,7 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.utils.files import get_local_config_file
 from compliance.aws_cis.aws_cis import AWSCISGenerator
+from compliance.azure_cis.azure_cis import AzureCISGenerator
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -22,7 +23,7 @@ class ComplianceService(Triggerable, PluginBase):
         try:
             if job_name == 'execute_force' or self.should_cloud_compliance_run():
                 logger.info(f'Running Compliance Report..')
-                self.run_compliance_report()
+                self.run_compliance_report(post_json)
             else:
                 logger.info(f'Cloud compliance is not enabled, not running')
                 return False
@@ -31,9 +32,22 @@ class ComplianceService(Triggerable, PluginBase):
         return ''
 
     @staticmethod
-    def run_compliance_report():
-        aws_cis_generator = AWSCISGenerator()
-        aws_cis_generator.generate()
+    def run_compliance_report(post_json: dict):
+        report_type = post_json.get('report') if post_json else None
+
+        if not report_type or report_type == 'aws':
+            try:
+                aws_cis_generator = AWSCISGenerator()
+                aws_cis_generator.generate()
+            except Exception:
+                logger.exception(f'Could not generate AWS CIS Report')
+
+        if not report_type or report_type == 'azure':
+            try:
+                azure_cis_generator = AzureCISGenerator()
+                azure_cis_generator.generate()
+            except Exception:
+                logger.exception(f'Could not generate Azure CIS Report')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

@@ -10,7 +10,7 @@ from typing import Dict, List, Any
 import boto3
 
 from axonius.clients.aws.aws_clients import get_boto3_client_by_session
-from compliance.aws_cis.account_report import AccountReport, RuleStatus
+from compliance.utils.account_report import AccountReport, RuleStatus
 from compliance.aws_cis.aws_cis_utils import aws_cis_rule, \
     get_api_error, get_api_data, AWS_CIS_DEFAULT_REGION
 

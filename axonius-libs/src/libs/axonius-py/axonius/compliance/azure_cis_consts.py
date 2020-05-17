@@ -1,0 +1,1 @@
+AZURE_CIS_ALL_RULES = []

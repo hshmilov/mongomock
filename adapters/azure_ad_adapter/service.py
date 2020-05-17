@@ -3,6 +3,8 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.azure.consts import AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_VERIFY_SSL, \
+    AZURE_AUTHORIZATION_CODE, AZURE_ACCOUNT_TAG, AZURE_IS_AZURE_AD_B2C, AZURE_AD_CLOUD_ENVIRONMENT, AZURE_HTTPS_PROXY
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
@@ -15,12 +17,6 @@ from azure_ad_adapter.connection import AUTHORITY_HOST_URL, AzureAdClient
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
-AZURE_CLIENT_ID = 'client_id'
-AZURE_CLIENT_SECRET = 'client_secret'
-AZURE_TENANT_ID = 'tenant_id'
-AZURE_VERIFY_SSL = 'verify_ssl'
-AZURE_AUTHORIZATION_CODE = 'authorization_code'
 
 AZURE_AD_DEVICE_TYPE = 'Azure AD'
 INUTE_DEVICE_TYPE = 'Intune'
@@ -69,10 +65,10 @@ class AzureAdAdapter(AdapterBase, Configurable):
             connection = AzureAdClient(client_id=client_config[AZURE_CLIENT_ID],
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
                                        tenant_id=client_config[AZURE_TENANT_ID],
-                                       https_proxy=client_config.get('https_proxy'),
+                                       https_proxy=client_config.get(AZURE_HTTPS_PROXY),
                                        verify_ssl=client_config.get(AZURE_VERIFY_SSL),
-                                       is_azure_ad_b2c=client_config.get('is_azure_ad_b2c'),
-                                       azure_region=client_config.get('azure_region')
+                                       is_azure_ad_b2c=client_config.get(AZURE_IS_AZURE_AD_B2C),
+                                       azure_region=client_config.get(AZURE_AD_CLOUD_ENVIRONMENT)
                                        )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
             refresh_tokens_db = self._get_collection('refresh_tokens')
@@ -103,8 +99,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                                     f're-set the token. Full message: {str(e)}')
                 raise
             metadata_dict = dict()
-            if client_config.get('account_tag'):
-                metadata_dict['account_tag'] = client_config.get('account_tag')
+            if client_config.get(AZURE_ACCOUNT_TAG):
+                metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
             return connection, metadata_dict
         except Exception as e:
             message = 'Error connecting to Azure AD with tenant id {0}, reason: {1}'.format(
@@ -143,10 +139,10 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
-                    'name': 'azure_region',
+                    'name': AZURE_AD_CLOUD_ENVIRONMENT,
                     'title': 'Cloud Environment',
                     'type': 'string',
-                    'enum': ['Global', 'China'],
+                    'enum': ['Global', 'China'],    # if you add something here, change azure_cis_account_report.py
                     'default': 'Global'
                 },
                 {
@@ -156,12 +152,12 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'is_azure_ad_b2c',
+                    'name': AZURE_IS_AZURE_AD_B2C,
                     'title': 'Is Azure AD B2C',
                     'type': 'bool'
                 },
                 {
-                    'name': 'account_tag',
+                    'name': AZURE_ACCOUNT_TAG,
                     'title': 'Account Tag',
                     'type': 'string'
                 },
@@ -172,7 +168,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'default': True
                 },
                 {
-                    'name': 'https_proxy',
+                    'name': AZURE_HTTPS_PROXY,
                     'title': 'HTTPS Proxy',
                     'type': 'string'
                 }
@@ -181,9 +177,9 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
-                'azure_region',
+                AZURE_AD_CLOUD_ENVIRONMENT,
                 AZURE_VERIFY_SSL,
-                'is_azure_ad_b2c'
+                AZURE_IS_AZURE_AD_B2C
             ],
             'type': 'array'
         }
@@ -311,7 +307,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
             if devie_type == 'Intune':
                 device = self._create_intune_device(raw_device_data)
             if device:
-                device.account_tag = metadata.get('account_tag')
+                device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
                 yield device
 
     def _parse_users_raw_data(self, raw_data_all):
@@ -331,7 +327,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     logger.warning(f'Warning - no user id for {raw_user_data}, bypassing')
                     continue
                 user.id = str(user_id)
-                user.account_tag = metadata.get('account_tag')
+                user.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
 
                 account_enabled = raw_user_data.get('accountEnabled')
                 if isinstance(account_enabled, bool):
