@@ -288,18 +288,19 @@ class Triggerable(Feature, ABC):
             return normalize_triggerable_request_result(promise.value or '')
         return ''
 
-    def any_tasks_in_progress(self) -> str:
+    def tasks_in_progress(self) -> list:
         """
-        Returns whether any task is currently in progress
-        Returns the name of the first task, or None
+        Returns a list with the names of the currently running tasks
+        :return:
         """
+        tasks = []
         for name, task in self.__state.items():
             with task.lock:
                 if task.triggered or task.scheduled:
-                    return name
+                    tasks.append(name)
         for name in self.__prioritized_state:
-            return name
-        return None
+            tasks.append(name)
+        return tasks
 
     def __perform_stop_job(self, job_name, job_state):
         """

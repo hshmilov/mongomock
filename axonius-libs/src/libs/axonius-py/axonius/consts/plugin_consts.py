@@ -100,6 +100,7 @@ AGGREGATION_SETTINGS = 'aggregation_settings'
 MAX_WORKERS = 'max_workers'
 SOCKET_READ_TIMEOUT = 'socket_read_timeout'
 UPPERCASE_HOSTNAMES = 'uppercase_hostnames'
+UPDATE_CLIENTS_STATUS = 'update_clients_status'
 
 # PASSWORD SETTINGS #
 PASSWORD_SETTINGS = 'password_policy_settings'
@@ -119,6 +120,7 @@ RESET_PASSWORD_LINK_EXPIRATION = 'reset_password_link_expiration'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
+CLIENTS_COLLECTION = 'clients'
 AUDIT_COLLECTION = 'audit'
 REPORTS_CONFIG_COLLECTION = 'reports_config'
 VERSION_COLLECTION = 'version'

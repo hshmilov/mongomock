@@ -106,7 +106,8 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
                                           PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
                                           PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME,
-                                          AUDIT_COLLECTION, RESET_PASSWORD_LINK_EXPIRATION, RESET_PASSWORD_SETTINGS)
+                                          AUDIT_COLLECTION, UPDATE_CLIENTS_STATUS,
+                                          RESET_PASSWORD_LINK_EXPIRATION, RESET_PASSWORD_SETTINGS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -124,6 +125,7 @@ from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      SSLState)
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.atomicint import AtomicInteger
 from axonius.utils.build_modes import get_build_mode
 from axonius.utils.datetime import parse_date
 from axonius.utils.debug import is_debug_attached
@@ -182,6 +184,9 @@ except AttributeError:
 
 # Global list of all the functions we are registering.
 ROUTED_FUNCTIONS = list()
+
+# Initialize running add_rule function counter
+RUNNING_ADD_RULES_COUNT = AtomicInteger(0)
 
 
 def random_string(length: int, source: str = string.ascii_letters + string.digits) -> str:
@@ -286,8 +291,13 @@ def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
                                        'message': str(second_err)}), 400
 
         return actual_wrapper
-
-    return wrap
+    try:
+        RUNNING_ADD_RULES_COUNT.inc()
+        return wrap
+    except Exception:
+        return wrap
+    finally:
+        RUNNING_ADD_RULES_COUNT.dec()
 
 
 def retry_if_connection_error(exception):
@@ -3095,6 +3105,7 @@ class PluginBase(Configurable, Feature, ABC):
 
         self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
+        self._update_adapters_clients_periodically = config[AGGREGATION_SETTINGS].get(UPDATE_CLIENTS_STATUS, False)
         self._uppercase_hostnames = config[AGGREGATION_SETTINGS].get(UPPERCASE_HOSTNAMES) or False
         try:
             socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
@@ -3796,12 +3807,17 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': UPPERCASE_HOSTNAMES,
                             'title': 'Convert all hostnames to uppercase',
                             'type': 'bool'
+                        },
+                        {
+                            'name': UPDATE_CLIENTS_STATUS,
+                            'title': 'Update adapters clients status periodically (Every 1:30 hours)',
+                            'type': 'bool'
                         }
                     ],
                     'name': AGGREGATION_SETTINGS,
                     'title': 'Aggregation Settings',
                     'type': 'array',
-                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES]
+                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES, UPDATE_CLIENTS_STATUS]
                 },
                 {
                     'items': [
@@ -3985,7 +4001,8 @@ class PluginBase(Configurable, Feature, ABC):
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,
                 SOCKET_READ_TIMEOUT: 5,
-                UPPERCASE_HOSTNAMES: False
+                UPPERCASE_HOSTNAMES: False,
+                UPDATE_CLIENTS_STATUS: False
             },
             'getting_started_checklist': {
                 'enabled': False,

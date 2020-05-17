@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
 from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple, Optional
+
 import requests
 
 import func_timeout
@@ -39,7 +40,7 @@ from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, Adapt
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
-from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
+from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error, RUNNING_ADD_RULES_COUNT
 from axonius.thread_stopper import StopThreadException
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
@@ -191,11 +192,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return
 
         client_count = self._clients_collection.estimated_document_count()
-        running_task = self.any_tasks_in_progress()
-        if self.outside_reason_to_live() or running_task or client_count:
+        running_tasks = self.tasks_in_progress()
+        if self.outside_reason_to_live() or running_tasks or client_count:
             logger.debug('Found reason to live')
             logger.debug(f'{client_count} clients exist')
-            logger.debug(f'Task {running_task} is still running')
+            logger.debug(f'Tasks {", ".join(running_tasks)} are still running')
             self.__has_a_reason_to_live = True
             return
 
@@ -416,6 +417,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if post_json and post_json.get('do_not_look_at_last_cycle') is True:
                 do_not_look_at_last_cycle = True
             return to_json(self.clean_db(do_not_look_at_last_cycle))
+        elif job_name == 'update_clients_status':
+            return self._update_clients_status()
         elif job_name == 'refetch_device':
             try:
                 self.refetch_device(client_id=post_json.get('client_id'),
@@ -471,6 +474,38 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         return []
 
     # pylint: enable=R0201
+
+    def _update_clients_status(self):
+        """
+        A function that iterate every client config on the adapter, and check its status.
+        If the status is error and there is no other trigger while this function was called it tries
+        to connect and fetch data, if it succeed it updates the status automatically
+        :return:
+        """
+        # There would always be at least 1 instance of 'update_clients_status' running, just want to make sure that
+        # there is no more than 1 instance (In case a whole cycle passed and the task didnt finish),
+        # and no other task than that is currently in process
+        if len(self.tasks_in_progress()) > 1 and RUNNING_ADD_RULES_COUNT.value > 0:
+            return jsonify('Other tasks are running, waiting for next trigger')
+
+        for client_config in self._get_clients_config():
+            if client_config['status'] == 'success':
+                continue
+            try:
+                self._clients[client_config['client_id']] = self.__connect_client_facade(client_config)
+                self._update_client_status(client_config['client_id'], 'success')
+                logger.info(f'Client: {client_config["client_id"]} status was changed to success!')
+            except Exception as e:
+                logger.error(f'Couldn\'t initiate connection to client: '
+                             f'{client_config["client_id"]}, keep it in error status')
+                continue
+            try:
+                post_data = {'check_fetch_time': False, 'client_name': client_config['client_id']}
+                self._trigger_remote_plugin_no_blocking(self.plugin_unique_name, 'insert_to_db', data=post_data)
+            except Exception as e:
+                logger.debug(f'An error happened while trying to insert data to db {str(e)}')
+                continue
+        return jsonify(f'Adapter {self.plugin_unique_name} finished updating clients status')
 
     def _parse_users_raw_data_hook(self, raw_users):
         """

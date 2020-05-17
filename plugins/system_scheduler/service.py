@@ -21,6 +21,7 @@ from flask import jsonify
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
@@ -30,9 +31,10 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME,
                                           REPORTS_PLUGIN_NAME,
                                           STATIC_ANALYSIS_PLUGIN_NAME,
-                                          STATIC_CORRELATOR_PLUGIN_NAME)
+                                          STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION, AGGREGATION_SETTINGS,
+                                          UPDATE_CLIENTS_STATUS)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.scheduler_consts import SchedulerState
+from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -93,6 +95,18 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           next_run_time=datetime.now(),
                                           max_instances=1)
         self.__realtime_scheduler.start()
+
+        self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
+            'default': ThreadPoolExecutorApscheduler(1)
+        })
+
+        if self._update_adapters_clients_periodically:
+            self.__adapter_clients_status.add_job(func=self.__check_adapter_clients_status,
+                                                  trigger=IntervalTrigger(
+                                                      minutes=CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL),
+                                                  next_run_time=datetime.now(),
+                                                  max_instances=1)
+            self.__adapter_clients_status.start()
 
         self.__correlation_lock = threading.Lock()
         self._correlation_scheduler = LoggedBackgroundScheduler(
@@ -395,9 +409,19 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     )
                     logger.info(f'Adding initial job. Next run: {job.next_run_time}')
 
+    def update_global_settings(self):
+        try:
+            config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
+                {'config_name': CORE_CONFIG_NAME})['config']
+            self._update_adapters_clients_periodically = config[AGGREGATION_SETTINGS].get(UPDATE_CLIENTS_STATUS, False)
+        except KeyError:
+            logger.warning('Desired key was not found in core config', exc_info=True)
+            self._update_adapters_clients_periodically = False
+
     def _global_config_updated(self):
         try:
             self.configure_correlation_scheduler()
+            self.update_global_settings()
         except Exception:
             logger.exception(f'Failed updating correlation scheduler settings')
 
@@ -678,6 +702,33 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if config:
                     if config.get('realtime_adapter'):
                         yield adapter
+
+    def __get_all_adapters(self):
+        yield from self.core_configs_collection.find(
+            {
+                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+            }
+        )
+
+    def get_adapter_clients_count(self, adapter_unique_name: str) -> int:
+        """
+        :param adapter_unique_name: Adapter unique name
+        :return: Returns the amount of clients in adapter
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({})
+
+    def __check_adapter_clients_status(self):
+        """
+        Trigger each adapter to check its client's status and update it if necessary.
+        In case a client's status changed from 'error' to 'success' it runs fetch automatically
+        :return:
+        """
+        for adapter in self.__get_all_adapters():
+            if self.get_adapter_clients_count(adapter[PLUGIN_UNIQUE_NAME]):
+                self._trigger_remote_plugin_no_blocking(
+                    plugin_name=adapter[PLUGIN_UNIQUE_NAME],
+                    job_name='update_clients_status'
+                )
 
     def __run_realtime_adapters(self):
         """
