@@ -313,7 +313,6 @@ def is_ivanti_cm_adapter(adapter_device):
 
 def is_service_now_and_no_other(adapter_device):
     if adapter_device.get('plugin_name') == 'service_now_adapter' and not get_hostname(adapter_device) \
-            and not get_normalized_ip(adapter_device)\
             and not get_serial(adapter_device) and not adapter_device.get(NORMALIZED_MACS):
         return True
     return False

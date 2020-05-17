@@ -18,10 +18,16 @@ NIC_TABLE_KEY = 'cmdb_ci_network_adapter'
 DEPARTMENT_TABLE_KEY = 'department_table'
 LOCATION_TABLE_KEY = 'location_table'
 USER_GROUPS_TABLE_KEY = 'user_groups_table'
+RELATIONS_TABLE = 'cmdb_rel_ci'
 ALM_ASSET_TABLE = 'alm_hardware'
 COMPANY_TABLE = 'core_company'
 IPS_TABLE = 'u_ip_address'
 CI_IPS_TABLE = 'cmdb_ci_ip_address'
+U_SUPPLIER_TABLE = 'u_supplier'
+MAINTENANCE_SCHED_TABLE = 'cmn_schedule'
+SOFTWARE_PRODUCT_TABLE = 'cmdb_software_product_model'
+MODEL_TABLE = 'cmdb_model'
+CMDB_CI_TABLE = 'cmdb_ci'
 # pylint: disable=C0103
 INSTALL_STATUS_DICT = {'0': 'Retired',
                        '1': 'Deployed',
@@ -68,3 +74,22 @@ U_ENVIRONMENT_DICT = {'development': 'Development',
                       'test': 'Test',
                       'training': 'Training',
                       'undefined': 'undefined'}
+
+DEVICE_SUB_TABLES_KEY_TO_NAME = {
+    USERS_TABLE_KEY: USERS_TABLE,
+    LOCATION_TABLE_KEY: LOCATIONS_TABLE,
+    USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
+    NIC_TABLE_KEY: NIC_TABLE_KEY,
+    DEPARTMENT_TABLE_KEY: DEPARTMENTS_TABLE,
+    ALM_ASSET_TABLE: ALM_ASSET_TABLE,
+    COMPANY_TABLE: COMPANY_TABLE,
+    IPS_TABLE: IPS_TABLE,
+    CI_IPS_TABLE: CI_IPS_TABLE,
+    U_SUPPLIER_TABLE: U_SUPPLIER_TABLE,
+    # Note: If Relations was requested, ALL cmdb_ci will be fetched as sub_table for relations info.
+    RELATIONS_TABLE: RELATIONS_TABLE,
+    MAINTENANCE_SCHED_TABLE: MAINTENANCE_SCHED_TABLE,
+    SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,
+    MODEL_TABLE: MODEL_TABLE,
+}
+ASYNC_CHUNK_SIZE = 50

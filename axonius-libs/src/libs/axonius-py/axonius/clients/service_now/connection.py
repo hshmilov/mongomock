@@ -1,6 +1,9 @@
 import io
 import json
 import logging
+from math import ceil
+from typing import Generator, Tuple, List, Optional
+from aiohttp import ClientResponse
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -39,15 +42,15 @@ class ServiceNowConnection(RESTConnection):
                    extra_headers={'Content-Type': None})
 
     def get_user_list(self):
-        users_table = []
-        try:
-            users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting users')
+
+        # prepare users dict by sys_id
         users_table_dict = dict()
-        for user in users_table:
-            if user.get('sys_id'):
-                users_table_dict[user.get('sys_id')] = user
+        # Note: we only have a single table so we ignore the returned table_key
+        for _, users_chunk in self._iter_async_table_chunks_by_key({consts.USERS_TABLE_KEY: consts.USERS_TABLE}):
+            for user in users_chunk:
+                if user.get('sys_id'):
+                    users_table_dict[user.get('sys_id')] = user
+
         for user in users_table_dict.values():
             user_to_yield = user.copy()
             try:
@@ -57,137 +60,238 @@ class ServiceNowConnection(RESTConnection):
                 logger.exception(f'Problem getting manager for user {user}')
             yield user_to_yield
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_users_info_for_devices=False):
-        tables_devices = []
-        users_table = []
-        try:
-            if fetch_users_info_for_devices:
-                users_table = list(self.__get_devices_from_table(consts.USERS_TABLE))
-            else:
-                users_table = []
-        except Exception:
-            logger.exception(f'Problem getting users')
+    def get_device_list(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
+        subtables_by_key = self._get_subtables_by_key(fetch_users_info_for_devices=fetch_users_info_for_devices,
+                                                      fetch_ci_relations=fetch_ci_relations)
+        self.__users_table = subtables_by_key.get(consts.USERS_TABLE_KEY) or {}
+        for device_type, table_name, table_chunk in self.__iter_device_table_chunks_by_details():
+            yield {
+                consts.TABLE_NAME_KEY: table_name,
+                consts.DEVICE_TYPE_NAME_KEY: device_type,
+                consts.DEVICES_KEY: table_chunk,
+                # Inject subtables to every table chunk
+                # Note: '**' operator expands the dict into its individual items for addition in the new one.
+                **subtables_by_key,
+            }
 
-        location_table = []
-        try:
-            location_table = list(self.__get_devices_from_table(consts.LOCATIONS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting location')
-        user_groups_table = []
-        try:
-            user_groups_table = list(self.__get_devices_from_table(consts.USER_GROUPS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting users groups')
-        nics_table = []
-        try:
-            nics_table = list(self.__get_devices_from_table(consts.NIC_TABLE_KEY))
-        except Exception:
-            logger.exception(f'Problem getting nics')
+    # pylint: disable=too-many-branches,too-many-statements
+    def _get_subtables_by_key(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
+        tables_by_key = {}
 
-        departments_table = []
-        try:
-            departments_table = list(self.__get_devices_from_table(consts.DEPARTMENTS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting departments')
-        companies_table = []
-        try:
-            companies_table = list(self.__get_devices_from_table(consts.COMPANY_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting companies')
-        ips_table = []
-        try:
-            ips_table = list(self.__get_devices_from_table(consts.IPS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting ips')
-        ci_ips_table = []
-        try:
-            ci_ips_table = list(self.__get_devices_from_table(consts.CI_IPS_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting ci ips table')
-        users_table_dict = dict()
-        users_username_dict = dict()
-        for user in users_table:
-            if user.get('sys_id'):
-                users_table_dict[user.get('sys_id')] = user
-                if user.get('name'):
-                    users_username_dict[user.get('user_name')] = user.get('sys_id')
+        sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
+        # if users were not requested, dont fetch them
+        if not fetch_users_info_for_devices:
+            tables_by_key.setdefault(consts.USERS_TABLE_KEY, dict())
+            del sub_tables_to_request_by_key[consts.USERS_TABLE_KEY]
 
-        location_table_dict = dict()
-        for location in location_table:
-            if location.get('sys_id'):
-                location_table_dict[location.get('sys_id')] = location
-        user_groups_dict = dict()
-        for user_group_raw in user_groups_table:
-            if user_group_raw.get('sys_id'):
-                user_groups_dict[user_group_raw.get('sys_id')] = user_group_raw
+        additional_url_params_by_table_key = {}
+        if fetch_ci_relations:
+            # Append device requests with only the sys_id and name properties (as sub_tables)
+            sub_tables_to_request_by_key[consts.CMDB_CI_TABLE] = consts.CMDB_CI_TABLE
+            additional_url_params_by_table_key = {consts.CMDB_CI_TABLE: {
+                'sysparm_fields': 'sys_id,name,sys_class_name',
+            }}
+        else:
+            # if relations were not requested, dont fetch them
+            tables_by_key.setdefault(consts.RELATIONS_TABLE, dict())
+            del sub_tables_to_request_by_key[consts.RELATIONS_TABLE]
 
-        nic_table_dict = dict()
-        try:
-            for nic in nics_table:
-                if (nic.get('cmdb_ci') or {}).get('value'):
-                    if (nic.get('cmdb_ci') or {}).get('value') not in nic_table_dict:
-                        nic_table_dict[(nic.get('cmdb_ci') or {}).get('value')] = []
-                    nic_table_dict[(nic.get('cmdb_ci') or {}).get('value')].append(nic)
-        except Exception:
-            logger.exception(f'Problem building nic dict')
-        department_table_dict = dict()
-        for department in departments_table:
-            if department.get('sys_id'):
-                department_table_dict[department.get('sys_id')] = department
+        for table_key, table_results_chunk in self._iter_async_table_chunks_by_key(
+                sub_tables_to_request_by_key, additional_params_by_table_key=additional_url_params_by_table_key):
+            # Note: all checks for validity of table_results_chunk are performed by the generator
+            for sub_table_result in table_results_chunk:
+                if not isinstance(sub_table_result, dict):
+                    logger.warning(f'Invalid table_result received for key {table_key}: {sub_table_result}')
+                    continue
 
-        alm_asset_table = []
-        try:
-            alm_asset_table = list(self.__get_devices_from_table(consts.ALM_ASSET_TABLE))
-        except Exception:
-            logger.exception(f'Problem getting location')
-        alm_asset_table_dict = dict()
-        for alm_asset in alm_asset_table:
-            if alm_asset.get('sys_id'):
-                alm_asset_table_dict[alm_asset.get('sys_id')] = alm_asset
+                curr_table = tables_by_key.setdefault(table_key, dict())
 
-        companies_table_dict = dict()
-        for company in companies_table:
-            if company.get('sys_id'):
-                companies_table_dict[company.get('sys_id')] = company
+                # General subtable cases - table = {'sys_id': general subtable dict}
+                if table_key in [consts.USERS_TABLE_KEY, consts.LOCATION_TABLE_KEY,
+                                 consts.USER_GROUPS_TABLE_KEY, consts.DEPARTMENT_TABLE_KEY,
+                                 consts.ALM_ASSET_TABLE, consts.COMPANY_TABLE, consts.U_SUPPLIER_TABLE,
+                                 consts.MAINTENANCE_SCHED_TABLE, consts.SOFTWARE_PRODUCT_TABLE, consts.MODEL_TABLE]:
+                    sys_id = sub_table_result.get('sys_id')
+                    if not sys_id:
+                        continue
+                    if sys_id in curr_table:
+                        logger.debug(f'Located sys_id duplication "{sys_id}" in sub_table_key {table_key}')
+                        continue
+                    curr_table[sys_id] = sub_table_result
 
-        ci_ips_table_dict = dict()
-        try:
-            for ci_ip in ci_ips_table:
-                if isinstance(ci_ip, dict) and ci_ip.get('asset'):
-                    if ci_ip.get('u_nic') not in ci_ips_table_dict:
-                        ci_ips_table_dict[ci_ip.get('u_nic')] = []
-                    ci_ips_table_dict[ci_ip.get('u_nic')].append(ci_ip)
-        except Exception:
-            logger.exception(f'Problem getting ci ips dict')
-        ips_table_dict = dict()
-        try:
-            for ip_data in ips_table:
-                if (ip_data.get('u_configuration_item') or {}).get('value'):
-                    if (ip_data.get('u_configuration_item') or {}).get('value') not in ips_table_dict:
-                        ips_table_dict[(ip_data.get('u_configuration_item') or {}).get('value')] = []
-                    ips_table_dict[(ip_data.get('u_configuration_item') or {}).get('value')].append(ip_data)
-        except Exception:
-            logger.exception('Problem parsing ips table')
-        self.__users_table = users_table_dict
-        for table_details in consts.TABLES_DETAILS:
-            new_table_details = table_details.copy()
-            table_devices = {consts.DEVICES_KEY: self.__get_devices_from_table(table_details[consts.TABLE_NAME_KEY])}
-            new_table_details.update(table_devices)
-            new_table_details[consts.USERS_TABLE_KEY] = users_table_dict
-            new_table_details[consts.USERS_USERNAME_KEY] = users_username_dict
-            new_table_details[consts.LOCATION_TABLE_KEY] = location_table_dict
-            new_table_details[consts.USER_GROUPS_TABLE_KEY] = user_groups_dict
-            new_table_details[consts.NIC_TABLE_KEY] = nic_table_dict
-            new_table_details[consts.DEPARTMENT_TABLE_KEY] = department_table_dict
-            new_table_details[consts.ALM_ASSET_TABLE] = alm_asset_table_dict
-            new_table_details[consts.COMPANY_TABLE] = companies_table_dict
-            new_table_details[consts.IPS_TABLE] = ips_table_dict
-            new_table_details[consts.CI_IPS_TABLE] = ci_ips_table_dict
-            tables_devices.append(new_table_details)
+                    # ADDITIONALLY, for users table key, configure username subtable as well
+                    if table_key == consts.USERS_TABLE_KEY:
+                        # Note: the check for 'name' vs the usage of 'user_name' was on the original sync impl.
+                        username = sub_table_result.get('user_name')
+                        if not (sub_table_result.get('name') and username):
+                            continue
+                        username_subtable = tables_by_key.setdefault(consts.USERS_USERNAME_KEY, dict())
+                        if username in username_subtable:
+                            logger.debug(f'Located username duplication "{username}" in sub_table_key {table_key}')
+                            continue
+                        username_subtable[username] = sub_table_result.get('sys_id')
 
-        return tables_devices
+                # CI_IPS - table = {'nic_dict.u_nic': [nic dicts...]}
+                elif table_key == consts.CI_IPS_TABLE:
+                    if not sub_table_result.get('asset'):
+                        continue
+                    curr_table.setdefault(sub_table_result.get('u_nic'), list()).append(sub_table_result)
+
+                # IPS - curr_table = {'ip_dict.u_configuration_item.value': [ips dicts...]}
+                elif table_key == consts.IPS_TABLE:
+                    configuration_item_value = (sub_table_result.get('u_configuration_item') or {}).get('value')
+                    if not configuration_item_value:
+                        continue
+                    curr_table.setdefault(configuration_item_value, list()).append(sub_table_result)
+
+                # NIC - curr_table = {'nic_dict.cmdb_ci.value': [nic dicts...]}
+                elif table_key == consts.NIC_TABLE_KEY:
+                    cmdb_ci_value = (sub_table_result.get('cmdb_ci') or {}).get('value')
+                    if not cmdb_ci_value:
+                        continue
+                    curr_table.setdefault(cmdb_ci_value, list()).append(sub_table_result)
+
+                # Relations - curr_table = {'sys_id': {'parents': ['sys_id',...], 'children': ['sys_id']}
+                elif table_key == consts.RELATIONS_TABLE:
+                    sys_id = sub_table_result.get('sys_id')
+                    if not sys_id:
+                        continue
+                    curr_rel_dict = curr_table.setdefault(sys_id, {})
+
+                    parent_id = (sub_table_result.get('parent') or {}).get('value')
+                    if parent_id:
+                        curr_rel_dict.setdefault('parents', []).append(parent_id)
+
+                    child_id = (sub_table_result.get('child') or {}).get('value')
+                    if child_id:
+                        curr_rel_dict.setdefault('children', []).append(child_id)
+
+                # CMDB_CI as subtable - curr_table = {'sys_id': {'name': name, 'sys_class_name': class_name}}
+                elif table_key == consts.CMDB_CI_TABLE:
+                    # NOTE: removes the sys_id when found (it will be present as the key of the subtable)
+                    sys_id = sub_table_result.pop('sys_id', None)
+                    if not sys_id:
+                        continue
+
+                    # test existence and non-emptiness of cmdb_ci entry
+                    if isinstance(curr_table.get(sys_id), dict):
+                        continue
+                    curr_table[sys_id] = sub_table_result
+
+                else:
+                    logger.error('Invalid sub_table_key encountered {sub_table_key}')
+                    continue
+
+        return tables_by_key
+
+    @staticmethod
+    def __get_table_name_by_device_type():
+        return {table_details[consts.DEVICE_TYPE_NAME_KEY]: table_details[consts.TABLE_NAME_KEY]
+                for table_details in consts.TABLES_DETAILS}
+
+    def __iter_device_table_chunks_by_details(self) -> Generator[Tuple[str, str, List[dict]], None, None]:
+        # prepare table_name_by_key for async requests
+        table_name_by_device_type = self.__get_table_name_by_device_type()
+        for device_type, table_results_chunk in self._iter_async_table_chunks_by_key(table_name_by_device_type):
+            # Note: all checks for validity of table_results_chunk are performed by the generator
+            yield (device_type, table_name_by_device_type[device_type], table_results_chunk)
+
+    @staticmethod
+    def _get_table_async_request_params(table_name: str, offset: int, page_size: int,
+                                        additional_url_params: Optional[dict]=None):
+        if not additional_url_params:
+            additional_url_params = dict()
+        return {'name': f'table/{str(table_name)}',
+                'do_basic_auth': True,
+                # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
+                'url_params': {'sysparm_limit': page_size,
+                               'sysparm_offset': offset,
+                               'sysparm_query': 'ORDERBYDESCsys_created_on',
+                               **additional_url_params}}
+
+    def _iter_async_table_chunks_by_key(self, table_name_by_key: dict,
+                                        additional_params_by_table_key: Optional[dict] = None) \
+            -> Generator[Tuple[str, dict], None, None]:
+        """ yields table chunks in the form of (table_key, List[table_result_dict]) tuple.
+            When pagination has stopped for a specific table_key, it yields a last (table_key, None)"""
+
+        if not additional_params_by_table_key:
+            additional_params_by_table_key = dict()
+
+        # prepare initial request for each table
+        # Note: these requests are only to retrieve the total count
+        initial_request_params_by_key = {
+            table_key: {
+                **self._get_table_async_request_params(
+                    table_name, 0, 1, additional_url_params=additional_params_by_table_key.get(table_key)),
+                # Note: Initial requests needs to return in raw form to read its headers
+                'return_response_raw': True,
+            } for table_key, table_name in table_name_by_key.items()}
+
+        # run the initial requests to retrieve the total count (ignore first page results)
+        table_total_counts_by_key = {}
+        for table_key, raw_response in zip(initial_request_params_by_key.keys(),
+                                           self._async_get(list(initial_request_params_by_key.values()),
+                                                           retry_on_error=True)):
+            if not (self._is_async_response_good(raw_response) and isinstance(raw_response, ClientResponse)):
+                logger.warning(f'Async response returned bad, its {raw_response}')
+                continue
+
+            try:
+                table_total_counts_by_key[table_key] = int(raw_response.headers['X-Total-Count'])
+            except Exception:
+                logger.warning(f'Unable to retrieve totals for table_key {table_key}.')
+                continue
+        logger.info(f'Requested counts: {table_total_counts_by_key}')
+
+        # prepare requests for all table pages whose total we achieved successfully
+        table_keys = []
+        chunk_requests = []
+        for table_key, total_count in table_total_counts_by_key.items():
+            # compute page count
+            number_of_offsets = min(ceil(total_count / float(self.__offset_size)),
+                                    self.__number_of_offsets)
+            table_name = table_name_by_key[table_key]
+            for page_offset in range(0, number_of_offsets):
+                table_keys.append(table_key)
+                offset = page_offset * self.__offset_size
+                chunk_requests.append(self._get_table_async_request_params(
+                    table_name, offset, self.__offset_size,
+                    additional_url_params=additional_params_by_table_key.get(table_key)))
+
+        # run all the async requests
+        for table_key, response in zip(table_keys, self._async_get(chunk_requests, retry_on_error=True,
+                                                                   chunks=consts.ASYNC_CHUNK_SIZE)):
+            table_results_chunk = self.__parse_results_chunk_from_response(response, table_key)
+            # Note: Invalid response and data validity in response are audited and checked in the parse method
+            if not table_results_chunk:
+                continue
+
+            logger.debug(f'yielding {len(table_results_chunk)} results for table_key {table_key}')
+            yield table_key, table_results_chunk
+
+    def __parse_results_chunk_from_response(self, response, table_key):
+
+        if not self._is_async_response_good(response):
+            logger.error(f'Async response returned bad, its {response}')
+            return None
+
+        if not isinstance(response, dict):
+            logger.warning(f'Invalid response returned: {response}')
+            return None
+
+        table_results_chunk = response.get('result', [])
+        if not isinstance(table_results_chunk, list):
+            logger.warning(f'Invalid result returned for table_key {table_key}: {table_results_chunk}')
+            return None
+
+        curr_count = len(table_results_chunk)
+        if curr_count == 0:
+            logger.info(f'No results returned for table_key {table_key}')
+            return None
+
+        return table_results_chunk
 
     def __get_devices_from_table(self, table_name, number_of_offsets=None):
         logger.info(f'Fetching table {table_name}')
@@ -213,6 +317,7 @@ class ServiceNowConnection(RESTConnection):
     def __add_dict_to_table(self, table_name, dict_data):
         return self._post(f'table/{str(table_name)}', body_params=dict_data)
 
+    # pylint: disable=too-many-branches
     def create_service_now_incident(self, service_now_dict):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
         short_description = service_now_dict.get('short_description', '')
