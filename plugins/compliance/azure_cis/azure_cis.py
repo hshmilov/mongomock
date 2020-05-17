@@ -77,7 +77,7 @@ class AzureCISGenerator:
 
         client_config_accounts = []
 
-        for azure_client_config in self.all_azure_client_configs:
+        for azure_client_config in self.all_azure_client_configs.values():
             # Prepare all accounts creds
             client_config_id = '_'.join([
                 azure_client_config.get(AZURE_ACCOUNT_TAG, ''),
@@ -112,8 +112,8 @@ class AzureCISGenerator:
                             'last_updated': datetime.datetime.now()
                         }
                     )
+
+                    logger.info(f'Finished Azure-CIS report for "{account_name}" ({account_id} '
+                                f'in {time.time() - start_time} seconds.')
                 except Exception:
                     logger.exception(f'Could not get results in cloud-compliance')
-
-                logger.info(f'Finished Azure-CIS report for "{account_name}" ({account_id} '
-                            f'in {time.time() - start_time} seconds.')

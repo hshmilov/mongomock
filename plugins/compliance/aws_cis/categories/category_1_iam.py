@@ -12,7 +12,7 @@ import boto3
 from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.utils.datetime import parse_date
 from compliance.utils.account_report import AccountReport, RuleStatus
-from compliance.aws_cis.aws_cis_utils import bad_api_response, good_api_response, get_api_error, aws_cis_rule, \
+from compliance.utils.cis_utils import bad_api_response, good_api_response, get_api_error, cis_rule, \
     AWS_CIS_DEFAULT_REGION, get_api_data, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -82,7 +82,7 @@ class CISAWSCategory1:
         self.account_summary = get_account_summary(self.iam_client)
         self.account_id = account_dict.get('account_id_number')
 
-    @aws_cis_rule('1.1')
+    @cis_rule('1.1')
     def check_cis_aws_1_1(self, **kwargs):
         """
         1.1 Avoid the use of the "root" account (scored)
@@ -142,7 +142,7 @@ class CISAWSCategory1:
             self.report.add_rule_error(rule_section, 'Could not find the root account in the credentials report')
 
     # pylint: disable=unnecessary-pass
-    @aws_cis_rule('1.2')
+    @cis_rule('1.2')
     def check_cis_aws_1_2(self, **kwargs):
         """
         1.2  Ensure multi-factor authentication (MFA) is enabled for all IAM users that have a console password (scored)
@@ -183,7 +183,7 @@ class CISAWSCategory1:
                 ''
             )
 
-    @aws_cis_rule('1.3')
+    @cis_rule('1.3')
     def check_cis_aws_1_3(self, **kwargs):
         """
         1.3  Ensure credentials unused for 90 days or greater are disabled (Scored)
@@ -260,7 +260,7 @@ class CISAWSCategory1:
                 ''
             )
 
-    @aws_cis_rule('1.4')
+    @cis_rule('1.4')
     def check_cis_aws_1_4(self, **kwargs):
         """
         1.4 Ensure access keys are rotated every 90 days or less (Scored)
@@ -327,7 +327,7 @@ class CISAWSCategory1:
                 ''
             )
 
-    @aws_cis_rule('1.5')
+    @cis_rule('1.5')
     def check_cis_aws_1_5(self, **kwargs):
         """
         1.5 Ensure IAM password policy requires at least one uppercase letter (Scored)
@@ -365,7 +365,7 @@ class CISAWSCategory1:
                 'Password policy does not require at least one uppercase letter'
             )
 
-    @aws_cis_rule('1.6')
+    @cis_rule('1.6')
     def check_cis_aws_1_6(self, **kwargs):
         """
         1.6 Ensure IAM password policy require at least one lowercase letter (Scored)
@@ -403,7 +403,7 @@ class CISAWSCategory1:
                 'Password policy does not require at least one lowercase letter'
             )
 
-    @aws_cis_rule('1.7')
+    @cis_rule('1.7')
     def check_cis_aws_1_7(self, **kwargs):
         """
         1.7 Ensure IAM password policy require at least one symbol (Scored)
@@ -441,7 +441,7 @@ class CISAWSCategory1:
                 'Password policy does not require at least one symbol'
             )
 
-    @aws_cis_rule('1.8')
+    @cis_rule('1.8')
     def check_cis_aws_1_8(self, **kwargs):
         """
         1.8 Ensure IAM password policy require at least one number (Scored)
@@ -479,7 +479,7 @@ class CISAWSCategory1:
                 'Password policy does not require at least one number'
             )
 
-    @aws_cis_rule('1.9')
+    @cis_rule('1.9')
     def check_cis_aws_1_9(self, **kwargs):
         """
         1.9 Ensure IAM password policy requires minimum length of 14 or greater (Scored)
@@ -517,7 +517,7 @@ class CISAWSCategory1:
                 'Password policy does not require at least 14 characters'
             )
 
-    @aws_cis_rule('1.10')
+    @cis_rule('1.10')
     def check_cis_aws_1_10(self, **kwargs):
         """
         1.10 Ensure IAM password policy prevents password reuse (Scored)
@@ -555,7 +555,7 @@ class CISAWSCategory1:
                 'Password policy does not prevent reusing last 24 passwords'
             )
 
-    @aws_cis_rule('1.11')
+    @cis_rule('1.11')
     def check_cis_aws_1_11(self, **kwargs):
         """
         1.11 Ensure IAM password policy expires passwords within 90 days or less (Scored)
@@ -593,7 +593,7 @@ class CISAWSCategory1:
                 'Password policy does not expire passwords after 90 days or less'
             )
 
-    @aws_cis_rule('1.12')
+    @cis_rule('1.12')
     def check_cis_aws_1_12(self, **kwargs):
         """
         1.12 Ensure no root account access key exists (Scored)
@@ -636,7 +636,7 @@ class CISAWSCategory1:
         else:
             self.report.add_rule_error(rule_section, 'Could not find the root account in the credentials report')
 
-    @aws_cis_rule('1.13')
+    @cis_rule('1.13')
     def check_cis_aws_1_13(self, **kwargs):
         """
         1.13 Ensure MFA is enabled for the "root" account (Scored)
@@ -671,7 +671,7 @@ class CISAWSCategory1:
                 ''
             )
 
-    @aws_cis_rule('1.14')
+    @cis_rule('1.14')
     def check_cis_aws_1_14(self, **kwargs):
         """
         1.14 Ensure hardware MFA is enabled for the "root" account (Scored)
@@ -727,7 +727,7 @@ class CISAWSCategory1:
             ''
         )
 
-    @aws_cis_rule('1.16')
+    @cis_rule('1.16')
     def check_cis_aws_1_16(self, **kwargs):
         """
         1.16 Ensure IAM policies are attached only to groups or roles (Scored)
@@ -780,7 +780,7 @@ class CISAWSCategory1:
                 ''
             )
 
-    @aws_cis_rule('1.20')
+    @cis_rule('1.20')
     def check_cis_aws_1_20(self, **kwargs):
         rule_section = kwargs['rule_section']
         try:
@@ -824,7 +824,7 @@ class CISAWSCategory1:
                 f'Error listing policies (iam.list_policies): {str(e)}'
             )
 
-    @aws_cis_rule('1.22')
+    @cis_rule('1.22')
     def check_cis_aws_1_22(self, **kwargs):
         """
         1.22 Ensure IAM policies that allow full "*:*" administrative privileges are not created (Scored)

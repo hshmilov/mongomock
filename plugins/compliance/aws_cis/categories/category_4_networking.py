@@ -10,7 +10,7 @@ from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.entities import EntityType
 from compliance.utils.account_report import AccountReport, RuleStatus
-from compliance.aws_cis.aws_cis_utils import aws_cis_rule, bad_api_response, good_api_response, \
+from compliance.utils.cis_utils import cis_rule, bad_api_response, good_api_response, \
     get_api_error, get_api_data, get_count_incompliant_cis_rule, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -56,7 +56,7 @@ class CISAWSCategory4:
         self.security_groups = get_security_groups(session, regions, account_dict.get('https_proxy'))
         self.account_id = account_dict.get('account_id_number')
 
-    @aws_cis_rule('4.1')
+    @cis_rule('4.1')
     def check_cis_aws_4_1(self, **kwargs):
         """
         4.1 Ensure no security groups allow ingress from 0.0.0.0/0 to port 22 (Scored)
@@ -109,7 +109,7 @@ class CISAWSCategory4:
                 ''
             )
 
-    @aws_cis_rule('4.2')
+    @cis_rule('4.2')
     def check_cis_aws_4_2(self, **kwargs):
         """
         4.2 Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389 (Scored)
@@ -160,7 +160,7 @@ class CISAWSCategory4:
                 ''
             )
 
-    @aws_cis_rule('4.3')
+    @cis_rule('4.3')
     def check_cis_aws_4_3(self, **kwargs):
         """
         4.3 Ensure the default security group of every VPC restricts all traffic (Scored)

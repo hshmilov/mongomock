@@ -9,7 +9,7 @@ from axonius.clients.azure.consts import AZURE_TENANT_ID, AZURE_ACCOUNT_TAG, AZU
     AZURE_SUBSCRIPTION_ID, AZURE_CLOUD_ENVIRONMENT, AZURE_AD_CLOUD_ENVIRONMENT, AzureClouds, AZURE_STACK_HUB_URL, \
     AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_PROXY_SETTINGS, AZURE_HTTPS_PROXY, AZURE_VERIFY_SSL, AZURE_IS_AZURE_AD_B2C
 from compliance.azure_cis.azure_cis_rules import generate_rules, generate_failed_report
-from compliance.utils.account_report import AccountReport
+from compliance.utils.AzureAccountReport import AzureAccountReport
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -51,7 +51,7 @@ def get_session_by_account_dict(account_dict: dict) -> AzureCloudConnection:
             management_url=management_url,
             resource=resource,
             azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
-            is_azure_ad_b2c=azure_stack_hub_proxy_settings.get(AZURE_IS_AZURE_AD_B2C),
+            is_azure_ad_b2c=account_dict.get(AZURE_IS_AZURE_AD_B2C),
             https_proxy=account_dict.get(AZURE_HTTPS_PROXY),
             verify_ssl=account_dict.get(AZURE_VERIFY_SSL)
     ) as connection:
@@ -61,7 +61,7 @@ def get_session_by_account_dict(account_dict: dict) -> AzureCloudConnection:
 def generate_report_for_azure_account(account_dict: dict) -> Tuple[str, str, dict]:
     account_name = account_dict.get('name') or 'unknown'
     logger.info(f'Parsing account {account_name}')
-    report = AccountReport()
+    report = AzureAccountReport()
 
     account_id = account_dict[AZURE_TENANT_ID]
     account_name = account_id

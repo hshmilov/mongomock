@@ -11,7 +11,7 @@ from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.compliance.aws_cis_consts import AWS_CIS_ALL_RULES
 from compliance.utils.account_report import AccountReport
-from compliance.aws_cis.aws_cis_utils import good_api_response, bad_api_response
+from compliance.utils.cis_utils import good_api_response, bad_api_response
 from compliance.aws_cis.categories.category_1_iam import CISAWSCategory1
 from compliance.aws_cis.categories.category_2_logging import CISAWSCategory2
 from compliance.aws_cis.categories.category_3_monitoring import CISAWSCategory3

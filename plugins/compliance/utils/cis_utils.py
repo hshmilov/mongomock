@@ -31,7 +31,7 @@ def bad_api_response(error) -> dict:
     }
 
 
-def aws_cis_rule(rule_section: str):
+def cis_rule(rule_section: str):
     def inner_function(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
@@ -49,7 +49,7 @@ def aws_cis_rule(rule_section: str):
 
 
 def get_count_incompliant_cis_rule(
-        entity: EntityType, account_id: Optional[str], cis_rule: str) -> int:
+        entity: EntityType, account_id: Optional[str], aws_cis_rule: str) -> int:
     if not account_id:
         return 0
     try:
@@ -64,7 +64,7 @@ def get_count_incompliant_cis_rule(
                     '$elemMatch': {
                         '$and': [
                             {
-                                'data.aws_cis_incompliant.rule_section': cis_rule,
+                                'data.aws_cis_incompliant.rule_section': aws_cis_rule,
                             },
                             {
                                 'data.aws_account_id': account_id

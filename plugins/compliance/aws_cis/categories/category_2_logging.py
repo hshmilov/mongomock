@@ -15,7 +15,7 @@ from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.clients.aws.consts import REGIONS_NAMES
 from axonius.utils.datetime import parse_date
 from compliance.utils.account_report import AccountReport, RuleStatus
-from compliance.aws_cis.aws_cis_utils import aws_cis_rule, \
+from compliance.utils.cis_utils import cis_rule, \
     get_api_error, get_api_data, AWS_CIS_DEFAULT_REGION, errors_to_gui
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -36,7 +36,7 @@ class CISAWSCategory2:
         else:
             self.all_regions = REGIONS_NAMES
 
-    @aws_cis_rule('2.1')
+    @cis_rule('2.1')
     def check_cis_aws_2_1(self, **kwargs):
         """
         2.1 Ensure CloudTrail is enabled in all regions (Scored)
@@ -83,7 +83,7 @@ class CISAWSCategory2:
             'ReadWriteType set to All.'
         )
 
-    @aws_cis_rule('2.2')
+    @cis_rule('2.2')
     def check_cis_aws_2_2(self, **kwargs):
         """
         2.2 Ensure CloudTrail log file validation is enabled (Scored)
@@ -121,7 +121,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.3')
+    @cis_rule('2.3')
     def check_cis_aws_2_3(self, **kwargs):
         """
         2.3 Ensure the S3 bucket used to store CloudTrail logs is not publicly accessible (Scored)
@@ -210,7 +210,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.4')
+    @cis_rule('2.4')
     def check_cis_aws_2_4(self, **kwargs):
         """
         2.4 Ensure CloudTrail trails are integrated with CloudWatch Logs (Scored)
@@ -264,7 +264,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.5')
+    @cis_rule('2.5')
     def check_cis_aws_2_5(self, **kwargs):
         """
         2.5 Ensure AWS Config is enabled in all regions (Scored)
@@ -342,7 +342,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.6')
+    @cis_rule('2.6')
     def check_cis_aws_2_6(self, **kwargs):
         """
         2.6 Ensure S3 bucket access logging is enabled on the CloudTrail S3 bucket (Scored)
@@ -406,7 +406,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.7')
+    @cis_rule('2.7')
     def check_cis_aws_2_7(self, **kwargs):
         """
         2.7 Ensure CloudTrail logs are encrypted at rest using KMS CMKs (Scored)
@@ -447,7 +447,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.8')
+    @cis_rule('2.8')
     def check_cis_aws_2_8(self, **kwargs):
         """
         2.8 Ensure rotation for customer created CMKs is enabled (Scored)
@@ -497,7 +497,7 @@ class CISAWSCategory2:
                 ''
             )
 
-    @aws_cis_rule('2.9')
+    @cis_rule('2.9')
     def check_cis_aws_2_9(self, **kwargs):
         """
         2.9 Ensure VPC flow logging is enabled in all VPCs (Scored)
