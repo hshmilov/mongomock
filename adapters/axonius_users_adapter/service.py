@@ -179,6 +179,7 @@ class AxoniusUsersAdapter(AdapterBase):
             user.last_name = user_raw.get('last_name')
             user.image = user_raw.get('pic_name')
             user.is_admin = user_raw.get('admin')
+            user.last_logon = parse_date(user_raw.get('last_login'))
 
             # specific fields
             user.source = user_raw.get('source')

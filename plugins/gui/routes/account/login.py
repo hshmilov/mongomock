@@ -132,7 +132,6 @@ class Login:
                                                upsert=True)
 
         self.__perform_login_with_user(user_from_db, remember_me)
-        self._update_user_last_login(user_from_db)
         response = Response('')
         self._add_expiration_timeout_cookie(response)
         return response
@@ -178,6 +177,7 @@ class Login:
         self.get_session['user'] = user
         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
         self.get_session.permanent = remember_me
+        self._update_user_last_login(user)
         self._log_activity_login()
 
     def __exteranl_login_successful(self, source: str,
