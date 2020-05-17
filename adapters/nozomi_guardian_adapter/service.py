@@ -1,10 +1,12 @@
+import ipaddress
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapterVlan
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_mac
 from nozomi_guardian_adapter.connection import NozomiGuardianConnection
@@ -14,7 +16,7 @@ from nozomi_guardian_adapter.structures import NozomiAssetDevice
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class NozomiGuardianAdapter(AdapterBase):
+class NozomiGuardianAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(NozomiAssetDevice):
         pass
@@ -136,8 +138,14 @@ class NozomiGuardianAdapter(AdapterBase):
 
             device.id = device_id + '_' + (serial_number or next(iter(macs), ''))
 
-            device.name = device_id
-            device.hostname = device_id
+            # make sure device_id (used for hostname and name) is not IP
+            try:
+                _ = ipaddress.ip_address(device_id)
+                # If we got to this line - it means device_id is an ip
+            except Exception:
+                device.name = device_id
+                device.hostname = device_id
+
             device.add_ips_and_macs(ips=ips, macs=macs)
 
             vlans = []
