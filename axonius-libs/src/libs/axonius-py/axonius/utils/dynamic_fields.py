@@ -1,14 +1,20 @@
 # pylint: disable=protected-access
 import datetime
+import logging
 
 from axonius.fields import ListField, Field
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import normalize_var_name
 
+EMPTY_VARS = (None, [], {}, '')  # for handling non-null "Falsey" data
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # pylint: disable=consider-merging-isinstance
 def get_entity_new_field(title: str, value):
-    if not value:
+    logger.debug(f'Getting new field for {title}: {value}')
+    if value in EMPTY_VARS:
         return None
 
     if isinstance(value, list):
@@ -19,14 +25,14 @@ def get_entity_new_field(title: str, value):
         class SmartJsonClassInstance(SmartJsonClass):
             pass
         field_type = SmartJsonClassInstance
+    elif isinstance(value, bool):
+        field_type = bool
     elif isinstance(value, datetime.datetime) or isinstance(value, datetime.date):
         field_type = datetime.datetime
     elif isinstance(value, float):
         field_type = float
     elif isinstance(value, int):
         field_type = int
-    elif isinstance(value, bool):
-        field_type = bool
     else:
         field_type = str
 
@@ -34,7 +40,8 @@ def get_entity_new_field(title: str, value):
 
 
 def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str):
-    if not value:
+    # don't just `if not value` in case value is a false boolean, for example!
+    if value in EMPTY_VARS:
         return
     key = normalize_var_name(key)
     if not entity.does_field_exist(key):

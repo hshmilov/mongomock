@@ -372,7 +372,12 @@ class JsonAdapter(AdapterBase):
             user.domain = self._get_raw(user_raw, fields, 'domain')
             user.username = self._get_raw(user_raw, fields, 'username')
             # And now for something completely different...
-            self._parse_entity_dynamic(user, user_raw)
+            try:
+                self._parse_entity_dynamic(user, user_raw)
+            except Exception:
+                message = f'Failed to parse dynamic fields for {user_raw}'
+                logger.warning(message, exc_info=True)
+
             user.set_raw(user_raw)
             return user
         except Exception as e:
