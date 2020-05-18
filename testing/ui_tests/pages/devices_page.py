@@ -33,6 +33,7 @@ class DevicesPage(EntitiesPage):
     FIELD_USERS_LAST_USE_NAME = 'last_use_date'
     FIELD_LAST_USED_USERS = 'Last Used Users'
     FIELD_FIRST_FETCH_TIME = 'First Fetch Time'
+    FIELD_FETCH_TIME = 'Fetch Time'
     FIELD_FIRST_SEEN = 'First Seen'
     FIELD_USERS_LOCAL = 'Is Local'
     FIELD_USERS_LOCAL_NAME = 'is_local'

@@ -9,12 +9,14 @@ from selenium.webdriver.remote.webelement import WebElement
 from axonius.utils.wait import wait_until
 from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA,
                                                     FILE_NAME)
+from test_credentials.json_file_credentials import client_details as json_file_creds
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.pages.page import (PAGE_BODY, RETRY_WAIT_FOR_ELEMENT,
-                                 SLEEP_INTERVAL)
-from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME, CSV_NAME,
-                                      JSON_ADAPTER_NAME)
+from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
+                                      JSON_ADAPTER_NAME,
+                                      CSV_NAME)
+
 
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
@@ -22,6 +24,7 @@ Adapter = namedtuple('Adapter', 'name description')
 CONNECTION_LABEL = 'AXON'
 CONNECTION_LABEL_UPDATED = 'AXON2'
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
+JSON_NAME = 'JSON File'
 ADAPTER_THYCOTIC_VAULT_BUTTON = 'cyberark-button'
 ADAPTER_THYCOTIC_VAULT_QUERY_ID = 'cyberark-query'
 ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .md-icon'
@@ -199,6 +202,13 @@ class AdaptersPage(EntitiesPage):
 
     def clean_adapter_servers(self, name, delete_associated_entities=False):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
+
+    def restore_json_client(self):
+        self.clean_adapter_servers(JSON_NAME, delete_associated_entities=True)
+        self.add_server(json_file_creds, JSON_NAME)
+        self.wait_for_server_green()
+        self.wait_for_table_to_load()
+        self.wait_for_data_collection_toaster_absent()
 
     def checkboxes_count(self):
         table_element = self.driver.find_element_by_css_selector(self.TABLE_CLASS)

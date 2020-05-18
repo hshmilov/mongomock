@@ -117,7 +117,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit0",
+            "id": "device0",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 12,
@@ -181,7 +181,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit1",
+            "id": "device1",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 12,
@@ -242,7 +242,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2008 r2 (64-bit)"
             },
-            "id": "shit2",
+            "id": "device2",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -295,7 +295,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit3",
+            "id": "device3",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": -1,
@@ -354,7 +354,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5 or later",
                 "type": "VMWare"
             },
-            "id": "shit4",
+            "id": "device4",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -407,7 +407,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows 7 (32-bit)"
             },
-            "id": "shit5",
+            "id": "device5",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -468,7 +468,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 7 (64-bit)"
             },
-            "id": "shit6",
+            "id": "device6",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -536,7 +536,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 6 (64-bit)"
             },
-            "id": "shit7",
+            "id": "device7",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -602,7 +602,7 @@ esx_json_file_mock_devices = {
                 "type": "FreeBSD",
                 "os_str": "freebsd pre-11 versions (64-bit)"
             },
-            "id": "shit8",
+            "id": "device8",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 47,
@@ -659,7 +659,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "centos 4/5 or later (64-bit)"
             },
-            "id": "shit9",
+            "id": "device9",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -719,7 +719,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 7 (64-bit)"
             },
-            "id": "shit10",
+            "id": "device10",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -777,7 +777,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit11",
+            "id": "device11",
             "vm_tools_status": "toolsNotRunning",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -840,7 +840,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit12",
+            "id": "device12",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 23,
@@ -902,7 +902,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows 10 (64-bit)"
             },
-            "id": "shit13",
+            "id": "device13",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -965,7 +965,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit14",
+            "id": "device14",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -1018,7 +1018,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit15",
+            "id": "device15",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": -1,
@@ -1082,7 +1082,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "centos 4/5 or later (64-bit)"
             },
-            "id": "shit16",
+            "id": "device16",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -1140,7 +1140,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 6 (64-bit)"
             },
-            "id": "shit17",
+            "id": "device17",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -1206,7 +1206,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit18",
+            "id": "device18",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 80,
@@ -1272,7 +1272,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit19",
+            "id": "device19",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 80,
@@ -1330,7 +1330,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit20",
+            "id": "device20",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 78,
@@ -1394,7 +1394,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "centos 4/5 or later (64-bit)"
             },
-            "id": "shit21",
+            "id": "device21",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 9,
@@ -1505,7 +1505,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "other 3.x linux (64-bit)"
             },
-            "id": "shit22",
+            "id": "device22",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 121,
@@ -1571,7 +1571,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit23",
+            "id": "device23",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 51,
@@ -1631,7 +1631,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5 or later",
                 "type": "VMWare"
             },
-            "id": "shit24",
+            "id": "device24",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -1684,7 +1684,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit25",
+            "id": "device25",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 15,
@@ -1784,7 +1784,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "other 3.x linux (64-bit)"
             },
-            "id": "shit26",
+            "id": "device26",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -1848,7 +1848,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit27",
+            "id": "device27",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 51,
@@ -1916,7 +1916,7 @@ esx_json_file_mock_devices = {
                 "type": "FreeBSD",
                 "os_str": "freebsd pre-11 versions (64-bit)"
             },
-            "id": "shit28",
+            "id": "device28",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -1975,7 +1975,7 @@ esx_json_file_mock_devices = {
                 "bitness": 64,
                 "os_str": "other (64-bit)"
             },
-            "id": "shit29",
+            "id": "device29",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -2040,7 +2040,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2012 (64-bit)"
             },
-            "id": "shit30",
+            "id": "device30",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 22,
@@ -2102,7 +2102,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2008 r2 (64-bit)"
             },
-            "id": "shit31",
+            "id": "device31",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -2165,7 +2165,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows 8.x (64-bit)"
             },
-            "id": "shit32",
+            "id": "device32",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 49,
@@ -2236,7 +2236,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 5 (32-bit)"
             },
-            "id": "shit33",
+            "id": "device33",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2293,7 +2293,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows 10 (64-bit)"
             },
-            "id": "shit34",
+            "id": "device34",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2360,7 +2360,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit35",
+            "id": "device35",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 22,
@@ -2429,7 +2429,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit36",
+            "id": "device36",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 22,
@@ -2496,7 +2496,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows 10 (64-bit)"
             },
-            "id": "shit37",
+            "id": "device37",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2563,7 +2563,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit38",
+            "id": "device38",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 28,
@@ -2631,7 +2631,7 @@ esx_json_file_mock_devices = {
                 "bitness": 64,
                 "os_str": "other (64-bit)"
             },
-            "id": "shit39",
+            "id": "device39",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2707,7 +2707,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "other 2.6.x linux (64-bit)"
             },
-            "id": "shit40",
+            "id": "device40",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 15,
@@ -2764,7 +2764,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit41",
+            "id": "device41",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "fetch_time": "2020-05-13 10:02:45",
@@ -2814,7 +2814,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2016 (64-bit)"
             },
-            "id": "shit42",
+            "id": "device42",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 42,
@@ -2870,7 +2870,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit43",
+            "id": "device43",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2927,7 +2927,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "red hat enterprise linux 5 (64-bit)"
             },
-            "id": "shit44",
+            "id": "device44",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -2983,7 +2983,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "centos 4/5 or later (64-bit)"
             },
-            "id": "shit45",
+            "id": "device45",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -3048,7 +3048,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit46",
+            "id": "device46",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 124,
@@ -3094,7 +3094,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5.0 build-5969303",
                 "type": "VMWare"
             },
-            "id": "shit47",
+            "id": "device47",
             "connection_hostname": "vcenter.axonius.lan",
             "cpus": [
                 {
@@ -3152,7 +3152,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5.0 build-4564106",
                 "type": "VMWare"
             },
-            "id": "shit48",
+            "id": "device48",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 515,
             "device_type": "ESXHost",
@@ -3191,7 +3191,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5.0 build-4564106",
                 "type": "VMWare"
             },
-            "id": "shit49",
+            "id": "device49",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 515,
             "device_type": "ESXHost",
@@ -3249,7 +3249,7 @@ esx_json_file_mock_devices = {
                 "type": "Windows",
                 "os_str": "microsoft windows server 2012 (64-bit)"
             },
-            "id": "shit50",
+            "id": "device50",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 870,
@@ -3289,7 +3289,7 @@ esx_json_file_mock_devices = {
                 "os_str": "vmware esxi 6.5.0 build-4564106",
                 "type": "VMWare"
             },
-            "id": "shit51",
+            "id": "device51",
             "connection_hostname": "vcenter.axonius.lan",
             "cpus": [
                 {
@@ -3389,7 +3389,7 @@ esx_json_file_mock_devices = {
                 "type": "Linux",
                 "os_str": "ubuntu linux (64-bit)"
             },
-            "id": "shit52",
+            "id": "device52",
             "cloud_provider": "VMWare",
             "connection_hostname": "vcenter.axonius.lan",
             "uptime": 7,

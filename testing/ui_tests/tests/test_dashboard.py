@@ -118,6 +118,7 @@ class TestDashboard(TestBase):
         Tests Issue: https://axonius.atlassian.net/browse/AX-4962
         """
         self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
         self.dashboard_page.open_new_card_wizard()
         self.dashboard_page.select_chart_metric('Field Segmentation')
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)

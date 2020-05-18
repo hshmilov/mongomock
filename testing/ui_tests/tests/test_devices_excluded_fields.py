@@ -15,6 +15,9 @@ class TestDevicesExcludedFields(TestBase):
     def test_correlation_reasons_not_shown_to_user(self):
         with JsonFileService().contextmanager(take_ownership=True):
             self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
             self.base_page.run_discovery()
 
             self.devices_page.switch_to_page()

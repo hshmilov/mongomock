@@ -154,6 +154,8 @@ class TestSavedQuery(TestBase):
             assert self.devices_page.count_entities() > tasks_results_count
 
     def test_read_only_query(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         wait_until(lambda: self.devices_page.find_query_title_text() != self.NEW_QUERY_TITLE)
         self.devices_page.reset_query()
@@ -412,6 +414,8 @@ class TestSavedQuery(TestBase):
 
     def test_unsupported_expression_msg(self):
         saved_query_name = 'All installed software on devices'
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_table_to_be_responsive()
         self.devices_queries_page.fill_enter_table_search(saved_query_name)

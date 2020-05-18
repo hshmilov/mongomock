@@ -190,6 +190,7 @@ class TestDevice(TestBase):
 
         self.devices_page.save_custom_data()
         self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.safe_refresh()
         self.devices_page.click_general_tab()
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME)
         assert self.devices_page.find_element_by_text(asset_name)

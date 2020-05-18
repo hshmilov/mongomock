@@ -5,15 +5,14 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
 from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
+from ui_tests.tests.test_enforcement_config import JSON_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AWS_ADAPTER,
                                       AWS_ADAPTER_NAME,
                                       AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
-                                      WINDOWS_QUERY_NAME)
+                                      WINDOWS_QUERY_NAME, JSON_ADAPTER_PLUGIN_NAME)
 from services.plugins.general_info_service import GeneralInfoService
-from services.adapters.cisco_service import CiscoService
-from services.adapters.esx_service import EsxService
 from services.adapters.cylance_service import CylanceService
 from services.adapters.aws_service import AwsService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
@@ -25,6 +24,8 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_FIRST_HOSTNAME,
                                                     DEVICE_FIRST_NAME,
                                                     DEVICE_SECOND_NAME)
+from test_credentials.test_esx_credentials import esx_json_file_mock_devices
+from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from devops.scripts.automate_dev import credentials_inputer
 
@@ -514,6 +515,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         assert len(self.devices_page.get_all_data()) == 20
         self.devices_page.clear_query_wizard()
+        self.devices_page.safe_refresh()
 
     def _assert_query(self, expected_query):
         current_query = self.devices_page.find_query_search_input().get_attribute('value')
@@ -530,9 +532,9 @@ class TestDevicesQueryAdvancedCases(TestBase):
             # enum of type string
             {'field': ADAPTER_CONNECTIONS_FIELD,
              'comp_op': self.devices_page.QUERY_COMP_EQUALS,
-             'value': 'Cisco',
+             'value': JSON_NAME,
              'field_type': 'string',
-             'expected_query': '(adapters == "cisco_adapter")'},
+             'expected_query': f'(adapters == "{JSON_ADAPTER_PLUGIN_NAME}")'},
             # enum of type string
             {'field': 'Port Access: Port Mode',
              'comp_op': self.devices_page.QUERY_COMP_EQUALS,
@@ -569,10 +571,16 @@ class TestDevicesQueryAdvancedCases(TestBase):
              'field_type': 'integer',
              'expected_query': '(specific_data.data.os.bitness == 64)'}
         ]
-        with CiscoService().contextmanager(take_ownership=True), \
-                EsxService().contextmanager(take_ownership=True),\
-                CylanceService().contextmanager(take_ownership=True):
+        with CylanceService().contextmanager(take_ownership=True):
             credentials_inputer.main()
+            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
+            self.adapters_page.add_server(cisco_json_file_mock_credentials, JSON_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.adapters_page.wait_for_table_to_load()
+            self.adapters_page.wait_for_data_collection_toaster_absent()
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
@@ -593,12 +601,9 @@ class TestDevicesQueryAdvancedCases(TestBase):
                 self._perform_query_scenario(**conf)
             self.devices_page.click_search()
 
-            self.adapters_page.clean_adapter_servers(self.CISCO_PRETTY_NAME)
-            self.adapters_page.clean_adapter_servers(self.ESX_PRETTY_NAME)
+            self.adapters_page.restore_json_client()
             self.adapters_page.clean_adapter_servers(self.CYCLANCE_PRETTY_NAME)
 
-        self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
-        self.wait_for_adapter_down(self.ESX_PLUGIN_NAME)
         self.wait_for_adapter_down(self.CYCLANCE_PLUGIN_NAME)
 
         self.devices_page.switch_to_page()
@@ -632,7 +637,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         assert len(self.devices_page.get_all_data()) == 1
 
         self.devices_page.click_search()
-        self.adapters_page.remove_json_extra_client()
+        self.adapters_page.restore_json_client()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
         self.devices_page.clear_query_wizard()
@@ -668,9 +673,10 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_remove_query_expression_does_not_reset_values()
         self._test_not_expression()
         self._test_adapters_size()
-        # self._test_enum_expressions()
+        self._test_enum_expressions()
         self._test_asset_entity_expressions()
 
+    @pytest.mark.skip('will be moved soon')
     def test_empty_fields_arent_there(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
