@@ -240,6 +240,8 @@ class EntitiesPage(Page):
     EDIT_TAGS_BUTTON_TEXT = 'Edit Tags'
     ENTITIES_ACTIONS_DROPDOWN_CSS = '.ant-dropdown-menu'
 
+    SAFEGUARD_MODAL_CSS = '.x-modal'
+
     @property
     def url(self):
         raise NotImplementedError
@@ -1065,8 +1067,11 @@ class EntitiesPage(Page):
         self.click_button(self.DELETE_BUTTON)
 
     def approve_remove_selected(self):
-        safeguard_modal = self.driver.find_element_by_css_selector('.x-modal')
+        modals = self.driver.find_elements_by_css_selector(self.SAFEGUARD_MODAL_CSS)
+        self.logger.info(f'number of {self.SAFEGUARD_MODAL_CSS} in approve_remove_selected is: {len(modals)}')
+        safeguard_modal = self.driver.find_element_by_css_selector(self.SAFEGUARD_MODAL_CSS)
         self.click_button(self.DELETE_BUTTON, context=safeguard_modal)
+        self.wait_for_element_absent_by_css(self.SAFEGUARD_MODAL_CSS)
 
     def click_enforcement_tasks_tab(self):
         self.click_tab(self.ENFORCEMENT_DATA_TAB_TITLE)

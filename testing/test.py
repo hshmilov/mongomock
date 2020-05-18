@@ -619,6 +619,7 @@ def main():
                 'ui_test_devices_query_advanced_cases',
                 'ui_test_session',
                 'integ_test_system',
+                'integ_test_watchdogs',
                 'ui_test_report_generation_more_cases',
                 'ui_test_report_generation_special_cases',
                 'ui_test_settings_permissions',
