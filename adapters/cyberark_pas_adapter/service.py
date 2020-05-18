@@ -10,8 +10,10 @@ from cyberark_pas_adapter.connection import CyberarkPasConnection
 from cyberark_pas_adapter.client_id import get_client_id
 from cyberark_pas_adapter.structures import CyberarkPasUserInstance, BusinessAddress, \
     Internet, Phones, PersonDetails
+from cyberark_pas_adapter.consts import AuthenticationMethods
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # pylint: disable=logging-format-interpolation
 
@@ -36,6 +38,8 @@ class CyberarkPasAdapter(AdapterBase):
     @staticmethod
     def get_connection(client_config):
         connection = CyberarkPasConnection(domain=client_config['domain'],
+                                           auth_method=client_config.get(
+                                               'auth_method') or AuthenticationMethods.Cyberark.value,
                                            verify_ssl=client_config['verify_ssl'],
                                            https_proxy=client_config.get('https_proxy'),
                                            username=client_config['username'],
@@ -82,6 +86,13 @@ class CyberarkPasAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'auth_method',
+                    'title': 'Authentication Method',
+                    'type': 'string',
+                    'enum': [auth_method.value for auth_method in AuthenticationMethods],
+                    'default': AuthenticationMethods.Cyberark.value
+                },
+                {
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string'
@@ -105,6 +116,7 @@ class CyberarkPasAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
+                'auth_method',
                 'username',
                 'password',
                 'verify_ssl'

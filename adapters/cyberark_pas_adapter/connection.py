@@ -3,7 +3,7 @@ import datetime
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from cyberark_pas_adapter.consts import API_LOGON_SUFFIX
+from cyberark_pas_adapter.consts import API_LOGON_SUFFIX, AuthenticationMethods
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -14,11 +14,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class CyberarkPasConnection(RESTConnection):
     """ rest client for CyberarkPas adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, auth_method, **kwargs):
         super().__init__(*args, url_base_prefix='',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
+        # Change CyberArk -> Cyberark
+        if auth_method == AuthenticationMethods.Cyberark.value:
+            auth_method = auth_method.capitalize()
+        self._auth_method = auth_method
         self._token = None
         self._session_refresh = None
 
@@ -42,8 +46,9 @@ class CyberarkPasConnection(RESTConnection):
                 'password': self._password
             }
 
+            api_suffix = API_LOGON_SUFFIX.format(self._auth_method)
             self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=250)
-            self._token = self._post(API_LOGON_SUFFIX, body_params=body_params, use_json_in_response=False,
+            self._token = self._post(api_suffix, body_params=body_params, use_json_in_response=False,
                                      return_response_raw=False)  # type: bytes
             self._session_headers = {
                 'Authorization': self._token.decode('utf-8').strip('"')
