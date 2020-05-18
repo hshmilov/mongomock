@@ -71,7 +71,7 @@ def generate_report_for_azure_account(account_dict: dict) -> Tuple[str, str, dic
         account_name = f'{account_tag} ({account_id})'
 
     try:
-        session = get_session_by_account_dict(account_dict)
+        azure_client = get_session_by_account_dict(account_dict)
     except Exception as e:
         logger.exception(f'Exception while generating Azure report for {account_name} - could not get initial session')
         generate_failed_report(report, f'Could not generate azure connection: {str(e)}')
@@ -79,7 +79,10 @@ def generate_report_for_azure_account(account_dict: dict) -> Tuple[str, str, dic
 
     try:
         # Get tenant name / account alias
-        raise NotImplementedError()
+        with azure_client:
+            org_info = azure_client.get_organization_information()
+            account_id = org_info['id']
+            account_alias = org_info['displayName']
     except Exception:
         logger.exception(f'Could not get account alias for {account_name}')
         account_alias = None
@@ -90,7 +93,7 @@ def generate_report_for_azure_account(account_dict: dict) -> Tuple[str, str, dic
         account_name = f'{account_alias} ({account_id})'
 
     try:
-        generate_rules(report, session, account_dict)
+        generate_rules(report, azure_client, account_dict)
     except Exception:
         logger.exception(f'Exception while generating rules for Azure account {account_name}')
     return account_id.strip(), account_name.strip(), report.get_json()

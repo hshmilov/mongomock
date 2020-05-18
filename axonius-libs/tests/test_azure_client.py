@@ -18,18 +18,25 @@ def azure_connection() -> AzureCloudConnection:
 
 @pytest.fixture(scope='module')
 def azure_client() -> AzureCloudConnection:
-    return azure_connection()
+    with azure_connection() as connection:
+        yield connection
 
 
 # pylint: disable=redefined-outer-name
 def test_get_vms(azure_client):
-    with azure_client:
-        assert list(azure_client.compute.get_all_vms())
+    assert list(azure_client.compute.get_all_vms())
 
 
-def test_get_tenants(azure_client):
-    with azure_client:
-        print(json.dumps(list(azure_client.get_tenants_list())))
+def test_get_tenant_name(azure_client):
+    org = azure_client.get_organization_information()
+    disply_name = org.get('displayName')
+    assert disply_name
+
+
+def test_azure_ad_get_guest_users(azure_client):
+    guest_users = list(azure_client.ad.get_guest_users())
+    jprint(guest_users)
+    assert len(guest_users) > 0
 
 
 def jprint(to_print):
@@ -38,7 +45,7 @@ def jprint(to_print):
 
 def main():
     with azure_connection() as client:
-        jprint(list(client.get_tenants_list()))
+        jprint(client.graph_get('organization'))
 
 
 if __name__ == '__main__':

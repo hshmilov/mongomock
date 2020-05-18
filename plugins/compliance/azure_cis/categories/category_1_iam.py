@@ -21,15 +21,25 @@ class CISAzureCategory1:
         1.3 Ensure that there are no guest users
         """
         rule_section = kwargs['rule_section']
-        total_resources = 10
+        total_resources = self.azure.ad.get_total_users_count()
         errors = []
+
+        for guest_user in self.azure.graph_paginated_get(
+                'users',
+                api_filter='userType eq \'Guest\'',
+                api_select='displayName,mail'
+        ):
+            display_name = guest_user.get('displayName', '')
+            mail = guest_user.get('mail', '')
+
+            errors.append(f'Found guest user "{display_name}" ({mail})')
 
         if errors:
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                0,
+                len(errors),
                 errors_to_gui(errors)
             )
         else:
@@ -47,8 +57,27 @@ class CISAzureCategory1:
         1.23 Ensure that no custom subscription owner roles are created
         """
         rule_section = kwargs['rule_section']
-        total_resources = 10
         errors = []
+
+        all_roles = list(self.azure.rm_subscription_paginated_get(
+            'providers/Microsoft.Authorization/roleDefinitions',
+            api_version='2018-07-01'
+        ))
+        total_resources = len(all_roles)
+
+        for role_raw in all_roles:
+            role = role_raw.get('properties') or {}
+            if role.get('type') != 'CustomRole':
+                continue
+
+            assignable_scopes = role.get('assignableScopes') or []
+            permissions = role.get('permissions') or []
+            # Check for entries with assignableScope of / or a subscription, and an action of *
+            if any(x == '/' or x.startswith('/subscriptions') for x in assignable_scopes):
+                all_allowed = [action for permission in permissions for action in permission.get('actions', [])]
+                if '*' in all_allowed:
+                    errors.append(f'Found custom role "{role.get("roleName")}" with "*" permissions '
+                                  f'assigned to "{",".join(assignable_scopes)}"')
 
         if errors:
             self.report.add_rule(

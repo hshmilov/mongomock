@@ -6,6 +6,7 @@ from collections import namedtuple
 
 import adal
 
+from axonius.clients.azure.ad import AzureADConnection
 from axonius.clients.azure.compute import AzureComputeConnection
 from axonius.clients.azure.consts import AzureStackHubProxySettings, PAGINATION_LIMIT, AzureClouds
 from axonius.clients.rest.connection import RESTConnection
@@ -15,6 +16,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 DEFAULT_API_VERSION = '2016-03-30'
+DEFAULT_AZURE_AD_GRAPH_API_VERSION = '1.6'
 
 
 AzureCloudEndpointsTuple = namedtuple(
@@ -86,6 +88,9 @@ class AzureCloudConnection(RESTConnection):
         self._graph_token_last_refresh = None
         self._graph_token_expires_in = None
         self._graph_token = None
+        self._ad_graph_token_last_refresh = None
+        self._ad_graph_token_expires_in = None
+        self._ad_graph_token = None
 
         if cloud:
             self._cloud = cloud
@@ -131,7 +136,9 @@ class AzureCloudConnection(RESTConnection):
                          **kwargs)
 
         # Initialize all clients
+        # pylint: disable=invalid-name
         self.compute = AzureComputeConnection(self)
+        self.ad = AzureADConnection(self)
 
     def _mgmt_refresh_token(self):
         last_refresh = self._mgmt_token_last_refresh
@@ -196,7 +203,7 @@ class AzureCloudConnection(RESTConnection):
         force_full_url = False
         while page < PAGINATION_LIMIT:
             try:
-                result = self._rm_request(method, url, force_full_url=force_full_url, **kwargs)
+                result = self._rm_request(method, url.lstrip('/'), force_full_url=force_full_url, **kwargs)
                 yield from (result.get('value') or [])
                 url = result.get('nextLink')
                 if not url:
@@ -209,6 +216,17 @@ class AzureCloudConnection(RESTConnection):
 
     def rm_paginated_get(self, url: str, api_version=None, **kwargs):
         yield from self.rm_paginated_request('GET', url, api_version=api_version, **kwargs)
+
+    def rm_subscription_paginated_get(self, url: str, api_version=None, **kwargs):
+        yield from self.rm_paginated_request(
+            'GET', f'subscriptions/{self.subscription}/{url.lstrip("/")}', api_version=api_version, **kwargs
+        )
+
+    def rm_get(self, url, api_version=None, **kwargs):
+        return self._rm_request('GET', url.lstrip('/'), api_version=api_version, **kwargs)
+
+    def rm_subscription_get(self, url, api_version=None, **kwargs):
+        return self.rm_get(f'subscriptions/{self.subscription}/{url}', api_version=api_version, **kwargs)
 
     # Graph API (https://docs.microsoft.com/en-us/graph/api/overview?toc=.%2Fref%2Ftoc.json&view=graph-rest-1.0)
     def _graph_refresh_token(self):
@@ -255,12 +273,23 @@ class AzureCloudConnection(RESTConnection):
             response, raise_for_status=True, use_json_in_response=True, return_response_raw=False
         )
 
-    def graph_paginated_request(self, method, resource, version):
+    def graph_paginated_request(self, method, resource, version, api_filter, api_select, **kwargs):
         # Take care of paging generically: https://developer.microsoft.com/en-us/graph/docs/concepts/paging
         version = version or 'v1.0'
         url = f'{self._graph_url.rstrip("/")}/{version.strip("/")}/{resource.strip("/")}'
 
-        result = self._graph_request(method, url)
+        url_params = {}
+        if api_filter:
+            url_params['$filter'] = api_filter
+        if api_select:
+            url_params['$select'] = api_select
+
+        if 'url_params' in kwargs:
+            kwargs['url_params'].update(url_params)
+        else:
+            kwargs['url_params'] = url_params
+
+        result = self._graph_request(method, url, **kwargs)
         yield from result['value']
 
         page_num = 1
@@ -269,8 +298,89 @@ class AzureCloudConnection(RESTConnection):
             yield from result['value']
             page_num += 1
 
-    def graph_paginated_get(self, resource, version=None):
-        yield from self.graph_paginated_request('GET', resource, version)
+    def graph_paginated_get(self, resource, version=None, api_filter=None, api_select=None):
+        yield from self.graph_paginated_request('GET', resource, version, api_filter, api_select)
+
+    def graph_get(self, resource, api_version=None, api_filter=None, api_select=None):
+        try:
+            return next(self.graph_paginated_get(resource, api_version, api_filter, api_select))
+        except StopIteration:
+            return None
+
+    # AD Graph API
+    def _ad_graph_refresh_token(self):
+        last_refresh = self._ad_graph_token_last_refresh
+        expires_in = self._ad_graph_token_expires_in
+
+        if last_refresh and expires_in \
+                and last_refresh + datetime.timedelta(seconds=expires_in) > datetime.datetime.now():
+            return
+
+        context = adal.AuthenticationContext(
+            f'{self._auth_url}/{self.tenant_id}', proxies=self._proxies, verify_ssl=self._verify_ssl)
+
+        response = context.acquire_token_with_client_credentials(
+            self._ad_graph_url,
+            self._app_client_id,
+            self._app_client_secret)
+
+        if 'accessToken' not in response:
+            logger.error(f'Error authenticating, response is {response}')
+            raise RESTException(f'Auth error')
+
+        self._ad_graph_token = response['accessToken']
+        self._ad_graph_token_last_refresh = datetime.datetime.now()
+        self._ad_graph_token_expires_in = int(response.get('expiresIn') or 60 * 20) - 600
+
+    def _ad_graph_request(self, *args, **kwargs):
+        self._ad_graph_refresh_token()
+
+        response = self._do_request(
+            *args,
+            extra_headers={'Authorization': f'Bearer {self._ad_graph_token}'},
+            raise_for_status=False,
+            use_json_in_response=False,
+            return_response_raw=True,
+            **kwargs
+        )
+
+        if response.status_code == 429:
+            self.handle_sync_429_default(response)
+            return self._ad_graph_request(*args, **kwargs)
+
+        return self._handle_response(
+            response, raise_for_status=True, use_json_in_response=True, return_response_raw=False
+        )
+
+    def ad_graph_paginated_request(self, method, resource, api_version, **kwargs):
+        # Take care of paging generically: https://developer.microsoft.com/en-us/graph/docs/concepts/paging
+        url = f'{self._ad_graph_url.rstrip("/")}/{self.tenant_id.strip("/")}/{resource.strip("/")}'
+
+        if not api_version:
+            api_version = DEFAULT_AZURE_AD_GRAPH_API_VERSION
+
+        if not kwargs.get('url_params'):
+            kwargs['url_params'] = {'api-version': api_version}
+        elif not kwargs.get('url_params', {}).get('api-version'):
+            kwargs['url_params']['api-version'] = api_version
+
+        result = self._ad_graph_request(method, url, **kwargs)
+        yield from result['value']
+
+        page_num = 1
+        while '@odata.nextLink' in result and page_num < PAGINATION_LIMIT:
+            result = self._get(result['@odata.nextLink'], force_full_url=True)
+            yield from result['value']
+            page_num += 1
+
+    def ad_graph_paginated_get(self, resource, api_version=None):
+        yield from self.ad_graph_paginated_request('GET', resource, api_version)
+
+    def ad_graph_get(self, resource, api_version=None):
+        try:
+            return next(self.ad_graph_paginated_get(resource, api_version))
+        except StopIteration:
+            return None
 
     # Generic
     def _connect(self):
@@ -281,12 +391,15 @@ class AzureCloudConnection(RESTConnection):
         self._mgmt_token_expires_in = None
         self._graph_token_last_refresh = None
         self._graph_token_expires_in = None
+        self._ad_graph_token_last_refresh = None
+        self._ad_graph_token_expires_in = None
 
         self._mgmt_refresh_token()
         self._graph_refresh_token()
+        self._ad_graph_refresh_token()
 
     def get_device_list(self):
         raise NotImplementedError()
 
-    def get_tenants_list(self):
-        yield from self.rm_paginated_get('tenants', api_version='2020-01-01')
+    def get_organization_information(self):
+        return self.graph_get('organization')

@@ -42,7 +42,8 @@ USERS_ATTRIBUTES = [
     'onPremisesLastSyncDateTime',
     'streetAddress',
     'passwordPolicies',
-    'userPrincipalName'
+    'userPrincipalName',
+    'userType'
 ]
 
 DEVICE_ATTRIBUTES = [

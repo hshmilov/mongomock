@@ -48,6 +48,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
         ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
         ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
         ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time)')
+        user_type = Field(str, 'User Type', enum=['Member', 'Guest'])
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -357,6 +358,10 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 user.user_title = raw_user_data.get('jobTitle')
                 user.mail = mail
                 user.user_telephone_number = raw_user_data.get('mobilePhone')
+
+                user_type = raw_user_data.get('userType')
+                if user_type in ['Guest', 'Member']:
+                    user.user_type = user_type
 
                 # On premise settings
                 ad_on_premise_samaccountname = raw_user_data.get('onPremisesSamAccountName')
