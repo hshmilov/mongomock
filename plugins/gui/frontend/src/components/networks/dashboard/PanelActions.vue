@@ -1,198 +1,206 @@
 <template>
-  <div class="actions">
-    <span
-      v-if="isChartFilterable"
-      class="actions__search"
-      @click="$emit('toggleShowSearch')"
-    >
-      <VIcon
-        size="15"
-        class="cardSearch-expression-handle"
-      >$vuetify.icons.cardSearch</VIcon>
-    </span>
-    <ADropdown
-      v-if="hasDropDownMenu"
-      class="actions__menu"
-      :trigger="['click']"
-      placement="bottomRight"
-      :get-popup-container="getPopupContainer"
-    >
-      <span
-        class="ant-dropdown-link card_menu"
-      >
-        <VIcon
-          size="15"
-          class="verticaldots-expression-handle"
-        >$vuetify.icons.verticaldots</VIcon>
-      </span>
-      <AMenu slot="overlay">
-        <AMenuItem
-          v-if="editable"
-          id="edit_chart"
-          key="0"
-          @click="$emit('edit')"
+  <XRoleGateway
+    :permission-category="$permissionConsts.categories.Dashboard"
+    :permission-section="$permissionConsts.categories.Charts"
+  >
+    <template slot-scope="{ canAdd, canUpdate, canDelete }">
+      <div class="actions">
+        <span
+          v-if="isChartFilterable"
+          class="actions__search"
+          @click="$emit('toggleShowSearch')"
         >
-          Edit
-        </AMenuItem>
-        <AMenuItem
-          v-if="$can($permissionConsts.categories.Dashboard,
-                     $permissionConsts.actions.Delete,
-                     $permissionConsts.categories.Charts)"
-          id="remove_chart"
-          key="1"
-          @click="$emit('remove')"
-        >Delete</AMenuItem>
-        <AMenuItem
-          v-if="chart.metric==='segment'"
-          id="export_chart"
-          key="2"
-          @click="exportCSV"
+          <VIcon
+            size="15"
+            class="cardSearch-expression-handle"
+          >$vuetify.icons.cardSearch</VIcon>
+        </span>
+        <ADropdown
+          class="actions__menu"
+          :trigger="['click']"
+          placement="bottomRight"
+          :get-popup-container="getPopupContainer"
         >
-          Export to CSV
-        </AMenuItem>
-        <AMenuItem
-          id="move_or_copy_chart"
-          key="3"
-          @click="openMoveOrCopy"
-        >
-          Move or Copy
-        </AMenuItem>
-        <AMenuItem
-          id="refresh_chart"
-          key="4"
-          @click="fetchMorePanel"
-        >
-          Refresh
-        </AMenuItem>
-        <ASubMenu
-          v-if="sortable"
-          id="sort_chart"
-          title="Sort"
-        >
-          <ASubMenu
-            :id="getSortTypeId(ChartSortTypeEnum.value)"
+          <span
+            class="ant-dropdown-link card_menu"
+            href="#"
           >
-            <span slot="title">
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortMethodActive(
-                    ChartSortTypeEnum.value
-                  ),
-                }"
-              >
-                {{ getSortTitle(ChartSortTypeEnum.value) }}
-              </span>
-            </span>
+            <VIcon
+              size="15"
+              class="verticaldots-expression-handle"
+            >$vuetify.icons.verticaldots</VIcon>
+          </span>
+          <AMenu slot="overlay">
             <AMenuItem
-              :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.desc)"
-              key="5"
-              @click="
-                sortClick({
-                  type: ChartSortTypeEnum.value,
-                  order: ChartSortOrderEnum.desc
-                })
-              "
+              v-if="canUpdate && chart.user_id !== '*'"
+              id="edit_chart"
+              key="0"
+              @click="$emit('edit')"
             >
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortOrderActive(
-                    ChartSortTypeEnum.value,
-                    ChartSortOrderEnum.desc
-                  ),
-                }"
-              >
-                {{ ChartSortOrderLabelEnum.desc }}
-              </span>
+              Edit
             </AMenuItem>
             <AMenuItem
-              :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.asc)"
-              key="6"
-              @click="
-                sortClick({
-                  type: ChartSortTypeEnum.value,
-                  order: ChartSortOrderEnum.asc
-                })
-              "
+              v-if="canDelete"
+              id="remove_chart"
+              key="1"
+              @click="$emit('remove')"
             >
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortOrderActive(
-                    ChartSortTypeEnum.value,
-                    ChartSortOrderEnum.asc
-                  ),
-                }"
-              >
-                {{ ChartSortOrderLabelEnum.asc }}
-              </span>
-            </AMenuItem>
-          </ASubMenu>
-          <ASubMenu
-            :id="getSortTypeId(ChartSortTypeEnum.name)"
-          >
-            <span slot="title">
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortMethodActive(
-                    ChartSortTypeEnum.name
-                  ),
-                }"
-              >
-                {{ getSortTitle(ChartSortTypeEnum.name) }}
-              </span>
-            </span>
-            <AMenuItem
-              :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.desc)"
-              key="7"
-              @click="
-                sortClick({
-                  type: ChartSortTypeEnum.name,
-                  order: ChartSortOrderEnum.desc
-                })
-              "
-            >
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortOrderActive(
-                    ChartSortTypeEnum.name,
-                    ChartSortOrderEnum.desc
-                  ),
-                }"
-              >
-                {{ ChartSortOrderLabelEnum.desc }}
-              </span>
+              Remove
             </AMenuItem>
             <AMenuItem
-              :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.asc)"
-              key="8"
-              @click="
-                sortClick({
-                  type: ChartSortTypeEnum.name,
-                  order: ChartSortOrderEnum.asc
-                })
-              "
+              v-if="chart.metric==='segment'"
+              id="export_chart"
+              key="2"
+              @click="() => exportCSV(chart.uuid, chart.name, chart.historical)"
             >
-              <span
-                class="sort-title"
-                :class="{
-                  'sort-active': isSortOrderActive(
-                    ChartSortTypeEnum.name,
-                    ChartSortOrderEnum.asc
-                  ),
-                }"
-              >
-                {{ ChartSortOrderLabelEnum.asc }}
-              </span>
+              Export to CSV
             </AMenuItem>
-          </ASubMenu>
-        </ASubMenu>
-      </AMenu>
-    </ADropdown>
-  </div>
+            <AMenuItem
+              v-if="canAdd || canUpdate"
+              id="move_or_copy_chart"
+              key="3"
+              @click="openMoveOrCopy"
+            >
+              Move or Copy
+            </AMenuItem>
+            <AMenuItem
+              id="refresh_chart"
+              key="4"
+              @click="fetchChartData"
+            >
+              Refresh
+            </AMenuItem>
+            <ASubMenu
+              v-if="sortable"
+              id="sort_chart"
+              title="Sort"
+            >
+              <ASubMenu
+                :id="getSortTypeId(ChartSortTypeEnum.value)"
+              >
+                <span slot="title">
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortMethodActive(
+                        ChartSortTypeEnum.value
+                      ),
+                    }"
+                  >
+                    {{ getSortTitle(ChartSortTypeEnum.value) }}
+                  </span>
+                </span>
+                <AMenuItem
+                  :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.desc)"
+                  key="5"
+                  @click="
+                    sortClick({
+                      type: ChartSortTypeEnum.value,
+                      order: ChartSortOrderEnum.desc
+                    })
+                  "
+                >
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortOrderActive(
+                        ChartSortTypeEnum.value,
+                        ChartSortOrderEnum.desc
+                      ),
+                    }"
+                  >
+                    {{ ChartSortOrderLabelEnum.desc }}
+                  </span>
+                </AMenuItem>
+                <AMenuItem
+                  :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.asc)"
+                  key="6"
+                  @click="
+                    sortClick({
+                      type: ChartSortTypeEnum.value,
+                      order: ChartSortOrderEnum.asc
+                    })
+                  "
+                >
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortOrderActive(
+                        ChartSortTypeEnum.value,
+                        ChartSortOrderEnum.asc
+                      ),
+                    }"
+                  >
+                    {{ ChartSortOrderLabelEnum.asc }}
+                  </span>
+                </AMenuItem>
+              </ASubMenu>
+              <ASubMenu
+                :id="getSortTypeId(ChartSortTypeEnum.name)"
+              >
+                <span slot="title">
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortMethodActive(
+                        ChartSortTypeEnum.name
+                      ),
+                    }"
+                  >
+                    {{ getSortTitle(ChartSortTypeEnum.name) }}
+                  </span>
+                </span>
+                <AMenuItem
+                  :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.desc)"
+                  key="7"
+                  @click="
+                    sortClick({
+                      type: ChartSortTypeEnum.name,
+                      order: ChartSortOrderEnum.desc
+                    })
+                  "
+                >
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortOrderActive(
+                        ChartSortTypeEnum.name,
+                        ChartSortOrderEnum.desc
+                      ),
+                    }"
+                  >
+                    {{ ChartSortOrderLabelEnum.desc }}
+                  </span>
+                </AMenuItem>
+                <AMenuItem
+                  :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.asc)"
+                  key="8"
+                  @click="
+                    sortClick({
+                      type: ChartSortTypeEnum.name,
+                      order: ChartSortOrderEnum.asc
+                    })
+                  "
+                >
+                  <span
+                    class="sort-title"
+                    :class="{
+                      'sort-active': isSortOrderActive(
+                        ChartSortTypeEnum.name,
+                        ChartSortOrderEnum.asc
+                      ),
+                    }"
+                  >
+                    {{ ChartSortOrderLabelEnum.asc }}
+                  </span>
+                </AMenuItem>
+              </ASubMenu>
+            </ASubMenu>
+          </AMenu>
+        </ADropdown>
+      </div>
+    </template>
+  </XRoleGateway>
 </template>
 
 <script>
@@ -224,14 +232,6 @@ export default {
       type: Object,
       default: () => ({}),
     },
-    editable: {
-      type: Boolean,
-      default: false,
-    },
-    hasDropDownMenu: {
-      type: Boolean,
-      default: false,
-    },
     isChartFilterable: {
       type: Boolean,
       default: false,
@@ -257,6 +257,17 @@ export default {
       return this.selectedSortOrder || _get(this.chart, 'config.sort.sort_order');
     },
   },
+  watch: {
+    chart() {
+      this.selectedSortType = null;
+      this.selectedSortOrder = null;
+    },
+  },
+  created() {
+    this.ChartSortTypeEnum = ChartSortTypeEnum;
+    this.ChartSortOrderEnum = ChartSortOrderEnum;
+    this.ChartSortOrderLabelEnum = ChartSortOrderLabelEnum;
+  },
   methods: {
     ...mapMutations({
       moveOrCopyToggle: MOVE_OR_COPY_TOGGLE,
@@ -274,7 +285,7 @@ export default {
         currentPanel: this.chart,
       });
     },
-    fetchMorePanel() {
+    fetchChartData() {
       this.fetchDashboardPanel({
         uuid: this.chart.uuid,
         spaceId: this.currentSpace,
@@ -312,7 +323,7 @@ export default {
       this.selectedSortType = sortConfig.type;
       this.selectedSortOrder = sortConfig.order;
       this.chart.selectedSort = sortConfig;
-      this.fetchChartData(this.chart.uuid, 0, this.chart.historical, true);
+      this.fetchChartData();
     },
     getSortTitle(type) {
       return `Sort by ${_capitalize(type)}`;
@@ -323,17 +334,6 @@ export default {
     getSortOrderId(type, order) {
       return `chart_sort_order_${type}_${order}`;
     },
-  },
-  watch: {
-    chart() {
-      this.selectedSortType = null;
-      this.selectedSortOrder = null;
-    },
-  },
-  created() {
-    this.ChartSortTypeEnum = ChartSortTypeEnum;
-    this.ChartSortOrderEnum = ChartSortOrderEnum;
-    this.ChartSortOrderLabelEnum = ChartSortOrderLabelEnum;
   },
 };
 </script>
@@ -357,27 +357,29 @@ export default {
       }
     }
   }
+  .x-card {
+    .role-gateway {
+      width: unset;
+      .actions {
+        &__menu {
+          cursor: pointer;
+          padding: 8px 0;
+        }
 
-  .actions {
-    &__menu {
-      cursor: pointer;
-      padding: 8px 0;
+        .actions__search {
+          cursor: pointer;
+          margin-right: 8px;
+        }
+      }
     }
-
-    .actions__search {
-      cursor: pointer;
-      margin-right: 8px;
+    .sort-title {
+      padding-left: 10px;
+    }
+    .sort-active {
+      padding-left: 0px;
+    }
+    .sort-active::before {
+      content: "• ";
     }
   }
-
-  .sort-title {
-    padding-left: 10px;
-  }
-  .sort-active {
-    padding-left: 0px;
-  }
-  .sort-active::before {
-    content: "• ";
-  }
-
 </style>

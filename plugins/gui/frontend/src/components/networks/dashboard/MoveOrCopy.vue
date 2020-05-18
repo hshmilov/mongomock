@@ -30,7 +30,7 @@
       <ACheckbox
         id="create_panel_copy"
         :checked="copy"
-        :disabled="isPersonalSpaceSelected"
+        :disabled="cannotCopy || isPersonalSpaceSelected"
         @change="onChangeCopy"
       >
         Create a copy
@@ -79,7 +79,11 @@ export default {
   computed: {
     ...mapState({
       spaces(state) {
-        return state.dashboard.spaces.data;
+        const allSpaces = state.dashboard.spaces.data;
+        if (this.cannotCopy) {
+          return allSpaces.filter((space) => space.type !== 'personal');
+        }
+        return allSpaces;
       },
       currentSpace(state) {
         return state.dashboard.currentSpace;
@@ -91,12 +95,19 @@ export default {
         return state.dashboard.currentPanel;
       },
     }),
+    cannotCopy() {
+      return this.$cannot(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.Add, this.$permissionConsts.categories.Charts);
+    },
     isPersonalSpaceSelected() {
       return this.space === this.personalSpace.uuid;
     },
   },
   mounted() {
     this.space = this.currentSpace;
+    if (this.cannotCopy) {
+      this.copy = false;
+    }
   },
   methods: {
     ...mapMutations({

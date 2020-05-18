@@ -58,18 +58,26 @@ class LoginPage(Page):
         self.wait_for_element_present_by_css(self.LOGOUT_CSS)
         self.driver.find_element_by_css_selector(self.LOGOUT_CSS).click()
 
-    def logout_and_login_with_admin(self):
+    def logout_and_login_with_admin(self, wait_for_getting_started=True):
         self.logout()
         self.wait_for_login_page_to_load()
-        self.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+        self.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'],
+                   wait_for_getting_started=wait_for_getting_started)
 
-    def switch_user(self, user_name, user_password, set_new_path=None):
+    def switch_user(self,
+                    user_name,
+                    user_password,
+                    set_new_path=None,
+                    wait_for_getting_started=True):
         self.logout()
         self.wait_for_login_page_to_load()
         if set_new_path:
             self.change_current_tab_url(self.current_url + set_new_path)
             self.wait_for_login_page_to_load()
-        self.login(username=user_name, password=user_password)
+        self.login(username=user_name,
+                   password=user_password,
+                   remember_me=False,
+                   wait_for_getting_started=wait_for_getting_started)
 
     def find_invalid_login_message(self):
         return self.find_element_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)

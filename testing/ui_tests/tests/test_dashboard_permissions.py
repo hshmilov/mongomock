@@ -13,6 +13,7 @@ from ui_tests.tests.permissions_test_base import PermissionsTestBase
 class TestDashboardPermissions(PermissionsTestBase):
 
     TEST_EMPTY_TITLE = 'test empty'
+    TEST_MOVE_TITLE = 'test move'
     OSX_OPERATING_SYSTEM_NAME = 'OS X Operating System'
     OSX_OPERATING_SYSTEM_FILTER = 'specific_data.data.os.type == "OS X"'
 
@@ -22,6 +23,7 @@ class TestDashboardPermissions(PermissionsTestBase):
     NOTE_TEXT = 'note text'
 
     def test_dashboard_permissions(self):
+        self.settings_page.disable_getting_started_feature()
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
         self.settings_page.switch_to_page()
@@ -33,10 +35,16 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                                      ui_consts.FIRST_NAME,
                                                                      ui_consts.LAST_NAME,
                                                                      self.settings_page.RESTRICTED_ROLE)
+        self.devices_page.create_saved_query(self.OSX_OPERATING_SYSTEM_FILTER, self.OSX_OPERATING_SYSTEM_NAME)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.add_segmentation_card(module='Devices',
+                                                  field=ui_consts.OS_TYPE_OPTION_NAME,
+                                                  title=self.TEST_MOVE_TITLE,
+                                                  view_name=self.OSX_OPERATING_SYSTEM_NAME)
         self.dashboard_page.switch_to_page()
         self.dashboard_page.add_new_space(self.TEST_RENAME_SPACE_NAME)
 
-        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD, None, False)
 
         settings_permissions = {
             'dashboard': [],
@@ -57,7 +65,8 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      'View devices',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_search_insights()
         self.dashboard_page.fill_query_value('cb')
@@ -73,7 +82,8 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      'View users',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_search_insights()
         self.dashboard_page.fill_query_value('cb')
@@ -84,42 +94,49 @@ class TestDashboardPermissions(PermissionsTestBase):
         self.dashboard_page.assert_users_explorer_results_exists()
 
     def _test_chart_permissions(self, settings_permissions, user_role):
+        self.dashboard_page.switch_to_page()
+        assert not self.dashboard_page.is_remove_card_button_present(self.TEST_MOVE_TITLE)
+        assert not self.dashboard_page.is_edit_card_button_present(self.TEST_MOVE_TITLE)
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'dashboard',
+                                                     'Edit charts',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
+        self.dashboard_page.switch_to_page()
+        assert not self.dashboard_page.is_remove_card_button_present(self.TEST_MOVE_TITLE)
+        assert self.dashboard_page.is_edit_card_button_present(self.TEST_MOVE_TITLE)
+        self.dashboard_page.edit_card(self.TEST_MOVE_TITLE)
+        self.dashboard_page.click_card_save()
+        self.dashboard_page.open_move_or_copy_card(self.TEST_MOVE_TITLE)
+        assert self.dashboard_page.is_move_or_copy_checkbox_disabled()
+        self.dashboard_page.close_move_or_copy_dialog()
+
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
                                                      'Add chart',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         assert not self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
         assert not self.dashboard_page.is_new_chart_card_missing()
-        self.devices_page.create_saved_query(self.OSX_OPERATING_SYSTEM_FILTER, self.OSX_OPERATING_SYSTEM_NAME)
         self.dashboard_page.switch_to_page()
         self.dashboard_page.add_segmentation_card(module='Devices',
                                                   field=ui_consts.OS_TYPE_OPTION_NAME,
                                                   title=self.TEST_EMPTY_TITLE,
                                                   view_name=self.OSX_OPERATING_SYSTEM_NAME)
         assert not self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
-        assert not self.dashboard_page.is_edit_card_button_present(self.TEST_EMPTY_TITLE)
-        self._add_action_to_role_and_login_with_user(settings_permissions,
-                                                     'dashboard',
-                                                     'Edit charts',
-                                                     user_role,
-                                                     ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
-        self.dashboard_page.switch_to_page()
-        self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
-        assert not self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
-        assert self.dashboard_page.is_edit_card_button_present(self.TEST_EMPTY_TITLE)
-        self.dashboard_page.edit_card(self.TEST_EMPTY_TITLE)
-        self.dashboard_page.click_card_save()
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
                                                      'Delete chart',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
@@ -134,7 +151,8 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      'Add space',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         assert not self.dashboard_page.is_missing_add_space()
         self.dashboard_page.add_new_space(self.TEST_SPACE_NAME)
@@ -146,7 +164,8 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      'Delete space',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
-                                                     ui_consts.NEW_PASSWORD)
+                                                     ui_consts.NEW_PASSWORD,
+                                                     False)
         self.dashboard_page.switch_to_page()
         assert not self.dashboard_page.is_missing_add_space()
         assert not self.dashboard_page.is_missing_remove_space()

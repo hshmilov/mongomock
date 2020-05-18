@@ -30,9 +30,7 @@
           </div>
           <PanelActions
             :chart="chart"
-            :editable="canUserUpdatePanels && chart.user_id !== '*'"
             :sortable="isSortable(chart)"
-            :has-drop-down-menu="draggable && canUserUpdatePanels"
             :is-chart-filterable="isChartFilterable"
             v-on="$listeners"
             @edit="editPanel"
@@ -197,11 +195,6 @@ export default {
         return state.constants.allowedDates[this.chart.config.entity];
       },
     }),
-    canUserUpdatePanels() {
-      return this.$can(this.$permissionConsts.categories.Dashboard,
-        this.$permissionConsts.actions.Update,
-        this.$permissionConsts.categories.Charts);
-    },
     dataFilter: {
       get() {
         return this.filter;
