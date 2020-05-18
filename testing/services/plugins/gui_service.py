@@ -1147,7 +1147,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         panels = dashboard_collection.find({})
         panels_map = {str(panel.get('_id')): panel for panel in panels}
         for space in dashboard_spaces_collection.find(filter=filter_archived()):
-            panels_order = space.get('panels_order')
+            panels_order = space.get('panels_order', [])
             space_id = space.get('_id')
             for panel_id in panels_order:
                 if str(panels_map[panel_id].get('space')) != space_id:
