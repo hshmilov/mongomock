@@ -15,6 +15,7 @@ from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
+
 # pylint: disable=too-many-lines,no-member
 
 
@@ -93,6 +94,7 @@ class SettingsPage(Page):
     VIEWER_ROLE = 'Viewer'
     RESTRICTED_ROLE = 'Restricted'
     USE_PROXY = 'Proxy enabled'
+    USE_PASSWORD_MGR_VAULT = 'Use Password Manager'
     USE_AMAZON = 'Enable Amazon S3 integration'
     USE_GUI_SSL = 'Configure custom SSL certificate'
     USE_CORRELATION_SCHEDULE = 'Enable correlation schedule'
@@ -164,8 +166,13 @@ class SettingsPage(Page):
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
     ACTIVE_TAB = 'div.x-tab.active'
 
-    SETTINGS_SAVE_TIMEOUT = 60 * 30
+    ENTERPRISE_PASSWORD_MGMT_TEXT = 'Use Password Manager'
+    ENTERPRISE_PASSWORD_MGMT_MODE_DDL = 'div > div > div:nth-child(3) > div > div'
+    ENTERPRISE_PASSWORD_MGMT_MODE_DDL_OPTIONS = '.x-select-option'
+    ENTERPRISE_PASSWORD_MGMT_THYCOTIC_SS_TEXT = 'Thycotic Secret Server'
+    ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT = 'CyberArk Vault'
 
+    SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
     USERS_PANEL_CONTENT = '.user-panel .v-navigation-drawer__content'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
@@ -1041,6 +1048,11 @@ class SettingsPage(Page):
         toggle = self.find_checkbox_by_label(self.USE_PROXY)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
+    def set_vault_settings_enabled(self, make_yes=True):
+        self.wait_for_element_present_by_text(self.ENTERPRISE_PASSWORD_MGMT_TEXT)
+        toggle = self.find_checkbox_by_label(self.USE_PASSWORD_MGR_VAULT)
+        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
+
     def set_gui_ssl_settings_enabled(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.USE_GUI_SSL)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
@@ -1052,10 +1064,6 @@ class SettingsPage(Page):
     def set_amazon_settings_enabled(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.USE_AMAZON)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
-
-    def set_cyberark_vault_settings_enabled(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.USE_CYBERARK_VAULT)
-        self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
     def fill_bucket_name(self, bucket_name):
         self.fill_text_field_by_element_id(self.AMAZON_BUCKET_NAME_FIELD, bucket_name)
@@ -1359,6 +1367,27 @@ class SettingsPage(Page):
     def find_discovery_mode_options(self):
         return self.driver.find_elements_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_OPTIONS)
 
+    def find_enterprise_password_mgmt_mode_dropdown(self):
+        self.wait_for_element_present_by_css(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)
+        return self.driver.find_elements_by_tag_name(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)[1]
+
+    def get_enterprise_password_mgmt_settings_selected_item(self):
+        return self.find_enterprise_password_mgmt_mode_dropdown().text
+
+    def select_enterprise_password_mgmt_provider(self, vault_provider_text):
+        if self.get_enterprise_password_mgmt_settings_selected_item() != vault_provider_text:
+            self.select_option_without_search(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL,
+                                              self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL_OPTIONS,
+                                              vault_provider_text)
+
+    def select_thycotic_secret_server(self):
+        self.select_enterprise_password_mgmt_provider(
+            vault_provider_text=self.ENTERPRISE_PASSWORD_MGMT_THYCOTIC_SS_TEXT)
+
+    def select_cyberark_secret_server(self):
+        self.select_enterprise_password_mgmt_provider(
+            vault_provider_text=self.ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT)
+
     def assert_server_error(self, error):
         assert self.wait_for_element_present_by_css(self.FOOTER_ERROR_CSS).text == error
 
@@ -1369,6 +1398,38 @@ class SettingsPage(Page):
         current_settings = session.get('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
                                        timeout=self.SETTINGS_SAVE_TIMEOUT)
         return current_settings.json().get('config', None)
+
+    def fill_thycotic_host(self, host):
+        self.fill_text_field_by_element_id('host', host)
+
+    def fill_thycotic_port(self, port):
+        self.fill_text_field_by_element_id('port', port)
+
+    def fill_thycotic_username(self, username):
+        self.fill_text_field_by_element_id('username', username)
+
+    def fill_thycotic_password(self, password):
+        self.fill_text_field_by_element_id('password', password)
+
+    def clear_enterprise_password_mgmt_settings(self):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.wait_for_element_present_by_text(self.ENTERPRISE_PASSWORD_MGMT_TEXT)
+        toggle = self.find_checkbox_by_label(self.USE_PASSWORD_MGR_VAULT)
+        self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
+        self.click_save_global_settings()
+
+    def enable_thycotic_vault_global_config(self, thycotic_config: dict):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.set_vault_settings_enabled()
+        self.select_thycotic_secret_server()
+        self.fill_thycotic_host(thycotic_config['host'])
+        self.fill_thycotic_port(thycotic_config['port'])
+        self.fill_thycotic_username(thycotic_config['username'])
+        self.fill_thycotic_password(thycotic_config['password'])
+        self.click_save_global_settings()
+        self.wait_for_saved_successfully_toaster()
 
     def toggle_root_master(self, toggle_value):
         self.wait_for_element_present_by_text(self.USE_ROOT_MASTER)

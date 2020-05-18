@@ -21,3 +21,6 @@ CONNECTION_LABEL = 'connection_label'
 CLIENT_CONFIG = 'client_config'
 # adapter client id attribute
 CLIENT_ID = 'client_id'
+
+# Enterprise Password Mgr
+VAULT_PROVIDER = 'vault_provider'

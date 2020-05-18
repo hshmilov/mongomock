@@ -105,11 +105,11 @@
                 axiosClient.post('password_vault', {
                         query: this.queryModal.current_query,
                         field: this.schema.name,
-                        vault_type: 'cyberark_vault'
+                        vault_type: 'vault_provider'
                 }).then((testRes) => {
                     if (!testRes) return
                     this.success = true
-                    this.data = {query: this.queryModal.current_query, type: 'cyberark_vault'}
+                    this.data = {query: this.queryModal.current_query, type: 'vault_provider'}
                     this.input()
                     this.validate()
                 }).catch((recievedError) => {

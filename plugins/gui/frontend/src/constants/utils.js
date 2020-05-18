@@ -98,7 +98,7 @@ export const parseVaultError = (errorString) => {
   // currentMatch + errorString.substring(currentMatch).indexOf(':'))
   // currentMatch += errorString.substring(currentMatch).indexOf(':') + 1
   // let parsedError = errorString.substring(currentMatch)
-  const regexp = 'cyberark_vault_error\\:(.+?)\\:(.*)';
+  const regexp = '.*_vault_error\\:(.+?)\\:(.*)';
   const result = errorString.match(regexp);
   return result;
 };

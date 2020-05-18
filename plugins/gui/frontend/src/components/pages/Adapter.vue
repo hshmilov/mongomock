@@ -263,7 +263,7 @@ export default {
         return _get(state, `adapters.clients.${this.adapterId}`, []);
       },
       isCyberarkVault(state) {
-        return _get(state, 'configuration.data.global.cyberark_vault', false);
+        return _get(state, 'configuration.data.global.passwordManagerEnabled', false);
       },
       connectionLabelValid() {
         return !this.requireConnectionLabel || this.serverModal.connectionLabel;
@@ -417,7 +417,7 @@ export default {
           error: client.error,
           valid: true,
         };
-        if (client.error && client.error !== '' && client.error.startsWith('cyberark_vault_error')) {
+        if (client.error && client.error !== '' && client.error.includes('_vault_error')) {
           const [, name, value] = parseVaultError(client.error);
           this.serverModal.serverData[name].error = value;
           this.serverModal.error = value;

@@ -1,3 +1,4 @@
+from axonius.consts.adapter_consts import VAULT_PROVIDER
 from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH, UNCHANGED_MAGIC_FOR_GUI)
 
 
@@ -14,7 +15,7 @@ def clear_passwords_fields(data, schema):
     """
     if not data:
         return data
-    if schema.get('format') == 'password' and not (isinstance(data, dict) and data.get('type') == 'cyberark_vault'):
+    if schema.get('format') == 'password' and not (isinstance(data, dict) and data.get('type') == VAULT_PROVIDER):
         return UNCHANGED_MAGIC_FOR_GUI
     if schema['type'] == 'array':
         items = schema['items']

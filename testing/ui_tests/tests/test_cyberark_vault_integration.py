@@ -21,7 +21,8 @@ class TestCyberarkIntegration(TestBase):
     def input_test_settings(self, app_id=CYBERARK_TEST_MOCK['application_id']):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        self.settings_page.set_cyberark_vault_settings_enabled()
+        self.settings_page.set_vault_settings_enabled()
+        self.settings_page.select_cyberark_secret_server()
         self.settings_page.fill_cyberark_domain_address(CYBERARK_TEST_MOCK['domain'])
         self.settings_page.fill_cyberark_port(CYBERARK_TEST_MOCK['port'])
         self.settings_page.fill_cyberark_application_id(app_id)
@@ -38,14 +39,14 @@ class TestCyberarkIntegration(TestBase):
         self._wait_until_click_intercepted(self.settings_page.switch_to_page)
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        toggle = self.settings_page.find_checkbox_by_label(self.settings_page.USE_CYBERARK_VAULT)
+        self.settings_page.wait_for_element_present_by_text(self.settings_page.ENTERPRISE_PASSWORD_MGMT_TEXT)
+        toggle = self.settings_page.find_checkbox_by_label(self.settings_page.USE_PASSWORD_MGR_VAULT)
         self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
         self.settings_page.click_save_global_settings()
 
     def test_input_settings(self):
         with CyberarkVaultSimulatorService().contextmanager(take_ownership=True):
             self.input_test_settings()
-
         self.remove_cyberark_settings()
 
     def _wait_until_cyberark_is_present(self):

@@ -53,6 +53,8 @@ from retrying import retry
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
+from axonius.clients.abstract.abstract_vault_connection import AbstractVaultConnection, VaultProvider
+from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.plugin_exceptions import SessionInvalid, PluginNotFoundException
@@ -106,8 +108,13 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
                                           PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
                                           PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME,
-                                          AUDIT_COLLECTION, UPDATE_CLIENTS_STATUS,
-                                          RESET_PASSWORD_LINK_EXPIRATION, RESET_PASSWORD_SETTINGS)
+                                          PASSWORD_MANGER_THYCOTIC_SS_VAULT, PASSWORD_MANGER_ENUM, THYCOTIC_SS_HOST,
+                                          THYCOTIC_SS_PORT, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL,
+                                          THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
+                                          CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, PASSWORD_MANGER_ENABLED,
+                                          VAULT_SETTINGS, AUDIT_COLLECTION, RESET_PASSWORD_LINK_EXPIRATION,
+                                          RESET_PASSWORD_SETTINGS, UPDATE_CLIENTS_STATUS)
+
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
@@ -695,7 +702,7 @@ class PluginBase(Configurable, Feature, ABC):
             self.execution_monitor_scheduler.start()
 
         self.__inmem_keyval = dict()
-        self._cyberark_vault = None
+        self._vault_connection = None
         self._update_schema()
         self._update_config_inner()
         self.__save_hyperlinks_to_db()
@@ -3048,8 +3055,8 @@ class PluginBase(Configurable, Feature, ABC):
         return None
 
     @property
-    def cyberark_vault(self) -> CyberArkVaultConnection:
-        return self._cyberark_vault
+    def vault_pwd_mgmt(self) -> AbstractVaultConnection:
+        return self._vault_connection
 
     def check_password_fetch(self, field_name: str, query: str) -> bool:
         """
@@ -3058,7 +3065,7 @@ class PluginBase(Configurable, Feature, ABC):
         :param query: The query to use to fetch from vault.
         :return: True if successfully fetched the password.
         """
-        password = self.cyberark_vault.query_password(field_name, query)
+        password = self.vault_pwd_mgmt.query_password(field_name, query)
         return password is not None
 
     # Global settings
@@ -3115,16 +3122,12 @@ class PluginBase(Configurable, Feature, ABC):
             logger.exception(f'Could not set socket read timout')
         self._configured_session_timeout = (self._socket_read_timeout, self._socket_recv_timeout)
 
+        # vault settings have to come after self._configured_session_timeout has been configured
+        # because it uses it
         if self._vault_settings['enabled'] is True:
-            # Cyberark vault settings have to come after self._configured_session_timeout has been configured
-            # because it uses it
-            self._cyberark_vault = CyberArkVaultConnection(self._vault_settings['domain'],
-                                                           self._vault_settings['port'],
-                                                           self._vault_settings['application_id'],
-                                                           self._grab_file(self._vault_settings['certificate_key'],
-                                                                           stored_locally=False).read())
-        # enable: disable=invalid-name
+            self._vault_connection = self._vault_connection_factory()
 
+        # enable: disable=invalid-name
         self._aggregation_max_workers = None
         try:
             max_workers = int(config[AGGREGATION_SETTINGS].get(MAX_WORKERS))
@@ -3477,39 +3480,93 @@ class PluginBase(Configurable, Feature, ABC):
                     ]
                 },
                 {
-                    'type': 'array',
-                    'title': 'CyberArk Settings',
-                    'name': 'vault_settings',
-                    'required': ['enabled', 'domain',
-                                 'application_id', 'certificate_key', 'port'],
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Use CyberArk',
+                            'title': 'Use Password Manager',
                             'type': 'bool'
                         },
                         {
-                            'name': 'domain',
-                            'title': 'CyberArk domain',
+                            'name': 'conditional',
+                            'title': 'Password Manager',
+                            'enum': [
+                                {
+                                    'name':  VaultProvider.CyberArk.value,
+                                    'title': 'CyberArk Vault'
+                                },
+                                {
+                                    'name': VaultProvider.Thycotic.value,
+                                    'title': 'Thycotic Secret Server'
+                                }
+                            ],
                             'type': 'string'
                         },
                         {
-                            'name': 'port',
-                            'title': 'Port',
-                            'type': 'integer',
-                            'format': 'port'
+                            'name': VaultProvider.CyberArk.value,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': CYBERARK_DOMAIN,
+                                    'title': 'CyberArk domain',
+                                    'type': 'string'
+                                },
+                                {
+                                    'name': CYBERARK_PORT,
+                                    'title': 'Port',
+                                    'type': 'integer',
+                                    'format': CYBERARK_PORT
+                                },
+                                {
+                                    'name': CYBERARK_APP_ID,
+                                    'title': 'Application ID',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': CYBERARK_CERT_KEY,
+                                    'title': 'Certificate key',
+                                    'type': 'file'
+                                }
+                            ],
+                            'required': [CYBERARK_DOMAIN, CYBERARK_APP_ID, CYBERARK_CERT_KEY, CYBERARK_PORT]
                         },
                         {
-                            'name': 'application_id',
-                            'title': 'Application ID',
-                            'type': 'string',
-                        },
-                        {
-                            'name': 'certificate_key',
-                            'title': 'Certificate key',
-                            'type': 'file'
+                            'name': VaultProvider.Thycotic.value,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': THYCOTIC_SS_HOST,
+                                    'title': 'Thycotic Secret Server URL',
+                                    'type': 'string'
+                                },
+                                {
+                                    'name': THYCOTIC_SS_USERNAME,
+                                    'title': 'User name',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': THYCOTIC_SS_PASSWORD,
+                                    'title': 'Password',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': THYCOTIC_SS_PORT,
+                                    'title': 'Port',
+                                    'type': 'integer',
+                                    'format': THYCOTIC_SS_PORT
+                                },
+                                {
+                                    'name': THYCOTIC_SS_VERIFY_SSL,
+                                    'title': 'Verify SSL',
+                                    'type': 'bool',
+                                }
+                            ],
+                            'required': [THYCOTIC_SS_HOST, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD]
                         }
-                    ]
+                    ],
+                    'name': 'vault_settings',
+                    'title': 'Enterprise Password Management Settings',
+                    'type': 'array',
+                    'required': ['enabled']
                 },
                 {
                     'items': [
@@ -3968,12 +4025,22 @@ class PluginBase(Configurable, Feature, ABC):
                 PASSWORD_PROTECTION_LOCKOUT_MIN: 5,
                 'conditional': PASSWORD_PROTECTION_BY_IP
             },
-            'vault_settings': {
-                'enabled': False,
-                'domain': None,
-                'port': None,
-                'application_id': None,
-                'certificate_key': None
+            VAULT_SETTINGS: {
+                PASSWORD_MANGER_ENABLED: False,
+                PASSWORD_MANGER_ENUM: PASSWORD_MANGER_CYBERARK_VAULT,
+                PASSWORD_MANGER_CYBERARK_VAULT: {
+                    CYBERARK_DOMAIN: None,
+                    CYBERARK_PORT: None,
+                    CYBERARK_APP_ID: None,
+                    CYBERARK_CERT_KEY: None
+                },
+                PASSWORD_MANGER_THYCOTIC_SS_VAULT: {
+                    THYCOTIC_SS_HOST: None,
+                    THYCOTIC_SS_PORT: None,
+                    THYCOTIC_SS_USERNAME: None,
+                    THYCOTIC_SS_PASSWORD: None,
+                    THYCOTIC_SS_VERIFY_SSL: False
+                }
             },
             NOTIFICATIONS_SETTINGS: {
                 NOTIFY_ADAPTERS_FETCH: False,
@@ -4097,6 +4164,31 @@ class PluginBase(Configurable, Feature, ABC):
             if client_id and conn_label:
                 clients_label[conn_label].append((client_id, plugin_unique_name))
         return clients_label
+
+    def _vault_connection_factory(self) -> AbstractVaultConnection:
+        """
+        initialize vault connection
+
+        :return: AbstractVaultConnection - instance of vault connection
+        """
+        if self._vault_settings.get(PASSWORD_MANGER_ENUM) == PASSWORD_MANGER_THYCOTIC_SS_VAULT:
+            thycotic_secret_server_vault = self._vault_settings.get(PASSWORD_MANGER_THYCOTIC_SS_VAULT)
+            return ThycoticVaultConnection(host=thycotic_secret_server_vault.get(THYCOTIC_SS_HOST),
+                                           port=thycotic_secret_server_vault.get(THYCOTIC_SS_PORT),
+                                           username=thycotic_secret_server_vault.get(THYCOTIC_SS_USERNAME),
+                                           password=thycotic_secret_server_vault.get(THYCOTIC_SS_PASSWORD),
+                                           verify_ssl=thycotic_secret_server_vault.get(THYCOTIC_SS_VERIFY_SSL, False)
+                                           )
+
+        if self._vault_settings.get(PASSWORD_MANGER_ENUM) == PASSWORD_MANGER_CYBERARK_VAULT:
+            cyberark_vault = self._vault_settings.get(PASSWORD_MANGER_CYBERARK_VAULT)
+            return CyberArkVaultConnection(domain=cyberark_vault.get(CYBERARK_DOMAIN),
+                                           port=int(cyberark_vault.get(CYBERARK_PORT)),
+                                           cyberark_appid=cyberark_vault.get(CYBERARK_APP_ID),
+                                           cert=self._grab_file(cyberark_vault.get(CYBERARK_CERT_KEY),
+                                                                stored_locally=False).read())
+
+        raise RuntimeError(f'Invalid Vault connection selection --> {PASSWORD_MANGER_ENUM}')
 
     def log_activity(self, category: AuditCategory, action: AuditAction, params: Dict[str, str] = None,
                      activity_type: AuditType = AuditType.Info, user_id: ObjectId = None):

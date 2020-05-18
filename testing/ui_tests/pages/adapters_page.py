@@ -1,20 +1,20 @@
+import re
 import time
 from collections import namedtuple
 from copy import copy
-import re
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from axonius.utils.wait import wait_until
+from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA,
+                                                    FILE_NAME)
 from test_helpers.file_mock_credentials import FileForCredentialsMock
-
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
-from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
-                                      JSON_ADAPTER_NAME,
-                                      CSV_NAME)
-from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA, FILE_NAME)
+from ui_tests.pages.page import (PAGE_BODY, RETRY_WAIT_FOR_ELEMENT,
+                                 SLEEP_INTERVAL)
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME, CSV_NAME,
+                                      JSON_ADAPTER_NAME)
 
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
@@ -22,6 +22,9 @@ Adapter = namedtuple('Adapter', 'name description')
 CONNECTION_LABEL = 'AXON'
 CONNECTION_LABEL_UPDATED = 'AXON2'
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
+ADAPTER_THYCOTIC_VAULT_BUTTON = 'cyberark-button'
+ADAPTER_THYCOTIC_VAULT_QUERY_ID = 'cyberark-query'
+ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .md-icon'
 
 
 class AdaptersPage(EntitiesPage):
@@ -105,7 +108,7 @@ class AdaptersPage(EntitiesPage):
         self.get_enabled_button(self.SAVE_AND_CONNECT_BUTTON).click()
 
     def is_save_button_disabled(self):
-        self.is_element_disabled(self.get_button(self.SAVE_AND_CONNECT_BUTTON))
+        return self.is_element_disabled(self.get_button(self.SAVE_AND_CONNECT_BUTTON))
 
     def click_cancel(self):
         context_element = self.wait_for_element_present_by_css('.x-modal.config-server')
@@ -394,6 +397,51 @@ class AdaptersPage(EntitiesPage):
             self.click_new_server()
         else:
             self.click_edit_server(row_position - 1)
+
+    def click_thycotic_button(self):
+        element = self.driver.find_element_by_css_selector(ADAPTER_THYCOTIC_VAULT_ICON)
+        element.click()
+
+    def find_thycotic_vault_icon(self):
+        return self.driver.find_element_by_id(ADAPTER_THYCOTIC_VAULT_BUTTON)
+
+    def verify_thycotic_button_is_not_present(self):
+        if len(self.driver.find_elements_by_id(ADAPTER_THYCOTIC_VAULT_BUTTON)):
+            return False
+        return True
+
+    def assert_thycotic_vault_icon_appear(self):
+        element = self.find_thycotic_vault_icon()
+        assert element is not None
+
+    def check_thycotic_fetch_status(self, should_succeed=True):
+        thycotic_icon_element = self.driver.find_element_by_css_selector(ADAPTER_THYCOTIC_VAULT_ICON)
+        class_attribute = 'success' if should_succeed else 'error'
+        return class_attribute in thycotic_icon_element.get_attribute('class')
+
+    def check_thycotic_success_status(self):
+        assert self.check_thycotic_fetch_status(should_succeed=True)
+
+    def check_thycotic_failure_status(self):
+        assert self.check_thycotic_fetch_status(should_succeed=False)
+
+    def fetch_password_from_thycotic_vault(self, screct_id: str, is_negative_test=False):
+        # Waiting until cyberark icon is present
+        wait_until(self.assert_thycotic_vault_icon_appear,
+                   check_return_value=False,
+                   tolerated_exceptions_list=[AssertionError, NoSuchElementException])
+        self.click_thycotic_button()
+        self.fill_text_field_by_element_id(ADAPTER_THYCOTIC_VAULT_QUERY_ID, screct_id)
+        self.click_button('Fetch')
+
+        if is_negative_test:
+            wait_until(self.check_thycotic_failure_status,
+                       check_return_value=False,
+                       tolerated_exceptions_list=[AssertionError, NoSuchElementException])
+        else:
+            wait_until(self.check_thycotic_success_status,
+                       check_return_value=False,
+                       tolerated_exceptions_list=[AssertionError, NoSuchElementException])
 
     def find_server_connection_label_value(self):
         return self.driver.find_element_by_id('connectionLabel').get_attribute('value')

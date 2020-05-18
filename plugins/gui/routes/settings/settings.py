@@ -47,7 +47,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration):
                 'jira': self._jira_settings['enabled'] if self._jira_settings else False,
                 'opsgenie': self._opsgenie_settings['enabled'] if self._opsgenie_settings else False,
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
-                'cyberark_vault': self._vault_settings['enabled'],
+                'passwordManagerEnabled': self._vault_settings['enabled'],
                 'customerId': self.node_id
             }
         })

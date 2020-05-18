@@ -143,3 +143,19 @@ X_UI_USER_SOURCE = 'x-ui-user-source'
 # Defaults
 DEFAULT_SOCKET_READ_TIMEOUT = 5
 DEFAULT_SOCKET_RECV_TIMEOUT = 300
+
+# Enterprise Password Manger- Vault Connection
+VAULT_SETTINGS = 'vault_settings'
+PASSWORD_MANGER_ENABLED = 'enabled'
+PASSWORD_MANGER_ENUM = 'conditional'
+PASSWORD_MANGER_CYBERARK_VAULT = 'cyberark_vault'
+PASSWORD_MANGER_THYCOTIC_SS_VAULT = 'thycotic_secret_server_vault'
+THYCOTIC_SS_HOST = 'host'
+THYCOTIC_SS_PORT = 'port'
+THYCOTIC_SS_USERNAME = 'username'
+THYCOTIC_SS_PASSWORD = 'password'
+THYCOTIC_SS_VERIFY_SSL = 'verify_ssl'
+CYBERARK_DOMAIN = 'domain'
+CYBERARK_PORT = 'port'
+CYBERARK_APP_ID = 'application_id'
+CYBERARK_CERT_KEY = 'certificate_key'

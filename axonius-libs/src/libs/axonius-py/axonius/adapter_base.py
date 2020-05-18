@@ -24,7 +24,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 from retrying import retry
 
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL, CLIENT_ID
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL,\
+    CLIENT_ID, VAULT_PROVIDER
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.metric_helper import log_metric
@@ -1098,15 +1099,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # Get all the password fields from schema
         password_fields = [item['name'] for item in self._clients_schema()['items'] if item.get('format') == 'password']
 
-        # Get all the cyberark_vault fields from the client_config
-        cyberark_fields = [(field, client_config_copy[field])
-                           for field
-                           in password_fields
-                           if isinstance(client_config_copy.get(field), dict) and
-                           client_config_copy[field].get('type') == 'cyberark_vault']
+        # Get all the vault fields from the client_config
+        vault_connection_fields = [(field, client_config_copy[field])
+                                   for field
+                                   in password_fields
+                                   if isinstance(client_config_copy.get(field), dict) and
+                                   client_config_copy[field].get('type') == VAULT_PROVIDER]
 
-        for field_name, field in cyberark_fields:
-            client_config_copy[field_name] = self.cyberark_vault.query_password(field_name, field.get('query'))
+        for field_name, field in vault_connection_fields:
+            client_config_copy[field_name] = self.vault_pwd_mgmt.query_password(field_name, field.get('query'))
 
         return client_config_copy
 

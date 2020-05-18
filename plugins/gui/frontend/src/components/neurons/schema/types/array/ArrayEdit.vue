@@ -201,6 +201,9 @@
     },
     methods: {
       dataChanged(value, itemName) {
+        if ( itemName === 'conditional') {
+          this.needsValidation = true;
+        }
         if (Array.isArray(this.data) && typeof itemName === 'number') {
           this.data = this.data.map((item, index) => index === itemName? value : item)
         } else {
@@ -218,6 +221,35 @@
         // We go through each of the children fields and make sure to invalidate them.
         // In other words, once the option sub fields is invisible again, we have to make them valid
         // since they are no longer relevant for validation.
+
+
+      // handle a case where enable checkbox follow by conditional
+      if (Array.isArray(this.schema.items)
+                    && this.schema.items[0].name === 'enabled'
+                    && this.schema.items.length > 1
+                    && this.schema.items[1].name === 'conditional') {
+        const enabledItem = this.schema.items[0].name
+        const conditionalSelectedItem = this.schema.items[1].name
+        const conditionalEnumItems = this.schema.items[1].enum
+
+        // if form enabled then remove validation from drop down list unselected items ( hidden )
+        if (this.data[enabledItem] === true) {
+
+          const selected = this.data[conditionalSelectedItem];
+          conditionalEnumItems.filter((item) => (item.name !== selected)).forEach((item) => {
+            this.$emit('remove-validate',
+              Object.keys(this.data[item.name])
+                .map((conditionalItem) => ({ name: conditionalItem })));
+          });
+          // if form is not enabled remove validate from all drop down list items
+        } else {
+          conditionalEnumItems.forEach((item) => {
+            this.$emit('remove-validate', Object.keys(this.data[item.name]).map((item) => ({ name: item })));
+          });
+        }
+      }
+
+
         if(checkHiddenFields
            && this.schema.items[0].name === 'enabled'
            && this.data[this.schema.items[0].name] === false

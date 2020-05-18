@@ -14,7 +14,11 @@ from pymongo import UpdateOne
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
-    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION
+    PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION, PASSWORD_MANGER_CYBERARK_VAULT, \
+    PASSWORD_MANGER_ENUM, CYBERARK_DOMAIN, CYBERARK_CERT_KEY, PASSWORD_MANGER_THYCOTIC_SS_VAULT, THYCOTIC_SS_HOST, \
+    THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID,\
+    CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED
+
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
 from axonius.consts.core_consts import CORE_CONFIG_NAME, NotificationHookType, LINK_REGEX
 from axonius.entities import EntityType
@@ -53,7 +57,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 16:
             self._update_schema_version_16()
 
-        if self.db_schema_version != 16:
+        if self.db_schema_version < 17:
+            self._update_schema_version_17()
+
+        if self.db_schema_version != 17:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -829,6 +836,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             raise
 
     def _update_schema_version_16(self):
+
         print('Upgrade to schema 16 - Audit max size and documents')
         try:
             max_documents = 100000
@@ -846,13 +854,60 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 old_audit_collection.drop()
 
             new_audit_collection.rename(AUDIT_COLLECTION)
-
             self.db_schema_version = 16
 
         except Exception as e:
             print(f'Exception while upgrading schema to version 16. Details: {e}')
             traceback.print_exc()
             raise
+
+    def _update_schema_version_17(self):
+        # enterprise password mgmt - vault settings
+        print('Upgrade to schema 17 -enterprise password mgmt - vault settings ')
+        try:
+            config_match = {
+                'config_name': CORE_CONFIG_NAME
+            }
+
+            updated_vault_settings = {
+                PASSWORD_MANGER_ENABLED: False,
+                PASSWORD_MANGER_ENUM: PASSWORD_MANGER_CYBERARK_VAULT,
+                PASSWORD_MANGER_CYBERARK_VAULT: {
+                    CYBERARK_DOMAIN: None,
+                    CYBERARK_PORT: None,
+                    CYBERARK_APP_ID: None,
+                    CYBERARK_CERT_KEY: None
+                },
+                PASSWORD_MANGER_THYCOTIC_SS_VAULT: {
+                    THYCOTIC_SS_HOST: None,
+                    THYCOTIC_SS_PORT: None,
+                    THYCOTIC_SS_USERNAME: None,
+                    THYCOTIC_SS_PASSWORD: None,
+                    THYCOTIC_SS_VERIFY_SSL: False
+                }
+            }
+
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            current_config = config_collection.find_one(config_match)
+
+            if current_config:
+                current_vault_settings = current_config['config'].get(VAULT_SETTINGS)
+                if current_vault_settings and current_vault_settings.get(PASSWORD_MANGER_ENABLED):
+                    updated_vault_settings[PASSWORD_MANGER_ENABLED] = True
+                    current_vault_settings.pop(PASSWORD_MANGER_ENABLED)
+                    updated_vault_settings[PASSWORD_MANGER_CYBERARK_VAULT] = current_vault_settings
+                    current_config['config'][VAULT_SETTINGS] = updated_vault_settings
+                    config_collection.replace_one(config_match, current_config)
+                else:
+                    current_config['config'][VAULT_SETTINGS] = updated_vault_settings
+                    config_collection.replace_one(config_match, current_config)
+
+            self.db_schema_version = 17
+
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 17. Details: {e}')
+            traceback.print_exc()
+            raise e
 
     def register(self, api_key=None, plugin_name=''):
         headers = {}

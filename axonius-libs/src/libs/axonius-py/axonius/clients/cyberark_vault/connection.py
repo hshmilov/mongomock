@@ -5,25 +5,17 @@ from pathlib import Path
 import requests
 from gridfs import GridOut
 
+from axonius.clients.abstract.abstract_vault_connection import VaultException, VaultProvider
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CyberarkVaultException(Exception):
+class CyberarkVaultException(VaultException):
 
     def __init__(self, field_name, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._field_name = field_name
-
-    def __repr__(self):
-        # This is so the gui will recognize this specific error and to what field it's relevant to.
-        return f'cyberark_vault_error:{self._field_name}:{super().__repr__()}'
-
-    def __str__(self):
-        # This is so the gui will recognize this specific error and to what field it's relevant to.
-        return f'cyberark_vault_error:{self._field_name}:{super().__str__()}'
+        super().__init__(VaultProvider.CyberArk, field_name, *args, **kwargs)
 
 
 class CyberArkVaultConnection(RESTConnection):
