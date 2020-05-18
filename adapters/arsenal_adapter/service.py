@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field, ListField
@@ -17,7 +18,7 @@ from arsenal_adapter.consts import ALLOWED_TYPES
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class ArsenalAdapter(AdapterBase):
+class ArsenalAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         asset_type = Field(str, 'Asset Type')
@@ -54,8 +55,7 @@ class ArsenalAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -65,7 +65,7 @@ class ArsenalAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(self.__asset_types, self.__asset_statuses)
 
     @staticmethod
     def _clients_schema():
@@ -159,3 +159,37 @@ class ArsenalAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'asset_types',
+                    'title': 'Asset Types',
+                    'type': 'string'
+                },
+                {
+                    'name': 'asset_statuses',
+                    'title': 'Asset Statuses',
+                    'type': 'string',
+                }
+            ],
+            'required': [],
+            'pretty_name': 'Arsenal Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'asset_types': None,
+            'asset_statuses': None
+        }
+
+    def _on_config_update(self, config):
+        logger.info(f'Loading Arsenal config: {config}')
+        self.__asset_types = [x.strip() for x in config.get('asset_types').split(',')] \
+            if config.get('asset_types') else None
+        self.__asset_statuses = [x.strip() for x in config.get('asset_statuses').split(',')] \
+            if config.get('asset_statuses') else None

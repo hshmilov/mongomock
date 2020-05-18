@@ -392,13 +392,10 @@ class JsonAdapter(AdapterBase):
                 if not key or not val:
                     logger.debug(f'Bad item. Key "{key}" ; Value "{val}"')
                     continue
-                normalized_var_name = normalize_var_name(key)
-                field_title = ' '.join(
+                normalized_var_name = 'json_' + normalize_var_name(key)
+                field_title = 'JSON ' + ' '.join(
                     [word.capitalize() for word in key.split(' ')])
-                if entity_obj.does_field_exist(normalized_var_name):
-                    # Make sure not to overwrite existing data
-                    normalized_var_name = 'json_' + normalized_var_name
-                    field_title = f'JSON {field_title}'
+
                 put_dynamic_field(entity_obj, normalized_var_name, val, field_title)
             except Exception as e:
                 logger.warning(f'Failed to add {key}:{val} to entity {entity_obj.id}: '

@@ -123,7 +123,7 @@ cd $SCRIPT_DIR
 cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
 _wait_for_apt update
 echo "Installing various dependencies..."
-_wait_for_apt install -yq sshpass open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386 cntlm
+_wait_for_apt install -yq sshpass ntp open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386 cntlm
 _wait_for_apt install -yq zip unzip
 echo "Installing python 3.6..."
 # unixodbc-dev https://github.com/mkleehammer/pyodbc/issues/276 is needed for pyodbc

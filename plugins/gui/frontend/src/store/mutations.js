@@ -50,7 +50,7 @@ export const updateDataCountQuick = (state, payload) => {
       count.data = payload.data;
       count.data_to_show = payload.data;
       if (payload.data == '1000') {
-        count.data_to_show = '> 1000, loading...';
+        count.data_to_show = 'Loading...';
       }
     }
   }

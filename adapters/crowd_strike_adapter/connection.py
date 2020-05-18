@@ -257,16 +257,19 @@ class CrowdStrikeConnection(RESTConnection):
             logger.exception(f'Error getting devices groups')
         return devices
 
-    def get_devices_ids(self, offset: int, devices_per_page: int) -> dict:
+    def get_devices_ids(self, offset: int, devices_per_page: int, query: str = None) -> dict:
         """
         Get devices ids from crowdstrike api
         :param offset: paging offset
         :param devices_per_page: devices per page
         :return:
         """
-        logger.debug(f'Getting devices offset {offset}, devices per page: {devices_per_page}')
+        logger.debug(f'Getting devices offset {offset}, devices per page: {devices_per_page}, query: {str(query)}')
+        url_params = {'limit': devices_per_page, 'offset': offset}
+        if query:
+            url_params['filter'] = query
         return self.__get('devices/queries/devices/v1',
-                          url_params={'limit': devices_per_page, 'offset': offset},
+                          url_params=url_params,
                           do_basic_auth=not self._got_token)
 
     # pylint: disable=arguments-differ
@@ -274,16 +277,68 @@ class CrowdStrikeConnection(RESTConnection):
         """
         Get devices data list from CrowdStrike Api
         """
+        # Due to the API's pagination limit (up to 150,000 devices per one query) we have to split the
+        # yields for differnet queries.
+        try:
+            response = self.get_devices_ids(0, 10)
+            total_count = response['meta']['pagination']['total']
+            logger.info(f'Total count of all assets: {total_count}')
+        except Exception:
+            logger.exception(f'Can not get initial pagination response')
+            raise
+
+        # Yield all hostname that start with A, B, C, etc. Note! this is case in-sensitive.
+        letters = [chr(x) for x in range(ord('A'), ord('A') + 26)]
+        for letter in letters:
+            try:
+                yield from self.get_device_list_with_query(
+                    should_get_policies,
+                    should_get_vulnerabilities,
+                    f'hostname:\'{letter}*\''
+                )
+            except Exception:
+                logger.exception(f'Can not yield for letter {letter}')
+
+        # Then, yield from all those who do not start with ascii letters
+        try:
+            yield from self.get_device_list_with_query(
+                should_get_policies,
+                should_get_vulnerabilities,
+                '+'.join([f'hostname:!\'{letter}*\'' for letter in letters])
+            )
+        except Exception:
+            logger.exception(f'Can not yield not of all letters')
+
+        # Then, yield those who do not have a hostname. This should have been part of the 'not all letters'
+        # filter but do this just in case.
+        try:
+            yield from self.get_device_list_with_query(
+                should_get_policies,
+                should_get_vulnerabilities,
+                'hostname:null'
+            )
+        except Exception:
+            logger.exception(f'Can not yield from hostname null')
+
+    def get_device_list_with_query(self, should_get_policies, should_get_vulnerabilities, query):
         offset = 0
         devices_per_page = consts.DEVICES_PER_PAGE
         try:
-            response = self.get_devices_ids(offset, devices_per_page)
+            response = self.get_devices_ids(offset, devices_per_page, query)
             offset += response['meta']['pagination']['offset']
             self.requests_count += 1
             total_count = response['meta']['pagination']['total']
         except Exception:
             logger.exception(f'Cant get total count')
             raise RESTException('Cant get total count')
+
+        logger.info(f'Total count for "{str(query)}": {total_count}')
+
+        if total_count > 150000:
+            logger.warning(f'Warning - more than 150,000 devices per query! Crowd-Strike API does not support that. '
+                           f'Querying up to 150,000.')
+            total_count = 150000
+
         devices_per_page = int(consts.DEVICES_PER_PAGE_PERCENTAGE / 100 * total_count)
         # check if devices_per_page is not too big or too small
         if devices_per_page > consts.MAX_DEVICES_PER_PAGE:
@@ -293,10 +348,10 @@ class CrowdStrikeConnection(RESTConnection):
 
         devices = self.get_devices_data(response['resources'], should_get_policies, should_get_vulnerabilities)
         yield from devices['resources']
-        logger.info(f'Total count: {total_count}')
+
         while offset < total_count and offset < consts.MAX_NUMBER_OF_DEVICES:
             try:
-                response = self.get_devices_ids(offset, devices_per_page)
+                response = self.get_devices_ids(offset, devices_per_page, query)
                 devices = self.get_devices_data(response['resources'], should_get_policies, should_get_vulnerabilities)
                 yield from devices['resources']
                 self.requests_count += 2

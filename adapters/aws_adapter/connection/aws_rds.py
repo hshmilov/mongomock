@@ -30,10 +30,10 @@ def parse_raw_data_inner_rds(
     vpcs_by_id = generic_resources.get('vpcs') or {}
     security_group_dict = generic_resources.get('security_groups') or {}
     try:
-        device.id = rds_instance_raw['DBInstanceIdentifier']
+        device.id = rds_instance_raw['DBInstanceArn']
         device.name = rds_instance_raw['DBInstanceIdentifier']
         device.aws_device_type = 'RDS'
-        device.cloud_id = rds_instance_raw['DBInstanceIdentifier']
+        device.cloud_id = rds_instance_raw['DBInstanceArn']
         device.cloud_provider = 'AWS'
         device.aws_availability_zone = rds_instance_raw.get('AvailabilityZone')
 

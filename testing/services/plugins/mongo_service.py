@@ -13,6 +13,8 @@ from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_
 from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
                                        USERS_PREFERENCES_COLLECTION)
+from axonius.utils.mongo_administration import set_mongo_parameter
+from conf_tools import get_customer_conf_json
 from services.ports import DOCKER_PORTS
 from services.system_service import SystemService
 from services.weave_service import WeaveService
@@ -128,12 +130,18 @@ class MongoService(SystemService, WeaveService):
         super().start(mode, allow_restart, rebuild, *args, **kwargs)
 
         self.wait_for_service()
-        print("Mongo master is online. Waiting for replica set to be ready...")
+        print('Mongo master is online. Waiting for replica set to be ready...')
 
         self.configure_replica_set()
+        self.set_db_config()
         self.clean_old_databases()
 
-        print("Finished setting up mongo")
+        print('Finished setting up mongo')
+
+    def set_db_config(self):
+        # Set cursor timeout to 30 minutes. Too many operations do not end up in the default 10 minutes,
+        # especially API
+        set_mongo_parameter(self.client, 'cursorTimeoutMillis', 1000 * 60 * 30)
 
     def wait_for_service(self, timeout=60 * 45):
         # We wait much longer for mongo, because in some customers, a hard restart can cause a corruption in the db
@@ -164,7 +172,12 @@ class MongoService(SystemService, WeaveService):
 
     @property
     def volumes(self):
-        return [f'{self.container_name}_data:/data/db', f'{self.service_dir}/scripts:/scripts:ro']
+        volume_name = get_customer_conf_json().get('mongo_volume_name')
+        if volume_name:
+            print(f'Mongo: Using volume {volume_name}')
+        else:
+            volume_name = f'{self.container_name}_data'
+        return [f'{volume_name}:/data/db', f'{self.service_dir}/scripts:/scripts:ro']
 
     @property
     def environment(self):

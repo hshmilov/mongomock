@@ -372,6 +372,8 @@ class DockerService(AxonService):
             # No need to build anything
             return
 
+        assert self.is_unique_image, 'Can not build a non-unique image!'
+
         # dump Dockerfile.autogen to local folder
         print(f'building {self.image}')
         autogen_path = dockerfile_path + '.autogen'

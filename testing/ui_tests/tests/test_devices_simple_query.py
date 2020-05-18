@@ -285,7 +285,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.fill_filter(slow_query)
         self.devices_page.enter_search()
-        wait_until(lambda: '> 1000' in self.devices_page.get_raw_count_entities())
+        wait_until(lambda: 'Loading' in self.devices_page.get_raw_count_entities())
         assert self.devices_page.count_entities() == devices_count
 
     def test_adapters_filter_all_vs_clear_selection(self):

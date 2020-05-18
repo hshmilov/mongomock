@@ -93,8 +93,10 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_30()
         if self.db_schema_version < 31:
             self._update_schema_version_31()
+        if self.db_schema_version < 32:
+            self._update_schema_version_32()
 
-        if self.db_schema_version != 31:
+        if self.db_schema_version != 32:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1465,6 +1467,75 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             raise
         except Exception as e:
             print(f'Exception while upgrading core db to version 31. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_32(self):
+        print('Update to schema 32 - migrate AWS RDS ID')
+        try:
+            entities_db = self._entity_db_map[EntityType.Devices]
+            to_fix = []
+            for entity in entities_db.find(
+                    {
+                        f'adapters.data.aws_device_type': 'RDS'
+                    },
+                    projection={
+                        '_id': 1,
+                        f'adapters.{PLUGIN_NAME}': 1,
+                        f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                        f'adapters.data.id': 1,
+                        f'adapters.data.aws_device_type': 1,
+                        f'adapters.data.rds_data.db_instance_arn': 1,
+                    }
+            ):
+                # Then go on all AWS RDS device-adapters on each device
+                all_aws_rds = [x for x in entity['adapters'] if x[PLUGIN_NAME] == 'aws_adapter']
+                for aws_rds in all_aws_rds:
+                    aws_rds_data = aws_rds['data']
+                    if aws_rds_data.get('aws_device_type') != 'RDS':
+                        continue
+
+                    aws_rds_current_id = aws_rds_data.get('id')
+                    if not aws_rds_current_id:
+                        continue
+
+                    aws_rds_new_id = (aws_rds_data.get('rds_data') or {}).get('db_instance_arn')
+                    if not aws_rds_new_id:
+                        continue
+
+                    # If this has been already migrated, move on
+                    if aws_rds_current_id == aws_rds_new_id:
+                        continue
+
+                    # Else, add to the list of fixes
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.quick_id': get_preferred_quick_adapter_id(
+                            aws_rds[PLUGIN_UNIQUE_NAME], aws_rds_current_id
+                        )
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': aws_rds_new_id,
+                            'adapters.$.data.cloud_id': aws_rds_new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                aws_rds[PLUGIN_UNIQUE_NAME], aws_rds_new_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading AWS RDS ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'AWS RDS ID upgrade: Nothing to fix. Moving on')
+            self.db_schema_version = 32
+        except BulkWriteError as e:
+            print(f'BulkWriteError: {e.details}')
+            raise
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 32. Details: {e}')
             traceback.print_exc()
             raise
 

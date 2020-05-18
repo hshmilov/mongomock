@@ -14,7 +14,9 @@ from typing import NamedTuple, Iterable, List, Union, Dict
 
 import cachetools
 import dateutil
+
 import pymongo
+from pymongo.errors import ExecutionTimeout
 
 from bson import ObjectId
 from flask import request, session, g, Response
@@ -25,7 +27,6 @@ from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFA
     SortType, SortOrder
 
 from axonius.entities import EntitiesNamespace
-
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, GUI_PLUGIN_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
@@ -575,10 +576,14 @@ def get_entities_count(
     if is_date_filter_required:
         processed_filter = get_historized_filter(entities_filter, history_date)
     is_adapter_where_query = is_where_count_query(processed_filter)
-    if quick and is_adapter_where_query:
-        return entity_collection.count(processed_filter, limit=1000)
-    if quick and not is_adapter_where_query:
-        return entity_collection.count_documents(processed_filter, limit=1000)
+    try:
+        if quick and is_adapter_where_query:
+            return entity_collection.count(processed_filter, limit=1000, maxTimeMS=1000)
+        if quick and not is_adapter_where_query:
+            return entity_collection.count_documents(processed_filter, limit=1000, maxTimeMS=1000)
+    except ExecutionTimeout:
+        logger.warning(f'Quick request exceeded max timeout. returning 1000. Query is {processed_filter}')
+        return 1000
 
     if not processed_filter:
         return entity_collection.estimated_document_count()

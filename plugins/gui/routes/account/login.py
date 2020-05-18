@@ -138,7 +138,8 @@ class Login:
 
     def _log_activity_login_failure(self, user_name):
         if request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
-                                             or 'diag-l.axonius.com' in request.referrer):
+                                             or 'diag-l.axonius.com' in request.referrer
+                                             or 'insider.axonius.lan' in request.referrer):
             return
 
         self.log_activity_default(AuditCategory.UserSession.value,

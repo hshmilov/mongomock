@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, List
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -30,8 +31,14 @@ class ArsenalConnection(RESTConnection):
         if not json_data.get('assets'):
             raise RESTException(f'Bad response data: {json_data}')
 
-    def get_device_list(self):
-        response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE}}, return_response_raw=True,
+    # pylint: disable=arguments-differ
+    def get_device_list(self, asset_types: Optional[List[str]], asset_statuses: Optional[List[str]]):
+        query = {'page': {'size': DEVICE_PER_PAGE}}
+        if asset_types:
+            query['asset_types'] = asset_types
+        if asset_statuses:
+            query['asset_statuses'] = asset_statuses
+        response = self._post('', body_params=query, return_response_raw=True,
                               use_json_in_response=False)
         json_data = response.json()
         error_header = response.headers.get('Grpc-Status-Details-Bin')

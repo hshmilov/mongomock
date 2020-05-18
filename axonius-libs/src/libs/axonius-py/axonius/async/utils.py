@@ -6,6 +6,8 @@ import ssl
 import typing
 import logging
 from inspect import isawaitable
+
+import certifi
 from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector, ClientConnectorError
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -98,7 +100,7 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
         except ClientConnectorError as e:
             if not retry_on_error:
                 raise e
-            logger.warning(f'Got error on http request, retry: {retries} - {str(e)}')
+            logger.warning(f'Got error on http request, retry: {retries} - ({str(e)})', exc_info=True)
             if retries == MAX_RETRIES:
                 logger.error('Max retries exceeded for async request')
                 raise e
@@ -120,6 +122,8 @@ async def run(reqs, handle_429_function, max_retries=MAX_RETRIES,
         cert = kwargs.get('cert')
         ssl_ctx = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
         ssl_ctx.load_cert_chain(*cert)
+    else:
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
     connector = TCPConnector(limit=None, ssl_context=ssl_ctx)
     should_run_event = asyncio.Event()
     should_run_event.set()

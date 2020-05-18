@@ -285,7 +285,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     domain = device_raw.get('machine_domain')
                     if isinstance(self.__machine_domain_whitelist, list) \
                             and self.__machine_domain_whitelist and \
-                            str(domain).lower() not in self.__machine_domain_whitelist.lower():
+                            str(domain).lower() not in self.__machine_domain_whitelist:
                         continue
                     if not is_domain_valid(domain):
                         domain = None
@@ -417,7 +417,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
     def _on_config_update(self, config):
         self._get_policies = config['get_policies']
         self._get_vulnerabilities = config['get_vulnerabilities']
-        self.__machine_domain_whitelist = config.get('machine_domain_whitelist').split(',') \
+        self.__machine_domain_whitelist = [x.lower() for x in config.get('machine_domain_whitelist').split(',')] \
             if config.get('machine_domain_whitelist') else None
         self.__group_name_whitelist = config.get('group_name_whitelist').split(',') \
             if config.get('group_name_whitelist') else None

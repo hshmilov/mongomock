@@ -74,7 +74,7 @@ class MongoAliveTask(WatchdogTask):
                     self.check_mongo_connection_now()
                     continue
                 except Exception as e:
-                    self.report_error(f'{MONGO_IS_DOWN}- {e}')
+                    self.report_error(f'Error connecting to mongo - {e}')
 
                 retries = 0
                 fixed = False
@@ -86,13 +86,14 @@ class MongoAliveTask(WatchdogTask):
                         self.check_mongo_connection_now()
                         fixed = True
                     except Exception as e:
-                        self.report_error(f'{MONGO_IS_DOWN} - {e}')
+                        self.report_error(f'Error connecting to mongo - {e}')
                     else:
                         self.report_info('Success connecting to mongo.')
                         break
 
                 if not fixed:
                     MONGOALIVE_WATCHDOG_IN_PROGRESS.touch()
+                    self.report_error(MONGO_IS_DOWN)
                     self.report_info(f'Restarting mongo and gui')
                     with open('/home/ubuntu/helper.log', 'a') as helper:
                         subprocess.check_call('./se.sh re mongo'.split(),

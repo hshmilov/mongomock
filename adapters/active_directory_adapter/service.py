@@ -350,6 +350,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 additional_msg = "connection timed out"
             elif "saslprep error:" in str(e).lower():
                 additional_msg = "Invalid credentials - credentials contain invalid characters"
+            elif 'ldapstrongerauthrequiredresult' in str(e).lower():
+                additional_msg = 'Server requires a stronger authentication. Please try using an encrypted connection'
             elif 'ldapinvalidcredentialsresult' in str(e).lower():
                 if 'data 52e' in str(e).lower():
                     additional_msg = 'Invalid credentials'
@@ -384,9 +386,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             elif 'socket ssl wrapping error' in str(e).lower():
                 additional_msg = 'SSL error. Please check the SSL settings'
             elif 'invalid server address' in str(e).lower():
-                additional_msg = 'Invalid server address'
+                additional_msg = f'Invalid server address - {str(e)}'
             else:
-                additional_msg = 'connection error, please check the settings'
+                additional_msg = f'connection error, please check the settings - {str(e)}'
             message = f'Error: {additional_msg}.'
             logger.exception(message)
         except Exception:
