@@ -2,15 +2,16 @@ import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters.aws_service import AwsService
-from services.adapters.crowd_strike_service import CrowdStrikeService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
+from ui_tests.tests.test_adapters import JSON_NAME
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
-                                      STRESSTEST_ADAPTER_NAME, CROWD_STRIKE_ADAPTER_NAME, CROWD_STRIKE_ADAPTER,
+                                      STRESSTEST_ADAPTER_NAME,
                                       AD_ADAPTER_NAME, AWS_ADAPTER_NAME, AWS_ADAPTER)
-from test_credentials.test_crowd_strike_credentials import client_details as crowd_strike_client_details
+
+from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
 from test_credentials.test_aws_credentials import client_details
 
 
@@ -251,26 +252,26 @@ class TestDevicesTable(TestEntitiesTable):
         assert self.devices_page.find_search_value() == ''
 
     def test_device_expand_row(self):
-        with CrowdStrikeService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(CROWD_STRIKE_ADAPTER_NAME)
-            self.adapters_page.create_new_adapter_connection(CROWD_STRIKE_ADAPTER_NAME, crowd_strike_client_details)
-            self.base_page.run_discovery(wait=True)
-            self.devices_page.switch_to_page()
-            self.devices_page.query_hostname_contains(self.TARGET_HOSTNAME)
-            self.devices_page.click_expand_row(index=1)
-            # The value from all adapters seperated by \n
-            device_host_name = self.devices_page.get_column_data_expand_row(self.devices_page.FIELD_HOSTNAME_TITLE)
-            # Make sure all values are not ''
-            assert device_host_name and all(x != '' for x in device_host_name[0].split('\n'))
-            assert self.devices_page.NAME_ADAPTERS_AD in self.devices_page.get_column_data_adapter_names()
-            assert CROWD_STRIKE_ADAPTER in self.devices_page.get_column_data_adapter_names()
-            self.devices_page.edit_columns(add_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
-                                           remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
-                                           adapter_title=[AD_ADAPTER_NAME])
-            assert device_host_name != self.devices_page.get_column_data_expand_row(
-                self.devices_page.FIELD_HOSTNAME_TITLE
-            )
-
-        # Cleanup
-        self.adapters_page.clean_adapter_servers(CROWD_STRIKE_ADAPTER_NAME, delete_associated_entities=True)
-        self.wait_for_adapter_down(CROWD_STRIKE_ADAPTER)
+        self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.wait_for_server_green(position=2)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
+        self.base_page.run_discovery(wait=True)
+        self.devices_page.switch_to_page()
+        self.devices_page.query_hostname_contains(self.TARGET_HOSTNAME)
+        self.devices_page.click_expand_row(index=1)
+        # The value from all adapters seperated by \n
+        device_host_name = self.devices_page.get_column_data_expand_row(self.devices_page.FIELD_HOSTNAME_TITLE)
+        # Make sure all values are not ''
+        assert device_host_name and all(x != '' for x in device_host_name[0].split('\n'))
+        assert self.devices_page.NAME_ADAPTERS_AD in self.devices_page.get_column_data_adapter_names()
+        assert self.devices_page.NAME_ADAPTERS_JSON in self.devices_page.get_column_data_adapter_names()
+        self.devices_page.edit_columns(add_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
+                                       remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE],
+                                       adapter_title=[AD_ADAPTER_NAME])
+        assert device_host_name != self.devices_page.get_column_data_expand_row(
+            self.devices_page.FIELD_HOSTNAME_TITLE
+        )
+        self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_NAME,
+                                         expected_left=1, delete_associated_entities=True,
+                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)

@@ -8,12 +8,10 @@ from dateutil.relativedelta import relativedelta
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from json_file_adapter.service import DEVICES_DATA, FILE_NAME, USERS_DATA
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.adapters.crowd_strike_service import CrowdStrikeService
 from services.adapters.tanium_asset_service import TaniumAssetService
 from services.adapters.tanium_discover_service import TaniumDiscoverService
 from services.adapters.tanium_sq_service import TaniumSqService
-from test_credentials.test_crowd_strike_credentials import \
-    client_details as crowd_strike_client_details
+from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
 from test_credentials.test_tanium_asset_credentials import \
     CLIENT_DETAILS as tanium_asset_details
 from test_credentials.test_tanium_discover_credentials import \
@@ -21,9 +19,8 @@ from test_credentials.test_tanium_discover_credentials import \
 from test_credentials.test_tanium_sq_credentials import \
     CLIENT_DETAILS as tanium_sq_details
 from test_helpers.file_mock_credentials import FileForCredentialsMock
+from ui_tests.tests.test_adapters import JSON_NAME
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
-                                      CROWD_STRIKE_ADAPTER,
-                                      CROWD_STRIKE_ADAPTER_NAME,
                                       LINUX_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
                                       STRESSTEST_SCANNER_ADAPTER,
@@ -175,28 +172,28 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         Also make sure that if a different field was selected,
         It will be shown and not the ID.
         """
-        with CrowdStrikeService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(CROWD_STRIKE_ADAPTER_NAME)
-            self.adapters_page.create_new_adapter_connection(CROWD_STRIKE_ADAPTER_NAME, crowd_strike_client_details)
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            self.devices_page.click_query_wizard()
-            self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
-            self.devices_page.select_query_field(self.devices_page.ID_FIELD)
-            self.devices_page.select_query_adapter(CROWD_STRIKE_ADAPTER_NAME)
-            assert self.devices_page.get_query_field() == self.users_page.ID_FIELD
-            self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES)
-            self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
-            assert self.devices_page.get_query_field() == self.devices_page.FIELD_NETWORK_INTERFACES
-            self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
-            self.devices_page.select_query_adapter(CROWD_STRIKE_ADAPTER_NAME)
-            assert self.devices_page.get_query_field() == self.devices_page.FIELD_LAST_SEEN
-            self.devices_page.close_dropdown()
-            self.devices_page.wait_for_table_to_load()
-            self.adapters_page.clean_adapter_servers(CROWD_STRIKE_ADAPTER_NAME, delete_associated_entities=True)
-
-        self.wait_for_adapter_down(CROWD_STRIKE_ADAPTER)
+        self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.wait_for_server_green(position=2)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
+        self.devices_page.select_query_field(self.devices_page.ID_FIELD)
+        self.devices_page.select_query_adapter(JSON_NAME)
+        assert self.devices_page.get_query_field() == self.users_page.ID_FIELD
+        self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES)
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
+        assert self.devices_page.get_query_field() == self.devices_page.FIELD_NETWORK_INTERFACES
+        self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
+        self.devices_page.select_query_adapter(JSON_NAME)
+        assert self.devices_page.get_query_field() == self.devices_page.FIELD_LAST_SEEN
+        self.devices_page.close_dropdown()
+        self.devices_page.wait_for_table_to_load()
+        self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_NAME,
+                                         expected_left=2, delete_associated_entities=True,
+                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
     def test_in_enum_query(self):
         stress = stresstest_service.StresstestService()
