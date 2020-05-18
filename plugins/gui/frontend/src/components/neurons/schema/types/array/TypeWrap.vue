@@ -18,49 +18,49 @@
 </template>
 
 <script>
-  export default {
-    name: 'XTypeWrap',
-    props: {
-      name: {
-        type: [String, Number],
-        default: ''
-      },
-      type: {
-        type: String,
-        default: ''
-      },
-      description: {
-        type: String,
-        default: ''
-      },
-      title: {
-        type: String,
-        default: ''
-      },
-      required: {
-        type: [Boolean, Array],
-        default: true
-      },
-      items: {
-        type: [Array, Object],
-        default: () => []
-      },
-      path: {
-        type: Array,
-        default: () => []
-      },
-      expand: {
-        type: Boolean,
-        default: true
-      }
+export default {
+  name: 'XTypeWrap',
+  props: {
+    name: {
+      type: [String, Number],
+      default: '',
     },
-    computed: {
-      label () {
-        if (this.type === 'array') { return '' }
-        return this.title
-      }
-    }
-  }
+    type: {
+      type: String,
+      default: '',
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    required: {
+      type: [Boolean, Array],
+      default: true,
+    },
+    items: {
+      type: [Array, Object],
+      default: () => [],
+    },
+    path: {
+      type: Array,
+      default: () => [],
+    },
+    expand: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  computed: {
+    label() {
+      if (this.type === 'array') { return ''; }
+      return this.title;
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -71,4 +71,12 @@
             width: 100%;
         }
     }
+
+  .inline-display {
+    display: flex;
+
+    .inline-label {
+      margin-left: 3px;
+    }
+  }
 </style>

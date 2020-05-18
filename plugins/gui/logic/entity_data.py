@@ -1,21 +1,21 @@
 import csv
 import io
+import json
 import logging
 from datetime import datetime
-from uuid import uuid4
 from typing import Generator
-import json
-from flask import request, session, jsonify
+from uuid import uuid4
 from pymongo import DESCENDING
+from flask import request, session, jsonify
 
+from axonius.consts.gui_consts import CORRELATION_REASONS
+from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
+from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 from axonius.plugin_base import EntityType, return_error, PluginBase
+from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.utils.permissions_helper import is_role_admin
-from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
-from axonius.consts.gui_consts import CORRELATION_REASONS
-from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 from gui.logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -254,7 +254,6 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         field_by_name.keys())
 
     if search_term:
-
         def search_term_in_row_value(field_value):
             return (search_term in field_value or
                     isinstance(field_value, list) and any(search_term in str(s) for s in field_value))
@@ -374,6 +373,7 @@ def get_export_csv(rows: list, field_by_name: dict, sort: dict):
     dw.writeheader()
     dw.writerows(result_data)
     return string_output
+
 
 ##############
 # User Notes #

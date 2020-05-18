@@ -1464,3 +1464,15 @@ class SettingsPage(Page):
         self.click_toggle_button(toggle, make_yes=enable, scroll_to_toggle=True)
         self.click_save_button()
         self.wait_for_saved_successfully_toaster()
+
+    def toggle_compliance_visible_feature(self, show_feature):
+        cloud_visible_toggle = self.find_checkbox_by_label('Cloud Visible')
+        self.click_toggle_button(cloud_visible_toggle, make_yes=show_feature)
+
+    def toggle_compliance_enable_feature(self, show_feature):
+        cloud_enabled_toggle = self.find_checkbox_by_label('Cloud Enabled')
+        self.click_toggle_button(cloud_enabled_toggle, make_yes=show_feature)
+
+    def enable_and_display_compliance(self):
+        self.toggle_compliance_visible_feature(True)
+        self.toggle_compliance_enable_feature(True)

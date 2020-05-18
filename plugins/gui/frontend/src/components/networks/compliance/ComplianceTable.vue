@@ -26,15 +26,21 @@
       <template slot="actions">
         <XButton
           type="link"
-          @click="exportCSV"
-        >Export CSV
+          class="compliance-action-button"
+          @click.stop.prevent="exportCSV"
+          :loading="exporting"
+        >
+          <VIcon
+            size="18"
+          >$vuetify.icons.entityExport</VIcon>
+          Export CSV
         </XButton>
       </template>
     </XTable>
     <XCompliancePanel
       :data="currentRule"
       :fields="fields"
-      :dateFormat="dateFormat"
+      :date-format="dateFormat"
       @close="closeSidePanel"
     />
   </div>
@@ -184,7 +190,7 @@ export default {
 };
 </script>
 <style lang="scss">
-  $header-height: 20px;
+  $header-height: 90px;
 
   .x-compliance-table {
     height: calc(100% - #{$header-height});
@@ -263,6 +269,37 @@ export default {
         border-right: 6px solid transparent;
         border-bottom: 10px solid $indicator-warning;
         border-radius: unset;
+      }
+    }
+  }
+
+  .ant-btn.x-button {
+    &.compliance-action-button:not([disabled]) {
+      width: auto;
+      color: $theme-black;
+      svg {
+        stroke: $theme-black;
+      }
+      &.menuOpened {
+        color: $theme-blue;
+        svg {
+          stroke: $theme-blue;
+        }
+      }
+      &.action {
+        width: auto;
+      }
+    }
+    &.compliance-action-button:not([disabled]):hover {
+      color: $theme-blue;
+      svg {
+        stroke: $theme-blue;
+        .stroke-color {
+          stroke: $theme-blue;
+        }
+        .fill-color {
+          fill: $theme-blue;
+        }
       }
     }
   }

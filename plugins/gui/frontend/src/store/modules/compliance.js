@@ -1,4 +1,5 @@
 // eslint-disable-next-line import/prefer-default-export
+
 export const compliance = {
   state: {
     /* Compliance DataTable State */
@@ -57,9 +58,5 @@ export const compliance = {
     },
     /* Data of Rule currently being shown */
     current: { fetching: false, data: {}, error: '' },
-  },
-  mutations: {
-  },
-  actions: {
   },
 };

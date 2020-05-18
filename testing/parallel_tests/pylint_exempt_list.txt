@@ -354,6 +354,8 @@ axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/utils/com_helper.p
 axonius-libs/tests/mongo_escaping_test.py
 axonius-libs/tests/test_triggerable.py
 axonius-libs/tests/test_wmi_smb_runner.py
+axonius-libs/src/libs/axonius-py/axonius/compliance/azure_cis_default_rules.py
+axonius-libs/src/libs/axonius-py/axonius/compliance/aws_cis_default_rules.py
 deployment/make.py
 deployment/run_tests.py
 deployment/set_logrotate.py

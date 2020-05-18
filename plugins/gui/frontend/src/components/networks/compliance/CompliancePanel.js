@@ -129,7 +129,7 @@ export default {
           },
         },
         name: this.data.rule,
-        selectedView: null,
+        uuid: null,
       });
       this.$router.push({ path: `/${query.module}` });
     },
@@ -166,9 +166,7 @@ export default {
           <div class="status-container">
             <div class={`status ${this.data.status.toLowerCase().replace(' ', '-')}`}/>
             <div class="status-text">{this.data.status}</div>
-            {
-              this.data.status !== 'No Data' ? <div class="results-text">{this.data.results}</div> : ''
-            }
+            { this.shouldDisplayResult() ? <div class="results-text" >{this.data.results}</div> : null }
           </div>
           <div class="buttons">
             {
@@ -191,8 +189,17 @@ export default {
         </div>
       );
     },
+    shouldDisplayResult() {
+      const data = this.data.status !== 'No Data';
+      try {
+        const passedRules = parseInt(this.data.results.split('/')[0], 10);
+        return data && passedRules;
+      } catch (e) {
+        return false;
+      }
+    },
   },
-  render() {
+  render(h) {
     return (
       <x-side-panel
         value={this.data !== null}

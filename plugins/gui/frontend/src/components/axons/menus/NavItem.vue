@@ -83,7 +83,7 @@
                 margin-right: 10px;
                 display: inline-block;
                 .svg-fill {  fill: $grey-4  }
-                .svg-stroke {  stroke: $grey-4  }
+                .svg-stroke {  stroke: $grey-4; fill: $theme-black; }
             }
             .empty-icon {
                 width: 35px;
@@ -98,7 +98,7 @@
         &.disabled {
             .md-icon {
                 .svg-fill {  fill: $grey-5;  }
-                .svg-stroke {  stroke: $grey-5;  }
+                .svg-stroke {  stroke: $grey-5; }
             }
             .item-link {
                 cursor: default;
@@ -110,7 +110,7 @@
             }
             .md-icon {
                 .svg-fill {  fill: $theme-orange;  }
-                .svg-stroke {  stroke: $theme-orange;  }
+                .svg-stroke {  stroke: $theme-orange; fill: $theme-black;  }
             }
         }
         &.active {

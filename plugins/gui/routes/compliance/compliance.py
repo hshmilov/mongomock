@@ -46,22 +46,8 @@ class Compliance:
     def compliance_csv(self, name, schema_fields, accounts):
         return self._post_compliance_csv(name, schema_fields, accounts)
 
-    def _post_compliance_csv(self, name, schema_fields, accounts):
-        try:
-            if not self._is_compliance_visible():
-                return return_error('Cloud asset compliance is not visible')
-            return self._get_compliance_rules_csv(name, schema_fields, accounts)
-        except Exception as e:
-            logger.exception(f'Error in get_compliance')
-            return return_error(str(e), non_prod_error=True, http_status=500)
-
-    def _is_compliance_visible(self):
-        cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
-        is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
-        return is_cloud_compliance_visible
-
     @staticmethod
-    def _get_compliance_rules_csv(compliance_name, schema_fields, accounts):
+    def _get_compliance_rules_csv_file(compliance_name, schema_fields, accounts):
         rules = get_compliance(compliance_name, 'report', accounts)
 
         def _get_order(elem):
@@ -78,9 +64,27 @@ class Compliance:
         for rule in rules:
             rule['entities_results'] = rule.get('error') \
                 if rule.get('error') else rule.get('entities_results')
-        # pylint: enable=unsupported-assignment-operation
+        #pylint: enable=unsupported-assignment-operation
 
-        csv_string = get_export_csv(rules, field_by_name, None)
+        return get_export_csv(rules, field_by_name, None)
+
+    def _post_compliance_csv(self, name, schema_fields, accounts):
+        try:
+            if not self._is_compliance_visible():
+                return return_error('Cloud asset compliance is not visible')
+            return self._get_compliance_rules_csv(name, schema_fields, accounts)
+        except Exception as e:
+            logger.exception(f'Error in get_compliance')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+
+    def _is_compliance_visible(self):
+        cloud_compliance_settings = self.feature_flags_config().get(FeatureFlagsNames.CloudCompliance) or {}
+        is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
+        return is_cloud_compliance_visible
+
+    @staticmethod
+    def _get_compliance_rules_csv(compliance_name, schema_fields, accounts):
+        csv_string = Compliance._get_compliance_rules_csv_file(compliance_name, schema_fields, accounts)
         output = make_response(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         output.headers[
