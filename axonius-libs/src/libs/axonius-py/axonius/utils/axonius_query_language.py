@@ -373,8 +373,8 @@ def parse_filter_uncached(filter_str: str, history_date=None) -> frozendict:
     res = translate_filter_not(axonius.pql.find(filter_str)) if filter_str else {}
     post_process_filter(res, include_outdated)
     convert_to_main_db(res)
-    res = process_compare_sub_queries(res)
-    res = process_multicompare_sub_queries(res)
+    res = replace_data_in_query(COMPARE_MAGIC_STRING, process_compare_query, res)
+    res = replace_data_in_query(MULTI_COMPARE_MAGIC_STRING, process_multi_compare_query, res)
 
     res = {
         '$and': [res]
@@ -388,52 +388,40 @@ def parse_filter_uncached(filter_str: str, history_date=None) -> frozendict:
     return frozendict(res)
 
 
-def process_compare_sub_queries(query: dict) -> dict:
+# pylint: disable=R1710,R0912
+def replace_data_in_query(magic: str, replace_function: callable, query: dict) -> dict:
     """
-    This function receives a query, check whether COMPARE_MAGIC_STRING is in the received query dict.
+    This function receives a query, check whether `magic` is in the received query dict.
     It does that by running through the whole dict recursively (only by the types that can actually appear in this dict)
-    if it finds the desired magic string, it passes it on to `process_compare_query` to process the special query,
+    if it finds the desired magic string, it passes it on to `replace_function` to process the special query,
     update the result from `process_compare_query` and return the new process query to the system.
+    :param magic: a magic string to search in the dict
+    :param replace_function: a callable function to handle the part of the dict that needs to be replaced
     :param query: a dictionary with the query the user entered
     :return: a processed query that can handle regular field comparison queries in the mongoDB
     """
-    if COMPARE_MAGIC_STRING in query:
-        return process_compare_query(query[COMPARE_MAGIC_STRING])
-    for k, v in query.items():
-        if isinstance(v, dict):
-            query[k] = process_compare_sub_queries(v)
-        if isinstance(v, list):
-            for i, list_value in enumerate(v):
-                if isinstance(list_value, (list, dict)) and COMPARE_MAGIC_STRING in list_value:
-                    v[i] = process_compare_query(list_value[COMPARE_MAGIC_STRING])
-        if k == COMPARE_MAGIC_STRING:
-            query.update(process_compare_query(v))
-            del k
-    return query
-
-
-def process_multicompare_sub_queries(query: dict) -> dict:
-    """
-    This function receives a query, check whether MULTI_COMPARE_MAGIC_STRING is in the received query dict.
-    It does that by running through the whole dict recursively (only by the types that can actually appear in this dict)
-    if it finds the desired magic string, it passes it on to `process_compare_query` to process the special query,
-    update the result from `process_compare_query` and return the new process query to the system.
-    :param query: a dictionary with the query the user entered
-    :return: a processed query that can handle complex field comparison queries in the mongoDB
-    """
-    if MULTI_COMPARE_MAGIC_STRING in query:
-        return process_multi_compare_query(query[MULTI_COMPARE_MAGIC_STRING])
-    for k, v in query.items():
-        if isinstance(v, dict):
-            query[k] = process_multicompare_sub_queries(v)
-        if isinstance(v, list):
-            for i, list_value in enumerate(v):
-                if isinstance(list_value, (list, dict)) and MULTI_COMPARE_MAGIC_STRING in list_value:
-                    v[i] = process_multi_compare_query(list_value[MULTI_COMPARE_MAGIC_STRING])
-        if k == MULTI_COMPARE_MAGIC_STRING:
-            query.update(process_multi_compare_query(v))
-            del k
-    return query
+    if magic in query:
+        return replace_function(query[magic])
+    if isinstance(query, list):
+        for i, list_value in enumerate(query):
+            if isinstance(list_value, (list, dict)) and magic in list_value:
+                query[i] = replace_function(list_value[magic])
+            elif isinstance(list_value, (list, dict)):
+                query[i] = replace_data_in_query(magic, replace_function, list_value)
+    elif isinstance(query, dict):
+        for k, v in query.items():
+            if isinstance(v, dict):
+                query[k] = replace_data_in_query(magic, replace_function, v)
+            if isinstance(v, list):
+                for i, list_value in enumerate(v):
+                    if isinstance(list_value, (list, dict)) and magic in list_value:
+                        v[i] = replace_function(list_value[magic])
+                    elif isinstance(list_value, (list, dict)):
+                        v[i] = replace_data_in_query(magic, replace_function, list_value)
+            if k == magic:
+                query.update(replace_function(v))
+                del k
+        return query
 
 
 def process_multi_compare_query(compare_statement: dict) -> dict:

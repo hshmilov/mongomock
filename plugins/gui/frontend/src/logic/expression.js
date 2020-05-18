@@ -28,7 +28,11 @@ const Expression = function (expression, condition, isFirst) {
     const filterStack = [];
 
     if (expression.logicOp && !isFirst) {
-      filterStack.push(`${expression.logicOp} `);
+      if (expression.context === 'CMP' && (expression.value === '' || (['<Days', '>Days'].includes(expression.compOp) && isNaN(expression.subvalue)))) {
+
+      } else {
+        filterStack.push(`${expression.logicOp} `);
+      }
     }
 
     let bracketWeight = 0;
