@@ -1,11 +1,15 @@
 
 import logging
+import ssl
 from typing import Tuple
 import urllib
 from urllib.parse import urlparse
-
-import chardet
+from urllib.request import urlopen, Request
 import requests
+import requests.utils
+import requests.auth
+import chardet
+
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.aws.utils import get_s3_object
@@ -107,6 +111,59 @@ def load_from_url(client_config) -> bytes:
         raise ClientConnectionException(message)
 
 
+def load_from_ftp(client_config, test_only=False) -> bytes:
+    url = client_config.get('resource_path')
+    headers = {}
+    raw_additional_headers = client_config.get('request_headers')
+    if raw_additional_headers:
+        try:
+            headers = from_json(raw_additional_headers)
+        except Exception as e:
+            message = f'Failed to parse additional headers from {raw_additional_headers}: {str(e)}'
+            logger.exception(message)
+            raise ClientConnectionException(message)
+    username = client_config.get('username')
+    password = client_config.get('password')
+    # support basic auth with only username or only password
+    # and also username+password
+    # example: username is an api key for basic auth
+    # see for example https://github.com/postmanlabs/httpbin/issues/356
+    request = Request(url, headers=headers)
+    auth = (username, password) if (username or password) else None
+    if auth and 'Authorization' not in request.headers:
+        auth_obj = requests.auth.HTTPBasicAuth(*auth)
+        request = auth_obj(request)
+
+    http_proxy = client_config.get('http_proxy')
+    if http_proxy:
+        request.set_proxy(http_proxy, 'http')
+    # urllib.requests does not support ftpS so https_proxy is ignored.
+
+    ca_file = None
+    ca_path = None
+    if client_config.get('verify_ssl') is True:
+        verify_paths = ssl.get_default_verify_paths()
+        ca_file = verify_paths.cafile
+        ca_path = verify_paths.capath
+    try:
+        response = urlopen(url,
+                           timeout=get_default_timeout().recv_timeout,
+                           cafile=ca_file,
+                           capath=ca_path
+                           )
+        if not response:
+            raise ClientConnectionException(
+                f'Error - Failed to get file from {request.full_url}')
+        if test_only:
+            return bytes(True)
+        with response as file_obj:
+            return file_obj.read()
+    except Exception as e:
+        message = f'Failed to get resource from URL: {str(e)}'
+        logger.exception(message)
+        raise ClientConnectionException(message)
+
+
 def load_from_smb(client_config) -> bytes:
     try:
         username = client_config.get('username')
@@ -157,6 +214,8 @@ def load_remote_binary_data(client_config) -> bytes:
         resource_path = client_config.get('resource_path').lower()
         if resource_path.startswith('http'):
             data_bytes = load_from_url(client_config)
+        elif resource_path.startswith('ftp://'):
+            data_bytes = load_from_ftp(client_config)
         elif resource_path.startswith('\\\\'):
             data_bytes = load_from_smb(client_config)
         else:
@@ -206,25 +265,36 @@ def test_file_reachability(client_config):
     if client_config.get('s3_bucket') or client_config.get('s3_object_location'):
         return RESTConnection.test_reachability(AWS_ENDPOINT_FOR_REACHABILITY_TEST)
     if client_config.get('resource_path'):
-        # May raise TypeError, this is intentional.
-        resource_path = client_config.get('resource_path').lower()
-        if resource_path.startswith('http'):
-            parsed_url = urlparse(resource_path)
-            port = parsed_url.port
-            http_proxy = client_config.get('http_proxy')
-            https_proxy = client_config.get('https_proxy')
-            return RESTConnection.test_reachability(resource_path,
-                                                    port=port,
-                                                    https_proxy=https_proxy,
-                                                    http_proxy=http_proxy)
-        if resource_path.startswith('\\\\'):
-            share_path = resource_path[2:]
-            share_path = 'smb://' + share_path.replace('\\', '/')
-            parsed_url = urlparse(share_path)
-            test_445 = RESTConnection.test_reachability(parsed_url.hostname, port=445)
-            test_137 = RESTConnection.test_reachability(parsed_url.hostname, port=137)
-            return test_445 and test_137
-        logger.error('Test reachability failed: resource_path invalid')
-        return False
+        return _test_resource_reachability(client_config)
     logger.error('Test reachability failed: Invalid configuration.')
+    return False
+
+
+def _test_resource_reachability(client_config):
+    # May raise TypeError, this is intentional.
+    resource_path = client_config.get('resource_path').lower()
+    if resource_path.startswith('http'):
+        parsed_url = urlparse(resource_path)
+        port = parsed_url.port
+        http_proxy = client_config.get('http_proxy')
+        https_proxy = client_config.get('https_proxy')
+        return RESTConnection.test_reachability(resource_path,
+                                                port=port,
+                                                https_proxy=https_proxy,
+                                                http_proxy=http_proxy)
+    if resource_path.startswith('ftp://'):
+        try:
+            # This method may raise exceptions, while the others not so much
+            return bool(load_from_ftp(client_config, test_only=True))
+        except Exception as e:
+            logger.warning(f'Test reachability for FTP failed with {str(e)}', exc_info=True)
+            return False
+    if resource_path.startswith('\\\\'):
+        share_path = resource_path[2:]
+        share_path = 'smb://' + share_path.replace('\\', '/')
+        parsed_url = urlparse(share_path)
+        test_445 = RESTConnection.test_reachability(parsed_url.hostname, port=445)
+        test_137 = RESTConnection.test_reachability(parsed_url.hostname, port=137)
+        return test_445 and test_137
+    logger.error('Test reachability failed: resource_path invalid')
     return False

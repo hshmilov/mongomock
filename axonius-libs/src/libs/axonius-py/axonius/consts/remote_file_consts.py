@@ -1,7 +1,8 @@
 
-RESOURCE_PATH_DESCRIPTION = '''Path can be either an HTTP(S) URL, or an SMB share path.
-When specifying a URL, the endpoint must support the HTTP GET method.
-All urls must start with HTTP:// or HTTPS:// .
+RESOURCE_PATH_DESCRIPTION = '''Path can be either an HTTP(S) URL, FTP URL, or an SMB share path.
+When specifying an HTTP(S) URL, the endpoint must support the HTTP GET method.
+All Non-FTP urls must start with HTTP:// or HTTPS:// .
+FTP urls must start with FTP:// .
 The optional username and password will be used for BASIC authentication, if provided.
 When specifying an SMB Share path, the path must start with double-backslashes ("\\\\").
 Username and password, if provided for an SMB path, will be used to authentication.'''
