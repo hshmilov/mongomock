@@ -83,7 +83,7 @@ import {
 import { Dropdown, Menu } from 'ant-design-vue';
 import _get from 'lodash/get';
 import _snakeCase from 'lodash/snakeCase';
-import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '@store/mutations';
+import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW, CLEAR_DATA_VIEW_FILTERS } from '@store/mutations';
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { defaultFields } from '@constants/entities';
 import { FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES } from '@store/getters';
@@ -159,6 +159,7 @@ export default {
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW,
       showToasterMessage: SHOW_TOASTER_MESSAGE,
+      clearViewFilters: CLEAR_DATA_VIEW_FILTERS,
     }),
     ...mapActions({
       fetchContentCSV: FETCH_DATA_CONTENT_CSV,
@@ -177,6 +178,7 @@ export default {
         fieldsForReset = allFieldsGroup[_snakeCase(this.querySearchTemplate.name)];
       }
       this.updateTableColumns(fieldsForReset);
+      this.clearViewFilters({ module: this.module });
     },
     resetColumnsToSystemDefault() {
       let fieldsForReset = defaultFields[this.module];
@@ -186,6 +188,7 @@ export default {
         fieldsForReset = _get(template, 'view.fields', []);
       }
       this.updateTableColumns(fieldsForReset);
+      this.clearViewFilters({ module: this.module });
     },
     updateTableColumns(fields) {
       this.updateView({

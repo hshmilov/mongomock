@@ -59,10 +59,10 @@ class TestSavedQuery(TestBase):
         self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert self.devices_page.is_query_save_as_disabled()
         # Filter host name field
-        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, 'test')
+        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, [{'term': 'test'}])
         assert not self.devices_page.is_query_save_as_disabled()
         # No filter host name field
-        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, '')
+        self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE, [{'term': ''}])
         assert self.devices_page.is_query_save_as_disabled()
         self.devices_page.build_query_active_directory()
 

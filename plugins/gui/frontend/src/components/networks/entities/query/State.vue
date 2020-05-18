@@ -181,8 +181,7 @@ export default {
       return this.view.query.filter === ''
                 && _isEqual(this.view.fields, this.userFieldsGroups.default)
                 && this.view.sort.field === ''
-                && (!Object.keys(this.view.colFilters).length
-                      || !Object.values(this.view.colFilters).find((val) => val));
+                && !this.hasColFilters();
     },
     isEdited() {
       if (!this.selectedView || !this.selectedView.view) {
@@ -195,7 +194,7 @@ export default {
       const filterDiff = query.filter !== view.query.filter;
       const fieldsDiff = !_isEqual(fields, view.fields);
       const sortDiff = sort.field !== view.sort.field || sort.desc !== view.sort.desc;
-      const colFiltersDiff = !this.objsValuesMatch(colFilters, view.colFilters);
+      const colFiltersDiff = colFilters && view.colFilters && !_isEqual(colFilters, view.colFilters);
       return view && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff);
     },
     status() {
@@ -249,15 +248,10 @@ export default {
       });
       this.$emit('done');
     },
-    objContained(superset, subset) {
-      return Object.entries(subset).every(([key, value]) => _isEqual(superset[key], value));
-    },
-    objsValuesMatch(objA = {}, objB = {}) {
-      /*
-        This is checking that any key in objA has the same value as the key in objB
-        (including undefined - if it is undefined in one and non existent in the other, it passes)
-         */
-      return this.objContained(objA, objB) && this.objContained(objB, objB);
+    hasColFilters() {
+      return Object.values(this.view.colFilters).some((cf) => {
+        return cf.some((f) => !f.include || f.term.trim() !== '');
+      });
     },
   },
 };

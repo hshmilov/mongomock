@@ -20,10 +20,6 @@ export default {
       type: Boolean,
       default: false,
     },
-    loading: {
-      type: Boolean,
-      default: false,
-    },
   },
 };
 </script>
@@ -32,8 +28,8 @@ export default {
   .ant-btn-primary {
     width: 120px;
   }
-  .ant-btn:not(.ant-btn-circle):not(.ant-btn-inverse-emphasize) {
-    border: 0;
+  .ant-btn[disabled] {
+    border-color: transparent;
   }
   .ant-btn-emphasize {
       background-color: $theme-orange;

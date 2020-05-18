@@ -17,6 +17,7 @@ const getDefaultState = () => ({
     },
     historical: null,
     colFilters: {},
+    filterColumnActive: false,
   },
 
   details: { data: {}, fetching: false, error: '' },

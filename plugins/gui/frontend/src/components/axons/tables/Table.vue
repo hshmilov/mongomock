@@ -7,7 +7,7 @@
             v-if="value && multipleRowSelection"
             class="w-14"
           >
-            <x-checkbox
+            <XCheckbox
               :data="allSelected"
               :indeterminate="partSelected"
               @change="onSelectAll"
@@ -19,21 +19,22 @@
           >
             <div>&nbsp;</div>
           </th>
-          <x-table-head
+          <XTableHead
             v-for="field in fields"
             :key="field.name"
             :field="field"
             :sort="sort"
             :sortable="sortable(field)"
-            :filter="getFilter(field.name)"
+            :filters="getFilters(field.name)"
             :filterable="filterable"
+            :filter-column-name="filterColumnName"
             @click="clickCol"
-            @filter="(filter) => filterCol(field.name, filter)"
+            @toggleColumnFilter="(fieldName) => toggleColumnFilter(fieldName)"
           />
         </tr>
       </thead>
       <tbody>
-        <x-table-row
+        <XTableRow
           v-for="(row, index) in data"
           :id="row[idField]"
           :key="index"
@@ -53,18 +54,25 @@
         >
           <template #default="slotProps">
             <slot v-bind="slotProps">
-              <x-table-data v-if="!$scopedSlots.default" v-bind="slotProps" />
+              <XTableData
+                v-if="!$scopedSlots.default"
+                v-bind="slotProps"
+              />
             </slot>
           </template>
-        </x-table-row>
+        </XTableRow>
         <template v-if="pageSize">
           <tr
             v-for="n in pageSize - data.length"
             :key="data.length + n"
             class="x-table-row"
           >
-            <td v-if="value && multipleRowSelection">&nbsp;</td>
-            <td v-if="expandable">&nbsp;</td>
+            <td v-if="value && multipleRowSelection">
+&nbsp;
+            </td>
+            <td v-if="expandable">
+&nbsp;
+            </td>
             <td
               v-for="field in fields"
               :key="field.name"
@@ -73,19 +81,27 @@
         </template>
       </tbody>
     </table>
+    <ColumnFilter
+      v-if="filterColumnActive"
+      :filter-column-name="filterColumnName"
+      :saved-filters="getFilters(filterColumnName)"
+      @updateColFilters="data => $emit('updateColFilters', data)"
+      @toggleColumnFilter="toggleColumnFilter"
+    />
   </div>
 </template>
 
 <script>
-import xTableData from './TableData';
-import xTableHead from './TableHead.vue';
-import xTableRow from './TableRow.vue';
-import xCheckbox from '../inputs/Checkbox.vue';
+import XTableData from './TableData';
+import XTableHead from './TableHead.vue';
+import XTableRow from './TableRow.vue';
+import XCheckbox from '../inputs/Checkbox.vue';
+import ColumnFilter from './ColumnFilter.vue';
 
 export default {
   name: 'XTable',
   components: {
-    xTableHead, xTableRow, xTableData, xCheckbox,
+    XTableHead, XTableRow, XTableData, XCheckbox, ColumnFilter,
   },
   props: {
     fields: {
@@ -102,9 +118,7 @@ export default {
     },
     sort: {
       type: Object,
-      default: () => {
-        return { field: '', desc: true };
-      },
+      default: () => ({ field: '', desc: true }),
     },
     colFilters: {
       type: Object,
@@ -155,9 +169,15 @@ export default {
       default: true,
     },
   },
+  data() {
+    return {
+      filterColumnActive: false,
+      filterColumnName: '',
+    };
+  },
   computed: {
     ids() {
-      return this.data.map(item => item[this.idField]);
+      return this.data.map((item) => item[this.idField]);
     },
     partSelected() {
       return Boolean(this.value && this.value.length && this.value.length < this.data.length);
@@ -182,12 +202,12 @@ export default {
       if (isSelected) {
         this.$emit('input', [...this.value, id]);
       } else {
-        this.$emit('input', this.value.filter(currentId => currentId !== id));
+        this.$emit('input', this.value.filter((currentId) => currentId !== id));
       }
     },
     onSelectAll(selected) {
       if (selected && (!this.value || !this.value.length)) {
-        this.$emit('input', this.ids.filter(id => !this.readOnly.includes(id)));
+        this.$emit('input', this.ids.filter((id) => !this.readOnly.includes(id)));
       } else {
         this.$emit('input', []);
       }
@@ -195,20 +215,18 @@ export default {
         this.onClickAll(selected);
       }
     },
-    filterCol(fieldName, filter) {
-      this.$emit('filter', {
-        ...this.colFilters,
-        [fieldName]: filter.toLowerCase() || undefined,
-      });
-    },
-    getFilter(fieldName) {
+    getFilters(fieldName) {
       if (!this.colFilters) {
         return undefined;
       }
-      return this.colFilters[fieldName] || '';
+      return this.colFilters[fieldName] || [];
     },
     sortable(field) {
       return (this.onClickCol !== undefined) && field.name !== 'adapters';
+    },
+    toggleColumnFilter(fieldName) {
+      this.filterColumnName = fieldName;
+      this.filterColumnActive = !this.filterColumnActive;
     },
   },
 };

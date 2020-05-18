@@ -3,16 +3,18 @@
 import Vue from 'vue';
 import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
-import EnforcementsCustomIcon from '../components/axons/icons/axoniusIcons/enforcements.vue';
-import DraggableCustomIcon from '../components/axons/icons/axoniusIcons/draggable.vue';
-import VerticaldotsCustomIcon from '../components/axons/icons/axoniusIcons/verticaldots.vue';
-import CardDraggable from '../components/axons/icons/axoniusIcons/cardDraggable.vue';
-import CardSearch from '../components/axons/icons/axoniusIcons/cardSearch.vue';
-import EntityAction from '../components/axons/icons/axoniusIcons/entityAction.vue';
-import EntityColumn from '../components/axons/icons/axoniusIcons/entityColumn.vue';
-import EntityExport from '../components/axons/icons/axoniusIcons/entityExport.vue';
-import ResetPassword from '../components/axons/icons/axoniusIcons/resetPassword.vue';
-import Toggle from '../components/axons/icons/axoniusIcons/toggle.vue';
+import EnforcementsCustomIcon from '@axons/icons/axoniusIcons/enforcements.vue';
+import DraggableCustomIcon from '@axons/icons/axoniusIcons/draggable.vue';
+import VerticaldotsCustomIcon from '@axons/icons/axoniusIcons/verticaldots.vue';
+import CardDraggable from '@axons/icons/axoniusIcons/cardDraggable.vue';
+import CardSearch from '@axons/icons/axoniusIcons/cardSearch.vue';
+import EntityAction from '@axons/icons/axoniusIcons/entityAction.vue';
+import EntityColumn from '@axons/icons/axoniusIcons/entityColumn.vue';
+import EntityExport from '@axons/icons/axoniusIcons/entityExport.vue';
+import ResetPassword from '@axons/icons/axoniusIcons/resetPassword.vue';
+import Toggle from '@axons/icons/axoniusIcons/toggle.vue';
+import Filterable from '@axons/icons/axoniusIcons/filterable.vue';
+import Funnel from '@axons/icons/axoniusIcons/funnel.vue';
 import defaultTheme from '../assets/themes/default.json';
 
 const axoniusIcons = {
@@ -83,6 +85,12 @@ const axoniusIcons = {
   },
   resetPassword: {
     component: ResetPassword,
+  },
+  filterable: {
+    component: Filterable,
+  },
+  funnel: {
+    component: Funnel,
   },
 };
 

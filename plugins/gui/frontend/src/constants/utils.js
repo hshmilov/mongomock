@@ -23,7 +23,9 @@ export const formatDate = (dateString, schema, dateFormat) => {
   return dateTime.format(`${dateFormat} HH:mm:ss`);
 };
 
-export const includesIgnoreCase = (str, substring) => str && str.toLowerCase().includes(substring);
+export const includesIgnoreCase = (str, substring) => (
+  str && str.toLowerCase().includes(substring.toLowerCase())
+);
 
 export const calcMaxIndex = (list) => (list.length > 0
   ? Math.max(...list.map((item) => item.i || 0)) + 1 : 0);

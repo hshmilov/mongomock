@@ -9,21 +9,21 @@
         v-if="oktaConfig.enabled"
         id="okta_login_link"
         :class="{'grid-span2': singleLoginMethod}"
-        link
+        type="link"
         @click="onOktaLogin"
       >Login with Okta</XButton>
       <XButton
         v-if="samlConfig.enabled"
         id="saml_login_link"
         :class="{'grid-span2': singleLoginMethod}"
-        link
+        type="link"
         @click="onSamlLogin"
       >Login with {{ samlConfig.idp_name }}</XButton>
       <XButton
         v-if="ldapConfig.enabled"
         id="ldap_login_link"
         :class="{'grid-span2': singleLoginMethod}"
-        link
+        type="link"
         @click="toggleLdapLogin"
       >Login with LDAP</XButton>
     </div>
@@ -44,10 +44,11 @@
       </div>
       <div slot="footer">
         <XButton
-          link
+          type="link"
           @click="toggleLdapLogin"
         >Cancel</XButton>
         <XButton
+          type="primary"
           :disabled="!ldapData.complete"
           @click="onLdapLogin"
         >Login</XButton>

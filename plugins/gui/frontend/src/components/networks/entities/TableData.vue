@@ -114,8 +114,8 @@ export default {
       }),
     },
     filter: {
-      type: String,
-      default: '',
+      type: Array,
+      default: () => [],
     },
     hoverRow: {
       type: Boolean,

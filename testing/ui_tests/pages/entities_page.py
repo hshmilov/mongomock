@@ -108,7 +108,7 @@ class EntitiesPage(Page):
     NAME_ADAPTERS_AD = 'active_directory_adapter'
     VALUE_ADAPTERS_GENERAL = 'Aggregated'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
-    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(text(), \'{col_name_text}\')]'
+    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(., \'{col_name_text}\')]'
 
     TABLE_DATA_SLICER_TYPE_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
@@ -684,14 +684,21 @@ class EntitiesPage(Page):
         sort = header.find_element_by_css_selector('.sort')
         assert sort.get_attribute('class') == ('sort down' if desc else 'sort up')
 
-    def filter_column(self, col_name, filter_str):
+    def open_column_filter_modal(self, col_name):
         header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
         ActionChains(self.driver).move_to_element(header).perform()
-        filter_container = header.find_element_by_css_selector('.filter')
-        filter_container.find_element_by_css_selector('.md-icon').click()
-        filter_search = filter_container.find_element_by_css_selector(self.SEARCH_INPUT_CSS)
-        self.fill_text_by_element(filter_search, filter_str)
-        self.key_down_enter(filter_search)
+        header.find_element_by_css_selector('.filter').click()
+
+    def save_column_filter_modal(self):
+        self.driver.find_element_by_css_selector('#column_filter .ant-btn-primary').click()
+
+    def filter_column(self, col_name, filter_list):
+        self.open_column_filter_modal(col_name)
+        for index, filter_dict in enumerate(filter_list):
+            if index > 1:
+                self.driver.find_element_by_css_selector('#column_filter .addFilter').click()
+            self.fill_text_field_by_css_selector('#column_filter .filter:last-child input', filter_dict['term'])
+        self.save_column_filter_modal()
 
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)

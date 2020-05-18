@@ -800,8 +800,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             if field_filters and field_filters.get(field_path):
                 if isinstance(val, list):
                     val = [item for item in val if is_filter_in_value(item, field_filters[field_path])]
-                elif is_filter_in_value(val, field_filters[field_path]):
-                    val = None
+                elif not is_filter_in_value(val, field_filters[field_path]):
+                    val = ''
 
             field_to_value[field_path] = val
         if not include_details:

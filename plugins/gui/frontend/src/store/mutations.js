@@ -1,3 +1,5 @@
+import _pickBy from 'lodash/pickBy';
+import _isEmpty from 'lodash/isEmpty';
 import { getModule } from './actions';
 import { pluginMeta } from '../constants/plugin_meta';
 import { initCustomData } from '../constants/entities';
@@ -70,9 +72,9 @@ export const updateDataCount = (state, payload) => {
   count.rule = payload.rule;
 
   if (payload.isExperimentalAPI && payload.data !== undefined) {
-        count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
-        count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
-        return;
+    count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
+    count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
+    return;
   }
   if (payload.data !== undefined) {
     count.data = payload.data;
@@ -115,6 +117,11 @@ export const updateDataView = (state, payload) => {
   if (!module) return;
   if (payload.view) {
     module.view = { ...module.view, ...payload.view };
+    if (payload.view.fields) {
+      module.view.colFilters = _pickBy(module.view.colFilters, (value, key) => {
+        return payload.view.fields.includes(key);
+      });
+    }
   }
   if (payload.selectedView !== undefined) {
     state[payload.module] = { ...module, selectedView: payload.selectedView };
@@ -132,9 +139,23 @@ export const UPDATE_DATA_VIEW_FILTER = 'UPDATE_DATA_VIEW_FILTER';
 export const updateDataViewFilter = (state, payload) => {
   const module = getModule(state, payload);
   if (!module) return;
-  if (payload.view) {
-    module.view.colFilters = payload.view.colFilters;
+
+  const colFilters = { ...module.view.colFilters };
+
+  if (_isEmpty(payload.colFilters.filters)) {
+    delete colFilters[payload.colFilters.fieldName];
+  } else {
+    colFilters[payload.colFilters.fieldName] = payload.colFilters.filters;
   }
+
+  module.view.colFilters = colFilters;
+};
+
+export const CLEAR_DATA_VIEW_FILTERS = 'CLEAR_DATA_VIEW_FILTERS';
+export const clearDataViewFilter = (state, payload) => {
+  const module = getModule(state, payload);
+  if (!module) return;
+  module.view.colFilters = {};
 };
 
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW';

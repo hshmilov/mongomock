@@ -103,6 +103,7 @@
                     Hours
                   </div>
                   <XButton
+                    type="inverse"
                     :disabled="!enableStartAccess"
                     @click="startTempAccess"
                   >

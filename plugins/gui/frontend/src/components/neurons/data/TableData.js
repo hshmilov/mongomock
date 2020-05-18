@@ -2,21 +2,30 @@ import xTableData from '@axons/tables/TableData';
 import { isObject, includesIgnoreCase, formatStringTemplate } from '@constants/utils';
 import xSlice from '../schema/Slice.vue';
 
-function hasFilter(data, filter) {
-  if (!data) {
-    return false;
-  }
-  if (typeof data === 'string') {
-    return includesIgnoreCase(data, filter);
-  }
-  if (typeof data !== 'object') {
-    return false;
-  }
-  const itemsToCheck = Array.isArray(data) ? data : Object.values(data);
-  return Boolean(itemsToCheck.find((item) => hasFilter(item, filter)));
+function passFilter(str, filter) {
+  return includesIgnoreCase(str, filter.term) === filter.include;
 }
 
-function processData(data, schema, filter, sort) {
+function hasFilter(data, filters) {
+  if (!data) return false;
+
+  if (typeof data === 'string') {
+    return filters.every((filter) => {
+      return passFilter(data, filter);
+    });
+  }
+  if (typeof data !== 'object') return false;
+
+  const itemsToCheck = Array.isArray(data) ? data : Object.values(data).map((v) => v.toString());
+  return filters.every((filter) => {
+    if (filter.include) {
+      return itemsToCheck.some((item) => passFilter(item, filter));
+    }
+    return itemsToCheck.every((item) => passFilter(item, filter));
+  });
+}
+
+function processData(data, schema, filters, sort) {
   let processedData = data;
   if (schema.name && isObject(processedData)) {
     processedData = schema.rowDataTransform
@@ -30,13 +39,15 @@ function processData(data, schema, filter, sort) {
       }
     }
   }
-  if (!filter) {
+
+  if (filters.length === 0) {
     return processedData;
   }
+
   if (Array.isArray(processedData)) {
-    return processedData.filter((item) => hasFilter(item, filter));
+    return processedData.filter((item) => hasFilter(item, filters));
   }
-  return hasFilter(processedData, filter) ? processedData : null;
+  return hasFilter(processedData, filters) ? processedData : null;
 }
 
 export default {
@@ -57,8 +68,8 @@ export default {
       }),
     },
     filter: {
-      type: String,
-      default: '',
+      type: Array,
+      default: () => [],
     },
   },
   render(createElement, { props }) {

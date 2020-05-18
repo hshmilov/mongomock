@@ -60,7 +60,7 @@
         :multiple-row-selection="multipleRowSelection"
         :row-class="rowClass"
         :read-only="readOnly"
-        @filter="updateColFilters"
+        @updateColFilters="updateColFilters"
       >
         <template #default="slotProps">
           <slot v-bind="slotProps">
@@ -126,14 +126,13 @@ import {
 } from 'vuex';
 import _orderBy from 'lodash/orderBy';
 import _isEmpty from 'lodash/isEmpty';
+import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '@store/mutations';
+import { FETCH_DATA_CONTENT } from '@store/actions';
 import XSearchInput from '../inputs/SearchInput.vue';
 import XTableWrapper from '../../axons/tables/TableWrapper.vue';
 import XTable from '../../axons/tables/Table.vue';
 import XTableData from './TableData';
 import XButton from '../../axons/inputs/Button.vue';
-
-import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '../../../store/mutations';
-import { FETCH_DATA_CONTENT } from '../../../store/actions';
 
 export default {
   name: 'XDataTable',
@@ -545,7 +544,7 @@ export default {
       this.enableSelectAll = selected;
     },
     updateColFilters(colFilters) {
-      this.updateViewFilter({ module: this.module, view: { colFilters } });
+      this.updateViewFilter({ module: this.module, colFilters });
     },
     resetScrollPosition() {
       this.$refs.table.$el.scrollTop = 0;

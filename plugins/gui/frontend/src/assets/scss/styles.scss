@@ -640,6 +640,10 @@ input[type='text'], input[type='password'], input[type='number'] {
     }
     .ant-modal-header {
         border-bottom: unset;
+        .ant-modal-title {
+          font-weight: normal;
+          font-size: 18px;
+        }
     }
     .ant-modal-body {
         padding: 0 24px;
