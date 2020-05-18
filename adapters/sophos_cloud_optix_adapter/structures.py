@@ -8,7 +8,7 @@ class GCPServiceAccount(SmartJsonClass):
     scopes = ListField(str, 'Scopes')
 
 
-class AzureIpConfiguration(SmartJsonClass):
+class AzureGCPIpConfiguration(SmartJsonClass):
     """ This class supports the collection of Azure IP Configuration data. """
     name = Field(str, 'Name')
     private_ip = Field(str, 'Private IP')
@@ -18,8 +18,8 @@ class AzureIpConfiguration(SmartJsonClass):
     app_sec_groups = ListField(str, 'Application Security Group')
 
 
-class AzureNetworkInterface(SmartJsonClass):
-    """ This class supports the collection of Azure Network Interface data. """
+class AzureGCPNetworkInterface(SmartJsonClass):
+    """ This class supports the collection of Azure and GCP Network Interface data. """
     id = Field(str, 'Interface ID')
     name = Field(str, 'Name')
     type = Field(str, 'Type')
@@ -29,8 +29,9 @@ class AzureNetworkInterface(SmartJsonClass):
     sec_group_id = Field(str, 'Security Group ID')
     network_id = Field(str, 'Network ID')
     subnet_id = Field(str, 'Subnet ID')
-    ip_configuration = ListField(AzureIpConfiguration, 'IP Configuration')
+    ip_configuration = ListField(AzureGCPIpConfiguration, 'IP Configuration')
     kind = Field(str, 'Kind')
+    access_config = ListField(dict, 'Access Configuration')
 
 
 class SecurityGroup(SmartJsonClass):

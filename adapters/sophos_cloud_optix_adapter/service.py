@@ -17,8 +17,8 @@ from axonius.utils.parsing import figure_out_cloud
 from sophos_cloud_optix_adapter.client_id import get_client_id
 from sophos_cloud_optix_adapter.connection import SophosCloudOptixConnection
 from sophos_cloud_optix_adapter.structures import (GCPServiceAccount,
-                                                   AzureIpConfiguration,
-                                                   AzureNetworkInterface,
+                                                   AzureGCPIpConfiguration,
+                                                   AzureGCPNetworkInterface,
                                                    SecurityGroup)
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -48,6 +48,7 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
         is_public = Field(bool, 'Is Public')
         kind = Field(str, 'Kind')
         last_modified_by = Field(str, 'Last Modified By')
+        nic = ListField(AzureGCPNetworkInterface, 'Network Interface')
         nsg_id = Field(str, 'Network Security Group ID')
         os_disk_encryption = Field(bool, 'OS Disk Encryption')
         password_login = Field(bool, 'Password Login')
@@ -342,13 +343,12 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
                         else:
                             logger.exception(f'Wrong data type for public_ip in {device_raw}')
 
-                        netif = AzureNetworkInterface(id=nic.get('interfaceId'),
-                                                      name=nic.get('name') or
-                                                      nic.get('interfaceId'),
-                                                      public_ip=list(public_ips),
-                                                      private_ip=list(private_ips),
-                                                      sec_group_id=nic.get('nsgId')
-                                                      )
+                        netif = AzureGCPNetworkInterface(id=nic.get('interfaceId'),
+                                                         name=nic.get('name') or nic.get('interfaceId'),
+                                                         public_ip=list(public_ips),
+                                                         private_ip=list(private_ips),
+                                                         sec_group_id=nic.get('nsgId')
+                                                         )
                         # there is a potential typo in the docs, so testing for the [sic] and correct spelling
                         if isinstance(nic.get('ipConfigration'), list) or \
                                 isinstance(nic.get('ipConfiguration'), list):
@@ -366,20 +366,22 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
                                 else:
                                     private_ips.add(config_private_ip)
 
-                                config = AzureIpConfiguration(name=configuration.get('name'),
-                                                              private_ip=list(private_ips),
-                                                              public_ip=list(public_ips),
-                                                              subnet=configuration.get('subnet'),
-                                                              is_primary=configuration.get('primary'),
-                                                              app_sec_groups=configuration
-                                                              .get('applicationSecurityGroups')
-                                                              )
+                                config = AzureGCPIpConfiguration(name=configuration.get('name'),
+                                                                 private_ip=list(private_ips),
+                                                                 public_ip=list(public_ips),
+                                                                 subnet=configuration.get('subnet'),
+                                                                 is_primary=configuration.get('primary'),
+                                                                 app_sec_groups=configuration
+                                                                 .get('applicationSecurityGroups')
+                                                                 )
 
-                                netif.ip_configuration = config
+                                netif.ip_configuration.append(config)
 
                             netif.ips = list(private_ips.union(public_ips))
-
                             device.add_nic(name=netif.name, ips=netif.ips)
+
+                        device.nic.append(netif)
+
                     except Exception as err:
                         logger.exception(f'Problem creating network interface for'
                                          f' {nic} on {cloud_provider}: {err}')
@@ -398,25 +400,28 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
 
                         ips = list(private_ips)
 
-                        netif = AzureNetworkInterface(name=nic.get('name'),
-                                                      private_ip=list(private_ips),
-                                                      ips=ips,
-                                                      network_id=nic.get('networkId'),
-                                                      subnet_id=nic.get('subnetId'),
-                                                      kind=nic.get('kind')
-                                                      )
+                        netif = AzureGCPNetworkInterface(name=nic.get('name'),
+                                                         private_ip=list(private_ips),
+                                                         ips=ips,
+                                                         network_id=nic.get('networkId'),
+                                                         subnet_id=nic.get('subnetId'),
+                                                         kind=nic.get('kind')
+                                                         )
                         if isinstance(nic.get('accessConfigList'), list):
                             for configuration in nic.get('accessConfigList'):
-                                config = AzureIpConfiguration(name=configuration.get('name'),
-                                                              nat_ip=configuration.get('natIP'),
-                                                              public_ptr_domain_name=configuration
-                                                              .get('publicPtrDomainName'),
-                                                              kind=configuration.get('kind')
-                                                              )
+                                config = AzureGCPIpConfiguration(name=configuration.get('name'),
+                                                                 nat_ip=configuration.get('natIP'),
+                                                                 public_ptr_domain_name=configuration
+                                                                 .get('publicPtrDomainName'),
+                                                                 kind=configuration.get('kind')
+                                                                 )
 
-                                netif.access_config = config
+                                netif.access_config.append(config)
 
                             device.add_nic(name=netif.name, ips=netif.ips)
+
+                        device.nic.append(netif)
+
                     except Exception as err:
                         logger.exception(
                             f'Problem creating network interface for {nic} '
@@ -466,8 +471,9 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
             return device
         except Exception as err:
             logger.exception(
-                f'Problem with fetching Sophos Cloud Optix Device: {err} '
-                f' for device_raw: {device_raw}')
+                f'Problem with fetching Sophos Cloud Optix Device for '
+                f'{device_raw}: {err}')
+
             return None
 
     def _create_user(self, user_raw):
@@ -481,13 +487,23 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
                 user.account_disabled = more_info.get('isArchived') or \
                     more_info.get('isSuspended')
                 user.account_id = user_raw.get('accountId')
-                user.arn = user_raw.get('moreInfo').get('arn')
 
-                if user.arn and isinstance(user.arn, str):
-                    user.username = user.arn.split('/')[-1]
-                else:
-                    user.username = more_info.get('signInName') or \
-                        more_info.get('primaryEmail')
+                try:
+                    account_type = more_info.get('accountType')
+                    if account_type.upper() == 'AWS':
+                        user.arn = more_info.get('arn')
+                        if user.arn and isinstance(user.arn, str):
+                            user.username = user.arn.split('/')[-1]
+                        else:
+                            user.username = more_info.get('userId') or ''
+                    elif account_type.upper() == 'GCP':
+                        user.username = more_info.get('primaryEmail') or ''
+                    elif account_type.upper() == 'AZURE':
+                        user.username = more_info.get('signInName') or \
+                            more_info.get('mainNickname') or \
+                            more_info.get('principalName') or ''
+                except Exception:
+                    logger.exception(f'Unable to set username: {user_raw}')
 
                 try:
                     policy_count = more_info.get('attachedManagedPolicyCount')
@@ -523,7 +539,7 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
 
                 over_privd = more_info.get('isOverPrivileged')
                 if isinstance(over_privd, str):
-                    user.is_over_privileged = over_privd.lowercase() == 'true'
+                    user.is_over_privileged = over_privd.lower() == 'true'
                 elif isinstance(over_privd, (bool, int)):
                     user.is_over_privileged = bool(over_privd)
                 else:
