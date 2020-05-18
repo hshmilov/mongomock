@@ -536,6 +536,7 @@ def main():
                         print(test_module)
 
                 priority_tests_parallel = ['test_code.py', 'test_ad.py', 'test_carbonblack_defense.py',
+                                           'test_crowd_strike.py',
                                            'test_sentinelone.py', 'test_aws.py',
                                            'test_service_now.py', 'test_cybereason.py',
                                            'test_tenable_security_center.py',
@@ -600,10 +601,12 @@ def main():
             # Priority tests
             priority_tests = [
                 'ui_test_devices_table_tags',
+                'ui_test_devices_table',
                 'ui_test_instances_upgrade',
                 'Unit Tests',
                 'ui_test_instances_after_join',
                 'ui_test_report_generation',
+                'ui_test_devices_query_advanced_more_cases',
                 'ui_test_enforcement_actions',
                 'ui_test_instances_master_docker_restart',
                 'ui_test_instances_before_join',
