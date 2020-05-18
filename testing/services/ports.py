@@ -269,6 +269,7 @@ DOCKER_PORTS = {
     'redhat-satellite-adapter':         12346,
     'workday-adapter':                  13200,
     'axonius-users-adapter':            13337,
+    'esentire-json-adapter':            13339,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,

@@ -8,6 +8,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/sophos-cloud-optix',
         description: 'Sophos Cloud Optix is a public cloud visibility and threat response solution that detects, responds, and prevents cloud security and compliance gaps.'
     },
+    esentire_json_adapter: {
+        title: 'esNetwork',
+        description: 'eSentire\'s esNetwork provides network monitoring and remediation as a fully managed MDR service.'
+    },
     nozomi_guardian_adapter: {
         title: 'Nozomi Networks Guardian',
         link: 'https://docs.axonius.com/docs/nozomi-networks-guardian',

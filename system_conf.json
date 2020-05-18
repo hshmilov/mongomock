@@ -21,7 +21,8 @@
       "workday",
       "infinite_sleep",
       "mysql_special",
-      "g_naapi"
+      "g_naapi",
+      "esentire_json"
     ],
     "remove-from-exclude": []
   }
