@@ -3,7 +3,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 import adal
-from axonius.clients.rest.connection import RESTConnection
+
+from axonius.clients.rest.connection import (ASYNC_ERROR_SLEEP_TIME,
+                                             ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
+                                             MAX_ASYNC_RETRIES, RESTConnection)
 from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -12,6 +15,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
 CHINA_AUTHORITY_HOST_URL = 'https://login.partner.microsoftonline.cn'
 GRAPH_API_URL = 'https://graph.microsoft.com'
+GRAPH_API_PREFIX_BETA = '/beta'
+GRAPH_API_PREFIX_BASE = '/v1.0'
 CHINA_GRAPH_API_URL = 'https://microsoftgraph.chinacloudapi.cn'
 AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'    # legacy api required for azure ad b2c
 CHINA_AZURE_AD_GRAPH_API_URL = 'https://graph.chinacloudapi.cn'
@@ -44,6 +49,14 @@ USERS_ATTRIBUTES = [
     'passwordPolicies',
     'userPrincipalName',
     'userType'
+    'createdDateTime',
+    'isResourceAccount',
+    'lastPasswordChangeDateTime',
+    'employeeId',
+]
+
+USERS_ATTRIBUTES_BETA = [
+    'signInActivity',
 ]
 
 DEVICE_ATTRIBUTES = [
@@ -64,12 +77,30 @@ DEVICE_ATTRIBUTES = [
 
 # pylint: disable=logging-format-interpolation, too-many-instance-attributes
 class AzureAdClient(RESTConnection):
-    def __init__(self, client_id, client_secret, tenant_id, *args, is_azure_ad_b2c=None, azure_region=None, **kwargs):
+    def __init__(self,
+                 client_id,
+                 client_secret,
+                 tenant_id,
+                 *args,
+                 is_azure_ad_b2c=None,
+                 azure_region=None,
+                 allow_beta_api=False,
+                 allow_fetch_mfa=False,
+                 parallel_count=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
+                 async_retry_time=ASYNC_ERROR_SLEEP_TIME,
+                 async_retry_max=MAX_ASYNC_RETRIES,
+                 **kwargs):
+        self._parallel_count = parallel_count
+        self._async_retry_time = async_retry_time
+        self._async_retry_max = async_retry_max
+        self._allow_beta_api = allow_beta_api
+        self._allow_fetch_mfa = allow_fetch_mfa
         self._client_id = client_id
         self._client_secret = client_secret
         self._tenant_id = tenant_id
         self._refresh_token = None
         self._is_azure_ad_b2c = is_azure_ad_b2c
+
         logger.info(f'Creating Azure AD with tenant {tenant_id} and client id {client_id}. '
                     f'B2C: {bool(is_azure_ad_b2c)} azure_region: {azure_region}')
         if is_azure_ad_b2c:
@@ -79,7 +110,7 @@ class AzureAdClient(RESTConnection):
             else:
                 self._api_endpoint = AZURE_AD_GRAPH_API_URL
                 self._authority_host_url = AUTHORITY_HOST_URL
-            super().__init__(domain=self._api_endpoint, url_base_prefix=f'/{self._tenant_id}', *args, **kwargs)
+            url_base_prefix = f'/{self._tenant_id}'
         else:
             if str(azure_region).lower() == 'china':
                 self._api_endpoint = CHINA_GRAPH_API_URL
@@ -87,7 +118,8 @@ class AzureAdClient(RESTConnection):
             else:
                 self._api_endpoint = GRAPH_API_URL
                 self._authority_host_url = AUTHORITY_HOST_URL
-            super().__init__(domain=self._api_endpoint, url_base_prefix='/v1.0', *args, **kwargs)
+            url_base_prefix = GRAPH_API_PREFIX_BETA if allow_beta_api else GRAPH_API_PREFIX_BASE
+        super().__init__(domain=self._api_endpoint, url_base_prefix=url_base_prefix, *args, **kwargs)
 
     def set_refresh_token(self, refresh_token):
         self._refresh_token = refresh_token
@@ -157,6 +189,15 @@ class AzureAdClient(RESTConnection):
         self._renew_token_if_needed()
         return super()._get(*args, **kwargs)
 
+    # pylint: disable=arguments-differ
+    def _async_get(self, *args, **kwargs):
+        self._renew_token_if_needed()
+        return super()._async_get(*args,
+                                  chunks=self._parallel_count,
+                                  max_retries=self._async_retry_max,
+                                  retry_sleep_time=self._async_retry_time,
+                                  **kwargs)
+
     def _paged_get(self, resource):
         # Take care of paging generically: https://developer.microsoft.com/en-us/graph/docs/concepts/paging
         result = self._get(resource)
@@ -217,8 +258,82 @@ class AzureAdClient(RESTConnection):
         if self._is_azure_ad_b2c:
             yield from self._paged_get(f'users?api-version=1.6')
         else:
-            # We have to specify the attributes, "*" is not supported.
-            yield from self._paged_get(f'users?$select={",".join(USERS_ATTRIBUTES)}')
+            yield from self._get_graph_user_list()
+
+    @staticmethod
+    def _extract_user_pn_and_endpoint(request_dict):
+        request = request_dict.get('name')
+        if not (request and isinstance(request, str)):
+            return None
+        if request.startswith('user'):
+            return request.split('/')[1], 'memberOf'
+        if request.startswith('reports'):
+            return request.partition('$filter=')[-1], 'credsDetails'
+        return None
+
+    def _get_graph_user_list(self):
+        user_by_user_pn = {}  # dict of userPrincipalName to user object
+        async_requests = []  # list of requests to perform asynchronously
+        # Get all users immediately because paging in Graph API is unpredictable
+        for user in self._iter_graph_users():
+            # check that user has a principal name
+            try:
+                user_pn = user.get('userPrincipalName')
+                if not (user_pn and isinstance(user_pn, str)):
+                    logger.error(f'Failed to get userPrincipalName for user {user}')
+                    continue
+            except Exception:
+                logger.exception(f'Failed to get userPrincipalName for user {user}')
+                continue
+            # Check if the user pn is already known, so we don't
+            # schedule extra fetches for that pn...
+            if user_pn in user_by_user_pn:
+                logger.warning(f'User PN {user_pn} already known, skipping...')
+                continue
+
+            # add resulting object to dict
+            user_by_user_pn.setdefault(user_pn, user)
+
+            # add memberOf() request for the user
+            # Note: Looks like async requests require putting url_params into a param and not as part of the url!
+            async_requests.append({
+                'name': f'users/{user_pn}/memberOf',
+                'url_params': {'$select': 'displayName'}
+            })
+
+            # handle mfa
+            if self._allow_fetch_mfa:
+                # READ ME!
+                # using beta api to fetch! Will fail if beta api not allowed
+                # Unless this functionality is added to GA. So we do not check if it's enabled,
+                # for future-proofing.
+                # requires Reports.Read.All permission
+                async_requests.append({
+                    'name': 'reports/credentialUserRegistrationDetails',
+                    'url_params': {'$filter': f'userDisplayName eq \'{user_pn}\''}
+                })
+
+        # now run through the responses, match each response to a user
+        for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
+            if not self._is_async_response_good(response):
+                logger.warning(f'Bad async response for {request_dict}, got: {response} ')
+                continue
+            try:
+                user_pn, endpoint = self._extract_user_pn_and_endpoint(request_dict)
+                user = user_by_user_pn[user_pn]
+                user[endpoint] = response['value']
+            except Exception:
+                logger.exception(f'Failed to parse response for request {request_dict}')
+                continue
+
+        yield from user_by_user_pn.values()
+
+    def _iter_graph_users(self):
+        attrs = USERS_ATTRIBUTES
+        if self._allow_beta_api:
+            attrs += USERS_ATTRIBUTES_BETA
+        # We have to specify the attributes, "*" is not supported.
+        yield from self._paged_get(f'users?$select={",".join(attrs)}')
 
     def test_connection(self):
         self.connect()
@@ -227,7 +342,7 @@ class AzureAdClient(RESTConnection):
                 for _ in self._paged_get(f'users?api-version=1.6'):
                     break
             else:
-                for _ in self._paged_get(f'devices?$top=1'):
+                for _ in self._paged_get(f'users?$top=1'):
                     break
         except Exception as e:
             if 'insufficient privileges to complete the operation' in str(e).lower():

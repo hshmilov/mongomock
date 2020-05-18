@@ -48,6 +48,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
         ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
         ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
         ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time)')
+        is_resource_account = Field(bool, 'Is Resource Account')
         user_type = Field(str, 'User Type', enum=['Member', 'Guest'])
 
     def __init__(self):
@@ -57,8 +58,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
     def _get_client_id(client_config):
         return client_config[AZURE_TENANT_ID]
 
-    @staticmethod
-    def _test_reachability(client_config):
+    def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(AUTHORITY_HOST_URL)
 
     def _connect_client(self, client_config):
@@ -69,7 +69,12 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                        https_proxy=client_config.get(AZURE_HTTPS_PROXY),
                                        verify_ssl=client_config.get(AZURE_VERIFY_SSL),
                                        is_azure_ad_b2c=client_config.get(AZURE_IS_AZURE_AD_B2C),
-                                       azure_region=client_config.get(AZURE_AD_CLOUD_ENVIRONMENT)
+                                       azure_region=client_config.get(AZURE_AD_CLOUD_ENVIRONMENT),
+                                       allow_beta_api=self.__allow_beta_api,
+                                       allow_fetch_mfa=self.__allow_fetch_mfa,
+                                       parallel_count=self.__parallel_count,
+                                       async_retry_time=self.__async_retry_time,
+                                       async_retry_max=self.__async_retries_max
                                        )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
             refresh_tokens_db = self._get_collection('refresh_tokens')
@@ -311,6 +316,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
                 yield device
 
+    # pylint: disable=too-many-locals
     def _parse_users_raw_data(self, raw_data_all):
         raw_data, metadata = raw_data_all
         for raw_user_data in iter(raw_data):
@@ -392,11 +398,70 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 ad_on_premise_sync_enabled = raw_user_data.get('onPremisesSyncEnabled')
                 if isinstance(ad_on_premise_sync_enabled, bool):
                     user.ad_on_premise_sync_enabled = ad_on_premise_sync_enabled
+
                 try:
                     user.ad_on_premise_last_sync_date_time = parse_date(raw_user_data.get('onPremisesLastSyncDateTime'))
                 except Exception:
+                    # warning(exception), but continue running
                     logger.exception(f'Can not parse onPremisesLastSyncDateTime')
 
+                # groups
+                user_groups = raw_user_data.get('memberOf')
+                if isinstance(user_groups, list):
+                    groups = list()
+                    for group in user_groups:
+                        if not isinstance(group, dict):
+                            continue
+                        group_name = group.get('displayName')
+                        if group_name and isinstance(group_name, str):
+                            groups.append(group_name)
+                    try:
+                        user.groups = groups
+                    except Exception:
+                        logger.warning(f'Failed to parse groups for {user_id} from {user_groups}')
+                if not user_groups:
+                    # warn, but continue running (fallthrough!)
+                    logger.warning(f'Group information not available for {user_id}')
+
+                # last logon
+                login_dict = raw_user_data.get('signInActivity')
+                if login_dict and isinstance(login_dict, dict):
+                    user.last_logon = parse_date(login_dict.get('lastSignInDateTime'))
+                else:
+                    # warn, but continue running
+                    logger.warning(f'Sign in activity not available for {user_id}')
+
+                # mfa
+                user_mfa_data = raw_user_data.get('credsDetails')
+                if user_mfa_data:
+                    if isinstance(user_mfa_data, list):
+                        user_mfa_data = user_mfa_data[0]  # safeguard, this should never happen.
+                    if isinstance(user_mfa_data, dict):
+                        factors = user_mfa_data.get('authMethods') or []
+                        factor_status = user_mfa_data.get('isMfaRegistered')
+                        if not isinstance(factor_status, bool):
+                            factor_status = None
+                        for factor in factors:
+                            try:
+                                user.add_user_factor(
+                                    factor_type=factor,
+                                    factor_status=factor_status
+                                )
+                            except Exception:
+                                logger.warning(f'Failed to parse user mfa info from {user_mfa_data}')
+
+                # last password change
+                user.last_password_change = parse_date(raw_user_data.get('lastPasswordChangeDateTime'))
+                # employee id
+                user.employee_id = raw_user_data.get('employeeId')
+                # user created
+                user.user_created = parse_date(raw_user_data.get('createdDateTime'))
+                # is resource account
+                is_resource_account = raw_user_data.get('is_resource_account')
+                if isinstance(is_resource_account, bool):
+                    user.is_resource_account = is_resource_account
+
+                # set raw
                 user.set_raw(raw_user_data)
                 yield user
             except Exception:
@@ -415,9 +480,38 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'title': 'Fields to exclude',
                     'type': 'string'
                 },
+                {
+                    'name': 'allow_beta_api',
+                    'title': 'Allow use of BETA API endpoints',
+                    'type': 'bool',
+                    'description': 'Required currently in order to allow '
+                                   'fetching users last log-on date and MFA enrollment status',
+                },
+                {
+                    'name': 'allow_fetch_mfa',
+                    'title': 'Allow fetching MFA enrollment status for users',
+                    'type': 'bool',
+                    'description': 'Currently requires use of BETA API, as well as Reports.Read.All permissions.'
+                },
+                {
+                    'name': 'parallel_count',
+                    'title': 'Number of parallel requests',
+                    'type': 'integer'
+                },
+                {
+                    'name': 'retry_max',
+                    'title': 'Max retry count for parallel requests',
+                    'type': 'integer'
+                },
+                {
+                    'name': 'async_error_sleep_time',
+                    'title': 'Time in seconds to wait between retries of parallel requests',
+                    'type': 'integer'
+                }
             ],
             'required': [
-                'fields_to_exclude'
+                'allow_beta_api',
+                'allow_fetch_mfa'
             ],
             'pretty_name': 'Azure AD Configuration',
             'type': 'array'
@@ -426,8 +520,22 @@ class AzureAdAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fields_to_exclude': None
+            'fields_to_exclude': None,
+            'allow_beta_api': False,
+            'allow_fetch_mfa': False,
+            'parallel_count': 10,
+            'retry_max': 3,
+            'async_error_sleep_time': 3,
         }
 
     def _on_config_update(self, config):
+        logger.info(f'Got new advanced configuration: {config}')
         self.__fields_to_exclude = config['fields_to_exclude']
+        self.__allow_beta_api = config['allow_beta_api']
+        self.__allow_fetch_mfa = config['allow_fetch_mfa']
+        if self.__allow_fetch_mfa and not self.__allow_beta_api:
+            logger.warning(f'NOTICE: allow_fetch_mfa is on but allow_beta_api is off,'
+                           f' even though fetching mfa requires beta api!')
+        self.__async_retries_max = config['retry_max']
+        self.__parallel_count = config['parallel_count']
+        self.__async_retry_time = config['async_error_sleep_time']
