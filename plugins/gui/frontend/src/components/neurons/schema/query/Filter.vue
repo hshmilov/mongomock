@@ -13,7 +13,7 @@
         :disabled="disabled"
         :first="!i"
         :module="module"
-        @change="onExpressionsChange"
+        v-on="{ change: onExpressionsChangeByIndex(i)}"
         @remove="() => removeExpression(i)"
       />
     </template>
@@ -40,8 +40,8 @@
           :disabled="disabled"
           :first="!i"
           :module="module"
-          @change="onExpressionsChange"
-          @remove="() => removeExpression(i)"
+          v-on="{ change: onExpressionsChangeByIndex(i)}"
+          @remove="removeExpression(i)"
         />
       </li>
     </Draggable>
@@ -112,19 +112,23 @@ export default {
       return `expression__container${this.expressions.length > 1 ? '--draggable' : ''}`;
     },
   },
-  mounted() {
-    if (!this.expressions.length) {
-      this.addEmptyExpression();
-    }
-  },
   methods: {
+    onExpressionsChangeByIndex(index) {
+      return (update) => {
+        this.$emit('change', this.expressions.map((currentExpression, i) => {
+          if (index === i) {
+            return { ...currentExpression, ...update };
+          }
+          return currentExpression;
+        }));
+      };
+    },
     onExpressionsChange() {
       this.$emit('change', this.expressions);
     },
     addEmptyExpression() {
       const logicOp = !this.expressions.length ? '' : 'and';
-      this.expressions.push({ ...expression, i: this.maxIndex, logicOp });
-      this.onExpressionsChange();
+      this.$emit('change', [...this.expressions, { ...expression, i: this.maxIndex, logicOp }]);
     },
     removeExpression(index) {
       if (index >= this.expressions.length) return;
@@ -141,7 +145,6 @@ export default {
     },
     reset() {
       this.filters.length = 0;
-      this.addEmptyExpression();
       this.$emit('error', null);
     },
   },

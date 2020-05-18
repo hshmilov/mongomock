@@ -248,18 +248,30 @@ class EntitiesPage(Page):
     def root_page_css(self):
         raise NotImplementedError
 
+    @staticmethod
+    def _call_wizard_command_with_timeout(func, timeout=0.5):
+        """
+            Function wrapper for query wizard commands. The query wizard has debounce, thus we
+            need to make sure we wait after each command to ensure the changes are rendered.
+            :param f method to execute.
+            :returns none
+        """
+        func()
+        time.sleep(timeout)
+
     def click_query_wizard(self):
         time.sleep(0.3)
-        self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click()
+        self._call_wizard_command_with_timeout(lambda: self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click())
 
     def select_query_field(self, text, parent=None, partial_text=True, select_num=0):
-        self.select_option(self.QUERY_FIELD_DROPDOWN_CSS,
-                           self.DROPDOWN_TEXT_BOX_CSS,
-                           self.DROPDOWN_SELECTED_OPTION_CSS,
-                           text,
-                           parent=parent,
-                           partial_text=partial_text,
-                           select_num=select_num)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option(self.QUERY_FIELD_DROPDOWN_CSS,
+                                       self.DROPDOWN_TEXT_BOX_CSS,
+                                       self.DROPDOWN_SELECTED_OPTION_CSS,
+                                       text,
+                                       parent=parent,
+                                       partial_text=partial_text,
+                                       select_num=select_num))
 
     def get_all_fields_in_field_selection(self):
         self.driver.find_element_by_css_selector(self.QUERY_FIELD_DROPDOWN_CSS).click()
@@ -304,8 +316,9 @@ class EntitiesPage(Page):
             self.get_button(adapter, context=filter_adapter_box).click()
         else:
             self.find_element_by_text(adapter, filter_adapter_box).click()
-        self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS).click()
-        time.sleep(0.5)
+
+        self._call_wizard_command_with_timeout(
+            lambda: self.driver.find_element_by_css_selector(self.FILTER_ADAPTERS_CSS).click())
 
     def click_on_select_all_filter_adapters(self, parent=None):
         self.click_on_filter_adapter('Select all', parent, button=True)
@@ -359,10 +372,11 @@ class EntitiesPage(Page):
         return adapters_list
 
     def select_query_comp_op(self, text, parent=None):
-        self.select_option_without_search(self.QUERY_COMP_OP_DROPDOWN_CSS,
-                                          self.DROPDOWN_SELECTED_OPTION_CSS,
-                                          text,
-                                          parent=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option_without_search(self.QUERY_COMP_OP_DROPDOWN_CSS,
+                                                      self.DROPDOWN_SELECTED_OPTION_CSS,
+                                                      text,
+                                                      parent=parent))
 
     def fill_query_wizard_date_picker(self, date_value, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_DATE_PICKER_CSS,
@@ -374,24 +388,30 @@ class EntitiesPage(Page):
         return self.driver.find_element_by_css_selector(self.QUERY_COMP_OP_DROPDOWN_CSS).text
 
     def fill_query_string_value(self, text, parent=None):
-        self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_INPUT_CSS, text, context=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_INPUT_CSS,
+                                                         text, context=parent))
 
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS, text, context=parent)
 
     def fill_field_comparison_query_value(self, text, parent=None):
-        self.fill_text_field_by_css_selector(self.QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS, text, context=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.fill_text_field_by_css_selector(
+                self.QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS, text, context=parent))
 
     def select_query_value(self, text, parent=None):
-        self.select_option(self.QUERY_VALUE_COMPONENT_CSS,
-                           self.DROPDOWN_TEXT_BOX_CSS,
-                           self.DROPDOWN_SELECTED_OPTION_CSS,
-                           text, parent=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option(self.QUERY_VALUE_COMPONENT_CSS,
+                                       self.DROPDOWN_TEXT_BOX_CSS,
+                                       self.DROPDOWN_SELECTED_OPTION_CSS,
+                                       text, parent=parent))
 
     def select_query_value_without_search(self, value, parent=None):
-        self.select_option_without_search(self.QUERY_VALUE_COMPONENT_CSS,
-                                          self.DROPDOWN_SELECTED_OPTION_CSS,
-                                          value, parent=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option_without_search(self.QUERY_VALUE_COMPONENT_CSS,
+                                                      self.DROPDOWN_SELECTED_OPTION_CSS,
+                                                      value, parent=parent))
 
     def get_query_value(self, parent=None, input_type_string=False):
         css_to_use = self.QUERY_VALUE_COMPONENT_INPUT_CSS if input_type_string else self.QUERY_VALUE_COMPONENT_CSS
@@ -402,8 +422,10 @@ class EntitiesPage(Page):
         return el.get_attribute('value')
 
     def select_query_logic_op(self, text, parent=None):
-        self.select_option_without_search(self.QUERY_LOGIC_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, text,
-                                          parent=parent)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option_without_search(self.QUERY_LOGIC_DROPDOWN_CSS,
+                                                      self.DROPDOWN_SELECTED_OPTION_CSS, text,
+                                                      parent=parent))
 
     def click_wizard_outdated_toggle(self):
         self.driver.find_element_by_css_selector(self.OUTDATED_TOGGLE_CSS).click()
@@ -502,7 +524,8 @@ class EntitiesPage(Page):
         self.click_select_all_label('Clear all')
 
     def add_query_expression(self):
-        self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click()
+        self._call_wizard_command_with_timeout(
+            lambda: self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click())
 
     def toggle_left_bracket(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_BRACKET_LEFT_CSS).click()
@@ -513,7 +536,8 @@ class EntitiesPage(Page):
     def toggle_not(self, expression_element=None):
         if not expression_element:
             expression_element = self.driver
-        expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click()
+        self._call_wizard_command_with_timeout(
+            lambda: expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click())
 
     def select_context_all(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
@@ -540,11 +564,12 @@ class EntitiesPage(Page):
                                           parent=expression_element)
 
     def select_asset_entity_adapter(self, expression_element, adapter_title):
-        self.select_option(self.QUERY_ASSET_ENTITY_ADAPTER_CSS,
-                           self.DROPDOWN_TEXT_BOX_CSS,
-                           self.DROPDOWN_SELECTED_OPTION_CSS,
-                           adapter_title,
-                           parent=expression_element)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option(self.QUERY_ASSET_ENTITY_ADAPTER_CSS,
+                                       self.DROPDOWN_TEXT_BOX_CSS,
+                                       self.DROPDOWN_SELECTED_OPTION_CSS,
+                                       adapter_title,
+                                       parent=expression_element))
 
     def get_asset_entity_children(self, expression_element):
         if not expression_element:
@@ -555,17 +580,18 @@ class EntitiesPage(Page):
         return self.get_asset_entity_children(self.find_expressions()[0])
 
     def select_asset_entity_field(self, child_element, field_title):
-        self.select_option(self.QUERY_ASSET_ENTITY_FIELD_CSS,
-                           self.DROPDOWN_TEXT_BOX_CSS,
-                           self.DROPDOWN_SELECTED_OPTION_CSS,
-                           field_title,
-                           parent=child_element)
+        self._call_wizard_command_with_timeout(
+            lambda: self.select_option(self.QUERY_ASSET_ENTITY_FIELD_CSS,
+                                       self.DROPDOWN_TEXT_BOX_CSS,
+                                       self.DROPDOWN_SELECTED_OPTION_CSS,
+                                       field_title,
+                                       parent=child_element))
 
     def remove_query_expression(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_REMOVE_EXPRESSION_CSS).click()
 
     def clear_query_wizard(self):
-        self.click_button('Clear')
+        self._call_wizard_command_with_timeout(lambda: self.click_button('Clear'))
 
     def clear_filter(self):
         # Explicit clear needed for Mac - 'fill_filter' will not replace the text

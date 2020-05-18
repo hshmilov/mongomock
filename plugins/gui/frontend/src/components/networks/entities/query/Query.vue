@@ -36,8 +36,12 @@
 
 <script>
 import { mapState, mapGetters, mapMutations } from 'vuex';
+import _isEmpty from 'lodash/isEmpty';
+
 import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/getters';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { expression } from '@constants/filter';
+
 import XButton from '@axons/inputs/Button.vue';
 import XQueryState from './State.vue';
 import XQuerySearchInput from './SearchInput.vue';
@@ -91,7 +95,11 @@ export default {
     }),
     query: {
       get() {
-        return this.view.query;
+        const { query } = this.view;
+        if (_isEmpty(query.expressions)) {
+          return { ...query, expressions: [{ ...expression }] };
+        }
+        return query;
       },
       set(query) {
         this.updateQuery(query, false);
@@ -252,7 +260,7 @@ export default {
               uniqueAdapters: false,
               enforcementFilter: this.enforcementFilter,
             },
-            expressions: [],
+            expressions: [{ ...expression }],
             search: null,
           },
         },

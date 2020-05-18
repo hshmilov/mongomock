@@ -60,6 +60,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XCondition from './Condition.vue';
 import XButton from '../../../axons/inputs/Button.vue';
@@ -157,11 +158,7 @@ export default {
   },
   methods: {
     updateExpression(update) {
-      this.$emit('input', {
-        ...this.expression,
-        ...update,
-      });
-      this.$emit('change');
+      this.$emit('change', { ...update });
     },
     toggleLeftBracket() {
       this.updateExpression({
