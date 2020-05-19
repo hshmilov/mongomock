@@ -1376,7 +1376,7 @@ class SettingsPage(Page):
 
     def find_enterprise_password_mgmt_mode_dropdown(self):
         self.wait_for_element_present_by_css(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)
-        return self.driver.find_elements_by_tag_name(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)[1]
+        return self.driver.find_elements_by_css_selector(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)[1]
 
     def get_enterprise_password_mgmt_settings_selected_item(self):
         return self.find_enterprise_password_mgmt_mode_dropdown().text

@@ -3,6 +3,7 @@
 import Vue from 'vue';
 import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
+
 import EnforcementsCustomIcon from '@axons/icons/axoniusIcons/enforcements.vue';
 import EnforcementsLock from '@axons/icons/axoniusIcons/enforcementsLock.vue';
 import DraggableCustomIcon from '@axons/icons/axoniusIcons/draggable.vue';
@@ -16,6 +17,7 @@ import ResetPassword from '@axons/icons/axoniusIcons/resetPassword.vue';
 import Toggle from '@axons/icons/axoniusIcons/toggle.vue';
 import Filterable from '@axons/icons/axoniusIcons/filterable.vue';
 import Funnel from '@axons/icons/axoniusIcons/funnel.vue';
+import VaultLogo from '@axons/icons/axoniusIcons/vaultLogo.vue';
 import defaultTheme from '../assets/themes/default.json';
 
 const axoniusIcons = {
@@ -86,6 +88,46 @@ const axoniusIcons = {
   },
   resetPassword: {
     component: ResetPassword,
+  },
+  thycotic: {
+    component: VaultLogo,
+    props: {
+      provider: 'thycotic',
+    },
+  },
+  thycoticSuccess: {
+    component: VaultLogo,
+    props: {
+      provider: 'thycotic',
+      status: 'success',
+    },
+  },
+  thycoticError: {
+    component: VaultLogo,
+    props: {
+      provider: 'thycotic',
+      status: 'error',
+    },
+  },
+  cyberark: {
+    component: VaultLogo,
+    props: {
+      provider: 'cyberark',
+    },
+  },
+  cyberarkSuccess: {
+    component: VaultLogo,
+    props: {
+      provider: 'cyberark',
+      status: 'success',
+    },
+  },
+  cyberarkError: {
+    component: VaultLogo,
+    props: {
+      provider: 'cyberark',
+      status: 'error',
+    },
   },
   filterable: {
     component: Filterable,

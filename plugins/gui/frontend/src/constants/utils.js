@@ -95,14 +95,13 @@ export const weekDays = Array.from(new Array(7).keys()).map(createWeekDayObject)
 export const monthDays = Array.from(new Array(29).keys()).map(createMonthDayObject);
 
 export const parseVaultError = (errorString) => {
-  // let currentMatch = errorString.indexOf(':') + 1
-  // let errorFieldName =// errorString.substring(currentMatch,
-  // currentMatch + errorString.substring(currentMatch).indexOf(':'))
-  // currentMatch += errorString.substring(currentMatch).indexOf(':') + 1
-  // let parsedError = errorString.substring(currentMatch)
   const regexp = '.*_vault_error\\:(.+?)\\:(.*)';
-  const result = errorString.match(regexp);
-  return result;
+  const errorParts = errorString.match(regexp) || [];
+  const [, field, exception] = errorParts;
+  const error = exception || errorString;
+  return {
+    error, field,
+  };
 };
 
 export const getParentFromField = (fieldName) => fieldName.split('.').slice(0, -1).join('.');

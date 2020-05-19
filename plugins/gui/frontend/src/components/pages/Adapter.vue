@@ -102,7 +102,7 @@
               :schema="adapterSchema"
               :api-upload="uploadFileEndpoint"
               :error="connectionLabelError"
-              :passwords-vault-enabled="isCyberarkVault"
+              :passwords-vault-enabled="isPasswordVaultEnabled"
               @submit="saveServer"
               @validate="validateServer"
             />
@@ -262,7 +262,7 @@ export default {
       connections(state) {
         return _get(state, `adapters.clients.${this.adapterId}`, []);
       },
-      isCyberarkVault(state) {
+      isPasswordVaultEnabled(state) {
         return _get(state, 'configuration.data.global.passwordManagerEnabled', false);
       },
       connectionLabelValid() {
@@ -418,9 +418,9 @@ export default {
           valid: true,
         };
         if (client.error && client.error !== '' && client.error.includes('_vault_error')) {
-          const [, name, value] = parseVaultError(client.error);
-          this.serverModal.serverData[name].error = value;
-          this.serverModal.error = value;
+          const { field, error } = parseVaultError(client.error);
+          this.serverModal.serverData[field].error = error;
+          this.serverModal.error = error;
         }
       }
       this.toggleServerModal();

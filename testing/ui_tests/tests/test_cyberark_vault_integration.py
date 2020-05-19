@@ -56,17 +56,9 @@ class TestCyberarkIntegration(TestBase):
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_new_server()
-
-        element = None
-        try:
-            element = self.adapters_page.driver.find_element_by_id('cyberark-button')
-        except NoSuchElementException:
-            # dismiss the connection modal
-            if element is None:
-                self.adapters_page.click_cancel()
-                raise
-
-        assert element is not None
+        assert self.adapters_page.find_password_vault_button() is not None
+        self.adapters_page.click_cancel()
+        self.adapters_page.wait_for_modal_close()
 
     @staticmethod
     def _cyberark_context_manager():
@@ -86,13 +78,8 @@ class TestCyberarkIntegration(TestBase):
         return self.devices_page.count_entities()
 
     def _did_fetch_succeed(self):
-        cyberark_icon_element = self.adapters_page.driver.find_element_by_css_selector('.cyberark-icon .md-icon')
-        options = {'success': True, 'error': False}
-        for (k, retval) in options.items():
-            if k in cyberark_icon_element.get_attribute('class'):
-                return retval
-        assert False, 'Can\'t find fetch result'
-        return None
+        password_vault_icon_status = self.adapters_page.find_password_vault_button_status()
+        return 'success' in password_vault_icon_status.get_attribute('class')
 
     def test_successful_get(self):
         with self._cyberark_context_manager(), self._csv_context_manager():
@@ -125,9 +112,9 @@ class TestCyberarkIntegration(TestBase):
                    tolerated_exceptions_list=[AssertionError, NoSuchElementException])
         print('Adding csv client.')
 
-        self.adapters_page.click_cyberark_button()
-        self.adapters_page.fill_text_field_by_element_id('cyberark-query',
-                                                         query)
+        self.adapters_page.click_new_server()
+        self.adapters_page.find_password_vault_button().click()
+        self.adapters_page.fill_text_field_by_element_id('provider-input', query)
 
         print('Fetching cyberark query.')
         self.adapters_page.click_button('Fetch')
@@ -148,6 +135,7 @@ class TestCyberarkIntegration(TestBase):
             wait_until(self._wait_until_cyberark_is_present, check_return_value=False,
                        tolerated_exceptions_list=[AssertionError, NoSuchElementException])
             print('Adding csv client.')
+            self.adapters_page.click_new_server()
             self.adapters_page.fill_upload_csv_form_with_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
 
             # Check successful device fetch.

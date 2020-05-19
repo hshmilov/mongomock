@@ -150,6 +150,7 @@
 
       .error-border:not(.md-field) {
         border: 1px solid $indicator-error;
+        padding: 1px;
       }
     }
 

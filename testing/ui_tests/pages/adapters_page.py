@@ -71,6 +71,8 @@ class AdaptersPage(EntitiesPage):
     CSV_FILE_NAME = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
     CSV_INPUT_ID = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
 
+    PASSWORD_VAULT_TOGGLE_CSS = '.provider-toggle'
+
     @property
     def url(self):
         return f'{self.base_url}/adapters'
@@ -348,9 +350,11 @@ class AdaptersPage(EntitiesPage):
         element = self.wait_for_element_present_by_css('.adapters-search .md-switch-thumb')
         element.click()
 
-    def click_cyberark_button(self):
-        element = self.driver.find_element_by_css_selector('.cyberark-icon .md-icon')
-        element.click()
+    def find_password_vault_button(self):
+        return self.driver.find_element_by_css_selector(self.PASSWORD_VAULT_TOGGLE_CSS)
+
+    def find_password_vault_button_status(self):
+        return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS} .status')
 
     def get_connected_adapters_number_form_switch_label(self):
         pattern = r'configured only \((\d)\)'
