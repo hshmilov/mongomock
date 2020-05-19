@@ -29,3 +29,4 @@ CREATE INDEX adapter_device_os_id_idx  ON public.adapter_devices using brin (os_
 
 CREATE INDEX adapter_devices_adapter_name_idx ON public.adapter_devices  using brin (adapter_name);
 CREATE INDEX user_devices_adapter_name_idx ON public.adapter_users  using brin (adapter_name);
+

@@ -18,7 +18,8 @@ EXCLUDE_PATHS = [
     'usr',
     '.idea',
     '.git',
-    '.venv'
+    '.venv',
+    'bandicoot',
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
 ABSOLUTE_ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..')

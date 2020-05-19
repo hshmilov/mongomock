@@ -1,4 +1,4 @@
-FROM  postgres:12.1-alpine as builder
+FROM  postgres:12.3-alpine as builder
 
 ENV POSTGRES_USER postgres
 ENV POSTGRES_PASSWORD changeme

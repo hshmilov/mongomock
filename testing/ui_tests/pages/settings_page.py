@@ -49,6 +49,8 @@ class SettingsPage(Page):
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
     EXACT_SEARCH_LABEL = 'Use exact match for assets search'
+    ACTIVATE_BANDICOOT_LABEL = 'Run Bandicoot container (results will be available next cycle)'
+    EXPERIMENTAL_API_LABEL = ''
     NOTIFY_ON_ADAPTERS_FETCH_LABEL = 'Notify on adapters fetch'
     SAML_LOGINS_LABEL = 'Allow SAML-based logins'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
@@ -854,6 +856,11 @@ class SettingsPage(Page):
 
     def find_exact_search_toggle(self):
         return self.find_checkbox_by_label(self.EXACT_SEARCH_LABEL)
+
+    def find_activate_bandicoot_toggle(self):
+        self.wait_for_element_present_by_xpath(
+            self.CHECKBOX_XPATH_TEMPLATE.format(label_text=self.ACTIVATE_BANDICOOT_LABEL))
+        return self.find_checkbox_by_label(self.ACTIVATE_BANDICOOT_LABEL)
 
     def find_allow_okta_logins_toggle(self):
         return self.find_checkbox_by_label(self.OKTA_LOGINS_LABEL)

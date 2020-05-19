@@ -35,4 +35,4 @@ class BandicootService(WeaveService):
         pass  # We never want to remove this static image...
 
     def is_up(self, *args, **kwargs):
-        return True
+        return self.get_is_container_up()

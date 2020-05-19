@@ -92,7 +92,7 @@ git init
 git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
 ./devops/scripts/host_installation/init_host.sh
 cd ~/cortex/bandicoot
-go mod vendor
+sudo go mod vendor
 cd ~
 cd install
 chmod 777 *

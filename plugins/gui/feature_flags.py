@@ -99,7 +99,7 @@ class FeatureFlags(Configurable):
                 },
                 {
                     'name': FeatureFlagsNames.Bandicoot,
-                    'title': 'Run Bandicoot container (results won\'t be available until next cycle)',
+                    'title': 'Run Bandicoot container (results will be available next cycle)',
                     'type': 'bool',
                 },
                 {
