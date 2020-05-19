@@ -117,7 +117,6 @@ export default {
         base: '',
         intersecting: ['', ''],
       };
-      this.$emit('state');
     },
     removeIntersecting(index) {
       this.intersecting.splice(index, 1);
@@ -131,7 +130,6 @@ export default {
         if (ind === index) return view;
         return item;
       });
-      this.$emit('state');
     },
     validate() {
       this.$emit('validate', !this.intersecting.filter((view) => view === '').length);

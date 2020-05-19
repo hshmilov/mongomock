@@ -1032,6 +1032,74 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
     ]
 
 
+def fetch_chart_matrix(
+        _: ChartViews,
+        entity: EntityType,
+        base, intersecting,
+        sort,
+        selected_sort_by=None,
+        selected_sort_order=None,
+        for_date=None,) -> Optional[List]:
+
+    # Query and data collections according to given parent's module
+    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+
+    # go over base queries
+    data = []
+    has_results = False
+    total_values = defaultdict(int)
+    for base_query_index, base_query_name in enumerate(base):
+        base_view = {'query': {'filter': '', 'expressions': []}}
+        if base_query_name:
+            base_view = find_filter_by_name(entity, base_query_name)
+            if not base_view.get('query'):
+                continue
+        else:
+            base_query_name = f'All {entity.value}'
+
+        base_queries = [parse_filter(base_view['query']['filter'], for_date)]
+        if for_date and is_date_filter_required:
+            base_queries.append({'accurate_for_datetime': for_date})
+        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
+
+        # intersection of base query with each data query
+        for intersecting_query_index, intersecting_query_name in enumerate(intersecting):
+            child_view = find_filter_by_name(entity, intersecting_query_name)
+
+            if not child_view or not child_view.get('query'):
+                continue
+            child_filter = child_view['query']['filter']
+            child_query = parse_filter(child_filter, for_date)
+            child_view['query']['filter'] = f'{base_filter}({child_filter})'
+            child_view['query']['expressions'] = []
+            numeric_value = data_collection.count_documents({
+                '$and': base_queries + [child_query]
+            })
+
+            if numeric_value != 0:
+                has_results = True
+
+            total_values[base_query_index] += numeric_value
+
+            data.append({'intersectionName': intersecting_query_name,
+                         'intersectionIndex': intersecting_query_index,
+                         'name': base_query_name,
+                         'baseIndex': base_query_index,  # used to distinguish between base queries with same name
+                         'view': child_view,
+                         'module': entity.value,
+                         'numericValue': numeric_value})
+
+    # no intersections found - return an empty response
+    if not has_results:
+        return None
+
+    for intersection in data:
+        intersection['value'] = total_values[intersection['baseIndex']]
+
+    data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
+    return data
+
+
 @dashboard_call_limit(10)
 def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
@@ -1047,12 +1115,13 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
         ChartMetrics.intersect: fetch_chart_intersect,
         ChartMetrics.segment: fetch_chart_segment,
         ChartMetrics.abstract: fetch_chart_abstract,
-        ChartMetrics.timeline: fetch_chart_timeline
+        ChartMetrics.timeline: fetch_chart_timeline,
+        ChartMetrics.matrix: fetch_chart_matrix
     }
     config = {**dashboard['config']}
 
     def call_dashboard_handler(metric):
-        if metric in [ChartMetrics.segment, ChartMetrics.compare]:
+        if metric in [ChartMetrics.segment, ChartMetrics.compare, ChartMetrics.matrix]:
             return handler_by_metric[metric](ChartViews[dashboard['view']],
                                              selected_sort_by=sort_by,
                                              selected_sort_order=sort_order,
@@ -1166,6 +1235,18 @@ def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
     return fetch_chart_abstract(ChartViews[card['view']], **config, for_date=latest_date)
 
 
+def fetch_chart_matrix_historical(card, from_given_date, to_given_date):
+    if not card.get('view') \
+            or not card.get('config') \
+            or not card['config'].get('entity'):
+        return []
+    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
+    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
+    if not latest_date:
+        return []
+    return fetch_chart_matrix(ChartViews[card['view']], **config, for_date=latest_date)
+
+
 @dashboard_call_limit(5)
 def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
                                   sort_by=None, sort_order=None):
@@ -1189,6 +1270,7 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
             ChartMetrics.intersect: fetch_chart_intersect_historical,
             ChartMetrics.segment: fetch_chart_segment_historical,
             ChartMetrics.abstract: fetch_chart_abstract_historical,
+            ChartMetrics.matrix: fetch_chart_matrix_historical
         }
 
         def call_dashboard_handler(metric):

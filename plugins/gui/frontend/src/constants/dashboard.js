@@ -4,6 +4,7 @@ export const ChartTypesEnum = {
   intersect: 'intersect',
   segment: 'segment',
   timeline: 'timeline',
+  matrix: 'matrix',
 };
 
 export const ChartViewEnum = {
@@ -11,6 +12,7 @@ export const ChartViewEnum = {
   pie: 'pie',
   line: 'line',
   summary: 'summary',
+  stacked: 'stacked',
 };
 
 export const ChartSortTypeLabelEnum = {

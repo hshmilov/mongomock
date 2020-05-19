@@ -19,7 +19,22 @@
         </div>
       </template>
       <template slot="body">
-        <div class="body-content">
+        <div
+          v-if="body.name"
+          class="body-content"
+        >
+          <div class="name">
+            {{ body.name }}
+          </div>
+          <div>
+            <span class="value">{{ body.value }}</span>
+            <span class="percentage">{{ body.percentage }}</span>
+          </div>
+        </div>
+        <div
+          v-else
+          class="body-content"
+        >
           <span class="value">{{ body.value }}</span>
           <span class="percentage">{{ body.percentage }}</span>
         </div>
@@ -117,6 +132,10 @@ export default {
         font-size: small;
       }
 
+      .name {
+        margin-right: 8px;
+      }
+
       .name, .value {
         max-width: 40ch;
         text-overflow: ellipsis;
@@ -132,10 +151,6 @@ export default {
 
         &.pie-fill-1 {
           color: $theme-black;
-        }
-
-        .name {
-          margin-right: 8px;
         }
       }
 

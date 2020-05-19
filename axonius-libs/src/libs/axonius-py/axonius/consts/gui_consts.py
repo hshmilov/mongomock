@@ -12,6 +12,7 @@ class ChartMetrics(Enum):
     segment = auto()
     abstract = auto()
     timeline = auto()
+    matrix = auto()
 
 
 class ChartViews(Enum):
@@ -22,6 +23,7 @@ class ChartViews(Enum):
     pie = auto()
     summary = auto()
     line = auto()
+    stacked = auto()
 
 
 class ChartFuncs(Enum):

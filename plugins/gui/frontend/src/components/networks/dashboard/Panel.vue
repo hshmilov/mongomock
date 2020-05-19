@@ -139,6 +139,7 @@ import XLine from '../../axons/charts/Line.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XChartLegend from '../../axons/charts/ChartLegend.vue';
 import PanelActions from './PanelActions.vue';
+import XStacked from '../../axons/charts/Stacked.vue';
 import {
   ChartTypesEnum, ChartViewEnum,
 } from '../../../constants/dashboard';
@@ -155,6 +156,7 @@ export default {
     XSearchInput,
     XChartLegend,
     PanelActions,
+    XStacked,
   },
   props: {
     chart: {
@@ -289,8 +291,9 @@ export default {
       this.showSearch = !this.showSearch;
     },
     isSortable(chart) {
-      return (chart.metric === ChartTypesEnum.segment || chart.metric === ChartTypesEnum.compare)
-              && chart.view === ChartViewEnum.histogram;
+      return (((chart.metric === ChartTypesEnum.segment || chart.metric === ChartTypesEnum.compare)
+              && chart.view === ChartViewEnum.histogram)
+              || chart.view === ChartViewEnum.stacked);
     },
   },
 };
