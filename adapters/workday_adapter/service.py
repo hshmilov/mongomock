@@ -1,5 +1,6 @@
 import logging
-
+# pylint: disable=import-error
+from zeep.helpers import serialize_object
 from axonius.users.user_adapter import UserAdapter
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -133,35 +134,28 @@ class WorkdayAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_user(self, user_raw):
+    def _create_user(self, worker_obj):
         try:
             user = self._new_user_adapter()
-            user_id = user_raw.get('id')
+            user_id = worker_obj.User_ID
             if user_id is None:
-                logger.warning(f'Bad user with no ID {user_raw}')
+                logger.warning(f'Bad user with no ID {worker_obj}')
                 return None
 
             # Axonius generic stuff
-            user.id = user_id
-            user.employee_number = user_raw.get('id')
-            user.first_name = user_raw.get('firstName')
-            user.last_name = user_raw.get('lastName')
-            user.display_name = user_raw.get('displayName')
-            user.mail = user_raw.get('workEmail')
-            user.user_telephone_number = user_raw.get('mobilePhone')
-            user.user_title = user_raw.get('jobTitle')
-            user.user_department = user_raw.get('department')
-            user.image = user_raw.get('photoUrl')
+            user.id = f'{user_id}_{str(worker_obj.Worker_ID) or ""}'
+            user.mail = user_id
+            user.employee_id = worker_obj.Worker_ID
 
-            user.set_raw(user_raw)
+            user.set_raw(serialize_object(worker_obj, target_cls=dict))
             return user
         except Exception:
-            logger.exception(f'Problem with fetching Workday Worker for {user_raw}')
+            logger.exception(f'Problem with fetching Workday Worker for {worker_obj}')
             return None
 
     def _parse_users_raw_data(self, users_raw):
         for user_raw in users_raw:
-            user = self._create_user(user_raw)
+            user = self._create_user(user_raw.Worker_Data)
             if user:
                 yield user
 

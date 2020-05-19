@@ -9,7 +9,7 @@ from zeep.wsse.username import UsernameToken
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from workday_adapter.consts import DEVICE_PER_PAGE
+from workday_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -86,7 +86,7 @@ class WorkdayConnection(RESTConnection):
     def _connect(self):
         self._create_auth()
         self._create_client()
-        next(self.get_users_list(1))
+        next(self.get_users_list(1, 2))
 
     @staticmethod
     def _gen_args(count=DEVICE_PER_PAGE):
@@ -114,14 +114,27 @@ class WorkdayConnection(RESTConnection):
         }
         return request_crit
 
-    def get_users_list(self, count=DEVICE_PER_PAGE):
+    def _paginated_get_workers(self, count=DEVICE_PER_PAGE, max_results=MAX_NUMBER_OF_DEVICES):
         kwargs = self._gen_args(count)
         response = self._client.service.Get_Workers(**kwargs)
-        logger.debug(f'Got response: {response}')
-        logger.debug(f'Response is {type(response)}')
-        logger.debug(f'Response dict is: {response.__dict__}')
-        logger.debug(f'Response deserialized is: {zeep.helpers.serialize_object(response)}')
-        yield from response.data
+        total_results = 0
+        logger.info(f'Expecting {int(response.Response_Results.Total_Results)} results')
+        while kwargs['Response_Filter']['Page'] <= response.Response_Results.Total_Pages:
+            yield from response.Response_Data.Worker
+            total_results += response.Response_Results.Page_Results
+            if total_results >= max_results:
+                logger.warning(f'Got {total_results} results out of a maximum of {max_results}. Stopping!')
+                break
+            kwargs['Response_Filter']['Page'] += 1
+            response = self._client.service.Get_Workers(**kwargs)
+
+    def get_users_list(self, count=DEVICE_PER_PAGE, max_count=MAX_NUMBER_OF_DEVICES):
+        # kwargs = self._gen_args(count)
+        # response = self._client.service.Get_Workers(**kwargs)
+        # logger.debug(f'Response is {type(response)}')
+        # logger.debug(f'Response Data Example: {response.Response_Data.Worker[0]}')
+        # logger.debug(f'Response Results is: {response.Response_Results}')
+        yield from self._paginated_get_workers(count, max_count)
 
     def get_device_list(self):
         # AUTOADAPTER - implement get_device_list
