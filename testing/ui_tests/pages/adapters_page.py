@@ -249,6 +249,13 @@ class AdaptersPage(EntitiesPage):
         self.approve_remove_selected()
         self.wait_for_elements_delete(expected_left=expected_left)
 
+    def remove_json_extra_server(self, credentials, expected_left=1):
+        self.remove_server(ad_client=credentials,
+                           adapter_name=JSON_ADAPTER_NAME,
+                           expected_left=expected_left,
+                           delete_associated_entities=True,
+                           adapter_search_field=self.JSON_FILE_SERVER_SEARCH_FIELD)
+
     def fill_creds(self, **kwargs):
         for key, value in kwargs.items():
             element = self.driver.find_element_by_id(key)
@@ -369,6 +376,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_adapter(adapter_name)
         self.add_server(ad_client=server_details, adapter_name=adapter_name)
         self.wait_for_server_green()
+        self.wait_for_data_collection_toaster_absent()
         self.switch_to_page()
 
     def add_json_extra_client(self):

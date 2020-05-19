@@ -3,12 +3,12 @@ import time
 import pytest
 
 from axonius.utils.wait import wait_until
-from devops.scripts.automate_dev import credentials_inputer
-from services.adapters.cisco_service import CiscoService
 from services.adapters.stresstest_service import StresstestService
 from ui_tests.tests.ui_consts import (STRESSTEST_ADAPTER,
-                                      STRESSTEST_ADAPTER_NAME)
+                                      STRESSTEST_ADAPTER_NAME,
+                                      JSON_ADAPTER_NAME)
 from ui_tests.tests.ui_test_base import TestBase
+from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 
 
 class TestHyperlinks(TestBase):
@@ -141,33 +141,33 @@ class TestHyperlinks(TestBase):
     @pytest.mark.skip('AX-6869')
     def test_entity_field_links(self):
         self.enforcements_page.switch_to_page()
-        with CiscoService().contextmanager(take_ownership=True):
-            credentials_inputer.main()
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
+        self.adapters_page.connect_adapter(JSON_ADAPTER_NAME, cisco_json_file_mock_credentials)
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
 
-            # Test Aggregated/General Data Advanced tables links
-            self.devices_page.click_query_wizard()
-            self.devices_page.select_query_field(self.devices_page.FIELD_CONNECTED_DEVICES)
-            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
-            self.devices_page.click_search()
-            self.devices_page.wait_for_table_to_load()
-            link = self.devices_page.find_general_data_table_link(self.devices_page.FIELD_CONNECTED_DEVICES)
-            link_text = link.text
-            link.click()
-            self.devices_page.wait_for_table_to_load()
-            ips_column_data = self.devices_page.get_column_data_slicer(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
-            assert ips_column_data and link_text in ips_column_data[0]
+        # Test Aggregated/General Data Advanced tables links
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_CONNECTED_DEVICES)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+        self.devices_page.click_search()
+        self.devices_page.wait_for_table_to_load()
+        link = self.devices_page.find_general_data_table_link(self.devices_page.FIELD_CONNECTED_DEVICES)
+        link_text = link.text
+        link.click()
+        self.devices_page.wait_for_table_to_load()
+        ips_column_data = self.devices_page.get_column_data_slicer(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
+        assert ips_column_data and link_text in ips_column_data[0]
 
-            # Test Aggregated/General Data Basic Info links
-            self.devices_page.switch_to_page()
-            self.devices_page.run_filter_query(self.devices_page.JSON_ADAPTER_FILTER)
-            link = self.devices_page.find_general_data_basic_link(self.devices_page.FIELD_LAST_USED_USERS)
-            link_text = link.text
-            link.click()
-            self.users_page.wait_for_table_to_load()
-            time.sleep(5)
-            wait_until(lambda: self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE),
-                       tolerated_exceptions_list=[ValueError], check_return_value=False)
-            column_data = self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE)
-            assert link_text in column_data, f'link_text: {link_text}, column_data: {column_data}'
+        # Test Aggregated/General Data Basic Info links
+        self.devices_page.switch_to_page()
+        self.devices_page.run_filter_query(self.devices_page.JSON_ADAPTER_FILTER)
+        link = self.devices_page.find_general_data_basic_link(self.devices_page.FIELD_LAST_USED_USERS)
+        link_text = link.text
+        link.click()
+        self.users_page.wait_for_table_to_load()
+        time.sleep(5)
+        wait_until(lambda: self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE),
+                   tolerated_exceptions_list=[ValueError], check_return_value=False)
+        column_data = self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE)
+        assert link_text in column_data, f'link_text: {link_text}, column_data: {column_data}'
+        self.adapters_page.remove_json_extra_server(cisco_json_file_mock_credentials)
