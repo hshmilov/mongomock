@@ -25,7 +25,7 @@ CREATE INDEX os_type_trgm_idx ON public.adapter_users USING gin (mail COLLATE pg
 
 CREATE INDEX adapter_devices_last_seen_idx ON public.adapter_devices (last_seen DESC);
 
-CREATE INDEX adapter_devices ON public.adapter_devices using brin (os_id);
+CREATE INDEX adapter_device_os_id_idx  ON public.adapter_devices using brin (os_id);
 
-CREATE INDEX adapter_devices_adapter_name ON public.adapter_devices  using brin (adapter_name DESC);
-CREATE INDEX user_devices_adapter_name ON public.adapter_users  using brin (adapter_name DESC);
+CREATE INDEX adapter_devices_adapter_name_idx ON public.adapter_devices  using brin (adapter_name);
+CREATE INDEX user_devices_adapter_name_idx ON public.adapter_users  using brin (adapter_name);
