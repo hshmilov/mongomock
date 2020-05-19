@@ -1,4 +1,6 @@
 import copy
+
+import pytest
 import requests
 
 from selenium.common.exceptions import NoSuchElementException
@@ -112,6 +114,7 @@ class TestThycoticIntegration(TestBase):
             self.adapters_page.clean_adapter_servers(ESX_ADAPTER_NAME, True)
         self.wait_for_adapter_down(ESX_PLUGIN_NAME)
 
+    @pytest.mark.skip('AX-7550')
     def test_client_error_when_thycotic_host_timeout(self):
         """
         use case : when thycotic server is down adapter client with vault password  deice fetch
