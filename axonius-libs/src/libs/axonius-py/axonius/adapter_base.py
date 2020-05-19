@@ -814,12 +814,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         with self._clients_lock:
             logger.info(f'Deleting client {client_unique_id}')
             client = self._clients_collection.find_one_and_delete({'_id': ObjectId(client_unique_id)})
+            if client is None:
+                return return_error('No such client')
+
             self._decrypt_client_config(client['client_config'])
             self._delete_client_connection_label(client)
             self._clean_unneeded_client_config_fields(client['client_config'])
-
-            if client is None:
-                return '', 204
             client_id = ''
             try:
                 client_id = self._get_client_id(client['client_config'])
