@@ -147,7 +147,9 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
 
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
-            mail_content = smtp_service.get_email_first_csv_content(recipient)
+            mail_content = wait_until(smtp_service.get_email_first_csv_content,
+                                      check_return_value=True,
+                                      recipient=recipient)
             assert tag_name in mail_content.decode('utf-8')
             self.logger.info('We are done with test_report_with_hebrew_name_and_text test')
 
