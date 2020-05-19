@@ -26,6 +26,7 @@ class SystemMetric:
     HOST_SWAP_FREE = 'host.swap.free'
     HOST_SWAP_PERCENT = 'host.swap.percent'
     HOST_DOCKER_STATS_KEY = 'host.docker_stats'
+    MONGO_AGGREGATOR_KEY = 'mongo.aggregator'
     CYCLE_FINISHED = 'cycle_finished'
     TRIAL_EXPIRED_STATE = 'trial_expired_state'
     CONTRACT_EXPIRED_STATE = 'contract_expired_state'

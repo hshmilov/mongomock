@@ -5,7 +5,9 @@ import docker
 import netifaces
 
 from axonius.consts.metric_consts import SystemMetric
+from axonius.utils.mongo_administration import get_collection_storage_size
 from scripts.watchdog.watchdog_task import WatchdogTask
+from services.axonius_service import AxoniusService
 
 SLEEP_SECONDS = 60 * 10
 
@@ -22,6 +24,7 @@ class SystemMetricsTask(WatchdogTask):
             self.report_memory()
             self.report_swap()
             self.report_docker_stats()
+            self.report_collection_stats()
             time.sleep(SLEEP_SECONDS)
 
     def report_disk_space(self):
@@ -84,6 +87,20 @@ class SystemMetricsTask(WatchdogTask):
                     self.report_error(f'Failed getting stats for {container.name} - {e}')
         except Exception as e:
             self.report_error(f'failed to docker stats - {e}')
+
+    def report_collection_stats(self):
+        try:
+            ax = AxoniusService()
+            all_collections = sorted(list(ax.db.client['aggregator'].list_collection_names()))
+
+            for collection_name in all_collections:
+                storage = get_collection_storage_size(ax.db.client['aggregator'][collection_name])
+
+                metric_name = f'{SystemMetric.MONGO_AGGREGATOR_KEY}.{collection_name}'
+                self.report_metric(metric_name, bytes_to_gb(storage))
+
+        except Exception as e:
+            self.report_error(f'Failed reporting collection stats - {e}')
 
 
 if __name__ == '__main__':

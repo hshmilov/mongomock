@@ -1,7 +1,7 @@
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 from funcy import chunks
 
 from axonius.clients.rest.connection import RESTConnection
@@ -17,6 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # api doc: https://assets.falcon.crowdstrike.com/support/api/swagger.html
 
 PoliciesType = Dict[str, List]
+MAX_PAGES_PROTECTION = 1000000
 
 
 class CrowdStrikeConnection(RESTConnection):
@@ -272,11 +273,44 @@ class CrowdStrikeConnection(RESTConnection):
                           url_params=url_params,
                           do_basic_auth=not self._got_token)
 
+    def get_devices_ids_scroll(self, offset: Optional[str], devices_per_page: int, query: str = None) -> dict:
+        """
+        Get devices ids from crowdstrike api
+        :param offset: paging offset
+        :param devices_per_page: devices per page
+        :return:
+        """
+        logger.debug(f'Getting devices offset {offset}, devices per page: {devices_per_page}, query: {str(query)}')
+        url_params = {'limit': devices_per_page}
+        if offset:
+            url_params['offset'] = offset
+        if query:
+            url_params['filter'] = query
+        return self.__get('devices/queries/devices-scroll/v1',
+                          url_params=url_params,
+                          do_basic_auth=not self._got_token)
+
     # pylint: disable=arguments-differ
     def get_device_list(self, should_get_policies, should_get_vulnerabilities):
         """
         Get devices data list from CrowdStrike Api
         """
+        # CrowdStrike has a scroll api that supports more than 150,000 devices but it is not open to everyone.
+        # try it first
+        try:
+            response = self.get_devices_ids_scroll(None, 10)
+            query_count = response['meta']['pagination']['total']
+            logger.info(f'Using scroll api with total devices: {query_count}')
+            has_scroll_api = True
+        except Exception:
+            logger.warning(f'Problem using scroll api, reverting to regular api', exc_info=True)
+            has_scroll_api = False
+
+        if has_scroll_api:
+            yield from self.get_device_list_with_scroll_api(should_get_policies, should_get_vulnerabilities)
+            return
+
+        # If that doesn't work then we need to use the 'regular' api.
         # Due to the API's pagination limit (up to 150,000 devices per one query) we have to split the
         # yields for differnet queries.
         try:
@@ -319,6 +353,66 @@ class CrowdStrikeConnection(RESTConnection):
             )
         except Exception:
             logger.exception(f'Can not yield from hostname null')
+
+    def get_device_list_with_scroll_api(self, should_get_policies, should_get_vulnerabilities):
+        try:
+            response = self.get_devices_ids_scroll(None, consts.DEVICES_PER_PAGE)
+            offset = response['meta']['pagination']['offset']
+            self.requests_count += 1
+            total_count = response['meta']['pagination']['total']
+        except Exception:
+            logger.exception(f'Cant get total count')
+            raise RESTException('Cant get total count')
+
+        logger.info(f'Devices scroll: got total count of {total_count}')
+
+        devices_per_page = int(consts.DEVICES_PER_PAGE_PERCENTAGE / 100 * total_count)
+        # check if devices_per_page is not too big or too small
+        if devices_per_page > consts.MAX_DEVICES_PER_PAGE:
+            devices_per_page = consts.MAX_DEVICES_PER_PAGE
+        if devices_per_page < consts.DEVICES_PER_PAGE:
+            devices_per_page = consts.DEVICES_PER_PAGE
+
+        # We have to first pull all resources, then pull the data. The reason being is that
+        # the scrolling cursor is active just for 2 minutes, and so we have to make those requests quick enough
+        # and not trust get_devices_data which could be slow.
+        all_devices_resources = response['resources']
+
+        pages = 0
+        while pages < MAX_PAGES_PROTECTION:
+            try:
+                pages += 1
+                response = self.get_devices_ids_scroll(offset, devices_per_page)
+
+                if not response['resources']:
+                    break
+
+                all_devices_resources.extend(response['resources'])
+                self.requests_count += 2
+                if self._got_token and self.requests_count >= consts.REFRESH_TOKEN_REQUESTS:
+                    self.refresh_access_token()
+
+                offset = response['meta']['pagination']['offset']
+                if not offset:
+                    break
+            except Exception:
+                logger.exception(f'Problem getting device-resources offset {offset}')
+                break
+
+        logger.info(f'Got {len(all_devices_resources)} device-ids in {pages} pages. Yielding with data now')
+
+        for chunk in chunks(devices_per_page, all_devices_resources):
+            try:
+                devices = self.get_devices_data(chunk, should_get_policies, should_get_vulnerabilities)
+                yield from devices['resources']
+
+                self.requests_count += 2
+                if self._got_token and self.requests_count >= consts.REFRESH_TOKEN_REQUESTS:
+                    self.refresh_access_token()
+
+            except Exception:
+                logger.exception(f'Problem getting offset {offset}')
+                break
 
     def get_device_list_with_query(self, should_get_policies, should_get_vulnerabilities, query):
         offset = 0
