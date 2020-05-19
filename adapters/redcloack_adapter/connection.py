@@ -29,7 +29,7 @@ class RedcloackConnection(RESTConnection):
             try:
                 response = self._get('hosts',
                                      url_params={'offset': offset, 'count': DEVICE_PER_PAGE})
-                if not response:
+                if not response or not response.get('hosts'):
                     break
                 yield from response['hosts']
                 offset += DEVICE_PER_PAGE

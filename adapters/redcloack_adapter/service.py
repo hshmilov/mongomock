@@ -132,6 +132,9 @@ class RedcloackAdapter(AdapterBase):
                         device.last_used_users = system_info.get('logon_user')
                     try:
                         device.figure_os(system_info.get('version'))
+                        if system_info.get('windows_version'):
+                            win_version = system_info.get('windows_version')
+                            device.figure_os(f'Windows {win_version}')
                     except Exception:
                         logger.exception(f'Problem getting os for {device_raw}')
             except Exception:

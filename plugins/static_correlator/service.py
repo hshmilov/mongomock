@@ -61,7 +61,7 @@ class StaticCorrelatorService(CorrelatorBase):
                 }
             }
 
-        fields_to_get = ('id', 'os', 'name', 'hostname', 'network_interfaces', 'device_serial', 'email',
+        fields_to_get = ('id', 'os', 'name', 'hostname', 'network_interfaces', 'device_serial', 'email', 'table_type',
                          'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'friendly_name', 'fetch_type',
                          'cloud_id', 'ad_name', 'ad_distinguished_name', 'paloalto_device_type', 'public_ips',
                          'azure_display_name', 'uuid', 'device_type', 'resource_id', 'sccm_server', 'agent_uuid',
@@ -100,7 +100,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                                                       'global_hostname_correlation':
                                                                           self._global_hostname_correlation,
                                                                       'allow_service_now_by_name_only':
-                                                                          self._allow_service_now_by_name_only})
+                                                                          self._allow_service_now_by_name_only,
+                                                                      'correlate_snow_no_dash':
+                                                                          self._correlate_snow_no_dash})
 
     # pylint: enable=arguments-differ
 

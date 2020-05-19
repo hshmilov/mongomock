@@ -397,6 +397,31 @@ class AnsibleTowerAdapter(AdapterBase):
                     device.os.kernel_version = facts_raw.get('ansible_kernel')
                 except Exception:
                     pass
+                try:
+                    ansible_installed_software = facts_raw.get('ansible_installed_software')
+                    if not isinstance(ansible_installed_software, list):
+                        ansible_installed_software = []
+                    for sw_raw in ansible_installed_software:
+                        if not isinstance(sw_raw, dict) or not sw_raw.get('DisplayName'):
+                            continue
+                        device.add_installed_software(name=sw_raw.get('DisplayName'),
+                                                      version=sw_raw.get('Version'),
+                                                      vendor=sw_raw.get('Publisher'))
+                except Exception:
+                    logger.exception(f'Problem getting sw')
+                try:
+                    packages = facts_raw.get('packages')
+                    if not isinstance(packages, dict):
+                        packages = {}
+                    packages_val = packages.values()
+                    for package_raw in packages_val:
+                        if not isinstance(package_raw, list):
+                            package_raw = [package_raw]
+                        for package_data in package_raw:
+                            device.add_installed_software(name=package_data.get('name'),
+                                                          version=package_data.get('version'))
+                except Exception:
+                    logger.exception(f'Problem getting packages')
                 ansible_env = facts_raw.get('ansible_env')
                 if not isinstance(ansible_env, dict):
                     ansible_env = {}

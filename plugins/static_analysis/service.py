@@ -869,6 +869,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                             for one_user in user:
                                 field_candidate = one_user.get_first_data(associcated_field)
                                 if field_candidate:
+                                    field_candidate = str(field_candidate)
                                     break
                             if field_candidate:
                                 device_last_used_users_fields_sets[associcated_field].add(field_candidate)

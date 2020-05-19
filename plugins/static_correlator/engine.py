@@ -17,7 +17,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    compare_asset_hosts, compare_asset_name,
                                    compare_bios_serial_serial, compare_clouds,
                                    compare_device_normalized_hostname,
-                                   compare_hostname,
+                                   compare_hostname, is_valid_ip,
                                    compare_last_used_users,
                                    get_ad_name_or_azure_display_name,
                                    get_asset_name, get_asset_or_host, get_manufacturer_from_mac,
@@ -552,6 +552,48 @@ def compare_domain_for_correlation(adapter_device1, adapter_device2):
     return False
 
 
+def is_snow_netgear_adapter(adapter_device):
+    if not is_snow_netgear_adapter(adapter_device):
+        return False
+    return adapter_device['data'].get('table_type') == 'Network Device'
+
+
+def get_asset_or_host_no_dash(adapter_device):
+    asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
+    if asset:
+        asset = asset.strip()
+        if is_valid_ip(asset) or ' ' in asset:
+            return asset
+        return asset.split('.')[0].lower().strip().split('-')[0]
+    return None
+
+
+def compare_asset_hosts_no_dash(adapter_device1, adapter_device2):
+    asset1 = get_asset_or_host_no_dash(adapter_device1)
+    asset2 = get_asset_or_host_no_dash(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def get_host_or_asset_no_dash(adapter_device):
+    asset = get_hostname(adapter_device) or get_asset_name(adapter_device)
+    if asset:
+        asset = asset.strip()
+        if is_valid_ip(asset) or ' ' in asset:
+            return asset
+        return asset.split('.')[0].lower().strip().split('-')[0]
+    return None
+
+
+def compare_host_or_asset_no_dash(adapter_device1, adapter_device2):
+    asset1 = get_host_or_asset_no_dash(adapter_device1)
+    asset2 = get_host_or_asset_no_dash(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 class StaticCorrelatorEngine(CorrelatorEngineBase):
     """
     For efficiency reasons this engine assumes a different structure (let's refer to it as compact structure)
@@ -689,6 +731,28 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   inner_compare_funcs,
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
+
+    def _correlate_snow_asset_host_snow_no_dash(self, adapters_to_correlate):
+        logger.info('Starting to correlate asset host snow no dash')
+        filtered_adapters_list = filter(get_asset_or_host_no_dash, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_or_host_no_dash],
+                                      [compare_asset_hosts_no_dash],
+                                      [is_snow_netgear_adapter],
+                                      [],
+                                      {'Reason': 'They have the same asset host before dash and one from snow'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_snow_host_asset_snow_no_dash(self, adapters_to_correlate):
+        logger.info('Starting to correlate host asset snow no dash')
+        filtered_adapters_list = filter(get_host_or_asset_no_dash, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_host_or_asset_no_dash],
+                                      [compare_host_or_asset_no_dash],
+                                      [is_snow_netgear_adapter],
+                                      [],
+                                      {'Reason': 'They have the same host asset before dash and one from snow'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_fqdn_ip(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname_FQDN-IP')
@@ -1164,6 +1228,11 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         global ALLOW_SERVICE_NOW_BY_NAME_ONLY
         ALLOW_SERVICE_NOW_BY_NAME_ONLY = (self._correlation_config and
                                           self._correlation_config.get('allow_service_now_by_name_only') is True)
+        correlate_snow_no_dash = bool(self._correlation_config and
+                                      self._correlation_config.get('correlate_snow_no_dash') is True)
+        if correlate_snow_no_dash:
+            yield from self._correlate_snow_asset_host_snow_no_dash(adapters_to_correlate)
+            yield from self._correlate_snow_host_asset_snow_no_dash(adapters_to_correlate)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)

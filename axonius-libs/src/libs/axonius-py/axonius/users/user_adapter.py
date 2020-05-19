@@ -140,4 +140,5 @@ class UserAdapter(SmartJsonClass):
 assert UserAdapter.last_seen.name == LAST_SEEN_FIELD
 
 
-ASSOCIATED_FIELD = ['mail', 'user_department', 'ad_display_name', 'division', 'company']
+ASSOCIATED_FIELD = ['mail', 'user_department', 'ad_display_name', 'division',
+                    'company', 'description', 'organizational_unit']

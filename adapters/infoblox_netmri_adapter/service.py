@@ -163,7 +163,6 @@ class InfobloxNetmriAdapter(AdapterBase):
             logger.exception(f'Failed creating instance for device {device_raw}')
 
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        logger.debug(f'Got device data: {device_raw}')
         try:
             device_id = device_raw.get('DeviceID')
             if device_id is None:

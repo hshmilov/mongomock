@@ -74,7 +74,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
                                           CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
-                                          CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
+                                          CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH,
                                           CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                           GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY, CORRELATE_GLOBALY_ON_HOSTNAME,
                                           MAX_WORKERS, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
@@ -3097,6 +3097,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._csv_full_hostname = config[CORRELATION_SETTINGS].get(CSV_FULL_HOSTNAME, True)
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
+        self._correlate_snow_no_dash = config[CORRELATION_SETTINGS].get(CORRELATE_SNOW_NO_DASH, False)
         self._correlate_public_ip_only = config[CORRELATION_SETTINGS].get(CORRELATE_PUBLIC_IP_ONLY, False)
         self._allow_service_now_by_name_only = config[CORRELATION_SETTINGS].get(ALLOW_SERVICE_NOW_BY_NAME_ONLY, False)
         self._global_hostname_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_GLOBALY_ON_HOSTNAME, False)
@@ -3800,6 +3801,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Correlate Microsoft Azure AD based on asset name only'
                         },
                         {
+                            'name': CORRELATE_SNOW_NO_DASH,
+                            'type': 'bool',
+                            'title': 'Correlate ServiceNow network devices based on first name before any dash'
+                        },
+                        {
                             'name': CORRELATE_PUBLIC_IP_ONLY,
                             'type': 'bool',
                             'title': 'Correlate devices based on public IP only'
@@ -3820,6 +3826,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
+                                 CORRELATE_SNOW_NO_DASH,
                                  CORRELATE_GLOBALY_ON_HOSTNAME, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
@@ -4061,6 +4068,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CSV_FULL_HOSTNAME: False,
                 CORRELATE_BY_SNOW_MAC: False,
                 CORRELATE_BY_AZURE_AD_NAME_ONLY: False,
+                CORRELATE_SNOW_NO_DASH: False,
                 CORRELATE_PUBLIC_IP_ONLY: False,
                 ALLOW_SERVICE_NOW_BY_NAME_ONLY: False,
                 CORRELATE_GLOBALY_ON_HOSTNAME: False
