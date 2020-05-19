@@ -6,7 +6,7 @@
       <XPage
         title="Enforcement Center"
         class="x-enforcements"
-        :class="{disabled: !canUpdate}"
+        :class="{disabled: !canUpdate || enforcementsLocked}"
       >
         <XSearch
           v-model="searchValue"
@@ -20,7 +20,7 @@
           title="Enforcement Sets"
           :fields="fields"
           :on-click-row="navigateEnforcement"
-          :multiple-row-selection="canDelete"
+          :multiple-row-selection="canDelete && !enforcementsLocked"
         >
           <template slot="actions">
             <XButton
@@ -31,16 +31,19 @@
             <XButton
               id="enforcement_new"
               type="primary"
-              :disabled="!canAdd"
+              :disabled="!canAdd || enforcementsLocked"
               @click="newEnforcement('new')"
             >Add Enforcement</XButton>
             <XButton
               type="emphasize"
-              :disabled="userCannotViewEnforcementsTasks"
+              :disabled="userCannotViewEnforcementsTasks || enforcementsLocked"
               @click="navigateTasks"
             >View Tasks</XButton>
           </template>
         </XTable>
+        <XEnforcementsFeatureLockTip
+           :enabled="enforcementsLocked"
+        />
       </XPage>
     </template>
   </XRoleGateway>
@@ -49,6 +52,9 @@
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
+import _get from 'lodash/get';
+
+import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
 import XPage from '../axons/layout/Page.vue';
 import XSearch from '../neurons/inputs/SearchInput.vue';
 import XTable from '../neurons/data/Table.vue';
@@ -60,7 +66,7 @@ import { REMOVE_ENFORCEMENTS, FETCH_ENFORCEMENT, SET_ENFORCEMENT } from '../../s
 export default {
   name: 'XEnforcements',
   components: {
-    XPage, XSearch, XTable, XButton,
+    XPage, XSearch, XTable, XButton, XEnforcementsFeatureLockTip,
   },
   data() {
     return {
@@ -72,6 +78,9 @@ export default {
     ...mapState({
       query(state) {
         return state.enforcements.view.query;
+      },
+      enforcementsLocked(state) {
+        return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
     }),
     name() {
@@ -126,6 +135,7 @@ export default {
       removeEnforcements: REMOVE_ENFORCEMENTS, fetchEnforcement: FETCH_ENFORCEMENT,
     }),
     navigateEnforcement(enforcementId) {
+      if (this.enforcementsLocked) return;
       this.fetchEnforcement(enforcementId);
       this.$router.push({ path: `/${this.name}/${enforcementId}` });
     },

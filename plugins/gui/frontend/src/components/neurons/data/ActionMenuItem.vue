@@ -49,7 +49,11 @@
       disabledDescription: {
         type: String,
         default: ''
-      }
+      },
+      itemActiveHandler: {
+        type: Function,
+        default: undefined,
+      },
     },
     data () {
       return {

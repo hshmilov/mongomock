@@ -42,6 +42,7 @@
       :message="`Enforcement is running. View in Enforcements -> Tasks`"
       action-text="Run"
       disabled-description="You don't have permission to run enforcements"
+      :itemActiveHandler="enforceHandler"
     >
       <div class="mb-8">
         There are {{ selectionCount }} {{ module }} selected. Select the Enforcement Set:
@@ -73,6 +74,10 @@
         <div>The {{ selectionCount }} selected assets will be filtered from this query</div>
       </div>
     </XActionMenuItem>
+    <XEnforcementsFeatureLockTip
+      :enabled="showEnforcementsLockTip"
+      @close-lock-tip="closeEnforceLockTip"
+    />
   </XActionMenu>
 </template>
 
@@ -81,6 +86,7 @@ import {
   mapState, mapActions, mapGetters, mapMutations,
 } from 'vuex';
 import _get from 'lodash/get';
+import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
 import XActionMenu from '../../neurons/data/ActionMenu.vue';
 import XActionMenuItem from '../../neurons/data/ActionMenuItem.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
@@ -98,7 +104,9 @@ import QueryBuilder from '../../../logic/query_builder';
 
 export default {
   name: 'XEntitiesActionMenu',
-  components: { XActionMenu, XActionMenuItem, XSelect },
+  components: {
+    XActionMenu, XActionMenuItem, XSelect, XEnforcementsFeatureLockTip,
+  },
   props: {
     module: {
       type: String,
@@ -120,6 +128,7 @@ export default {
   data() {
     return {
       selectedEnforcement: '',
+      showEnforcementsLockTip: false,
     };
   },
   computed: {
@@ -140,6 +149,9 @@ export default {
       },
       view(state) {
         return state[this.module].view;
+      },
+      enforcementsLocked(state) {
+        return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
     }),
     ...mapGetters({
@@ -162,7 +174,7 @@ export default {
     },
   },
   mounted() {
-    if (!this.enforcementRestricted && !this.enforcementOptions.length) {
+    if (!this.enforcementRestricted && !this.enforcementOptions.length && !this.enforcementsLocked) {
       this.fetchContent({
         module: 'enforcements',
         getCount: false,
@@ -248,6 +260,16 @@ export default {
         this.$emit('done');
         resolve();
       });
+    },
+    enforceHandler() {
+      if (this.enforcementsLocked) {
+        this.showEnforcementsLockTip = true;
+        return false;
+      }
+      return true;
+    },
+    closeEnforceLockTip() {
+      this.showEnforcementsLockTip = false;
     },
   },
 };

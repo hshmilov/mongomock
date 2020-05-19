@@ -64,6 +64,10 @@
         >Delete</XButton>
       </template>
     </XTable>
+    <XEnforcementsFeatureLockTip
+      :enabled="showEnforcementsLockTip"
+      @close-lock-tip="closeEnforcementsLockTip"
+    />
   </div>
 </template>
 
@@ -76,6 +80,7 @@ import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
+import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
 
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
@@ -83,12 +88,13 @@ import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 
 import { fetchEntityTags } from '@api/saved-queries';
 import { getEntityPermissionCategory } from '@constants/entities';
+import _get from 'lodash/get';
 
 
 export default {
   name: 'XQueriesTable',
   components: {
-    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox,
+    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip,
   },
   props: {
     namespace: {
@@ -103,6 +109,7 @@ export default {
       searchValue: '',
       entityTags: [],
       filterTags: [],
+      showEnforcementsLockTip: false,
     };
   },
   computed: {
@@ -116,6 +123,9 @@ export default {
       userCannotDeleteSavedQueries() {
         return this.$cannot(this.permissionCategory,
           this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries);
+      },
+      enforcementsLocked(state) {
+        return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
     }),
     queriesRowsSelections: {
@@ -228,6 +238,12 @@ export default {
       this.$router.push({ path: `/${this.namespace}` });
     },
     createEnforcement(queryName) {
+      if (this.enforcementsLocked) {
+        this.closeQuerySidePanel();
+        this.openEnforcementsLockTip();
+        return;
+      }
+
       this.setEnforcement({
         actions: {
           main: null,
@@ -322,6 +338,12 @@ export default {
         },
       });
       this.$refs.table.fetchContentPages(true);
+    },
+    openEnforcementsLockTip() {
+      this.showEnforcementsLockTip = true;
+    },
+    closeEnforcementsLockTip() {
+      this.showEnforcementsLockTip = false;
     },
   },
 };

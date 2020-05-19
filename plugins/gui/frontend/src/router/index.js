@@ -1,8 +1,8 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import multiguard from 'vue-router-multiguard';
-import { LOGOUT } from '@store/modules/auth';
-import store from '../store/index';
+
+import { adminGuard, enforcementsFeatureTagGuard } from './guards';
 
 const Account = () => import('../components/pages/Account.vue');
 const Adapter = () => import('../components/pages/Adapter.vue');
@@ -31,38 +31,6 @@ const xDevicesSavedQueries = () => import('../components/pages/DevicesSavedQueri
 const xUsersSavedQueries = () => import('../components/pages/UsersSavedQueries');
 
 Vue.use(Router);
-
-const adminGuard = (to, from, next) => {
-  let unWatch = null;
-  const proceed = () => {
-    if (unWatch) {
-      unWatch();
-    }
-    if (store.state.auth.currentUser.data.admin
-      || store.state.auth.currentUser.data.role_name === 'Admin') {
-      next();
-    } else {
-      store.dispatch(LOGOUT)
-        .then(() => next('/'))
-        .catch(() => next('/'));
-    }
-  };
-  // currently there is no way to know if the store load the current user data
-  // and got all the info
-  // we set a watch on the user_name property and wait for the value
-  if (!store.state.auth.currentUser.data.user_name) {
-    unWatch = store.watch(
-      (state) => state.auth.currentUser.data.user_name,
-      (userName) => {
-        if (userName) {
-          proceed();
-        }
-      },
-    );
-  } else {
-    proceed();
-  }
-};
 
 const routes = [
   {
@@ -129,26 +97,31 @@ const routes = [
     path: '/enforcements/:id',
     component: Enforcement,
     name: 'Enforcement',
+    beforeEnter: multiguard([enforcementsFeatureTagGuard]),
   },
   {
     path: '/enforcements/:id/tasks',
     component: Tasks,
     name: 'EnforcementTasks',
+    beforeEnter: multiguard([enforcementsFeatureTagGuard]),
   },
   {
     path: '/enforcements/:id/tasks/:taskId',
     component: Task,
     name: 'EnforcementTaskById',
+    beforeEnter: multiguard([enforcementsFeatureTagGuard]),
   },
   {
     path: '/tasks',
     name: 'Tasks',
     component: Tasks,
+    beforeEnter: multiguard([enforcementsFeatureTagGuard]),
   },
   {
     path: '/tasks/:taskId',
     component: Task,
     name: 'Task',
+    beforeEnter: multiguard([enforcementsFeatureTagGuard]),
   },
   {
     path: '/settings',

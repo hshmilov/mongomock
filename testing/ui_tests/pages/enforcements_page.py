@@ -153,6 +153,8 @@ class EnforcementsPage(EntitiesPage):
     RESULT_CSS = '.result-container'
     QUERY_TITLE_CSS = '.query-title'
 
+    ENFORCEMENT_LOCK_MODAL_CSS = '#enforcement_feature_lock'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'
@@ -909,3 +911,6 @@ class EnforcementsPage(EntitiesPage):
     def click_result_redirect(self):
         element = self.driver.find_element_by_css_selector(self.RESULT_CSS)
         element.click()
+
+    def assert_lock_modal_is_visible(self):
+        self.wait_for_element_present_by_css(self.ENFORCEMENT_LOCK_MODAL_CSS)

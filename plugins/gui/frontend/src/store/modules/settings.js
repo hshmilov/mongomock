@@ -114,6 +114,7 @@ export const settings = {
             configName: payload.configName,
             data: {
               config: payload.config,
+              schema: payload.schema,
             },
           });
         }

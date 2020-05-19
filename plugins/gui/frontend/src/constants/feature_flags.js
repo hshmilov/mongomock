@@ -13,4 +13,5 @@ export const FeatureFlagsEnum = {
   root_master_settings_delete_backups: 'root_master_settings_delete_backups',
   root_master_settings_enabled: 'root_master_settings_enabled',
   trial_end: 'trial_end',
+  enforcement_center: 'enforcement_center',
 };

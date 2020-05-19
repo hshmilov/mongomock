@@ -1,11 +1,14 @@
 <template>
-  <x-page class="x-tasks" :breadcrumbs="breadcrumbs">
-    <x-search
+  <XPage
+    class="x-tasks"
+    :breadcrumbs="breadcrumbs"
+  >
+    <XSearch
       v-model="searchValue"
       placeholder="Search tasks..."
       @keyup.enter.native="onSearchConfirm"
     />
-    <x-table
+    <XTable
       ref="table"
       :module="enforcementDesignated ? 'enforcements/current' : 'tasks'"
       :endpoint="endpointForDesignatedTasks"
@@ -13,110 +16,111 @@
       :fields="fields"
       :on-click-row="viewTask"
     />
-  </x-page>
+  </XPage>
 </template>
 
 <script>
-  import xPage from '../axons/layout/Page.vue'
-  import xSearch from '../neurons/inputs/SearchInput.vue'
-  import xTable from '../neurons/data/Table.vue'
+import { mapMutations, mapActions, mapState } from 'vuex';
 
-  import { mapMutations, mapActions, mapState } from 'vuex'
-  import { UPDATE_DATA_VIEW } from '../../store/mutations'
-  import { FETCH_TASK } from '../../store/modules/tasks'
+import XPage from '../axons/layout/Page.vue';
+import XSearch from '../neurons/inputs/SearchInput.vue';
+import XTable from '../neurons/data/Table.vue';
 
-  import { FETCH_ENFORCEMENT } from '../../store/modules/enforcements'
+import { UPDATE_DATA_VIEW } from '../../store/mutations';
+import { FETCH_TASK } from '../../store/modules/tasks';
 
-  export default {
-    name: 'XTasks',
-    components: {
-      xPage, xSearch, xTable
+import { FETCH_ENFORCEMENT } from '../../store/modules/enforcements';
+
+export default {
+  name: 'XTasks',
+  components: {
+    XPage, XSearch, XTable,
+  },
+  computed: {
+    ...mapState({
+      currentEnforcementName(state) {
+        return state.enforcements.current.data.name;
+      },
+    }),
+    enforcementDesignated() {
+      return this.$route.params.id || false;
     },
-    computed: {
-      ...mapState({
-        currentEnforcementName(state) {
-          return state.enforcements.current.data.name
-        }
-      }),
-      enforcementDesignated() {
-        return this.$route.params.id || false
-      },
-      endpointForDesignatedTasks(){
-        return this.enforcementDesignated ? `enforcements/${this.enforcementDesignated}/tasks` : 'enforcements/tasks'
-      },
-      breadcrumbs() {
-        return [
-          { title: 'enforcement center', path: { name: 'Enforcements'}},
-          ...( this.enforcementDesignated ? [{title: this.currentEnforcementName, path: { name: 'Enforcement', params: {id: this.enforcementDesignated}}}] : [] ),
-          { title: 'Tasks' }
-        ]        
-      },
-      fields() {
-        return [{
-          name: 'status', title: 'Status', type: 'string'
-        }, {
-          name: 'result.metadata.success_rate', title: 'Successful / Total', type: 'string'
-        }, {
-          name: 'post_json.report_name', title: 'Name', type: 'string'
-        }, {
-          name: 'result.main.name', title: 'Main Action', type: 'string'
-        }, {
-          name: 'result.metadata.trigger.view.name', title: 'Trigger Query Name', type: 'string'
-        }, {
-          name: 'started_at', title: 'Started', type: 'string', format: 'date-time'
-        }, {
-          name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time'
-        }]
-      },
-      searchFilter() {
-        let textFilter = this.fields.map(field => `${field.name} == regex("${this.searchValue}", "i")`).join(' or ')
-        if (this.statusValue === '*') {
-          return textFilter
-        }
-        return `job_completed_state == '${this.statusValue}' and (${textFilter})`
+    endpointForDesignatedTasks() {
+      return this.enforcementDesignated ? `enforcements/${this.enforcementDesignated}/tasks` : 'enforcements/tasks';
+    },
+    breadcrumbs() {
+      return [
+        { title: 'enforcement center', path: { name: 'Enforcements' } },
+        ...(this.enforcementDesignated ? [{ title: this.currentEnforcementName, path: { name: 'Enforcement', params: { id: this.enforcementDesignated } } }] : []),
+        { title: 'Tasks' },
+      ];
+    },
+    fields() {
+      return [{
+        name: 'status', title: 'Status', type: 'string',
+      }, {
+        name: 'result.metadata.success_rate', title: 'Successful / Total', type: 'string',
+      }, {
+        name: 'post_json.report_name', title: 'Name', type: 'string',
+      }, {
+        name: 'result.main.name', title: 'Main Action', type: 'string',
+      }, {
+        name: 'result.metadata.trigger.view.name', title: 'Trigger Query Name', type: 'string',
+      }, {
+        name: 'started_at', title: 'Started', type: 'string', format: 'date-time',
+      }, {
+        name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time',
+      }];
+    },
+    searchFilter() {
+      const textFilter = this.fields.map((field) => `${field.name} == regex("${this.searchValue}", "i")`).join(' or ');
+      if (this.statusValue === '*') {
+        return textFilter;
+      }
+      return `job_completed_state == '${this.statusValue}' and (${textFilter})`;
+    },
+  },
+  data() {
+    return {
+      searchValue: '',
+      statusValue: '*',
+    };
+  },
+  mounted() {
+    this.fetchEnforcementIfNotExist();
+    this.onSearchConfirm();
+  },
+  methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
+    ...mapActions({
+      fetchTask: FETCH_TASK,
+      fetchEnforcmentAPI: FETCH_ENFORCEMENT,
+    }),
+    fetchEnforcementIfNotExist() {
+      if (!this.currentEnforcementName && this.enforcementDesignated) {
+        this.fetchEnforcmentAPI(this.enforcementDesignated);
       }
     },
-    data () {
-      return {
-        searchValue: '',
-        statusValue: '*'
-      }
+    viewTask(taskId) {
+      this.fetchTask(taskId);
+      this.$router.push({ path: `/tasks/${taskId}` });
     },
-    mounted() {
-      this.fetchEnforcementIfNotExist()
-      this.onSearchConfirm()
+    onSearchConfirm() {
+      this.updateView({
+        module: this.enforcementDesignated ? 'enforcements/current' : 'tasks',
+        view: {
+          query: {
+            filter: this.searchFilter,
+          },
+          page: 0,
+        },
+      });
+      this.$refs.table.fetchContentPages(true);
     },
-    methods: {
-      ...mapMutations({
-        updateView: UPDATE_DATA_VIEW
-      }),
-      ...mapActions({
-        fetchTask: FETCH_TASK,
-        fetchEnforcmentAPI: FETCH_ENFORCEMENT,
-      }),
-      fetchEnforcementIfNotExist() {
-        if(!this.currentEnforcementName && this.enforcementDesignated) {
-          this.fetchEnforcmentAPI(this.enforcementDesignated)
-        }
-      },
-      viewTask (taskId) {
-        this.fetchTask(taskId)
-        this.$router.push({ path: `/tasks/${taskId}` })
-      },
-      onSearchConfirm() {
-        this.updateView({
-          module: this.enforcementDesignated ? 'enforcements/current' : 'tasks',
-          view: {
-            query: {
-              filter: this.searchFilter
-            },
-            page: 0
-          }
-        })
-        this.$refs.table.fetchContentPages(true)
-      }
-    }
-  }
+  },
+};
 </script>
 
 <style lang="scss">

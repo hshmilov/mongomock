@@ -4,6 +4,7 @@ import Vue from 'vue';
 import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
 import EnforcementsCustomIcon from '@axons/icons/axoniusIcons/enforcements.vue';
+import EnforcementsLock from '@axons/icons/axoniusIcons/enforcementsLock.vue';
 import DraggableCustomIcon from '@axons/icons/axoniusIcons/draggable.vue';
 import VerticaldotsCustomIcon from '@axons/icons/axoniusIcons/verticaldots.vue';
 import CardDraggable from '@axons/icons/axoniusIcons/cardDraggable.vue';
@@ -91,6 +92,9 @@ const axoniusIcons = {
   },
   funnel: {
     component: Funnel,
+  },
+  enforcementsLock: {
+    component: EnforcementsLock,
   },
 };
 

@@ -395,6 +395,7 @@ export default {
         pluginId: 'gui',
         configName: 'FeatureFlags',
         config: this.featureFlags.config,
+        schema: this.featureFlags.schema,
       }).then((response) => {
         this.createToast(response);
       }).catch((error) => {

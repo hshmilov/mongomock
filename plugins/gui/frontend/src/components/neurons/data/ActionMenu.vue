@@ -186,6 +186,10 @@ export default {
     activate(item) {
       if (!item || !item.activate) return;
       this.dropDownOpened = false;
+      if (item.itemActiveHandler && typeof item.itemActiveHandler === 'function') {
+        const res = item.itemActiveHandler();
+        if (!res) return;
+      }
       item.activate();
     },
     deleteEntities() {

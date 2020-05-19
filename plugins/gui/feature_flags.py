@@ -119,6 +119,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.EnforcementCenter,
+                    'title': 'Enable Enforcement Center',
+                    'type': 'bool',
+                },
+                {
                     'name': FeatureFlagsNames.CloudCompliance,
                     'title': 'Cloud Asset Compliance Center',
                     'type': 'array',
@@ -160,7 +165,7 @@ class FeatureFlags(Configurable):
                 }
             ],
             'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
-                         FeatureFlagsNames.QueryTimelineRange],
+                         FeatureFlagsNames.QueryTimelineRange, FeatureFlagsNames.EnforcementCenter],
             'name': 'feature_flags',
             'title': 'Feature Flags',
             'type': 'array'
@@ -186,5 +191,6 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
             FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
-            FeatureFlagsNames.QueryTimelineRange: False
+            FeatureFlagsNames.QueryTimelineRange: False,
+            FeatureFlagsNames.EnforcementCenter: True
         }

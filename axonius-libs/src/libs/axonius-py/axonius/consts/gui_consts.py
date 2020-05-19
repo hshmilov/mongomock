@@ -184,6 +184,7 @@ class FeatureFlagsNames:
     RefetchAssetEntityAction = 'refetch_action'
     EnableFIPS = 'enable_fips'
     QueryTimelineRange = 'query_timeline_range'
+    EnforcementCenter = 'enforcement_center'
 
 
 class CloudComplianceNames:

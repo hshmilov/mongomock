@@ -141,6 +141,7 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
+
 import XPage from '../axons/layout/Page.vue';
 import XSplitBox from '../axons/layout/SplitBox.vue';
 import XCard from '../axons/layout/Card.vue';

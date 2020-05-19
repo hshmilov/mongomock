@@ -67,7 +67,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 32:
+        if self.db_schema_version != 33:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -139,6 +139,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_31()
         if self.db_schema_version < 32:
             self._update_schema_version_32()
+        if self.db_schema_version < 33:
+            self._update_schema_version_33()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1140,6 +1142,26 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 32
         except Exception as e:
             print(f'Exception while upgrading gui db to version 32. Details: {e}')
+
+    def _update_schema_version_33(self):
+        """
+        For 3.4 - Add a default value for a new feature flag in Axonius system:
+        Enable Enforcement Center
+        Set default to True for existing customers
+        :return:
+        """
+        print('Upgrade to schema 33')
+        try:
+            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+                'config_name': FEATURE_FLAGS_CONFIG
+            }, {
+                '$set': {
+                    'config.enforcement_center': True
+                }
+            })
+            self.db_schema_version = 33
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 33. Details: {e}')
 
     def _fix_space_id_in_panels(self):
         dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
