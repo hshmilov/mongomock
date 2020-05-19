@@ -54,6 +54,7 @@ DOCKER_PORTS = {
     'chef-adapter':                     5223,
     'airwatch-adapter':                 5228,
     'kaseya-adapter':                   5286,
+    'pure-storage-flash-array-adapter': 5287,
     'postgres':                         5432,
     'nessus-adapter':                   5555,
     'general-info':                     5556,

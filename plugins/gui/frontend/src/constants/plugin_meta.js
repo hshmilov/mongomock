@@ -439,6 +439,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/f5-big-ip-icontrol',
         description: 'F5 iControl is a Web services-enabled open API providing granular control over the configuration and management of F5\'s application delivery platform, BIG-IP.'
     },
+    pure_storage_flash_array_adapter: {
+        title: 'Pure Storage Pure1',
+        link: 'https://docs.axonius.com/docs/pure-storage-pure1',
+        description: 'Pure Storage Pure1 is a cloud-based storage management solution that provides self-driving storage, data-storage management, and monitoring.'
+    },
     bitlocker_adapter: {
         title: 'Microsoft BitLocker Administration and Monitoring (MBAM)',
         link: 'https://docs.axonius.com/docs/mbam',
