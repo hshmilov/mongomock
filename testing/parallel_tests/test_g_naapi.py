@@ -32,9 +32,15 @@ class TestGNaapiAdapter(AdapterTestBase):
     def some_user_id(self):
         raise NotImplementedError()
 
-    @pytest.mark.skip('No test environment')
+    @pytest.mark.skip('Skip untili make this work just once')
     def test_fetch_devices(self):
-        pass
+        ##################################################################################
+        ## DO NOT PYTEST.MARK.SKIP THIS FUNCTION. IT USES A MOCK SERVER AND IF IT IS    ##
+        ## NOT WORKING THAN IT REALLY BROKE. THIS CAN HAPPEN IF YOU CHANGED SOMETHING   ##
+        ## IN AWS, BECAUSE IT HEAVILY DEPENDS ON AWS                                    ##
+        ##################################################################################
+        print(f'Calling super().test_fetch_devices')
+        super().test_fetch_devices()
 
     @pytest.mark.skip('No test environment')
     def test_removing_adapter_creds_with_devices(self):

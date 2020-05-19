@@ -1,6 +1,7 @@
 """
 HTTPS Flask server for mocking
 """
+import json
 import ssl
 import os
 import time
@@ -11,6 +12,7 @@ from werkzeug.utils import secure_filename
 CURRENT_PATH = os.path.abspath(os.path.dirname(__file__))
 APP = Flask('Mock Server')
 LOGS = []
+NAAPI_JSON_RESPONSE = json.loads(open(os.path.join(CURRENT_PATH, 'g_naapi_example.json'), 'rt').read())
 
 
 def mock_services(func):
@@ -101,6 +103,27 @@ def https_post():
         filename = secure_filename(file.filename)
         file.save(filename)
     return ''
+
+
+#  G_NAAPI
+@APP.route('/aws/ec2/instance', methods=['GET'])
+def g_naapi_aws_ec2_instance():
+    if not request.headers.get('x-api-key'):
+        raise ValueError(f'No x-api-key!')
+
+    if request.args.get('search_after'):
+        print(f'Got pagination request, returning none')
+        return jsonify({
+            'took': 5,
+            '_scroll_id': '',
+            'hits': {
+                'total': 1,
+                'max_score': 1,
+                'hits': []
+            }
+        })
+
+    return jsonify(NAAPI_JSON_RESPONSE)
 
 
 def main():

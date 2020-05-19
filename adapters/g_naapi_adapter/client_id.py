@@ -1,2 +1,6 @@
+import hashlib
+
+
 def get_client_id(client_config):
-    return client_config['domain'] + '_' + client_config['username']
+    api_declassified = hashlib.md5(client_config['api_key'].encode('utf-8')).hexdigest()
+    return client_config['domain'] + '_' + api_declassified

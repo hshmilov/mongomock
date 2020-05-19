@@ -1,17 +1,21 @@
 import logging
 
+from aws_adapter.connection.structures import OnlyAWSDeviceAdapter, AWS_POWER_STATE_MAP, AWSRole, AWSEBSVolume
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.devices.device_adapter import DeviceRunningState
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from g_naapi_adapter.connection import GNaapiConnection
 from g_naapi_adapter.client_id import get_client_id
-from g_naapi_adapter.structures import GNaapiDeviceInstance, GNaapiUserInstance
+from g_naapi_adapter.structures import GNaapiDeviceInstance, GNaapiUserInstance, GNaapiRelationships
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+# pylint: disable=too-many-branches, too-many-statements
 class GNaapiAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(GNaapiDeviceInstance):
@@ -29,18 +33,17 @@ class GNaapiAdapter(AdapterBase):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'),
-                                                https_proxy=client_config.get('https_proxy'))
+        return RESTConnection.test_reachability(
+            client_config.get('domain'), https_proxy=client_config.get('https_proxy')
+        )
 
     @staticmethod
     def get_connection(client_config):
-        # AUTOADAPTER
         connection = GNaapiConnection(
             domain=client_config['domain'],
+            apikey=client_config['api_key'],
             verify_ssl=client_config['verify_ssl'],
-            https_proxy=client_config.get('https_proxy'),
-            username=client_config['username'],
-            password=client_config['password']
+            https_proxy=client_config.get('https_proxy')
         )
         with connection:
             pass  # check that the connection credentials are valid
@@ -93,17 +96,12 @@ class GNaapiAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'G Naapi Domain',
+                    'title': 'Domain',
                     'type': 'string'
                 },
                 {
-                    'name': 'username',
-                    'title': 'User Name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'password',
-                    'title': 'Password',
+                    'name': 'api_key',
+                    'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -120,7 +118,7 @@ class GNaapiAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'username',
+                'api_key',
                 'password',
                 'verify_ssl'
             ],
@@ -128,25 +126,162 @@ class GNaapiAdapter(AdapterBase):
         }
 
     @staticmethod
-    def _fill_g_naapi_device_fields(device_raw: dict, device: MyDeviceAdapter):
+    def _create_aws_ec2(device_raw: dict, aws_device: OnlyAWSDeviceAdapter, device: MyDeviceAdapter):
+        """
+        A lot of Copy paste from aws_ec2_eks_ecs_elb.py
+        :return:
+        """
+        aws_device.aws_device_type = 'EC2'
+        device.hostname = device_raw.get('publicDnsName') or device_raw.get('privateDnsName')
+        power_state = AWS_POWER_STATE_MAP.get(device_raw.get('state', {}).get('name'),
+                                              DeviceRunningState.Unknown)
+
+        device.power_state = power_state
         try:
-            return None
+            tags_dict = {i['key']: i['value'] for i in device_raw.get('tags', {})}
         except Exception:
-            logger.exception(f'Failed creating instance for device {device_raw}')
+            logger.exception(f'Problem parsing tags dict')
+            tags_dict = {}
+        for key, value in tags_dict.items():
+            aws_device.add_aws_ec2_tag(key=key, value=value)
+            device.add_key_value_tag(key, value)
+        aws_device.instance_type = device_raw['instanceType']
+        aws_device.key_name = device_raw.get('keyName')
+        vpc_id = device_raw.get('vpcId')
+        if vpc_id and isinstance(vpc_id, str):
+            vpc_id = vpc_id.lower()
+            aws_device.vpc_id = vpc_id
+        subnet_id = device_raw.get('SubnetId')
+        if subnet_id:
+            aws_device.subnet_id = subnet_id
+        device.name = tags_dict.get('Name', '')
+
+        try:
+            device.figure_os(device_raw.get('platform', ''))
+        except Exception:
+            logger.exception(f'Problem parsing OS type')
+
+        aws_device.private_dns_name = device_raw.get('privateDnsName')
+        aws_device.public_dns_name = device_raw.get('publicDnsName')
+        try:
+            aws_device.monitoring_state = (device_raw.get('monitoring') or {}).get('state')
+        except Exception:
+            logger.exception(f'Problem getting monitoring state for {device_raw}')
+
+        try:
+            for security_group in (device_raw.get('securityGroups') or []):
+                aws_device.add_aws_security_group(
+                    name=security_group.get('groupName')
+                )
+        except Exception:
+            logger.exception(f'Problem getting security groups at {device_raw}')
+
+        ec2_ips = []
+        for iface in device_raw.get('networkInterfaces', []):
+            ec2_ips = [addr.get('privateIpAddress') for addr in iface.get('privateIpAddresses', [])]
+
+            assoc = iface.get('association')
+            if assoc is not None:
+                public_ip = assoc.get('publicIp')
+                if public_ip:
+                    device.add_public_ip(public_ip)
+                    ec2_ips.append(public_ip)
+
+            device.add_nic(iface.get('macAddress'), ec2_ips)
+
+        more_ips = []
+
+        specific_private_ip_address = device_raw.get('privateIpAddress')
+        if specific_private_ip_address:
+            if specific_private_ip_address not in ec2_ips:
+                more_ips.append(specific_private_ip_address)
+
+        specific_public_ip_address = device_raw.get('publicIpAddress')
+        if specific_public_ip_address and specific_public_ip_address not in ec2_ips:
+            more_ips.append(specific_public_ip_address)
+            device.add_public_ip(specific_public_ip_address)
+
+        if more_ips:
+            device.add_ips_and_macs(ips=more_ips)
+
+        try:
+            aws_device.launch_time = parse_date(device_raw.get('launchTime'))
+        except Exception:
+            logger.exception(f'Problem getting launch time for {device_raw}')
+        aws_device.image_id = device_raw.get('imageId')
+
+        try:
+            iam_instance_profile_raw = device_raw.get('iamInstanceProfile')
+            if iam_instance_profile_raw:
+                aws_device.aws_attached_role = AWSRole(
+                    role_id=iam_instance_profile_raw.get('id'),
+                    role_arn=iam_instance_profile_raw.get('arn')
+                )
+        except Exception:
+            logger.exception(f'Could not parse iam instance profile')
+
+        try:
+            for ebs in (device_raw.get('blockDeviceMappings') or []):
+                aws_device.ebs_volumes.append(
+                    AWSEBSVolume(
+                        name=ebs.get('deviceName'),
+                        volume_id=ebs.get('ebs', {}).get('volumeId'),
+                    )
+                )
+        except Exception:
+            logger.exception(f'Error parsing instance volumes')
 
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
-            device_id = device_raw.get('')
+            device_id = device_raw.get('ResourceId')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('') or '')
+            device.id = device_id
+            device.cloud_id = device_id
+            device.cloud_provider = 'AWS'
+            device.g_naapi_index_date = parse_date(device_raw.get('IndexDate'))
+            device.g_naapi_ttl = parse_date(device_raw.get('TTL'))
 
-            self._fill_g_naapi_device_fields(device_raw, device)
+            configuration = device_raw.get('configuration') or device_raw.get('Configuration')
+            if not configuration:
+                logger.exception(f'Bad device with no configuration: {configuration}')
+                return None
+            tags = device_raw.get('Tags') or {}
+            relationships = device_raw.get('Relationships') or []
+            try:
+                for relationship in relationships:
+                    device.relationships.append(
+                        GNaapiRelationships(
+                            relationship_name=relationship.get('RelationshipName'),
+                            resource_id=relationship.get('ResourceId'),
+                            resource_name=relationship.get('ResourceName'),
+                            resource_type=relationship.get('ResourceType'),
+                        )
+                    )
+            except Exception:
+                logger.exception(f'Could not parse relatnionships')
 
+            aws_info = OnlyAWSDeviceAdapter()
+            self._create_aws_ec2(configuration, aws_info, device)
+
+            # Things that come from the root json (aws config info)
+            if tags.get('Name'):
+                device.name = tags.get('Name')
+
+            try:
+                if device_raw.get('awsAccountAlias'):
+                    aws_info.aws_account_alias.append(device_raw.get('awsAccountAlias'))
+                aws_info.aws_account_id = device_raw.get('awsAccountId') or device_raw.get('AccountId')
+                aws_info.aws_region = device_raw.get('AwsRegion')
+                aws_info.aws_availability_zone = device_raw.get('AvailabilityZone')
+                aws_info.instance_arn = device_raw.get('Arn')
+            except Exception:
+                logger.exception(f'Problem appending extra info')
+
+            device.last_seen = parse_date(device_raw.get('ConfigurationItemCaptureTime'))
+            device.aws_data = aws_info
             device.set_raw(device_raw)
-
             return device
         except Exception:
             logger.exception(f'Problem with fetching GNaapi Device for {device_raw}')
@@ -170,30 +305,8 @@ class GNaapiAdapter(AdapterBase):
                 logger.exception(f'Problem with fetching GNaapi Device for {device_raw}')
 
     @staticmethod
-    def _fill_g_naapi_user_fields(user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
-        try:
-            pass
-        except Exception:
-            logger.exception(f'Failed creating instance for user {user_raw}')
-
-    def _create_user(self, user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
-        try:
-            user_id = user_raw.get('')
-            if user_id is None:
-                logger.warning(f'Bad user with no ID {user_raw}')
-                return None
-            user.id = user_id + '_' + (user_raw.get('') or '')
-
-            self._fill_g_naapi_user_fields(user_raw, user)
-
-            user.set_raw(user_raw)
-
-            return user
-        except Exception:
-            logger.exception(f'Problem with fetching GNaapi User for {user_raw}')
-            return None
+    def _create_user(user_raw: dict, user: MyUserAdapter):
+        return None
 
     # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, users_raw_data):
@@ -215,5 +328,4 @@ class GNaapiAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
-        return [AdapterProperty.Assets, AdapterProperty.UserManagement]
+        return [AdapterProperty.Assets, AdapterProperty.Cloud_Provider]

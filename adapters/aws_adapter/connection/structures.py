@@ -368,7 +368,7 @@ class AWSCISRule(SmartJsonClass):
     rule_section = Field(str, 'Rule Section')
 
 
-class AWSAdapter:
+class AWSAdapter(SmartJsonClass):
     account_tag = Field(str, 'Account Tag')
     aws_account_alias = ListField(str, 'Account Alias')
     aws_account_id = Field(str, 'Account ID')
@@ -412,7 +412,7 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     accessed_services = ListField(AWSUserService, 'Services Accessed By User')
 
 
-class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
+class OnlyAWSDeviceAdapter(AWSAdapter):
     ssm_data_last_seen = Field(datetime.datetime)
     aws_availability_zone = Field(str, 'Availability Zone')
     aws_device_type = Field(
@@ -423,6 +423,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
     security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
     # EC2-specific fields
+    instance_arn = Field(str, 'Instance ARN')
     instance_type = Field(str, 'Instance Type')
     key_name = Field(str, 'Key Name')
     private_dns_name = Field(str, 'Private Dns Name')
@@ -490,3 +491,7 @@ class AWSDeviceAdapter(DeviceOrContainerAdapter, AWSAdapter):
 
     def add_aws_load_balancer(self, **kwargs):
         self.aws_load_balancers.append(AWSLoadBalancer(**kwargs))
+
+
+class AWSDeviceAdapter(DeviceOrContainerAdapter, OnlyAWSDeviceAdapter):
+    pass

@@ -1,0 +1,207 @@
+{
+  "took": 5,
+  "_scroll_id": "",
+  "hits": {
+    "total": 1,
+    "max_score": 1,
+    "hits": [
+      {
+        "_score": 1,
+        "_index": "aws_ec2_instance",
+        "_type": "_doc",
+        "_id": "i-00000000000000",
+        "_uid": "",
+        "_routing": "",
+        "_parent": "",
+        "_version": null,
+        "sort": null,
+        "highlight": null,
+        "_source": {
+          "AccountId": null,
+          "Arn": "arn:aws:ec2:us-east-1:123456789:instance/i-000000000000",
+          "AvailabilityZone": "us-east-1b",
+          "AwsRegion": "us-east-1",
+          "Configuration": null,
+          "ConfigurationItemCaptureTime": "2018-06-16T02:13:14.693Z",
+          "ConfigurationItemMD5Hash": null,
+          "ConfigurationItemStatus": "OK",
+          "ConfigurationStateId": null,
+          "RelatedEvents": [],
+          "Relationships": [
+            {
+              "RelationshipName": null,
+              "ResourceId": "eni-00000000",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::NetworkInterface"
+            },
+            {
+              "RelationshipName": null,
+              "ResourceId": "sg-00000000",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::SecurityGroup"
+            },
+            {
+              "RelationshipName": null,
+              "ResourceId": "subnet-000000000",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::Subnet"
+            },
+            {
+              "RelationshipName": null,
+              "ResourceId": "vol-00000000000",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::Volume"
+            },
+            {
+              "RelationshipName": null,
+              "ResourceId": "vol-111111111111111",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::Volume"
+            },
+            {
+              "RelationshipName": null,
+              "ResourceId": "vpc-00000000",
+              "ResourceName": null,
+              "ResourceType": "AWS::EC2::VPC"
+            }
+          ],
+          "ResourceCreationTime": "2018-06-15T19:39:09Z",
+          "ResourceId": "i-00000000000000",
+          "ResourceName": null,
+          "ResourceType": "AWS::EC2::Instance",
+          "SupplementaryConfiguration": null,
+          "Tags": {
+            "Name": "some name",
+            "app": "UAI000000",
+            "chef_meta": "chef",
+            "created_timestamp": "2018-06-15 19:39:09+00:00",
+            "env": "prod",
+            "terraform": "1",
+            "uai": "UAI0000000"
+          },
+          "Version": null,
+          "configurationStateId": 1529115194693,
+          "configuration": {
+            "amiLaunchIndex": 0,
+            "architecture": "x86_64",
+            "blockDeviceMappings": [
+              {
+                "deviceName": "/dev/sda1",
+                "ebs": {
+                  "attachTime": "2018-06-15T19:39:10.000Z",
+                  "deleteOnTermination": true,
+                  "status": "attached",
+                  "volumeId": "vol-000000000000"
+                }
+              },
+              {
+                "deviceName": "/dev/sdg",
+                "ebs": {
+                  "attachTime": "2018-06-15T19:39:10.000Z",
+                  "deleteOnTermination": true,
+                  "status": "attached",
+                  "volumeId": "vol-11111111111111"
+                }
+              }
+            ],
+            "clientToken": "",
+            "ebsOptimized": false,
+            "elasticGpuAssociations": [],
+            "enaSupport": true,
+            "hypervisor": "xen",
+            "iamInstanceProfile": {
+              "arn": "arn:aws:iam::123456789:instance-profile/blahblah",
+              "id": "what"
+            },
+            "imageId": "ami-0000000",
+            "instanceId": "i-0000000000000",
+            "instanceType": "m4.large",
+            "keyName": "somekey",
+            "launchTime": "2018-06-15T19:39:09.000Z",
+            "monitoring": {
+              "state": "disabled"
+            },
+            "networkInterfaces": [
+              {
+                "attachment": {
+                  "attachTime": "2018-06-15T19:39:09.000Z",
+                  "attachmentId": "eni-attach-00000000",
+                  "deleteOnTermination": true,
+                  "deviceIndex": 0,
+                  "status": "attached"
+                },
+                "description": "",
+                "groups": [
+                  {
+                    "groupId": "sg-000000",
+                    "groupName": "ALL_OPEN"
+                  }
+                ],
+                "ipv6Addresses": [],
+                "macAddress": "xxxxxxxxxxx",
+                "networkInterfaceId": "eni-0000000",
+                "ownerId": "1234556789",
+                "privateDnsName": "blah.com",
+                "privateIpAddress": "10.0.2.30",
+                "privateIpAddresses": [
+                  {
+                    "primary": true,
+                    "privateDnsName": "10.0.2.30.ec2.internal",
+                    "privateIpAddress": "10.0.2.30"
+                  }
+                ],
+                "sourceDestCheck": true,
+                "status": "in-use",
+                "subnetId": "subnet-00000000",
+                "vpcId": "vpc-00000000"
+              }
+            ],
+            "placement": {
+              "availabilityZone": "us-east-1b",
+              "groupName": "",
+              "tenancy": "default"
+            },
+            "platform": "windows",
+            "privateDnsName": "blah.ec2.internal",
+            "privateIpAddress": "1.1.1.1.1",
+            "productCodes": [],
+            "publicDnsName": "",
+            "rootDeviceName": "/dev/sda1",
+            "rootDeviceType": "ebs",
+            "securityGroups": [
+              {
+                "groupId": "sg-0000000",
+                "groupName": "ALL_OPEN"
+              }
+            ],
+            "sourceDestCheck": true,
+            "state": {
+              "code": 16,
+              "name": "running"
+            },
+            "stateTransitionReason": "",
+            "subnetId": "subnet-0000",
+            "tags": [
+              {
+                "key": "created_timestamp",
+                "value": "2018-06-15 19:39:09+00:00"
+              },
+              {
+                "key": "uptime",
+                "value": "3.00:00:00.000"
+              }
+            ],
+            "virtualizationType": "hvm",
+            "vpcId": "vpc-00000"
+          },
+          "supplementaryConfiguration": {},
+          "awsAccountId": "123456789",
+          "configurationItemVersion": "1.3",
+          "awsAccountAlias": "some-awesome-ge-account",
+          "IndexDate": "2018-06-19T01:02:59Z",
+          "TTL": "2018-06-19T01:32:59Z"
+        }
+      }
+    ]
+  }
+}
