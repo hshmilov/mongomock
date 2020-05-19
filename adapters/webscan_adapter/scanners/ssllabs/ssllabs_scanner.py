@@ -11,6 +11,14 @@ from webscan_adapter.scanners.ssllabs import ssllabs
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def is_ip_exists(device: DeviceAdapter, ip):
+    for interface in device.network_interfaces:
+        ips = interface.ips
+        if ip in ips:
+            return True
+    return False
+
+
 class Protocol(SmartJsonClass):
     _id = Field(int, 'Id')
     name = Field(str, 'Name')
@@ -141,6 +149,7 @@ class SSLLabsScanner(ServiceScanner):
             return
         data = self.results
         endpoint_obj_lst = []
+        ips = []
         for endpoint in data.get('endpoints', []):
             endpoint_obj = Endpoint(ip_address=endpoint.get('ipAddress'),
                                     server_name=endpoint.get('serverName'),
@@ -148,10 +157,16 @@ class SSLLabsScanner(ServiceScanner):
                                     has_warnings=endpoint.get('hasWarnings'),
                                     is_exceptional=endpoint.get('isExceptional'),
                                     details=self.get_endpoints_details(endpoint.get('details', {}) or {}))
-
+            ips.append(endpoint_obj.ip_address)
             endpoint_obj_lst.append(endpoint_obj)
 
         ssllabs_data = SSLLabs(host=data.get('host'),
                                protocol=data.get('protocol'),
                                endpoints=endpoint_obj_lst)
         device.ssllabs = ssllabs_data
+        for ip in ips:
+            try:
+                if not is_ip_exists(device, ip):
+                    device.add_nic(ips=[ip])
+            except Exception:
+                logger.error('Error adding ip to device', exc_info=True)
