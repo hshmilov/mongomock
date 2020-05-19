@@ -11,8 +11,7 @@ def azure_connection() -> AzureCloudConnection:
     return AzureCloudConnection(
         azure_client_details['client_id'],
         azure_client_details['client_secret'],
-        azure_client_details['tenant_id'],
-        azure_client_details['subscription_id'],
+        azure_client_details['tenant_id']
     )
 
 
@@ -35,8 +34,13 @@ def test_get_tenant_name(azure_client):
 
 def test_azure_ad_get_guest_users(azure_client):
     guest_users = list(azure_client.ad.get_guest_users())
-    jprint(guest_users)
     assert len(guest_users) > 0
+
+
+def test_get_all_subscriptions(azure_client):
+    all_subscriptions = azure_client.all_subscriptions
+    jprint(all_subscriptions)
+    assert len(all_subscriptions) > 0
 
 
 def jprint(to_print):

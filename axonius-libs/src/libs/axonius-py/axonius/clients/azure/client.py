@@ -66,7 +66,6 @@ class AzureCloudConnection(RESTConnection):
             app_client_id: str,
             app_client_secret: str,
             tenant_id: str,
-            subscription: str,
             cloud: AzureClouds = AzureClouds.Public,
             management_url: str = None,   # Set a different base-url for azure-stack-hub
             resource: str = None,   # Set a different resource for azure-stack-hub
@@ -78,7 +77,6 @@ class AzureCloudConnection(RESTConnection):
         self._app_client_id = app_client_id
         self._app_client_secret = app_client_secret
         self.tenant_id = tenant_id
-        self.subscription = subscription
         self._azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
         self.is_azure_ad_b2c = is_azure_ad_b2c
 
@@ -139,6 +137,8 @@ class AzureCloudConnection(RESTConnection):
         # pylint: disable=invalid-name
         self.compute = AzureComputeConnection(self)
         self.ad = AzureADConnection(self)
+
+        self.__all_subscriptions = None
 
     def _mgmt_refresh_token(self):
         last_refresh = self._mgmt_token_last_refresh
@@ -217,16 +217,16 @@ class AzureCloudConnection(RESTConnection):
     def rm_paginated_get(self, url: str, api_version=None, **kwargs):
         yield from self.rm_paginated_request('GET', url, api_version=api_version, **kwargs)
 
-    def rm_subscription_paginated_get(self, url: str, api_version=None, **kwargs):
+    def rm_subscription_paginated_get(self, url: str, subscription: str, api_version=None, **kwargs):
         yield from self.rm_paginated_request(
-            'GET', f'subscriptions/{self.subscription}/{url.lstrip("/")}', api_version=api_version, **kwargs
+            'GET', f'subscriptions/{subscription}/{url.lstrip("/")}', api_version=api_version, **kwargs
         )
 
     def rm_get(self, url, api_version=None, **kwargs):
         return self._rm_request('GET', url.lstrip('/'), api_version=api_version, **kwargs)
 
-    def rm_subscription_get(self, url, api_version=None, **kwargs):
-        return self.rm_get(f'subscriptions/{self.subscription}/{url}', api_version=api_version, **kwargs)
+    def rm_subscription_get(self, url, subscription: str, api_version=None, **kwargs):
+        return self.rm_get(f'subscriptions/{subscription}/{url}', api_version=api_version, **kwargs)
 
     # Graph API (https://docs.microsoft.com/en-us/graph/api/overview?toc=.%2Fref%2Ftoc.json&view=graph-rest-1.0)
     def _graph_refresh_token(self):
@@ -398,8 +398,22 @@ class AzureCloudConnection(RESTConnection):
         self._graph_refresh_token()
         self._ad_graph_refresh_token()
 
+        # Get all subscriptions we have access to
+        self.__all_subscriptions = {}
+        for subscription in self.rm_paginated_get('subscriptions', api_version='2020-01-01'):
+            self.__all_subscriptions[subscription['subscriptionId']] = subscription
+
+        logger.info(f'Connected with access to {len(self.__all_subscriptions)} subscriptions')
+
     def get_device_list(self):
         raise NotImplementedError()
 
     def get_organization_information(self):
         return self.graph_get('organization')
+
+    @property
+    def all_subscriptions(self) -> dict:
+        """
+        :return: All subscriptions this application has access to.
+        """
+        return self.__all_subscriptions

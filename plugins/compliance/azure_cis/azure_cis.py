@@ -3,7 +3,7 @@ import logging
 import concurrent.futures
 import time
 
-from axonius.clients.azure.consts import AZURE_TENANT_ID, AZURE_ACCOUNT_TAG
+from axonius.clients.azure.consts import AZURE_TENANT_ID, AZURE_ACCOUNT_TAG, AZURE_SUBSCRIPTION_ID
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
 from compliance.azure_cis.azure_cis_account_report import generate_report_for_azure_account
@@ -35,40 +35,17 @@ class AzureCISGenerator:
                     azure_client_config['plugin_unique_name'] = azure_plugin_unique_name
                     azure_client_config['azure_adapter_type'] = 'azure'
 
-                    tenant_id = azure_client_config[AZURE_TENANT_ID]
+                    # Subscriptions is not interesting here. we will later understand automatically what we
+                    # have access to.
+                    azure_client_config.pop(AZURE_SUBSCRIPTION_ID, None)
 
-                    self.all_azure_client_configs[tenant_id] = azure_client_config
+                    tenant_id = azure_client_config[AZURE_TENANT_ID]
+                    if tenant_id not in self.all_azure_client_configs:
+                        self.all_azure_client_configs[tenant_id] = azure_client_config
             except Exception:
                 logger.exception(f'Could not add client config of {azure_plugin_unique_name}')
 
-        for azure_ad_client_config in self.plugin_base.core_configs_collection.find(
-                {'plugin_name': 'azure_ad_adapter'}
-        ):
-            azure_ad_plugin_unique_name = azure_ad_client_config.get('plugin_unique_name')
-            if not azure_ad_plugin_unique_name:
-                continue
-            try:
-                for azure_client in db_connection[azure_ad_plugin_unique_name]['clients'].find({}):
-                    azure_ad_client_config = azure_client['client_config'].copy()
-                    self.plugin_base._decrypt_client_config(azure_ad_client_config)
-
-                    azure_ad_client_config['plugin_unique_name'] = azure_ad_plugin_unique_name
-                    azure_ad_client_config['azure_adapter_type'] = 'azure_ad'
-
-                    tenant_id = azure_ad_client_config[AZURE_TENANT_ID]
-                    if tenant_id not in self.all_azure_client_configs:
-                        # Note! we do not add duplicate values here. In fact - this means we prioritize
-                        # azure over azure ad. The reason for that is that usually azure just contains
-                        # far more information than azure ad.
-                        # However, there are bad things here as well - Azure AD is capable of
-                        # having intune authentication code + b2c checkbox information. We currently assume two things:
-                        # - there is no use of intune authentication code in CIS and so this is irrelevant
-                        # - Azure AD B2C can not be put into a regular azure adapter as it is not a compute capable
-                        #   account, and thus we will not miss any b2c information since it will be exclusive
-                        #   to the azure ad adapter.
-                        self.all_azure_client_configs[tenant_id] = azure_ad_client_config
-            except Exception:
-                logger.exception(f'Could not add client config of {azure_ad_plugin_unique_name}')
+        # Note that we are not looking at azure-ad at all.
 
     def generate(self):
         # We need to iterate through all different accounts to make one aggregated cis report.
@@ -104,11 +81,12 @@ class AzureCISGenerator:
                 start_time = futures_to_data[future]
                 try:
                     account_id, account_name, report_json = future.result()
-                    PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].insert_one(
+                    PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['azure_reports'].insert_one(
                         {
                             'account_id': account_id,
                             'account_name': account_name,
                             'report': report_json,
+                            'type': 'azure-cis',
                             'last_updated': datetime.datetime.now()
                         }
                     )

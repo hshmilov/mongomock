@@ -97,6 +97,7 @@ class AWSCISGenerator:
                                 'account_id': account_id,
                                 'account_name': account_name,
                                 'report': report_json,
+                                'type': 'aws-cis',
                                 'last_updated': datetime.datetime.now()
                             }
                         )

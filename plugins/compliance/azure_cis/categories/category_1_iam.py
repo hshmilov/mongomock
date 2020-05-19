@@ -58,26 +58,33 @@ class CISAzureCategory1:
         """
         rule_section = kwargs['rule_section']
         errors = []
+        total_resources = 0
 
-        all_roles = list(self.azure.rm_subscription_paginated_get(
-            'providers/Microsoft.Authorization/roleDefinitions',
-            api_version='2018-07-01'
-        ))
-        total_resources = len(all_roles)
+        for subscription_id, subscription_data in self.azure.all_subscriptions.items():
+            subscription_name = subscription_data.get('displayName') or subscription_id
 
-        for role_raw in all_roles:
-            role = role_raw.get('properties') or {}
-            if role.get('type') != 'CustomRole':
-                continue
+            all_roles = list(self.azure.rm_subscription_paginated_get(
+                'providers/Microsoft.Authorization/roleDefinitions',
+                subscription_id,
+                api_version='2018-07-01'
+            ))
 
-            assignable_scopes = role.get('assignableScopes') or []
-            permissions = role.get('permissions') or []
-            # Check for entries with assignableScope of / or a subscription, and an action of *
-            if any(x == '/' or x.startswith('/subscriptions') for x in assignable_scopes):
-                all_allowed = [action for permission in permissions for action in permission.get('actions', [])]
-                if '*' in all_allowed:
-                    errors.append(f'Found custom role "{role.get("roleName")}" with "*" permissions '
-                                  f'assigned to "{",".join(assignable_scopes)}"')
+            total_resources += len(all_roles)
+
+            for role_raw in all_roles:
+                role = role_raw.get('properties') or {}
+                if role.get('type') != 'CustomRole':
+                    continue
+
+                assignable_scopes = role.get('assignableScopes') or []
+                permissions = role.get('permissions') or []
+                # Check for entries with assignableScope of / or a subscription, and an action of *
+                if any(x == '/' or x.startswith('/subscriptions') for x in assignable_scopes):
+                    all_allowed = [action for permission in permissions for action in permission.get('actions', [])]
+                    if '*' in all_allowed:
+                        errors.append(
+                            f'Found custom role "{role.get("roleName")}" in subscription "{subscription_name}" '
+                            f'with "*" permissions, assigned to "{",".join(assignable_scopes)}"')
 
         if errors:
             self.report.add_rule(

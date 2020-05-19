@@ -60,7 +60,7 @@ def get_compliance(compliance_name: str, method: str, accounts: list):
         if method == 'report_no_data':
             return {
                 'status': 'no_data',
-                'error': 'Please connect the AWS Adapter',
+                'error': 'Please connect the AWS/Azure Adapter',
                 'rules': [],
             }
 

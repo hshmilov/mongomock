@@ -6,7 +6,7 @@ from typing import Tuple
 
 from axonius.clients.azure.client import AzureCloudConnection
 from axonius.clients.azure.consts import AZURE_TENANT_ID, AZURE_ACCOUNT_TAG, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, \
-    AZURE_SUBSCRIPTION_ID, AZURE_CLOUD_ENVIRONMENT, AZURE_AD_CLOUD_ENVIRONMENT, AzureClouds, AZURE_STACK_HUB_URL, \
+    AZURE_CLOUD_ENVIRONMENT, AZURE_AD_CLOUD_ENVIRONMENT, AzureClouds, AZURE_STACK_HUB_URL, \
     AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_PROXY_SETTINGS, AZURE_HTTPS_PROXY, AZURE_VERIFY_SSL, AZURE_IS_AZURE_AD_B2C
 from compliance.azure_cis.azure_cis_rules import generate_rules, generate_failed_report
 from compliance.utils.AzureAccountReport import AzureAccountReport
@@ -19,6 +19,7 @@ def get_session_by_account_dict(account_dict: dict) -> AzureCloudConnection:
     if account_type == 'azure':
         cloud_key = AZURE_CLOUD_ENVIRONMENT
     elif account_type == 'azure_ad':
+        # 'azure_ad' currently not implemented. maybe will be in the future.
         cloud_key = AZURE_AD_CLOUD_ENVIRONMENT
     else:
         raise ValueError(f'Unknown Azure Adapter type {account_type}!')
@@ -46,7 +47,6 @@ def get_session_by_account_dict(account_dict: dict) -> AzureCloudConnection:
             app_client_id=account_dict[AZURE_CLIENT_ID],
             app_client_secret=account_dict[AZURE_CLIENT_SECRET],
             tenant_id=account_dict[AZURE_TENANT_ID],
-            subscription=account_dict.get(AZURE_SUBSCRIPTION_ID),
             cloud=cloud,
             management_url=management_url,
             resource=resource,
