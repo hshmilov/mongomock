@@ -1,23 +1,29 @@
 import ipaddress
 import logging
+import re
 from datetime import datetime
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter, TenableVulnerability
+from axonius.devices.device_adapter import DeviceAdapter, TenableVulnerability, NessusInstance
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from axonius.clients.tenable_sc.connection import \
     TenableSecurityScannerConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+# pylint: disable=logging-format-interpolation
+
+
 class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         repository_name = Field(str, 'Repository Name')
         score = Field(int, 'Score')
@@ -160,6 +166,100 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements
+    @staticmethod
+    def _get_nessus_instance(device_raw: str):
+        nessus_instance = NessusInstance()
+
+        try:
+            nessus_instance.version = re.search('Nessus version : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Nessus version {device_raw}')
+        try:
+            nessus_instance.plugin_feed_version = re.search('Plugin feed version : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Plugin feed version {device_raw}')
+        try:
+            nessus_instance.scanner_edition_used = re.search('Scanner edition used : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Scanner edition used {device_raw}')
+        try:
+            nessus_instance.scan_type = re.search('Scan type : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Scan type {device_raw}')
+        try:
+            nessus_instance.scan_policy_used = re.search('Scan policy used : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Scan policy used {device_raw}')
+        try:
+            nessus_instance.scanner_ip = re.search('Scanner IP : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Scanner IP {device_raw}')
+        try:
+            port_scanner_re = r'Port scanner\(s\) : (.*)'
+            nessus_instance.port_scanner = re.search(port_scanner_re, device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Port scanners {device_raw}')
+        try:
+            nessus_instance.port_range = re.search('Port range : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Port range {device_raw}')
+        try:
+            nessus_instance.thorough_tests = re.search('Thorough tests : (.*)', device_raw).group(1) == 'yes'
+        except Exception:
+            logger.debug(f'Failed parsing Thorough tests {device_raw}')
+        try:
+            nessus_instance.experimental_tests = re.search('Experimental tests : (.*)', device_raw).group(1) == 'yes'
+        except Exception:
+            logger.debug(f'Failed parsing Experimental tests {device_raw}')
+        try:
+            nessus_instance.paranoia_level = int(re.search('Paranoia level : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Paranoia level {device_raw}')
+        try:
+            nessus_instance.report_verbosity = int(re.search('Report verbosity : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Report verbosity {device_raw}')
+        try:
+            nessus_instance.safe_check = re.search('Safe checks : (.*)', device_raw).group(1) == 'yes'
+        except Exception:
+            logger.debug(f'Failed parsing Safe check {device_raw}')
+        try:
+            nessus_instance.credentialed_check = re.search('Credentialed checks : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Credentialed checks {device_raw}')
+        try:
+            nessus_instance.patch_management_checks = re.search('Patch management checks : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing Patch management checks {device_raw}')
+        try:
+            nessus_instance.cgi_scanning = re.search('CGI scanning : (.*)', device_raw).group(1)
+        except Exception:
+            logger.debug(f'Failed parsing CGI scanning {device_raw}')
+        try:
+            nessus_instance.max_hosts = int(re.search('Max hosts : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Max hosts {device_raw}')
+        try:
+            nessus_instance.max_checks = int(re.search('Max checks : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Max checks {device_raw}')
+        try:
+            nessus_instance.receive_timeout = int(re.search('Recv timeout : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Recv timeout {device_raw}')
+        try:
+            nessus_instance.scan_start_date = parse_date(re.search('Scan Start Date : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Scan Start Date {device_raw}')
+        try:
+            nessus_instance.scan_duration = int(re.search('Scan duration : (.*)', device_raw).group(1))
+        except Exception:
+            logger.debug(f'Failed parsing Scan duration {device_raw}')
+
+        return nessus_instance
+
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def create_device(self, raw_device_data):
         device = self._new_device_adapter()
         last_seen = None
@@ -223,7 +323,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             try:
                 last_scan_date = datetime.fromtimestamp(int(last_scan))
                 last_seen = last_scan_date
-                device.last_seen = last_scan_date    # The best we have
+                device.last_seen = last_scan_date  # The best we have
                 device.last_scan = last_scan_date
             except Exception:
                 logger.error(f'Couldn\'t parse last scan {last_scan}')
@@ -254,6 +354,12 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 synopsis = vulnerability.get('synopsis') or None
                 see_also = vulnerability.get('seeAlso') or None
                 severity = (vulnerability.get('severity') or {}).get('name') or None
+                plugin_text = vulnerability.get('pluginText') or None
+                nessus_instance = None
+                if plugin_text and 'Nessus version' in plugin_text:
+                    nessus_instance = self._get_nessus_instance(vulnerability.get('pluginText'))
+                plugin_id = vulnerability.get('pluginID')
+
                 device.add_tenable_vuln(plugin=plugin_name,
                                         severity=severity,
                                         cpe=cpe,
@@ -261,9 +367,13 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                         cvss_base_score=cvss_base_score,
                                         exploit_available=exploit_available,
                                         synopsis=synopsis,
-                                        see_also=see_also)
+                                        see_also=see_also,
+                                        nessus_instance=nessus_instance,
+                                        plugin_text=plugin_text,
+                                        plugin_id=plugin_id)
             except Exception:
                 logger.exception(f'Problem adding tenable vuln')
+
             try:
                 if vulnerability.get('cve'):
                     cves_list = list(filter(None, (vulnerability.get('cve') or '').split(',')))
@@ -337,7 +447,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_schema(cls) -> dict:
         return {
-            "items": [
+            'items': [
                 {
                     'name': 'drop_only_ip_devices',
                     'title': 'Do not fetch devices with no MAC address and no hostname',
@@ -369,14 +479,14 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'type': 'string',
                 }
             ],
-            "required": [
+            'required': [
                 'drop_only_ip_devices',
                 'fetch_software_per_device',
                 'fetch_vulnerabilities',
                 'drop_only_unauth_scans'
             ],
-            "pretty_name": "Tenable.sc Configuration",
-            "type": "array"
+            'pretty_name': 'Tenable.sc Configuration',
+            'type': 'array'
         }
 
     @classmethod
@@ -401,6 +511,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__drop_only_ip_devices = config['drop_only_ip_devices']
+        # pylint: disable=invalid-name
         self.__fetch_top_n_installed_software = config.get('fetch_top_n_installed_software') or 0
         self.__fetch_software_per_device = config['fetch_software_per_device']
         self.__fetch_vulnerabilities = config['fetch_vulnerabilities']

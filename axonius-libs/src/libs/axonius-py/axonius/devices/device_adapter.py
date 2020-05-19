@@ -492,6 +492,31 @@ class ServiceData(SmartJsonClass):
     status = Field(str, 'Status')
 
 
+# pylint: disable=too-many-instance-attributes
+class NessusInstance(SmartJsonClass):
+    version = Field(str, 'Version')
+    plugin_feed_version = Field(str, 'Plugin Feed Version')
+    scanner_edition_used = Field(str, 'Scanner Edition Used')
+    scan_type = Field(str, 'Scan Type')
+    scan_policy_used = Field(str, 'Scan Policy Used')
+    scanner_ip = Field(str, 'Scanner IP')
+    port_scanner = Field(str, 'Port Scanner(s)')
+    port_range = Field(str, 'Port Range')
+    thorough_tests = Field(bool, 'Thorough Tests')
+    experimental_tests = Field(bool, 'Experimental Tests')
+    paranoia_level = Field(int, 'Paranoia Level')
+    report_verbosity = Field(int, 'Report Verbosity')
+    safe_check = Field(bool, 'Safe Checks')
+    patch_management_checks = Field(str, 'Patch Management Checks')
+    cgi_scanning = Field(str, 'CGI Scanning')
+    max_hosts = Field(int, 'Max Hosts')
+    max_checks = Field(int, 'Max Checks')
+    receive_timeout = Field(int, 'Receive Timeout')
+    scan_start_date = Field(datetime.datetime, 'Scan Start Date')
+    scan_duration = Field(int, 'Scan Duration (sec)',)
+    credentialed_check = Field(str, 'Credentialed Check')
+
+
 class TenableVulnerability(SmartJsonClass):
     plugin_id = Field(str, 'Plugin ID')
     output = Field(str, 'Output')
@@ -503,6 +528,8 @@ class TenableVulnerability(SmartJsonClass):
     exploit_available = Field(bool, 'Exploit Available')
     synopsis = Field(str, 'Synopsis')
     see_also = Field(str, 'See Also')
+    nessus_instance = Field(NessusInstance, 'Nessus Scan')
+    plugin_text = Field(str, 'Vulnerability Text')
 
 
 class TenableSource(SmartJsonClass):
