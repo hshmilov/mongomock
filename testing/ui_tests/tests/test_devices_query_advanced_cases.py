@@ -40,6 +40,32 @@ class TestDevicesQueryAdvancedCases(TestBase):
     CYCLANCE_PLUGIN_NAME = 'cylance_adapter'
     CYCLANCE_PRETTY_NAME = 'CylancePROTECT'
 
+    def test_empty_fields_arent_there(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+
+        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_GENERAL, parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        # swap_cached is only returned by chef, not by AD or JSON
+        assert 'Total Swap GB' not in fields
+        assert 'Host Name' in fields
+
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        assert 'Last Contact' in fields
+        assert 'Cloud ID' not in fields
+        assert 'Last Seen' not in fields
+        assert 'AD Use DES Key Only' not in fields
+
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[0])
+        fields = list(self.devices_page.get_all_fields_in_field_selection())
+        assert 'AD Use DES Key Only' in fields
+
     def test_in_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -675,33 +701,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_adapters_size()
         self._test_enum_expressions()
         self._test_asset_entity_expressions()
-
-    @pytest.mark.skip('will be moved soon')
-    def test_empty_fields_arent_there(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.click_query_wizard()
-
-        expressions = self.devices_page.find_expressions()
-        assert len(expressions) == 1
-
-        self.devices_page.select_query_adapter(self.devices_page.VALUE_ADAPTERS_GENERAL, parent=expressions[0])
-        fields = list(self.devices_page.get_all_fields_in_field_selection())
-        # swap_cached is only returned by chef, not by AD or JSON
-        assert 'Total Swap GB' not in fields
-        assert 'Host Name' in fields
-
-        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
-        fields = list(self.devices_page.get_all_fields_in_field_selection())
-        assert 'Last Contact' in fields
-        assert 'Cloud ID' not in fields
-        assert 'Last Seen' not in fields
-        assert 'AD Use DES Key Only' not in fields
-
-        self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[0])
-        fields = list(self.devices_page.get_all_fields_in_field_selection())
-        assert 'AD Use DES Key Only' in fields
 
     def test_change_field_with_different_value_schema(self):
         with AwsService().contextmanager(take_ownership=True):

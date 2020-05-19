@@ -59,7 +59,7 @@ class TestEnforcementActions(TestBase):
                        total_timeout=5 * 60,
                        tolerated_exceptions_list=[NoSuchElementException, ElementNotInteractableException])
 
-        self.adapters_page.switch_to_page()
-        self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
+            self.adapters_page.switch_to_page()
+            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
         self.wait_for_adapter_down(SHODAN_ADAPTER)
         self.wait_for_adapter_down(AWS_ADAPTER)
