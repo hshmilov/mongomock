@@ -32,7 +32,7 @@ def get_env(aws_key, aws_secret):
 
 
 def run_on_subprocess(command, *args, **kwargs):
-    if 'win' in sys.platform:
+    if sys.platform.startswith('win'):
         command = shlex.split(command)
 
     return run(command, *args, **kwargs)
@@ -70,13 +70,20 @@ def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
     run_on_subprocess(ova_command, env=env, shell=True, check=True, stderr=STDOUT)
 
     log('Set latest ami')
-    ami_id_file = Path('ami_id.txt')
-    ami_id_file.write_text(ami_id)
-    set_ami_id_command = f'aws s3 cp ami_id.txt s3://axonius-releases/latest_release/ami_id.txt --acl public-read'
-    run_on_subprocess(set_ami_id_command, env=env, shell=True, check=True, stderr=STDOUT)
-    ami_id_file.unlink()
+    write_file_to_latest_release_bucket(env, ami_id, 'ami_id.txt')
+
+    log('Set latest version')
+    write_file_to_latest_release_bucket(env, version_name, 'version_name.txt')
 
     log('Files copied to production')
+
+
+def write_file_to_latest_release_bucket(env, data, file_name):
+    data_file = Path(file_name)
+    data_file.write_text(data)
+    set_file_command = f'aws s3 cp {file_name} s3://axonius-releases/latest_release/{file_name} --acl public-read'
+    run_on_subprocess(set_file_command, env=env, shell=True, check=True, stderr=STDOUT)
+    data_file.unlink()
 
 
 def create_tag(version_name, commit_hash, **_):
