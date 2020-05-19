@@ -397,6 +397,7 @@ class PrismaCloudAdapter(AdapterBase):
             if not device_raw or not device_type:
                 continue
             try:
+                # noinspection PyTypeChecker
                 device = self._create_device(device_raw, device_type, self._new_device_adapter())
                 if device:
                     yield device

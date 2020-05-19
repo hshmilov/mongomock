@@ -1,7 +1,10 @@
 import logging
+import datetime
 from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple
+from urllib.parse import urljoin
 
 from axonius.clients.qualys import consts, xmltodict
+from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.exception import RESTException
@@ -12,6 +15,8 @@ In this connection we target the VM module (and probably PC later on).
 These modules have a rate limit - by default of 2 connections through api v2.0 or 300 api requests an hour.
 For the sake of the user - if the next api request is allowed within the next 30 seconds we wait and try again.
 '''
+
+# pylint: disable=logging-format-interpolation
 
 
 class IteratorCounter:
@@ -38,6 +43,7 @@ class IteratorCounter:
         logger.info(self._message.format(count=self._count))
 
 
+# pylint: disable=too-many-instance-attributes
 class QualysScansConnection(RESTConnection):
 
     def __init__(self,
@@ -48,6 +54,7 @@ class QualysScansConnection(RESTConnection):
                  retry_sleep_time=None,
                  max_retries=None,
                  date_filter=None,
+                 fetch_from_inventory=False,
                  **kwargs):
         """ Initializes a connection to Illusive using its rest API
 
@@ -63,11 +70,136 @@ class QualysScansConnection(RESTConnection):
         self._devices_per_page = devices_per_page or consts.DEVICES_PER_PAGE
         self._retry_sleep_time = retry_sleep_time or consts.RETRY_SLEEP_TIME
         self._max_retries = max_retries or consts.MAX_RETRIES
+        self._fetch_from_inventory = fetch_from_inventory
+        self._jwt_token = None
+        self._jwt_token_refresh = None
+        self._gateway_api = self._get_qualys_gateway(str(self._url))
+
+    def _refresh_jwt_token(self):
+        if self._jwt_token_refresh and self._jwt_token_refresh < datetime.datetime.now():
+            return
+        self._get_inventory_jwt_token()
+
+    @staticmethod
+    def _get_qualys_gateway(api_url):
+        # prepare gatway_url - https://www.qualys.com/platform-identification/
+
+        # if no endpoint, take default
+        if 'qualysapi.qualys' in api_url:
+            gateway_replacement = 'gateway.qg1'
+
+        # The rest public ones starts with qualysapi.qg#
+        elif 'qualysapi.qg' in api_url:
+            gateway_replacement = 'gateway'
+
+        # Private platform
+        else:
+            gateway_replacement = 'qualysgateway'
+
+        return api_url.replace('qualysapi', gateway_replacement)
+
+    def _get_inventory_jwt_token(self):
+        try:
+            self._session_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            body_params = {
+                'username': self._username,
+                'password': self._password,
+                'token': 'true',
+            }
+            url = urljoin(self._gateway_api, INVENTORY_AUTH_API)
+            token = self._post(url, body_params=body_params, force_full_url=True, use_json_in_body=False,
+                               use_json_in_response=False, return_response_raw=False)
+            if not (isinstance(token, bytes) and token):
+                raise ValueError(f'Got unknown response while getting token {str(token)}')
+
+            self._jwt_token = token.decode('utf-8').strip('"')
+            self._jwt_token_refresh = datetime.datetime.utcnow() + datetime.timedelta(seconds=JWT_TOKEN_REFRESH)
+            self._session_headers = {
+                'Authorization': 'Bearer ' + self._jwt_token,
+                'Content-Type': 'application/json'
+            }
+        except Exception as e:
+            raise ValueError(f'Error: Failed getting jwt token, invalid request was made. {str(e)}')
+
+    def _connect_inventory(self):
+        try:
+            self._get_inventory_jwt_token()
+            url_params = {
+                'pageSize': 1
+            }
+            url = urljoin(self._gateway_api, '/am/v1/assets/host/filter/list')
+            self._post(url, url_params=url_params, force_full_url=True)
+        except Exception as e:
+            raise ValueError(f'Error: Invalid response from server, please check domain or credentials: {str(e)}')
+
+    def _paginated_inventory_get(self):
+        try:
+            fetched_devices = {}
+            total_devices = 0
+            url_params = {
+                'pageSize': 100
+            }
+            url = urljoin(self._gateway_api, '/am/v1/assets/host/filter/list')
+            self._refresh_jwt_token()
+            response = self._post(url, url_params=url_params, force_full_url=True)
+            if not (isinstance(response, dict) and isinstance(response.get('assetListData'), dict)):
+                logger.warning(f'Received invalid response {response}')
+                return
+
+            asset_list_data = response.get('assetListData')
+            if not isinstance(asset_list_data.get('asset'), list):
+                logger.warning(f'Received invalid response, no assets found {response}')
+                return
+
+            for device in asset_list_data.get('asset'):
+                if isinstance(device, dict) and device.get('assetId'):
+                    fetched_devices[device.get('assetId')] = True
+                yield device
+                total_devices += 1
+
+            while response.get('hasMore') and total_devices < MAX_DEVICES:
+                if not response.get('lastSeenAssetId'):
+                    logger.warning(f'Failed paginate all assets {response}')
+                    break
+
+                url_params['lastSeenAssetId'] = response.get('lastSeenAssetId')
+                self._refresh_jwt_token()
+                response = self._post(url, url_params=url_params, force_full_url=True)
+                if not (isinstance(response, dict) and isinstance(response.get('assetListData'), dict)):
+                    logger.warning(f'Received invalid response while pagination {response}')
+                    break
+
+                for device in asset_list_data.get('asset'):
+                    # There is a bug in the pagination mechanism
+                    # https://discussions.qualys.com/thread/20713-pagination-problem-limited-records
+                    # Checking if the pagination works and the paginate result got new devices
+                    if isinstance(device, dict) and device.get('assetId'):
+                        if fetched_devices.get(device.get('assetId')):
+                            # Pop existing devices that already been yield
+                            fetched_devices.pop(device.get('assetId'))
+                            continue
+                        fetched_devices[device.get('assetId')] = True
+                    yield device
+                    total_devices += 1
+
+                # No new devices fetched
+                if not len(fetched_devices):
+                    logger.debug(f'Stopping pagination, got response with 0 new devices')
+                    break
+
+            logger.info(f'Finish paginate assets, got {total_devices}')
+        except Exception as err:
+            logger.exception(f'Invalid request made, {str(err)}')
+            raise
 
     def _connect(self):
         if not self._username or not self._password:
             raise RESTException('No username or password')
-        self._get_device_count()
+
+        if self._fetch_from_inventory:
+            self._connect_inventory()
+        else:
+            self._get_device_count()
 
     def _prepare_get_hostassets_request_params(self, start_offset):
         params = {
@@ -183,8 +315,11 @@ class QualysScansConnection(RESTConnection):
 
     def get_device_list(self):
         try:
-            for device_raw in self._get_hostassets():
-                yield device_raw
+            if self._fetch_from_inventory:
+                yield from self._paginated_inventory_get()
+            else:
+                for device_raw in self._get_hostassets():
+                    yield device_raw
         except Exception:
             logger.exception(f'Problem getting hostassets')
 

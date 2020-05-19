@@ -7,7 +7,7 @@ import re
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln, DeviceOpenPort
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -16,8 +16,13 @@ from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.clients.qualys import consts
 from axonius.clients.qualys.connection import QualysScansConnection
+from qualys_scans_adapter.structures import InventoryInstance, InventoryContainer, InventoryAgent, InventorySensor, \
+    InventoryActivation
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+# pylint: disable=logging-format-interpolation
 
 
 class QualysVulnerability(SmartJsonClass):
@@ -41,6 +46,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         agent_last_seen = Field(datetime.datetime, 'Agent Last Seen')
         qweb_host_id = Field(int, 'Qweb Host ID')
         tracking_method = Field(str, 'Tracking Method')
+        inventory_instance = Field(InventoryInstance, 'Inventory Asset')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -84,6 +90,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get(consts.QUALYS_SCANS_DOMAIN),
                                                 https_proxy=client_config.get('https_proxy'))
+
     # pylint: disable=too-many-function-args
 
     def _connect_client(self, client_config):
@@ -105,7 +112,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 max_retries=self.__max_retries,
                 retry_sleep_time=self.__retry_sleep_time,
                 devices_per_page=self.__devices_per_page,
-                https_proxy=client_config.get('https_proxy')
+                https_proxy=client_config.get('https_proxy'),
+                fetch_from_inventory=self.__fetch_from_inventory
             )
             with connection:
                 pass
@@ -116,6 +124,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             )
             logger.exception(message)
             raise ClientConnectionException(message)
+
     # pylint: enable=too-many-function-args
 
     @staticmethod
@@ -186,9 +195,200 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             logger.exception('Problem opening vulnerabilities csv file')
             return qid_info
 
+    @staticmethod
+    def _fill_inventory_agent_instance(device_raw: dict, device: InventoryInstance):
+        try:
+            inventory_agent = InventoryAgent()
+
+            inventory_agent.version = device_raw.get('version')
+            inventory_agent.configurable_profile = device_raw.get('configurationProfile')
+            inventory_agent.connected_from = device_raw.get('connectedFrom')
+            inventory_agent.last_activity = parse_date(device_raw.get('lastActivity'))
+            inventory_agent.last_checked_in = parse_date(device_raw.get('lastCheckedIn'))
+            inventory_agent.last_inventory = parse_date(device_raw.get('lastInventory'))
+
+            activations = []
+            if isinstance(device_raw.get('activations'), list):
+                for activation in device_raw.get('activations'):
+                    if isinstance(activation, dict):
+                        inventory_activation = InventoryActivation()
+                        inventory_activation.key = activation.get('key')
+                        inventory_activation.status = activation.get('status')
+                        activations.append(inventory_activation)
+            inventory_agent.activations = activations
+
+            device.inventory_agent = inventory_agent
+        except Exception:
+            logger.exception(f'Failed creating agent for inventory device {device_raw}')
+
+    @staticmethod
+    def _fill_inventory_sensor_instance(device_raw: dict, device: InventoryInstance):
+        try:
+            sensor = InventorySensor()
+
+            sensor.activated_modules = device_raw.get('activatedForModules')
+            sensor.pending_activation_modules = device_raw.get('pendingActivationForModules')
+            sensor.last_vm_scan = parse_date(device_raw.get('lastVMScan'))
+            sensor.last_compliance_scan = parse_date(device_raw.get('lastComplianceScan'))
+            sensor.last_full_scan = parse_date(device_raw.get('lastFullScan'))
+            sensor.error_status = device_raw.get('errorStatus')
+
+            device.sensor = sensor
+        except Exception:
+            logger.exception(f'Failed creating sensor for inventory device {device_raw}')
+
+    @staticmethod
+    def _fill_inventory_container_instance(device_raw: dict, device: InventoryInstance):
+        try:
+            container = InventoryContainer()
+
+            container.product = device_raw.get('product')
+            container.version = device_raw.get('version')
+            container.num_of_images = device_raw.get('noOfImages')
+            container.num_of_container = device_raw.get('noOfContainers')
+
+            device.container = container
+        except Exception:
+            logger.exception(f'Failed creating container for inventory device {device_raw}')
+
+    def _fill_inventory_asset_instance(self, device_raw: dict, device: MyDeviceAdapter):
+        try:
+            inventory_instance = InventoryInstance()
+
+            inventory_instance.host_id = device_raw.get('hostId')
+            inventory_instance.agent_id = device_raw.get('agentId')
+            inventory_instance.create_date = parse_date(device_raw.get('createDate'))
+            inventory_instance.sensor_last_update_date = parse_date(device_raw.get('sensorLastUpdatedDate'))
+            inventory_instance.asset_type = device_raw.get('assetType')
+            inventory_instance.most_frequent_user = device_raw.get('mostFrequentUser')
+            inventory_instance.is_container_host = device_raw.get('isContainerHost')
+            inventory_instance.is_hypervisor = device_raw.get('isHypervisor')
+
+            if isinstance(device_raw.get('sensor'), dict):
+                self._fill_inventory_sensor_instance(device_raw.get('sensor'), inventory_instance)
+
+            if isinstance(device_raw.get('container'), dict):
+                self._fill_inventory_container_instance(device_raw.get('container'), inventory_instance)
+
+            if isinstance(device_raw.get('agent'), dict):
+                self._fill_inventory_agent_instance(device_raw.get('agent'), inventory_instance)
+
+            device.inventory_instance = inventory_instance
+        except Exception:
+            logger.exception(f'Failed creating inventory device {device_raw}')
+
+    # pylint: disable=R0912,R0915
+    # pylint: disable=too-many-locals
+    def _create_inventory_device(self, device_raw: dict, device: MyDeviceAdapter):
+        try:
+            device_id = device_raw.get('assetId')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id
+            device.uuid = device_raw.get('hostUUID')
+            device.hostname = device_raw.get('netbiosName') or device_raw.get('dnsName') or device_raw.get('assetName')
+            device.name = device_raw.get('assetName')
+            device.time_zone = device_raw.get('timeZone')
+            device.total_physical_memory = device_raw.get('totalMemory')
+            device.total_number_of_cores = device_raw.get('cpuCount')
+            device.bios_serial = device_raw.get('biosSerialNumber')
+            device.virtual_host = device_raw.get('isVirtualMachine')
+
+            last_logged_user = device_raw.get('lastLoggedOnUser') or []
+            if isinstance(last_logged_user, str):
+                last_logged_user = [last_logged_user]
+            device.last_used_users = last_logged_user
+
+            dns_servers = device_raw.get('dnsName') or []
+            if isinstance(dns_servers, str):
+                dns_servers = [dns_servers]
+            device.dns_servers = dns_servers
+
+            mac = device_raw.get('hwSerialNumber')
+            ips = device_raw.get('address') or []
+            if isinstance(ips, str):
+                ips = [ips]
+            device.add_nic(mac=mac, ips=ips)
+
+            if device_raw.get('operatingSystem'):
+                os = device_raw.get('operatingSystem')
+                os_string = (os.get('osName') or '') + ' ' + (os.get('fullName') or '') + ' ' + \
+                            (os.get('category') or '') + ' ' + (os.get('productName') or '')
+                device.figure_os(os_string=os_string)
+
+            if isinstance(device_raw.get('hardware'), dict):
+                hardware = device_raw.get('hardware')
+                device.add_connected_hardware(name=hardware.get('fullName'),
+                                              manufacturer=hardware.get('manufacturer'),
+                                              hw_id=hardware.get('model'))
+
+            open_ports_data = device_raw.get('openPortListData')
+            if isinstance(open_ports_data, dict) and isinstance(open_ports_data.get('openPort'), list):
+                open_ports = []
+                for open_port in open_ports_data.get('openPort'):
+                    if isinstance(open_port, dict):
+                        open_ports.append(DeviceOpenPort(protocol=open_port.get('protocol'),
+                                                         port_id=open_port.get('port'),
+                                                         service_name=open_port.get('detectedService')))
+                device.open_ports = open_ports
+
+            nics_data = device_raw.get('networkInterfaceListData')
+            if isinstance(nics_data, dict) and isinstance(nics_data.get('networkInterface'), list):
+                for network_interface in nics_data.get('networkInterface'):
+                    if not isinstance(network_interface, dict):
+                        continue
+                    ips = network_interface.get('addressIpV4') or []
+                    if isinstance(ips, str):
+                        ips = [ips]
+                    if isinstance(network_interface.get('addresses'), str) and network_interface.get('addresses'):
+                        ips.extend(network_interface.get('addresses').split(','))
+                    device.add_nic(mac=network_interface.get('macAddress'),
+                                   ips=ips,
+                                   name=network_interface.get('interfaceName'),
+                                   gateway=network_interface.get('gatewayAddress'))
+
+            softwares_data = device_raw.get('softwareListData')
+            if isinstance(softwares_data, dict) and isinstance(softwares_data.get('software'), list):
+                for software in softwares_data.get('software'):
+                    device.add_installed_software(name=software.get('fullName'),
+                                                  version=software.get('version'),
+                                                  architecture=software.get('architecture'),
+                                                  description=software.get('category'),
+                                                  publisher=software.get('publisher'))
+
+            tag_list = device_raw.get('tagList')
+            if isinstance(tag_list, dict) and isinstance(tag_list.get('tag'), list):
+                for tag_data in tag_list.get('tag'):
+                    if isinstance(tag_data, dict):
+                        for key, value in tag_data.items():
+                            device.add_key_value_tag(key=key, value=value)
+
+            service_list = device_raw.get('serviceList')
+            if isinstance(service_list, dict) and isinstance(service_list.get('service'), list):
+                for service in service_list.get('service'):
+                    if isinstance(service, dict):
+                        device.add_service(name=service.get('name'),
+                                           display_name=service.get('description'),
+                                           status=service.get('status'))
+
+            self._fill_inventory_asset_instance(device_raw, device)
+
+            device.set_raw(device_raw)
+            return device
+
+        except Exception:
+            logger.exception(f'Problem with fetching Inventory Device for {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._create_agent_device(device_raw, self.__qualys_tags_white_list)
+            if self.__fetch_from_inventory:
+                # noinspection PyTypeChecker
+                device = self._create_inventory_device(device_raw, self._new_device_adapter())
+            else:
+                device = self._create_agent_device(device_raw, self.__qualys_tags_white_list)
+
             if device:
                 yield device
 
@@ -210,7 +410,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
             if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \
-                    device_raw.get('dnsHostName').split('.')[0].lower() ==\
+                    device_raw.get('dnsHostName').split('.')[0].lower() == \
                     device_raw.get('netbiosName').split('.')[0].lower():
                 hostname = device_raw.get('dnsHostName')
             if hostname != device_raw.get('address'):
@@ -422,6 +622,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_vulnerabilities_data',
                     'type': 'bool',
                     'title': 'Fetch vulnerabilities data'
+                },
+                {
+                    'name': 'fetch_from_inventory',
+                    'type': 'bool',
+                    'title': 'Use Inventory API'
                 }
             ],
             'required': [
@@ -430,7 +635,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'fetch_vulnerabilities_data',
                 'max_retries',
                 'retry_sleep_time',
-                'devices_per_page'
+                'devices_per_page',
+                'fetch_from_inventory'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -445,19 +651,21 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'max_retries': consts.MAX_RETRIES,
             'devices_per_page': consts.DEVICES_PER_PAGE,
             'fetch_vulnerabilities_data': True,
-            'qualys_tags_white_list': None
+            'qualys_tags_white_list': None,
+            'fetch_from_inventory': False
         }
 
     def _on_config_update(self, config):
         self.__request_timeout = config['request_timeout']
         self.__async_chunk_size = config['async_chunk_size']
-        self.__fetch_vulnerabilities_data = config['fetch_vulnerabilities_data']\
+        self.__fetch_vulnerabilities_data = config['fetch_vulnerabilities_data'] \
             if 'fetch_vulnerabilities_data' in config else True
         self.__max_retries = config.get('max_retries', consts.MAX_RETRIES)
         self.__retry_sleep_time = config.get('max_retries', consts.RETRY_SLEEP_TIME)
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
         self.__qualys_tags_white_list = config.get('qualys_tags_white_list').split(',') \
             if config.get('qualys_tags_white_list') else None
+        self.__fetch_from_inventory = config.get('fetch_from_inventory', False)
 
     @classmethod
     def adapter_properties(cls):
