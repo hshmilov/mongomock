@@ -37,7 +37,7 @@ MONGO_STOP_GRACE_PERIOD = 600
 class MongoService(SystemService, WeaveService):
     # The reason we're using just one client is that you must'nt have many instance of the client
     # because mongo is buggy as hell and opens 600 threads and crashes your app
-    client = pymongo.MongoClient(connection_line)
+    client = pymongo.MongoClient(connection_line, connect=False)
 
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
