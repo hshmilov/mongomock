@@ -27,7 +27,8 @@ U_SUPPLIER_TABLE = 'u_supplier'
 MAINTENANCE_SCHED_TABLE = 'cmn_schedule'
 SOFTWARE_PRODUCT_TABLE = 'cmdb_software_product_model'
 MODEL_TABLE = 'cmdb_model'
-CMDB_CI_TABLE = 'cmdb_ci'
+# Note: Relations Details are performed as part of cmdb_rel_ci, they are not queried from snow separately!
+RELATIONS_DETAILS_TABLE_KEY = 'RELATION_DETAILS'
 # pylint: disable=C0103
 INSTALL_STATUS_DICT = {'0': 'Retired',
                        '1': 'Deployed',
@@ -75,6 +76,22 @@ U_ENVIRONMENT_DICT = {'development': 'Development',
                       'training': 'Training',
                       'undefined': 'undefined'}
 
+# raw values - retrieved from original relations response
+RELATIONS_TABLE_CHILD_KEY = 'child'
+RELATIONS_TABLE_PARENT_KEY = 'parent'
+
+# field names - used for put_dynamic_field
+RELATIONS_FIELD_CHILD = 'downstream'
+RELATIONS_FIELD_PARENT = 'upstream'
+
+RELATIONS_KEY_TO_FIELD = {
+    RELATIONS_TABLE_CHILD_KEY: RELATIONS_FIELD_CHILD,
+    RELATIONS_TABLE_PARENT_KEY: RELATIONS_FIELD_PARENT,
+}
+
+DEPRECATED_RELATIVE_FIELDS = ['parents', 'children']
+DEPRECATED_VALUE = []
+
 DEVICE_SUB_TABLES_KEY_TO_NAME = {
     USERS_TABLE_KEY: USERS_TABLE,
     LOCATION_TABLE_KEY: LOCATIONS_TABLE,
@@ -86,7 +103,6 @@ DEVICE_SUB_TABLES_KEY_TO_NAME = {
     IPS_TABLE: IPS_TABLE,
     CI_IPS_TABLE: CI_IPS_TABLE,
     U_SUPPLIER_TABLE: U_SUPPLIER_TABLE,
-    # Note: If Relations was requested, ALL cmdb_ci will be fetched as sub_table for relations info.
     RELATIONS_TABLE: RELATIONS_TABLE,
     MAINTENANCE_SCHED_TABLE: MAINTENANCE_SCHED_TABLE,
     SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,

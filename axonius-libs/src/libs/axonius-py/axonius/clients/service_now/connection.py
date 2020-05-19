@@ -73,6 +73,21 @@ class ServiceNowConnection(RESTConnection):
                 **subtables_by_key,
             }
 
+    @staticmethod
+    def _prepare_relations_fields():
+        fields = ['type.name']
+        for relation in [consts.RELATIONS_TABLE_CHILD_KEY, consts.RELATIONS_TABLE_PARENT_KEY]:
+            for relative_field in ['sys_id', 'sys_class_name', 'name']:
+                fields.append(f'{relation}.{relative_field}')
+        return ','.join(fields)
+
+    @staticmethod
+    def _prepare_relative_dict(relation_dict, relation):
+        """ relation = RELATIONS_TABLE_CHILD_KEY | RELATIONS_TABLE_PARENT_KEY  """
+        return {k.replace(f'{relation}.', '', 1): v
+                for k, v in relation_dict.items()
+                if (isinstance(k, str) and k.startswith(f'{relation}.'))}
+
     # pylint: disable=too-many-branches,too-many-statements
     def _get_subtables_by_key(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
         tables_by_key = {}
@@ -85,11 +100,9 @@ class ServiceNowConnection(RESTConnection):
 
         additional_url_params_by_table_key = {}
         if fetch_ci_relations:
-            # Append device requests with only the sys_id and name properties (as sub_tables)
-            sub_tables_to_request_by_key[consts.CMDB_CI_TABLE] = consts.CMDB_CI_TABLE
-            additional_url_params_by_table_key = {consts.CMDB_CI_TABLE: {
-                'sysparm_fields': 'sys_id,name,sys_class_name',
-            }}
+            additional_url_params_by_table_key = {
+                consts.RELATIONS_TABLE: {'sysparm_fields': self._prepare_relations_fields()},
+            }
         else:
             # if relations were not requested, dont fetch them
             tables_by_key.setdefault(consts.RELATIONS_TABLE, dict())
@@ -150,32 +163,36 @@ class ServiceNowConnection(RESTConnection):
                         continue
                     curr_table.setdefault(cmdb_ci_value, list()).append(sub_table_result)
 
-                # Relations - curr_table = {'sys_id': {'parents': ['sys_id',...], 'children': ['sys_id']}
+                # Relations - curr_table = {'sys_id': {RELATIONS_PARENT: ['sys_id', ...],
+                #                                      RELATIONS_CHILD: ['sys_id', ...]}
                 elif table_key == consts.RELATIONS_TABLE:
-                    sys_id = sub_table_result.get('sys_id')
-                    if not sys_id:
-                        continue
-                    curr_rel_dict = curr_table.setdefault(sys_id, {})
-
-                    parent_id = (sub_table_result.get('parent') or {}).get('value')
-                    if parent_id:
-                        curr_rel_dict.setdefault('parents', []).append(parent_id)
-
-                    child_id = (sub_table_result.get('child') or {}).get('value')
-                    if child_id:
-                        curr_rel_dict.setdefault('children', []).append(child_id)
-
-                # CMDB_CI as subtable - curr_table = {'sys_id': {'name': name, 'sys_class_name': class_name}}
-                elif table_key == consts.CMDB_CI_TABLE:
-                    # NOTE: removes the sys_id when found (it will be present as the key of the subtable)
-                    sys_id = sub_table_result.pop('sys_id', None)
-                    if not sys_id:
+                    parent_sys_id = sub_table_result.pop(f'{consts.RELATIONS_TABLE_PARENT_KEY}.sys_id', None)
+                    child_sys_id = sub_table_result.pop(f'{consts.RELATIONS_TABLE_CHILD_KEY}.sys_id', None)
+                    if not (parent_sys_id and child_sys_id):
+                        logger.warning(f'Relation with no parent ({parent_sys_id}) AND child ({child_sys_id}):'
+                                       f' {sub_table_result}')
                         continue
 
-                    # test existence and non-emptiness of cmdb_ci entry
-                    if isinstance(curr_table.get(sys_id), dict):
-                        continue
-                    curr_table[sys_id] = sub_table_result
+                    # Mark: parent -child> child
+                    parent_relations = curr_table.setdefault(parent_sys_id, {})
+                    parent_relations.setdefault(consts.RELATIONS_TABLE_CHILD_KEY, set()).add(child_sys_id)
+
+                    # Mark: parent <-parent- child
+                    child_relations = curr_table.setdefault(child_sys_id, {})
+                    child_relations.setdefault(consts.RELATIONS_TABLE_PARENT_KEY, set()).add(parent_sys_id)
+
+                    # prepare relatives information - {'sys_id': {'name': name, 'sys_class_name': class_name}}
+                    relations_details = tables_by_key.setdefault(consts.RELATIONS_DETAILS_TABLE_KEY, dict())
+
+                    # save parent details
+                    if parent_sys_id not in relations_details:
+                        relations_details[parent_sys_id] = self._prepare_relative_dict(
+                            sub_table_result, consts.RELATIONS_TABLE_PARENT_KEY)
+
+                    # save child details
+                    if child_sys_id not in relations_details:
+                        relations_details[child_sys_id] = self._prepare_relative_dict(
+                            sub_table_result, consts.RELATIONS_TABLE_CHILD_KEY)
 
                 else:
                     logger.error('Invalid sub_table_key encountered {sub_table_key}')
@@ -200,12 +217,17 @@ class ServiceNowConnection(RESTConnection):
                                         additional_url_params: Optional[dict]=None):
         if not additional_url_params:
             additional_url_params = dict()
+        sysparm_query = 'ORDERBYDESCsys_created_on'
+        additional_query = additional_url_params.get('sysparm_query')
+        if isinstance(additional_query, str):
+            # Note: ^ == AND
+            sysparm_query = f'{sysparm_query}^{additional_query}'
         return {'name': f'table/{str(table_name)}',
                 'do_basic_auth': True,
                 # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
                 'url_params': {'sysparm_limit': page_size,
                                'sysparm_offset': offset,
-                               'sysparm_query': 'ORDERBYDESCsys_created_on',
+                               'sysparm_query': sysparm_query,
                                **additional_url_params}}
 
     def _iter_async_table_chunks_by_key(self, table_name_by_key: dict,

@@ -865,17 +865,20 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting user {user_raw}', exc_info=True)
 
     @staticmethod
-    def _get_relations(initial_sys_id, relation_key, relations_table_dict, relations_info_dict, initial_depth=3) \
+    def _get_relations(initial_sys_id, relation_key, relations_table_dict, relations_info_dict, initial_depth=2) \
             -> Optional[List[dict]]:
         """
         :param initial_sys_id:
-        :param relation_key: 'children' | 'parents'
-        :param relations_table_dict: {sys_id: [relative_sys_id, ...]}
+        :param relation_key: RELATIONS_TABLE_CHILD_KEY | RELATIONS_TABLE_PARENT_KEY
+                            if other value is given, KeyError would be raised.
+        :param relations_table_dict: {RELATIONS_TABLE_CHILD_KEY: {sys_id: [relative_sys_id, ...], ...},
+                                      RELATIONS_TABLE_PARENT_KEY: {sys_id: [relative_sys_id, ..], ...}}
         :param relations_info_dict:  {sys_id: {'name': ..., ...}}
         :param initial_depth:
-        :return: [{'name': ..., ..., 'children 1': [
-                    {'name':..., ..., 'children 2': [...]}
-                  ]}]
+        :return: (for relation_key==RELATIONS_TABLE_CHILD_KEY)
+            [{'name': ..., ..., RELATIONS_FIELD_CHILD: [
+                {'name':..., ..., RELATIONS_FIELD_CHILD: [...]}
+              ]}]
         """
 
         def _recursive_prepare_relation(sys_id, depth) -> dict:
@@ -886,21 +889,21 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 return relations_info
             curr_relation_dict = relations_info or {}
 
-            # prepare relation_key for put_dynamic_field: (depth, key_name)
-            #   (3, 'children 1'), (2, 'children 2'), ...
-            curr_depth_key = f'{relation_key} {initial_depth - depth + 1}'
+            # Note: this throws intentionally if invalid relation_key was given
+            curr_field_name = RELATIONS_KEY_TO_FIELD[relation_key]
+            curr_relative_details = curr_relation_dict.setdefault(curr_field_name, list())
 
             # parse relation
             for relative_sys_id in curr_relations:
                 relative_dict = _recursive_prepare_relation(relative_sys_id, depth=depth - 1)
                 if not relative_dict:
                     continue
-                curr_relation_dict.setdefault(curr_depth_key, list()).append(relative_dict)
+                curr_relative_details.append(relative_dict)
             return curr_relation_dict
 
         # if initial sys_id has no relations of relation_key type, return None
         relative_sys_ids = (relations_table_dict.get(initial_sys_id) or {}).get(relation_key)
-        if not isinstance(relative_sys_ids, list):
+        if not relative_sys_ids:
             return None
 
         relative_dicts = []
@@ -914,18 +917,27 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _fill_relations(self, device, sys_id, relations_table_dict, relations_info_dict):
 
         try:
-            related_children = self._get_relations(sys_id, 'children', relations_table_dict, relations_info_dict)
+            related_children = self._get_relations(sys_id, RELATIONS_TABLE_CHILD_KEY,
+                                                   relations_table_dict, relations_info_dict)
             if related_children:
-                put_dynamic_field(device, 'children', related_children, 'Children')
+                put_dynamic_field(device, RELATIONS_FIELD_CHILD, related_children, RELATIONS_FIELD_CHILD)
         except Exception:
             logger.debug(f'Failed parsing child relations for sys_id {sys_id}', exc_info=True)
 
         try:
-            related_parents = self._get_relations(sys_id, 'parents', relations_table_dict, relations_info_dict)
+            related_parents = self._get_relations(sys_id, RELATIONS_TABLE_PARENT_KEY,
+                                                  relations_table_dict, relations_info_dict)
             if related_parents:
-                put_dynamic_field(device, 'parents', related_parents, 'Parents')
+                put_dynamic_field(device, RELATIONS_FIELD_PARENT, related_parents, RELATIONS_FIELD_PARENT)
         except Exception:
             logger.debug(f'Failed parsing parent relations for sys_id {sys_id}', exc_info=True)
+
+        for deprecated_dynamic_field in DEPRECATED_RELATIVE_FIELDS:
+            try:
+                put_dynamic_field(device, deprecated_dynamic_field, DEPRECATED_VALUE, deprecated_dynamic_field)
+            except Exception:
+                logger.warning(f'Failed removing deprecated relative field {deprecated_dynamic_field}', exc_info=True)
+                continue
 
     @staticmethod
     def _fill_maintenance_schedule(device, maintenance_schedule_dict):
@@ -954,7 +966,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             ci_ips_table_dict = table_devices_data.get(CI_IPS_TABLE)
             supplier_table_dict = table_devices_data.get(U_SUPPLIER_TABLE)
             relations_table_dict = table_devices_data.get(RELATIONS_TABLE)
-            relations_info_dict = table_devices_data.get(CMDB_CI_TABLE)
+            relations_info_dict = table_devices_data.get(RELATIONS_DETAILS_TABLE_KEY)
             maintenance_sched_dict = table_devices_data.get(MAINTENANCE_SCHED_TABLE)
             software_product_dict = table_devices_data.get(SOFTWARE_PRODUCT_TABLE)
             model_dict = table_devices_data.get(MODEL_TABLE)

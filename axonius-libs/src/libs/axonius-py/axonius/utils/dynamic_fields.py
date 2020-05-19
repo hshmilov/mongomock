@@ -12,16 +12,19 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # pylint: disable=consider-merging-isinstance
-def get_entity_new_field(title: str, value):
+def get_entity_new_field(title: str, value, allow_empty=False):
     logger.debug(f'Getting new field for {title}: {value}')
     if value in EMPTY_VARS:
-        return None
+        if not allow_empty:
+            return None
+        field_type = type(value)
+        # fallthrough all the way to Field creation
 
-    if isinstance(value, list):
+    elif isinstance(value, list):
         field_type = get_entity_new_field(title, value[0])._type
         return ListField(field_type, title)
 
-    if isinstance(value, dict):
+    elif isinstance(value, dict):
         class SmartJsonClassInstance(SmartJsonClass):
             pass
         field_type = SmartJsonClassInstance
@@ -39,13 +42,18 @@ def get_entity_new_field(title: str, value):
     return Field(field_type, title)
 
 
-def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str):
+# pylint: disable=too-many-branches
+def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str, allow_empty=False):
     # don't just `if not value` in case value is a false boolean, for example!
-    if value in EMPTY_VARS:
+    if (not allow_empty) and (value in EMPTY_VARS):
         return
     key = normalize_var_name(key)
     if not entity.does_field_exist(key):
-        entity.declare_new_field(key, get_entity_new_field(title, value))
+        entity.declare_new_field(key, get_entity_new_field(title, value, allow_empty=allow_empty))
+
+    if value in EMPTY_VARS:
+        # If we reached here it means we allow empty values are OK with setting and empty value
+        entity[key] = value
 
     if isinstance(value, dict):
         smartjsonclass_instance = entity.get_field_type(key)._type()
@@ -60,7 +68,7 @@ def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str):
             if isinstance(item, dict):
                 smartjsonclass_instance = smartjsonclass_class()
                 for d_key, d_value in item.items():
-                    put_dynamic_field(smartjsonclass_instance, d_key, d_value, d_key)
+                    put_dynamic_field(smartjsonclass_instance, d_key, d_value, d_key.title())
 
                 entity[key].append(smartjsonclass_instance)
             else:
