@@ -1,0 +1,6 @@
+DEVICE_PER_PAGE = 200
+MAX_NUMBER_OF_DEVICES = 2000000
+
+URL_DEVICES = 'plat/res/device'
+URL_USERS = 'user'
+URL_BASE_PREFIX = 'imcrs'

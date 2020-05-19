@@ -183,6 +183,11 @@ export const pluginMeta = {
         description: 'Infoblox NetMRI is a network management solution that provides network change and configuration management (NCCM), and enables users to automate network change, see the impact of changes on network health, manage network configurations, and meet a variety of compliance requirements.',
         link: 'https://docs.axonius.com/docs/infoblox-netmri'
     },
+    hpe_imc_adapter: {
+        title: 'HPE Intelligent Management Center (IMC)',
+        description: 'HPE Intelligent Management Center (IMC) is a networking solution that delivers management across campus core and data center networks.',
+        link: 'https://docs.axonius.com/docs/hp-imc'
+    },
     nutanix_adapter: {
         title: 'Nutanix AHV',
         link: 'https://docs.axonius.com/docs/nutanix-ahv',

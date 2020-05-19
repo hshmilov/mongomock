@@ -265,6 +265,7 @@ DOCKER_PORTS = {
     'keycloak-adapter':                 10018,
     'pa-users-csv-adapter':             10110,
     'infoblox-netmri-adapter':          10112,
+    'hpe-imc-adapter':                  10113,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,
     'citrix-epm-adapter':               12347,
