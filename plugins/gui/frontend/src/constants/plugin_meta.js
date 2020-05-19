@@ -17,6 +17,10 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/nozomi-networks-guardian',
         description: 'Nozomi Networks Guardian monitors network communications and device behavior for physical and virtual appliances.'
     },
+    citrix_epm_adapter: {
+        title: 'Citrix Endpoint Management (XenMobile)',
+        description: 'Citrix Endpoint Management (formelly XenMobile) is a solution for managing endpoints, offering mobile device management (MDM) and mobile application management (MAM) capabilities.'
+    },
     axonius_users_adapter: {
         title: 'Axonius Users',
         link: 'https://docs.axonius.com/docs/axonius-users',

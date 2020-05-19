@@ -267,6 +267,7 @@ DOCKER_PORTS = {
     'infoblox-netmri-adapter':          10112,
     'kenna-adapter':                    12345,
     'redhat-satellite-adapter':         12346,
+    'citrix-epm-adapter':               12347,
     'workday-adapter':                  13200,
     'axonius-users-adapter':            13337,
     'esentire-json-adapter':            13339,
