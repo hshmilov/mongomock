@@ -8,7 +8,7 @@ import pytz
 
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
 from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
-    MONGOALIVE_WATCHDOG_IN_PROGRESS
+    MONGOALIVE_WATCHDOG_IN_PROGRESS, create_lock_file
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
 
@@ -92,7 +92,7 @@ class MongoAliveTask(WatchdogTask):
                         break
 
                 if not fixed:
-                    MONGOALIVE_WATCHDOG_IN_PROGRESS.touch()
+                    create_lock_file(MONGOALIVE_WATCHDOG_IN_PROGRESS)
                     self.report_error(MONGO_IS_DOWN)
                     self.report_info(f'Restarting mongo and gui')
                     with open('/home/ubuntu/helper.log', 'a') as helper:

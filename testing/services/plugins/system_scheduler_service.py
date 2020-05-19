@@ -1,6 +1,9 @@
+import sys
+
 import requests
 from retrying import retry
 from axonius.consts.scheduler_consts import Phases, SchedulerState
+from axonius.utils.host_utils import PYTHON_LOCKS_DIR
 from services.plugin_service import PluginService, API_KEY_HEADER
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
@@ -69,6 +72,14 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         scheduler_state = self.current_state().json()
         state = SchedulerState(**scheduler_state['state'])
         assert state.Phase != Phases.Stable.name
+
+    @property
+    def volumes_override(self):
+        volumes = []
+        if 'linux' in sys.platform.lower():
+            volumes = [f'{PYTHON_LOCKS_DIR}:{PYTHON_LOCKS_DIR}']
+        volumes.extend(super().volumes_override)
+        return volumes
 
     def _migrate_db(self):
         super()._migrate_db()

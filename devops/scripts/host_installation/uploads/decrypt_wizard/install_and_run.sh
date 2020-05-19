@@ -1,8 +1,8 @@
 #!/bin/bash
 
 set -e
-
-INSTALL_LOCK=/tmp/install.lock
+LOCKS_DIR=/tmp/ax-locks
+INSTALL_LOCK=$LOCKS_DIR/install.lock
 
 if [ -f $INSTALL_LOCK ]; then
     echo "install lock exists, exiting"
@@ -15,6 +15,7 @@ function finish {
 
 trap finish EXIT
 
+mkdir -p $LOCKS_DIR
 touch $INSTALL_LOCK
 
 DECRYPTION_KEY=$1

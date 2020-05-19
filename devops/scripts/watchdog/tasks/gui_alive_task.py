@@ -9,7 +9,7 @@ from scripts.watchdog.watchdog_task import WatchdogTask
 
 from axonius.consts.system_consts import CORTEX_PATH, NODE_MARKER_PATH
 from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
-    GUIALIVE_WATCHDOG_IN_PROGRESS
+    GUIALIVE_WATCHDOG_IN_PROGRESS, create_lock_file
 
 SLEEP_SECONDS = 60 * 1
 ERROR_MSG = 'UI is not responding'  # do not modify this string. used for alerts
@@ -68,7 +68,7 @@ class GuiAliveTask(WatchdogTask):
 
             if self.now() - self.last_time_gui_alive > GUI_IS_DEAD_THRESH:
                 try:
-                    GUIALIVE_WATCHDOG_IN_PROGRESS.touch()
+                    create_lock_file(GUIALIVE_WATCHDOG_IN_PROGRESS)
                     self.report_info(SHUTTING_DOWN_THE_SYSTEM_MGS)
                     self.report_info(f'Stopping mongo')
                     mongo = self.docker_client.containers.get('mongo')

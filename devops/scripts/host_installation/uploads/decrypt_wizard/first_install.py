@@ -7,7 +7,8 @@ import time
 import os
 
 AXONIUS_DECRYPTED_FILE = Path(f'/home/ubuntu/cortex/axonius.sh')
-INSTALL_LOCK = Path('/tmp/install.lock')
+PYTHON_LOCKS_DIR = Path('/tmp/ax-locks/')
+INSTALL_LOCK = PYTHON_LOCKS_DIR / 'install.lock'
 
 INSTALL_HOME = Path('/home/ubuntu')
 

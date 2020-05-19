@@ -41,7 +41,8 @@ AXONIUS_SETTINGS_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_
 INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.logged_in')
 BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted_for_production')
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
-PYTHON_INSTALLER_LOCK_FILE = Path('/tmp/python_installer.lock')
+PYTHON_INSTALLER_LOCK_DIR = Path('/tmp/ax-locks/')
+PYTHON_INSTALLER_LOCK_FILE = PYTHON_INSTALLER_LOCK_DIR / 'python_installer.lock'
 
 CHMOD_FILES = [
     INSTANCES_SETUP_SCRIPT_PATH,
@@ -72,6 +73,8 @@ def main():
             if check_lock_file(PYTHON_INSTALLER_LOCK_FILE):
                 print(f'Install is already in progress')
             else:
+                if not PYTHON_INSTALLER_LOCK_DIR.is_dir():
+                    PYTHON_INSTALLER_LOCK_DIR.mkdir(exist_ok=True)
                 PYTHON_INSTALLER_LOCK_FILE.touch()
                 success = start_install_flow()
         finally:

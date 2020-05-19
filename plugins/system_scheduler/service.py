@@ -44,7 +44,7 @@ from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.backup import backup_to_s3
 from axonius.utils.files import get_local_config_file
-from axonius.utils.host_utils import get_free_disk_space
+from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
 from axonius.utils.root_master.root_master import root_master_restore_from_s3
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -737,7 +737,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         with self.__realtime_lock:
             try:
-                if self.state.SubPhase is None:
+                if check_installer_locks(unlink=False):
+                    # Installer is in progress, do not trigger rt adapters
+                    logger.debug('Installer is in progress')
+                    should_trigger_plugins = False
+                    should_fetch_rt_adapter = False
+
+                elif self.state.SubPhase is None:
                     # Not in cycle - can do all
                     should_trigger_plugins = True
                     should_fetch_rt_adapter = True
