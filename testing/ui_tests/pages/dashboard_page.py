@@ -1,6 +1,7 @@
 import time
 import datetime
 import re
+from contextlib import contextmanager
 from decimal import Decimal, getcontext
 import pytest
 
@@ -12,6 +13,8 @@ from selenium.webdriver.support.color import Color
 from ui_tests.pages.page import Page
 from services.axon_service import TimeoutException
 from axonius.utils.wait import wait_until
+
+# pylint: disable=too-many-lines
 
 
 class DashboardPage(Page):
@@ -126,6 +129,11 @@ class DashboardPage(Page):
     TOOLTIP_HEADER_CONTENT_CSS = '.x-tooltip .header-content'
     TOOLTIP_BODY_CONTENT_CSS = '.x-tooltip .body-content'
     MOVE_OR_COPY_MODAL_ID = 'move_or_copy'
+
+    PIE_CHART_TYPE = 'pie'
+    HISTOGRAM_CHART_TYPE = 'histogram'
+    SUMMARY_CHART_TYPE = 'summary'
+    TIMELINE_CHART_TYPE = 'timeline'
 
     @property
     def root_page_css(self):
@@ -529,6 +537,12 @@ class DashboardPage(Page):
     def edit_card(self, card_title):
         panel = self.get_card(card_title)
         self.open_close_card_menu(panel)
+        self.driver.find_element_by_id(self.CARD_EDIT_BTN_ID).click()
+        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_card_spinner_to_end()
+
+    def open_edit_card(self, card):
+        self.open_close_card_menu(card)
         self.driver.find_element_by_id(self.CARD_EDIT_BTN_ID).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
         self.wait_for_card_spinner_to_end()
@@ -1180,3 +1194,17 @@ class DashboardPage(Page):
             # Good, it is missing
             return False
         return True
+
+    @contextmanager
+    def edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):
+        self.open_edit_card(card)
+        yield
+        self.click_card_save()
+        if chart_type == self.PIE_CHART_TYPE:
+            self.assert_pie_slices_data(card, assert_data)
+        if chart_type == self.HISTOGRAM_CHART_TYPE:
+            self.assert_histogram_lines_data(card, assert_data)
+        if chart_type == self.SUMMARY_CHART_TYPE:
+            self.assert_summary_text_data(card, assert_data)
+        if chart_type == self.TIMELINE_CHART_TYPE:
+            self.assert_timeline_svg_exist(card, assert_data)

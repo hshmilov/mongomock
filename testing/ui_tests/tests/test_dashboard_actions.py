@@ -1,5 +1,4 @@
 import time
-from contextlib import contextmanager
 import pytest
 from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
@@ -19,10 +18,6 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDashboardActions(TestBase):
-    PIE_CHART_TYPE = 'pie'
-    HISTOGRAM_CHART_TYPE = 'histogram'
-    SUMMARY_CHART_TYPE = 'summary'
-    TIMELINE_CHART_TYPE = 'timeline'
     TEST_EDIT_CARD_TITLE = 'Testonius'
     TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
     NON_LOCAL_USERS_QUERY_NAME = 'Non-local users'
@@ -31,20 +26,6 @@ class TestDashboardActions(TestBase):
     AD_NO_PASSWORD_EXPIRATION_OPTION = 'AD Enabled Users Whose Password Does Not Expire'
     AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
     SEARCH_ICON_CSS = '.actions__search'
-
-    @contextmanager
-    def _edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):
-        self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
-        yield
-        self.dashboard_page.click_card_save()
-        if chart_type == self.PIE_CHART_TYPE:
-            self.dashboard_page.assert_pie_slices_data(card, assert_data)
-        if chart_type == self.HISTOGRAM_CHART_TYPE:
-            self.dashboard_page.assert_histogram_lines_data(card, assert_data)
-        if chart_type == self.SUMMARY_CHART_TYPE:
-            self.dashboard_page.assert_summary_text_data(card, assert_data)
-        if chart_type == self.TIMELINE_CHART_TYPE:
-            self.dashboard_page.assert_timeline_svg_exist(card, assert_data)
 
     def test_dashboard_chart_edit(self):
 
@@ -85,7 +66,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.edit_card(title)
         self.dashboard_page.select_chart_metric('Query Comparison')
         assert self.dashboard_page.is_chart_save_disabled()
-        self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)
+        self.dashboard_page.change_chart_type(self.dashboard_page.PIE_CHART_TYPE)
         views_list = self.dashboard_page.get_views_list()
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[0])
         self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
@@ -97,7 +78,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.edit_card(title)
         self.dashboard_page.select_chart_metric('Field Segmentation')
         assert self.dashboard_page.is_chart_save_disabled()
-        self.dashboard_page.change_chart_type(self.HISTOGRAM_CHART_TYPE)
+        self.dashboard_page.change_chart_type(self.dashboard_page.HISTOGRAM_CHART_TYPE)
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)
         self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
         self.dashboard_page.select_chart_wizard_field(OS_SERVICE_PACK_OPTION_NAME)
@@ -125,73 +106,76 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.click_card_save()
 
     def _test_intersection_chart_edit(self, card):
-        with self._edit_and_assert_chart(card, ['5', '18', '77'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['5', '18', '77'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(HOSTNAME_DC_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, ['9', '18', '73'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['9', '18', '73'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(WINDOWS_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, ['53', '47'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['53', '47'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_intersection_chart_first_query(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_intersection_chart_second_query(self.AD_ADMINS_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, ['60', '40'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['60', '40'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(self.AD_BAD_CONFIG_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, ['33', '27', '20', '20'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['33', '27', '20', '20'],
+                                                       self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(self.AD_ADMINS_QUERY_NAME)
 
     def _test_comparison_chart_edit(self, card):
-        with self._edit_and_assert_chart(card, ['51', '49'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['51', '49'], self.dashboard_page.PIE_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])
 
-        with self._edit_and_assert_chart(card, ['21', '20'], self.HISTOGRAM_CHART_TYPE):
-            self.dashboard_page.change_chart_type(self.HISTOGRAM_CHART_TYPE)
+        with self.dashboard_page.edit_and_assert_chart(card, ['21', '20'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+            self.dashboard_page.change_chart_type(self.dashboard_page.HISTOGRAM_CHART_TYPE)
 
-        with self._edit_and_assert_chart(card, ['20', '15'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['20', '15'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME, views_list[1])
 
     def _test_segmentation_chart_edit(self, card):
-        with self._edit_and_assert_chart(card, ['2'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['2'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.fill_chart_segment_filter(OS_SERVICE_PACK_OPTION_NAME, '1')
 
-        with self._edit_and_assert_chart(card, ['13', '3'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['13', '3'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['5', '1'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['5', '1'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.AD_BAD_CONFIG_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, ['6'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['6'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_field(IS_LOCAL_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['81', '19'], self.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['81', '19'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
-            self.dashboard_page.change_chart_type(self.PIE_CHART_TYPE)
+            self.dashboard_page.change_chart_type(self.dashboard_page.PIE_CHART_TYPE)
 
     def _test_summary_chart_edit(self, card):
-        with self._edit_and_assert_chart(card, ['15'], self.SUMMARY_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['15'], self.dashboard_page.SUMMARY_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_chart_wizard_field(USER_NAME_OPTION_NAME)
             self.dashboard_page.select_chart_summary_function(COUNT_OPTION_NAME)
 
-        with self._edit_and_assert_chart(card, ['515'], self.SUMMARY_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['515'], self.dashboard_page.SUMMARY_CHART_TYPE):
             self.dashboard_page.select_chart_summary_function(AVERAGE_OPTION_NAME)
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)
             self.dashboard_page.select_chart_wizard_adapter(AD_ADAPTER_NAME)
             self.dashboard_page.select_chart_wizard_field(AD_PRIMARY_GROUP_ID_OPTION_NAME)
 
     def _test_timeline_chart_edit(self, card):
-        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS, self.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
+                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
 
-        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS, self.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
+                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
             self.dashboard_page.toggle_comparison_intersection_switch()
             self.dashboard_page.select_chart_result_range_date()
             self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now() + datetime.timedelta(-30))
@@ -202,7 +186,8 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])
 
-        with self._edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS, self.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
+                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE, views_list[1])
@@ -214,7 +199,8 @@ class TestDashboardActions(TestBase):
         self.base_page.run_discovery()
         self.dashboard_page.open_new_card_wizard()
         self.dashboard_page.select_chart_metric('Field Segmentation')
-        self.dashboard_page.fill_text_field_by_element_id(self.dashboard_page.CHART_TITLE_ID, self.TEST_EDIT_CARD_TITLE)
+        self.dashboard_page.fill_text_field_by_element_id(self.dashboard_page.CHART_TITLE_ID,
+                                                          self.TEST_EDIT_CARD_TITLE)
         assert self.dashboard_page.is_chart_segment_include_empty_enabled()
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE)
         self.dashboard_page.select_chart_wizard_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
@@ -333,11 +319,14 @@ class TestDashboardActions(TestBase):
                                                   field=TAGS_FIELD_NAME,
                                                   title=self.TEST_EDIT_CARD_TITLE)
         card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
-        with self._edit_and_assert_chart(card, ['5', '4', '3', '2'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['5', '4', '3', '2'],
+                                                       self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.check_chart_segment_include_empty()
-        with self._edit_and_assert_chart(card, ['5', '4', '3'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['5', '4', '3'],
+                                                       self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.fill_chart_segment_filter(TAGS_OPTION_NAME, 'filter', 1)
-        with self._edit_and_assert_chart(card, ['4', '2'], self.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['4', '2'],
+                                                       self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.fill_chart_segment_filter(TAGS_OPTION_NAME, 'search', 1)
         histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
         line = self.dashboard_page.get_histogram_line_from_histogram(histogram_chart, 1)
