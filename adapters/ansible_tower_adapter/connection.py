@@ -28,6 +28,7 @@ class AnsibleTowerConnection(RESTConnection):
 
         self._get(f'{API_HOST_URI}/', url_params={'page_size': 10}, do_basic_auth=True)
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_device_list(self):
         """  The next and previous fields provides links to
              additional results if there are more than will fit on a single page. The
@@ -45,6 +46,12 @@ class AnsibleTowerConnection(RESTConnection):
                 if isinstance(ansibel_hosts, dict) and ansibel_hosts:
                     for host in ansibel_hosts['results']:
                         if isinstance(host, dict) and host.get('type') == AnsibelTowerInstanceType.host.name:
+                            try:
+                                host_id = host['id']
+                                host['facts_raw'] = self._get(f'{API_HOST_URI}/{host_id}/ansible_facts/',
+                                                              do_basic_auth=True)
+                            except Exception:
+                                logger.exception(f'Problem with facts for host {host}')
                             yield host
 
             except Exception:

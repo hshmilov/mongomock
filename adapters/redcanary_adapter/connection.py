@@ -26,8 +26,30 @@ class RedcanaryConnection(RESTConnection):
                               'page': page})
 
     def get_device_list(self):
+        detections_dict = dict()
+        try:
+            for detection_raw in self._get_api_endpoint('detections'):
+                try:
+                    relationships = detection_raw.get('relationships') or {}
+                    affected_endpoint = relationships.get('affected_endpoint') or {}
+                    endpoint_data = affected_endpoint.get('data') or {}
+                    endpoint_id = endpoint_data.get('id')
+                    if not endpoint_id:
+                        continue
+                    endpoint_id = str(endpoint_id)
+                    if endpoint_id not in detections_dict:
+                        detections_dict[endpoint_id] = []
+                    detections_dict[endpoint_id].append(detection_raw)
+                except Exception:
+                    logger.exception(f'Prbolem with detecion {detection_raw}')
+        except Exception:
+            logger.exception(f'Problem with detcionns')
+        for device_raw in self._get_api_endpoint('endpoints'):
+            yield device_raw, detections_dict
+
+    def _get_api_endpoint(self, endpoint):
         page = 1
-        response = self._get('endpoints',
+        response = self._get(endpoint,
                              url_params={'per_page': DEVICE_PER_PAGE,
                                          'page': page}
                              )
@@ -35,7 +57,7 @@ class RedcanaryConnection(RESTConnection):
         while page * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 page += 1
-                response = self._get('endpoints',
+                response = self._get(endpoint,
                                      url_params={'per_page': DEVICE_PER_PAGE,
                                                  'page': page}
                                      )

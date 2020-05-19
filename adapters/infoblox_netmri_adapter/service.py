@@ -171,7 +171,8 @@ class InfobloxNetmriAdapter(AdapterBase):
                 return None
             device_name = device_raw.get('DeviceName')
             device.id = device_id + '_' + device_name or '' + '_' + device_raw.get('DeviceUniqueKey') or ''
-            device.name = device_name
+            if device_name != 'unknown':
+                device.name = device_name
             if device_raw.get('DeviceDNSName') != 'unknown':
                 device.hostname = device_raw.get('DeviceDNSName')
             device.device_model = device_raw.get('DeviceModel')

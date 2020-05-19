@@ -104,6 +104,9 @@ export const actionsMeta = {
     update_cherwell_computer: {
         title: 'Update Cherwell Computer'
     },
+    update_service_now_computer: {
+        title: 'Update ServiceNow Computer'
+    },
     carbonblack_defense_change_policy: {
         title: 'Change Carbon Black CB Defense Policy'
     },
@@ -222,7 +225,7 @@ export const actionsMeta = {
     },
     create_cmdb_computer: {
         title: 'Manage CMDB Computer',
-        items: ['create_service_now_computer', 'update_cherwell_computer']
+        items: ['create_service_now_computer', 'update_service_now_computer','update_cherwell_computer']
     },
     manage_directory: {
         title: 'Manage Microsoft Active Directory (AD) Services',

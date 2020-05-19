@@ -23,6 +23,7 @@ class CounterActAdapter(AdapterBase):
         ad_disply_name = Field(str, 'AD Display Name')
         fingerprint = Field(str, 'Fingerprint')
         in_groups = ListField(str, 'In Groups')
+        connectivity_type = Field(str, 'Connectivity Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -179,6 +180,8 @@ class CounterActAdapter(AdapterBase):
                                     device.fingerprint = field_raw_data.get('value')
                                 elif field_raw_name == 'vendor':
                                     device.device_manufacturer = field_raw_data.get('value')
+                                elif field_raw_name == 'connectivity_type':
+                                    device.connectivity_type = field_raw_data.get('value')
                                 elif field_raw_name == 'in-group':
                                     if isinstance(field_raw_data, list):
                                         for group_info in field_raw_data:

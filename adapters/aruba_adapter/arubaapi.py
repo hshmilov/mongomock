@@ -15,7 +15,7 @@ class ArubaAPI:
 
     _SESSION_COOKIE = 'SESSION'
 
-    def __init__(self, device, username, password, port=4343, insecure=False):
+    def __init__(self, device, username, password, port=4343, insecure=False, ssl=True):
         """Instantiates an ArubaAPI object
 
         :param device: Name or IP address of controller
@@ -33,10 +33,13 @@ class ArubaAPI:
         """
         if device.startswith('https://'):
             device = device[len('https://'):]
+        if device.startswith('http://'):
+            device = device[len('http://'):]
         self.device = device
         self.port = port
         self.username = username
         self.password = password
+        self.scheme = 'https' if ssl else 'http'
         self.verify = not insecure
         self.session = requests.Session()
         if not self.verify:
@@ -54,7 +57,7 @@ class ArubaAPI:
         self.close()
 
     def _uri(self):
-        uri = 'https://{}'.format(self.device)
+        uri = '{}://{}'.format(self.scheme, self.device)
         if self.port:
             uri = '{}:{}'.format(uri, self.port)
         return uri

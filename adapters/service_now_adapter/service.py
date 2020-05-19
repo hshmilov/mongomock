@@ -133,7 +133,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     # pylint: disable=R0912,R0915,R0914
     def create_snow_device(self,
                            device_raw,
-                           table_type='cmdb_ci_computer',
+                           table_type=None,
                            snow_location_table_dict=None,
                            fetch_ips=True,
                            snow_department_table_dict=None,
@@ -320,6 +320,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 host_name = device_raw.get('host_name') or device_raw.get('fqdn') or device_raw.get('u_fqdn')
                 if host_name and name and name.lower() in host_name.lower():
                     device.hostname = host_name.split('.')[0].strip()
+                else:
+                    alias = device_raw.get('u_alias')
+                    if alias:
+                        alias_list = alias.split(',')
+                        for alias_raw in alias_list:
+                            alias_raw = alias_raw.strip().lower()
+                            if alias_raw and alias_raw != 'undefined':
+                                device.hostname = alias_raw
             except Exception:
                 logger.warning(f'Problem getting hostname in {device_raw}', exc_info=True)
             try:
@@ -712,6 +720,33 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    @add_rule('update_computer', methods=['POST'])
+    def update_service_now_computer(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        service_now_connection = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, device_raw = conn.update_service_now_computer(service_now_connection)
+                    success = success or result_status
+                    if success is True:
+                        device = self.create_snow_device(device_raw=device_raw,
+                                                         fetch_ips=self.__fetch_ips)
+                        if device:
+                            device_dict = device.to_dict()
+                            self._save_data_from_plugin(
+                                client_id,
+                                {'raw': [], 'parsed': [device_dict]},
+                                EntityType.Devices, False)
+                            self._save_field_names_to_db(EntityType.Devices)
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return 'Failure', 400
+
     @add_rule('create_incident', methods=['POST'])
     def create_service_now_incident(self):
         if self.get_method() != 'POST':
@@ -744,8 +779,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     success = success or result_status
                     if success is True:
                         device = self.create_snow_device(device_raw=device_raw,
-                                                         fetch_ips=self.__fetch_ips,
-                                                         table_type='cmdb_ci_computer')
+                                                         fetch_ips=self.__fetch_ips)
                         if device:
                             device_id = device.id
                             device_dict = device.to_dict()

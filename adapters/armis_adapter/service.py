@@ -119,7 +119,7 @@ class ArmisAdapter(AdapterBase):
                 try:
                     ips = device_raw.get('ipAddress').split(',') if device_raw.get('ipAddress') else None
                     mac = device_raw.get('macAddress') if device_raw.get('macAddress') else None
-                    if len(mac) != 17:
+                    if not mac or len(mac) != 17:
                         mac = None
                     if ips or mac:
                         device.add_nic(mac, ips)

@@ -11,4 +11,5 @@ XML_ATTRIB_CODES = {'0x1006e': 'Model Name',
                     '0x10030': 'Serial_Number',
                     '0x129e7': 'TopologyModelNameString',
                     '0x12adb': 'CollectionsModelNameString',
-                    '0x10052': 'sysDescr'}
+                    '0x10052': 'sysDescr',
+                    '0x12de0': 'RunningFirmware'}

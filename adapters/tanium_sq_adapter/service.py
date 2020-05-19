@@ -79,6 +79,14 @@ class TaniumSqAdapter(AdapterBase):
         value = self._get_value(name=name, value_map=value_map, first=True)
 
         if not tanium.tools.is_empty(value=value):
+            try:
+                if value:
+                    if value.endswith('.(none)'):
+                        value = value[: -len('.(none)')]
+                    if './bin/sh' in value:
+                        value = value[:value.find('./bin/sh')]
+            except Exception:
+                logger.exception(f'ERROR getting host_name from')
             device.hostname = value
 
     def _sens_serial(self, device, name, value_map):

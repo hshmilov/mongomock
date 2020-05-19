@@ -42,6 +42,12 @@ class AzureAdAdapter(AdapterBase, Configurable):
         managed_device_name = Field(str, 'Managed Device Name')
         azure_ad_id = Field(str)
         last_sign_in = Field(datetime.datetime, 'Approximate Last SignIn Time')
+        compliance_state = Field(str, 'Compliance State')
+        grace_period_expiration = Field(datetime.datetime, 'Compliance Grace Period Expiration Date Time')
+        device_enrollment_type = Field(str, 'Device Enrollment Type')
+        device_registration_state = Field(str, 'Device Registration State')
+        eas_activated = Field(bool, 'EAS Activated')
+        enrolled_time = Field(datetime.datetime, 'Enrolled Date Time')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         account_tag = Field(str, 'Account Tag')
@@ -249,7 +255,13 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 return None
             device.id = device_id + '_' + (device_raw.get('deviceName') or '')
             device.name = device_raw.get('deviceName')
+            device.grace_period_expiration = parse_date(device_raw.get('complianceGracePeriodExpirationDateTime'))
             device.device_manufacturer = device_raw.get('manufacturer')
+            device.compliance_state = device_raw.get('complianceState')
+            device.device_enrollment_type = device_raw.get('deviceEnrollmentType')
+            device.device_registration_state = device_raw.get('deviceRegistrationState')
+            device.eas_activated = device_raw.get('easActivated') \
+                if isinstance(device_raw.get('easActivated'), bool) else None
             device.device_model = device_raw.get('model')
             try:
                 total_storage_space_in_gb = int(device_raw.get('totalStorageSpaceInBytes')) / (1024.0 ** 3)
@@ -280,6 +292,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
             device.phone_number = device_raw.get('phoneNumber')
             device.android_security_patch_level = device_raw.get('androidSecurityPatchLevel')
             device.email = device_raw.get('emailAddress')
+            device.enrolled_time = parse_date(device_raw.get('enrolledDateTime'))
             if device_raw.get('wiFiMacAddress'):
                 device.add_nic(device_raw.get('wiFiMacAddress'), None)
             device.is_encrypted = device_raw.get('isEncrypted')

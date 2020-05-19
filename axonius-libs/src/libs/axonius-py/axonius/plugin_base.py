@@ -77,7 +77,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC,
                                           CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                           GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY, CORRELATE_GLOBALY_ON_HOSTNAME,
-                                          MAX_WORKERS,
+                                          MAX_WORKERS, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
                                           NODE_ID, NODE_INIT_NAME,
                                           NOTIFICATIONS_SETTINGS,
                                           NOTIFY_ADAPTERS_FETCH,
@@ -3098,6 +3098,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_by_snow_mac = config[CORRELATION_SETTINGS].get(CORRELATE_BY_SNOW_MAC, False)
         self._correlate_azure_ad_name_only = config[CORRELATION_SETTINGS].get(CORRELATE_BY_AZURE_AD_NAME_ONLY, False)
         self._correlate_public_ip_only = config[CORRELATION_SETTINGS].get(CORRELATE_PUBLIC_IP_ONLY, False)
+        self._allow_service_now_by_name_only = config[CORRELATION_SETTINGS].get(ALLOW_SERVICE_NOW_BY_NAME_ONLY, False)
         self._global_hostname_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_GLOBALY_ON_HOSTNAME, False)
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
@@ -3804,6 +3805,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Correlate devices based on public IP only'
                         },
                         {
+                            'name': ALLOW_SERVICE_NOW_BY_NAME_ONLY,
+                            'type': 'bool',
+                            'title': 'Correlate ServiceNow by name only'
+                        },
+                        {
                             'name': CORRELATE_GLOBALY_ON_HOSTNAME,
                             'type': 'bool',
                             'title': 'Correlate Globally based on Hostname only'
@@ -3814,7 +3820,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                 CORRELATE_GLOBALY_ON_HOSTNAME,
+                                 CORRELATE_GLOBALY_ON_HOSTNAME, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
                 {
@@ -4056,6 +4062,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_BY_SNOW_MAC: False,
                 CORRELATE_BY_AZURE_AD_NAME_ONLY: False,
                 CORRELATE_PUBLIC_IP_ONLY: False,
+                ALLOW_SERVICE_NOW_BY_NAME_ONLY: False,
                 CORRELATE_GLOBALY_ON_HOSTNAME: False
             },
             CORRELATION_SCHEDULE: {

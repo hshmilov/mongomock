@@ -30,7 +30,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
                                    is_azuread_or_ad_and_have_name,
-                                   hostname_not_problematic,
+                                   hostname_not_problematic, os_do_not_contradict,
                                    is_different_plugin,
                                    is_from_juniper_and_asset_name,
                                    is_windows, is_linux, get_cloud_id_or_hostname, compare_cloud_id_or_hostname,
@@ -51,15 +51,15 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter', 'quest_kace_adapter']
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
-                      'counter_act_adapter']
+                      'counter_act_adapter', 'tanium_discover_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
-                      'infoblox_adapter', 'azure_ad_adapter']
+                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
+ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
 
 
 def get_private_dns_name(adapter_device):
@@ -107,7 +107,8 @@ def is_only_host_adapter(adapter_device):
         return True
     try:
         if adapter_device.get('plugin_name') == 'active_directory_adapter' and \
-                (DOES_AD_HAVE_ONE_CLIENT or 'OU=Linux,' in adapter_device['data'].get('id')):
+                (DOES_AD_HAVE_ONE_CLIENT or 'OU=Linux,' in adapter_device['data'].get('id')
+                 or is_linux(adapter_device)):
             return True
     except Exception:
         pass
@@ -125,7 +126,8 @@ def is_zscaler_adapter(adapter_device):
 def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
-        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)
+        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)\
+        or is_service_now_and_no_other(adapter_device)
 
 
 def is_only_host_adapter_not_localhost(adapter_device):
@@ -197,6 +199,12 @@ def get_agent_uuid(adapter_device):
 def compare_agent_uuids(adapter_device1, adapter_device2):
     if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
         return False
+    return get_agent_uuid(adapter_device1) == get_agent_uuid(adapter_device2)
+
+
+def agent_uuid_do_not_contradict(adapter_device1, adapter_device2):
+    if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
+        return True
     return get_agent_uuid(adapter_device1) == get_agent_uuid(adapter_device2)
 
 
@@ -312,7 +320,15 @@ def is_ivanti_cm_adapter(adapter_device):
 
 
 def is_service_now_and_no_other(adapter_device):
-    if adapter_device.get('plugin_name') == 'service_now_adapter' and not get_hostname(adapter_device) \
+    if not adapter_device.get('plugin_name') == 'service_now_adapter':
+        return False
+    try:
+        if ALLOW_SERVICE_NOW_BY_NAME_ONLY:
+            return True
+    except Exception:
+        pass
+    if not get_hostname(adapter_device) \
+            and not get_normalized_ip(adapter_device) \
             and not get_serial(adapter_device) and not adapter_device.get(NORMALIZED_MACS):
         return True
     return False
@@ -344,7 +360,8 @@ def is_aws_or_chef_adapter(adapter_device):
 
 
 def is_asset_ok_hostname_no_adapters(adapter_device):
-    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter', 'epo_adapter']
+    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter',
+                                                 'epo_adapter', 'esx_adapter']
 
 
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
@@ -421,8 +438,14 @@ def force_mac_adapters(adapter_device):
 # pylint: disable=global-statement
 
 
+def is_a_record_device(adapter_device):
+    return adapter_device.get('plugin_name') == 'infoblox_adapter' \
+        and adapter_device['data'].get('fetch_type') == 'A Record'
+
+
 def is_full_hostname_adapter(adapter_device):
-    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter']
+    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter'] \
+        or is_a_record_device(adapter_device)
 
 
 # Solarwinds Node are bad for MAC correlation
@@ -676,7 +699,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_fqdn_or_hostname],
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname_fqdn and IPs or MACs'},
                                       CorrelationReason.StaticAnalysis)
@@ -690,7 +713,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [macs_do_not_contradict, ips_do_not_contradict_or_mac_intersection,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs or MACs'},
                                       CorrelationReason.StaticAnalysis)
@@ -716,22 +739,22 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [lambda x: x.get('plugin_name') in USERS_CORRELATION_ADAPTERS],
                                       [compare_last_used_users,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and LastUsedUser'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_domain(self, adapters_to_correlate):
         logger.info('Starting to correlate on Hostname-Domain')
-        filtered_adapters_list = filter(get_normalized_hostname_str, filter(get_domain_for_correlation,
-                                                                            adapters_to_correlate))
+        filtered_adapters_list = filter(get_asset_or_host, filter(get_domain_for_correlation,
+                                                                  adapters_to_correlate))
         filtered_adapters_list = filter(hostname_not_problematic, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
-                                      [get_normalized_hostname_str],
-                                      [compare_device_normalized_hostname],
+                                      [get_asset_or_host],
+                                      [compare_asset_hosts],
                                       [is_from_ad],
                                       [compare_domain_for_correlation,
-                                       not_wifi_adapters,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname and domain'},
                                       CorrelationReason.StaticAnalysis)
@@ -746,7 +769,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(not_wifi_adapter, filtered_adapters_list)
         filtered_adapters_list = filter(lambda x: x.get('plugin_name') != 'cisco_meraki_adapter',
                                         filtered_adapters_list)
-        inner_compare = [serials_do_not_contradict]
+        inner_compare = [serials_do_not_contradict, agent_uuid_do_not_contradict, os_do_not_contradict]
         if csv_full_hostname:
             inner_compare.append(compare_hostname)
         else:
@@ -1138,6 +1161,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                             self._correlation_config.get('correlate_azure_ad_name_only') is True)
         correlate_public_ip_only = bool(self._correlation_config and
                                         self._correlation_config.get('correlate_public_ip_only') is True)
+        global ALLOW_SERVICE_NOW_BY_NAME_ONLY
+        ALLOW_SERVICE_NOW_BY_NAME_ONLY = (self._correlation_config and
+                                          self._correlation_config.get('allow_service_now_by_name_only') is True)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)

@@ -493,6 +493,8 @@ class ServiceData(SmartJsonClass):
 
 
 class TenableVulnerability(SmartJsonClass):
+    plugin_id = Field(str, 'Plugin ID')
+    output = Field(str, 'Output')
     plugin = Field(str, 'Plugin')
     severity = Field(str, 'Severity')
     cpe = Field(str, 'Cpe')

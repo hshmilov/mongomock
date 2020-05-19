@@ -43,7 +43,7 @@ class SendEmailToEntities(ActionTypeBase):
             'mail_subject': None,
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-statements
     def _run(self) -> EntitiesResult:
         mail_sender = self._plugin_base.mail_sender
         if not mail_sender:
@@ -57,6 +57,7 @@ class SendEmailToEntities(ActionTypeBase):
             'adapters.data.project_ids': 1,
             'adapters.data.account_tag': 1,
             'adapters.data.aws_account_alias': 1,
+            'tags.data.last_used_users_mail_association': 1,
             'internal_axon_id': 1
         })
         results = []
@@ -69,12 +70,20 @@ class SendEmailToEntities(ActionTypeBase):
                 account_tag = []
                 aws_account_alias = []
                 mail_list = set()
-                for adapter_data in entry['adapters']:
+                adapters_entries = entry['adapters']
+                try:
+                    if isinstance(entry.get('tags'), list):
+                        adapters_entries.extend(entry['tags'])
+                except Exception:
+                    logger.exception(f'Problem with tags data')
+                for adapter_data in adapters_entries:
                     adapter_data = adapter_data.get('data') or {}
                     if adapter_data.get('mail'):
                         mail_list.add(adapter_data.get('mail'))
                     if adapter_data.get('email'):
                         mail_list.add(adapter_data.get('email'))
+                    if adapter_data.get('last_used_users_mail_association'):
+                        mail_list.add(adapter_data.get('last_used_users_mail_association'))
                     if adapter_data.get('first_name') and not first_name:
                         first_name = adapter_data.get('first_name')
                     if adapter_data.get('username') and not username:

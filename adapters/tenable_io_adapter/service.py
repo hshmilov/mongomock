@@ -250,6 +250,21 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 device.name = fqdns[0]
             else:
                 device.hostname = fqdns[0]
+        try:
+            installed_software = device_raw.get('installed_software')
+            if not isinstance(installed_software, list):
+                installed_software = []
+            for sw_raw in installed_software:
+                try:
+                    sw_raw = sw_raw.split(':')
+                    if len(sw_raw) == 5 and sw_raw[0] == 'cpe' and sw_raw[1] == '/a':
+                        device.add_installed_software(vendor=sw_raw[2],
+                                                      name=sw_raw[3],
+                                                      version=sw_raw[4])
+                except Exception:
+                    logger.debug(f'Problem with sw {sw_raw}')
+        except Exception:
+            logger.exception(f'Problem with installed sw')
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []
@@ -258,6 +273,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 severity = vuln_raw.get('severity', '')
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
+                plugin_output = vuln_raw.get('output')
                 plugin_data = []
                 cpe = None
                 cve = None
@@ -291,6 +307,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 if f'{plugin_name}__{severity}' not in plugin_and_severity:
                     plugin_and_severity.append(f'{plugin_name}__{severity}')
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
+                                            output=plugin_output, plugin_id=plugin_id,
                                             cvss_base_score=cvss_base_score, exploit_available=exploit_available,
                                             synopsis=synopsis, see_also=see_also)
                     device.add_vulnerable_software(cve_id=cve)

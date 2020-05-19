@@ -23,8 +23,6 @@ class ServiceNowConnection(RESTConnection):
         self.__offset_size = consts.OFFSET_SIZE
         super().__init__(url_base_prefix='api/now/', *args, **kwargs)
         self._permanent_headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        self.__number_of_incidents = 0
-        self.__number_of_new_computers = 0
 
     def _connect(self):
         if self._username is not None and self._password is not None:
@@ -317,6 +315,10 @@ class ServiceNowConnection(RESTConnection):
     def __add_dict_to_table(self, table_name, dict_data):
         return self._post(f'table/{str(table_name)}', body_params=dict_data)
 
+    def __update_dict_in_table(self, table_name, sys_id, dict_data):
+        self._patch(f'table/{table_name}/{sys_id}', body_params=dict_data)
+        return self._get(f'table/{table_name}/{sys_id}')
+
     # pylint: disable=too-many-branches
     def create_service_now_incident(self, service_now_dict):
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
@@ -332,8 +334,7 @@ class ServiceNowConnection(RESTConnection):
         subcategory = service_now_dict.get('subcategory')
         csv_string = service_now_dict.get('csv_string')
 
-        self.__number_of_incidents += 1
-        logger.info(f'Creating servicenow incident num {self.__number_of_incidents}: impact={impact}, '
+        logger.info(f'Creating servicenow incident: impact={impact}, '
                     f'short_description={short_description}, description={description}')
         try:
             final_dict = {'impact': impact,
@@ -370,17 +371,26 @@ class ServiceNowConnection(RESTConnection):
                                           csv_string=csv_string)
             return True
         except Exception:
-            logger.exception(f'Exception while creating incident for num {self.__number_of_incidents}')
+            logger.exception(f'Exception while creating incident')
             return False
 
     def create_service_now_computer(self, connection_dict):
         cmdb_ci_table = connection_dict.get('cmdb_ci_table') or 'cmdb_ci_computer'
-        self.__number_of_new_computers += 1
-        logger.info(f'Creating service now computer num {self.__number_of_new_computers}')
+        logger.info(f'Creating service now computer ')
         try:
             device_raw = self.__add_dict_to_table(cmdb_ci_table, connection_dict)['result']
             return True, device_raw
         except Exception:
-            logger.exception(f'Exception while creating incident for '
-                             f'num {self.__number_of_new_computers} with connection dict {connection_dict}')
+            logger.exception(f'Exception while creating incident with connection dict {connection_dict}')
+            return False, None
+
+    def update_service_now_computer(self, connection_dict):
+        cmdb_ci_table = connection_dict['sys_class_name']
+        sys_id = connection_dict['sys_id']
+        logger.info(f'Updating service now computer')
+        try:
+            device_raw = self.__update_dict_in_table(cmdb_ci_table, sys_id, connection_dict)['result']
+            return True, device_raw
+        except Exception:
+            logger.exception(f'Exception while creating incident with connection dict {connection_dict}')
             return False, None

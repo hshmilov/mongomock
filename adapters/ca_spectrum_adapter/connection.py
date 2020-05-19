@@ -21,7 +21,7 @@ class CaSpectrumConnection(RESTConnection):
             raise RESTException('No username or password')
         xml_response = parse_xml_from_string(
             self._get('devices?'
-                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&'
+                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&attr=0x12de0&'
                       'attr=0x23000c&attr=0x23000d&attr=0x1102a&attr=0x10030&attr=0x10052&'
                       f'throttlesize={THROTTLESIZE_MIN}',
                       do_basic_auth=True,
@@ -34,7 +34,7 @@ class CaSpectrumConnection(RESTConnection):
     def get_device_list(self):
         xml_response = parse_xml_from_string(
             self._get('devices?'
-                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&'
+                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&attr=0x12de0&'
                       'attr=0x23000c&attr=0x23000d&attr=0x1102a&attr=0x10030&attr=0x10052&'
                       f'throttlesize={THROTTLESIZE_MIN}',
                       do_basic_auth=True,
@@ -45,7 +45,7 @@ class CaSpectrumConnection(RESTConnection):
         logger.info(f'Total models {total_models}')
         xml_response = parse_xml_from_string(
             self._get('devices?'
-                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&'
+                      'attr=0x1006e&attr=0x12d7f&attr=0x10032&attr=0x110df&attr=0x23000e&attr=0x12de0&'
                       'attr=0x23000c&attr=0x23000d&attr=0x1102a&attr=0x10030&attr=0x10052&'
                       f'throttlesize={total_models}',
                       do_basic_auth=True,

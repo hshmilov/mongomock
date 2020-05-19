@@ -83,8 +83,8 @@ class TaniumAdapter(AdapterBase):
         value = device_raw.get('host_name')
         try:
             if value:
-                if value.endswith('(none)'):
-                    value = value[: -len('(none)')]
+                if value.endswith('.(none)'):
+                    value = value[: -len('.(none)')]
                 if './bin/sh' in value:
                     value = value[:value.find('./bin/sh')]
             return value or ''

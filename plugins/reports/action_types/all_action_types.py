@@ -50,6 +50,7 @@ from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
 from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
 from reports.action_types.alert.create_fresh_service_incident import FreshServiceIncidentAction
 from reports.action_types.base.webscan_enrichment import WebscanEnrichment
+from reports.action_types.base.update_service_now_computer import UpdateServicenowComputerAction
 from reports.action_types.base.create_jira_ticket_per_entity import JiraIncidentPerEntityAction
 from reports.action_types.base.automox_install_update import AutomoxInstallUpdateAction
 from reports.action_types.base.carbonblack_defense_quarantine import CarbonblackDefenseQuarantineAction
@@ -68,6 +69,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_cherwell_incident': CherwellIncidentAction,
     'add_custom_data': AddCustomDataAction,
     'carbonblack_isolate': CarbonblackIsolateAction,
+    'update_service_now_computer': UpdateServicenowComputerAction,
     'carbonblack_unisolate': CarbonblackUnisolateAction,
     'untag': UntagAllEntitiesAction,
     'run_executable_windows': RunExecutable,

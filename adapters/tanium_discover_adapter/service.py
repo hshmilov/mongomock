@@ -9,6 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter, DeviceAdapterOS
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.utils.parsing import figure_out_os
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from tanium_discover_adapter.consts import METHODS, FETCH_OPTS
 
 from tanium_discover_adapter.connection import TaniumDiscoverConnection
@@ -16,7 +17,7 @@ from tanium_discover_adapter.connection import TaniumDiscoverConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class TaniumDiscoverAdapter(AdapterBase):
+class TaniumDiscoverAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(field_type=str, title='Tanium Server')
@@ -186,11 +187,15 @@ class TaniumDiscoverAdapter(AdapterBase):
             ('ports', None, self._add_open_ports),
             ('tags', None, self._add_adapter_tags),
         ]
+        if self.__trust_hostname:
+            discover_hostname = 'hostname'
+        else:
+            discover_hostname = 'discover_hostname'
         specific = [
             ('cloudTags', 'tags_cloud', tanium.tools.set_csv),
             ('computerid', 'computer_id', tanium.tools.set_int),
             ('createdAt', 'created_at', tanium.tools.set_dt),
-            ('hostname', 'discover_hostname', tanium.tools.set_str),
+            ('hostname', discover_hostname, tanium.tools.set_str),
             ('ignored', 'is_ignored', tanium.tools.set_bool),
             ('instanceId', 'instance_id', tanium.tools.set_str),
             ('instanceState', 'instance_state', tanium.tools.set_str),
@@ -267,3 +272,29 @@ class TaniumDiscoverAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'trust_hostname',
+                    'title': 'Trust Tanium Discover hostname',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'trust_hostname'
+            ],
+            'pretty_name': 'Tanium Discover Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'trust_hostname': False
+        }
+
+    def _on_config_update(self, config):
+        self.__trust_hostname = config.get('trust_hostname') or False

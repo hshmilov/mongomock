@@ -58,6 +58,20 @@
             'href': 'https://nvd.nist.gov/vuln/detail/' + value
         }
     },
+    'email': function (value) {
+        return {
+            'type': 'query',
+            'module': 'users',
+            'filter': 'specific_data.data.mail == "'+value+'"'
+        }
+    },
+    'owner': function (value) {
+        return {
+            'type': 'query',
+            'module': 'users',
+            'filter': 'specific_data.data.username == "'+value+'"'
+        }
+    },
     'software_cves.cve_id': function (value) {
         return {
             'type': 'link',

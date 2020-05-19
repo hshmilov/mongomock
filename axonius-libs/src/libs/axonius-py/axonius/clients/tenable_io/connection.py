@@ -8,7 +8,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.clients.tenable_io.consts import AGENTS_PER_PAGE, DEVICES_PER_PAGE,\
     NUMBER_OF_SLEEPS, SECONDS_IN_DAY, TIME_TO_SLEEP,\
-    DAYS_UNTIL_FETCH_AGAIN, DAYS_FOR_VULNS_IN_CSV, DAYS_VULNS_FETCH, MAX_AGENTS
+    DAYS_UNTIL_FETCH_AGAIN, DAYS_FOR_VULNS_IN_CSV, MAX_AGENTS
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -225,10 +225,7 @@ class TenableIoConnection(RESTConnection):
                 logger.exception(f'Problem updating asset {updated_asset}')
 
     def _get_vulns(self):
-        yield from self._get_export_data('vulns', action='updated_at',
-                                         epoch=int(time.time()) - (SECONDS_IN_DAY * DAYS_VULNS_FETCH))
-        yield from self._get_export_data('vulns', action='created_at',
-                                         epoch=int(time.time()) - (SECONDS_IN_DAY * DAYS_VULNS_FETCH))
+        return self._tio.exports.vulns()
 
     # pylint: disable=W0221
     def get_device_list(self, use_cache):

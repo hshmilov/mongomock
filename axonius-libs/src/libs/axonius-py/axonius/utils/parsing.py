@@ -225,7 +225,7 @@ def figure_out_windows_dist(s):
         return '10'
     s = s.replace('Windows ', '').replace('Windows', '').replace('Win', '')
     dist_name = ''
-    if 'server' in s:
+    if 'server' in s or 'windows 2003' in s:
         dist_name = f'{dist_name} Server'
     else:
         dists_with_no_version = ['Vista', 'XP']
@@ -900,6 +900,7 @@ def hostname_not_problematic(adapter_device):
              and 'n/a' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'itadmins-macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'macbook-pro_root' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
@@ -1218,7 +1219,9 @@ def get_asset_name(adapter_device):
     if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
             and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)) \
             and not is_tenable_io_adapter(adapter_device):
-        return adapter_device['data'].get('name').upper()
+        asset = adapter_device['data'].get('name').upper().strip()
+        if asset not in ['UNKNOWN']:
+            return asset
     return None
 
 
@@ -1405,12 +1408,20 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
         if is_dangerous_asset_names_adapter(adapter_device1):
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
-            if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
+            if asset1 and asset2:
+                asset1_lower = asset1.split('.')[0].lower()
+                asset2_lower = asset2.split('.')[0].lower()
+                if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
+                    return True
                 return False
         if is_dangerous_asset_names_adapter(adapter_device2):
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
-            if asset1 and asset2 and asset1.split('.')[0].lower() != asset2.split('.')[0].lower():
+            if asset1 and asset2:
+                asset1_lower = asset1.split('.')[0].lower()
+                asset2_lower = asset2.split('.')[0].lower()
+                if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
+                    return True
                 return False
     return True
 
@@ -1516,7 +1527,8 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
     def is_in_short_names_adapters_and_long_name(adapter_device):
         if is_linux(adapter_device):
             return False
-        if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter', 'active_directory_adapter',
+        if adapter_device.get('plugin_name') in ['carbonblack_protection_adapter',
+                                                 'active_directory_adapter',
                                                  'lansweeper_adapter', 'sccm_adapter'] \
                 and len(get_hostname(adapter_device).split('.')[0]) == NET_BIOS_MAX_LENGTH:
             return True

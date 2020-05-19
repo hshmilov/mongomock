@@ -22,6 +22,7 @@ class CaSpectrumAdapter(AdapterBase):
         ca_type = Field(str, 'Device Type')
         contact_person = Field(str, 'Contact Person')
         location = Field(str, 'Location')
+        running_firmware = Field(str, 'Running Firmware')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -152,6 +153,7 @@ class CaSpectrumAdapter(AdapterBase):
             device.description = device_raw_dict.get('sysDescr')
             device.location = device_raw_dict.get('Location')
             device.ca_type = device_raw_dict.get('DeviceType')
+            device.running_firmware = device_raw_dict.get('RunningFirmware')
             device.set_raw(device_raw_dict)
             return device
         except Exception:

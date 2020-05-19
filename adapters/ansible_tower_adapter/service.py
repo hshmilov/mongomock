@@ -9,6 +9,7 @@ from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField, datetime
+from axonius.utils.parsing import is_domain_valid
 from axonius.smart_json_class import SmartJsonClass
 
 from ansible_tower_adapter.connection import AnsibleTowerConnection
@@ -71,15 +72,12 @@ class AnsibleTowerAdapter(AdapterBase):
         '''
         inventory_id = Field(int, 'Inventory ID')
         inventory_name = Field(str, 'Inventory Name')
-
         device_type = Field(str, 'Device Type')
-
         created_at = Field(datetime.datetime, 'Creation Time')
         modified_at = Field(datetime.datetime, 'Modification Time')
         # only exits on internal host
         created_by = Field(AnsibleHostAdminUser, 'Created By')
         modified_by = Field(AnsibleHostAdminUser, 'Modified By')
-
         ec2_block_devices = ListField(AnsibleDataVariables, 'ec2_block_devices')
         datastore = ListField(AnsibleDataVariables, 'datastore')
         resourcepool = ListField(AnsibleDataVariables, 'resourcepool')
@@ -88,7 +86,6 @@ class AnsibleTowerAdapter(AdapterBase):
         guest = ListField(AnsibleDataVariables, 'guest')
         config = ListField(AnsibleDataVariables, 'config')
         runtime = ListField(AnsibleDataVariables, 'runtime')
-
         groups = ListField(AnsiblelHostGroups, 'Groups')
 
     def __init__(self, *args, **kwargs):
@@ -228,7 +225,8 @@ class AnsibleTowerAdapter(AdapterBase):
             if not device.does_field_exist(ANSIBEL_VARBS_PREFIX + field_name):
                 device.declare_new_field(ANSIBEL_VARBS_PREFIX + field_name, ListField(str, field_name))
             for item in content:
-                device[ANSIBEL_VARBS_PREFIX + field_name].append(item)
+                if item:
+                    device[ANSIBEL_VARBS_PREFIX + field_name].append(item)
 
     def __parse_variables_raw_dict_content(self, device, content, field_name):
         if self._is_data_variables_on_map(field_name):
@@ -299,6 +297,7 @@ class AnsibleTowerAdapter(AdapterBase):
         except Exception:
             logger.exception(f'ERROR mapping cloud ID for device {device.get_raw()}')
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -348,7 +347,83 @@ class AnsibleTowerAdapter(AdapterBase):
                 self.set_cloud_id(device)
             except Exception:
                 logger.exception(f'Problem with parsing cloud id for {device_raw}')
-
+            try:
+                facts_raw = device_raw.get('facts_raw')
+                if not isinstance(facts_raw, dict):
+                    facts_raw = {}
+                device.bios_version = facts_raw.get('ansible_bios_version')
+                device.device_serial = facts_raw.get('ansible_product_serial')
+                device.device_manufacturer = facts_raw.get('ansible_system_vendor')
+                ansible_users_and_groups = facts_raw.get('ansible_users_and_groups')
+                hostname = facts_raw.get('ansible_hostname')
+                device.hostname = hostname
+                if not hostname:
+                    hostname = ''
+                hostname = hostname.upper()
+                if not isinstance(ansible_users_and_groups, list):
+                    ansible_users_and_groups = []
+                device.local_admins = []
+                device.local_admins_domain_users = []
+                device.local_admins_local_users = []
+                device.local_admins_groups = []
+                device.local_admins_users = []
+                for user_data in ansible_users_and_groups:
+                    try:
+                        admin_type = None
+                        admin_name = user_data.get('MemberName')
+                        group_name = user_data.get('GroupName')
+                        if group_name == 'Administrators' and admin_name and not admin_name.startswith('S-1-5-21'):
+                            if user_data.get('Class') == 'User':
+                                admin_type = 'Admin User'
+                                domain_name = user_data.get('Domain')
+                                if domain_name and domain_name.upper() == hostname:
+                                    device.local_admins_local_users.append(admin_name)
+                                elif domain_name:
+                                    device.local_admins_domain_users.append(admin_name)
+                            elif user_data.get('Class') == 'Group':
+                                admin_type = 'Group Membership'
+                            device.add_local_admin(admin_type=admin_type,
+                                                   admin_name=admin_name)
+                    except Exception:
+                        logger.exception(f'Problem with user data')
+                ansible_domain = facts_raw.get('ansible_domain')
+                if facts_raw.get('ansible_user_id'):
+                    device.last_used_users = [facts_raw.get('ansible_user_id')]
+                if is_domain_valid(ansible_domain):
+                    device.domain = ansible_domain
+                device.figure_os((facts_raw.get('ansible_os_name') or '')
+                                 + ' ' + (facts_raw.get('ansible_distribution') or ''))
+                try:
+                    device.os.kernel_version = facts_raw.get('ansible_kernel')
+                except Exception:
+                    pass
+                ansible_env = facts_raw.get('ansible_env')
+                if not isinstance(ansible_env, dict):
+                    ansible_env = {}
+                for k, v in ansible_env.items():
+                    try:
+                        device.add_key_value_tag(key=k, value=v)
+                    except Exception:
+                        logger.exception(f'Problem with Ansible data')
+                nics = facts_raw.get('ansible_interfaces')
+                if not isinstance(nics, list):
+                    nics = []
+                for nic in nics:
+                    try:
+                        if isinstance(nic, dict):
+                            device.add_nic(mac=nic.get('macaddress'), name=nic.get('interface_name'))
+                    except Exception:
+                        logger.exception(f'Problem with nic {nic}')
+                ips = facts_raw.get('ansible_ip_addresses')
+                if not isinstance(ips, list):
+                    ips = []
+                if ips:
+                    device.add_nic(ips=ips)
+                if facts_raw.get('ansible_lastboot'):
+                    device.set_boot_time(boot_time=parse_date(facts_raw.get('ansible_lastboot')))
+            except Exception:
+                logger.exception(f'Problem getting facts raw {device_raw}')
+            device.set_raw(device_raw)
             return device
 
         except Exception as e:

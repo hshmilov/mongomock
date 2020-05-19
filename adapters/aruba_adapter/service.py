@@ -52,10 +52,14 @@ class ArubaAdapter(AdapterBase):
             port = None
         try:
             if str(port) != '443':
+                if not port:
+                    port = 4343
+                ssl = client_config['ssl'] if 'ssl' in client_config else True
                 connection = arubaapi.ArubaAPI(device=client_config['domain'], username=client_config['username'],
                                                password=client_config['password'],
                                                insecure=not client_config.get('verify_ssl'),
-                                               port=port)
+                                               port=port,
+                                               ssl=ssl)
                 session_type = 'basic_aruba'
             else:
                 connection = ArubaConnection(domain=client_config['domain'],
@@ -257,12 +261,18 @@ class ArubaAdapter(AdapterBase):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'ssl',
+                    'title': 'Use SSL',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'domain',
                 'username',
                 'password',
+                'ssl',
                 'verify_ssl'
             ],
             'type': 'array'

@@ -201,6 +201,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             device.vpn_type = device_raw_dict.get('vpn-type')
             device.vpn_public_ip = device_raw_dict.get('public-ip')
             device.vpn_tunnel_type = device_raw_dict.get('tunnel-type')
+            device.figure_os(device_raw_dict.get('client'))
             try:
                 ips = [device_raw_dict.get('virtual-ip')] if device_raw_dict.get('virtual-ip') else None
                 if ips:
@@ -212,7 +213,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem adding lifetime to {device_raw_dict}')
             try:
-                device.last_seen = parse_date(device_raw_dict.get('login-time-utc'))
+                device.last_seen = parse_date(int(device_raw_dict.get('login-time-utc')))
             except Exception:
                 logger.exception(f'Problem adding adding login time to {device_raw_dict}')
             device.set_raw(device_raw_dict)

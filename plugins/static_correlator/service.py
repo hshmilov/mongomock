@@ -62,7 +62,7 @@ class StaticCorrelatorService(CorrelatorBase):
             }
 
         fields_to_get = ('id', 'os', 'name', 'hostname', 'network_interfaces', 'device_serial', 'email',
-                         'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'friendly_name',
+                         'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'friendly_name', 'fetch_type',
                          'cloud_id', 'ad_name', 'ad_distinguished_name', 'paloalto_device_type', 'public_ips',
                          'azure_display_name', 'uuid', 'device_type', 'resource_id', 'sccm_server', 'agent_uuid',
                          'last_used_users', 'nessus_no_scan_id', 'private_dns_name', 'macs_no_ip', 'tanium_type',
@@ -98,7 +98,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                                                       'correlate_public_ip_only':
                                                                           self._correlate_public_ip_only,
                                                                       'global_hostname_correlation':
-                                                                          self._global_hostname_correlation})
+                                                                          self._global_hostname_correlation,
+                                                                      'allow_service_now_by_name_only':
+                                                                          self._allow_service_now_by_name_only})
 
     # pylint: enable=arguments-differ
 
