@@ -316,10 +316,18 @@ cisco_json_file_mock_credentials = {
             },
             "id": "arp_00:1B:8F:DF:DF:40",
             "plugin_type": "Adapter",
+            "hostname": "Axonius-TLV.axonius.lan",
             "network_interfaces": [
                 {
                     "manufacturer": "Cisco (Cisco Systems, Inc)",
                     "mac": "00:1B:8F:DF:DF:40"
+                },
+                {
+                    "mac": "00:1B:8F:DF:DF:41",
+                    "ips": ["192.168.20.42"],
+                    "subnets": ["192.168.20.0/24"],
+                    "manufacturer": "Cisco (Cisco Systems, Inc)",
+                    "name": "Vlan2"
                 }
             ],
             "fetch_time": "2020-05-13 19:05:53",

@@ -1,6 +1,5 @@
 import time
 
-import pytest
 
 from axonius.utils.wait import wait_until
 from services.adapters.stresstest_service import StresstestService
@@ -138,7 +137,6 @@ class TestHyperlinks(TestBase):
             if clients_db:
                 clients_db.delete_many({})
 
-    @pytest.mark.skip('AX-6869')
     def test_entity_field_links(self):
         self.enforcements_page.switch_to_page()
         self.adapters_page.connect_adapter(JSON_ADAPTER_NAME, cisco_json_file_mock_credentials)
@@ -160,7 +158,7 @@ class TestHyperlinks(TestBase):
 
         # Test Aggregated/General Data Basic Info links
         self.devices_page.switch_to_page()
-        self.devices_page.run_filter_query(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.run_filter_query(self.devices_page.SPECIFIC_JSON_ADAPTER_FILTER)
         link = self.devices_page.find_general_data_basic_link(self.devices_page.FIELD_LAST_USED_USERS)
         link_text = link.text
         link.click()

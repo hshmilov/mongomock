@@ -245,7 +245,11 @@ class TestBase:
         self.axonius_system.scheduler.wait_for_scheduler(True)
 
         self.axonius_system.get_devices_db().delete_many({})
-        self.axonius_system.get_aggregator_devices_fields_db().delete_many({})
+        self.axonius_system.get_aggregator_devices_fields_db().delete_many({
+            'name': {
+                '$ne': 'hyperlinks'
+            }
+        })
         self.axonius_system.get_users_db().delete_many({})
         self.axonius_system.get_roles_db().delete_many({'predefined': {'$exists': False}})
         self.axonius_system.get_enforcements_db().delete_many({})
