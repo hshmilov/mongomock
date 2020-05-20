@@ -558,6 +558,7 @@ testing/test_credentials/test_tenable_security_center_credentials.py
 testing/test_credentials/test_traiana_lab_machines_credentials.py
 testing/test_credentials/test_crowd_strike_mock_credentials.py
 testing/test_credentials/test_nexpose_credentials_mock.py
+testing/test_credentials/test_aws_credentials_mock.py
 testing/test_helpers/device_helper.py
 testing/test_helpers/parallel_runner.py
 testing/test_helpers/qcore_fake_pump.py

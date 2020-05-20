@@ -27,6 +27,7 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 from test_credentials.test_aws_credentials import client_details as aws_client_details
+from test_credentials.test_aws_credentials_mock import aws_json_file_mock_devices
 from devops.scripts.automate_dev import credentials_inputer
 
 
@@ -703,30 +704,32 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_asset_entity_expressions()
 
     def test_change_field_with_different_value_schema(self):
-        with AwsService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            self.devices_page.click_query_wizard()
-            expressions = self.devices_page.find_expressions()
-            self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
-            self.devices_page.select_query_comp_op('equals', parent=expressions[0])
-            self.devices_page.fill_query_string_value('w', parent=expressions[0])
-            self.devices_page.wait_for_table_to_be_responsive()
-            query_filter = self.devices_page.find_search_value()
-            results_count = len(self.devices_page.get_all_data())
-            self.devices_page.select_query_field(self.devices_page.FIELD_FIREWALL_RULES_FROM_PORT,
-                                                 parent=expressions[0])
-            self.devices_page.wait_for_table_to_be_responsive()
-            assert len(self.devices_page.get_all_data()) == results_count
-            assert self.devices_page.find_search_value() == query_filter
-            assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
-            self.devices_page.click_search()
+        self.adapters_page.add_server(aws_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.wait_for_server_green(position=2)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.wait_for_data_collection_toaster_absent()
 
-            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
-        self.wait_for_adapter_down(AWS_ADAPTER)
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op('equals', parent=expressions[0])
+        self.devices_page.fill_query_string_value('w', parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        query_filter = self.devices_page.find_search_value()
+        results_count = len(self.devices_page.get_all_data())
+        self.devices_page.select_query_field(self.devices_page.FIELD_FIREWALL_RULES_FROM_PORT,
+                                             parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert len(self.devices_page.get_all_data()) == results_count
+        assert self.devices_page.find_search_value() == query_filter
+        assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
+        self.devices_page.click_search()
+
+        self.adapters_page.remove_server(ad_client=aws_json_file_mock_devices, adapter_name=JSON_NAME,
+                                         expected_left=1, delete_associated_entities=True,
+                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
     # pylint: disable=R0915
     @pytest.mark.skip('AX-7287')
