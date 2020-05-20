@@ -1,3 +1,5 @@
+import pytest
+
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from ui_tests.tests.ui_test_base import TestBase
@@ -61,6 +63,7 @@ class TestCloudCompliance(TestBase):
             self.settings_page.toggle_compliance_visible_feature(False)
         self.settings_page.save_and_wait_for_toaster()
 
+    @pytest.mark.skip('AX-7569')
     def test_compliance_score(self):
         self.devices_page.switch_to_page()
         self.login_page.logout()
