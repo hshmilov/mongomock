@@ -238,6 +238,9 @@ export default {
       return this.chartView === ChartViewEnum.histogram;
     },
     viewOptions() {
+      if (!this.entity) {
+        return [];
+      }
       if (!this.views[this.entity]) {
         return [{
           name: this.view, title: 'Missing Permissions',

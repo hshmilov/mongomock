@@ -1059,7 +1059,7 @@ def fetch_chart_matrix(
     total_values = defaultdict(int)
     for base_query_index, base_query_id in enumerate(base):
         base_view = {'query': {'filter': '', 'expressions': []}}
-        if base_query_name:
+        if base_query_id:
             base_from_db = find_view_by_id(entity, base_query_id)
             base_query_name = base_from_db['name']
             base_view = base_from_db['view']
@@ -1075,7 +1075,7 @@ def fetch_chart_matrix(
 
         # intersection of base query with each data query
         for intersecting_query_index, intersecting_query_id in enumerate(intersecting):
-            child_from_db = find_view_by_id(entity, base_query_id)
+            child_from_db = find_view_by_id(entity, intersecting_query_id)
             intersecting_query_name = child_from_db['name']
             child_view = child_from_db['view']
 

@@ -113,6 +113,9 @@
         return this.getDataSchemaByName(this.entity)
       },
       viewOptions() {
+        if (!this.entity) {
+          return [];
+        }
         if (!this.views[this.entity]) {
           return [{
             name: this.view, title: 'Missing Permissions',

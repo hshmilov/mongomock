@@ -3,8 +3,9 @@
     v-bind="{options, value, placeholder, id, readOnly, searchable: true, size: 'sm'}"
     class="x-select-symbol"
     :class="{minimal}"
+    :read-only="readOnly"
+    missing-items-label=""
     @input="selectOption"
-    :readOnly="readOnly"
   >
     <template slot-scope="{ option }">
       <div class="x-type-img">

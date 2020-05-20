@@ -135,6 +135,9 @@ export default {
       this.$emit('validate', !this.intersecting.filter((view) => view === '').length);
     },
     restrictedViewOptions(selectedView) {
+      if (!this.entity || !selectedView) {
+        return [];
+      }
       return [{
         name: selectedView, title: 'Missing Permissions',
       }];

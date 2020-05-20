@@ -132,6 +132,9 @@ export default {
       return index >= this.min;
     },
     restrictedViewOptions(selectedView) {
+      if (!selectedView) {
+        return [];
+      }
       return [{
         name: selectedView, title: 'Missing Permissions',
       }];

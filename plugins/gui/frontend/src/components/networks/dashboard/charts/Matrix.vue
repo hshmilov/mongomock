@@ -23,7 +23,7 @@
         <label>Base query</label>
         <XSelect
           :value="baseItem"
-          :options="views[entity]"
+          :options="views[entity] || restrictedViewOptions(baseItem)"
           :searchable="true"
           placeholder="query (or empty for all)"
           @input="(view) => updateBase(index, view)"
@@ -42,14 +42,14 @@
     >+</XButton>
     <div class="grid-span2">
       <div
-        v-for="(intercsectingItem, index) in intersecting"
+        v-for="(intersectingItem, index) in intersecting"
         :key="index"
         class="intersection-query-row"
       >
         <label>Intersecting query</label>
         <XSelect
-          :value="intercsectingItem"
-          :options="views[entity]"
+          :value="intersectingItem"
+          :options="views[entity] || restrictedViewOptions(intersectingItem)"
           :searchable="true"
           placeholder="query..."
           @input="(view) => updateIntersecting(index, view)"
@@ -210,6 +210,14 @@ export default {
     },
     validate() {
       this.$emit('validate', !this.intersecting.filter((view) => view === '').length);
+    },
+    restrictedViewOptions(selectedView) {
+      if (!this.entity || !selectedView) {
+        return [];
+      }
+      return [{
+        name: selectedView, title: 'Missing Permissions',
+      }];
     },
   },
 };
