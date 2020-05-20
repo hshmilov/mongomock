@@ -181,8 +181,6 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
         # add this to the fields_info variable
         self.fields_info.append(field_value)
 
-        logger.info(f'Successfully declared dynamic field {field_name} - {str(field_value)}')
-
     def get_field_type(self, field_name: str):
         base = [x for x in self.fields_info if x.name == field_name]
         if not base:
