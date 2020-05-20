@@ -435,7 +435,8 @@ def not_wifi_adapter(adapter_device):
              adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT') or\
             (adapter_device.get('plugin_name').lower() == 'tanium_discover_adapter') \
             or is_counter_act_adapter(adapter_device):
-        return False
+        if adapter_device.get(NORMALIZED_MACS):
+            return False
     return True
 
 
@@ -862,6 +863,10 @@ def is_tenable_io_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'tenable_io_adapter'
 
 
+def is_g_naapi_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'g_naapi_adapter'
+
+
 def is_counter_act_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'counter_act_adapter'
 
@@ -1218,7 +1223,8 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
 def get_asset_name(adapter_device):
     if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
             and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)) \
-            and not is_tenable_io_adapter(adapter_device):
+            and not is_tenable_io_adapter(adapter_device)\
+            and not is_g_naapi_adapter(adapter_device):
         asset = adapter_device['data'].get('name').upper().strip()
         if asset not in ['UNKNOWN']:
             return asset
