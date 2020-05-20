@@ -14,7 +14,7 @@ import pymongo
 import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
-from flask import (session)
+from flask import session, g
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
@@ -1061,7 +1061,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         return is_axonius_role(self.get_session.get('user', {}))
 
     def get_user_permissions(self):
-        return self.get_session.get('user', {}).get('permissions', {})
+        permissions = self.get_session.get('user', {}).get('permissions', {})
+        if not permissions and g.api_user_permissions:
+            permissions = g.api_user_permissions
+        return permissions
 
     @property
     def saml_settings_file_path(self):

@@ -63,23 +63,25 @@ def basic_authentication(func, required_permission: PermissionValue = None):
             This function is called to check if a username /
             password combination is valid.
             """
+
             user_from_db = users_collection.find_one({'user_name': username})
             if user_from_db is None:
                 logger.info(f'Unknown user {username} tried logging in')
-                return None
+                return None, None
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
             if not bcrypt.verify(password, user_from_db['password']):
-                return None
+                return None, None
             if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())\
                     and not role.get(IS_AXONIUS_ROLE):
-                return None
+                return None, None
 
+            role_permissions = deserialize_db_permissions(role['permissions'])
             if user_from_db.get('name') == 'admin':
-                return user_from_db
-            if not check_permissions(deserialize_db_permissions(role['permissions']),
-                                     required_permission):
-                return None
-            return user_from_db
+                return user_from_db, role_permissions
+
+            if not check_permissions(role_permissions, required_permission):
+                return None, None
+            return user_from_db, role_permissions
 
         def check_auth_api_key(api_key, api_secret):
             """
@@ -91,22 +93,25 @@ def basic_authentication(func, required_permission: PermissionValue = None):
             })
 
             if not user_from_db:
-                return None
+                return None, None
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
             if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()) \
                     and not is_axonius_role(role):
-                return None
-            if user_from_db.get('admin'):
-                return user_from_db
+                return None, None
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
-            if not check_permissions(deserialize_db_permissions(role['permissions']),
-                                     required_permission):
-                return None
-            return user_from_db
+            role_permissions = deserialize_db_permissions(role['permissions'])
+            if user_from_db.get('admin'):
+                return user_from_db, role_permissions
+            if not check_permissions(role_permissions, required_permission):
+                return None, None
+            return user_from_db, role_permissions
 
         api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
-        user_from_db = check_auth_api_key(*api_auth) or (auth and check_auth_user(auth.username, auth.password))
+        user_from_db, permissions = check_auth_api_key(*api_auth)
+        if not user_from_db and auth:
+            user_from_db, permissions = check_auth_user(auth.username, auth.password)
+
         if user_from_db:
 
             if has_request_context():
@@ -116,7 +121,7 @@ def basic_authentication(func, required_permission: PermissionValue = None):
 
             # save the associated user for the local request
             g.api_request_user = user_from_db
-
+            g.api_user_permissions = permissions
             return func(self, *args, **kwargs)
 
         return return_error('Unauthorized', 401)
