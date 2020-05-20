@@ -10,12 +10,13 @@ from services.adapters.esx_service import EsxService
 from test_credentials.test_esx_credentials import client_details as esx_client_details
 from test_credentials.test_thycotic_vault_credentials import THYCOTIC_SECRET_SEREVER,\
     THYCOTIC_SECRET_SEREVER__ESX_SECRET_ID
-from ui_tests.tests.test_adapters import ESX_PLUGIN_NAME
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
+# all of this should be removed anyways
 ESX_ADAPTER_FILTER = 'adapters == "esx_adapter"'
 ESX_ADAPTER_NAME = 'VMware ESXi'
+ESX_PLUGIN_NAME = 'esx_adapter'
 
 ADAPTER_THYCOTIC_VAULT_BUTTION = 'cyberark-button'
 

@@ -28,12 +28,6 @@ EXPECTED_ADAPTER_LIST_LABELS = [
 ESX_NAME = 'VMware ESXi'
 CARBONBLACKDEFENCE_NAME = 'Carbon Black CB Defense'
 CARBONBLACKDEFENCE_PLUGIN_NAME = 'carbonblack_defense_adapter'
-ESX_PLUGIN_NAME = 'esx_adapter'
-
-NEXPOSE_NAME = 'Rapid7 Nexpose'
-NEXPOSE_PLUGIN_NAME = 'nexpose_adapter'
-
-LAST_SEEN_THRESHOLD_HOURS = '21600'
 
 # pylint: disable= too-many-statements
 
@@ -192,7 +186,7 @@ class TestAdapters(TestBase):
             self.adapters_page.fill_creds(**carbonblack_defence_client_details)
             self.adapters_page.click_save()
             self.adapters_page.click_advanced_settings()
-            self.adapters_page.fill_last_seen_threshold_hours(LAST_SEEN_THRESHOLD_HOURS)
+            self.adapters_page.fill_last_seen_threshold_hours(self.adapters_page.LAST_SEEN_THRESHOLD_HOURS)
             self.adapters_page.save_advanced_settings()
             self.adapters_page.wait_for_spinner_to_end()
 

@@ -32,9 +32,11 @@ class TestDevicesTable(TestEntitiesTable):
             def refresh_until_device():
                 self.devices_page.refresh()
                 self.devices_page.wait_for_table_to_be_responsive()
+                self.devices_page.select_page_size(100)
+                self.devices_page.wait_for_table_to_be_responsive()
                 return any(self.devices_page.get_column_data_slicer(self.devices_page.FIELD_TAGS))
 
-            wait_until(refresh_until_device, total_timeout=60 * 5)
+            wait_until(refresh_until_device, total_timeout=60 * 10)
 
             self.settings_page.switch_to_page()
             self.devices_page.switch_to_page()

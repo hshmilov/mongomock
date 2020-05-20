@@ -21,13 +21,16 @@ from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
-CONNECTION_LABEL = 'AXON'
-CONNECTION_LABEL_UPDATED = 'AXON2'
-TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
+
 JSON_NAME = 'JSON File'
+
+# Junk that shouldn't be here
 ADAPTER_THYCOTIC_VAULT_BUTTON = 'cyberark-button'
 ADAPTER_THYCOTIC_VAULT_QUERY_ID = 'cyberark-query'
 ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .md-icon'
+CONNECTION_LABEL = 'AXON'
+CONNECTION_LABEL_UPDATED = 'AXON2'
+TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
 
 
 class AdaptersPage(EntitiesPage):
@@ -72,6 +75,8 @@ class AdaptersPage(EntitiesPage):
     CSV_INPUT_ID = 'file_path'  # Changed by Alex A on Jan 27 2020 - because schema changed
 
     PASSWORD_VAULT_TOGGLE_CSS = '.provider-toggle'
+
+    LAST_SEEN_THRESHOLD_HOURS = '21600'
 
     @property
     def url(self):
@@ -207,10 +212,7 @@ class AdaptersPage(EntitiesPage):
 
     def restore_json_client(self):
         self.clean_adapter_servers(JSON_NAME, delete_associated_entities=True)
-        self.add_server(json_file_creds, JSON_NAME)
-        self.wait_for_server_green()
-        self.wait_for_table_to_load()
-        self.wait_for_data_collection_toaster_absent()
+        self.add_json_server(json_file_creds, position=1, run_discovery_at_last=False)
 
     def checkboxes_count(self):
         table_element = self.driver.find_element_by_css_selector(self.TABLE_CLASS)
@@ -376,12 +378,25 @@ class AdaptersPage(EntitiesPage):
     def get_instances_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS).text
 
-    def connect_adapter(self, adapter_name, server_details):
+    def connect_adapter(self, adapter_name, server_details, position=1):
         self.wait_for_adapter(adapter_name)
         self.add_server(ad_client=server_details, adapter_name=adapter_name)
-        self.wait_for_server_green()
+        self.wait_for_server_green(position=position)
         self.wait_for_data_collection_toaster_absent()
         self.switch_to_page()
+
+    def add_json_server(self, server_details, position=2, run_discovery_at_last=True):
+        self.connect_adapter(adapter_name=JSON_ADAPTER_NAME, server_details=server_details, position=position)
+        self.click_adapter(adapter_name=JSON_ADAPTER_NAME)
+        self.wait_for_table_to_be_responsive()
+        self.click_advanced_settings()
+        self.fill_last_seen_threshold_hours(self.LAST_SEEN_THRESHOLD_HOURS)
+        self.save_advanced_settings()
+        self.wait_for_spinner_to_end()
+        self.switch_to_page()
+        if run_discovery_at_last:
+            # now it is useless, but in the long future could prove useful
+            self.test_base.base_page.run_discovery()
 
     def add_json_extra_client(self):
         self.add_server(CLIENT_DETAILS_EXTRA, adapter_name=JSON_ADAPTER_NAME)

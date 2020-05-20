@@ -4,7 +4,6 @@ from selenium.common.exceptions import NoSuchElementException
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
 from services.plugins.general_info_service import GeneralInfoService
-from ui_tests.tests.test_adapters import JSON_NAME
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
@@ -249,10 +248,7 @@ class TestDevicesTable(TestEntitiesTable):
         assert self.devices_page.find_search_value() == ''
 
     def test_device_expand_row(self):
-        self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_NAME)
-        self.adapters_page.wait_for_server_green(position=2)
-        self.adapters_page.wait_for_table_to_load()
-        self.adapters_page.wait_for_data_collection_toaster_absent()
+        self.adapters_page.add_json_server(crowd_strike_json_file_mock_devices)
         self.base_page.run_discovery(wait=True)
         self.devices_page.switch_to_page()
         self.devices_page.query_hostname_contains(self.TARGET_HOSTNAME)
@@ -269,6 +265,4 @@ class TestDevicesTable(TestEntitiesTable):
         assert device_host_name != self.devices_page.get_column_data_expand_row(
             self.devices_page.FIELD_HOSTNAME_TITLE
         )
-        self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_NAME,
-                                         expected_left=1, delete_associated_entities=True,
-                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
+        self.adapters_page.remove_json_extra_server(crowd_strike_json_file_mock_devices)
