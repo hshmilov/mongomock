@@ -326,7 +326,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                         {
                             'name': 'history_settings',
-                            'title': 'Historical Data Settings',
+                            'title': 'Historical Data Retention Settings',
                             'type': 'array',
                             'items': [
                                 {
