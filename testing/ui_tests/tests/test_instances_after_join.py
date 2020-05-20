@@ -7,9 +7,6 @@ from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raised
-from services.adapters.ad_service import AdService
-from services.adapters.json_file_service import JsonFileService
-from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
     NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production, UPDATE_HOSTNAME
@@ -20,9 +17,6 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
     def test_instances_after_join(self):
         self.put_customer_conf_file()
 
-        # Adding adapter and data for later usage.
-        self.adapters_page.add_server(ad_client1_details)
-        self.adapters_page.wait_for_spinner_to_end()
         self.base_page.run_discovery()
         self.change_node_hostname()
 
@@ -63,13 +57,6 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         return self._check_device_count() > 1
 
     def check_master_disconnect(self):
-        local_json_adapter = JsonFileService()
-        local_json_adapter.take_process_ownership()
-        local_ad_adapter = AdService()
-        local_ad_adapter.take_process_ownership()
-
-        self.adapters_page.remove_server(delete_associated_entities=True)
-        time.sleep(5)
         self.devices_page.delete_devices()
 
         self.axonius_system.take_process_ownership()
@@ -196,14 +183,11 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         return False
 
     def update_hostname_form_gui_and_check_slave_node(self):
-
-        self.logger.info('SUB TEST  1 : Negative Flow hostname with space should fail validation ')
         self.instances_page.switch_to_page()
         illegal_hostname = 'BAD HOSTNAME'
         self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
                                                      new_hostname=illegal_hostname,
                                                      negative_test=True)
-        self.logger.info('SUB TEST  2 : Positive Flow update hostname')
         self.instances_page.switch_to_page()
 
         self.instances_page.change_instance_hostname(current_node_name=NEW_NODE_NAME,
