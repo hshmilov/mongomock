@@ -197,6 +197,7 @@ class CloudComplianceNames:
 class RootMasterNames:
     root_key = 'root_master_settings'
     enabled = 'enabled'
+    SMB_enabled = 'SMB_enabled'
     delete_backups = 'delete_backups'
 
 

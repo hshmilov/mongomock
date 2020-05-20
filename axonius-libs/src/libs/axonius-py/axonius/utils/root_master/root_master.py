@@ -9,7 +9,7 @@ import tarfile
 
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
-
+from axonius.utils.smb import SMBClient
 from axonius.clients.aws.utils import (
     aws_list_s3_objects,
     download_s3_object_to_file_obj,
@@ -20,11 +20,14 @@ from axonius.consts.gui_consts import RootMasterNames
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.utils.host_utils import get_free_disk_space
+from axonius.utils.backup import verify_preshared_key
 
 logger = logging.getLogger(f'axonius.{__name__}')
 DISK_SPACE_FREE_GB_MANDATORY = 15
-AWS_RESTORE_FILE = 'aws_restore.tar.gz'
-AWS_RESTORE_FILE_GPG = 'aws_restore.tar.gz.gpg'
+BYTES_TO_GIGABYTES = 1024 ** 3
+BYTES_TO_MEGABYTES = 1024 ** 2
+RESTORE_FILE = 'restore.tar.gz'
+RESTORE_FILE_GPG = 'restore.tar.gz.gpg'
 
 
 # pylint: disable=protected-access, too-many-locals, too-many-branches, too-many-statements
@@ -152,7 +155,7 @@ def verify_restore_s3(bucket_name, access_key_id=None, secret_access_key=None):
         raise ValueError(f'Must supply "bucket_name" or configure Global Settings > Amazon S3 settings')
 
     disk_free_bytes = get_free_disk_space()
-    disk_free_gb = disk_free_bytes / (1024 ** 3)
+    disk_free_gb = disk_free_bytes / (BYTES_TO_GIGABYTES)
     disk_free_gb_req = DISK_SPACE_FREE_GB_MANDATORY
     if disk_free_gb <= disk_free_gb_req:
         err = f'Available space must be above {disk_free_gb_req} GB, but only {disk_free_gb} GB is available'
@@ -212,10 +215,10 @@ def root_master_restore_from_s3():
 
 def restore_cleanup():
     """Cleanup all the files used by restore process."""
-    if os.path.exists(AWS_RESTORE_FILE_GPG):
-        os.unlink(AWS_RESTORE_FILE_GPG)
-    if os.path.exists(AWS_RESTORE_FILE):
-        os.unlink(AWS_RESTORE_FILE)
+    if os.path.exists(RESTORE_FILE_GPG):
+        os.unlink(RESTORE_FILE_GPG)
+    if os.path.exists(RESTORE_FILE):
+        os.unlink(RESTORE_FILE)
 
 
 def restore_from_s3_key(
@@ -262,9 +265,9 @@ def restore_from_s3_key(
             raise ValueError(f'Unable to find S3 Object {key_name!r} in bucket {bucket_name!r}, found:{valid}')
 
         disk_free_bytes = get_free_disk_space()
-        disk_free_gb = disk_free_bytes / (1024 ** 3)
+        disk_free_gb = disk_free_bytes / (BYTES_TO_GIGABYTES)
         obj_bytes = obj_meta['ContentLength']
-        obj_gb = obj_bytes / (1024 ** 3)
+        obj_gb = obj_bytes / (BYTES_TO_GIGABYTES)
         check_gb = obj_bytes * 2
 
         if check_gb >= disk_free_bytes:
@@ -277,7 +280,7 @@ def restore_from_s3_key(
 
         try:
             logger.info(f'Downloading backup file: {key_name}')
-            with open(AWS_RESTORE_FILE_GPG, 'wb') as file_obj:
+            with open(RESTORE_FILE_GPG, 'wb') as file_obj:
                 download_s3_object_to_file_obj(
                     bucket_name=bucket_name,
                     key=key_name,
@@ -292,19 +295,19 @@ def restore_from_s3_key(
         # decrypt
         try:
             subprocess.check_call(
-                ['gpg', '--output', AWS_RESTORE_FILE, '--passphrase', preshared_key, '--decrypt', AWS_RESTORE_FILE_GPG]
+                ['gpg', '--output', RESTORE_FILE, '--passphrase', preshared_key, '--decrypt', RESTORE_FILE_GPG]
             )
 
-            file_size_in_mb = round(os.stat(AWS_RESTORE_FILE).st_size / (1024 ** 2), 2)
+            file_size_in_mb = round(os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
             logger.info(f'Decrypt Complete: {key_name}. File size: {file_size_in_mb}mb')
         except Exception as exc:
             raise ValueError(f'Failed to decrypt S3 Object {key_name!r} from bucket {bucket_name!r}, bad password?')
 
-        if os.path.exists(AWS_RESTORE_FILE_GPG):
-            os.unlink(AWS_RESTORE_FILE_GPG)
+        if os.path.exists(RESTORE_FILE_GPG):
+            os.unlink(RESTORE_FILE_GPG)
 
         logger.info(f'Parsing {key_name}')
-        with tarfile.open(AWS_RESTORE_FILE, 'r:gz') as tar_file:
+        with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
             for member in tar_file.getmembers():
                 try:
                     if member.name.startswith('devices_'):
@@ -342,7 +345,7 @@ def restore_from_s3_key(
                 except Exception:
                     logger.critical(f'Could not parse member {member.name}')
 
-        os.unlink(AWS_RESTORE_FILE)
+        os.unlink(RESTORE_FILE)
 
         obj_meta['deleted'] = False
         obj_meta['re_restored'] = re_restored
@@ -372,3 +375,190 @@ def restore_from_s3_key(
         raise
     finally:
         restore_cleanup()
+
+
+def root_master_restore_from_smb():
+    """
+    Gets an update file of devices & users & fields and loads this to the memory
+    """
+    # 1. Check if there is enough memory left to parse this
+    # 2. Store the file on the disk. Extract it using the preshared key.
+    # 3. load each file to the memory, and parse it (Has to be single threaded) while not in a cycle.
+    #    This can also be async.
+    try:
+        root_master_settings = (PluginBase.Instance.feature_flags_config().get(RootMasterNames.root_key) or {})
+        # Verify root master settings
+        if not root_master_settings.get(RootMasterNames.SMB_enabled):
+            raise ValueError(f'Error - Root Master (SMB) mode is not enabled')
+
+        delete_backups = root_master_settings.get(RootMasterNames.delete_backups) or False
+
+        # Check if there is enough space on this machine. Otherwise stop the process
+        free_disk_space_in_bytes = get_free_disk_space()
+        free_disk_space_in_gb = free_disk_space_in_bytes / (BYTES_TO_GIGABYTES)
+        if free_disk_space_in_gb < DISK_SPACE_FREE_GB_MANDATORY:
+            message = f'Error - only {free_disk_space_in_gb}gb is left on disk, ' \
+                f'while {DISK_SPACE_FREE_GB_MANDATORY} is required'
+            raise ValueError(message)
+
+        smb_settings = PluginBase.Instance._smb_settings.copy()
+
+        if not smb_settings.get('enabled'):
+            raise ValueError(f'SMB integration is not enabled.')
+
+        if not smb_settings.get('enable_backups'):
+            raise ValueError(f'SMB Backups are not enabled.')
+
+        if smb_settings.get('hostname'):
+            hostname = smb_settings.get('hostname')
+        else:
+            raise ValueError(f'SMB hostname is not set.')
+
+        if smb_settings.get('ip'):
+            ip = smb_settings.get('ip')
+        else:
+            raise ValueError(f'SMB IP address is not set.')
+
+        share_name = smb_settings.get('share_path')
+        if not share_name:
+            raise ValueError(f'SMB share path not found.')
+        share_name = share_name.replace('\\', '/')
+
+        nbns = smb_settings.get('use_nbns')
+        if isinstance(nbns, bool):
+            use_nbns = nbns
+        else:
+            use_nbns = False
+
+        # Check the PSK to make sure it conforms to known standard/strength
+        preshared_key = smb_settings.get('preshared_key')
+
+        if not preshared_key:
+            raise ValueError(f'Backup Pre-Shared Key is not set.')
+
+        verify_preshared_key(preshared_key)
+
+        smb_client = SMBClient(ip=ip,
+                               smb_host=hostname,
+                               share_name=share_name,
+                               username=smb_settings.get('username') or '',
+                               password=smb_settings.get('password') or '',
+                               port=smb_settings.get('port'),
+                               use_nbns=use_nbns)
+
+        # fetch the existing filenames in the smb share
+        files_in_share = smb_client.list_files_on_smb()
+
+        root_master_config = PluginBase.Instance._get_collection('root_master_config', 'core')
+
+        # get a list of all files we haven't parsed yet
+        parsed_smb_files = [parsed_file_document['key'] for parsed_file_document
+                            in root_master_config.find({'type': 'parsed_file'})]
+
+        # figure out what's new and filter out the '.' files
+        new_smb_files = [smb_file for smb_file in files_in_share if files_in_share
+                         not in parsed_smb_files and not smb_file.startswith('.')] or []
+        logger.info(f'New SMB files found: {",".join(new_smb_files)}')
+
+        # remove any existing restore files
+        if os.path.exists(RESTORE_FILE_GPG):
+            os.unlink(RESTORE_FILE_GPG)
+        if os.path.exists(RESTORE_FILE):
+            os.unlink(RESTORE_FILE)
+
+        # For each file, download the file, parse it, set in DB and delete
+        for smb_file in new_smb_files:
+            try:
+                smb_client.download_files_from_smb([smb_file])
+                logger.info(f'Download complete: {smb_file}, Decrypting')
+            except Exception:
+                logger.exception(f'Unable to download {smb_file} from SMB')
+                raise
+
+            # decrypt
+            try:
+                subprocess.check_call([
+                    'gpg', '--output', RESTORE_FILE,
+                    '--passphrase', preshared_key,
+                    '--decrypt', smb_file
+                ])
+                file_size_in_mb = round(os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
+                logger.info(f'Decrypt Complete: {smb_file}. '
+                            f'File size: {file_size_in_mb}mb')
+                os.unlink(smb_file)
+            except Exception:
+                logger.exception(f'Unable to decrypt the file: {smb_file}')
+                raise
+
+            try:
+                logger.info(f'Parsing {RESTORE_FILE}')
+                with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
+                    for member in tar_file.getmembers():
+                        try:
+                            if member.name.startswith('devices_'):
+                                root_master_parse_entities(
+                                    EntityType.Devices, tar_file.extractfile(
+                                        member).read(), smb_file
+                                )
+                            elif member.name.startswith('users_'):
+                                root_master_parse_entities(
+                                    EntityType.Users, tar_file.extractfile(
+                                        member).read(), smb_file
+                                )
+                            elif member.name.startswith('raw_devices_'):
+                                root_master_parse_entities_raw(
+                                    EntityType.Devices,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('raw_users_'):
+                                root_master_parse_entities_raw(
+                                    EntityType.Users,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('fields_devices_'):
+                                root_master_parse_entities_fields(
+                                    EntityType.Devices,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('fields_users_'):
+                                root_master_parse_entities_fields(
+                                    EntityType.Users,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('adapter_client_labels_'):
+                                root_master_parse_adapter_client_labels(
+                                    tar_file.extractfile(member).read())
+                            else:
+                                logger.warning(f'found member {member.name}'
+                                               f' - no parsing known')
+                        except Exception:
+                            logger.exception(f'Could not parse member {member.name}')
+
+                os.unlink(RESTORE_FILE)
+
+                # Delete from share if necessary
+                if delete_backups:
+                    logger.info(f'Deleting file from SMB share: {smb_file}')
+                    try:
+                        smb_client.delete_files_from_smb([smb_file])
+                    except Exception:
+                        logger.exception(f'Could not delete object {smb_file} '
+                                         f'from {share_name}')
+
+                # Set in db as parsed
+                root_master_config.insert_one({'type': 'parsed_file',
+                                               'key': smb_file})
+                logger.info(f'Parsing {smb_file} complete.')
+            except Exception:
+                logger.exception(f'File download/parse failed: {smb_file}')
+            finally:
+                if os.path.exists(RESTORE_FILE_GPG):
+                    os.unlink(RESTORE_FILE_GPG)
+                if os.path.exists(RESTORE_FILE):
+                    os.unlink(RESTORE_FILE)
+    except Exception:
+        logger.exception(f'Root Master Mode: Could not restore from SMB')
+    finally:
+        if os.path.exists(RESTORE_FILE_GPG):
+            os.unlink(RESTORE_FILE_GPG)
+        if os.path.exists(RESTORE_FILE):
+            os.unlink(RESTORE_FILE)
+
+    # this is to provide a value to Flask so it doesn't HTTP 500
+    return 0

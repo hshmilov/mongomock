@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Set, Dict
+from dateutil import tz
 import requests
 
 import pytz
@@ -15,7 +16,6 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.base import BaseTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from dateutil import tz
 from flask import jsonify
 
 from axonius.adapter_base import AdapterBase
@@ -42,10 +42,10 @@ from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable, Ru
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.thread_stopper import StopThreadException
-from axonius.utils.backup import backup_to_s3
+from axonius.utils.backup import backup_to_s3, backup_to_external
 from axonius.utils.files import get_local_config_file
+from axonius.utils.root_master.root_master import root_master_restore_from_s3, root_master_restore_from_smb
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
-from axonius.utils.root_master.root_master import root_master_restore_from_s3
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -173,7 +173,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
     @staticmethod
     def trigger_s3_backup():
-        return str(backup_to_s3())
+        return str(backup_to_external(services=['s3']))
 
     @add_rule('trigger_root_master_s3_restore')
     def trigger_root_master_s3_restore_external(self):
@@ -182,6 +182,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     @staticmethod
     def trigger_root_master_s3_restore():
         return str(root_master_restore_from_s3())
+
+    @add_rule('trigger_smb_backup')
+    def trigger_smb_backup_external(self):
+        return jsonify({'result': str(self.trigger_smb_backup())})
+
+    @staticmethod
+    def trigger_smb_backup():
+        return str(backup_to_external(services=['smb']))
+
+    @add_rule('trigger_root_master_smb_restore')
+    def trigger_root_master_smb_restore_external(self):
+        return jsonify({'result': str(self.trigger_root_master_smb_restore())})
+
+    @staticmethod
+    def trigger_root_master_smb_restore():
+        return str(root_master_restore_from_smb())
 
     @add_rule('state', should_authenticate=False)
     def get_state(self):
@@ -532,6 +548,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             _complete_subphase()
             _start_subphase(subphase)
 
+        # pylint: disable=no-else-return
         with self._start_research():
             self.state.Phase = scheduler_consts.Phases.Research
             _log_activity_research(AuditAction.Start)
@@ -553,9 +570,31 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         self._request_gui_dashboard_cache_clear()
 
                 except Exception:
-                    logger.critical(f'Warning - could not complete root-master cycle')
+                    logger.critical(f'Could not complete root-master cycle (S3)')
 
                 return  # do not continue the rest of the cycle
+
+            # pylint: disable=no-else-return
+            elif (self.feature_flags_config().get(RootMasterNames.root_key)
+                  or {}).get(RootMasterNames.SMB_enabled):
+                try:
+                    logger.info(f'Root Master Mode enabled - Restoring from '
+                                f'SMB instead of fetch')
+                    response = root_master_restore_from_smb()
+                    self._request_gui_dashboard_cache_clear()
+
+                    _change_subphase(
+                        scheduler_consts.ResearchPhases.Post_Correlation)
+                    post_correlation_plugins = [plugin for plugin in
+                                                self._get_plugins(PluginSubtype.PostCorrelation)
+                                                if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
+                    if post_correlation_plugins:
+                        self._run_plugins(post_correlation_plugins)
+                        self._request_gui_dashboard_cache_clear()
+
+                except Exception:
+                    logger.critical(f'Could not complete Root Master cycle (SMB)')
+                    return  # do not continue the rest of the cycle
 
             try:
                 # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
@@ -684,8 +723,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     logger.info(f'Root Master mode enabled - not backing up')
                 elif self._aws_s3_settings.get('enabled') and self._aws_s3_settings.get('enable_backups'):
                     threading.Thread(target=backup_to_s3).start()
+                elif self._smb_settings.get('enabled') and self._smb_settings.get('enable_backups'):
+                    threading.Thread(target=backup_to_external, args=(['smb'],)).start()
             except Exception:
-                logger.exception(f'Could not run s3-backup phase')
+                logger.exception(f'Could not run backup phase')
 
     def __get_all_realtime_adapters(self):
         db_connection = self._get_db_connection()

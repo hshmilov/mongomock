@@ -48,16 +48,34 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
 
     def trigger_s3_backup(self):
         response = requests.get(
-            self.req_url + '/trigger_s3_backup', headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
-            f'{str(response.content)}'
+            f'{self.req_url}/trigger_s3_backup', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
         return response
 
     def trigger_root_master_s3_restore(self):
         response = requests.get(
-            self.req_url + '/trigger_root_master_s3_restore', headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
-            f'{str(response.content)}'
+            f'{self.req_url}/trigger_root_master_s3_restore', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
+        return response
+
+    def trigger_smb_backup(self):
+        response = requests.get(
+            f'{self.req_url}/trigger_smb_backup', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
+        return response
+
+    def trigger_root_master_smb_restore(self):
+        response = requests.get(
+            f'{self.req_url}/trigger_root_master_smb_restore', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
         return response
 
     @retry(stop_max_attempt_number=300, wait_fixed=1000)

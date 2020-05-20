@@ -67,7 +67,9 @@ def usage():
                                                        will remove '_old' from all aws devices.
     {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
     {name} s3_backup - Trigger s3 backup
+    {name} smb_backup - Trigger SMB backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
+    {name} root_master_smb_restore - Trigger 'Root Master mode' SMB restore
     {name} compliance run (aws/azure) - Run Compliance Report
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     '''
@@ -279,8 +281,14 @@ def main():
     elif component == 's3_backup':
         ss.trigger_s3_backup()
 
+    elif component == 'smb_backup':
+        ss.trigger_smb_backup()
+
     elif component == 'root_master_s3_restore':
         ss.trigger_root_master_s3_restore()
+
+    elif component == 'root_master_smb_restore':
+        ss.trigger_root_master_smb_restore()
 
     elif component == 'db':
         if action == 'rf':

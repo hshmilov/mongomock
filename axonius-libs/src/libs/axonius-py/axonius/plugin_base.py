@@ -1,4 +1,5 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
+# pylint: disable=W0402, bad-option-value, unnecessary-comprehension, import-error, C0302
 import base64
 import concurrent
 import concurrent.futures
@@ -14,118 +15,105 @@ import os
 import secrets
 import socket
 import ssl
-# pylint: disable=W0402
 import string
 import subprocess
-import time
 import sys
 import threading
+import time
 import traceback
 import uuid
-from typing import List, Set, Dict, Tuple, Iterable, Optional, Callable, Any
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-import cachetools
-import func_timeout
 import gridfs
 import pymongo
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# bson is requirement of mongo and its not recommended to install it manually
+from bson import ObjectId, json_util
 # pylint: disable=ungrouped-imports
 from pymongo import MongoClient, ReplaceOne
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, OperationFailure
+import cachetools
+import func_timeout
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
-from bson import ObjectId, json_util
-from flask import Flask, has_request_context, jsonify, request, session, Response
+from flask import (Flask, Response, has_request_context, jsonify, request,
+                   session)
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from funcy import chunks
 from jira import JIRA
 from namedlist import namedtuple
 from promise import Promise
 from retrying import retry
-# bson is requirement of mongo and its not recommended to install it manually
 from tlssyslog import TLSSysLogHandler
 
 import axonius.entities
-from axonius.clients.abstract.abstract_vault_connection import AbstractVaultConnection, VaultProvider
-from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
-from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
-from axonius.plugin_exceptions import SessionInvalid, PluginNotFoundException
-from axonius.adapter_exceptions import TagDeviceError, AdapterException
+from axonius.adapter_exceptions import AdapterException, TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.clients.abstract.abstract_vault_connection import AbstractVaultConnection, VaultProvider
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
-from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.opsgenie.connection import OpsgenieConnection
 from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, CONNECTION_LABEL
-from axonius.consts.core_consts import CORE_CONFIG_NAME, ACTIVATED_NODE_STATUS
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, GETTING_STARTED_CHECKLIST_SETTING, \
-    CloudComplianceNames, HASH_SALT, CORRELATION_REASONS
-from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
-                                          AGGREGATION_SETTINGS,
-                                          AGGREGATOR_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
-                                          CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_SCCM, CORRELATE_AD_DISPLAY_NAME,
-                                          CSV_FULL_HOSTNAME, CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH,
-                                          CORRELATION_SETTINGS, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                          GUI_PLUGIN_NAME, CORRELATE_PUBLIC_IP_ONLY, CORRELATE_GLOBALY_ON_HOSTNAME,
-                                          MAX_WORKERS, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
-                                          NODE_ID, NODE_INIT_NAME,
-                                          NOTIFICATIONS_SETTINGS,
-                                          NOTIFY_ADAPTERS_FETCH,
-                                          ADAPTERS_ERRORS_MAIL_ADDRESS,
-                                          ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
-                                          PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME,
-                                          PROXY_ADDR,
-                                          PROXY_PASSW,
-                                          PROXY_PORT,
-                                          PROXY_SETTINGS,
-                                          PROXY_USER,
-                                          VOLATILE_CONFIG_PATH,
-                                          X_UI_USER,
-                                          X_UI_USER_SOURCE,
-                                          PROXY_VERIFY,
-                                          GLOBAL_KEYVAL_COLLECTION, AXONIUS_DNS_SUFFIX,
-                                          NODE_USER_PASSWORD, REPORTS_PLUGIN_NAME, EXECUTION_PLUGIN_NAME,
-                                          NODE_ID_ENV_VAR_NAME,
-                                          HEAVY_LIFTING_PLUGIN_NAME, SOCKET_READ_TIMEOUT,
-                                          DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT, UPPERCASE_HOSTNAMES,
-                                          STATIC_ANALYSIS_SETTINGS, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
-                                          FIRST_FETCH_TIME, FETCH_TIME,
-                                          KEYS_COLLECTION, DB_KEY_ENV_VAR_NAME,
-                                          CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_HOURS_INTERVAL,
-                                          CORRELATION_SCHEDULE_ENABLED, PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING,
-                                          PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS,
-                                          PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_BRUTE_FORCE_PROTECTION,
-                                          PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
-                                          PASSWORD_PROTECTION_BY_IP, PASSWORD_PROTECTION_BY_USERNAME,
-                                          PASSWORD_MANGER_THYCOTIC_SS_VAULT, PASSWORD_MANGER_ENUM, THYCOTIC_SS_HOST,
-                                          THYCOTIC_SS_PORT, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL,
-                                          THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
-                                          CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, PASSWORD_MANGER_ENABLED,
-                                          VAULT_SETTINGS, AUDIT_COLLECTION, RESET_PASSWORD_LINK_EXPIRATION,
-                                          RESET_PASSWORD_SETTINGS, UPDATE_CLIENTS_STATUS)
-
+from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, CORE_CONFIG_NAME
+from axonius.consts.gui_consts import (CORRELATION_REASONS,
+                                       FEATURE_FLAGS_CONFIG,
+                                       GETTING_STARTED_CHECKLIST_SETTING,
+                                       HASH_SALT, CloudComplianceNames,
+                                       FeatureFlagsNames)
+from axonius.consts.plugin_consts import (
+    ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
+    ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME,
+    ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION, CONFIGURABLE_CONFIGS_COLLECTION,
+    CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM,
+    CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
+    CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
+    CORRELATE_GLOBALY_ON_HOSTNAME, CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_ENABLED,
+    CORRELATION_SCHEDULE_HOURS_INTERVAL, CORRELATION_SETTINGS,
+    CORRELATE_PUBLIC_IP_ONLY, CSV_FULL_HOSTNAME, DB_KEY_ENV_VAR_NAME,
+    DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
+    EXECUTION_PLUGIN_NAME, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
+    FETCH_TIME, FIRST_FETCH_TIME, GLOBAL_KEYVAL_COLLECTION,
+    GUI_PLUGIN_NAME, HEAVY_LIFTING_PLUGIN_NAME,
+    KEYS_COLLECTION, MAX_WORKERS, NODE_ID, NODE_ID_ENV_VAR_NAME,
+    NODE_INIT_NAME, NODE_USER_PASSWORD, NOTIFICATIONS_SETTINGS,
+    NOTIFY_ADAPTERS_FETCH, PASSWORD_PROTECTION_BY_USERNAME,
+    PASSWORD_LENGTH_SETTING, PASSWORD_MANGER_THYCOTIC_SS_VAULT, PASSWORD_MANGER_ENUM,
+    PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MANGER_ENABLED,
+    PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_MIN_UPPERCASE,
+    PASSWORD_PROTECTION_ALLOWED_RETRIES, PASSWORD_PROTECTION_LOCKOUT_MIN,
+    PASSWORD_SETTINGS, PASSWORD_BRUTE_FORCE_PROTECTION, PLUGIN_NAME,
+    PASSWORD_PROTECTION_BY_IP, PLUGIN_UNIQUE_NAME, PROXY_ADDR,
+    PROXY_PASSW, PROXY_PORT, PROXY_SETTINGS, PROXY_USER, PROXY_VERIFY,
+    RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION,
+    REPORTS_PLUGIN_NAME, SOCKET_READ_TIMEOUT, STATIC_ANALYSIS_SETTINGS,
+    THYCOTIC_SS_HOST, THYCOTIC_SS_PORT, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL,
+    THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
+    CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
+    UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE)
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
 from axonius.entities import EntityType
 from axonius.irequests import IRequests
+from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
+from axonius.plugin_exceptions import PluginNotFoundException, SessionInvalid
 from axonius.profiling.memory_tracing import run_memory_tracing
-from axonius.types.correlation import MAX_LINK_AMOUNT, CorrelateException, CorrelationResult
+from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelateException,
+                                       CorrelationResult)
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS,
                                      MANDATORY_SSL_CONFIG_SCHEMA,
@@ -387,9 +375,7 @@ class PluginBase(Configurable, Feature, ABC):
     db_user = 'ax_user'
     db_password = 'ax_pass'
 
-    # pylint: disable=too-many-branches
-    # pylint: disable=too-many-locals
-    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     def __init__(self, config_file_path: str, *args, core_data=None, requested_unique_plugin_name=None, **kwargs):
         """ Initialize the class.
 
@@ -726,9 +712,9 @@ class PluginBase(Configurable, Feature, ABC):
         # Finished, Writing some log
         logger.info(f'Plugin {self.plugin_unique_name}:{self.version} '
                     f'with axonius-libs:{self.lib_version} started successfully')
+
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
-
     def _insert_indexes_entity(self, entity_type):
         """Create all the indices.
 
@@ -742,11 +728,11 @@ class PluginBase(Configurable, Feature, ABC):
         common_db_indexes(self._historical_entity_views_db_map[entity_type])
         historic_indexes(self._historical_entity_views_db_map[entity_type])
 
-    # pylint: disable=no-self-use
+    # pylint: disable=no-self-use, import-error
     @add_rule('reload_uwsgi')
     def _reload_uwsgi(self):
         # We import here because this can not be imported from within the host, and the host uses plugin_base.py
-        import uwsgi    # pylint: disable=import-error
+        import uwsgi
         logger.info(f'Reloading uwsgi...')
         uwsgi.reload()
 
@@ -996,8 +982,8 @@ class PluginBase(Configurable, Feature, ABC):
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > retries:  # Two minutes
-                logger.exception(f'Error communicating with Core for more than 2 minutes, '
-                                 'exiting. Reason: {e}')
+                logger.exception(f'Error communicating with Core for more '
+                                 f'than 2 minutes, exiting. Reason: {e}')
                 # pylint: disable=protected-access
                 os._exit(1)
                 # pylint: enable=protected-access
@@ -3109,6 +3095,7 @@ class PluginBase(Configurable, Feature, ABC):
         limiter_settings = self._password_protection_settings
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
+        self._smb_settings = config.get('smb_settings') or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
         self.update_fips_status()
 
@@ -3946,6 +3933,72 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
+                            'title': 'Enable SMB Integration',
+                            'type': 'bool',
+                        },
+                        {
+                            'name': 'enable_backups',
+                            'title': 'Enable SMB Data Transfer',
+                            'type': 'bool',
+                        },
+                        {
+                            'name': 'hostname',
+                            'title': 'SMB Host Name',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'ip',
+                            'title': 'SMB Host IP',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'port',
+                            'title': 'SMB Port',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'share_path',
+                            'title': 'SMB Share Path',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'username',
+                            'title': 'User Name',
+                            'type': 'string',
+                        },
+                        {
+                            'name': 'password',
+                            'title': 'Password',
+                            'type': 'string',
+                            'format': 'password',
+                        },
+                        {
+                            'name': 'preshared_key',
+                            'title': 'Data Encryption Passphrase',
+                            'type': 'string',
+                            'format': 'password',
+                        },
+                        {
+                            'name': 'use_nbns',
+                            'title': 'Use NetBIOS Name Server',
+                            'type': 'bool',
+                        },
+                    ],
+                    'name': 'smb_settings',
+                    'title': 'SMB Settings',
+                    'type': 'array',
+                    'required': ['enabled',
+                                 'enable_backups',
+                                 'hostname',
+                                 'ip',
+                                 'share_path',
+                                 'preshared_key',
+                                 'use_nbns']
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
                             'title': 'Enable advanced API settings',
                             'type': 'bool'
                         },
@@ -4096,6 +4149,18 @@ class PluginBase(Configurable, Feature, ABC):
                 'preshared_key': None,
                 'aws_access_key_id': None,
                 'aws_secret_access_key': None
+            },
+            'smb_settings': {
+                'enabled': False,
+                'enable_backups': False,
+                'hostname': None,
+                'ip': None,
+                'port': 445,
+                'share_path': None,
+                'username': None,
+                'password': None,
+                'preshared_key': None,
+                'use_nbns': True,
             },
             'api_settings': {
                 'enabled': False,

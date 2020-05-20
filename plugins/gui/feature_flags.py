@@ -154,13 +154,20 @@ class FeatureFlags(Configurable):
                             'type': 'bool',
                         },
                         {
+                            'name': RootMasterNames.SMB_enabled,
+                            'title': 'Enable Root Master Mode (SMB)',
+                            'type': 'bool',
+                        },
+                        {
                             'name': RootMasterNames.delete_backups,
-                            'title': 'Delete backups from S3 after parse',
-                            'type': 'bool'
-                        }
+                            'title': 'Delete Backups After Parse',
+                            'type': 'bool',
+                        },
                     ],
                     'required': [
-                        'enabled', RootMasterNames.delete_backups
+                        RootMasterNames.enabled,
+                        RootMasterNames.SMB_enabled,
+                        RootMasterNames.delete_backups,
                     ],
                 }
             ],
@@ -186,6 +193,7 @@ class FeatureFlags(Configurable):
             },
             RootMasterNames.root_key: {
                 RootMasterNames.enabled: False,
+                RootMasterNames.SMB_enabled: False,
                 RootMasterNames.delete_backups: False,
             },
             FeatureFlagsNames.ReenterCredentials: False,
