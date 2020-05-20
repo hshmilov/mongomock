@@ -145,6 +145,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_33()
         if self.db_schema_version < 34:
             self._update_schema_version_34()
+        if self.db_schema_version < 35:
+            self._update_schema_version_35()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1288,6 +1290,27 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 34
         except Exception as e:
             print(f'Exception while upgrading gui db to version 34. Details: {e}')
+
+    def _update_schema_version_35(self):
+        """
+        For 3.4 - Default dashboard chart sort
+        :return:
+        """
+        print('Upgrade to schema 35')
+        try:
+            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many(
+                {'$or': [{'metric': 'compare'}, {'metric': 'segment'}]},
+                {
+                    '$set': {
+                        'config.sort': {
+                            'sort_by': 'value',
+                            'sort_order': 'desc'
+                        }
+                    }
+                })
+            self.db_schema_version = 35
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 35. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
