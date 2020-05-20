@@ -224,7 +224,7 @@ export const adapters = {
       }
       const { serverData, instanceId, instanceIdPrev } = payload;
 
-      const newAssociatedInstance = getters.getInstancesMap.get(instanceIdPrev || instanceId);
+      const newAssociatedInstance = getters.getInstancesMap.get(instanceId || instanceIdPrev);
       const isNewClient = payload.uuid === 'new';
       const uniqueTmpId = isNewClient ? shortid.generate() : null;
 
