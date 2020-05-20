@@ -36,6 +36,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/red-hat-satellite',
         description: 'Red Hat Satellite is a system management solution used to deploy, configure, and maintain systems across physical, virtual, and cloud environments.'
     },
+    failover_cluster_adapter: {
+        title: 'Windows Server Failover Clustering (WSFC)',
+        link: 'https://docs.axonius.com/docs/wsfc',
+        description: 'Windows Server Failover Clustering (WSFC) is a feature of the Windows Server platform for improving the high availability (HA) of applications and services. WSFC is the successor to Microsoft Cluster Service (MSCS).'
+    },
     sumo_logic_adapter: {
         title: 'Sumo Logic',
         link: 'https://docs.axonius.com/docs/sumo-logic',

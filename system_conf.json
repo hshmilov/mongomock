@@ -20,6 +20,7 @@
       "infinite_sleep",
       "mysql_special",
       "g_naapi",
+      "failover_cluster",
       "esentire_json"
     ],
     "remove-from-exclude": []
