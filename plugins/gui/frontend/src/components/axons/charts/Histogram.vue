@@ -178,12 +178,7 @@ export default {
 </script>
 
 <style lang="scss">
-
-   .card-history ~.x-histogram {
-      .histogram-container {
-        min-height: 220px
-      }
-    }
+  
     .x-histogram {
         height: 100%;
         display: flex;
@@ -194,6 +189,7 @@ export default {
           display: flex;
           flex-direction: column;
           flex: 1 0 auto;
+          height: 220px
         }
         .histogram-item {
             width: 100%;

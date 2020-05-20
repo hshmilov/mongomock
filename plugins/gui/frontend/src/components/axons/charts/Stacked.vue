@@ -43,7 +43,7 @@
         </div>
         <div class="matrix-footer">
           <div class="separator" />
-          <div class="totalCount">
+          <div class="matrix-total">
             {{ 'Total ' + totalValue }}
           </div>
           <XPaginator
@@ -217,7 +217,7 @@ export default {
         height: 100%;
 
         .groups-container {
-          height: calc(100% - 60px);
+          height: 240px;
 
           .intersection-group {
             margin-bottom: 4px;
@@ -250,8 +250,9 @@ export default {
           }
         }
 
-        .totalCount {
+        .matrix-total {
           text-align: center;
+          line-height: 24px;
         }
       }
     }
