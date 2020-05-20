@@ -17,12 +17,12 @@
           @input="updateEntity(index, $event)"
         />
         <XSelect
-          :value="view.name"
-          :options="views[view.entity]"
+          :value="view.id"
+          :options="views[view.entity] || restrictedViewOptions(view.id)"
           :searchable="true"
           placeholder="Query..."
           class="view-name"
-          @input="updateName(index, $event)"
+          @input="updateId(index, $event)"
         />
         <XButton
           v-if="isItemDeletable(index)"
@@ -50,7 +50,7 @@ import XSelectSymbol from './SelectSymbol.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
 import XButton from '../../axons/inputs/Button.vue';
 
-const dashboardView = { name: '', entity: '' };
+const viewTemplate = { id: '', entity: '' };
 export default {
   name: 'XSelectViews',
   components: {
@@ -96,19 +96,25 @@ export default {
     },
   },
   methods: {
-    updateName(index, name) {
+    updateId(index, id) {
       this.selected = this.selected.map((item, i) => {
-        if (i === index) {
-          item.name = name;
+        if (i !== index) {
+          return item;
         }
-        return item;
+        return {
+          ...item,
+          id,
+        };
       });
     },
     updateEntity(index, entity) {
       this.selected = this.selected.map((item, i) => {
-        if (i !== index) return item;
+        if (i !== index) {
+          return item;
+        }
         return {
-          entity, name: '',
+          entity,
+          id: '',
         };
       });
     },
@@ -116,7 +122,7 @@ export default {
       this.selected = this.selected.filter((_, i) => i !== index);
     },
     addView() {
-      this.selected = [...this.selected, { ...dashboardView }];
+      this.selected = [...this.selected, { ...viewTemplate }];
       this.$nextTick(() => {
         const ref = this.$refs.queries;
         ref.scrollTop = ref.scrollHeight;
@@ -124,6 +130,11 @@ export default {
     },
     isItemDeletable(index) {
       return index >= this.min;
+    },
+    restrictedViewOptions(selectedView) {
+      return [{
+        name: selectedView, title: 'Missing Permissions',
+      }];
     },
   },
 };

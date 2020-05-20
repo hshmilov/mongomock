@@ -9,7 +9,8 @@ from retrying import retry
 from axonius.plugin_base import EntityType
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME, REPORTS_PLUGIN_NAME)
+                                          CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME, REPORTS_PLUGIN_NAME,
+                                          REPORTS_CONFIG_COLLECTION)
 from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
                                        USERS_PREFERENCES_COLLECTION)
@@ -300,7 +301,7 @@ class MongoService(SystemService, WeaveService):
         })
 
     def gui_reports_config_collection(self):
-        return self.client[GUI_PLUGIN_NAME]['reports_config']
+        return self.client[GUI_PLUGIN_NAME][REPORTS_CONFIG_COLLECTION]
 
     def gui_dashboard_spaces_collection(self):
         return self.client[GUI_PLUGIN_NAME]['dashboard_spaces']

@@ -237,7 +237,7 @@ export default {
 
       this.$router.push({ path: `/${this.namespace}` });
     },
-    createEnforcement(queryName) {
+    createEnforcement(queryId) {
       if (this.enforcementsLocked) {
         this.closeQuerySidePanel();
         this.openEnforcementsLockTip();
@@ -255,7 +255,7 @@ export default {
           ...initTrigger,
           name: 'Trigger',
           view: {
-            name: queryName, entity: this.namespace,
+            id: queryId, entity: this.namespace,
           },
         }],
       });

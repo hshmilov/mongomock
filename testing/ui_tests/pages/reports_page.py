@@ -385,17 +385,21 @@ class ReportsPage(EntitiesPage):
         return self.is_element_has_disabled_class(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
 
     def is_saved_queries_disabled(self):
-        if not self.is_include_saved_queries_checkbox_disabled():
+        if 'checked' not in self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX).get_attribute('class'):
+            return True
+
+        if not self.is_element_has_disabled_class(
+                self.driver.find_element_by_css_selector(self.QUERY_ADD_CLASS)
+        ):
             return False
-        if 'checked' in self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX).get_attribute('class'):
-            if not self.is_element_has_disabled_class(
-                    self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)
-            ):
-                return False
-            if not self.is_element_has_disabled_class(
-                    self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS)
-            ):
-                return False
+        if not self.is_element_has_disabled_class(
+                self.driver.find_element_by_css_selector(self.SELECT_VIEW_ENTITY_ELEMENT_CSS)
+        ):
+            return False
+        if not self.is_element_has_disabled_class(
+                self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_ELEMENT_CSS)
+        ):
+            return False
         return True
 
     def is_email_config_disabled(self):
@@ -407,7 +411,6 @@ class ReportsPage(EntitiesPage):
     def is_form_disabled(self):
         disabled_list = [self.is_dashboard_checkbox_disabled(),
                          self.is_include_saved_queries_checkbox_disabled(),
-                         self.is_saved_queries_disabled(),
                          self.is_email_config_disabled(),
                          self.is_save_button_disabled()]
         if 'checked' in self.find_element_preceding_by_text(self.ADD_SCHEDULING_CHECKBOX).get_attribute('class'):

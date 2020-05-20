@@ -10,25 +10,25 @@
           <label>Saved Query:</label>
           <div class="base-query">
             <XSelectSymbol
-              v-model="config.view.entity"
+              v-model="viewEntity"
               :options="entityOptions"
               type="icon"
               placeholder="mod"
-              :read-only="readOnly"
+              :read-only="readOnly || entityOptions.length === 0"
               minimal
             />
             <XSelect
-              v-model="config.view.name"
+              v-model="config.view.id"
               :options="viewOptions"
               searchable
               placeholder="query name"
-              :read-only="readOnly"
+              :read-only="readOnly || entityOptions.length === 0 || !views[viewEntity]"
               class="query-name"
             />
           </div>
         </div>
         <XCheckbox
-          v-model="config.run_on"
+          v-model="runOn"
           value="AddedEntities"
           :read-only="readOnly"
           label="Run on added entities only"
@@ -179,8 +179,27 @@ export default {
         this.$emit('input', config);
       },
     },
-    viewEntity() {
-      return this.config.view.entity;
+    viewEntity: {
+      get() {
+        return this.config.view.entity;
+      },
+      set(entity) {
+        if (entity !== this.viewEntity) {
+          this.config.view.id = '';
+        }
+        this.config.view.entity = entity;
+      },
+    },
+    viewId() {
+      return this.config.view.id;
+    },
+    runOn: {
+      get() {
+        return this.config.run_on;
+      },
+      set(runOn) {
+        this.config.run_on = runOn || 'AllEntities';
+      },
     },
     periodOptions() {
       return this.triggerPeriods.map((x) => Object.entries(x).map(([name, title]) => ({ name, title, id: `${name}_period` }))).map((x) => x[0]);
@@ -189,20 +208,19 @@ export default {
       return this.config.conditions;
     },
     disableConfirm() {
-      return Boolean(!(this.config.view.name && this.config.view.entity));
-    },
-    runOn() {
-      return this.config.run_on;
+      return Boolean(!(this.config.view.id && this.config.view.entity));
     },
     viewOptions() {
-      if (!this.views || !this.config.view.entity) return;
-      const views = this.views[this.config.view.entity];
-      if (this.config.view.name && !views.some((view) => view.name === this.config.view.name)) {
-        views.push({
-          name: this.config.view.name, title: `${this.config.view.name} (deleted)`,
-        });
+      if (!this.views || !this.viewEntity) {
+        return [];
       }
-      return views;
+      if (!this.views[this.viewEntity]) {
+        return [{
+          name: this.viewId,
+          title: 'Missing Permissions',
+        }];
+      }
+      return this.views[this.viewEntity];
     },
     showScheduling: {
       get() {
@@ -240,7 +258,7 @@ export default {
       },
       set(value) {
         if (!value) return;
-        this.conditions.above = parseInt(value) > 0 ? parseInt(value) : 0;
+        this.conditions.above = parseInt(value, 10) > 0 ? parseInt(value, 10) : 0;
       },
     },
     below: {
@@ -249,7 +267,7 @@ export default {
       },
       set(value) {
         if (!value) return;
-        this.conditions.below = parseInt(value) > 0 ? parseInt(value) : 0;
+        this.conditions.below = parseInt(value, 10) > 0 ? parseInt(value, 10) : 0;
       },
     },
   },
@@ -257,18 +275,6 @@ export default {
     return {
       showConditions: false,
     };
-  },
-  watch: {
-    runOn() {
-      if (!this.runOn) {
-        this.config.run_on = 'AllEntities';
-      }
-    },
-    viewEntity(newEntity, oldEntity) {
-      if (newEntity !== oldEntity) {
-        this.config.view.name = '';
-      }
-    },
   },
   mounted() {
     this.showConditions = this.anyConditions;

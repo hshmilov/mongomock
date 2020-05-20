@@ -364,11 +364,14 @@ class RESTExample:
         trigger_dict['above'] = 1
 
         # Create new alert
+        status_code, users_views = self._client.get_users_views(
+            skip=0, limit=1, filter_='name==\'Users created in the last 30 days\'')
+        assert len(users_views.get('assets', [])) == 1, 'Failed to fetch view for trigger'
         status_code, alert_id = self._client.put_alert(name=ALERT_NAME,
                                                        triggers=[{
                                                            'name': ALERT_NAME,
                                                            'view': {
-                                                               'name': 'Users created in the last 30 days',
+                                                               'id': users_views['assets'][0]['uuid'],
                                                                'entity': 'users'
                                                            },
                                                            'conditions': trigger_dict,

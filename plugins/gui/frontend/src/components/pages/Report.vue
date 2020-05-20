@@ -64,7 +64,7 @@
           <XCheckbox
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
-            :read-only="cannotEditReport || entityOptions.length === 0"
+            :read-only="cannotEditReport"
             label="Include Saved Queries data"
             class="item"
             @change="validateSavedQueries"
@@ -97,7 +97,7 @@
                     @input="onEntityChange($event, i)"
                   />
                   <XSelect
-                    v-model="report.views[i].name"
+                    v-model="report.views[i].id"
                     :options="viewOptions(i)"
                     searchable
                     placeholder="query name"
@@ -116,7 +116,7 @@
               <XButton
                 type="light"
                 class="query-add"
-                :disabled="cannotEditReport"
+                :disabled="cannotEditReport || entityOptions.length === 0"
                 @click="addQuery"
               >+</XButton>
             </div>
@@ -239,7 +239,7 @@ export default {
         send_csv_attachments: true,
         spaces: [],
         include_saved_views: false,
-        views: [{ entity: '', name: '' }],
+        views: [{ entity: '', id: '' }],
         recipients: [],
         add_scheduling: null,
         period: 'daily',
@@ -307,13 +307,6 @@ export default {
       if (!this.reportData || !this.reportData.name) return 'New Report';
 
       return this.reportData.name;
-    },
-    disableSave() {
-      return !this.report.name
-        || !this.trigger
-        || !this.trigger.view
-        || !this.trigger.view.name
-        || !this.mainAction.name;
     },
     hideTestNow() {
       if (!this.report.last_generated) {
@@ -597,7 +590,7 @@ export default {
       this.$router.push({ name: 'Reports' });
     },
     onEntityChange(name, index) {
-      Vue.set(this.report.views, index, { entity: name, name: '' });
+      Vue.set(this.report.views, index, { entity: name, id: '' });
       this.$forceUpdate();
       this.validateSavedQueries();
     },
@@ -611,8 +604,8 @@ export default {
       this.$forceUpdate();
       this.validateSavedQueries();
     },
-    onQueryNameChange(name, index) {
-      Vue.set(this.report.views, index, { entity: this.report.views[index].entity, name });
+    onQueryNameChange(id, index) {
+      Vue.set(this.report.views, index, { entity: this.report.views[index].entity, id });
       this.$forceUpdate();
       this.validateSavedQueries();
     },
@@ -626,26 +619,16 @@ export default {
       return true;
     },
     viewOptions(index) {
-      if (!this.views || !this.report.views[index].entity) {
+      if (!this.views || !this.report.views[index]) {
         return [];
       }
-      if (this.report.views[index].entity && !this.views[this.report.views[index].entity]) {
+      const { entity, id } = this.report.views[index];
+      if (entity && !this.views[entity]) {
         return [{
-          name: this.report.views[index].name,
-          title: this.report.views[index].name,
+          name: id, title: 'Missing Permissions',
         }];
       }
-      const views = (this.report.views
-        && this.report.views[index]) ? this.views[this.report.views[index].entity] : [];
-      if (this.report.views
-        && this.report.views.length > 0
-        && this.report.views[index].name
-        && !views.some((view) => view.name === this.report.views[index].name)) {
-        views.push({
-          name: this.report.views[index].name, title: `${this.report.views[0].name} (deleted)`,
-        });
-      }
-      return views;
+      return entity ? this.views[entity] : [];
     },
     onNameChanged() {
       if (this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name') {
@@ -663,7 +646,7 @@ export default {
         result = false;
       }
       this.report.views.forEach((view) => {
-        if (!view.entity || !view.name) {
+        if (!view.entity || !view.id) {
           result = false;
         }
       });

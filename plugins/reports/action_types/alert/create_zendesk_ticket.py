@@ -96,16 +96,15 @@ class ZendeskTicketAction(ActionTypeAlert):
     def _run(self) -> AlertActionResult:
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
-        query_name = self._run_configuration.view.name
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
         log_message = report_consts.REPORT_CONTENT.format(name=self._report_data['name'],
-                                                          query=query_name,
+                                                          query=self.trigger_view_name,
                                                           num_of_triggers=self._run_configuration.times_triggered,
                                                           trigger_message=self._get_trigger_description(),
                                                           num_of_current_devices=len(self._internal_axon_ids),
                                                           old_results_num_of_devices=old_results_num_of_devices,
-                                                          query_link=self._generate_query_link(query_name))
+                                                          query_link=self._generate_query_link())
         ticket_body = self._config['ticket_body']
         if self._config.get('description_default') is True:
             ticket_body += '\n' + log_message

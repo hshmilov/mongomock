@@ -14,10 +14,13 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
                                           LAST_TRIGGERED_FIELD,
                                           TIMES_TRIGGERED_FIELD,
-                                          TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD)
+                                          TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD, TRIGGER_VIEW_NAME_FIELD,
+                                          TRIGGER_RESULT_VIEW_NAME_FIELD)
+
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
-                                       filtered, sorted_endpoint)
+                                       filtered, sorted_endpoint, find_view_name_by_id, find_views_by_name_match,
+                                       search_filter)
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.revving_cache import rev_cached
 from gui.logic.db_helpers import beautify_db_entry
@@ -35,24 +38,44 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_category_add_rules('enforcements')
 class Enforcements(Tasks):
 
-    def _get_enforcements(self, limit, mongo_filter, mongo_sort, skip):
-        sort = [(LAST_UPDATED_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+    def _get_enforcements(self, limit, mongo_filter, mongo_sort, skip, search: str = None):
 
         def beautify_enforcement(enforcement):
             actions = enforcement[ACTIONS_FIELD]
             trigger = enforcement[TRIGGERS_FIELD][0] if enforcement[TRIGGERS_FIELD] else None
+            trigger_view_name = ''
+            if trigger:
+                trigger_view = trigger['view']
+                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
             return beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
-                f'{TRIGGERS_FIELD}.view.name': trigger['view']['name'] if trigger else '',
+                TRIGGER_VIEW_NAME_FIELD: trigger_view_name,
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
                 f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD) if trigger else None,
                 LAST_UPDATED_FIELD: enforcement.get(LAST_UPDATED_FIELD),
                 UPDATED_BY_FIELD: enforcement.get(UPDATED_BY_FIELD)
             })
 
-        return [beautify_enforcement(enforcement) for enforcement in self.enforcements_collection.find(
-            mongo_filter).sort(sort).skip(skip).limit(limit)]
+        if search:
+            mongo_filter = {
+                '$or': [
+                    mongo_filter, {
+                        'triggers.view.id': {
+                            '$in': find_views_by_name_match(search)
+                        }
+                    }
+                ]
+            }
+        enforcements = self.enforcements_collection.find(mongo_filter)
+        if TRIGGER_VIEW_NAME_FIELD in mongo_sort:
+            beautiful_enforcements = [beautify_enforcement(enforcement) for enforcement in enforcements]
+            sorted_enforcements = sorted(beautiful_enforcements,
+                                         key=lambda e: e[TRIGGER_VIEW_NAME_FIELD],
+                                         reverse=mongo_sort[TRIGGER_VIEW_NAME_FIELD] == pymongo.DESCENDING)
+            return sorted_enforcements[skip:(skip + limit)]
+        sort = [(LAST_UPDATED_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+        return [beautify_enforcement(enforcement) for enforcement in enforcements.sort(sort).skip(skip).limit(limit)]
 
     def __process_enforcement_actions(self, actions):
         # This is a transitional method, i.e. it's here to maximize compatibility with previous versions
@@ -111,14 +134,15 @@ class Enforcements(Tasks):
     @paginated()
     @filtered()
     @sorted_endpoint()
+    @search_filter()
     @gui_route_logged_in(methods=['GET'])
-    def get_enforcements(self, limit, skip, mongo_filter, mongo_sort):
+    def get_enforcements(self, limit, skip, mongo_filter, mongo_sort, search):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
 
         :return:
         """
-        return jsonify(self._get_enforcements(limit, mongo_filter, mongo_sort, skip))
+        return jsonify(self._get_enforcements(limit, mongo_filter, mongo_sort, skip, search=search))
 
     @gui_route_logged_in(methods=['PUT'])
     def add_enforcements(self):
@@ -326,8 +350,9 @@ class Enforcements(Tasks):
     @paginated()
     @filtered()
     @sorted_endpoint()
+    @search_filter()
     @gui_route_logged_in('<enforcement_id>/tasks', methods=['GET'])
-    def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort):
+    def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort, search):
         enforcement = self.enforcements_collection.find_one({
             '_id': ObjectId(enforcement_id)
         })
@@ -337,9 +362,15 @@ class Enforcements(Tasks):
         if mongo_sort.get('status'):
             mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
             del mongo_sort['status']
+        tasks = self.enforcement_tasks_runs_collection.find(
+            self._tasks_query(mongo_filter, enforcement['name'], search))
+        if TRIGGER_RESULT_VIEW_NAME_FIELD in mongo_sort:
+            beautiful_tasks = [self.beautify_task_entry(task) for task in tasks]
+            sorted_tasks = sorted(beautiful_tasks, key=lambda e: e[TRIGGER_RESULT_VIEW_NAME_FIELD],
+                                  reverse=mongo_sort[TRIGGER_RESULT_VIEW_NAME_FIELD] == pymongo.DESCENDING)
+            return jsonify(sorted_tasks[skip: (skip + limit)])
         sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
-        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
-            self._tasks_query(mongo_filter, enforcement['name'])).sort(sort).skip(skip).limit(limit)])
+        return jsonify([self.beautify_task_entry(x) for x in tasks.sort(sort).skip(skip).limit(limit)])
 
     @filtered()
     @gui_route_logged_in('<enforcement_id>/tasks/count', methods=['GET'])

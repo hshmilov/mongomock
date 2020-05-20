@@ -1,5 +1,8 @@
 import logging
 
+from typing import List
+from bson import ObjectId
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -28,3 +31,11 @@ def filter_by_name(names, additional_filter=None):
     if additional_filter and additional_filter != {}:
         return {'$and': [base_names, additional_filter]}
     return base_names
+
+
+def filter_by_ids(ids: List[str]):
+    return {
+        '_id': {
+            '$in': [ObjectId(uuid) for uuid in ids]
+        }
+    }

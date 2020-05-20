@@ -10,13 +10,15 @@ export default {
   computed: {
     ...mapState({
       views(state) {
-        return this.entityList.reduce((map, module) => {
-          // eslint-disable-next-line no-param-reassign
-          map[module] = state[module].views.saved.content.data
+        return this.entityList.reduce((map, module) => ({
+          ...map,
+          [module]: state[module].views.saved.content.data
             .filter((view) => view)
-            .map((view) => ({ name: view.name, title: view.name, predefined: view.predefined }));
-          return map;
-        }, {});
+            .map((view) => ({
+              name: view.uuid,
+              title: view.name,
+            })),
+        }), {});
       },
       entityOptions() {
         return entities.filter((entity) => this.$canViewEntity(entity.name));
@@ -38,7 +40,11 @@ export default {
     }),
     fetchViewsHistory() {
       if (this.entityList.includes(this.module)) {
-        this.fetchViews({ module: `${this.module}/views/history`, getCount: false, limit: 5 });
+        this.fetchViews({
+          module: `${this.module}/views/history`,
+          getCount: false,
+          limit: 5
+        });
       }
     },
     viewsCallback() {},

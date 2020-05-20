@@ -3,8 +3,6 @@ import requests
 
 from axonius.utils import gui_helpers, db_querying_helper
 from axonius.utils.json import to_json, from_json
-
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
@@ -117,11 +115,6 @@ class SendWebhookAction(ActionTypeAlert):
     def _run(self) -> AlertActionResult:
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
-        query_name = self._run_configuration.view.name
-        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
-            {
-                'name': query_name
-            })
         # check for extra headers
         extra_headers_raw = self._config.get('extra_headers')
         if extra_headers_raw:
@@ -145,33 +138,29 @@ class SendWebhookAction(ActionTypeAlert):
         except (ValueError, TypeError):
             timeout_connect = TIMEOUT_CONNECT
         timeout = (timeout_connect, timeout_read)
-        if query:
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_list = query['view'].get('fields', [])
-            sort = gui_helpers.get_sort(query['view'])
-        else:
-            parsed_query_filter = self._create_query(self._internal_axon_ids)
-            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                          'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
-            sort = {}
+
+        sort = gui_helpers.get_sort(self.trigger_view_config)
+        field_list = self.trigger_view_config.get('fields', [
+            'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+            'specific_data.data.last_used_users', 'labels'
+        ])
+        entities_raw = db_querying_helper.get_entities(None,
+                                                       None,
+                                                       self.trigger_view_parsed_filter,
+                                                       sort, {
+                                                           field: 1
+                                                           for field
+                                                           in field_list
+                                                       }, self._entity_type)
+        entities = list(entities_raw)
+        entities_json = to_json(entities or None)
+        final_body = (self._config.get('custom_format') or '{"entities": {$BODY}}').replace(CUSTOM_FORMAT_STRING,
+                                                                                            entities_json)
         proxies = dict()
         if self._config.get('http_proxy'):
             proxies['http'] = self._config.get('http_proxy')
         if self._config.get('https_proxy'):
             proxies['https'] = self._config.get('https_proxy')
-
-        entities_raw = db_querying_helper.get_entities(None, None, parsed_query_filter,
-                                                       sort,
-                                                       {
-                                                           field: 1
-                                                           for field
-                                                           in field_list
-                                                       },
-                                                       self._entity_type)
-        entities = list(entities_raw)
-        entities_json = to_json(entities or None)
-        final_body = (self._config.get('custom_format') or '{"entities": {$BODY}}').replace(CUSTOM_FORMAT_STRING,
-                                                                                            entities_json)
         response = requests.post(self._config['webhook_url'], data=final_body,
                                  verify=self._config['verify_ssl'],
                                  auth=auth_tuple,

@@ -20,14 +20,14 @@ from axonius.entities import EntityType
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.utils.db_querying_helper import perform_saved_view_by_name
+from axonius.utils.db_querying_helper import perform_saved_view_by_id
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
                                           ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD, TRIGGERS_FIELD,
                                           LAST_TRIGGERED_FIELD, TIMES_TRIGGERED_FIELD, NOT_RAN_STATE,
-                                          CUSTOM_SELECTION_TRIGGER, ACTION_CONFIG_FIELD, ACTION_FIELD)
+                                          ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.types.enforcement_classes import (ActionInRecipe, Recipe, TriggerPeriod, Trigger, TriggerView,
                                                TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata,
                                                ActionRunResults, DBActionRunResults, EntityResult, SavedActionType)
@@ -191,7 +191,7 @@ class ReportsService(Triggerable, PluginBase):
             elif post_json.get('input'):
                 result = self.__process_run_configuration(report, Trigger(
                     name=enforcement_name,
-                    view=TriggerView(name=CUSTOM_SELECTION_TRIGGER, entity=EntityType[post_json['input']['entity']]),
+                    view=TriggerView(id=None, entity=EntityType[post_json['input']['entity']]),
                     conditions=TriggerConditions(new_entities=False, previous_entities=False, above=-1, below=-1),
                     period=TriggerPeriod.never,
                     last_triggered=None,
@@ -305,7 +305,7 @@ class ReportsService(Triggerable, PluginBase):
 
     def __process_trigger(self, trigger):
         trigger_obj = Trigger.from_dict(trigger)
-        view_result = self.get_view_results(trigger_obj.view.name, trigger_obj.view.entity)
+        view_result = self.get_view_results(trigger_obj.view.id, trigger_obj.view.entity)
         trigger_obj.result = self.__insert_new_list_internal_axon_ids(view_result)
         trigger_obj.result_count = len(view_result)
         return json.loads(trigger_obj.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
@@ -396,7 +396,7 @@ class ReportsService(Triggerable, PluginBase):
             for action_name, action_class in AllActionTypes.items()})
 
     @staticmethod
-    def get_view_results(view_name: str, view_entity: EntityType) -> List[str]:
+    def get_view_results(view_uuid: str, view_entity: EntityType) -> List[str]:
         """
         Gets a query's results from the DB.
 
@@ -411,7 +411,7 @@ class ReportsService(Triggerable, PluginBase):
         # Projection to get only the needed data to differentiate between results.
         return [x['internal_axon_id']
                 for x
-                in perform_saved_view_by_name(view_entity, view_name, projection=projection)]
+                in perform_saved_view_by_id(view_entity, view_uuid, projection=projection)]
 
     @staticmethod
     def _get_triggered_reports(current_result, diff_dict: QueryResultDiff,
@@ -589,7 +589,7 @@ class ReportsService(Triggerable, PluginBase):
             query_result = self.get_selected_entities(
                 EntityType[manual_input['entity']], manual_input['selection'], unescape_dict(manual_input['filter']))
         else:
-            query_result = self.get_view_results(trigger.view.name, trigger.view.entity)
+            query_result = self.get_view_results(trigger.view.id, trigger.view.entity)
 
         query_difference = query_result_diff(query_result, self.__get_internal_axon_ids(trigger.result))
         triggered_reason = self._get_triggered_reports(query_result, query_difference,

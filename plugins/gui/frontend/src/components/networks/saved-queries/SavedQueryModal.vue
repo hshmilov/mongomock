@@ -168,15 +168,17 @@ export default {
   },
   watch: {
     value(isOpen) {
-      if (isOpen && this.isEdit) {
-        const { name } = this.queryFormProxies;
-        const n = !_isNull(name) ? name : this.query.name;
-        this.queryFormProxies.name = n;
+      if (!isOpen) {
+        return;
       }
+      this.fetchQueriesNames();
+      if (!this.isEdit) {
+        return;
+      }
+      const { name } = this.queryFormProxies;
+      const n = !_isNull(name) ? name : this.query.name;
+      this.queryFormProxies.name = n;
     },
-  },
-  created() {
-    this.fetchQueriesNames();
   },
   methods: {
     ...mapActions({

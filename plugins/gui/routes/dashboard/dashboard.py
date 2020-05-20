@@ -46,6 +46,15 @@ class Dashboard(Charts, Notifications):
             logger.info(f'Report {dashboard_name} was removed')
             return None
 
+        if dashboard_data.get('entity'):
+            views_collection = self.gui_dbs.entity_query_views_db_map[EntityType(dashboard_data['entity'])]
+            if 'base' in dashboard_data:
+                dashboard_data['base'] = str(views_collection.find_one({
+                    'name': dashboard_data['base']
+                }, {'_id': 1})['_id']) if dashboard_data.get('base') else ''
+                dashboard_data['intersecting'] = [str(views_collection.find_one({
+                    'name': view
+                }, {'_id': 1})['_id']) for view in dashboard_data.get('intersecting', [])]
         result = self._dashboard_collection.replace_one({
             'name': dashboard_name
         }, {

@@ -9,7 +9,7 @@
     />
     <x-select
       v-model="view"
-      :options="views[entity] || []"
+      :options="viewOptions"
       :searchable="true"
       placeholder="query (or empty for all)"
     />
@@ -111,6 +111,14 @@
       schemaByName () {
         if (!this.entity) return {}
         return this.getDataSchemaByName(this.entity)
+      },
+      viewOptions() {
+        if (!this.views[this.entity]) {
+          return [{
+            name: this.view, title: 'Missing Permissions',
+          }];
+        }
+        return this.views[this.entity];
       }
     },
     methods: {

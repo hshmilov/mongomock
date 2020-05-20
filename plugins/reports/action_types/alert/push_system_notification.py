@@ -27,15 +27,12 @@ class SystemNotificationAction(ActionTypeAlert):
         # We can't keep this code for now because many tests uses Push Notification even when no data in the query
         # if not self._internal_axon_ids:
         #    return AlertActionResult(False, 'No Data')
-        query_name = self._run_configuration.view.name
-        title = report_consts.REPORT_TITLE.format(name=self._report_data['name'], query=query_name)
-
+        title = report_consts.REPORT_TITLE.format(name=self._report_data['name'],
+                                                  query=self.trigger_view_name)
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
             len(self._added_axon_ids)
-        link = self._generate_query_link(query_name)
-
         content = report_consts.REPORT_CONTENT.format(name=self._report_data['name'],
-                                                      query=query_name,
+                                                      query=self.trigger_view_name,
                                                       trigger_message=self._get_trigger_description(),
                                                       num_of_current_devices=len(self._internal_axon_ids),
                                                       old_results_num_of_devices=old_results_num_of_devices,
@@ -44,7 +41,7 @@ class SystemNotificationAction(ActionTypeAlert):
         link_hook = {
             'type': NotificationHookType.LINK.value,
             'key': 'query_link',
-            'value': link
+            'value': self._generate_query_link()
         }
 
         result = self._plugin_base.create_notification(title, content, hooks=[link_hook])

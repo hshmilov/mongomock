@@ -248,7 +248,7 @@ export default {
       return Boolean(this.error);
     },
     disableRun() {
-      return this.disableSave || !this.trigger || !this.trigger.view || !this.trigger.view.name;
+      return this.disableSave || !this.trigger || !this.trigger.view || !this.trigger.view.id;
     },
     actions() {
       if (!this.enforcement || !this.enforcement.actions) return { ...initRecipe };

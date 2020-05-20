@@ -9,7 +9,7 @@
     />
     <XSelect
       v-model="view"
-      :options="views[entity]"
+      :options="viewOptions"
       :searchable="true"
       placeholder="query (or empty for all)"
       class="view-name grid-span2"
@@ -236,6 +236,14 @@ export default {
     },
     showSortOptions() {
       return this.chartView === ChartViewEnum.histogram;
+    },
+    viewOptions() {
+      if (!this.views[this.entity]) {
+        return [{
+          name: this.view, title: 'Missing Permissions',
+        }];
+      }
+      return this.views[this.entity];
     },
   },
   watch: {

@@ -30,7 +30,7 @@ export const initRecipe = {
 
 export const initTrigger = {
   view: {
-    name: '',
+    id: '',
     entity: '',
   },
   run_on: 'AllEntities',

@@ -101,8 +101,8 @@ class TriggeredReason(Enum):
 
 @dataclass(frozen=True)
 class TriggerView(DataClassJsonMixin):
-    # The name of the saved query to be used
-    name: str
+    # The ObjectId of the saved query to be used
+    id: str
     # The entity type of the saved query
     entity: EntityType
 
@@ -175,7 +175,7 @@ class Trigger(DataClassJsonMixin):
     def from_dict(to_parse) -> 'Trigger':
         return Trigger(
             name=to_parse['name'],
-            view=TriggerView(to_parse['view']['name'], EntityType(to_parse['view']['entity'])),
+            view=TriggerView(to_parse['view']['id'], EntityType(to_parse['view']['entity'])),
             conditions=TriggerConditions.schema().make_triggerconditions(to_parse['conditions']),
             period=TriggerPeriod[to_parse['period']],
             last_triggered=to_parse.get('last_triggered'),

@@ -17,8 +17,8 @@ from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
-from axonius.utils.gui_helpers import (find_filter_by_name, find_entity_field, get_string_from_field_value,
-                                       is_where_count_query)
+from axonius.utils.gui_helpers import (find_view_config_by_id, find_entity_field, get_string_from_field_value,
+                                       is_where_count_query, find_view_by_id)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
@@ -101,13 +101,13 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         # But since list is very short the simpler and more readable implementation is fine
         entity_name = view.get('entity', EntityType.Devices.value)
         entity = EntityType(entity_name)
-        view_dict = find_filter_by_name(entity, view['name'])
+        view_dict = find_view_by_id(entity, view['id'])
         if not view_dict:
             continue
 
         data_item = {
-            'name': view['name'],
-            'view': view_dict,
+            'name': view_dict['name'],
+            'view': view_dict['view'],
             'module': entity_name,
             'value': 0
         }
@@ -117,7 +117,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         if for_date:
             data_item['accurate_for_datetime'] = for_date
         entity_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
-        query_filter = [parse_filter(view_dict['query']['filter'], for_date)]
+        query_filter = [parse_filter(view_dict['view']['query']['filter'], for_date)]
         # if we have a date and we don't have an historical collection, count using filter on all historical_col
         if for_date and is_date_filter_required:
             query_filter.append({'accurate_for_datetime': for_date})
@@ -168,10 +168,13 @@ def fetch_chart_intersect(
 
     base_view = {'query': {'filter': '', 'expressions': []}}
     base_queries = []
+    base_name = 'ALL'
     if base:
-        base_view = find_filter_by_name(entity, base)
+        base_from_db = find_view_by_id(entity, base)
+        base_view = base_from_db['view']
         if not base_view or not base_view.get('query'):
             return None
+        base_name = base_from_db.get('name', '')
         base_queries = [parse_filter(base_view['query']['filter'], for_date)]
 
     # If we have a date and this isn't an historical collection add a filter
@@ -184,12 +187,14 @@ def fetch_chart_intersect(
     else:
         total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
     if not total:
-        return [{'name': base or 'ALL', 'value': 0, 'remainder': True,
+        return [{'name': base_name, 'value': 0, 'remainder': True,
                  'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
 
-    child1_view = find_filter_by_name(entity, intersecting[0])
+    child1_from_db = find_view_by_id(entity, intersecting[0])
+    child1_view = child1_from_db['view']
     if not child1_view or not child1_view.get('query'):
         return None
+    child1_name = child1_from_db.get('name', '')
     child1_filter = child1_view['query']['filter']
     child1_query = parse_filter(child1_filter, for_date)
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
@@ -205,13 +210,15 @@ def fetch_chart_intersect(
             numeric_value = data_collection.count_documents({
                 '$and': base_queries + [child1_query]
             })
-        data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
+        data.append({'name': child1_name, 'view': child1_view, 'module': entity.value,
                      'numericValue': numeric_value,
                      'value': numeric_value / total})
     else:
-        child2_view = find_filter_by_name(entity, intersecting[1])
+        child2_from_db = find_view_by_id(entity, intersecting[1])
+        child2_view = child2_from_db['view']
         if not child2_view or not child2_view.get('query'):
             return None
+        child2_name = child2_from_db.get('name', '')
         child2_filter = child2_view['query']['filter']
         child2_query = parse_filter(child2_filter, for_date)
 
@@ -237,7 +244,7 @@ def fetch_chart_intersect(
                     }
                 ]
             })
-        data.append({'name': intersecting[0], 'numericValue': numeric_value,
+        data.append({'name': child1_name, 'numericValue': numeric_value,
                      'value': numeric_value / total, 'module': entity.value, 'view': child1_view})
 
         # Intersection
@@ -254,7 +261,7 @@ def fetch_chart_intersect(
                     child1_query, child2_query
                 ]})
         data.append(
-            {'name': ' + '.join(intersecting),
+            {'name': f'{child1_name} + {child2_name}',
              'intersection': True,
              'numericValue': numeric_value,
              'value': numeric_value / total,
@@ -263,7 +270,6 @@ def fetch_chart_intersect(
 
         # Child2 + Parent - Intersection
         child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
-
         if is_where_count_query(base_queries) or \
                 is_where_count_query(child1_query) or \
                 is_where_count_query(child2_query):
@@ -284,13 +290,13 @@ def fetch_chart_intersect(
                     }
                 ]
             })
-        data.append({'name': intersecting[1], 'numericValue': numeric_value,
+        data.append({'name': child2_name, 'numericValue': numeric_value,
                      'value': numeric_value / total, 'module': entity.value, 'view': child2_view})
 
     remainder = 1 - sum([x['value'] for x in data])
     numeric_remainder = total - sum([x['numericValue'] for x in data])
     child2_or = f' or ({child2_filter})' if child2_filter else ''
-    return [{'name': base or 'ALL', 'value': remainder, 'numericValue': numeric_remainder, 'remainder': True, 'view': {
+    return [{'name': base_name, 'value': remainder, 'numericValue': numeric_remainder, 'remainder': True, 'view': {
         **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
     }, 'module': entity.value}, *data]
 
@@ -310,7 +316,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
     base_view = {'query': {'filter': '', 'expressions': []}}
     base_queries = []
     if view:
-        base_view = find_filter_by_name(entity, view)
+        base_view = find_view_config_by_id(entity, view)
         if not base_view or not base_view.get('query'):
             return None, None
         base_queries.append(parse_filter(base_view['query']['filter'], for_date))
@@ -790,7 +796,7 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
         ]
     }
     if view:
-        base_view = find_filter_by_name(entity, view)
+        base_view = find_view_config_by_id(entity, view)
         if not base_view or not base_view.get('query'):
             return None, None
         base_query = {
@@ -906,20 +912,21 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
 
 def _compare_timeline_lines(views, date_ranges):
     for view in views:
-        if not view.get('name'):
+        if not view.get('id'):
             continue
         entity = EntityType(view['entity'])
-        base_view = find_filter_by_name(entity, view['name'])
+        base_from_db = find_view_by_id(entity, view['id'])
+        base_view = base_from_db['view']
         if not base_view or not base_view.get('query'):
             return
         yield {
-            'title': view['name'],
+            'title': base_from_db['name'],
             'points': _fetch_timeline_points(entity, base_view['query']['filter'], date_ranges)
         }
 
 
 def _intersect_timeline_lines(views, date_ranges):
-    if len(views) != 2 or not views[0].get('name'):
+    if len(views) != 2 or not views[0].get('id'):
         logger.error(f'Unexpected number of views for performing intersection {len(views)}')
         yield {}
     first_entity_type = EntityType(views[0]['entity'])
@@ -927,25 +934,27 @@ def _intersect_timeline_lines(views, date_ranges):
 
     # first query handling
     base_filter = ''
-    if views[0].get('name'):
-        base_view = find_filter_by_name(first_entity_type, views[0]['name'])
+    if views[0].get('id'):
+        base_from_db = find_view_by_id(first_entity_type, views[0]['id'])
+        base_view = base_from_db['view']
         if not base_view or not base_view.get('query'):
             return
         base_filter = base_view['query']['filter']
     yield {
-        'title': views[0]['name'],
+        'title': base_from_db['name'],
         'points': _fetch_timeline_points(first_entity_type, base_filter, date_ranges)
     }
 
     # second query handling
-    intersecting_view = find_filter_by_name(second_entity_type, views[1]['name'])
+    intersecting_from_db = find_view_by_id(second_entity_type, views[1]['id'])
+    intersecting_view = intersecting_from_db['view']
     if not intersecting_view or not intersecting_view.get('query'):
         yield {}
     intersecting_filter = intersecting_view.get('query', {}).get('filter', '')
     if base_filter:
         intersecting_filter = f'({base_filter}) and {intersecting_filter}'
     yield {
-        'title': f'{views[0]["name"]} and {views[1]["name"]}',
+        'title': f'{base_from_db["name"]} and {intersecting_from_db["name"]}',
         'points': _fetch_timeline_points(second_entity_type, intersecting_filter, date_ranges)
     }
 
@@ -1048,10 +1057,12 @@ def fetch_chart_matrix(
     data = []
     has_results = False
     total_values = defaultdict(int)
-    for base_query_index, base_query_name in enumerate(base):
+    for base_query_index, base_query_id in enumerate(base):
         base_view = {'query': {'filter': '', 'expressions': []}}
         if base_query_name:
-            base_view = find_filter_by_name(entity, base_query_name)
+            base_from_db = find_view_by_id(entity, base_query_id)
+            base_query_name = base_from_db['name']
+            base_view = base_from_db['view']
             if not base_view.get('query'):
                 continue
         else:
@@ -1063,8 +1074,10 @@ def fetch_chart_matrix(
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
 
         # intersection of base query with each data query
-        for intersecting_query_index, intersecting_query_name in enumerate(intersecting):
-            child_view = find_filter_by_name(entity, intersecting_query_name)
+        for intersecting_query_index, intersecting_query_id in enumerate(intersecting):
+            child_from_db = find_view_by_id(entity, base_query_id)
+            intersecting_query_name = child_from_db['name']
+            child_view = child_from_db['view']
 
             if not child_view or not child_view.get('query'):
                 continue

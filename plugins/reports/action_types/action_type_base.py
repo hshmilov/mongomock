@@ -1,12 +1,11 @@
 import logging
 import copy
 import traceback
-import urllib.parse
 from abc import ABC, abstractmethod
 from typing import Set, List, Iterable
 
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS
-from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME, PLUGIN_NAME, NODE_ID
+from axonius.consts.plugin_consts import PLUGIN_NAME, NODE_ID
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
@@ -172,14 +171,6 @@ class ActionTypeBase(ABC):
         """
         return iterate_axonius_entities(self._entity_type, self._internal_axon_ids,
                                         projection=projection)
-
-    def _generate_query_link(self, view_name):
-        # Getting system config from the gui.
-        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME).find_one(
-            {'type': 'server'}) or {}
-        url_params = urllib.parse.urlencode({'view': view_name})
-        return 'https://{}/{}?{}'.format(
-            system_config.get('server_name', 'localhost'), self._entity_type.value, url_params)
 
     def _get_trigger_description(self):
         """

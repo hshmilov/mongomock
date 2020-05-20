@@ -46,6 +46,7 @@
               :value="view"
             >
             <label
+              :key="`label_${view}`"
               :for="view"
               class="type-label"
             >

@@ -179,21 +179,15 @@ export default {
       const updated = {
         ...this.query,
         ...(_isNull(this.queryFieldsProxies.name) ? false : { name: this.queryFieldsProxies.name }),
-        ...(_isNull(this.queryFieldsProxies.description) ? false : {
-          description: this.queryFieldsProxies.description,
-        }),
+        ...(_isNull(this.queryFieldsProxies.description)
+          ? false
+          : { description: this.queryFieldsProxies.description }),
         ...(_isNull(this.queryFieldsProxies.tags) ? false : { tags: this.queryFieldsProxies.tags }),
       };
 
       this.$emit('save-changes', {
         queryData: updated,
-        done: (err) => {
-          this.fetchEntityTags();
-          this.toggleEditMode();
-          if (!err) {
-            this.fetchQueriesNames();
-          }
-        },
+        done: this.toggleEditMode,
       });
     },
     async fetchQueriesNames() {
@@ -256,13 +250,17 @@ export default {
       };
     },
     newEnforcement() {
-      this.$emit('new-enforcement', this.query.name);
+      this.$emit('new-enforcement', this.query.uuid);
     },
     closePanel() {
       this.$emit('close');
     },
-    toggleEditMode() {
+    async toggleEditMode() {
       this.editingMode = !this.editingMode;
+      if (this.editingMode) {
+        await this.fetchQueriesNames();
+        await this.fetchEntityTags();
+      }
     },
     removeQuery() {
       this.$emit('delete', undefined, this.queryId);
@@ -387,16 +385,7 @@ export default {
       this.entityTags = tags;
     },
   },
-  watch: {
-    async editingMode(isEditing) {
-      // Whenever user enter edit mode, fetch the latest list of tags
-      if (isEditing) {
-        this.fetchEntityTags();
-      }
-    },
-  },
   created() {
-    this.fetchQueriesNames();
     this.fetchDataFields({ module: this.namespace });
   },
   render() {

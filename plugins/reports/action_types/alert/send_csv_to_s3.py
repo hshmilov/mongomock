@@ -6,7 +6,6 @@ import boto3
 
 from axonius.clients.aws.utils import does_s3_key_exist
 from axonius.utils import gui_helpers
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
@@ -87,22 +86,13 @@ class SendCsvToS3(ActionTypeAlert):
         try:
             if not self._internal_axon_ids:
                 return AlertActionResult(False, 'No Data')
-            query_name = self._run_configuration.view.name
-            query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
-                'name': query_name
-            })
-            if query:
-                parsed_query_filter = parse_filter(query['view']['query']['filter'])
-                field_list = query['view'].get('fields', [])
-                sort = gui_helpers.get_sort(query['view'])
-                field_filters = query['view'].get('colFilters', {})
-            else:
-                parsed_query_filter = self._create_query(self._internal_axon_ids)
-                field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                              'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
-                sort = {}
-                field_filters = {}
-            csv_string = gui_helpers.get_csv(parsed_query_filter,
+            field_list = self.trigger_view_config.get('fields', [
+                'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+                'specific_data.data.last_used_users', 'labels'
+            ])
+            field_filters = self.trigger_view_config.get('colFilters', {})
+            sort = gui_helpers.get_sort(self.trigger_view_config)
+            csv_string = gui_helpers.get_csv(self.trigger_view_parsed_filter,
                                              sort,
                                              {field: 1 for field in field_list},
                                              self._entity_type,

@@ -24,7 +24,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           GUI_PLUGIN_NAME)
-from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
@@ -142,10 +142,9 @@ class Login:
                                              or 'insider.axonius.lan' in request.referrer):
             return
 
-        self.log_activity_default(AuditCategory.UserSession.value,
-                                  AuditAction.Failure.value,
-                                  {'user_name': user_name},
-                                  AuditType.Info)
+        self.log_activity(AuditCategory.UserSession, AuditAction.Failure, {
+            'user_name': user_name
+        })
 
     def _log_activity_login(self):
         self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {

@@ -263,11 +263,11 @@ export default {
       display: flex;
       width: 100%;
       align-items: center;
+      margin-bottom: 4px;
 
       .header {
         display: flex;
         line-height: 28px;
-        margin-bottom: 8px;
         margin-right: 16px;
 
         .query-title {
@@ -288,15 +288,15 @@ export default {
 
         .status {
           color: $grey-3;
+          display: flex;
+          align-items: center;
         }
       }
 
       > .x-button,
       .dropdown-input .x-button {
-        margin-bottom: 8px;
         padding: 4px;
         margin-right: 16px;
-        height: 28px;
       }
 
       .x-dropdown {
@@ -306,7 +306,7 @@ export default {
           padding-right: 8px;
 
           &:after {
-            margin-top: -6px;
+            margin-top: -2px;
           }
         }
 

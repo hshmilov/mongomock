@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 from threading import Lock
-from typing import NamedTuple, Iterable, List, Union, Dict
+from typing import NamedTuple, Iterable, List, Union, Dict, Optional
 
 import cachetools
 import dateutil
@@ -1530,7 +1530,7 @@ def nongui_beautify_db_entry(entry):
     return tmp
 
 
-def find_filter_by_name(entity_type: EntityType, name) -> Dict[str, object]:
+def find_filter_by_name(entity_type: EntityType, name) -> Optional[Dict[str, object]]:
     """
     From collection of views for given entity_type, fetch that with given name.
     Return its filter, or None if no filter.
@@ -1542,6 +1542,54 @@ def find_filter_by_name(entity_type: EntityType, name) -> Dict[str, object]:
         logger.info(f'No record found for view {name}')
         return None
     return view_doc['view']
+
+
+def find_view_by_id(entity_type: EntityType, view_id: str, projection: dict = None) -> Optional[Dict[str, object]]:
+    if not view_id:
+        return None
+    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({
+        '_id': ObjectId(view_id)
+    }, projection)
+    if not view_doc:
+        logger.info(f'No record found for view {view_id}')
+        return None
+    return view_doc
+
+
+def find_view_name_by_id(entity_type: EntityType, view_id: str) -> Optional[str]:
+    view_doc = find_view_by_id(entity_type, view_id, {
+        'name': 1, '_id': 0
+    })
+    return view_doc['name'] if view_doc else None
+
+
+def find_view_config_by_id(entity_type: EntityType, view_id: str) -> Optional[Dict[str, object]]:
+    if not view_id:
+        return None
+    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({
+        '_id': ObjectId(view_id)
+    }, {
+        'view': 1, '_id': 0
+    })
+    if not view_doc:
+        logger.info(f'No record found for view {view_id}')
+        return None
+    return view_doc['view']
+
+
+def find_views_by_name_match(name_match: str):
+    matching_views = []
+    for entity_type in EntityType:
+        for view in PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find({
+                'name': {
+                    '$regex': name_match,
+                    '$options': 'i'
+                }
+        }, {
+            '_id': 1
+        }):
+            matching_views.append(str(view['_id']))
+    return matching_views
 
 
 def get_string_from_field_value(base_value):

@@ -3,6 +3,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 from typing import Iterable, Dict, Iterator, Tuple
+from bson import ObjectId
 
 from cachetools import LRUCache
 from funcy import chunks
@@ -364,9 +365,9 @@ def perform_saved_view_converted(entity: EntityType,
     return convert_entities_to_frontend_entities(res, projection, True, field_filters=field_filters)
 
 
-def perform_saved_view_by_name(entity: EntityType,
-                               saved_view_name: str,
-                               **kwargs) -> Iterable[dict]:
+def perform_saved_view_by_id(entity: EntityType,
+                             saved_view_id: str,
+                             **kwargs) -> Iterable[dict]:
     """
     Performs a saved view on the DB
     :param entity: The entity type
@@ -375,7 +376,9 @@ def perform_saved_view_by_name(entity: EntityType,
     :raise ValueError: if the query doesn't exist
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    saved_view = plugin_base_instance().gui_dbs.entity_query_views_db_map[entity].find_one({'name': saved_view_name})
+    saved_view = plugin_base_instance().gui_dbs.entity_query_views_db_map[entity].find_one({
+        '_id': ObjectId(saved_view_id)
+    })
     if saved_view is None:
-        raise ValueError(f'Missing query "{saved_view_name}"')
+        raise ValueError(f'Missing query with id {saved_view_id}')
     return perform_saved_view(entity, saved_view, **kwargs)

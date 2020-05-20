@@ -315,7 +315,6 @@ export default {
   }
 
   .drag-handle {
-    width: 36px;
     margin: 0 auto;
     display: block;
     padding: 4px;
@@ -389,7 +388,6 @@ export default {
 
   .x-panels {
     .footer {
-      width: 100%;
       display: flex;
       margin: -2px;
     }

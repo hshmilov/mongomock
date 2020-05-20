@@ -16,7 +16,7 @@ from axonius.plugin_base import PluginBase
 from axonius.utils.gui_helpers import get_sort, entity_fields
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.axonius_query_language import parse_filter
-from gui.logic import filter_utils
+from gui.logic.filter_utils import filter_archived, filter_by_ids
 from gui.logic.dashboard_data import adapter_data
 from gui.logic.generate_csv import get_csv_file_from_heavy_lifting_plugin
 
@@ -658,13 +658,12 @@ class ReportGenerator:
         query_per_entity = {}
         for saved_query in saved_queries:
             entity = saved_query['entity']
-            name = saved_query['name']
             if entity not in query_per_entity:
                 query_per_entity[entity] = []
-            query_per_entity[entity].append(name)
+            query_per_entity[entity].append(saved_query['id'])
         saved_views_filter = None
         if include_all_saved_views:
-            saved_views_filter = filter_utils.filter_archived({
+            saved_views_filter = filter_archived({
                 'query_type': 'saved',
                 '$or': [
                     {
@@ -681,7 +680,7 @@ class ReportGenerator:
             field_to_title = self._get_field_titles(entity)
             # Fetch only saved views that were added by user, excluding out-of-the-box queries
             if query_per_entity.get(entity.name.lower()) and not include_all_saved_views:
-                saved_views_filter = filter_utils.filter_by_name(query_per_entity[entity.name.lower()])
+                saved_views_filter = filter_by_ids(query_per_entity[entity.name.lower()])
 
             if not saved_views_filter:
                 continue

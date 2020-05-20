@@ -69,7 +69,8 @@ LAST_GENERATED_FIELD = 'last_generated'
 TIMES_TRIGGERED_FIELD = 'times_triggered'
 LAST_UPDATE_FIELD = 'last_updated'
 TRIGGERS_FIELD = 'triggers'
+TRIGGER_VIEW_NAME_FIELD = f'{TRIGGERS_FIELD}.view.name'
+TRIGGER_RESULT_VIEW_NAME_FIELD = 'result.metadata.trigger.view.name'
 
 
 NOT_RAN_STATE = 'Not ran'
-CUSTOM_SELECTION_TRIGGER = 'Custom Selection'

@@ -33,7 +33,6 @@ import {
   GET_PANEL_MAP,
 } from '../../store/modules/dashboard';
 import { IS_EXPIRED } from '../../store/getters';
-import { SAVE_VIEW } from '../../store/actions';
 
 export default {
   name: 'XDashboard',
@@ -100,7 +99,6 @@ export default {
       fetchDashboardFirstUse: FETCH_DASHBOARD_FIRST_USE,
       fetchSpaces: FETCH_DASHBOARD_SPACES,
       fetchPanels: FETCH_DASHBOARD_PANELS,
-      saveView: SAVE_VIEW,
     }),
     showInsights(search) {
       this.$router.push({
@@ -115,7 +113,9 @@ export default {
         this.fetchDiscoveryData({ module: 'devices' }), this.fetchDiscoveryData({ module: 'users' }),
         this.fetchSpaces(),
       ]).then(this.fetchPanels).then(() => {
-        if (this._isDestroyed) return;
+        if (this._isDestroyed) {
+          return;
+        }
         this.timer = setTimeout(this.getDashboardData, 30000);
       });
     },

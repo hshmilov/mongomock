@@ -2,7 +2,6 @@ import logging
 import requests
 
 from axonius.utils import gui_helpers, db_querying_helper
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
@@ -55,28 +54,19 @@ class SlackSendMessageAction(ActionTypeAlert):
     def _run(self) -> AlertActionResult:
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
-        query_name = self._run_configuration.view.name
-        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
-            {
-                'name': query_name
-            })
-        if query:
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_list = query['view'].get('fields', [])
-            sort = gui_helpers.get_sort(query['view'])
-        else:
-            parsed_query_filter = self._create_query(self._internal_axon_ids)
-            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                          'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
-            sort = {}
-        all_gui_entities = db_querying_helper.get_entities(None, None, parsed_query_filter,
-                                                           sort,
-                                                           {
+        field_list = self.trigger_view_config.get('fields', [
+            'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+            'specific_data.data.last_used_users', 'labels'
+        ])
+        sort = gui_helpers.get_sort(self.trigger_view_config)
+        all_gui_entities = db_querying_helper.get_entities(None,
+                                                           None,
+                                                           self.trigger_view_parsed_filter,
+                                                           sort, {
                                                                field: 1
                                                                for field
                                                                in field_list
-                                                           },
-                                                           self._entity_type)
+                                                           }, self._entity_type)
 
         entities_str = ''
         for i, entity in enumerate(all_gui_entities):
@@ -96,8 +86,8 @@ class SlackSendMessageAction(ActionTypeAlert):
                         'text': 'Description: ' + log_message_full + '\n' + 'First 5 Results Are: \n' + entities_str,
                         'pretext': f'An Axonius alert - "{alert_name}" was triggered '
                                    f'because of {self._get_trigger_description()}.',
-                        'title': f'Query "{query_name}"',
-                        'title_link': self._generate_query_link(query_name),
+                        'title': f'Query "{self.trigger_view_name}"',
+                        'title_link': self._generate_query_link(),
                         'fields': [
                             {
                                 'title': 'Current amount',

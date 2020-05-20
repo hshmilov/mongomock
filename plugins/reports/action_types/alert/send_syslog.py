@@ -1,5 +1,4 @@
 from axonius.utils import gui_helpers
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.json import to_json
 
@@ -48,17 +47,16 @@ class NotifySyslogAction(ActionTypeAlert):
     def _run(self) -> AlertActionResult:
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
-        # Check if send device data is checked.
-        query_name = self._run_configuration.view.name
 
+        # Check if send device data is checked.
         if not self._config.get('send_device_data'):
             if self._run_configuration.result:
                 prev_result_count = self._run_configuration.result_count
             else:
                 prev_result_count = 0
-            query_link = self._generate_query_link(query_name).replace('\n', ' ')
+            query_link = self._generate_query_link().replace('\n', ' ')
             log_message = report_consts.REPORT_CONTENT.format(name=self._report_data['name'],
-                                                              query=query_name,
+                                                              query=self.trigger_view_name,
                                                               num_of_triggers=len(self._triggered_set),
                                                               trigger_message=self._get_trigger_description(),
                                                               num_of_current_devices=len(self._internal_axon_ids),
@@ -67,27 +65,19 @@ class NotifySyslogAction(ActionTypeAlert):
             self._plugin_base.send_syslog_message(log_message, self._config['severity'])
             return AlertActionResult(True, 'Sent Syslog message')
 
-        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
-            {
-                'name': query_name
-            })
-        if query:
-            parsed_query_filter = parse_filter(query['view']['query']['filter'])
-            field_list = query['view'].get('fields', [])
-            sort = gui_helpers.get_sort(query['view'])
-        else:
-            parsed_query_filter = self._create_query(self._internal_axon_ids)
-            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                          'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
-            sort = {}
-        all_gui_entities = get_entities(None, None, parsed_query_filter,
-                                        sort,
-                                        {
+        sort = gui_helpers.get_sort(self.trigger_view_config)
+        field_list = self.trigger_view_config.get('fields', [
+            'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+            'specific_data.data.last_used_users', 'labels'
+        ])
+        all_gui_entities = get_entities(None,
+                                        None,
+                                        self.trigger_view_parsed_filter,
+                                        sort, {
                                             field: 1
                                             for field
                                             in field_list
-                                        },
-                                        self._entity_type)
+                                        }, self._entity_type)
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']

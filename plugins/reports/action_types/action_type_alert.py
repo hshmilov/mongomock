@@ -2,13 +2,19 @@ import logging
 import traceback
 from abc import ABC, abstractmethod
 from typing import Set, List
+import urllib.parse
+from bson import ObjectId
 
 from axonius.entities import EntityType
 from axonius.types.enforcement_classes import (Trigger, TriggeredReason,
                                                AlertActionResult, ActionRunResults, EntityResult)
+from axonius.utils.axonius_query_language import parse_filter
+from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
 from reports.action_types.action_type_base import ActionTypeBase
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+# pylint: disable=W0212
 
 
 class ActionTypeAlert(ActionTypeBase, ABC):
@@ -72,5 +78,48 @@ class ActionTypeAlert(ActionTypeBase, ABC):
         :param trigger_data:  The results difference added or removed result
         :return:
         """
-        parsed_query_filter = {'internal_axon_id': {'$in': trigger_data}}
-        return parsed_query_filter
+        return {'internal_axon_id': {'$in': trigger_data}}
+
+    @property
+    def trigger_view_from_db(self) -> dict:
+        """
+        Fetch the view defining the action's trigger, from db according to its EntityType
+        :return: Found document or empty dict if none exists
+        """
+        if not self._run_configuration.view.id:
+            return {}
+        return self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
+            '_id': ObjectId(self._run_configuration.view.id)
+        })
+
+    @property
+    def trigger_view_name(self) -> str:
+        """
+        :return: Name of the trigger's view or None if none exists
+        """
+        return self.trigger_view_from_db.get('name')
+
+    @property
+    def trigger_view_config(self) -> dict:
+        """
+        :return: View configuration of the trigger's view or empty dict if none exists
+        """
+        return self.trigger_view_from_db.get('view', {})
+
+    @property
+    def trigger_view_parsed_filter(self) -> dict:
+        """
+        Parse the filter of the trigger's view or make a query over action's internal_axon_ids
+        :return: A mongo query object valid for the entities collection
+        """
+        if self.trigger_view_config.get('query'):
+            return parse_filter(self.trigger_view_config['query']['filter'])
+        return self._create_query(self._internal_axon_ids)
+
+    def _generate_query_link(self):
+        # Getting system config from the gui.
+        system_config = self._plugin_base._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME).find_one(
+            {'type': 'server'}) or {}
+        url_params = urllib.parse.urlencode({'view': self.trigger_view_name})
+        return 'https://{}/{}?{}'.format(
+            system_config.get('server_name', 'localhost'), self._entity_type.value, url_params)

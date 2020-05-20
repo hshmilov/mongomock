@@ -28,8 +28,10 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           MAINTENANCE_TYPE,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
-                                          LIBS_PATH, ADMIN_USER_NAME,
-                                          AXONIUS_USER_NAME, REPORTS_CONFIG_COLLECTION, DEFAULT_ROLE_ID)
+                                          LIBS_PATH,
+                                          AXONIUS_USER_NAME,
+                                          ADMIN_USER_NAME,
+                                          DEFAULT_ROLE_ID)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
                                        deserialize_db_permissions as old_deserialize_db_permissions)
@@ -67,7 +69,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 33:
+        if self.db_schema_version != 34:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -141,6 +143,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_32()
         if self.db_schema_version < 33:
             self._update_schema_version_33()
+        if self.db_schema_version < 34:
+            self._update_schema_version_34()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1058,7 +1062,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 30')
         try:
-            report_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, REPORTS_CONFIG_COLLECTION)
+            report_config_collection = self.db.gui_reports_config_collection()
             reports_to_fix = report_config_collection.find(
                 {'name': {'$regex': r'[^\w@.\s-]'}})
             fixed = {}
@@ -1143,26 +1147,6 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 32. Details: {e}')
 
-    def _update_schema_version_33(self):
-        """
-        For 3.4 - Add a default value for a new feature flag in Axonius system:
-        Enable Enforcement Center
-        Set default to True for existing customers
-        :return:
-        """
-        print('Upgrade to schema 33')
-        try:
-            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
-                'config_name': FEATURE_FLAGS_CONFIG
-            }, {
-                '$set': {
-                    'config.enforcement_center': True
-                }
-            })
-            self.db_schema_version = 33
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 33. Details: {e}')
-
     def _fix_space_id_in_panels(self):
         dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
         dashboard_collection = self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)
@@ -1190,6 +1174,120 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         }, {
             '$set': {'config.query_timeline_range': True}
         })
+
+    def _update_schema_version_33(self):
+        """
+        For 3.4 - Add a default value for a new feature flag in Axonius system:
+        Enable Enforcement Center
+        Set default to True for existing customers
+        :return:
+        """
+        print('Upgrade to schema 33')
+        try:
+            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+                'config_name': FEATURE_FLAGS_CONFIG
+            }, {
+                '$set': {
+                    'config.enforcement_center': True
+                }
+            })
+            self.db_schema_version = 33
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 33. Details: {e}')
+
+    def _update_reports_views(self, entity_to_views):
+        report_configs_update = self.db.gui_reports_config_collection().find({
+            'views': {
+                '$exists': True
+            }
+        }, {'views': 1})
+        for report_config in report_configs_update:
+            views_update = [{
+                'entity': view['entity'],
+                'id': entity_to_views[view['entity']].get(view['name'])
+            } for view in report_config['views'] if view.get('entity') and view.get('name')]
+            self.db.gui_reports_config_collection().update_one({
+                '_id': report_config['_id']
+            }, {
+                '$set': {
+                    'views': views_update
+                }
+            })
+
+    def _update_dashboards_views(self, entity_to_views):
+        dashboards_update = self.db.gui_dashboard_collection().find({
+            'config': {
+                '$exists': True
+            }
+        }, {'config': 1})
+        for dashboard in dashboards_update:
+            config = dashboard['config']
+            if config.get('views'):
+                config['views'] = [{
+                    'entity': view['entity'],
+                    'id': entity_to_views[view['entity']].get(view['name'])
+                } for view in config['views'] if view.get('entity') and view.get('name')]
+            elif config.get('entity'):
+                entity = config['entity']
+                if 'base' in config:
+                    config['base'] = entity_to_views[entity].get(config['base'])
+                    config['intersecting'] = [entity_to_views[entity].get(name) for name in config['intersecting']]
+                elif config.get('view'):
+                    config['view'] = entity_to_views[entity].get(config['view'])
+            self.db.gui_dashboard_collection().update_one({
+                '_id': dashboard['_id']
+            }, {
+                '$set': {
+                    'config': config
+                }
+            })
+
+    def _update_enforcements_views(self, entity_to_views):
+        enforcements_update = self.db.enforcements_collection().find({
+            'triggers': {
+                '$ne': []
+            }
+        }, {'triggers': 1})
+        for enforcement in enforcements_update:
+            triggers = [trigger for trigger in enforcement['triggers'] if trigger.get('view', {}).get('entity')]
+            for trigger in triggers:
+                view = trigger['view']
+                if view.get('name'):
+                    entity = view['entity']
+                    trigger['view'] = {
+                        'entity': entity,
+                        'id': entity_to_views[entity].get(trigger['view']['name'])
+                    }
+            self.db.enforcements_collection().update_one({
+                '_id': enforcement['_id']
+            }, {
+                '$set': {
+                    'triggers': triggers
+                }
+            })
+
+    def _update_schema_version_34(self):
+        """
+        AX-6287 Update all Reports, Enforcements and Charts holding a view name, to hold its uuid instead
+        """
+        print('Upgrade to schema 34')
+        try:
+            entity_to_views = {}
+            for entity_type in EntityType:
+                entity_to_views[entity_type.value] = {
+                    view['name']: str(view['_id'])
+                    for view in self._entity_views_map[entity_type].find({
+                        'query_type': 'saved'
+                    }, {
+                        'name': 1
+                    })
+                }
+            self._update_reports_views(entity_to_views)
+            self._update_dashboards_views(entity_to_views)
+            self._update_enforcements_views(entity_to_views)
+            self.db_schema_version = 34
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 34. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

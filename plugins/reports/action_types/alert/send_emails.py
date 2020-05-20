@@ -13,7 +13,6 @@ from axonius.entities import EntityType
 from axonius.utils import gui_helpers
 
 from axonius.consts import report_consts
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.types.enforcement_classes import AlertActionResult
 from axonius.utils.db_querying_helper import perform_saved_view_converted, get_entities
 from reports.action_types.action_type_alert import ActionTypeAlert
@@ -131,10 +130,9 @@ class SendEmailsAction(ActionTypeAlert):
             logger.info('Email cannot be sent because no email server is configured')
             return AlertActionResult(False, 'Email is disabled')
 
-        query_name = self._run_configuration.view.name
         subject = self._config.get('mailSubject') if \
             self._config.get('mailSubject') else report_consts.REPORT_TITLE.format(name=self._report_data['name'],
-                                                                                   query=query_name)
+                                                                                   query=self.trigger_view_name)
         logger.debug(self._config)
         if not self._config.get('emailList'):
             logger.info('Email cannot be sent because no recipients are configured')
@@ -145,21 +143,13 @@ class SendEmailsAction(ActionTypeAlert):
         try:
             # all the trigger result
             if self._config.get('sendDeviceCSV', False):
-                query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
-                    'name': query_name
-                })
-                if query:
-                    parsed_query_filter = parse_filter(query['view']['query']['filter'])
-                    field_list = query['view'].get('fields', [])
-                    sort = gui_helpers.get_sort(query['view'])
-                    field_filters = query['view'].get('colFilters', {})
-                else:
-                    parsed_query_filter = self._create_query(self._internal_axon_ids)
-                    field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                                  'specific_data.data.os.type', 'specific_data.data.last_used_users', 'labels']
-                    sort = {}
-                    field_filters = {}
-                csv_string = gui_helpers.get_csv(parsed_query_filter,
+                sort = gui_helpers.get_sort(self.trigger_view_config)
+                field_list = self.trigger_view_config.get('fields', [
+                    'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+                    'specific_data.data.last_used_users', 'labels'
+                ])
+                field_filters = self.trigger_view_config.get('colFilters', {})
+                csv_string = gui_helpers.get_csv(self.trigger_view_parsed_filter,
                                                  sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
@@ -203,11 +193,11 @@ class SendEmailsAction(ActionTypeAlert):
         if self._run_configuration.result:
             prev_result_count = self._run_configuration.result_count
 
-        query_link = self._generate_query_link(query_name)
+        query_link = self._generate_query_link()
 
         html_sections.append(REPORTS_TEMPLATES['header'].render({'subject': self._report_data['name']}))
         html_sections.append(REPORTS_TEMPLATES['second_header'].render(
-            {'query_link': query_link, 'reason': reason, 'period': period, 'query': query_name}))
+            {'query_link': query_link, 'reason': reason, 'period': period, 'query': self.trigger_view_name}))
         if self._config.get('emailBody'):
             html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
                 'body_text': self._config['emailBody'].replace('\n', '\n<br>')
@@ -219,9 +209,6 @@ class SendEmailsAction(ActionTypeAlert):
             'sum': len(self._internal_axon_ids)
         }))
         images_cid = {}
-        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
-            'name': query_name
-        })
         projection = {
             'adapters': 1
         }
@@ -230,8 +217,8 @@ class SendEmailsAction(ActionTypeAlert):
         elif self._entity_type == EntityType.Users:
             projection['specific_data.data.username'] = 1
 
-        if query:
-            results = perform_saved_view_converted(self._entity_type, query, projection, limit=10)
+        if self.trigger_view_from_db:
+            results = perform_saved_view_converted(self._entity_type, self.trigger_view_from_db, projection, limit=10)
         else:
             results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
                                    projection, self._entity_type)
@@ -339,19 +326,12 @@ class SendEmailsAction(ActionTypeAlert):
         """
 
         parsed_query_filter = self._create_query(trigger_data)
-        query = self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one(
-            {
-                'name': self._run_configuration.view.name
-            })
-        if query:
-            field_list = query['view'].get('fields', [])
-            sort = gui_helpers.get_sort(query['view'])
-            field_filters = query['view'].get('colFilters', {})
-        else:
-            field_list = ['specific_data.data.name', 'specific_data.data.hostname',
-                          'specific_data.data.os.type', 'specific_data.data.last_used_users']
-            sort = {}
-            field_filters = {}
+        field_list = self.trigger_view_config.get('fields', [
+            'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
+            'specific_data.data.last_used_users'
+        ])
+        sort = gui_helpers.get_sort(self.trigger_view_config)
+        field_filters = self.trigger_view_config.get('colFilters', {})
         csv_string = gui_helpers.get_csv(parsed_query_filter, sort,
                                          {field: 1 for field in field_list},
                                          self._entity_type,

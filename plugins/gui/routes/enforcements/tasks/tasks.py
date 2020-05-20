@@ -6,10 +6,12 @@ from flask import (jsonify)
 
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
-                                          NOT_RAN_STATE)
+                                          NOT_RAN_STATE, TRIGGER_RESULT_VIEW_NAME_FIELD)
+from axonius.plugin_base import EntityType
 from axonius.consts.report_consts import (ACTIONS_MAIN_FIELD)
 from axonius.utils.gui_helpers import (paginated, filtered,
-                                       sorted_endpoint)
+                                       sorted_endpoint,
+                                       find_view_name_by_id, find_views_by_name_match, search_filter)
 from axonius.mixins.triggerable import (StoredJobStateCompletion)
 from axonius.utils.mongo_chunked import get_chunks_length
 from gui.logic.db_helpers import beautify_db_entry
@@ -26,10 +28,21 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class Tasks:
 
     @staticmethod
-    def _tasks_query(mongo_filter, enforcement_name=None):
+    def _tasks_query(mongo_filter, enforcement_name=None, search_value=None):
         """
         General query for all Complete / In progress task that also answer given mongo_filter
         """
+        if search_value:
+            mongo_filter = {
+                '$or': [
+                    mongo_filter, {
+                        'result.metadata.trigger.view.id': {
+                            '$in': find_views_by_name_match(search_value)
+                        }
+                    }
+                ]
+            }
+
         query_segments = [{
             'job_name': 'run',
             '$or': [
@@ -48,7 +61,6 @@ class Tasks:
             query_segments.append({
                 'post_json.report_name': enforcement_name
             })
-
         return {
             '$and': query_segments
         }
@@ -56,15 +68,22 @@ class Tasks:
     @paginated()
     @filtered()
     @sorted_endpoint()
+    @search_filter()
     @gui_route_logged_in()
-    def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort):
+    def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort, search):
 
         if mongo_sort.get('status'):
             mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
             del mongo_sort['status']
+
+        tasks = self.enforcement_tasks_runs_collection.find(self._tasks_query(mongo_filter, search_value=search))
+        if TRIGGER_RESULT_VIEW_NAME_FIELD in mongo_sort:
+            beautiful_tasks = [self.beautify_task_entry(task) for task in tasks]
+            sorted_tasks = sorted(beautiful_tasks, key=lambda e: e[TRIGGER_RESULT_VIEW_NAME_FIELD],
+                                  reverse=mongo_sort[TRIGGER_RESULT_VIEW_NAME_FIELD] == pymongo.DESCENDING)
+            return jsonify(sorted_tasks[skip: (skip + limit)])
         sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
-        return jsonify([self.beautify_task_entry(x) for x in self.enforcement_tasks_runs_collection.find(
-            self._tasks_query(mongo_filter)).sort(sort).skip(skip).limit(limit)])
+        return jsonify([self.beautify_task_entry(x) for x in tasks.sort(sort).skip(skip).limit(limit)])
 
     @filtered()
     @gui_route_logged_in('count')
@@ -115,12 +134,17 @@ class Tasks:
                     clear_saved_action_passwords(x['action'])
 
             task_metadata = task.get('result', {}).get('metadata', {})
+            trigger = task_metadata.get('trigger', {})
+            trigger_view_name = ''
+            trigger_view = trigger.get('view')
+            if trigger_view:
+                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
             return beautify_db_entry({
                 '_id': task['_id'],
                 'enforcement': task['post_json']['report_name'],
-                'view': task_metadata['trigger']['view']['name'],
-                'period': task_metadata['trigger']['period'],
-                'condition': task_metadata['triggered_reason'],
+                'view': trigger_view_name,
+                'period': trigger.get('period', ''),
+                'condition': task_metadata.get('triggered_reason', ''),
                 'started': task['started_at'],
                 'finished': task['finished_at'],
                 'result': task['result'],
@@ -153,6 +177,12 @@ class Tasks:
                 success_rate = f'{main_successful_count} / {main_successful_count + main_unsuccessful_count}'
                 status = 'Completed'
 
+            trigger_view_name = ''
+            trigger = result.get('metadata', {}).get('trigger')
+            if trigger:
+                trigger_view = trigger['view']
+                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+
             return beautify_db_entry({
                 '_id': task.get('_id'),
                 'result.metadata.success_rate': success_rate,
@@ -161,8 +191,7 @@ class Tasks:
                                        result.get('metadata', {}).get('pretty_id', '')),
                 'status': status,
                 f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
-                'result.metadata.trigger.view.name': result.get('metadata', {}).get('trigger', {}).get('view', {}).get(
-                    'name', ''),
+                TRIGGER_RESULT_VIEW_NAME_FIELD: trigger_view_name,
                 'started_at': task.get('started_at', ''),
                 'finished_at': task.get('finished_at', '')
             })

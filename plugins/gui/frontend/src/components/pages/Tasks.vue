@@ -113,6 +113,7 @@ export default {
         view: {
           query: {
             filter: this.searchFilter,
+            search: this.searchValue,
           },
           page: 0,
         },
