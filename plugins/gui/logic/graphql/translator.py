@@ -1,22 +1,3 @@
-"""
-{'$and': [{'$or': [{'specific_data.data.hostname': {'$options': 'i',
-      '$regex': '33'}},
-    {'specific_data.data.name': 'yy'}]},
-  {'specific_data.data.name': {'$options': 'i', '$regex': '77$'}}]}
-
-print(translate_aql('(specific_data.data.hostname == regex("66", "i")) or (specific_data.data.hostname == "ttt")'))
-print(translate_aql('(specific_data.data.last_seen >= date("NOW - 7d"))'))
-print(translate_aql('not (specific_data.data.last_seen >= date("NOW - 30d"))'))
-print(translate_aql('(specific_data.data.adapter_properties == "Agent")
-or (specific_data.data.adapter_properties == "Manager")'))
-print(translate_aql('(specific_data.data.network_interfaces.ips == size(1))'))
-print(translate_aql('not (specific_data.data.adapter_properties == "Agent")'))
-print(translate_aql(
-    '((adapters_data.active_directory_adapter.id == ({"$exists":true,"$ne":""})))
-    and (specific_data.data.last_seen >= date("NOW - 30d")) and
-    not (specific_data.data.adapter_properties == "Agent")'))
-print(Translator(EntityType.Devices).translate('(specific_data.data.adapter_properties == "Vulnerability_Assessment")'))
-"""
 # pylint: disable=invalid-string-quote, invalid-triple-quote
 import typing
 import datetime
@@ -30,7 +11,8 @@ from gui.logic.graphql.builder import GqlQuery
 AQL_LOGICAL_AND = '$and'
 AQL_LOGICAL_OR = '$or'
 
-TERM_CONVERTER = {
+# Convert AQL logical terms to GraphQL (SqlGen) logical terms.
+LOGICAL_TERM_CONVERTER = {
     '$and': 'AND',
     '$or': 'OR',
     '$not': 'NOT',
@@ -42,7 +24,7 @@ VALUE_COMPARISON_METHODS = {
     '$not_regex': lambda x: {'not_ilike': f'%{x.lstrip("^").rstrip("$")}%'},
     '$eq': lambda x: {'eq': x},
     '$neq': lambda x: {'neq': x},
-    'exists': lambda x: {'exists': x},
+    '$exists': lambda x: {'exists': x},
     '$in': lambda x: {'in': x},
     '$not_in': lambda x: {'not_in': x},
     '$lt': lambda x: {'lt': _value_converter(x)},
@@ -50,9 +32,9 @@ VALUE_COMPARISON_METHODS = {
     '$lte': lambda x: {'lte': _value_converter(x)},
     '$gte': lambda x: {'gte': _value_converter(x)},
     '$not': lambda x: _build_value(x, reverse=True),
-    '$size': lambda x: {"size": x},
-    '$overlap': lambda x: {"overlap": x if isinstance(x, list) else [x]},
-    '$no_overlap': lambda x: {"no_overlap": x if isinstance(x, list) else [x]}
+    '$size': lambda x: {'size': x},
+    '$overlap': lambda x: {'overlap': x if isinstance(x, list) else [x]},
+    '$no_overlap': lambda x: {'no_overlap': x if isinstance(x, list) else [x]}
 
 }
 
@@ -69,19 +51,22 @@ REVERSE_OPERATORS = {
 }
 
 # Special key methods, this is done for inner document keys that have been turned to relations
-KEY_NAME_METHODS = {
-    'adapter_properties': lambda k, v: {'adapter': {"properties": _build_value(v, operator_override="$overlap",
+SIMPLE_TO_RELATION = {
+    'adapter_properties': lambda k, v: {'adapter': {'properties': _build_value(v, operator_override='$overlap',
                                                                                reverse=('$not' in v))}},
-    'network_interfaces.ips': lambda k, v: {'interfaces': {'ipAddrs': _build_value(v)}}
 }
 
 
 class GqlObject(str):
-    pass
+    """
+     GqlObject is an Object in GraphQL terms and we need to open a new {} and add the fields
+     """
 
 
 class GqlField(str):
-    pass
+    """
+    GqlField means that given string is a normal field and not an object
+    """
 
 
 class GqlNotSupported(str):
@@ -106,14 +91,20 @@ BUILDER_CONVERTERS = {
     'is_mfa_enforced': GqlField('mfaEnforced'),
     'is_mfa_enrolled': GqlField('mfaEnrolled'),
     'is_disabled': GqlField('disabled'),
+    'account_disabled': GqlField('disabled'),
     'is_locked': GqlField('locked'),
     'ips': GqlField('ipAddrs'),
     'mac': GqlField('macAddr'),
     'image': GqlNotSupported('image'),
+    'vlan_list': GqlObject('vlans'),
 }
 
 
 class Translator:
+    """
+    The Translator class handle translating AQL into SqlGen (GraphQL) and Projection into a GraphQL projection
+    """
+
     def __init__(self, entity_type: EntityType):
         self._entity_type = entity_type
         self._specific_data_converter = 'adapterDevices' if entity_type == EntityType.Devices else 'adapterUsers'
@@ -121,22 +112,29 @@ class Translator:
 
     @cached(cache=LFUCache(maxsize=64), key=lambda _, aql: hash(aql))
     def translate(self, aql):
+        """
+        Translate AQL to SqlGen filter, use cached to hash already translated AQLs
+        """
         processed_aql = process_filter(aql, None)
         tokenized_aql = _pql.find(processed_aql)
         return self._translate_aql(tokenized_aql)
 
     @cached(cache=LFUCache(maxsize=64), key=lambda _, fields_query: hash(fields_query))
     def build_gql(self, fields_query: str):
+        """
+        Translate Projection into GraphQL projection, use cached to hash already translated projections
+        """
         fields = fields_query.split(',')
         gql = GqlQuery().query(
             name=self._entity_type.name.lower(),
             input={'where': '$where', 'limit': '$limit', 'offset': '$offset', 'orderBy': '$orderBy'})
-        gql = gql.operation('query', name="GQLQuery",
+        gql = gql.operation('query', name='GQLQuery',
                             input={'$where': f'{self._bool_exp_type}_bool_exp!',
                                    '$limit': 'Int = 20',
                                    '$offset': 'Int = 0',
                                    '$orderBy': f'[{self._bool_exp_type}_order_by!]'}
                             )
+        # Always add these fields no matter projection
         gql.add_fields('adapterCount', 'id', '_compatibilityAPI')
         created_gql = {}
         for field in fields:
@@ -144,11 +142,16 @@ class Translator:
         return gql.generate()
 
     def _parse_field(self, field: str, created_gql: dict, current: GqlQuery):
+        """
+        Parse each field adding them into the current GqlQuery. Since projection can go into inner fields i.e if we want
+        to project a devices' adapter_devices or an adapter_devices' os, we will uses created_gql to keep track
+        of all gql objected we made.
+        """
         if field.startswith('specific_data.data'):
             field = field.replace('specific_data.data', self._specific_data_converter)
 
         # split the field
-        if "." not in field:
+        if '.' not in field:
             gql_field = BUILDER_CONVERTERS.get(field, GqlField(field))
             if isinstance(gql_field, GqlObject):
                 self._parse_field(gql_field, created_gql, current)
@@ -170,35 +173,63 @@ class Translator:
             current.add_fields(gql)
         self._parse_field(rest, created_gql, gql)
 
-    def _translate_aql(self, tokenized_aql):
+    # ============================================ AQL Translation ================================================= #
+
+    def _translate_aql(self, tokenized_aql: typing.Dict) -> typing.Dict:
+        """
+        Translate an tokenized AQL going over each Key,Value
+        """
         gql = {}
         for k, v in tokenized_aql.items():
+            # if the key is a Logical operator move to translate Logical, otherwise build comparison on field.
             if k in [AQL_LOGICAL_AND, AQL_LOGICAL_OR]:
                 gql.update(self._translate_logical_aql(k, v))
-                continue
-            gql.update(self._build_comparison(k, v))
+            else:
+                gql.update(self._build_comparison(k, v))
         return gql
 
-    def _translate_logical_aql(self, logical_type: typing.AnyStr, value: typing.List) -> typing.Dict:
+    def _translate_logical_aql(self, logical_type: typing.AnyStr, value: typing.List[typing.Dict]) -> typing.Dict:
+        """
+        A Logical AQL is usually a list of tokenized AQLs we would like to translate them all and add them into
+        single SqlGen logical term.
+        """
         converted_values = []
         for item in value:
             converted_values.append(self._translate_aql(item))
-        return {TERM_CONVERTER[logical_type]: converted_values}
+        return {LOGICAL_TERM_CONVERTER[logical_type]: converted_values}
 
-    def _build_comparison(self, key, value):
+    def _build_comparison(self, key: typing.AnyStr, value: typing.Dict) -> typing.Dict:
+        """
+        Build comparison from given key and value, the value holds the operator and value for given key
+        i.e field: {regex: 'test'}.
+
+        Fields are not always named the same in mongo and PostgreSQL so conversions are used.
+
+        In most cases the field complex with dot separated inner document selections in mongo, in these cases
+        we either split and build the nested SqlGen filter or use special cases.
+
+        """
         if key.startswith('specific_data.data'):
             return {
-                self._specific_data_converter: self._build_comparison(key.replace('specific_data.data.', ''), value)
+                self._specific_data_converter: self._build_comparison(key.split('.', 2)[-1], value)
             }
+        # adapter_data is a special case
         if key.startswith('adapters_data'):
-            return self._build_adapter_comparison(key.replace('adapters_data.', ''), value)
-        if key.startswith('os'):
-            return {self._specific_data_converter: self._build_adapter_comparison(key.replace('os.', ''), value)}
+            return self._build_adapter_comparison(key.split('.', 1)[-1], value)
 
-        method = KEY_NAME_METHODS.get(key)
+        method = SIMPLE_TO_RELATION.get(key)
         if method:
             return method(key, value)
-        return {TERM_CONVERTER.get(key, _to_lower_camel_case(key)): _build_value(value)}
+        try:
+            prefix, suffix = key.split('.', 1)
+        except ValueError:
+            return {BUILDER_CONVERTERS.get(key, _to_lower_camel_case(key)): _build_value(value)}
+
+        converted = BUILDER_CONVERTERS.get(prefix, GqlField(prefix))
+        if isinstance(converted, GqlObject):
+            return {converted: self._build_comparison(suffix, value)}
+
+        raise NotImplementedError(f'Unknown {key} : {value}')
 
     def _build_adapter_comparison(self, key, value):
         adapter_type, prop = key.split('.')
@@ -210,6 +241,9 @@ class Translator:
 # ====================================== Private Methods ====================================== #
 
 def _to_lower_camel_case(snake_str):
+    """
+    Fields in GraphQL projection are usually lowerCamelCase
+    """
     if '_' not in snake_str:
         return snake_str
     first, *others = snake_str.split('_')

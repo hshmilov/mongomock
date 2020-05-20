@@ -72,7 +72,7 @@ const (
 	OperationContains      = "contains"
 	OperationContainedBy   = "contained_by"
 	OperationOverlap       = "overlap"
-	OperationNoOverlap       = "no_overlap"
+	OperationNoOverlap     = "no_overlap"
 	OperationSize          = "size"
 	OperationContainsRegex = "contains_regex"
 	// Object filters
