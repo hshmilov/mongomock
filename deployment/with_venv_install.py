@@ -8,7 +8,7 @@ from pathlib import Path
 
 import distro
 
-from axonius.consts.system_consts import PYRUN_PATH_HOST
+from axonius.consts.system_consts import PYRUN_PATH_HOST, NODE_MARKER_PATH
 from axonius.utils.network.docker_network import read_weave_network_range
 from conf_tools import get_customer_conf_json
 from install import (TEMPORAL_PATH,
@@ -26,6 +26,8 @@ from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME
 from scripts.instances.network_utils import get_weave_subnet_ip_range
+from services.standalone_services.node_proxy_service import NodeProxyService
+from services.standalone_services.tunneler_service import TunnelerService
 from sysctl_editor import set_sysctl_value
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    print_state,
@@ -268,8 +270,19 @@ def run_discovery():
     discover_now.main(should_wait=False)
 
 
+def run_tunnels():
+    tun = TunnelerService()
+    tun.take_process_ownership()
+    tun.start(mode='prod', allow_restart=True, show_print=False)
+    proxy = NodeProxyService()
+    proxy.take_process_ownership()
+    proxy.start(mode='prod', allow_restart=True, show_print=False)
+
+
 def start_axonius():
     print_state('Starting up axonius system')
     from devops.axonius_system import main as system_main
     system_main('system up --all --prod --restart'.split())
+    if NODE_MARKER_PATH.is_file():
+        run_tunnels()
     print_state('System is up')

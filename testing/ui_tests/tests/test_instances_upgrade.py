@@ -50,7 +50,7 @@ class TestInstancesUpgrade(TestInstancesBase):
         if rc != 0:
             self.logger.info(f'ERROR: FAILED TO UPGRADE {out}')
         assert rc == 0
-
+        self.logger.info(f'upgrade output: {out}')
         port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
         rc, out = instance.ssh(f'export https_proxy=https://localhost:{port} && curl https://manage.chef.io')
         if rc != 0:

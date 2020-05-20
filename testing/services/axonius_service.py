@@ -14,7 +14,7 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
-                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL)
+                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from scripts.instances.network_utils import (get_encryption_key,
@@ -97,6 +97,10 @@ class AxoniusService:
             else:
                 print(f'Running on master')
                 AxoniusService.create_weave_network(weave_subnet_ip_range)
+        if NODE_MARKER_PATH.is_file():
+            # now that we know we are using weave, create a "using weave" marker file
+            if not is_using_weave():
+                USING_WEAVE_PATH.touch()
         if not cls.get_is_docker_network_exists():
             print(f'Creating regular axonius network')
             docker_subnet_ip_range = get_docker_subnet_ip_range()
