@@ -167,6 +167,8 @@ class SpacewalkAdapter(AdapterBase):
                 logger.exception(f'Problem with nic')
             try:
                 packages = device_raw.get('packages')
+                if packages is None:
+                    packages = []
                 for package in packages:
                     try:
                         device.add_installed_software(name=package.get('name'),

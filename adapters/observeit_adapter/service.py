@@ -120,7 +120,7 @@ class ObserveitAdapter(AdapterBase, Configurable):
                 if not is_domain_valid(domain):
                     domain = None
                 hostname = device_raw.get('SrvName')
-                if os_type is not None and consts.OS_TYPES_DICT[os_type] == 'Mac OS X':
+                if os_type is not None and consts.OS_TYPES_DICT.get(os_type) == 'Mac OS X':
                     if domain and '.' not in domain:
                         domain = domain.replace('’', '')
                         device.hostname = domain

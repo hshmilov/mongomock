@@ -160,7 +160,8 @@ class UnifiAdapter(AdapterBase, Configurable):
     @staticmethod
     def _add_last_seen(device, device_raw):
         try:
-            device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_seen'))
+            if device_raw.get('last_seen'):
+                device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_seen'))
         except Exception as e:
             logger.exception('Failed to set last seen {device_raw.get("last_seen")}')
 
