@@ -1,9 +1,10 @@
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip
@@ -14,7 +15,7 @@ from infoblox_netmri_adapter.structures import InfobloxNetmriDeviceInstance
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class InfobloxNetmriAdapter(AdapterBase):
+class InfobloxNetmriAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(InfobloxNetmriDeviceInstance):
         pass

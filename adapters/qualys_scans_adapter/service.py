@@ -447,6 +447,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             try:
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
                     try:
+                        if self.__use_dns_host_as_hostname:
+                            device.hostname = (asset_interface.get('HostAssetInterface') or {}).get('hostname')
                         mac = (asset_interface.get('HostAssetInterface') or {}).get('macAddress')
                         if not mac:
                             mac = None
@@ -627,6 +629,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_from_inventory',
                     'type': 'bool',
                     'title': 'Use Inventory API'
+                },
+                {
+                    'name': 'use_dns_host_as_hostname',
+                    'type': 'bool',
+                    'title': 'Use DNS Name as hostname before Netbios name'
                 }
             ],
             'required': [
@@ -636,7 +643,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'max_retries',
                 'retry_sleep_time',
                 'devices_per_page',
-                'fetch_from_inventory'
+                'fetch_from_inventory', 'use_dns_host_as_hostname'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -652,7 +659,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'devices_per_page': consts.DEVICES_PER_PAGE,
             'fetch_vulnerabilities_data': True,
             'qualys_tags_white_list': None,
-            'fetch_from_inventory': False
+            'fetch_from_inventory': False,
+            'use_dns_host_as_hostname': False
         }
 
     def _on_config_update(self, config):
@@ -666,6 +674,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__qualys_tags_white_list = config.get('qualys_tags_white_list').split(',') \
             if config.get('qualys_tags_white_list') else None
         self.__fetch_from_inventory = config.get('fetch_from_inventory', False)
+        self.__use_dns_host_as_hostname = config.get('use_dns_host_as_hostname', False)
 
     @classmethod
     def adapter_properties(cls):

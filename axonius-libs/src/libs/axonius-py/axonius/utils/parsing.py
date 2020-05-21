@@ -70,7 +70,7 @@ ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
-BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.',
+BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL']
 
 
@@ -1261,13 +1261,16 @@ def is_start_with_valid_ip(value):
     return is_valid_ip(value)
 
 
+BAD_ASSETS = ['dev', 'localhost']
+
+
 def get_asset_snow_or_host(adapter_device):
     if adapter_device.get('plugin_name') == 'service_now_adapter':
         asset = get_asset_name(adapter_device)
     else:
         asset = get_hostname(adapter_device)
     if asset:
-        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in ['dev']:
+        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in BAD_ASSETS:
             return asset
         return asset.split('.')[0].lower().strip()
     return None
@@ -1284,7 +1287,7 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
-        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in ['dev']:
+        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in BAD_ASSETS:
             return asset
         return asset.split('.')[0].lower().strip()
     return None
@@ -1425,18 +1428,18 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g')
-                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g')
-                if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                if asset1_lower in asset2_lower or asset2_lower in asset1_lower:
                     return True
                 return False
         if is_dangerous_asset_names_adapter(adapter_device2):
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g')
-                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g')
-                if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                if asset1_lower in asset2_lower or asset2_lower in asset1_lower:
                     return True
                 return False
     return True

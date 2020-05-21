@@ -21,17 +21,21 @@ MAX_PAGES_PROTECTION = 1000000
 
 
 class CrowdStrikeConnection(RESTConnection):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, member_cid=None, **kwargs):
         super().__init__(*args, **kwargs, headers={'Accept': 'application/json'})
         self.last_token_fetch = None
         self.requests_count = 0
+        self._member_cid = member_cid
 
     def refresh_access_token(self, force=False):
         if not self.last_token_fetch or (self.last_token_fetch + timedelta(minutes=20) < datetime.now()) or force:
             logger.debug(f'Refreshing access token after {self.requests_count} requests')
+            body_params = {'client_id': self._username,
+                           'client_secret': self._password}
+            if self._member_cid:
+                body_params['member_cid'] = self._member_cid
             response = self._post('oauth2/token', use_json_in_body=False,
-                                  body_params={'client_id': self._username,
-                                               'client_secret': self._password})
+                                  body_params=body_params)
             token = response['access_token']
             self._session_headers['Authorization'] = f'Bearer {token}'
             self.last_token_fetch = datetime.now()

@@ -103,12 +103,23 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
     @staticmethod
     def _connect_client(client_config):
         try:
-            connection = CrowdStrikeConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                                               username=client_config['username'], password=client_config['apikey'],
-                                               https_proxy=client_config.get('https_proxy'))
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            member_cid = client_config.get('member_cid')
+            if member_cid:
+                member_cids = member_cid.split(',')
+            else:
+                member_cids = [None]
+            connections = []
+            for member_cid in member_cids:
+                connection = CrowdStrikeConnection(domain=client_config['domain'],
+                                                   verify_ssl=client_config['verify_ssl'],
+                                                   username=client_config['username'],
+                                                   password=client_config['apikey'],
+                                                   https_proxy=client_config.get('https_proxy'),
+                                                   member_cid=member_cid)
+                with connection:
+                    pass  # check that the connection credentials are valid
+                connections.append(connection)
+            return connections
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -124,8 +135,9 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            yield from client_data.get_device_list(self._get_policies, self._get_vulnerabilities)
+        for connection in client_data:
+            with connection:
+                yield from connection.get_device_list(self._get_policies, self._get_vulnerabilities)
 
     @staticmethod
     def _clients_schema():
@@ -161,6 +173,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'member_cid',
+                    'type': 'string',
+                    'title': 'Member CID'
                 }
             ],
             'required': [

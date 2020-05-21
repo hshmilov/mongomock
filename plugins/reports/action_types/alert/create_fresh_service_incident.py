@@ -71,9 +71,12 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                     'title': 'Priority',
                     'type': 'string',
                     'enum': FRESH_SERVICE_PRIORITY.keys()
+                },
+                {
+                    'name': 'group_id',
+                    'type': 'integer',
+                    'title': 'Group ID'
                 }
-
-
             ],
             'required': [
                 'domain', 'apikey', 'priority',
@@ -94,16 +97,19 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             'subject': None,
             'priority': 'low',
             'verify_ssl': True,
-            'ticket_email': None
+            'ticket_email': None,
+            'group_id': None
         }
 
-    def _create_fresh_service_incident(self, description, subject, ticket_email, priority):
+    def _create_fresh_service_incident(self, description, subject, ticket_email, priority, group_id):
         fresh_service_dict = {'subject': subject,
                               'description': description,
                               'email': ticket_email,
                               'priority': priority,
                               'status': 2
                               }
+        if group_id:
+            fresh_service_dict['group_id'] = group_id
         try:
             if not self._config.get('domain') or not self._config.get('apikey'):
                 return 'Missing Parameters For Connection'
@@ -136,5 +142,6 @@ class FreshServiceIncidentAction(ActionTypeAlert):
         message = self._create_fresh_service_incident(description=log_message_full,
                                                       subject=self._config['subject'],
                                                       priority=FRESH_SERVICE_PRIORITY.get(self._config['priority']),
-                                                      ticket_email=self._config['ticket_email'],)
+                                                      ticket_email=self._config['ticket_email'],
+                                                      group_id=self._config.get('group_id'))
         return AlertActionResult(not message, message or 'Success')
