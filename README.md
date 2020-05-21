@@ -1,6 +1,13 @@
 # Cortex
 Where axons thrive
 
+### Data Classification
+
+All contents of this repository, including the Axonius product codebase, 
+are classified as Axonius Confidential/Restricted, 
+as defined in the Data Classification Policy. 
+Access to these contents requires an NDA and an explicit need-to-know.
+
 ### How to install - Production
 
 simply run: 
