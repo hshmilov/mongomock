@@ -15,7 +15,7 @@
     <XSelect
       id="baseQuery"
       v-model="base"
-      :options="views[entity] || restrictedViewOptions(base)"
+      :options="viewOptions(entity, base)"
       :searchable="true"
       placeholder="query (or empty for all)"
       class="grid-span2 view-name"
@@ -25,7 +25,7 @@
     <XSelect
       id="intersectingFirst"
       :value="intersecting[0]"
-      :options="views[entity] || restrictedViewOptions(intersecting[0])"
+      :options="viewOptions(entity, intersecting[0])"
       :searchable="true"
       placeholder="query..."
       class="grid-span2"
@@ -36,7 +36,7 @@
       <XSelect
         id="intersectingSecond"
         :value="intersecting[1]"
-        :options="views[entity] || restrictedViewOptions(intersecting[1])"
+        :options="viewOptions(entity, intersecting[1])"
         :searchable="true"
         placeholder="query..."
         @input="(view) => updateIntersecting(1, view)"
@@ -133,14 +133,6 @@ export default {
     },
     validate() {
       this.$emit('validate', !this.intersecting.filter((view) => view === '').length);
-    },
-    restrictedViewOptions(selectedView) {
-      if (!this.entity || !selectedView) {
-        return [];
-      }
-      return [{
-        name: selectedView, title: 'Missing Permissions',
-      }];
     },
   },
 };

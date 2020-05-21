@@ -15,7 +15,7 @@
     <x-select-views
       v-model="selectedViews"
       :entities="entities"
-      :views="views"
+      :view-options="viewOptions"
       :max="max"
       :min="min"
     />

@@ -63,7 +63,7 @@
           ref="dashboardRef"
           v-model="dashboard.config"
           :entities="entityOptions"
-          :views="views"
+          :view-options="viewOptions"
           :chart-view="dashboard.view"
           class="grid-span2"
           @validate="configValid = $event"
@@ -296,8 +296,6 @@ export default {
   }
 
   .sort-radio-group {
-    /*margin-top: 0px;*/
-    /*display: flex;*/
      label {
        font-size: 14px;
      }

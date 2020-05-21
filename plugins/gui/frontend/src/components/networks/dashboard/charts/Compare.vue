@@ -4,7 +4,7 @@
     <XSelectViews
       v-model="selectedViews"
       :entities="entities"
-      :views="views"
+      :view-options="viewOptions"
       :min="1"
     />
 

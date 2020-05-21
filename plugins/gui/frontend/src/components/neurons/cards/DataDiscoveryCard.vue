@@ -115,68 +115,75 @@ export default {
 </script>
 
 <style lang="scss">
-   .x-discovery-card.device-discovery{
-        grid-column: 1;
+  .x-discovery-card.device-discovery {
+    grid-column: 1;
+  }
+
+  .x-discovery-card.user-discovery {
+    grid-column: 2;
+  }
+
+  .x-discovery-card {
+    grid-row: 1;
+
+    &.double {
+      grid-row: 1 / span 2;
     }
 
-    .x-discovery-card.user-discovery{
-        grid-column: 2;
+    &.triple {
+      grid-row: 1 / span 3;
     }
 
-    .x-discovery-card {
-        grid-row: 1;
-
-        &.double {
-            grid-row: 1 / span 2;
-        }
-        &.triple {
-            grid-row: 1 / span 3;
-        }
+    .histogram-container {
+      min-height: 180px;
     }
-    .x-discovery-card {
-        .summary-title {
-            text-transform: capitalize;
-        }
-        .data-discovery {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
+  }
 
-            .discovery-summary {
-                border-top: 2px dashed $grey-2;
-                padding-top: 12px;
+  .x-discovery-card {
+    .summary-title {
+      text-transform: capitalize;
+    }
 
-                .summary-row {
-                    display: flex;
-                    font-size: 16px;
+    .data-discovery {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
 
-                    .summary-title {
-                        flex: auto 1 0;
+      .discovery-summary {
+        border-top: 2px dashed $grey-2;
+        padding-top: 12px;
 
-                        &.mid {
-                            font-size: 14px;
-                            color: $theme-orange;
-                            margin: auto 0;
-                            text-transform: capitalize;
-                            font-weight: 300;
-                        }
-                    }
+        .summary-row {
+          display: flex;
+          font-size: 16px;
 
-                    .quantity {
-                        font-weight: 500;
-                        width: 120px;
-                        text-align: center;
-                    }
+          .summary-title {
+            flex: auto 1 0;
 
-                    .svg-icon {
-                        margin: 6px 0;
-
-                        .svg-fill {
-                            fill: $theme-orange;
-                        }
-                    }
-                }
+            &.mid {
+              font-size: 14px;
+              color: $theme-orange;
+              margin: auto 0;
+              text-transform: capitalize;
+              font-weight: 300;
             }
+          }
+
+          .quantity {
+            font-weight: 500;
+            width: 120px;
+            text-align: center;
+          }
+
+          .svg-icon {
+            margin: 6px 0;
+
+            .svg-fill {
+              fill: $theme-orange;
+            }
+          }
         }
+      }
     }
+  }
 </style>

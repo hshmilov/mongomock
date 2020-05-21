@@ -98,7 +98,7 @@
                   />
                   <XSelect
                     v-model="report.views[i].id"
-                    :options="viewOptions(i)"
+                    :options="currentViewOptions(i)"
                     searchable
                     placeholder="query name"
                     :read-only="!canEditSavedView(i)"
@@ -618,17 +618,12 @@ export default {
       }
       return true;
     },
-    viewOptions(index) {
-      if (!this.views || !this.report.views[index]) {
+    currentViewOptions(index) {
+      if (!this.report.views[index]) {
         return [];
       }
       const { entity, id } = this.report.views[index];
-      if (entity && !this.views[entity]) {
-        return [{
-          name: id, title: 'Missing Permissions',
-        }];
-      }
-      return entity ? this.views[entity] : [];
+      return this.viewOptions(entity, id);
     },
     onNameChanged() {
       if (this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name') {

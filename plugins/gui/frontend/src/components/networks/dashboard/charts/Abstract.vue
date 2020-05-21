@@ -9,7 +9,7 @@
     />
     <x-select
       v-model="view"
-      :options="viewOptions"
+      :options="currentViewOptions"
       :searchable="true"
       placeholder="query (or empty for all)"
     />
@@ -112,17 +112,9 @@
         if (!this.entity) return {}
         return this.getDataSchemaByName(this.entity)
       },
-      viewOptions() {
-        if (!this.entity) {
-          return [];
-        }
-        if (!this.views[this.entity]) {
-          return [{
-            name: this.view, title: 'Missing Permissions',
-          }];
-        }
-        return this.views[this.entity];
-      }
+      currentViewOptions() {
+        return this.viewOptions(this.entity, this.view);
+      },
     },
     methods: {
       validate () {
@@ -140,6 +132,3 @@
   }
 </script>
 
-<style scoped>
-
-</style>

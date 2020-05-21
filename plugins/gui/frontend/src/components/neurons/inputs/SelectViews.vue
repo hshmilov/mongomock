@@ -18,7 +18,7 @@
         />
         <XSelect
           :value="view.id"
-          :options="views[view.entity] || restrictedViewOptions(view.id)"
+          :options="viewOptions(view.entity, view.id)"
           :searchable="true"
           placeholder="Query..."
           class="view-name"
@@ -65,9 +65,9 @@ export default {
       type: Array,
       required: true,
     },
-    views: {
-      type: Object,
-      default: () => ({}),
+    viewOptions: {
+      type: Function,
+      required: true,
     },
     max: {
       type: Number,
@@ -130,14 +130,6 @@ export default {
     },
     isItemDeletable(index) {
       return index >= this.min;
-    },
-    restrictedViewOptions(selectedView) {
-      if (!selectedView) {
-        return [];
-      }
-      return [{
-        name: selectedView, title: 'Missing Permissions',
-      }];
     },
   },
 };

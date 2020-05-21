@@ -1,3 +1,4 @@
+import _isEmpty from 'lodash/isEmpty';
 import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
@@ -43,11 +44,23 @@ export default {
         this.fetchViews({
           module: `${this.module}/views/history`,
           getCount: false,
-          limit: 5
+          limit: 5,
         });
       }
     },
     viewsCallback() {},
+    viewOptions(entity, id) {
+      if (!entity) {
+        return [];
+      }
+      if (!_isEmpty(this.views[entity])) {
+        return this.views[entity];
+      }
+      return id ? [{
+        name: id,
+        title: this.views[entity] ? 'Loading...' : 'Missing Permissions',
+      }] : [];
+    },
   },
   created() {
     if (this.isExpired) return;

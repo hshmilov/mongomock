@@ -23,7 +23,7 @@
         <label>Base query</label>
         <XSelect
           :value="baseItem"
-          :options="views[entity] || restrictedViewOptions(baseItem)"
+          :options="viewOptions(entity, baseItem)"
           :searchable="true"
           placeholder="query (or empty for all)"
           @input="(view) => updateBase(index, view)"
@@ -49,7 +49,7 @@
         <label>Intersecting query</label>
         <XSelect
           :value="intersectingItem"
-          :options="views[entity] || restrictedViewOptions(intersectingItem)"
+          :options="viewOptions(entity, intersectingItem)"
           :searchable="true"
           placeholder="query..."
           @input="(view) => updateIntersecting(index, view)"
@@ -210,14 +210,6 @@ export default {
     },
     validate() {
       this.$emit('validate', !this.intersecting.filter((view) => view === '').length);
-    },
-    restrictedViewOptions(selectedView) {
-      if (!this.entity || !selectedView) {
-        return [];
-      }
-      return [{
-        name: selectedView, title: 'Missing Permissions',
-      }];
     },
   },
 };

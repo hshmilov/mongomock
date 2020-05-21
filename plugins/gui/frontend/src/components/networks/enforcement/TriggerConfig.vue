@@ -19,7 +19,7 @@
             />
             <XSelect
               v-model="config.view.id"
-              :options="viewOptions"
+              :options="currentViewOptions"
               searchable
               placeholder="query name"
               :read-only="readOnly || entityOptions.length === 0 || !views[viewEntity]"
@@ -210,17 +210,8 @@ export default {
     disableConfirm() {
       return Boolean(!(this.config.view.id && this.config.view.entity));
     },
-    viewOptions() {
-      if (!this.views || !this.viewEntity) {
-        return [];
-      }
-      if (!this.views[this.viewEntity]) {
-        return [{
-          name: this.viewId,
-          title: 'Missing Permissions',
-        }];
-      }
-      return this.views[this.viewEntity];
+    currentViewOptions() {
+      return this.viewOptions(this.viewEntity, this.viewId);
     },
     showScheduling: {
       get() {
