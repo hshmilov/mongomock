@@ -23,6 +23,7 @@ class GNaapiDeviceInstance(DeviceAdapter):
     aws_data = Field(OnlyAWSDeviceAdapter, 'AWS Data')
     g_naapi_index_date = Field(datetime.datetime, 'Index Date')
     g_naapi_ttl = Field(datetime.datetime, 'TTL')
+    g_naapi_configuration_item_capture_time = Field(datetime.datetime, 'Configuration Item Capture Time')
     relationships = ListField(GNaapiRelationships, 'Relationships')
 
 

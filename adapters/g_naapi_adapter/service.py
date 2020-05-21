@@ -279,7 +279,7 @@ class GNaapiAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem appending extra info')
 
-            device.last_seen = parse_date(device_raw.get('ConfigurationItemCaptureTime'))
+            device.g_naapi_configuration_item_capture_time = parse_date(device_raw.get('ConfigurationItemCaptureTime'))
             device.aws_data = aws_info
             device.set_raw(device_raw)
             return device
