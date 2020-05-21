@@ -169,8 +169,6 @@ class ServiceNowConnection(RESTConnection):
                     parent_sys_id = sub_table_result.pop(f'{consts.RELATIONS_TABLE_PARENT_KEY}.sys_id', None)
                     child_sys_id = sub_table_result.pop(f'{consts.RELATIONS_TABLE_CHILD_KEY}.sys_id', None)
                     if not (parent_sys_id and child_sys_id):
-                        logger.warning(f'Relation with no parent ({parent_sys_id}) AND child ({child_sys_id}):'
-                                       f' {sub_table_result}')
                         continue
 
                     # Mark: parent -child> child

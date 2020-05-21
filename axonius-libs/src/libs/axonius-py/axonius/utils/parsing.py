@@ -1425,8 +1425,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower()
-                asset2_lower = asset2.split('.')[0].lower()
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g')
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g')
                 if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
                     return True
                 return False
@@ -1434,8 +1434,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower()
-                asset2_lower = asset2.split('.')[0].lower()
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g')
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g')
                 if asset1_lower.startswith(asset2_lower) or asset2_lower.startswith(asset1_lower):
                     return True
                 return False
