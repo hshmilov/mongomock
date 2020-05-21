@@ -190,7 +190,7 @@ export default {
       display: flex;
       flex-direction: column;
       flex: 1 0 auto;
-      min-height: 220px
+      min-height: 225px
     }
 
     .histogram-item {

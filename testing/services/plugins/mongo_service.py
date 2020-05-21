@@ -325,3 +325,6 @@ class MongoService(SystemService, WeaveService):
 
     def enforcements_collection(self):
         return self.client[REPORTS_PLUGIN_NAME][REPORTS_PLUGIN_NAME]
+
+    def tasks_collection(self):
+        return self.client[REPORTS_PLUGIN_NAME]['triggerable_history']

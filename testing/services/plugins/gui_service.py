@@ -69,7 +69,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 35:
+        if self.db_schema_version != 36:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -147,6 +147,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_34()
         if self.db_schema_version < 35:
             self._update_schema_version_35()
+        if self.db_schema_version < 36:
+            self._update_schema_version_36()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1268,22 +1270,26 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             })
 
+    def _get_views_by_entity(self):
+        entity_to_views = {}
+        for entity_type in EntityType:
+            entity_to_views[entity_type.value] = {
+                view['name']: str(view['_id'])
+                for view in self._entity_views_map[entity_type].find({
+                    'query_type': 'saved'
+                }, {
+                    'name': 1
+                })
+            }
+        return entity_to_views
+
     def _update_schema_version_34(self):
         """
         AX-6287 Update all Reports, Enforcements and Charts holding a view name, to hold its uuid instead
         """
         print('Upgrade to schema 34')
         try:
-            entity_to_views = {}
-            for entity_type in EntityType:
-                entity_to_views[entity_type.value] = {
-                    view['name']: str(view['_id'])
-                    for view in self._entity_views_map[entity_type].find({
-                        'query_type': 'saved'
-                    }, {
-                        'name': 1
-                    })
-                }
+            entity_to_views = self._get_views_by_entity()
             self._update_reports_views(entity_to_views)
             self._update_dashboards_views(entity_to_views)
             self._update_enforcements_views(entity_to_views)
@@ -1311,6 +1317,40 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 35
         except Exception as e:
             print(f'Exception while upgrading gui db to version 35. Details: {e}')
+
+    def _update_enforcement_tasks_views(self, entity_to_views):
+        trigger_path = 'result.metadata.trigger.view'
+        tasks_update = self.db.tasks_collection().find({
+            'job_name': 'run',
+            trigger_path: {
+                '$exists': True
+            }
+        }, {
+            trigger_path: 1
+        })
+        for task in tasks_update:
+            view = task['result']['metadata']['trigger']['view']
+            if not view.get('entity') or not view.get('name'):
+                continue
+
+            self.db.tasks_collection().update_one({
+                '_id': task['_id']
+            }, {
+                '$set': {
+                    trigger_path: {
+                        'entity': view['entity'],
+                        'id': entity_to_views[view['entity']].get(view['name'])
+                    }
+                }
+            })
+
+    def _update_schema_version_36(self):
+        print('Upgrade to schema 36')
+        try:
+            self._update_enforcement_tasks_views(self._get_views_by_entity())
+            self.db_schema_version = 36
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 36. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """
