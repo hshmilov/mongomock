@@ -13,7 +13,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=consider-merging-isinstance
 def get_entity_new_field(title: str, value, allow_empty=False):
-    logger.debug(f'Getting new field for {title}: {value}')
     if value in EMPTY_VARS:
         if not allow_empty:
             return None
