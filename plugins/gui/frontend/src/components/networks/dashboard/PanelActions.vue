@@ -372,14 +372,14 @@ export default {
         }
       }
     }
-    .sort-title {
-      padding-left: 10px;
-    }
-    .sort-active {
-      padding-left: 0px;
-    }
-    .sort-active::before {
-      content: "• ";
-    }
+  }
+  .sort-title {
+    padding-left: 10px;
+  }
+  .sort-active {
+    padding-left: 0;
+  }
+  .sort-active::before {
+    content: "• ";
   }
 </style>
