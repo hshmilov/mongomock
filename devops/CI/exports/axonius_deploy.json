@@ -47,6 +47,7 @@
       "instance_type": "t2.xlarge",
       "launch_block_device_mappings": [
         {
+          "delete_on_termination": true,
           "device_name": "/dev/sda1",
           "volume_size": "{{user `disk_size`}}",
           "encrypted": false
