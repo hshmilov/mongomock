@@ -1128,7 +1128,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [ips_do_not_contradict_or_mac_intersection,
                                        not_wifi_adapters, macs_do_not_contradict,
                                        cloud_id_do_not_contradict,
-                                       asset_hostnames_do_not_contradict,
+                                       asset_hostnames_do_not_contradict_and_no_chef,
                                        serials_do_not_contradict],
                                       {'Reason': 'They have the same SNOW Asset + Hostname name'},
                                       CorrelationReason.StaticAnalysis)

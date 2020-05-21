@@ -71,7 +71,7 @@ N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.',
-               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789']
+               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
@@ -1253,13 +1253,23 @@ def compare_serial_no_s(adapter_device1, adapter_device2):
     return serial1 and serial2 and serial1 == serial2
 
 
+def is_start_with_valid_ip(value):
+    if not value or not value.strip():
+        return False
+    value = value.strip()
+    value = value.split('_')[0].split('-')[0].split(',')[0].split(' ')[0]
+    return is_valid_ip(value)
+
+
 def get_asset_snow_or_host(adapter_device):
     if adapter_device.get('plugin_name') == 'service_now_adapter':
         asset = get_asset_name(adapter_device)
     else:
         asset = get_hostname(adapter_device)
     if asset:
-        return asset.lower().strip()
+        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in ['dev']:
+            return asset
+        return asset.split('.')[0].lower().strip()
     return None
 
 
@@ -1274,7 +1284,7 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
-        if is_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in ['dev']:
+        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in ['dev']:
             return asset
         return asset.split('.')[0].lower().strip()
     return None

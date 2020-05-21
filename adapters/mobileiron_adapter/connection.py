@@ -39,6 +39,8 @@ class MobileironConnection(RESTConnection):
         response = self._get('device_spaces/mine')
         if not isinstance(response, dict) or not response.get('results') or not isinstance(response['results'], list):
             raise RESTException('Could not get device_spaces/mine request')
+        device_space_id = response['results'][0]['id']
+        self._get('devices/count', url_params={'adminDeviceSpaceId': device_space_id, 'query': ''})
 
     def _update_users_dict(self):
         try:
