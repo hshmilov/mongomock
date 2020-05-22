@@ -128,6 +128,7 @@ export default {
       this.$nextTick(() => {
         this.$refs.filter.reset();
       });
+      this.$refs.wizard.clearStyles();
     },
     onChangeFilter(expressions) {
       this.debouncedUpdateQueryEvent(this.value.filter, this.value.onlyExpressionsFilter, this.value.meta, expressions);
