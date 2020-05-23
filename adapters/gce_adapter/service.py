@@ -643,13 +643,13 @@ class GceAdapter(AdapterBase, Configurable):
                 logger.warning(f'Bad device with no ID: {device_raw}')
                 return None
             # generic Axonius stuff
-            project_id = device_raw.get('project_id')
+            project_id = device_raw.get('projectId')
             device.id = f'{device_id}_{project_id}_{device_raw.get("name")}'
             device.cloud_provider = 'GCP'
             device.name = device_raw.get('name')
 
             # GCP specific stuff
-            device.project_id = device_raw.get('project_id')
+            device.project_id = device_raw.get('projectId')
             device.device_type = DeviceType.STORAGE.name
             device.creation_time_stamp = parse_date(device_raw.get('timeCreated'))
 

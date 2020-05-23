@@ -165,7 +165,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
             if 'items' not in page:
                 raise ValueError(f'Bad response while getting buckets: {page}')
             for item in page['items']:
-                item['project_id'] = project_id
+                item['projectId'] = project_id
                 if get_objects:
                     try:
                         item['x_objects'] = list(self._get_bucket_objects(item['id']))
@@ -194,9 +194,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
         :return: Yield dictionaries representing storage buckets.
         """
         if isinstance(project_id, list):
-            projects = [{'project_id': x} for x in project_id]
+            projects = [{'projectId': x} for x in project_id]
         else:
-            projects = [{'project_id': project_id}] if project_id is not None else self.get_project_list()
+            projects = [{'projectId': project_id}] if project_id is not None else self.get_project_list()
         for project in projects:
             project_id = project['projectId']
             try:
@@ -220,9 +220,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
         :return:  Yield dictionaries representing database instances
         """
         if isinstance(project_id, list):
-            projects = [{'project_id': x} for x in project_id]
+            projects = [{'projectId': x} for x in project_id]
         else:
-            projects = [{'project_id': project_id}] if project_id is not None else self.get_project_list()
+            projects = [{'projectId': project_id}] if project_id is not None else self.get_project_list()
         for project in projects:
             project_id = project['projectId']
             try:
