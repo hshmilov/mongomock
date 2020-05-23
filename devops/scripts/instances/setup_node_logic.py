@@ -63,10 +63,10 @@ def get_db_pass_from_core() -> str:
         command = f'docker run --rm {DOCKERHUB_URL}appropriate/curl -kfsSL {DB_PASSWORD_GET_URL}'
         password = subprocess.check_output(shlex.split(command), env=my_env).decode('ascii')
         if not password:
-            print("Error getting db pass")
+            print('Error getting db pass')
         return password
-    except Exception as e:
-        print(e)
+    except Exception:
+        print('Exception while getting db pass')
 
 
 def setup_node(connection_string):
