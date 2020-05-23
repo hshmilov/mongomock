@@ -48,6 +48,7 @@
           :user-id="resetPasswordInfo ? resetPasswordInfo.userId : ''"
           :user-email="resetPasswordInfo ? resetPasswordInfo.email : ''"
           :invite="resetPasswordInfo ? resetPasswordInfo.invite : false"
+          :user-name="resetPasswordInfo ? resetPasswordInfo.userName : ''"
           @close="closeResetPassword"
         />
       </div>

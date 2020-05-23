@@ -5,6 +5,7 @@ from flask import (jsonify,
 from axonius.plugin_base import EntityType
 from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from axonius.consts.gui_consts import ACTIVITY_PARAMS_COUNT
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 from gui.logic.views_data import get_views_count
 # pylint: disable=no-member
@@ -37,14 +38,12 @@ def views_generator(base_permission_category: PermissionCategory):
             return jsonify(self._add_entity_view(self.entity_type))
 
         @filtered()
-        @gui_route_logged_in('<query_type>', methods=['DELETE'])
+        @gui_route_logged_in('<query_type>', methods=['DELETE'], activity_params=[ACTIVITY_PARAMS_COUNT])
         def delete_views(self, query_type, mongo_filter):
             """
             Delete views over the devices db
-            :return:
             """
-            return jsonify(
-                self._delete_entity_views(self.entity_type, mongo_filter))
+            return jsonify({ACTIVITY_PARAMS_COUNT: str(self._delete_entity_views(self.entity_type, mongo_filter))})
 
         @gui_route_logged_in('<query_id>', methods=['POST'])
         def views_update(self, query_id):

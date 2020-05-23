@@ -1,14 +1,14 @@
 import createRequest from './create-request';
 
 export const validateResetPasswordToken = async (token) => {
-  const uri = `settings/users/tokens/validate/reset_password/${token}`;
+  const uri = `settings/users/tokens/validate/${token}`;
   const request = createRequest(uri);
   const { data } = await request({});
   return data;
 };
 
 export const resetUserPasswordByToken = async (token, newPassword) => {
-  const uri = 'settings/users/tokens/reset_password';
+  const uri = 'settings/users/tokens/reset';
   const request = createRequest(uri);
   const requestOptions = {};
   requestOptions.method = 'POST';
@@ -20,21 +20,22 @@ export const resetUserPasswordByToken = async (token, newPassword) => {
   return data;
 };
 
-export const getUserResetPasswordLink = async (userId, invite) => {
-  const uri = 'settings/users/tokens/create/reset_password';
+export const getUserResetPasswordLink = async (userId, invite, userName) => {
+  const uri = 'settings/users/tokens/generate';
   const request = createRequest(uri);
   const requestOptions = {};
   // If this link is for invitation then use the 'PUT' method
   requestOptions.method = invite ? 'PUT' : 'POST';
   requestOptions.data = {
     user_id: userId,
+    user_name: userName,
   };
   const { data } = await request(requestOptions);
   return data;
 };
 
 export const sendResetPasswordTokenEmail = async (userId, email, invite) => {
-  const uri = 'settings/users/tokens/send_reset_password';
+  const uri = 'settings/users/tokens/notify';
   const request = createRequest(uri);
   const requestOptions = {};
   // If this link is for invitation then use the 'PUT' method

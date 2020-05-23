@@ -191,13 +191,13 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
 
         return str(update_result['_id'])
 
-    def _delete_entity_views(self, entity_type: EntityType, mongo_filter):
+    def _delete_entity_views(self, entity_type: EntityType, mongo_filter) -> int:
         entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
 
         selection = self.get_request_data_as_object()
         selection['ids'] = [ObjectId(i) for i in selection['ids']]
         query_ids = self.get_selected_ids(entity_views_collection, selection, mongo_filter)
-        entity_views_collection.update_many({
+        update_result = entity_views_collection.update_many({
             '_id': {
                 '$in': query_ids
             }
@@ -206,7 +206,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                 'archived': True
             }
         })
-        return ''
+        return update_result.modified_count
 
     def _update_entity_views(self, entity_type: EntityType, query_id):
         view_data = self.get_request_data_as_object()
@@ -304,14 +304,14 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                         'id': adapter['data']['id']
                     })
             pool.map(delete_raw, entities)
-        self._entity_db_map[entity_type].delete_many({
+        deleted_result = self._entity_db_map[entity_type].delete_many({
             'internal_axon_id': {
                 '$in': self.get_selected_entities(entity_type, entities_selection, mongo_filter)
             }
         })
         self._trigger('clear_dashboard_cache', blocking=False)
 
-        return '', 200
+        return jsonify({'count': deleted_result.deleted_count})
 
     def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
         """

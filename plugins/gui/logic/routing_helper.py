@@ -214,7 +214,9 @@ class gui_category_add_rules:
             new_function = fn(*(func,), **inner_kwargs)
             new_function.__name__ = new_function_name
             if current_args.enforce_session and not current_args.kwargs.get(SKIP_ACTIVITY_ARG):
-                activity_category = original_cls.rule if not base_rule else f'{base_rule}.{original_cls.rule}'
+
+                activity_category = original_cls.rule if not base_rule else f'{base_rule}.{original_cls.rule}'.replace(
+                    '/', '.')
                 new_function = log_activity_rule(current_args.rule,
                                                  activity_category,
                                                  current_args.kwargs.get(ACTIVITY_PARAMS_ARG))(new_function)

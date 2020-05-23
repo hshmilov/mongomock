@@ -22,6 +22,7 @@ class AuditAction(Enum):
     Clean = 'clean'
     Trigger = 'trigger'
     Download = 'download'
+    ChangedPassword = 'changed_password'
 
 
 class AuditType(Enum):

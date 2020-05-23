@@ -113,7 +113,7 @@ export default {
         panelActions.push(<x-action-item
             class="action-reset-password"
             title="Reset Password"
-            onClick={() => this.displayResetPasswordModal(this.userId, this.lastSavedEmail)}
+            onClick={() => this.displayResetPasswordModal(this.userId, this.lastSavedEmail, this.userInfo.user_name)}
             size="20"
             color="#fff"
             icon="$vuetify.icons.resetPassword"
@@ -163,7 +163,7 @@ export default {
             res = await this.createNewUser(this.userInfo);
             if (res.status === 200 && this.userInfo.auto_generated_password) {
               const inviteUser = true;
-              this.displayResetPasswordModal(res.data.uuid, res.data.email, inviteUser);
+              this.displayResetPasswordModal(res.data.uuid, res.data.email, res.data.user_name, inviteUser);
             }
           } else {
             snackbarMessage = 'User updated successfully';
@@ -188,14 +188,15 @@ export default {
     callDeleteUser() {
       this.$emit('delete');
     },
-    displayResetPasswordModal(userId, email, invite = false) {
+    displayResetPasswordModal(userId, email, userName ,invite=false ) {
       if (!invite) {
         this.temporary = false;
       }
       this.$emit('reset-password', {
         userId,
-        email,
+        email, userName,
         invite,
+
         onClose: this.restoreTemporaryPanel,
       });
     },

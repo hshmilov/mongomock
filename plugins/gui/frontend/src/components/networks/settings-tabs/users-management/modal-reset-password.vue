@@ -103,6 +103,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    userName: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
@@ -129,7 +133,7 @@ export default {
     },
   },
   async mounted() {
-    this.link = await getUserResetPasswordLink(this.userId, this.invite);
+    this.link = await getUserResetPasswordLink(this.userId, this.invite, this.userName);
     this.email = this.userEmail;
   },
   methods: {

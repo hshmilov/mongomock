@@ -284,7 +284,7 @@ HASH_SALT = '2098f251e4f9d93cd379de4184e7eef17817fbc504e03ded3d6f09364d7725a3'
 #########################
 CSRF_TOKEN_LENGTH = 64
 EXCLUDED_CSRF_ENDPOINTS = ('api/login', 'api/signup', 'api/login/ldap', 'api/login/saml',
-                           'settings/users/tokens/reset_password')
+                           'settings/users/tokens/reset')
 
 
 #################
@@ -293,6 +293,7 @@ EXCLUDED_CSRF_ENDPOINTS = ('api/login', 'api/signup', 'api/login/ldap', 'api/log
 
 ACTIVITY_PARAMS_ARG = 'activity_params'
 SKIP_ACTIVITY_ARG = 'skip_activity'
+ACTIVITY_PARAMS_COUNT = 'count'
 
 
 class SortType(Enum):

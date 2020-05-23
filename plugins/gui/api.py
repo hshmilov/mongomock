@@ -642,7 +642,7 @@ class APIMixin:
         return self._update_user(user_id=user_id)
 
     @api_add_rule(
-        'tokens/create/reset_password',
+        'tokens/reset',
         methods=['PUT', 'POST'],
         required_permission=PermissionValue.get(None, PermissionCategory.Settings, PermissionCategory.Users),
     )
@@ -657,7 +657,7 @@ class APIMixin:
         return self.generate_user_reset_password_link()
 
     @api_add_rule(
-        'tokens/send_reset_password',
+        'tokens/notify',
         methods=['PUT', 'POST'],
         required_permission=PermissionValue.get(None, PermissionCategory.Settings, PermissionCategory.Users),
     )
@@ -1099,8 +1099,9 @@ class APIMixin:
         return self.get_query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Devices)
 
     @filtered()
-    @api_add_rule('devices/views', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
-        None, PermissionCategory.DevicesAssets, PermissionCategory.SavedQueries))
+    @api_add_rule('devices/views', methods=['POST', 'DELETE'],
+                  required_permission=PermissionValue.get(None, PermissionCategory.DevicesAssets,
+                                                          PermissionCategory.SavedQueries))
     def api_update_device_views(self, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -1121,8 +1122,9 @@ class APIMixin:
         return self.get_query_views(limit, skip, mongo_filter, mongo_sort, EntityType.Users)
 
     @filtered()
-    @api_add_rule('users/views', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
-        None, PermissionCategory.UsersAssets, PermissionCategory.SavedQueries))
+    @api_add_rule('users/views', methods=['POST', 'DELETE'],
+                  required_permission=PermissionValue.get(None, PermissionCategory.UsersAssets,
+                                                          PermissionCategory.SavedQueries))
     def api_update_users_views(self, mongo_filter):
         """
         Save or fetch views over the users db

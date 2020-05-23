@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import (jsonify,
                    make_response, request)
 
-from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT
+from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT
 from axonius.plugin_base import EntityType
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (historical, paginated,
@@ -62,8 +62,9 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             return iterator_jsonify(iterable)
 
         @filtered_entities()
-        @gui_route_logged_in(methods=['DELETE'], required_permission=PermissionValue.get(
-            PermissionAction.Update, permission_category))
+        @gui_route_logged_in(methods=['DELETE'], required_permission=PermissionValue.get(PermissionAction.Update,
+                                                                                         permission_category),
+                             activity_params=[ACTIVITY_PARAMS_COUNT])
         def delete_entities(self, mongo_filter):
             return self._delete_entities_by_internal_axon_id(
                 self.entity_type, self.get_request_data_as_object(), mongo_filter)

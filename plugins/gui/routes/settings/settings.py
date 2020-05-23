@@ -18,6 +18,7 @@ from gui.routes.settings.audit.audit import Audit
 from gui.routes.settings.getting_started.getting_started import GettingStarted
 from gui.routes.settings.plugins.plugins import Plugins
 from gui.routes.settings.roles.roles import Roles
+from gui.routes.settings.users.tokens.user_token import UserToken
 from gui.routes.settings.users.users import Users
 from gui.routes.settings.offline.configuration import Configuration
 
@@ -27,7 +28,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 @gui_category_add_rules('settings')
-class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration):
+class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, UserToken):
 
     @gui_route_logged_in(methods=['GET'], enforce_permissions=False)
     def system_config(self):
