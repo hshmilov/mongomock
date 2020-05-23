@@ -562,12 +562,12 @@ def is_where_count_query(query):
     return '\'$where\': ' in str(query)
 
 
-def get_entities_count(
-        entities_filter,
-        entity_collection,
-        history_date: datetime = None,
-        quick: bool = False,
-        is_date_filter_required: bool = False):
+def get_entities_count(entities_filter,
+                       entity_collection,
+                       history_date: datetime = None,
+                       quick: bool = False,
+                       is_date_filter_required: bool = False,
+                       ):
     """
     Count total number of devices answering given mongo_filter.
     If 'quick' is True, then will only count until 1000.

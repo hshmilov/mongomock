@@ -1,10 +1,13 @@
 import logging
 import uuid
+import math
+
 from collections import defaultdict
 from datetime import datetime
 from typing import Iterable, Dict, Iterator, Tuple
 from bson import ObjectId
 
+from dataclasses import dataclass
 from cachetools import LRUCache
 from funcy import chunks
 import pymongo
@@ -16,7 +19,7 @@ from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     convert_db_projection_to_view
 from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
-    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry
+    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count
 from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -25,6 +28,14 @@ ITERATE_CHUNK_SIZE = 50
 MAX_CURSORS = 100
 # pylint: disable=C0103
 cursors = LRUCache(maxsize=MAX_CURSORS)
+
+
+@dataclass
+class CursorMeta:
+    data_list: Iterable[dict]
+    cursor_id: str
+    page_number: int
+    asset_count: int
 
 
 def _normalize_db_projection_for_aggregation(projection: Dict[str, int]):
@@ -110,39 +121,71 @@ def _perform_find(entity_views_db,
                                 skip=skip).collation({'locale': 'en_US', 'caseLevel': False})
 
 
-def _get_all_entities_raw(entity_type: EntityType,
+def _get_all_entities_raw(skip: int,
+                          limit: int,
+                          entity_type: EntityType,
                           view_filter: dict,
                           db_projection: dict = None,
-                          cursor_id=None,
+                          cursor_id: str = None,
                           sort: dict = None,
                           default_sort: bool = False,
-                          history_date: datetime = None) -> Tuple[Iterator[dict], str]:
+                          history_date: datetime = None
+                          ) -> CursorMeta:
     """
     See get_entities for explanation of the parameters
     """
     # pylint: disable=W0603
     global cursors
-    db_cursor = None
+    cursor_obj = None
+
     # if the cursor exists, we just want to fetch the next results.
     if cursor_id:
-        db_cursor = cursors.get(cursor_id)
-        if not db_cursor:
-            raise ValueError(f'Cursor not found')
-    if db_cursor:
-        return db_cursor, cursor_id
+        cursor_obj = cursors.get(cursor_id, None)
+        if not cursor_obj:
+            raise ValueError(f'Cursor {cursor_id!r} not found')
+
+        cursor_obj.page_number += 1
+        return cursor_obj
 
     if db_projection:
-        db_projection, sort = get_db_projection(db_projection, sort)
-    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
+        db_projection, sort = get_db_projection(db_projection=db_projection, sort=sort)
+
+    collection, is_date_filter_required = plugin_base_instance().get_appropriate_view(
+        historical=history_date, entity_type=entity_type
+    )
+
     # if we defaulted to normal history collection, add historized_filter
     if history_date and is_date_filter_required:
-        view_filter = get_historized_filter(view_filter, history_date)
+        view_filter = get_historized_filter(entities_filter=view_filter, history_date=history_date)
+
+    asset_count = get_entities_count(
+        entities_filter=view_filter,
+        entity_collection=collection,
+        history_date=history_date,
+        is_date_filter_required=is_date_filter_required,
+        quick=False,
+    )
+
     try:
-        db_cursor = _perform_find(entity_views_db, 0, 0, view_filter, sort, db_projection, entity_type,
-                                  default_sort)
+        data_list = _perform_find(
+            limit=0,
+            skip=skip,
+            entity_type=entity_type,
+            entity_views_db=collection,
+            view_filter=view_filter,
+            projection=db_projection,
+            sort=sort,
+            default_sort=default_sort,
+        )
         cursor_id = str(uuid.uuid4())
-        cursors[cursor_id] = db_cursor
-        return db_cursor, cursor_id
+        cursor_obj = CursorMeta(
+            data_list=data_list,
+            cursor_id=cursor_id,
+            page_number=math.floor((skip / limit) + 1) if asset_count else 0,
+            asset_count=asset_count,
+        )
+        cursors[cursor_id] = cursor_obj
+        return cursor_obj
     except Exception:
         logger.exception('Exception when finding cursor')
         raise
@@ -179,7 +222,8 @@ def _get_entities_raw(entity_type: EntityType,
                       skip: int = None,
                       sort: dict = None,
                       default_sort: bool = False,
-                      history_date: datetime = None) -> Iterator[dict]:
+                      history_date: datetime = None,
+                      ) -> Iterator[dict]:
     """
     See get_entities for explanation of the parameters
     """
@@ -212,7 +256,8 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
                                           projection: dict,
                                           ignore_errors: bool = False,
                                           include_details: bool = False,
-                                          field_filters: dict = None) -> Iterable[dict]:
+                                          field_filters: dict = None,
+                                          ) -> Iterable[dict]:
     """
     Converts db like entities to frontend accepted entities.
     See get_entities for parameters
@@ -229,17 +274,21 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
 # pylint: disable=R0913
 
 
-def get_entities(limit: int, skip: int,
+def get_entities(limit: int,
+                 skip: int,
                  view_filter: dict,
                  sort: dict,
                  projection: dict,
                  entity_type: EntityType,
                  default_sort: bool = True,
-                 run_over_projection=True,
+                 run_over_projection: bool = True,
                  history_date: datetime = None,
                  ignore_errors: bool = False,
                  include_details: bool = False,
-                 field_filters: dict = None, cursor_id=None, use_cursor=False) -> Tuple[Iterable[dict], str]:
+                 field_filters: dict = None,
+                 cursor_id: str = None,
+                 use_cursor: bool = False,
+                 ) -> Tuple[Iterable[dict], str]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -270,16 +319,47 @@ def get_entities(limit: int, skip: int,
     logger.debug(f'Fetching data for entity {entity_type.name}')
     limit = limit or 0
     skip = skip or 0
-    if use_cursor:
-        data_list, cursor_id = _get_all_entities_raw(entity_type, view_filter, db_projection, cursor_id, sort,
-                                                     default_sort, history_date)
-        return convert_entities_to_frontend_entities(data_list, projection, ignore_errors, include_details,
-                                                     field_filters), cursor_id
 
-    data_list = _get_entities_raw(entity_type, view_filter, db_projection, limit, skip, sort,
-                                  default_sort, history_date)
-    return convert_entities_to_frontend_entities(data_list, projection, ignore_errors, include_details,
-                                                 field_filters)
+    if use_cursor:
+        cursor_obj = _get_all_entities_raw(
+            entity_type=entity_type,
+            view_filter=view_filter,
+            db_projection=db_projection,
+            cursor_id=cursor_id,
+            sort=sort,
+            skip=skip,
+            limit=limit,
+            default_sort=default_sort,
+            history_date=history_date,
+        )
+
+        entities = convert_entities_to_frontend_entities(
+            data_list=cursor_obj.data_list,
+            projection=projection,
+            ignore_errors=ignore_errors,
+            include_details=include_details,
+            field_filters=field_filters,
+        )
+        return entities, cursor_obj
+
+    data_list = _get_entities_raw(
+        entity_type=entity_type,
+        view_filter=view_filter,
+        db_projection=db_projection,
+        limit=limit,
+        skip=skip,
+        sort=sort,
+        default_sort=default_sort,
+        history_date=history_date,
+    )
+
+    return convert_entities_to_frontend_entities(
+        data_list=data_list,
+        projection=projection,
+        ignore_errors=ignore_errors,
+        include_details=include_details,
+        field_filters=field_filters,
+    )
 
 
 def perform_axonius_query(entity: EntityType,

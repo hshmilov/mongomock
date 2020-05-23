@@ -1,52 +1,51 @@
 import logging
 import math
+from datetime import datetime
 from itertools import islice
 from typing import List
 
-from flask import jsonify, request, has_request_context, g
+from flask import g, has_request_context, jsonify, request
 from passlib.hash import bcrypt
 
 from axonius.consts.adapter_consts import CONNECTION_LABEL
 from axonius.consts.gui_consts import IS_AXONIUS_ROLE, RootMasterNames
 from axonius.consts.metric_consts import ApiMetric
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, PLUGIN_NAME, NODE_ID
+from axonius.consts.plugin_consts import (DEVICE_CONTROL_PLUGIN_NAME, NODE_ID,
+                                          PLUGIN_NAME)
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import EntityType, return_error, PluginBase
+from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.utils.db_querying_helper import get_entities
-from axonius.utils.gui_helpers import (accounts as accounts_filter,
-                                       schema_fields as schema,
-                                       paginated, filtered_entities,
-                                       sorted_endpoint, projected, filtered,
-                                       add_rule_custom_authentication,
-                                       get_entities_count, add_rule_unauth,
-                                       entity_fields, PAGINATION_LIMIT_MAX, log_activity_rule)
-from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction,
-                                              PermissionValue, deserialize_db_permissions, is_axonius_role)
+from axonius.utils.gui_helpers import accounts as accounts_filter
+from axonius.utils.gui_helpers import (add_rule_custom_authentication,
+                                       add_rule_unauth, entity_fields,
+                                       filtered, filtered_entities,
+                                       get_entities_count, historical,
+                                       log_activity_rule, paginated, projected)
+from axonius.utils.gui_helpers import schema_fields as schema
+from axonius.utils.gui_helpers import sorted_endpoint
 from axonius.utils.metric import remove_ids
+from axonius.utils.permissions_helper import (PermissionAction,
+                                              PermissionCategory,
+                                              PermissionValue,
+                                              deserialize_db_permissions,
+                                              is_axonius_role)
 from axonius.utils.root_master.root_master import restore_from_s3_key
-from gui.logic.entity_data import (get_entity_data, entity_tasks)
+from gui.logic.entity_data import entity_tasks, get_entity_data
+from gui.logic.historical_dates import all_historical_dates
 from gui.logic.routing_helper import check_permissions
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 API_VERSION = '1'
+DEVICE_ASSETS_VIEW = PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)
+DEVICE_ASSETS_UPDATE = PermissionValue.get(PermissionAction.Update, PermissionCategory.DevicesAssets)
+USER_ASSETS_VIEW = PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)
+USER_ASSETS_UPDATE = PermissionValue.get(PermissionAction.Update, PermissionCategory.UsersAssets)
 
 
 # pylint: disable=protected-access,no-self-use,no-member,too-many-lines
 
 # Caution! These decorators must come BEFORE @add_rule
-
-def get_key_default(user_data, key, default_data, default_key, default_value, default_if_none=True):
-    """Get a key from user_data dict or a default key from default dict."""
-    if key in user_data:
-        value = user_data[key]
-
-        if value is None and default_if_none:
-            return default_data.get(default_key, default_value)
-
-        return value
-
-    return default_data.get(default_key, default_value)
 
 
 def basic_authentication(func, required_permission: PermissionValue = None):
@@ -783,40 +782,263 @@ class APIMixin:
         return self.delete_roles(role_id)
 
     ###########
-    # DEVICES #
+    # ASSETS  #
     ###########
 
-    @paginated()
-    @filtered_entities()
-    @sorted_endpoint()
-    @projected()
-    @api_add_rule('devices', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        None, PermissionCategory.DevicesAssets))
-    def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        devices_collection = self._entity_db_map[EntityType.Devices]
-        self._save_query_to_history(EntityType.Devices, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return_doc = {
-            'page': get_page_metadata(skip, limit,
-                                      get_entities_count(mongo_filter, devices_collection)),
-            'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
-                                        mongo_projection,
-                                        EntityType.Devices,
-                                        default_sort=self._system_settings['defaultSort']))
+    def api_get_assets_cursor(self,
+                              entity_type: EntityType,
+                              limit: int,
+                              skip: int,
+                              mongo_filter: dict,
+                              mongo_sort: dict,
+                              mongo_projection: dict,
+                              history_date: datetime,
+                              ) -> dict:
+        """Get assets using mongo cursor for paging.
+
+        Request body:
+            limit: int
+                default: 2000
+                max: 2000
+                min: 0
+                number of rows to return
+                @paginated parses as int into limit arg
+            skip: int
+                default: 0
+                min: 0
+                number of rows to skip
+                @paginated parses as int into skip arg
+            filter: str
+                default: None
+                AQL string
+                @filtered_entities parses as dict into mongo_filter arg
+            history_date: str
+                default: None
+                example: 2020-05-18T03:36:14.091000
+                datetime to get assets for
+                @historical parses into datetime obj as history_date arg
+                @filtered_entities parses as dict into mongo_filter arg
+            sort: str
+                default: None
+                field to sort assets on
+                @sorted_endpoint parses as dict into mongo_sort arg
+            desc: str
+                default: None
+                example: '1'
+                sort descending if '1', asscending if not
+                @sorted_endpoint parses as dict into mongo_sort arg
+            fields: str
+                default: None
+                CSV of fields to return
+                @projected parses into dict as mongo_projection arg
+            cursor: str
+                default: None
+                UUID of cursor to continue
+                get_entities() handles
+            include_details: bool
+                default: False
+                include breakdown of adapter sources for agg data
+                get_entities() handles
+
+        Response Body:
+            assets: list of dict
+            cursor: str
+                UUID that tracks iterator for a query
+            page: dict
+                number: int
+                    current page number
+                size: int
+                    count of assets in this page
+                totalPages: int
+                    total number of pages
+                totalResources: int
+                    total number of assets
+        """
+        request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+
+        self._save_query_to_history(
+            entity_type=entity_type,
+            view_filter=mongo_filter,
+            skip=skip,
+            limit=limit,
+            sort=mongo_sort,
+            projection=mongo_projection,
+        )
+
+        entities, cursor_obj = get_entities(
+            limit=limit,
+            skip=skip,
+            view_filter=mongo_filter,
+            sort=mongo_sort,
+            projection=mongo_projection,
+            entity_type=entity_type,
+            default_sort=self._system_settings.get('defaultSort'),
+            include_details=request_data.get('include_details', False),
+            cursor_id=request_data.get('cursor', None),
+            use_cursor=True,
+            history_date=history_date,
+        )
+
+        assets = [asset for asset in islice(entities, limit)]
+        page_meta = {
+            'number': cursor_obj.page_number,
+            'size': len(assets),
+            'totalPages': math.ceil(cursor_obj.asset_count / limit) if (limit and cursor_obj.asset_count) else 0,
+            'totalResources': cursor_obj.asset_count
         }
+        return_doc = {'page': page_meta, 'cursor': cursor_obj.cursor_id, 'assets': assets}
+        return return_doc
 
-        return jsonify(return_doc)
+    def api_get_assets_normal(self,
+                              entity_type: EntityType,
+                              limit: int,
+                              skip: int,
+                              mongo_filter: dict,
+                              mongo_sort: dict,
+                              mongo_projection: dict,
+                              history_date: datetime,
+                              ) -> dict:
+        """Get assets using paging.
 
-    @api_add_rule(
-        rule='devices/destroy',
-        methods=['POST'],
-        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.DevicesAssets)
-    )
-    def api_devices_destroy(self):
-        """Delete all assets and optionally all historical assets."""
-        return self._destroy_assets(entity_type=EntityType.Devices, historical_prefix='historical_devices_')
+        Request body:
+            limit: int
+                default: 2000
+                max: 2000
+                min: 0
+                number of rows to return
+                @paginated parses as int into limit arg
+            skip: int
+                default: 0
+                min: 0
+                number of rows to skip
+                @paginated parses as int into skip arg
+            filter: str
+                default: None
+                AQL string
+                @filtered_entities parses as dict into mongo_filter arg
+            history_date: str
+                default: None
+                example: 2020-05-18T03:36:14.091000
+                datetime to get assets for
+                @historical parses into datetime obj as history_date arg
+                @filtered_entities parses as dict into mongo_filter arg
+            sort: str
+                default: None
+                field to sort assets on
+                @sorted_endpoint parses as dict into mongo_sort arg
+            desc: str
+                default: None
+                example: '1'
+                sort descending if '1', asscending if not
+                @sorted_endpoint parses as dict into mongo_sort arg
+            fields: str
+                default: None
+                CSV of fields to return
+                @projected parses into dict as mongo_projection arg
+            include_details: bool
+                default: False
+                include breakdown of adapter sources for agg data
+                get_entities() handles
+
+        Response Body:
+            assets: list of dict
+            page: dict
+                number: int
+                    current page number
+                size: int
+                    count of assets in this page
+                totalPages: int
+                    total number of pages
+                totalResources: int
+                    total number of assets
+        """
+        request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+
+        self._save_query_to_history(
+            entity_type=entity_type,
+            view_filter=mongo_filter,
+            skip=skip,
+            limit=limit,
+            sort=mongo_sort,
+            projection=mongo_projection,
+        )
+
+        asset_count = self.api_get_assets_count(
+            entity_type=entity_type,
+            mongo_filter=mongo_filter,
+            history_date=history_date,
+        )
+
+        assets = get_entities(
+            limit=limit,
+            skip=skip,
+            view_filter=mongo_filter,
+            sort=mongo_sort,
+            projection=mongo_projection,
+            entity_type=entity_type,
+            default_sort=self._system_settings.get('defaultSort'),
+            include_details=request_data.get('include_details', False),
+            history_date=history_date,
+        )
+
+        assets = list(assets)
+        page_meta = get_page_metadata(skip=skip, limit=limit, number_of_assets=asset_count)
+        page_meta['size'] = len(assets)
+        return_doc = {'page': page_meta, 'assets': assets}
+        return return_doc
+
+    def api_get_assets_count(self, entity_type: EntityType, mongo_filter: dict, history_date: datetime) -> int:
+        """Get the count of assets matching a query.
+
+        Request body:
+            filter: str
+                default: None
+                AQL string
+                @filtered_entities parses as dict into mongo_filter arg
+            history_date: str
+                default: None
+                example: 2020-05-18T03:36:14.091000
+                datetime to get assets for
+                @historical parses into datetime obj as history_date arg
+
+        Response Body:
+            str
+
+        APIv2: needs to be proper json response
+        """
+        entity_collection, is_date_filter_required = self.get_appropriate_view(
+            historical=history_date, entity_type=entity_type
+        )
+
+        asset_count = get_entities_count(
+            entities_filter=mongo_filter,
+            entity_collection=entity_collection,
+            history_date=history_date,
+            is_date_filter_required=is_date_filter_required,
+        )
+        return asset_count
 
     def _destroy_assets(self, entity_type, historical_prefix):
-        """Delete all assets and optionally all historical assets."""
+        """Delete all assets and optionally all historical assets.
+
+        Will not be usable if 'enable_destroy' is not True in system settings!
+
+        Request Body:
+            destroy: bool
+                default: False
+                Actually do the destroy - must supply True to actually perform this!
+                User Fault Protection from random access to this endpoint.
+            history: bool
+                default: False
+                Also destroy all historical data
+
+        Response Body:
+            removed: int
+                count of assets destroyed
+            removed_history: int
+                count of all historical assets destroyed
+
+        """
         core_config, _ = self._get_plugin_configs(plugin_name='core', config_name='CoreService')
         api_settings = core_config.get('api_settings', {})
         destroy_enabled = api_settings.get('enable_destroy', False)
@@ -840,167 +1062,19 @@ class APIMixin:
 
         if do_history is True:
             collection_names = self.aggregator_db_connection.list_collection_names()
-            historicals = [x for x in collection_names if x.startswith(historical_prefix)]
+            historical_collection_names = [x for x in collection_names if x.startswith(historical_prefix)]
 
-            for historical in historicals:
-                collection = self.aggregator_db_connection[historical]
-                return_doc['removed_history'] += collection.count() or 0
-                collection.drop()
+            for historical_collection_name in historical_collection_names:
+                historical_collection = self.aggregator_db_connection[historical_collection_name]
+                return_doc['removed_history'] += historical_collection.count() or 0
+                historical_collection.drop()
 
         collection = self._entity_db_map[entity_type]
         return_doc['removed'] += collection.count() or 0
         collection.drop()
 
         self._insert_indexes_entity(entity_type=entity_type)
-        return jsonify(return_doc)
-
-    @filtered_entities()
-    @sorted_endpoint()
-    @projected()
-    @api_add_rule('devices/cached', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.DevicesAssets))
-    def api_cached_devices(self, mongo_filter, mongo_sort, mongo_projection):
-        content = self.get_request_data_as_object() if request.method == 'POST' else request.args
-        assets_count = None
-        try:
-            limit = int(content.get('limit', PAGINATION_LIMIT_MAX))
-            if limit < 1 or limit > PAGINATION_LIMIT_MAX:
-                limit = PAGINATION_LIMIT_MAX
-        except Exception:
-            limit = PAGINATION_LIMIT_MAX
-        cursor_id = content.get('cursor')
-        # count filtered assets only on the first request.
-        if not cursor_id:
-            devices_collection = self._entity_db_map[EntityType.Devices]
-            assets_count = get_entities_count(mongo_filter, devices_collection)
-
-        data, cursor_id = get_entities(0, 0, mongo_filter, mongo_sort,
-                                       mongo_projection,
-                                       EntityType.Devices,
-                                       default_sort=self._system_settings['defaultSort'], cursor_id=cursor_id,
-                                       use_cursor=True)
-        assets = [asset for asset in islice(data, limit)]
-        return_doc = {
-            'page': {
-                'totalResources': assets_count,
-                'size': len(assets)
-            },
-            'cursor': cursor_id,
-            'assets': assets
-        }
-        return jsonify(return_doc)
-
-    @filtered_entities()
-    @api_add_rule('devices/count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        None, PermissionCategory.DevicesAssets))
-    def api_devices_count(self, mongo_filter):
-        return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Devices]))
-
-    @api_add_rule('devices/fields', required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.DevicesAssets))
-    def api_devices_fields(self):
-        return jsonify(entity_fields(EntityType.Devices))
-
-    @api_add_rule('devices/<device_id>', required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.DevicesAssets))
-    def api_device_by_id(self, device_id):
-        return self._entity_by_id(EntityType.Devices, device_id)
-
-    @filtered_entities()
-    @api_add_rule('devices/labels', methods=['GET'], required_permission=PermissionValue.get(
-        None, PermissionCategory.DevicesAssets))
-    def api_get_device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
-
-    @filtered_entities()
-    @api_add_rule('devices/labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.DevicesAssets))
-    def api_update_device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
-
-    #########
-    # USERS #
-    #########
-
-    @paginated()
-    @filtered_entities()
-    @sorted_endpoint()
-    @projected()
-    @api_add_rule('users', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        None, PermissionCategory.UsersAssets))
-    def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        users_collection = self._entity_db_map[EntityType.Users]
-        self._save_query_to_history(EntityType.Users, mongo_filter, skip, limit, mongo_sort, mongo_projection)
-        return_doc = {
-            'page': get_page_metadata(skip, limit, get_entities_count(mongo_filter, users_collection)),
-            'assets': list(get_entities(limit, skip, mongo_filter, mongo_sort,
-                                        mongo_projection,
-                                        EntityType.Users,
-                                        default_sort=self._system_settings['defaultSort']))
-        }
-
-        return jsonify(return_doc)
-
-    @api_add_rule(
-        rule='users/destroy',
-        methods=['POST'],
-        required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.UsersAssets)
-    )
-    def api_users_destroy(self):
-        """Delete all assets and optionally all historical assets."""
-        return self._destroy_assets(entity_type=EntityType.Users, historical_prefix='historical_users_')
-
-    @filtered_entities()
-    @sorted_endpoint()
-    @projected()
-    @api_add_rule('users/cached', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.UsersAssets))
-    def api_cached_users(self, mongo_filter, mongo_sort, mongo_projection):
-        content = self.get_request_data_as_object() if request.method == 'POST' else request.args
-        assets_count = None
-        try:
-            limit = int(content.get('limit', PAGINATION_LIMIT_MAX))
-            if limit < 1 or limit > PAGINATION_LIMIT_MAX:
-                limit = PAGINATION_LIMIT_MAX
-        except Exception:
-            limit = PAGINATION_LIMIT_MAX
-        cursor_id = content.get('cursor')
-        # count filtered assets only on the first request.
-        if not cursor_id:
-            devices_collection = self._entity_db_map[EntityType.Users]
-            assets_count = get_entities_count(mongo_filter, devices_collection)
-
-        data, cursor_id = get_entities(0, 0, mongo_filter, mongo_sort,
-                                       mongo_projection,
-                                       EntityType.Users,
-                                       default_sort=self._system_settings['defaultSort'], cursor_id=cursor_id,
-                                       use_cursor=True)
-        assets = [asset for asset in islice(data, limit)]
-        return_doc = {
-            'page': {
-                'totalResources': assets_count,
-                'size': len(assets)
-            },
-            'cursor': cursor_id,
-            'assets': assets
-        }
-        return jsonify(return_doc)
-
-    @filtered_entities()
-    @api_add_rule('users/count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
-        None, PermissionCategory.UsersAssets))
-    def api_users_count(self, mongo_filter):
-        return str(get_entities_count(mongo_filter, self._entity_db_map[EntityType.Users]))
-
-    @api_add_rule('users/fields', required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.UsersAssets))
-    def api_users_fields(self):
-        return jsonify(entity_fields(EntityType.Users))
-
-    @api_add_rule('users/<user_id>', required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.UsersAssets))
-    def api_user_by_id(self, user_id):
-        return self._entity_by_id(EntityType.Users, user_id)
+        return return_doc
 
     def _entity_by_id(self, entity_type: EntityType, entity_id):
         """
@@ -1023,17 +1097,191 @@ class APIMixin:
             'tasks': entity_tasks(entity_id)
         })
 
+    ###########
+    # DEVICES #
+    ###########
+
+    @historical()
+    @paginated()
     @filtered_entities()
-    @api_add_rule('users/labels', methods=['GET'], required_permission=PermissionValue.get(
-        None, PermissionCategory.UsersAssets))
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(rule='devices', methods=['GET', 'POST'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_devices(self,
+                    limit: int,
+                    skip: int,
+                    mongo_filter: dict,
+                    mongo_sort: dict,
+                    mongo_projection: dict,
+                    history: datetime,
+                    ):
+        """Get device assets using paging. See api_get_assets_normal docstring."""
+        return jsonify(self.api_get_assets_normal(
+            entity_type=EntityType.Devices,
+            limit=limit,
+            skip=skip,
+            mongo_filter=mongo_filter,
+            mongo_sort=mongo_sort,
+            mongo_projection=mongo_projection,
+            history_date=history,
+        ))
+
+    @historical()
+    @paginated()
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(rule='devices/cached', methods=['GET', 'POST'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_devices_cursor(self,
+                           limit: int,
+                           skip: int,
+                           mongo_filter: dict,
+                           mongo_sort: dict,
+                           mongo_projection: dict,
+                           history: datetime,
+                           ):
+        """Get device assets using mongo cursor for paging. See api_get_assets_cursor docstring."""
+        return jsonify(self.api_get_assets_cursor(
+            entity_type=EntityType.Devices,
+            limit=limit,
+            skip=skip,
+            mongo_filter=mongo_filter,
+            mongo_sort=mongo_sort,
+            mongo_projection=mongo_projection,
+            history_date=history,
+        ))
+
+    @api_add_rule(rule='devices/history_dates', methods=['GET'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_devices_history_dates(self):
+        """Get all of the history dates that are valid for devices."""
+        return jsonify(all_historical_dates()['devices'])
+
+    @filtered_entities()
+    @historical()
+    @api_add_rule(rule='devices/count', methods=['GET', 'POST'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_devices_count(self, mongo_filter: dict, history: datetime):
+        """Get count of device assets. See api_get_assets_count docstring."""
+        return str(self.api_get_assets_count(
+            entity_type=EntityType.Devices,
+            mongo_filter=mongo_filter,
+            history_date=history,
+        ))
+
+    @api_add_rule(rule='devices/fields', methods=['GET'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_devices_fields(self):
+        return jsonify(entity_fields(EntityType.Devices))
+
+    @api_add_rule(rule='devices/<device_id>', methods=['GET'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_device_by_id(self, device_id):
+        return self._entity_by_id(EntityType.Devices, device_id)
+
+    @filtered_entities()
+    @api_add_rule(rule='devices/labels', methods=['GET'], required_permission=DEVICE_ASSETS_VIEW)
+    def api_get_device_labels(self, mongo_filter):
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
+
+    @filtered_entities()
+    @api_add_rule(rule='devices/labels', methods=['POST', 'DELETE'], required_permission=DEVICE_ASSETS_UPDATE)
+    def api_update_device_labels(self, mongo_filter):
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
+
+    @api_add_rule(rule='devices/destroy', methods=['POST'], required_permission=DEVICE_ASSETS_UPDATE)
+    def api_devices_destroy(self):
+        """Delete all assets and optionally all historical assets."""
+        return jsonify(self._destroy_assets(entity_type=EntityType.Devices, historical_prefix='historical_devices_'))
+
+    #########
+    # USERS #
+    #########
+
+    @historical()
+    @paginated()
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(rule='users', methods=['GET', 'POST'], required_permission=USER_ASSETS_VIEW)
+    def api_users(self,
+                  limit: int,
+                  skip: int,
+                  mongo_filter: dict,
+                  mongo_sort: dict,
+                  mongo_projection: dict,
+                  history: datetime,
+                  ):
+        """Get user assets using paging. See api_get_assets_normal docstring."""
+        return jsonify(self.api_get_assets_normal(
+            entity_type=EntityType.Users,
+            limit=limit,
+            skip=skip,
+            mongo_filter=mongo_filter,
+            mongo_sort=mongo_sort,
+            mongo_projection=mongo_projection,
+            history_date=history,
+        ))
+
+    @historical()
+    @paginated()
+    @filtered_entities()
+    @sorted_endpoint()
+    @projected()
+    @api_add_rule(rule='users/cached', methods=['GET', 'POST'], required_permission=USER_ASSETS_VIEW)
+    def api_users_cursor(self,
+                         limit: int,
+                         skip: int,
+                         mongo_filter: dict,
+                         mongo_sort: dict,
+                         mongo_projection: dict,
+                         history: datetime,
+                         ):
+        """Get user assets using mongo cursor for paging. See api_get_assets_cursor docstring."""
+        return jsonify(self.api_get_assets_cursor(
+            entity_type=EntityType.Users,
+            limit=limit,
+            skip=skip,
+            mongo_filter=mongo_filter,
+            mongo_sort=mongo_sort,
+            mongo_projection=mongo_projection,
+            history_date=history,
+        ))
+
+    @api_add_rule(rule='users/history_dates', methods=['GET'], required_permission=USER_ASSETS_VIEW)
+    def api_users_history_dates(self):
+        """Get all of the history dates that are valid for users."""
+        return jsonify(all_historical_dates()['users'])
+
+    @filtered_entities()
+    @historical()
+    @api_add_rule(rule='users/count', methods=['GET', 'POST'], required_permission=USER_ASSETS_VIEW)
+    def api_users_count(self, mongo_filter: dict, history: datetime):
+        """Get count of user assets. See api_get_assets_count docstring."""
+        return str(self.api_get_assets_count(
+            entity_type=EntityType.Users,
+            mongo_filter=mongo_filter,
+            history_date=history,
+        ))
+
+    @api_add_rule(rule='users/fields', methods=['GET'], required_permission=USER_ASSETS_VIEW)
+    def api_users_fields(self):
+        return jsonify(entity_fields(EntityType.Users))
+
+    @api_add_rule(rule='users/<user_id>', methods=['GET'], required_permission=USER_ASSETS_VIEW)
+    def api_user_by_id(self, user_id):
+        return self._entity_by_id(EntityType.Users, user_id)
+
+    @filtered_entities()
+    @api_add_rule(rule='users/labels', methods=['GET'], required_permission=USER_ASSETS_VIEW)
     def api_get_user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
 
     @filtered_entities()
-    @api_add_rule('users/labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
-        PermissionAction.Update, PermissionCategory.UsersAssets))
+    @api_add_rule(rule='users/labels', methods=['POST', 'DELETE'], required_permission=USER_ASSETS_UPDATE)
     def api_update_user_labels(self, mongo_filter):
         return self._entity_labels(self.users_db, self.users, mongo_filter)
+
+    @api_add_rule(rule='users/destroy', methods=['POST'], required_permission=USER_ASSETS_UPDATE)
+    def api_users_destroy(self):
+        """Delete all assets and optionally all historical assets."""
+        return jsonify(self._destroy_assets(entity_type=EntityType.Users, historical_prefix='historical_users_'))
 
     ################
     # ENFORCEMENTS #
