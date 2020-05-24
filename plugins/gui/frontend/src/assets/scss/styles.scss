@@ -632,6 +632,7 @@ textarea {
 
 input[type='text'], input[type='password'], input[type='number'] {
   -webkit-appearance: textfield;
+  border: 1px solid $grey-2;
 }
 
 .ant-modal {
