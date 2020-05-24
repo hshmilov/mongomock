@@ -359,7 +359,7 @@ class TestEnforcementActions(TestBase):
             self.devices_page.execute_saved_query(ENFORCEMENT_CHANGE_NAME)
             devices_count = self.devices_page.count_entities()
             smtp_service.verify_email_send(recipient)
-            mail_content = smtp_service.get_email_first_csv_content(recipient)
+            mail_content = smtp_service.wait_for_email_first_csv_content(recipient)
             mail_content_decoded = mail_content.decode('utf-8')
             mail_content_split = mail_content_decoded.split('\r\n')
             assert len(mail_content_split) == devices_count + 2, f'mail content: {mail_content!r}'

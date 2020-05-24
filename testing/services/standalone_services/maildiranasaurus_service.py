@@ -2,6 +2,7 @@ import os
 import mailbox
 import errno
 
+from axonius.utils.wait import wait_until
 from services.standalone_services.smtp_service import SmtpService
 
 
@@ -83,6 +84,11 @@ class MaildiranasaurusService(SmtpService):
     def get_email_subject(self, recipient):
         message = self.get_mail_message(recipient)
         return message['subject']
+
+    def wait_for_email_first_csv_content(self, recipient):
+        return wait_until(self.get_email_first_csv_content,
+                          check_return_value=True,
+                          recipient=recipient)
 
     def get_email_first_csv_content(self, recipient):
         """

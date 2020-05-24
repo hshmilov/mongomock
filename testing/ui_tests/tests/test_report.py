@@ -370,7 +370,7 @@ class TestReport(TestBase):
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
     def _test_csv(self, recipient, smtp_service):
-        mail_content = smtp_service.get_email_first_csv_content(recipient)
+        mail_content = smtp_service.wait_for_email_first_csv_content(recipient)
         mail_content_decoded = mail_content.decode('utf-8')
         mail_content_split = mail_content_decoded.split('\r\n')
         assert len(mail_content_split) == 12, f'mail content: {mail_content!r}'

@@ -58,7 +58,7 @@ class TestAdaptersPermissions(PermissionsTestBase):
         self.adapters_page.assert_new_server_button_is_enabled()
         assert self.adapters_page.is_row_checkbox_absent()
         self.adapters_page.assert_advanced_settings_is_disabled()
-        self.adapters_page.click_edit_server_by_name('Client1')
+        self.adapters_page.click_edit_server()
         self.adapters_page.click_save()
 
         self._add_action_to_role_and_login_with_user(settings_permissions,
@@ -73,7 +73,7 @@ class TestAdaptersPermissions(PermissionsTestBase):
         self.adapters_page.assert_new_server_button_is_enabled()
         self.adapters_page.assert_advanced_settings_is_enabled()
         assert self.adapters_page.is_row_checkbox_absent()
-        self.adapters_page.click_edit_server_by_name('Client1')
+        self.adapters_page.click_edit_server()
         wait_until(lambda: not self.adapters_page.is_save_button_disabled())
         self.adapters_page.click_save()
 

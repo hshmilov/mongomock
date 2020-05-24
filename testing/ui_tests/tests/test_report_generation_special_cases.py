@@ -11,10 +11,9 @@ from ui_tests.tests import ui_consts
 from ui_tests.tests.test_report_base import TestReportGenerationBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
 
-# pylint: disable=E1101
+# pylint: disable=E1101,no-member
 
 
-#pylint: disable=no-member
 class TestReportGenerationSpecialCases(TestReportGenerationBase):
     EMPTY_REPORT_NAME = 'empty_report'
 
@@ -147,9 +146,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
 
             self.reports_page.click_send_email()
             self.reports_page.find_email_sent_toaster()
-            mail_content = wait_until(smtp_service.get_email_first_csv_content,
-                                      check_return_value=True,
-                                      recipient=recipient)
+            mail_content = smtp_service.wait_for_email_first_csv_content(recipient)
             assert tag_name in mail_content.decode('utf-8')
             self.logger.info('We are done with test_report_with_hebrew_name_and_text test')
 
