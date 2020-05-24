@@ -387,6 +387,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         }))
 
         entity_to_add = self._new_device_adapter() if entity_type == EntityType.Devices else self._new_user_adapter()
+        logger.info(f'_entity_custom_data received data: {post_data["data"]}')
 
         errors = {}
         for k, v in post_data['data'].items():
@@ -408,6 +409,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             return return_error(errors, 400)
 
         entity_to_add_dict = entity_to_add.to_dict()
+        logger.info(f'_entity_custom_data adding data: {entity_to_add_dict}')
 
         with ThreadPool(5) as pool:
             def tag_adapter(entity):

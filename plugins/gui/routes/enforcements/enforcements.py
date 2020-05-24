@@ -307,6 +307,7 @@ class Enforcements(Tasks):
         """
         See self._entity_custom_data
         """
+        logger.info('Adding Custom Data by Triggered Enforcement')
         return self._entity_custom_data(EntityType(entity_type))
 
     @rev_cached(ttl=3600)

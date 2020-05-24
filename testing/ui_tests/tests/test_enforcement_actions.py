@@ -548,7 +548,6 @@ class TestEnforcementActions(TestBase):
         count = len(self.enforcements_page.find_elements_by_xpath(self.enforcements_page.COMPLETED_CELL_XPATH))
         return count == expected_completed_count
 
-    @pytest.mark.skip('AX-6501')
     def test_custom_data_action(self):
         # field name is similar to how generic 'Host Name' saved on db
         enforcement_db_like = {
