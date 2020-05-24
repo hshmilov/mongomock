@@ -121,6 +121,7 @@ class TestAdapters(TestBase):
             print('Cleaned csv clients.')
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
+    @pytest.mark.skip('AX-7641')
     def test_adapter_clients_label(self):
         """
         this test check for the connection label ( defined in the client configuration of the adapter ) existence
