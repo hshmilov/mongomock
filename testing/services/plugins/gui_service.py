@@ -1221,7 +1221,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_dashboards_views(self, entity_to_views):
         dashboards_update = self.db.gui_dashboard_collection().find({
             'config': {
-                '$exists': True
+                '$ne': None
             }
         }, {'config': 1})
         for dashboard in dashboards_update:
@@ -1305,8 +1305,16 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         print('Upgrade to schema 35')
         try:
             self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many(
-                {'$or': [{'metric': 'compare'}, {'metric': 'segment'}]},
                 {
+                    'config': {
+                        '$ne': None
+                    },
+                    '$or': [{
+                        'metric': 'compare'
+                    }, {
+                        'metric': 'segment'
+                    }]
+                }, {
                     '$set': {
                         'config.sort': {
                             'sort_by': 'value',
