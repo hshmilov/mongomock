@@ -166,6 +166,7 @@ class SettingsPage(Page):
 
     CONNECTION_LABEL_REQUIRED_DIV_CSS = '#requireConnectionLabel .checkbox-container'
     CONNECTION_LABEL_REQUIRED_INPUT_CSS = '#requireConnectionLabel .checkbox-container input'
+
     ACTIVE_TAB = 'div.x-tab.active'
 
     ENTERPRISE_PASSWORD_MGMT_TEXT = 'Use Password Manager'
@@ -227,6 +228,7 @@ class SettingsPage(Page):
         ],
     }
 
+    AUTO_QUERY_CHECKBOX_ID = 'autoQuery'
     ONLY_REPORTS_PERMISSIONS = {
         'reports': 'all'
     }
@@ -1462,6 +1464,19 @@ class SettingsPage(Page):
 
     def fill_s3_preshared_key(self, value):
         self.fill_text_field_by_element_id('preshared_key', value)
+
+    def toggle_auto_querying(self, make_yes=True):
+        self.switch_to_page()
+        self.click_gui_settings()
+        toggle = self.driver.find_element_by_id(self.AUTO_QUERY_CHECKBOX_ID)
+        self.click_toggle_button(toggle, make_yes=make_yes)
+        self.save_and_wait_for_toaster()
+
+    def disable_auto_querying(self):
+        self.toggle_auto_querying(make_yes=False)
+
+    def enable_auto_querying(self):
+        self.toggle_auto_querying(make_yes=True)
 
     def set_notify_on_adapters_fetch(self, enable=True):
         self.switch_to_page()

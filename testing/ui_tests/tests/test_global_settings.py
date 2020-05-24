@@ -306,6 +306,21 @@ class TestGlobalSettings(TestBase):
         self.settings_page.toggle_root_master(toggle_value)
         self.settings_page.save_and_wait_for_toaster()
 
+    def test_remove_auto_query(self):
+        self.settings_page.disable_auto_querying()
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        assert len(self.devices_page.get_all_data()) > 0
+        self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
+                                               operator='in',
+                                               value='NOT_EXSITS')
+        assert len(self.devices_page.get_all_data()) > 0
+        self.devices_page.click_query_search_when_auto_query_disabled()
+        self.users_page.wait_for_table_to_load()
+        assert len(self.devices_page.get_all_data()) == 0
+        self.settings_page.enable_auto_querying()
+
     def test_s3_restore(self):
         local_dir = _get_backup_files_local_dir()
         self.s3_passphrase = self._generate_random_passphrase()

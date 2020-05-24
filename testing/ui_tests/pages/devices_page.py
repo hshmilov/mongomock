@@ -297,3 +297,7 @@ class DevicesPage(EntitiesPage):
         self.fill_query_value(days, parent=expressions[0])
         self.wait_for_table_to_load()
         self.close_dropdown()
+
+    def click_query_search_when_auto_query_disabled(self):
+        self.click_button(text='Search',
+                          button_class='ant-btn ant-btn-primary x-button')
