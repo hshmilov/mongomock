@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
+import pytest
+
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
