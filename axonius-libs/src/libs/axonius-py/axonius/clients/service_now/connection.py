@@ -88,7 +88,7 @@ class ServiceNowConnection(RESTConnection):
                 for k, v in relation_dict.items()
                 if (isinstance(k, str) and k.startswith(f'{relation}.'))}
 
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def _get_subtables_by_key(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
         tables_by_key = {}
 
@@ -195,6 +195,10 @@ class ServiceNowConnection(RESTConnection):
                 else:
                     logger.error('Invalid sub_table_key encountered {sub_table_key}')
                     continue
+
+        distict_ids_by_table_key = {table_key: len(subtable_by_id)
+                                    for table_key, subtable_by_id in tables_by_key.items()}
+        logger.info(f'Actual distict ids count: {distict_ids_by_table_key}')
 
         return tables_by_key
 

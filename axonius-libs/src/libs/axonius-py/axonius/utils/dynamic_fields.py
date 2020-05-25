@@ -51,8 +51,9 @@ def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str, allow
         entity.declare_new_field(key, get_entity_new_field(title, value, allow_empty=allow_empty))
 
     if value in EMPTY_VARS:
-        # If we reached here it means we allow empty values are OK with setting and empty value
+        # If we reached here it means we allow empty values
         entity[key] = value
+        return
 
     if isinstance(value, dict):
         smartjsonclass_instance = entity.get_field_type(key)._type()

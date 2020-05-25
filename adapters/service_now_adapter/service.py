@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re
 import chardet
 from typing import List, Optional
 
@@ -11,7 +12,6 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.consts import *
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
@@ -44,6 +44,16 @@ class MaintenanceSchedule(SmartJsonClass):
     description = Field(str, 'Description')
     document = Field(str, 'Document')
     document_key = Field(str, 'Document Key')
+
+
+class RelativeInformationLeaf(SmartJsonClass):
+    name = Field(str, 'Name')
+    sys_class_name = Field(str, 'Class Name')
+
+
+class RelativeInformationNode1(RelativeInformationLeaf):
+    upstream = ListField(RelativeInformationLeaf, 'Upstream')
+    downstream = ListField(RelativeInformationLeaf, 'Downstream')
 
 
 class ServiceNowAdapter(AdapterBase, Configurable):
@@ -82,7 +92,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         u_loaner = Field(str, 'Loaner')
         u_virtual_system_type = Field(str, 'Virtual System Type')
         u_cloud_premises = Field(str, 'Cloud Premises')
-        u_bia_confidentiallity = Field(str, 'BIA Confidentiallity')
+        u_bia_confidentiality = Field(str, 'BIA Confidentiality')
         u_bia_availability = Field(str, 'BIA Availability')
         u_bia_id = Field(str, 'BIA ID')
         u_bia_integrity = Field(str, 'BIA Integrity')
@@ -108,7 +118,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         model_version_number = Field(str, 'Model Version Number')
         operational_status = Field(str, 'Operational Status')
         hardware_status = Field(str, 'Hardware Status')
+        hardware_substatus = Field(str, 'Hardware Substatus')
         vendor = Field(str, 'Vendor')
+        u_vendor_ban = Field(str, 'Vendor Ban')
         u_number = Field(str, 'U Number')
         support_group = Field(str, 'Support Group')
         u_director = Field(str, 'Director')
@@ -126,9 +138,102 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         maintenance_schedule = Field(MaintenanceSchedule, 'Maintenance Schedule')
         company = Field(str, 'Company')
         model_u_classification = Field(str, 'Model Classification')
+        use_count = Field(int, 'Use Count')
+        use_units = Field(str, 'Use Units')
+        bandwidth = Field(int, 'Estimated bandwidth')
+        snmp_sys_location = Field(str, 'SNMP Location')
+        u_audit_tools_checked = Field(str, 'Audit Tools Checked')
+        u_audit_tools_pass = Field(str, 'Audit Tools Pass')
+        u_backbone = Field(str, 'Backbone')
+        u_bill_ref_id = Field(str, 'Bill Ref ID')
+        u_circuit_id = Field(str, 'Circuit ID')
+        u_config_item_id = Field(str, 'Config Item ID')
+        u_ownership_ack = Field(str, 'Ownership ACK')
+        u_port_speed = Field(str, 'Port Speed')
+        u_previous_assigned_to = Field(str, 'Previous Assigned To')
+        u_previous_owned_by = Field(str, 'Previous Owned By')
+        u_process_origin = Field(str, 'Process Origin')
+        u_system_origin = Field(str, 'System Origin')
+        u_uninstall_date = Field(datetime.datetime, 'Uninstall Date')
+        u_access_authorisers = Field(str, 'Access Authorisers')
+        u_access_control_list_extraction_method = Field(str, 'ACL Extraction Method')
+        u_acl_contacts = Field(str, 'ACL Contacts')
+        u_acl_contacts_mailbox = Field(str, 'ACL Contacts Mailbox')
+        u_atm_category = Field(str, 'ATM Category')
+        u_atm_line_address = Field(str, 'ATM Line Address')
+        u_atm_security_carrier = Field(str, 'ATM Security Carrier')
+        u_attestation_date = Field(datetime.datetime, 'Attestation Date')
+        u_bted_id = Field(str, 'BTED ID')
+        u_bucf_contacts = Field(str, 'BUCF Contacts')
+        u_bucf_contacts_mailbox = Field(str, 'BUCF Contacts Mailbox')
+        u_business_owner = Field(str, 'Business Owner')
+        u_cmdb_data_mgt_journal = Field(str, 'Management Journal')
+        u_cmdb_data_owner = Field(str, 'Data Owner')
+        u_cmdb_data_owner_group = Field(str, 'Data Owner Group')
+        u_cmdb_data_owner_team = Field(str, 'Data Owner Team')
+        u_cmdb_data_steward = Field(str, 'Data Steward')
+        u_custodian = Field(str, 'Custodian')
+        u_custodian_group = Field(str, 'Custodian Group')
+        u_custodian_team = Field(str, 'Custodian Team')
+        u_delivery_of_access_control_list = Field(str, 'Delivery of ACL')
+        u_fulfilment_group = Field(str, 'Fulfilment Group')
+        u_last_update_from_import = Field(str, 'Last Update From Import')
+        u_oim_division = Field(str, 'OIM Division')
+        u_organisation = Field(str, 'Organisation')
+        u_orphan_account_contacts = Field(str, 'Orphan Account Contacts')
+        u_orphan_account_manager = Field(str, 'Orphan Account Manager')
+        u_permitted_childless = Field(str, 'Permitted Childless')
+        u_permitted_parentless = Field(str, 'Permitted Parentless')
+        u_primary_support_group = Field(str, 'Primary Support Group')
+        u_primary_support_sme = Field(str, 'Primary Support SME')
+        u_primary_support_team = Field(str, 'Primary Support Team')
+        u_reason_for_childless = Field(str, 'Reason For Childless')
+        u_reason_for_parentless = Field(str, 'Reason For Parentless')
+        u_recertification_approach = Field(str, 'Recertification Approach')
+        u_recertification_contacts = Field(str, 'Recertification Contacts')
+        u_recertification_type = Field(str, 'Recertification Type')
+        u_record_date_time = Field(str, 'Record Date Time')
+        u_record_id = Field(str, 'Record ID')
+        u_record_name = Field(str, 'Record Name')
+        u_ref_1_label = Field(str, 'Ref 1 Label')
+        u_ref_1_value = Field(str, 'Ref 1 Value')
+        u_ref_2_label = Field(str, 'Ref 2 Label')
+        u_ref_2_value = Field(str, 'Ref 2 Value')
+        u_ref_3_label = Field(str, 'Ref 3 Label')
+        u_ref_3_value = Field(str, 'Ref 3 Value')
+        u_role = Field(str, 'Role')
+        u_security_administrators = Field(str, 'Security Administrators')
+        u_si_id = Field(str, 'SI ID')
+        u_source_name = Field(str, 'Source Name')
+        u_source_target_class = Field(str, 'Source Target Class')
+        u_sox_control = Field(str, 'SOX Control')
+        u_suspensions_deletions = Field(str, 'Suspensions Deletions')
+        u_technical_admin_contacts = Field(str, 'Technical Admin Contacts')
+        u_tech_admin_mailbox = Field(str, 'Tech Admin Mailbox')
+        u_toxic_division_group = Field(str, 'Toxic Division Group')
+        u_uar_contacts = Field(str, 'UAR Contacts')
+        u_uar_contacts_mailbox = Field(str, 'UAR Contacts Mailbox')
+        u_uav_delegates = Field(str, 'UAV Delegates')
+        u_work_notes = Field(str, 'Work Notes')
+        phone_number = Field(str, 'Phone Number')
+        ci_comm_type = Field(str, 'Type')
+        # you should keep these last
+        upstream = ListField(RelativeInformationNode1, 'Upstream')
+        downstream = ListField(RelativeInformationNode1, 'Downstream')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @staticmethod
+    def _get_optional_reference(raw_value, reference_table: dict, reference_table_field: str):
+        if not raw_value:
+            return None
+        if not isinstance(raw_value, dict):
+            return raw_value
+        raw_value = reference_table.get(raw_value.get('value'))
+        if not isinstance(raw_value, dict):
+            return None
+        return raw_value.get(reference_table_field)
 
     # pylint: disable=R0912,R0915,R0914
     def create_snow_device(self,
@@ -202,8 +307,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.name = name
             class_name = device_raw.get('sys_class_name')
             device.u_cloud_premises = device_raw.get('u_cloud_premises')
-            device.u_bia_confidentiallity = device_raw.get('u_bia_confidentiallity')
             device.u_bia_availability = device_raw.get('u_bia_availability')
+            device.u_bia_confidentiality = device_raw.get('u_bia_confidentiality')
             device.u_bia_id = device_raw.get('u_bia_id')
             device.u_bia_integrity = device_raw.get('u_bia_integrity')
             device.u_bia_overall = device_raw.get('u_bia_overall')
@@ -213,7 +318,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.u_crosssite_condition = device_raw.get('u_crosssite_condition')
             device.u_virtual_system_type = device_raw.get('u_virtual_system_type')
             device.u_heritage = U_HERITAGE_DICT.get(str(device_raw.get('u_heritage'))) or device_raw.get('u_heritage')
-            virtual = device_raw.get('virtual')
+            virtual = device_raw.get('virtual') or device_raw.get('u_is_virtual')
             if isinstance(virtual, str):
                 device.is_virtual = virtual.lower() == 'true'
                 if virtual.lower() != 'true' and self.__fetch_only_virtual_devices:
@@ -232,6 +337,30 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         ip_addresses = ip_addresses.split('/')
                     elif ',' in ip_addresses:
                         ip_addresses = ip_addresses.split(',')
+                    elif ';' in ip_addresses:
+                        ip_addresses = ip_addresses.split(';')
+                    elif '&' in ip_addresses:
+                        ip_addresses = ip_addresses.split('&')
+                    elif 'and' in ip_addresses:
+                        ip_addresses = ip_addresses.split('and')
+                    elif r'\\\\' in ip_addresses:
+                        # Example: 1.1.1.1\\\\1.1.1.1
+                        ip_addresses = ip_addresses.split(r'\\\\')
+                    elif re.search(RE_SQUARED_BRACKET_WRAPPED, ip_addresses):
+                        # Example: [1.1.1.1] or [1.1.1.1][255.255.255.192]
+                        # Note: all of the use cases ive seen had only one ip (and at most an additional subnet),
+                        #       This implementation considers both as IPs in case this will actually be the case,
+                        #       at most the subnet will be ignored as invalid ip
+                        ip_addresses = re.findall(RE_SQUARED_BRACKET_WRAPPED, ip_addresses)
+                    elif ':' in ip_addresses:
+                        # Example: 1.1.1.1:8000
+                        ip_addresses = [ip_addresses.split(':')[0]]
+                    elif '(ilo' in ip_addresses.lower():
+                        # Example: 1.1.1.1 (iLo 1.1.1.1) or 1.1.1.1 (iLo)
+                        ip_addresses = [ip_addresses.split('(i', 1)[0]]
+                    elif '-' in ip_addresses:
+                        # Example: 1.1.1.1 - VLAN2
+                        ip_addresses = [ip_addresses.split('-')[0]]
                     else:
                         ip_addresses = [ip_addresses]
                     ip_addresses = [ip.strip() for ip in ip_addresses]
@@ -248,7 +377,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     (device_raw.get('support_group') or {}).get('value'))
                 if snow_support_group_value:
                     device.support_group = snow_support_group_value.get('name')
-                    device.u_director = snow_support_group_value.get('u_director')
+                    director_value = (snow_support_group_value.get('u_director') or {}).get('value')
+                    device.u_director = self._get_optional_reference(director_value, users_table_dict, 'name')
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -282,9 +412,74 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device_model = None
             curr_model_dict = snow_model_dict.get((device_raw.get('model_id') or {}).get('value')) or {}
             try:
-                device.model_u_classification = curr_model_dict.get('u_classification')
+                model_u_classification = curr_model_dict.get('u_classification')
+                if isinstance(model_u_classification, str):
+                    try:
+                        # see if its an integer string, e.g. '6'
+                        model_u_classification = int(model_u_classification)
+                        # Fallthrough to int handling
+                    except Exception:
+                        # nope its an actual string
+                        pass
+                if isinstance(model_u_classification, int):
+                    # Note: Translate classification into the correct string, default to the classification number
+                    model_u_classification = (MODEL_U_CLASSIFICATION_DICT.get(model_u_classification)
+                                              or model_u_classification)
+                device.model_u_classification = model_u_classification
             except Exception:
                 logger.warning(f'Problem getting model classification at {curr_model_dict}', exc_info=True)
+            try:
+                use_count = device_raw.get('use_count')
+                if isinstance(use_count, int):
+                    device.use_count = use_count
+                use_units = device_raw.get('use_units')
+                if isinstance(use_units, str):
+                    device.use_units = use_units
+                bandwidth = device_raw.get('bandwidth')
+                if isinstance(bandwidth, int):
+                    device.bandwidth = bandwidth
+                snmp_sys_location = device_raw.get('snmp_sys_location')
+                if isinstance(snmp_sys_location, str):
+                    device.snmp_sys_location = snmp_sys_location
+                u_audit_tools_checked = device_raw.get('u_audit_tools_checked')
+                if isinstance(u_audit_tools_checked, str):
+                    device.u_audit_tools_checked = u_audit_tools_checked
+                u_audit_tools_pass = device_raw.get('u_audit_tools_pass')
+                if isinstance(u_audit_tools_pass, str):
+                    device.u_audit_tools_pass = u_audit_tools_pass
+                u_backbone = device_raw.get('u_backbone')
+                if isinstance(u_backbone, str):
+                    device.u_backbone = u_backbone
+                u_bill_ref_id = device_raw.get('u_bill_ref_id')
+                if isinstance(u_bill_ref_id, str):
+                    device.u_bill_ref_id = u_bill_ref_id
+                u_circuit_id = device_raw.get('u_circuit_id')
+                if isinstance(u_circuit_id, str):
+                    device.u_circuit_id = u_circuit_id
+                u_config_item_id = device_raw.get('u_config_item_id')
+                if isinstance(u_config_item_id, str):
+                    device.u_config_item_id = u_config_item_id
+                u_ownership_ack = device_raw.get('u_ownership_ack')
+                if isinstance(u_ownership_ack, str):
+                    device.u_ownership_ack = u_ownership_ack
+                u_port_speed = device_raw.get('u_port_speed')
+                if isinstance(u_port_speed, str):
+                    device.u_port_speed = u_port_speed
+                u_previous_assigned_to = device_raw.get('u_previous_assigned_to')
+                if isinstance(u_previous_assigned_to, str):
+                    device.u_previous_assigned_to = u_previous_assigned_to
+                u_previous_owned_by = device_raw.get('u_previous_owned_by')
+                if isinstance(u_previous_owned_by, str):
+                    device.u_previous_owned_by = u_previous_owned_by
+                u_process_origin = device_raw.get('u_process_origin')
+                if isinstance(u_process_origin, str):
+                    device.u_process_origin = u_process_origin
+                u_system_origin = device_raw.get('u_system_origin')
+                if isinstance(u_system_origin, str):
+                    device.u_system_origin = u_system_origin
+                device.u_uninstall_date = parse_date(device_raw.get('u_uninstall_date'))
+            except Exception:
+                logger.warning(f'Failed parsing SNOW JSON fields', exc_info=True)
             try:
                 model_number = device_raw.get('model_number')
                 if isinstance(model_number, dict):
@@ -322,7 +517,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.hostname = host_name.split('.')[0].strip()
                 else:
                     alias = device_raw.get('u_alias')
-                    if alias:
+                    if alias and ',' in alias and '|' in name:
                         alias_list = alias.split(',')
                         for alias_raw in alias_list:
                             alias_raw = alias_raw.strip().lower()
@@ -472,10 +667,14 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                             assigned_to_business_unit_value = assigned_to_business_unit.get('value')
                             if assigned_to_business_unit_value:
                                 # Not sure whether its from company table or department table
-                                assgined_to_bus_obj = (companies_table_dict.get(assigned_to_business_unit_value) or
-                                                       snow_department_table_dict.get(assigned_to_business_unit_value)
-                                                       or {})
-                                assgined_to_bus_name = assgined_to_bus_obj.get('name')
+                                assgined_to_bus_name = None
+                                assgined_to_bus_obj = snow_department_table_dict.get(assigned_to_business_unit_value)
+                                if assgined_to_bus_obj:
+                                    assgined_to_bus_name = assgined_to_bus_obj.get('name')
+                                else:
+                                    assgined_to_bus_obj = companies_table_dict.get(assigned_to_business_unit_value)
+                                    if assgined_to_bus_obj:
+                                        assgined_to_bus_name = assgined_to_bus_obj.get('name')
                                 device.assigned_to_business_unit = assgined_to_bus_name
                     except Exception:
                         logger.exception(f'Problem with business unit')
@@ -501,6 +700,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                         device.vendor = companies_table_dict.get(vendor_link).get('name')
                 except Exception:
                     logger.exception(f'Problem getting vendor for {device_raw}')
+                u_vendor_ban = device_raw.get('u_vendor_ban')
+                if isinstance(u_vendor_ban, str):
+                    device.u_vendor_ban = u_vendor_ban
                 try:
                     manufacturer_link = ((device_raw.get('manufacturer') or {}).get('value') or
                                          (curr_model_dict.get('manufacturer') or {}).get('value'))
@@ -563,11 +765,104 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.u_supplier = (supplier_table_dict.get(supplier_value) or {}).get('u_supplier')
             except Exception:
                 logger.exception(f'Problem getting supplier_info {device_raw}')
-            self._fill_relations(device, device_raw.get('sys_id'), relations_table_dict, relations_info_dict)
+            self._fill_relation(device, device_raw.get('sys_id'), RELATIONS_TABLE_PARENT_KEY,
+                                relations_table_dict, relations_info_dict)
+            self._fill_relation(device, device_raw.get('sys_id'), RELATIONS_TABLE_CHILD_KEY,
+                                relations_table_dict, relations_info_dict)
             maintenance_dict = snow_maintenance_sched_dict.get(
                 (device_raw.get('maintenance_schedule') or {}).get('value'))
             if maintenance_dict:
                 self._fill_maintenance_schedule(device, maintenance_dict)
+            try:
+                device.u_access_authorisers = self._get_optional_reference(device_raw.get('u_access_authorisers'),
+                                                                           users_table_dict, 'name')
+                device.u_access_control_list_extraction_method = device_raw.get(
+                    'u_access_control_list_extraction_method')
+                device.u_acl_contacts = self._get_optional_reference(device_raw.get('u_acl_contacts'),
+                                                                     users_table_dict, 'name')
+                device.u_acl_contacts_mailbox = device_raw.get('u_acl_contacts_mailbox')
+                device.u_atm_category = device_raw.get('u_atm_category')
+                device.u_atm_line_address = device_raw.get('u_atm_line_address')
+                device.u_atm_security_carrier = device_raw.get('u_atm_security_carrier')
+                device.u_attestation_date = parse_date(device_raw.get('u_attestation_date'))
+                device.u_bted_id = device_raw.get('u_bted_id')
+                device.u_bucf_contacts = self._get_optional_reference(device_raw.get('u_bucf_contacts'),
+                                                                      users_table_dict, 'name')
+                device.u_bucf_contacts_mailbox = device_raw.get('u_bucf_contacts_mailbox')
+                device.u_business_owner = self._get_optional_reference(device_raw.get('u_business_owner'),
+                                                                       users_table_dict, 'name')
+                device.u_cmdb_data_mgt_journal = device_raw.get('u_cmdb_data_mgt_journal')
+                device.u_cmdb_data_owner = self._get_optional_reference(device_raw.get('u_cmdb_data_owner'),
+                                                                        users_table_dict, 'name')
+                device.u_cmdb_data_owner_group = self._get_optional_reference(device_raw.get('u_cmdb_data_owner_group'),
+                                                                              snow_user_groups_table_dict, 'name')
+                device.u_cmdb_data_owner_team = self._get_optional_reference(device_raw.get('u_cmdb_data_owner_team'),
+                                                                             snow_user_groups_table_dict, 'name')
+                device.u_cmdb_data_steward = self._get_optional_reference(device_raw.get('u_cmdb_data_steward'),
+                                                                          users_table_dict, 'name')
+                device.u_custodian = self._get_optional_reference(device_raw.get('u_custodian'),
+                                                                  users_table_dict, 'name')
+                device.u_custodian_group = self._get_optional_reference(device_raw.get('u_custodian_group'),
+                                                                        snow_user_groups_table_dict, 'name')
+                device.u_custodian_team = device_raw.get('u_custodian_team')
+                device.u_delivery_of_access_control_list = device_raw.get('u_delivery_of_access_control_list')
+                device.u_fulfilment_group = self._get_optional_reference(device_raw.get('u_fulfilment_group'),
+                                                                         snow_user_groups_table_dict, 'name')
+                device.u_last_update_from_import = device_raw.get('u_last_update_from_import')
+                device.u_oim_division = device_raw.get('u_oim_division')
+                device.u_organisation = device_raw.get('u_organisation')
+                device.u_orphan_account_contacts = self._get_optional_reference(device_raw.get('u_orphan_account_contacts'),
+                                                                                users_table_dict, 'name')
+                device.u_orphan_account_manager = self._get_optional_reference(device_raw.get('u_orphan_account_manager'),
+                                                                               users_table_dict, 'name')
+                device.u_permitted_childless = device_raw.get('u_permitted_childless')
+                device.u_permitted_parentless = device_raw.get('u_permitted_parentless')
+                device.u_primary_support_group = self._get_optional_reference(device_raw.get('u_primary_support_group'),
+                                                                              snow_user_groups_table_dict, 'name')
+                device.u_primary_support_sme = self._get_optional_reference(device_raw.get('u_primary_support_sme'),
+                                                                            users_table_dict, 'name')
+                device.u_primary_support_team = device_raw.get('u_primary_support_team')
+                device.u_reason_for_childless = device_raw.get('u_reason_for_childless')
+                device.u_reason_for_parentless = device_raw.get('u_reason_for_parentless')
+                device.u_recertification_approach = device_raw.get('u_recertification_approach')
+                device.u_recertification_contacts = self._get_optional_reference(device_raw.get('u_recertification_contacts'),
+                                                                                 users_table_dict, 'name')
+                device.u_recertification_type = device_raw.get('u_recertification_type')
+                device.u_record_date_time = device_raw.get('u_record_date_time')
+                device.u_record_id = device_raw.get('u_record_id')
+                device.u_record_name = device_raw.get('u_record_name')
+                device.u_ref_1_label = device_raw.get('u_ref_1_label')
+                device.u_ref_1_value = device_raw.get('u_ref_1_value')
+                device.u_ref_2_label = device_raw.get('u_ref_2_label')
+                device.u_ref_2_value = device_raw.get('u_ref_2_value')
+                device.u_ref_3_label = device_raw.get('u_ref_3_label')
+                device.u_ref_3_value = device_raw.get('u_ref_3_value')
+                device.u_role = device_raw.get('u_role')
+                device.u_security_administrators = self._get_optional_reference(device_raw.get('u_security_administrators'),
+                                                                                users_table_dict, 'name')
+                device.u_si_id = device_raw.get('u_si_id')
+                device.u_source_name = device_raw.get('u_source_name')
+                device.u_source_target_class = device_raw.get('u_source_target_class')
+                device.u_sox_control = device_raw.get('u_sox_control')
+                device.u_suspensions_deletions = device_raw.get('u_suspensions_deletions')
+                device.u_technical_admin_contacts = self._get_optional_reference(device_raw.get('u_technical_admin_contacts'),
+                                                                                 users_table_dict, 'name')
+                device.u_tech_admin_mailbox = device_raw.get('u_tech_admin_mailbox')
+                device.u_toxic_division_group = self._get_optional_reference(device_raw.get('u_toxic_division_group'),
+                                                                             snow_user_groups_table_dict, 'name')
+                device.u_uar_contacts = self._get_optional_reference(device_raw.get('u_uar_contacts'),
+                                                                     users_table_dict, 'name')
+                device.u_uar_contacts_mailbox = device_raw.get('u_uar_contacts_mailbox')
+                device.u_uav_delegates = self._get_optional_reference(device_raw.get('u_uav_delegates'),
+                                                                      users_table_dict, 'name')
+                device.u_work_notes = device_raw.get('u_work_notes')
+            except Exception:
+                logger.exception(f'Failed parsing cmdb_ci_computer_atm fields')
+            try:
+                device.phone_number = device_raw.get('phone_number')
+                device.ci_comm_type = device_raw.get('type')
+            except Exception:
+                logger.exception(f'failed parsing cmdb_ci_comm fields')
             device.domain = device_raw.get('dns_domain')
             device.used_for = device_raw.get('used_for')
             device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
@@ -581,6 +876,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             if self.__fetch_operational_status:
                 device.operational_status = install_status_dict.get(device_raw.get('operational_status'))
             device.hardware_status = device_raw.get('hardware_status')
+            hardware_sub_status = device_raw.get('hardware_substatus')
+            if isinstance(hardware_sub_status, str):
+                device.hardware_substatus = hardware_sub_status
             device.u_number = device_raw.get('u_number')
             device.u_consumption_type = device_raw.get('u_consumption_type')
             device.u_function = device_raw.get('u_function')
@@ -865,79 +1163,65 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 logger.warning(f'Problem getting user {user_raw}', exc_info=True)
 
     @staticmethod
-    def _get_relations(initial_sys_id, relation_key, relations_table_dict, relations_info_dict, initial_depth=2) \
+    def _fill_relation(device, initial_sys_id, relation_key, relations_table_dict, relations_info_dict, initial_depth=3) \
             -> Optional[List[dict]]:
-        """
-        :param initial_sys_id:
-        :param relation_key: RELATIONS_TABLE_CHILD_KEY | RELATIONS_TABLE_PARENT_KEY
-                            if other value is given, KeyError would be raised.
-        :param relations_table_dict: {RELATIONS_TABLE_CHILD_KEY: {sys_id: [relative_sys_id, ...], ...},
-                                      RELATIONS_TABLE_PARENT_KEY: {sys_id: [relative_sys_id, ..], ...}}
-        :param relations_info_dict:  {sys_id: {'name': ..., ...}}
-        :param initial_depth:
-        :return: (for relation_key==RELATIONS_TABLE_CHILD_KEY)
-            [{'name': ..., ..., RELATIONS_FIELD_CHILD: [
-                {'name':..., ..., RELATIONS_FIELD_CHILD: [...]}
-              ]}]
-        """
 
-        def _recursive_prepare_relation(sys_id, depth) -> dict:
+        def _get_node_class(depth):
+            if depth == 2:
+                return RelativeInformationNode1
+            else:
+                return RelativeInformationLeaf
+
+        def _recursive_prepare_relation(sys_id, depth):
+
             relations_info = relations_info_dict.get(sys_id)
+            if not relations_info:
+                return None
+
+            curr_node_cls = _get_node_class(depth)
+            curr_node = curr_node_cls(name=relations_info.get('name'),
+                                      sys_class_name=relations_info.get('sys_class_name'))
+
             curr_relations = (relations_table_dict.get(sys_id) or {}).get(relation_key) or []
             # If we reached max depth or there are no relations, return only the info
             if (depth == 1) or (not curr_relations):
-                return relations_info
-            curr_relation_dict = relations_info or {}
-
-            # Note: this throws intentionally if invalid relation_key was given
-            curr_field_name = RELATIONS_KEY_TO_FIELD[relation_key]
-            curr_relative_details = curr_relation_dict.setdefault(curr_field_name, list())
+                return curr_node
 
             # parse relation
+            curr_relative_objs = []
             for relative_sys_id in curr_relations:
-                relative_dict = _recursive_prepare_relation(relative_sys_id, depth=depth - 1)
-                if not relative_dict:
+                relative_obj = _recursive_prepare_relation(relative_sys_id, depth=depth - 1)
+                if not relative_obj:
                     continue
-                curr_relative_details.append(relative_dict)
-            return curr_relation_dict
+                curr_relative_objs.append(relative_obj)
 
-        # if initial sys_id has no relations of relation_key type, return None
-        relative_sys_ids = (relations_table_dict.get(initial_sys_id) or {}).get(relation_key)
-        if not relative_sys_ids:
-            return None
+            # assign relatives
+            if relation_key == RELATIONS_TABLE_CHILD_KEY:
+                curr_node.downstream = curr_relative_objs
+            elif relation_key == RELATIONS_TABLE_PARENT_KEY:
+                curr_node.upstream = curr_relative_objs
 
-        relative_dicts = []
-        for relative_sys_id in relative_sys_ids:
-            relative_dict = _recursive_prepare_relation(relative_sys_id, depth=initial_depth)
-            if not relative_dict:
-                continue
-            relative_dicts.append(relative_dict)
-        return relative_dicts
-
-    def _fill_relations(self, device, sys_id, relations_table_dict, relations_info_dict):
+            return curr_node
 
         try:
-            related_children = self._get_relations(sys_id, RELATIONS_TABLE_CHILD_KEY,
-                                                   relations_table_dict, relations_info_dict)
-            if related_children:
-                put_dynamic_field(device, RELATIONS_FIELD_CHILD, related_children, RELATIONS_FIELD_CHILD)
-        except Exception:
-            logger.debug(f'Failed parsing child relations for sys_id {sys_id}', exc_info=True)
+            # Handle initial depth differently
+            # if initial sys_id has no relations of relation_key type, return None
+            relative_sys_ids = (relations_table_dict.get(initial_sys_id) or {}).get(relation_key)
+            if not relative_sys_ids:
+                return None
 
-        try:
-            related_parents = self._get_relations(sys_id, RELATIONS_TABLE_PARENT_KEY,
-                                                  relations_table_dict, relations_info_dict)
-            if related_parents:
-                put_dynamic_field(device, RELATIONS_FIELD_PARENT, related_parents, RELATIONS_FIELD_PARENT)
+            relative_objs = []
+            for relative_sys_id in relative_sys_ids:
+                relative_obj = _recursive_prepare_relation(relative_sys_id, depth=initial_depth - 1)
+                if not relative_obj:
+                    continue
+                relative_objs.append(relative_obj)
+            if relation_key == RELATIONS_TABLE_CHILD_KEY:
+                device.downstream = relative_objs
+            elif relation_key == RELATIONS_TABLE_PARENT_KEY:
+                device.upstream = relative_objs
         except Exception:
-            logger.debug(f'Failed parsing parent relations for sys_id {sys_id}', exc_info=True)
-
-        for deprecated_dynamic_field in DEPRECATED_RELATIVE_FIELDS:
-            try:
-                put_dynamic_field(device, deprecated_dynamic_field, DEPRECATED_VALUE, deprecated_dynamic_field)
-            except Exception:
-                logger.warning(f'Failed removing deprecated relative field {deprecated_dynamic_field}', exc_info=True)
-                continue
+            logger.exception(f'Failed parsing relation {relation_key}')
 
     @staticmethod
     def _fill_maintenance_schedule(device, maintenance_schedule_dict):
