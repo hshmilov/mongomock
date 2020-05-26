@@ -1450,6 +1450,8 @@ class APIMixin:
         None, PermissionCategory.Adapters, PermissionCategory.Connections))
     def api_adapters_clients(self, adapter_name):
         request_data = self.get_request_data_as_object()
+        if not request_data:
+            return return_error('Connection data is required', 400)
         instance_id = request_data.pop('instanceName', self.node_id)
         connection_label = request_data.pop('connection_label', None)
         connection_data = {
@@ -1494,6 +1496,8 @@ class APIMixin:
                                                           PermissionCategory.Connections))
     def api_adapters_clients_update(self, adapter_name, client_id=None):
         request_data = self.get_request_data_as_object()
+        if not request_data:
+            return return_error('Connection data is required', 400)
         instance_id = request_data.pop('instanceName', self.node_id)
         prev_instance_id = request_data.pop('oldInstanceName', None)
         connection_label = request_data.pop('connection_label', None)

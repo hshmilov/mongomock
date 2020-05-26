@@ -528,12 +528,13 @@ class Login:
         Clears session, logs out
         :return:
         """
-        user = self.get_session['user']
-        username = user.get('user_name')
-        source = user.get('source')
-        first_name = user.get('first_name')
-        logger.info(f'User {username}, {source}, {first_name} has logged out')
-        self.log_activity_user(AuditCategory.UserSession, AuditAction.Logout)
+        user = self.get_session.get('user')
+        if user:
+            username = user.get('user_name')
+            source = user.get('source')
+            first_name = user.get('first_name')
+            logger.info(f'User {username}, {source}, {first_name} has logged out')
+            self.log_activity_user(AuditCategory.UserSession, AuditAction.Logout)
         self.get_session['user'] = None
         self.get_session['csrf-token'] = None
         self.get_session.clear()

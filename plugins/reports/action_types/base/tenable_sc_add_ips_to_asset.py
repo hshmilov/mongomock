@@ -140,9 +140,9 @@ class TenableScAddIPsToAsset(ActionTypeBase):
         if self._config['use_adapter'] is True:
             response = self._plugin_base.request_remote_plugin(action_name, adapter_unique_name,
                                                                'post', json=tenable_sc_dict)
-            if response.status_code == 200:
+            if response and response.status_code == 200:
                 return results
-            if response.status_code == 500:
+            if response and response.status_code == 500:
                 return generic_fail(self._internal_axon_ids, reason=response.data.message)
             return generic_fail(self._internal_axon_ids)
         try:

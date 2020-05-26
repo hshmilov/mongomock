@@ -332,10 +332,13 @@ class Dashboard(Charts, Notifications):
     def _lifecycle(self):
         # pylint: disable=no-member
         res = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        if not res or res.status_code != 200:
+            return return_error('Scheduler not responding', 500)
         execution_state = res.json()
         if 'state' not in execution_state:
-            logger.critical(f'Something is deeply wrong with scheduler, result is {execution_state} '
-                            f'on {res}')
+            message = f'Scheduler failed with message: {execution_state.get("message", "")}'
+            logger.error(message)
+            return return_error(message, 500)
         is_running = execution_state['state'] == TriggerStates.Triggered.name
         del res, execution_state
 

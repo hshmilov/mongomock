@@ -35,6 +35,8 @@ class Connections:
         }
         """
         request_data = self.get_request_data_as_object()
+        if not request_data or 'adapter' not in request_data:
+            return return_error('Adapter name and connection data are required', 400)
         adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
         return self._add_connection(adapter_name, instance_id, request_data)
@@ -42,6 +44,8 @@ class Connections:
     @gui_route_logged_in('test', methods=['POST'], skip_activity=True)
     def test_connection(self):
         request_data = self.get_request_data_as_object()
+        if not request_data or 'adapter' not in request_data:
+            return return_error('Adapter name and connection data are required', 400)
         adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
         return self._test_connection(adapter_name, instance_id, request_data.get('connection', {}))
@@ -49,6 +53,8 @@ class Connections:
     @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], activity_params=['adapter', 'client_id'])
     def update_connection(self, connection_id):
         request_data = self.get_request_data_as_object()
+        if not request_data or 'adapter' not in request_data:
+            return return_error('Adapter name and connection data are required', 400)
         adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
         instance_id_prev = request_data.pop('instance_prev', None)

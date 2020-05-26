@@ -171,9 +171,9 @@ def fetch_chart_intersect(
     base_name = 'ALL'
     if base:
         base_from_db = find_view_by_id(entity, base)
-        base_view = base_from_db['view']
-        if not base_view or not base_view.get('query'):
+        if not base_from_db or not base_from_db.get('view', {}).get('query'):
             return None
+        base_view = base_from_db['view']
         base_name = base_from_db.get('name', '')
         base_queries = [parse_filter(base_view['query']['filter'], for_date)]
 
@@ -191,9 +191,9 @@ def fetch_chart_intersect(
                  'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
 
     child1_from_db = find_view_by_id(entity, intersecting[0])
-    child1_view = child1_from_db['view']
-    if not child1_view or not child1_view.get('query'):
+    if not child1_from_db or not child1_from_db.get('view', {}).get('query'):
         return None
+    child1_view = child1_from_db['view']
     child1_name = child1_from_db.get('name', '')
     child1_filter = child1_view['query']['filter']
     child1_query = parse_filter(child1_filter, for_date)
@@ -215,9 +215,9 @@ def fetch_chart_intersect(
                      'value': numeric_value / total})
     else:
         child2_from_db = find_view_by_id(entity, intersecting[1])
-        child2_view = child2_from_db['view']
-        if not child2_view or not child2_view.get('query'):
+        if not child2_from_db or not child2_from_db.get('view', {}).get('query'):
             return None
+        child2_view = child2_from_db['view']
         child2_name = child2_from_db.get('name', '')
         child2_filter = child2_view['query']['filter']
         child2_query = parse_filter(child2_filter, for_date)
@@ -533,12 +533,12 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
     counted_results = Counter()
     for item in aggregate_results:
-        result_name = item.get('_id', {}).get('name', 'No Value')
         extra_data = item.get('extra_data', [])
         if 'No Value' in extra_data:
             counted_results['No Value'] += 1
         elif _match_result_item_to_filters(extra_data, reduced_filters):
-            counted_results[result_name] += 1
+            result_name = item.get('_id', {}).get('name', 'No Value')
+            counted_results[str(result_name)] += 1
 
     data = []
     for result_name, result_count in counted_results.items():
@@ -765,7 +765,8 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
             PLUGIN_NAME: splitted[1]
         }
     else:
-        raise Exception(f'Can\'t handle this field {field["name"]}')
+        logger.info(f'Chart defined with unsupported field {field["name"]}')
+        return None
 
     adapter_field_name = 'adapters.' + processed_field_name
     tags_field_name = 'tags.' + processed_field_name

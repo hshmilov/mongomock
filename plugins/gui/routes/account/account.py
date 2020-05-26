@@ -7,6 +7,7 @@ from flask import jsonify
 from axonius.consts.gui_consts import USERS_PREFERENCES_COLUMNS_FIELD
 from axonius.consts.plugin_consts import PASSWORD_NO_MEET_REQUIREMENTS_MSG
 from axonius.plugin_base import (EntityType, LIMITER_SCOPE, route_limiter_key_func, return_error)
+from axonius.utils.gui_helpers import get_connected_user_id
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -26,8 +27,10 @@ class Account:
         :return:
         """
         post_data = self.get_request_data_as_object()
-        user = self.get_session['user']
-        if not bcrypt.verify(post_data['old'], user['password']):
+        user = self.get_session.get('user')
+        if not user or not user.get('password'):
+            return return_error('Not logged in', 401)
+        if not bcrypt.verify(post_data.get('old', ''), user['password']):
             return return_error('Given password is wrong', 400)
 
         if not self._check_password_validity(post_data['new']):
@@ -57,8 +60,9 @@ class Account:
         Search for current user's preferences and it
         :return: List of saved fields or error if none found
         """
+
         user_preferences = self._users_preferences_collection.find_one({
-            'user_id': self.get_session['user']['_id']
+            'user_id': get_connected_user_id()
         })
         if not user_preferences:
             return jsonify({}), 200
@@ -79,7 +83,7 @@ class Account:
                 for (view_type, columns) in table_columns_preferences.items():
                     set_object[f'{entity_value}.{USERS_PREFERENCES_COLUMNS_FIELD}.{view_type}'] = columns
         self._users_preferences_collection.update_one({
-            'user_id': self.get_session['user']['_id']
+            'user_id': get_connected_user_id()
         }, {
             '$set': set_object
         }, upsert=True)

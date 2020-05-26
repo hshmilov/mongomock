@@ -208,7 +208,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
         self._users_tokens_collection = self._get_collection(USERS_TOKENS_COLLECTION)
         self._users_preferences_collection = self._get_collection(USERS_PREFERENCES_COLLECTION)
-        self._dashboard_collection = self._get_collection(DASHBOARD_COLLECTION)
         self._dashboard_spaces_collection = self._get_collection(DASHBOARD_SPACES_COLLECTION)
 
         self.reports_config_collection.create_index([('name', pymongo.HASHED)])
@@ -516,6 +515,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     @property
     def _nodes_metadata_collection(self):
         return self._get_collection(db_name=CORE_UNIQUE_NAME, collection_name='nodes_metadata')
+
+    @property
+    def _dashboard_collection(self):
+        return self._get_collection(DASHBOARD_COLLECTION)
 
     def get_plugin_unique_name(self, plugin_name):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]

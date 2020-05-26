@@ -106,6 +106,8 @@ class RunCmd(ActionTypeBase):
                                                           data=action_data).json()
 
         def prettify_output(id_, result: dict) -> EntityResult:
+            if not isinstance(result, dict):
+                return EntityResult(id_, False, {})
             value = result['value']
             success = result['success']
             return EntityResult(id_, success, value)
