@@ -280,7 +280,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     mac = discovered_data.get('mac_address')
                     if mac:
                         device.add_nic(mac=mac)
-                    device.hostname = discovered_data.get('discovered_name')
+                    if discovered_data.get('discovered_name') != 'unknown':
+                        device.hostname = discovered_data.get('discovered_name')
             except Exception:
                 logger.exception(f'Problem with discovered data for {device_raw}')
             device.set_raw(device_raw)
