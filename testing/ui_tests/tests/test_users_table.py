@@ -58,7 +58,7 @@ class TestUsersTable(TestEntitiesTable):
             pass
 
         sorted_usernames = usernames.copy()
-        sorted_usernames.sort(reverse=desc, key=str.casefold)
+        sorted_usernames.sort(reverse=desc)
         assert usernames == sorted_usernames
 
     def _test_user_sort(self, col_name):

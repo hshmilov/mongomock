@@ -231,7 +231,9 @@ class DevicesPage(EntitiesPage):
         assert any(text in x for x in all_data)
 
     def check_search_text_result_in_column(self, text, column_name):
-        column_data = self.get_table_column_data(column_name)
+        self.wait_for_table_to_load()
+        all_data = self.get_all_data_proper()
+        column_data = [x[column_name] for x in all_data]
         assert len(column_data)
         assert all(text in x.lower() for x in column_data)
 
