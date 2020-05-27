@@ -41,7 +41,54 @@ USER_QUERIES = [
     ('Disabled Admins',
      '(specific_data.data.is_admin == true) and (specific_data.data.account_disabled == false)',
      {'AND': [{'adapterUsers': {'admin': {'eq': True}}}, {'adapterUsers': {'disabled': {'eq': False}}}]}
-     )
+     ),
+    (
+        'User created last 30 days',
+        '(specific_data.data.user_created >= date("NOW - 30d"))',
+        {'adapterUsers': {'creationDate': {'gte': get_timestamp()}}}
+    ),
+    (
+        'User last bad logon 7 days',
+        '(specific_data.data.last_bad_logon >= date("NOW - 7d"))',
+        {'adapterUsers': {'lastBadLogon': {'gte': get_timestamp()}}}
+    ),
+    (
+        'non-local users',
+        '(specific_data.data.is_local == false)',
+        {'adapterUsers': {'local': {'eq': False}}}
+    ),
+    (
+        'Active admin users with passwords not changed in the last 30 days',
+        '(specific_data.data.is_admin == true) and ((specific_data.data.last_password_change == ({"$exists":true,'
+        '"$ne":null}))) and not (specific_data.data.last_password_change >= date("NOW - 30d")) and ('
+        'specific_data.data.account_disabled == false) and (specific_data.data.last_seen >= date("NOW - 7d"))',
+        {'AND': [{'adapterUsers': {'admin': {'eq': True}}},
+                 {'adapterUsers': {'lastPasswordChange': {'exists': True}}},
+                 {'adapterUsers': {'lastPasswordChange': {'lt': get_timestamp()}}},
+                 {'adapterUsers': {'disabled': {'eq': False}}},
+                 {'adapterUsers': {'lastSeen': {'gte': get_timestamp()}}}]},
+    ),
+    (
+        # Password required in Postgres is saved as a positive not negative.
+        'Password Required',
+        '(specific_data.data.password_not_required == true)',
+        {'adapterUsers': {'passwordRequired': {'eq': False}}},
+    ),
+    (
+        'At least 3 adapters',
+        '(adapter_list_length > 3)',
+        {'adapterCount': {'gt': 3}},
+    )
+
+
+    # (
+    #     '',
+    #     '(specific_data.data.account_disabled == false) '
+    #     'and not (specific_data.data.last_password_change >= date("NOW - 30d")) '
+    #     'and (specific_data.data.last_seen >= date("NOW - 7d")) '
+    #     'and (((specific_data.data.first_name == ({"$exists":true,"$ne":""}))) '
+    #     'or ((specific_data.data.image == ({"$exists":true,"$ne":""}))))'
+    # )
 
 ]
 

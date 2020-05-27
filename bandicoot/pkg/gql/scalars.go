@@ -2,10 +2,12 @@ package gql
 
 import (
 	"bandicoot/internal"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/99designs/gqlgen/graphql"
 	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/cast"
 	"io"
 	"log"
 	"net"
@@ -21,8 +23,15 @@ func MarshalEpochScalar(b internal.Epoch) graphql.Marshaler {
 }
 
 func UnmarshalEpochScalar(v interface{}) (internal.Epoch, error) {
-	val, ok := v.(int64)
-	if !ok {
+	var val int64
+	var err error
+	switch v := v.(type) {
+	case json.Number:
+		val, err = v.Int64()
+	default:
+		val, err = cast.ToInt64E(v)
+	}
+	if err != nil {
 		return 0, errors.New(fmt.Sprintf("epoch must be of type Int, got %T ", v))
 	}
 	return internal.EpochFromInt64(val)

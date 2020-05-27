@@ -9,7 +9,7 @@ import (
 type Epoch int64
 
 func EpochFromTime(t time.Time) Epoch {
-	return Epoch(t.Unix() + int64(t.Nanosecond()/1e6))
+	return Epoch(t.Unix() * 1000 + int64(t.Nanosecond() / 1e6))
 }
 
 func EpochFromInt64(t int64) (Epoch, error) {

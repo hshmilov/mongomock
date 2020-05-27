@@ -4,3 +4,4 @@ bin/*
 *.log
 *.autogen
 coverage.txt
+*.log.debug

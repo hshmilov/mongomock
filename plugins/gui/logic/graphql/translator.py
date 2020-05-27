@@ -67,6 +67,10 @@ class GqlField(str):
     """
     GqlField means that given string is a normal field and not an object
     """
+    def __new__(cls, value, builder=None):
+        obj = str.__new__(cls, value)
+        obj.builder = builder
+        return obj
 
 
 class GqlNotSupported(str):
@@ -97,6 +101,11 @@ BUILDER_CONVERTERS = {
     'mac': GqlField('macAddr'),
     'image': GqlNotSupported('image'),
     'vlan_list': GqlObject('vlans'),
+    'user_created': GqlField('creationDate'),
+    'last_bad_logon': GqlField('lastBadLogon'),
+    'password_not_required': GqlField('passwordRequired', builder=lambda x: {'eq': not x}),
+    'password_never_expires': GqlField('passwordExpires', builder=lambda x: {'eq': not x}),
+    'adapter_list_length': GqlField('adapterCount')
 }
 
 
@@ -223,7 +232,8 @@ class Translator:
         try:
             prefix, suffix = key.split('.', 1)
         except ValueError:
-            return {BUILDER_CONVERTERS.get(key, _to_lower_camel_case(key)): _build_value(value)}
+            gql = BUILDER_CONVERTERS.get(key, GqlField(_to_lower_camel_case(key)))
+            return {gql: gql.builder(value) if gql.builder else _build_value(value)}
 
         converted = BUILDER_CONVERTERS.get(prefix, GqlField(prefix))
         if isinstance(converted, GqlObject):
@@ -256,11 +266,15 @@ def _get_op_method(operator, reverse=False):
     return VALUE_COMPARISON_METHODS.get(operator)
 
 
-def _build_value(value, operator_override=None, reverse=False):
+def _build_value(value: typing.Dict, operator_override=None, reverse=False):
+    """
+    Builds value based on given operator. use operator override to use a different method
+    and reverse to reverse the operator
+    """
     if not isinstance(value, dict) and operator_override is None:
         return {'eq': _value_converter(value)}
 
-    if operator_override:
+    if operator_override is not None:
         method = _get_op_method(operator_override, reverse=reverse)
         return method(value)
 

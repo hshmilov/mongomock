@@ -227,7 +227,18 @@ type AdapterUser struct {
 	// User last name
 	LastName *string ` json:"last_name"`
 	// User email account
-	Mail *string ` json:"mail"`
+	Mail                   *string         ` json:"mail"`
+	CreationDate           *internal.Epoch ` json:"creation_date"`
+	LastLogon              *internal.Epoch ` json:"last_logon"`
+	LastLogoff             *internal.Epoch ` json:"last_logoff"`
+	AccountExpires         *internal.Epoch ` json:"account_expires"`
+	LastBadLogon           *internal.Epoch ` json:"last_bad_logon"`
+	LastPasswordChange     *internal.Epoch ` json:"last_password_change"`
+	LogonCount             *int            ` json:"logon_count"`
+	Status                 *string         ` json:"status"`
+	PasswordExpirationDate *internal.Epoch ` json:"password_expiration_date"`
+	PasswordExpires        *bool           ` json:"password_expires"`
+	PasswordRequired       *bool           ` json:"password_required"`
 	// User account has admin privileges
 	Admin *bool ` json:"admin"`
 	// User entity is local
@@ -684,14 +695,15 @@ type User struct {
 }
 
 type AdapterDevicesAggregate struct {
-	Group          []string               ` json:"group"`
-	Distinct       []string               ` json:"distinct"`
-	Count          *int                   ` json:"count"`
-	Sum            map[string]interface{} ` json:"sum"`
-	Avg            map[string]interface{} ` json:"avg"`
-	Min            map[string]interface{} ` json:"min"`
-	Max            map[string]interface{} ` json:"max"`
-	AdapterDevices []*AdapterDevice       ` json:"adapter_devices"`
+	Group    []string               ` json:"group"`
+	Distinct []string               ` json:"distinct"`
+	Count    *int                   ` json:"count"`
+	Sum      map[string]interface{} ` json:"sum"`
+	Avg      map[string]interface{} ` json:"avg"`
+	Min      map[string]interface{} ` json:"min"`
+	Max      map[string]interface{} ` json:"max"`
+	// Adapter devices that are correlated to this device
+	AdapterDevices []*AdapterDevice ` json:"adapter_devices"`
 }
 
 type AdapterUsersAggregate struct {
@@ -946,6 +958,28 @@ type AdapterUserBoolExp struct {
 	LastName *StringComparator ` json:"last_name"`
 	// filter by mail
 	Mail *StringComparator ` json:"mail"`
+	// filter by creationDate
+	CreationDate *EpochComparator ` json:"creation_date"`
+	// filter by lastLogon
+	LastLogon *EpochComparator ` json:"last_logon"`
+	// filter by lastLogoff
+	LastLogoff *EpochComparator ` json:"last_logoff"`
+	// filter by accountExpires
+	AccountExpires *EpochComparator ` json:"account_expires"`
+	// filter by lastBadLogon
+	LastBadLogon *EpochComparator ` json:"last_bad_logon"`
+	// filter by lastPasswordChange
+	LastPasswordChange *EpochComparator ` json:"last_password_change"`
+	// filter by logonCount
+	LogonCount *IntComparator ` json:"logon_count"`
+	// filter by status
+	Status *StringComparator ` json:"status"`
+	// filter by passwordExpirationDate
+	PasswordExpirationDate *EpochComparator ` json:"password_expiration_date"`
+	// filter by passwordExpires
+	PasswordExpires *BooleanComparator ` json:"password_expires"`
+	// filter by passwordRequired
+	PasswordRequired *BooleanComparator ` json:"password_required"`
 	// filter by admin
 	Admin *BooleanComparator ` json:"admin"`
 	// filter by local
@@ -2309,17 +2343,41 @@ const (
 	AdapterUsersAggregateAvgColumnsFetchTime AdapterUsersAggregateAvgColumns = "fetchTime"
 	// avg by lastSeen
 	AdapterUsersAggregateAvgColumnsLastSeen AdapterUsersAggregateAvgColumns = "lastSeen"
+	// avg by creationDate
+	AdapterUsersAggregateAvgColumnsCreationDate AdapterUsersAggregateAvgColumns = "creationDate"
+	// avg by lastLogon
+	AdapterUsersAggregateAvgColumnsLastLogon AdapterUsersAggregateAvgColumns = "lastLogon"
+	// avg by lastLogoff
+	AdapterUsersAggregateAvgColumnsLastLogoff AdapterUsersAggregateAvgColumns = "lastLogoff"
+	// avg by accountExpires
+	AdapterUsersAggregateAvgColumnsAccountExpires AdapterUsersAggregateAvgColumns = "accountExpires"
+	// avg by lastBadLogon
+	AdapterUsersAggregateAvgColumnsLastBadLogon AdapterUsersAggregateAvgColumns = "lastBadLogon"
+	// avg by lastPasswordChange
+	AdapterUsersAggregateAvgColumnsLastPasswordChange AdapterUsersAggregateAvgColumns = "lastPasswordChange"
+	// avg by logonCount
+	AdapterUsersAggregateAvgColumnsLogonCount AdapterUsersAggregateAvgColumns = "logonCount"
+	// avg by passwordExpirationDate
+	AdapterUsersAggregateAvgColumnsPasswordExpirationDate AdapterUsersAggregateAvgColumns = "passwordExpirationDate"
 )
 
 var AllAdapterUsersAggregateAvgColumns = []AdapterUsersAggregateAvgColumns{
 	AdapterUsersAggregateAvgColumnsFetchCycle,
 	AdapterUsersAggregateAvgColumnsFetchTime,
 	AdapterUsersAggregateAvgColumnsLastSeen,
+	AdapterUsersAggregateAvgColumnsCreationDate,
+	AdapterUsersAggregateAvgColumnsLastLogon,
+	AdapterUsersAggregateAvgColumnsLastLogoff,
+	AdapterUsersAggregateAvgColumnsAccountExpires,
+	AdapterUsersAggregateAvgColumnsLastBadLogon,
+	AdapterUsersAggregateAvgColumnsLastPasswordChange,
+	AdapterUsersAggregateAvgColumnsLogonCount,
+	AdapterUsersAggregateAvgColumnsPasswordExpirationDate,
 }
 
 func (e AdapterUsersAggregateAvgColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateAvgColumnsFetchCycle, AdapterUsersAggregateAvgColumnsFetchTime, AdapterUsersAggregateAvgColumnsLastSeen:
+	case AdapterUsersAggregateAvgColumnsFetchCycle, AdapterUsersAggregateAvgColumnsFetchTime, AdapterUsersAggregateAvgColumnsLastSeen, AdapterUsersAggregateAvgColumnsCreationDate, AdapterUsersAggregateAvgColumnsLastLogon, AdapterUsersAggregateAvgColumnsLastLogoff, AdapterUsersAggregateAvgColumnsAccountExpires, AdapterUsersAggregateAvgColumnsLastBadLogon, AdapterUsersAggregateAvgColumnsLastPasswordChange, AdapterUsersAggregateAvgColumnsLogonCount, AdapterUsersAggregateAvgColumnsPasswordExpirationDate:
 		return true
 	}
 	return false
@@ -2379,6 +2437,24 @@ const (
 	AdapterUsersAggregateColumnsLastName AdapterUsersAggregateColumns = "lastName"
 	// groupBy by mail
 	AdapterUsersAggregateColumnsMail AdapterUsersAggregateColumns = "mail"
+	// groupBy by creationDate
+	AdapterUsersAggregateColumnsCreationDate AdapterUsersAggregateColumns = "creationDate"
+	// groupBy by lastLogon
+	AdapterUsersAggregateColumnsLastLogon AdapterUsersAggregateColumns = "lastLogon"
+	// groupBy by lastLogoff
+	AdapterUsersAggregateColumnsLastLogoff AdapterUsersAggregateColumns = "lastLogoff"
+	// groupBy by accountExpires
+	AdapterUsersAggregateColumnsAccountExpires AdapterUsersAggregateColumns = "accountExpires"
+	// groupBy by lastBadLogon
+	AdapterUsersAggregateColumnsLastBadLogon AdapterUsersAggregateColumns = "lastBadLogon"
+	// groupBy by lastPasswordChange
+	AdapterUsersAggregateColumnsLastPasswordChange AdapterUsersAggregateColumns = "lastPasswordChange"
+	// groupBy by logonCount
+	AdapterUsersAggregateColumnsLogonCount AdapterUsersAggregateColumns = "logonCount"
+	// groupBy by status
+	AdapterUsersAggregateColumnsStatus AdapterUsersAggregateColumns = "status"
+	// groupBy by passwordExpirationDate
+	AdapterUsersAggregateColumnsPasswordExpirationDate AdapterUsersAggregateColumns = "passwordExpirationDate"
 )
 
 var AllAdapterUsersAggregateColumns = []AdapterUsersAggregateColumns{
@@ -2397,11 +2473,20 @@ var AllAdapterUsersAggregateColumns = []AdapterUsersAggregateColumns{
 	AdapterUsersAggregateColumnsFirstName,
 	AdapterUsersAggregateColumnsLastName,
 	AdapterUsersAggregateColumnsMail,
+	AdapterUsersAggregateColumnsCreationDate,
+	AdapterUsersAggregateColumnsLastLogon,
+	AdapterUsersAggregateColumnsLastLogoff,
+	AdapterUsersAggregateColumnsAccountExpires,
+	AdapterUsersAggregateColumnsLastBadLogon,
+	AdapterUsersAggregateColumnsLastPasswordChange,
+	AdapterUsersAggregateColumnsLogonCount,
+	AdapterUsersAggregateColumnsStatus,
+	AdapterUsersAggregateColumnsPasswordExpirationDate,
 }
 
 func (e AdapterUsersAggregateColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateColumnsID, AdapterUsersAggregateColumnsFetchCycle, AdapterUsersAggregateColumnsAdapterID, AdapterUsersAggregateColumnsAdapterName, AdapterUsersAggregateColumnsUserID, AdapterUsersAggregateColumnsFetchTime, AdapterUsersAggregateColumnsLastSeen, AdapterUsersAggregateColumnsUsername, AdapterUsersAggregateColumnsDisplayName, AdapterUsersAggregateColumnsDescription, AdapterUsersAggregateColumnsDomain, AdapterUsersAggregateColumnsUserSid, AdapterUsersAggregateColumnsFirstName, AdapterUsersAggregateColumnsLastName, AdapterUsersAggregateColumnsMail:
+	case AdapterUsersAggregateColumnsID, AdapterUsersAggregateColumnsFetchCycle, AdapterUsersAggregateColumnsAdapterID, AdapterUsersAggregateColumnsAdapterName, AdapterUsersAggregateColumnsUserID, AdapterUsersAggregateColumnsFetchTime, AdapterUsersAggregateColumnsLastSeen, AdapterUsersAggregateColumnsUsername, AdapterUsersAggregateColumnsDisplayName, AdapterUsersAggregateColumnsDescription, AdapterUsersAggregateColumnsDomain, AdapterUsersAggregateColumnsUserSid, AdapterUsersAggregateColumnsFirstName, AdapterUsersAggregateColumnsLastName, AdapterUsersAggregateColumnsMail, AdapterUsersAggregateColumnsCreationDate, AdapterUsersAggregateColumnsLastLogon, AdapterUsersAggregateColumnsLastLogoff, AdapterUsersAggregateColumnsAccountExpires, AdapterUsersAggregateColumnsLastBadLogon, AdapterUsersAggregateColumnsLastPasswordChange, AdapterUsersAggregateColumnsLogonCount, AdapterUsersAggregateColumnsStatus, AdapterUsersAggregateColumnsPasswordExpirationDate:
 		return true
 	}
 	return false
@@ -2461,6 +2546,24 @@ const (
 	AdapterUsersAggregateMaxColumnsLastName AdapterUsersAggregateMaxColumns = "lastName"
 	// max by mail
 	AdapterUsersAggregateMaxColumnsMail AdapterUsersAggregateMaxColumns = "mail"
+	// max by creationDate
+	AdapterUsersAggregateMaxColumnsCreationDate AdapterUsersAggregateMaxColumns = "creationDate"
+	// max by lastLogon
+	AdapterUsersAggregateMaxColumnsLastLogon AdapterUsersAggregateMaxColumns = "lastLogon"
+	// max by lastLogoff
+	AdapterUsersAggregateMaxColumnsLastLogoff AdapterUsersAggregateMaxColumns = "lastLogoff"
+	// max by accountExpires
+	AdapterUsersAggregateMaxColumnsAccountExpires AdapterUsersAggregateMaxColumns = "accountExpires"
+	// max by lastBadLogon
+	AdapterUsersAggregateMaxColumnsLastBadLogon AdapterUsersAggregateMaxColumns = "lastBadLogon"
+	// max by lastPasswordChange
+	AdapterUsersAggregateMaxColumnsLastPasswordChange AdapterUsersAggregateMaxColumns = "lastPasswordChange"
+	// max by logonCount
+	AdapterUsersAggregateMaxColumnsLogonCount AdapterUsersAggregateMaxColumns = "logonCount"
+	// max by status
+	AdapterUsersAggregateMaxColumnsStatus AdapterUsersAggregateMaxColumns = "status"
+	// max by passwordExpirationDate
+	AdapterUsersAggregateMaxColumnsPasswordExpirationDate AdapterUsersAggregateMaxColumns = "passwordExpirationDate"
 )
 
 var AllAdapterUsersAggregateMaxColumns = []AdapterUsersAggregateMaxColumns{
@@ -2479,11 +2582,20 @@ var AllAdapterUsersAggregateMaxColumns = []AdapterUsersAggregateMaxColumns{
 	AdapterUsersAggregateMaxColumnsFirstName,
 	AdapterUsersAggregateMaxColumnsLastName,
 	AdapterUsersAggregateMaxColumnsMail,
+	AdapterUsersAggregateMaxColumnsCreationDate,
+	AdapterUsersAggregateMaxColumnsLastLogon,
+	AdapterUsersAggregateMaxColumnsLastLogoff,
+	AdapterUsersAggregateMaxColumnsAccountExpires,
+	AdapterUsersAggregateMaxColumnsLastBadLogon,
+	AdapterUsersAggregateMaxColumnsLastPasswordChange,
+	AdapterUsersAggregateMaxColumnsLogonCount,
+	AdapterUsersAggregateMaxColumnsStatus,
+	AdapterUsersAggregateMaxColumnsPasswordExpirationDate,
 }
 
 func (e AdapterUsersAggregateMaxColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateMaxColumnsID, AdapterUsersAggregateMaxColumnsFetchCycle, AdapterUsersAggregateMaxColumnsAdapterID, AdapterUsersAggregateMaxColumnsAdapterName, AdapterUsersAggregateMaxColumnsUserID, AdapterUsersAggregateMaxColumnsFetchTime, AdapterUsersAggregateMaxColumnsLastSeen, AdapterUsersAggregateMaxColumnsUsername, AdapterUsersAggregateMaxColumnsDisplayName, AdapterUsersAggregateMaxColumnsDescription, AdapterUsersAggregateMaxColumnsDomain, AdapterUsersAggregateMaxColumnsUserSid, AdapterUsersAggregateMaxColumnsFirstName, AdapterUsersAggregateMaxColumnsLastName, AdapterUsersAggregateMaxColumnsMail:
+	case AdapterUsersAggregateMaxColumnsID, AdapterUsersAggregateMaxColumnsFetchCycle, AdapterUsersAggregateMaxColumnsAdapterID, AdapterUsersAggregateMaxColumnsAdapterName, AdapterUsersAggregateMaxColumnsUserID, AdapterUsersAggregateMaxColumnsFetchTime, AdapterUsersAggregateMaxColumnsLastSeen, AdapterUsersAggregateMaxColumnsUsername, AdapterUsersAggregateMaxColumnsDisplayName, AdapterUsersAggregateMaxColumnsDescription, AdapterUsersAggregateMaxColumnsDomain, AdapterUsersAggregateMaxColumnsUserSid, AdapterUsersAggregateMaxColumnsFirstName, AdapterUsersAggregateMaxColumnsLastName, AdapterUsersAggregateMaxColumnsMail, AdapterUsersAggregateMaxColumnsCreationDate, AdapterUsersAggregateMaxColumnsLastLogon, AdapterUsersAggregateMaxColumnsLastLogoff, AdapterUsersAggregateMaxColumnsAccountExpires, AdapterUsersAggregateMaxColumnsLastBadLogon, AdapterUsersAggregateMaxColumnsLastPasswordChange, AdapterUsersAggregateMaxColumnsLogonCount, AdapterUsersAggregateMaxColumnsStatus, AdapterUsersAggregateMaxColumnsPasswordExpirationDate:
 		return true
 	}
 	return false
@@ -2543,6 +2655,24 @@ const (
 	AdapterUsersAggregateMinColumnsLastName AdapterUsersAggregateMinColumns = "lastName"
 	// min by mail
 	AdapterUsersAggregateMinColumnsMail AdapterUsersAggregateMinColumns = "mail"
+	// min by creationDate
+	AdapterUsersAggregateMinColumnsCreationDate AdapterUsersAggregateMinColumns = "creationDate"
+	// min by lastLogon
+	AdapterUsersAggregateMinColumnsLastLogon AdapterUsersAggregateMinColumns = "lastLogon"
+	// min by lastLogoff
+	AdapterUsersAggregateMinColumnsLastLogoff AdapterUsersAggregateMinColumns = "lastLogoff"
+	// min by accountExpires
+	AdapterUsersAggregateMinColumnsAccountExpires AdapterUsersAggregateMinColumns = "accountExpires"
+	// min by lastBadLogon
+	AdapterUsersAggregateMinColumnsLastBadLogon AdapterUsersAggregateMinColumns = "lastBadLogon"
+	// min by lastPasswordChange
+	AdapterUsersAggregateMinColumnsLastPasswordChange AdapterUsersAggregateMinColumns = "lastPasswordChange"
+	// min by logonCount
+	AdapterUsersAggregateMinColumnsLogonCount AdapterUsersAggregateMinColumns = "logonCount"
+	// min by status
+	AdapterUsersAggregateMinColumnsStatus AdapterUsersAggregateMinColumns = "status"
+	// min by passwordExpirationDate
+	AdapterUsersAggregateMinColumnsPasswordExpirationDate AdapterUsersAggregateMinColumns = "passwordExpirationDate"
 )
 
 var AllAdapterUsersAggregateMinColumns = []AdapterUsersAggregateMinColumns{
@@ -2561,11 +2691,20 @@ var AllAdapterUsersAggregateMinColumns = []AdapterUsersAggregateMinColumns{
 	AdapterUsersAggregateMinColumnsFirstName,
 	AdapterUsersAggregateMinColumnsLastName,
 	AdapterUsersAggregateMinColumnsMail,
+	AdapterUsersAggregateMinColumnsCreationDate,
+	AdapterUsersAggregateMinColumnsLastLogon,
+	AdapterUsersAggregateMinColumnsLastLogoff,
+	AdapterUsersAggregateMinColumnsAccountExpires,
+	AdapterUsersAggregateMinColumnsLastBadLogon,
+	AdapterUsersAggregateMinColumnsLastPasswordChange,
+	AdapterUsersAggregateMinColumnsLogonCount,
+	AdapterUsersAggregateMinColumnsStatus,
+	AdapterUsersAggregateMinColumnsPasswordExpirationDate,
 }
 
 func (e AdapterUsersAggregateMinColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateMinColumnsID, AdapterUsersAggregateMinColumnsFetchCycle, AdapterUsersAggregateMinColumnsAdapterID, AdapterUsersAggregateMinColumnsAdapterName, AdapterUsersAggregateMinColumnsUserID, AdapterUsersAggregateMinColumnsFetchTime, AdapterUsersAggregateMinColumnsLastSeen, AdapterUsersAggregateMinColumnsUsername, AdapterUsersAggregateMinColumnsDisplayName, AdapterUsersAggregateMinColumnsDescription, AdapterUsersAggregateMinColumnsDomain, AdapterUsersAggregateMinColumnsUserSid, AdapterUsersAggregateMinColumnsFirstName, AdapterUsersAggregateMinColumnsLastName, AdapterUsersAggregateMinColumnsMail:
+	case AdapterUsersAggregateMinColumnsID, AdapterUsersAggregateMinColumnsFetchCycle, AdapterUsersAggregateMinColumnsAdapterID, AdapterUsersAggregateMinColumnsAdapterName, AdapterUsersAggregateMinColumnsUserID, AdapterUsersAggregateMinColumnsFetchTime, AdapterUsersAggregateMinColumnsLastSeen, AdapterUsersAggregateMinColumnsUsername, AdapterUsersAggregateMinColumnsDisplayName, AdapterUsersAggregateMinColumnsDescription, AdapterUsersAggregateMinColumnsDomain, AdapterUsersAggregateMinColumnsUserSid, AdapterUsersAggregateMinColumnsFirstName, AdapterUsersAggregateMinColumnsLastName, AdapterUsersAggregateMinColumnsMail, AdapterUsersAggregateMinColumnsCreationDate, AdapterUsersAggregateMinColumnsLastLogon, AdapterUsersAggregateMinColumnsLastLogoff, AdapterUsersAggregateMinColumnsAccountExpires, AdapterUsersAggregateMinColumnsLastBadLogon, AdapterUsersAggregateMinColumnsLastPasswordChange, AdapterUsersAggregateMinColumnsLogonCount, AdapterUsersAggregateMinColumnsStatus, AdapterUsersAggregateMinColumnsPasswordExpirationDate:
 		return true
 	}
 	return false
@@ -2601,17 +2740,41 @@ const (
 	AdapterUsersAggregateSumColumnsFetchTime AdapterUsersAggregateSumColumns = "fetchTime"
 	// sum by lastSeen
 	AdapterUsersAggregateSumColumnsLastSeen AdapterUsersAggregateSumColumns = "lastSeen"
+	// sum by creationDate
+	AdapterUsersAggregateSumColumnsCreationDate AdapterUsersAggregateSumColumns = "creationDate"
+	// sum by lastLogon
+	AdapterUsersAggregateSumColumnsLastLogon AdapterUsersAggregateSumColumns = "lastLogon"
+	// sum by lastLogoff
+	AdapterUsersAggregateSumColumnsLastLogoff AdapterUsersAggregateSumColumns = "lastLogoff"
+	// sum by accountExpires
+	AdapterUsersAggregateSumColumnsAccountExpires AdapterUsersAggregateSumColumns = "accountExpires"
+	// sum by lastBadLogon
+	AdapterUsersAggregateSumColumnsLastBadLogon AdapterUsersAggregateSumColumns = "lastBadLogon"
+	// sum by lastPasswordChange
+	AdapterUsersAggregateSumColumnsLastPasswordChange AdapterUsersAggregateSumColumns = "lastPasswordChange"
+	// sum by logonCount
+	AdapterUsersAggregateSumColumnsLogonCount AdapterUsersAggregateSumColumns = "logonCount"
+	// sum by passwordExpirationDate
+	AdapterUsersAggregateSumColumnsPasswordExpirationDate AdapterUsersAggregateSumColumns = "passwordExpirationDate"
 )
 
 var AllAdapterUsersAggregateSumColumns = []AdapterUsersAggregateSumColumns{
 	AdapterUsersAggregateSumColumnsFetchCycle,
 	AdapterUsersAggregateSumColumnsFetchTime,
 	AdapterUsersAggregateSumColumnsLastSeen,
+	AdapterUsersAggregateSumColumnsCreationDate,
+	AdapterUsersAggregateSumColumnsLastLogon,
+	AdapterUsersAggregateSumColumnsLastLogoff,
+	AdapterUsersAggregateSumColumnsAccountExpires,
+	AdapterUsersAggregateSumColumnsLastBadLogon,
+	AdapterUsersAggregateSumColumnsLastPasswordChange,
+	AdapterUsersAggregateSumColumnsLogonCount,
+	AdapterUsersAggregateSumColumnsPasswordExpirationDate,
 }
 
 func (e AdapterUsersAggregateSumColumns) IsValid() bool {
 	switch e {
-	case AdapterUsersAggregateSumColumnsFetchCycle, AdapterUsersAggregateSumColumnsFetchTime, AdapterUsersAggregateSumColumnsLastSeen:
+	case AdapterUsersAggregateSumColumnsFetchCycle, AdapterUsersAggregateSumColumnsFetchTime, AdapterUsersAggregateSumColumnsLastSeen, AdapterUsersAggregateSumColumnsCreationDate, AdapterUsersAggregateSumColumnsLastLogon, AdapterUsersAggregateSumColumnsLastLogoff, AdapterUsersAggregateSumColumnsAccountExpires, AdapterUsersAggregateSumColumnsLastBadLogon, AdapterUsersAggregateSumColumnsLastPasswordChange, AdapterUsersAggregateSumColumnsLogonCount, AdapterUsersAggregateSumColumnsPasswordExpirationDate:
 		return true
 	}
 	return false
@@ -3002,6 +3165,42 @@ const (
 	AdapterUserOrderByMailAsc AdapterUserOrderBy = "mail_ASC"
 	// Order by mail in a descending order
 	AdapterUserOrderByMailDesc AdapterUserOrderBy = "mail_DESC"
+	// Order by creationDate in an ascending order
+	AdapterUserOrderByCreationDateAsc AdapterUserOrderBy = "creationDate_ASC"
+	// Order by creationDate in a descending order
+	AdapterUserOrderByCreationDateDesc AdapterUserOrderBy = "creationDate_DESC"
+	// Order by lastLogon in an ascending order
+	AdapterUserOrderByLastLogonAsc AdapterUserOrderBy = "lastLogon_ASC"
+	// Order by lastLogon in a descending order
+	AdapterUserOrderByLastLogonDesc AdapterUserOrderBy = "lastLogon_DESC"
+	// Order by lastLogoff in an ascending order
+	AdapterUserOrderByLastLogoffAsc AdapterUserOrderBy = "lastLogoff_ASC"
+	// Order by lastLogoff in a descending order
+	AdapterUserOrderByLastLogoffDesc AdapterUserOrderBy = "lastLogoff_DESC"
+	// Order by accountExpires in an ascending order
+	AdapterUserOrderByAccountExpiresAsc AdapterUserOrderBy = "accountExpires_ASC"
+	// Order by accountExpires in a descending order
+	AdapterUserOrderByAccountExpiresDesc AdapterUserOrderBy = "accountExpires_DESC"
+	// Order by lastBadLogon in an ascending order
+	AdapterUserOrderByLastBadLogonAsc AdapterUserOrderBy = "lastBadLogon_ASC"
+	// Order by lastBadLogon in a descending order
+	AdapterUserOrderByLastBadLogonDesc AdapterUserOrderBy = "lastBadLogon_DESC"
+	// Order by lastPasswordChange in an ascending order
+	AdapterUserOrderByLastPasswordChangeAsc AdapterUserOrderBy = "lastPasswordChange_ASC"
+	// Order by lastPasswordChange in a descending order
+	AdapterUserOrderByLastPasswordChangeDesc AdapterUserOrderBy = "lastPasswordChange_DESC"
+	// Order by logonCount in an ascending order
+	AdapterUserOrderByLogonCountAsc AdapterUserOrderBy = "logonCount_ASC"
+	// Order by logonCount in a descending order
+	AdapterUserOrderByLogonCountDesc AdapterUserOrderBy = "logonCount_DESC"
+	// Order by status in an ascending order
+	AdapterUserOrderByStatusAsc AdapterUserOrderBy = "status_ASC"
+	// Order by status in a descending order
+	AdapterUserOrderByStatusDesc AdapterUserOrderBy = "status_DESC"
+	// Order by passwordExpirationDate in an ascending order
+	AdapterUserOrderByPasswordExpirationDateAsc AdapterUserOrderBy = "passwordExpirationDate_ASC"
+	// Order by passwordExpirationDate in a descending order
+	AdapterUserOrderByPasswordExpirationDateDesc AdapterUserOrderBy = "passwordExpirationDate_DESC"
 )
 
 var AllAdapterUserOrderBy = []AdapterUserOrderBy{
@@ -3031,11 +3230,29 @@ var AllAdapterUserOrderBy = []AdapterUserOrderBy{
 	AdapterUserOrderByLastNameDesc,
 	AdapterUserOrderByMailAsc,
 	AdapterUserOrderByMailDesc,
+	AdapterUserOrderByCreationDateAsc,
+	AdapterUserOrderByCreationDateDesc,
+	AdapterUserOrderByLastLogonAsc,
+	AdapterUserOrderByLastLogonDesc,
+	AdapterUserOrderByLastLogoffAsc,
+	AdapterUserOrderByLastLogoffDesc,
+	AdapterUserOrderByAccountExpiresAsc,
+	AdapterUserOrderByAccountExpiresDesc,
+	AdapterUserOrderByLastBadLogonAsc,
+	AdapterUserOrderByLastBadLogonDesc,
+	AdapterUserOrderByLastPasswordChangeAsc,
+	AdapterUserOrderByLastPasswordChangeDesc,
+	AdapterUserOrderByLogonCountAsc,
+	AdapterUserOrderByLogonCountDesc,
+	AdapterUserOrderByStatusAsc,
+	AdapterUserOrderByStatusDesc,
+	AdapterUserOrderByPasswordExpirationDateAsc,
+	AdapterUserOrderByPasswordExpirationDateDesc,
 }
 
 func (e AdapterUserOrderBy) IsValid() bool {
 	switch e {
-	case AdapterUserOrderByFetchCycleAsc, AdapterUserOrderByFetchCycleDesc, AdapterUserOrderByAdapterIDAsc, AdapterUserOrderByAdapterIDDesc, AdapterUserOrderByAdapterNameAsc, AdapterUserOrderByAdapterNameDesc, AdapterUserOrderByFetchTimeAsc, AdapterUserOrderByFetchTimeDesc, AdapterUserOrderByLastSeenAsc, AdapterUserOrderByLastSeenDesc, AdapterUserOrderByUsernameAsc, AdapterUserOrderByUsernameDesc, AdapterUserOrderByDisplayNameAsc, AdapterUserOrderByDisplayNameDesc, AdapterUserOrderByDescriptionAsc, AdapterUserOrderByDescriptionDesc, AdapterUserOrderByDomainAsc, AdapterUserOrderByDomainDesc, AdapterUserOrderByUserSidAsc, AdapterUserOrderByUserSidDesc, AdapterUserOrderByFirstNameAsc, AdapterUserOrderByFirstNameDesc, AdapterUserOrderByLastNameAsc, AdapterUserOrderByLastNameDesc, AdapterUserOrderByMailAsc, AdapterUserOrderByMailDesc:
+	case AdapterUserOrderByFetchCycleAsc, AdapterUserOrderByFetchCycleDesc, AdapterUserOrderByAdapterIDAsc, AdapterUserOrderByAdapterIDDesc, AdapterUserOrderByAdapterNameAsc, AdapterUserOrderByAdapterNameDesc, AdapterUserOrderByFetchTimeAsc, AdapterUserOrderByFetchTimeDesc, AdapterUserOrderByLastSeenAsc, AdapterUserOrderByLastSeenDesc, AdapterUserOrderByUsernameAsc, AdapterUserOrderByUsernameDesc, AdapterUserOrderByDisplayNameAsc, AdapterUserOrderByDisplayNameDesc, AdapterUserOrderByDescriptionAsc, AdapterUserOrderByDescriptionDesc, AdapterUserOrderByDomainAsc, AdapterUserOrderByDomainDesc, AdapterUserOrderByUserSidAsc, AdapterUserOrderByUserSidDesc, AdapterUserOrderByFirstNameAsc, AdapterUserOrderByFirstNameDesc, AdapterUserOrderByLastNameAsc, AdapterUserOrderByLastNameDesc, AdapterUserOrderByMailAsc, AdapterUserOrderByMailDesc, AdapterUserOrderByCreationDateAsc, AdapterUserOrderByCreationDateDesc, AdapterUserOrderByLastLogonAsc, AdapterUserOrderByLastLogonDesc, AdapterUserOrderByLastLogoffAsc, AdapterUserOrderByLastLogoffDesc, AdapterUserOrderByAccountExpiresAsc, AdapterUserOrderByAccountExpiresDesc, AdapterUserOrderByLastBadLogonAsc, AdapterUserOrderByLastBadLogonDesc, AdapterUserOrderByLastPasswordChangeAsc, AdapterUserOrderByLastPasswordChangeDesc, AdapterUserOrderByLogonCountAsc, AdapterUserOrderByLogonCountDesc, AdapterUserOrderByStatusAsc, AdapterUserOrderByStatusDesc, AdapterUserOrderByPasswordExpirationDateAsc, AdapterUserOrderByPasswordExpirationDateDesc:
 		return true
 	}
 	return false

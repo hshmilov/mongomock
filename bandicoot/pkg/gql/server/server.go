@@ -49,6 +49,7 @@ func Serve() {
 	//   - Logs all requests, like a combined access and error log.
 	//   - Logs to stdout.
 	r.Use(logger.SetLogger())
+	// Add request ID middleware
 	// Allow access to the gin context from graphql resolvers
 	r.Use(GinContextToContextMiddleware())
 

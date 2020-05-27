@@ -2,6 +2,7 @@ package gql
 
 //go:generate go run bandicoot/cmd/sqlgen
 import (
+	"bandicoot/internal"
 	"bandicoot/internal/sqlgen"
 	"bandicoot/internal/sqlgen/sql"
 	"context"
@@ -45,7 +46,7 @@ func executeAggregateQuery(ctx context.Context) (pgx.Rows, error) {
 	fieldCtx, opCtx := graphql.GetFieldContext(ctx), graphql.GetOperationContext(ctx)
 	start := time.Now()
 	t, err := sql.CreateTranslator(ctx, translatorConfig, opCtx.Variables, opCtx.Doc.Fragments, nil).TranslateAggregate(fieldCtx.Field.Field)
-	log.Info().TimeDiff("elapsed", time.Now(), start).Msg("Time took to translate query")
+	log.Debug().TimeDiff("elapsed", time.Now(), start).Msg("Time took to translate aggregate query")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to translate")
 		return nil, err
@@ -55,7 +56,12 @@ func executeAggregateQuery(ctx context.Context) (pgx.Rows, error) {
 		log.Error().Err(err).Msg("Failed to execute query")
 		return nil, err
 	}
-	log.Debug().TimeDiff("elapsed", time.Now(), start).Str("type", fieldCtx.Field.Name).Msg("Time took for query execution")
+	log.Debug().
+		TimeDiff("elapsed", time.Now(), start).
+		Str("type", fieldCtx.Field.Name).
+		Str("query", internal.TruncateString(t.Query, 120)).
+		Interface("params", t.Params).
+		Msg("Time took for aggregate query execution")
 	return rows, err
 }
 
@@ -147,7 +153,12 @@ func (r *queryResolver) Devices(ctx context.Context, _ *int, _ *int, _ *DeviceBo
 		log.Error().Err(err).Msg("Failed to execute scan on adapter device")
 		return nil, err
 	}
-	log.Debug().TimeDiff("elapsed", time.Now(), start).Str("type", "Devices").Msg("Time took for query scanning")
+	log.Debug().
+		TimeDiff("elapsed", time.Now(), start).
+		Str("query", internal.TruncateString(t.Query, 120)).
+		Interface("params", t.Params).
+		Str("type", "Devices").
+		Msg("Time took for query scanning")
 	return dd, nil
 }
 

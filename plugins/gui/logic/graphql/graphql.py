@@ -123,7 +123,10 @@ def allow_experimental(count=False):
             # fallback... fallback to minas... mongodb...
             if content.get('sort') is not None:
                 return func(self, *args, **kwargs)
-
+            # don't execute quick on experimental
+            quick = content.get('quick') or request.args.get('quick')
+            if quick:
+                return func(self, *args, **kwargs)
             logger.info(f'Using experimental API count={count}')
             try:
                 aql = content.get('filter')

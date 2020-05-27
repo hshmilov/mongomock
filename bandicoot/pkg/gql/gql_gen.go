@@ -155,32 +155,43 @@ type ComplexityRoot struct {
 	}
 
 	AdapterUser struct {
-		Adapter        func(childComplexity int, where *AdapterBoolExp) int
-		AdapterData    func(childComplexity int, where *AdapterDataBoolExp) int
-		AdapterID      func(childComplexity int) int
-		AdapterName    func(childComplexity int) int
-		Admin          func(childComplexity int) int
-		Data           func(childComplexity int) int
-		DelegatedAdmin func(childComplexity int) int
-		Description    func(childComplexity int) int
-		Disabled       func(childComplexity int) int
-		DisplayName    func(childComplexity int) int
-		Domain         func(childComplexity int) int
-		FetchCycle     func(childComplexity int) int
-		FetchTime      func(childComplexity int) int
-		FirstName      func(childComplexity int) int
-		ID             func(childComplexity int) int
-		LastName       func(childComplexity int) int
-		LastSeen       func(childComplexity int) int
-		Local          func(childComplexity int) int
-		Locked         func(childComplexity int) int
-		Mail           func(childComplexity int) int
-		MfaEnforced    func(childComplexity int) int
-		MfaEnrolled    func(childComplexity int) int
-		Suspended      func(childComplexity int) int
-		UserID         func(childComplexity int) int
-		UserSid        func(childComplexity int) int
-		Username       func(childComplexity int) int
+		AccountExpires         func(childComplexity int) int
+		Adapter                func(childComplexity int, where *AdapterBoolExp) int
+		AdapterData            func(childComplexity int, where *AdapterDataBoolExp) int
+		AdapterID              func(childComplexity int) int
+		AdapterName            func(childComplexity int) int
+		Admin                  func(childComplexity int) int
+		CreationDate           func(childComplexity int) int
+		Data                   func(childComplexity int) int
+		DelegatedAdmin         func(childComplexity int) int
+		Description            func(childComplexity int) int
+		Disabled               func(childComplexity int) int
+		DisplayName            func(childComplexity int) int
+		Domain                 func(childComplexity int) int
+		FetchCycle             func(childComplexity int) int
+		FetchTime              func(childComplexity int) int
+		FirstName              func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		LastBadLogon           func(childComplexity int) int
+		LastLogoff             func(childComplexity int) int
+		LastLogon              func(childComplexity int) int
+		LastName               func(childComplexity int) int
+		LastPasswordChange     func(childComplexity int) int
+		LastSeen               func(childComplexity int) int
+		Local                  func(childComplexity int) int
+		Locked                 func(childComplexity int) int
+		LogonCount             func(childComplexity int) int
+		Mail                   func(childComplexity int) int
+		MfaEnforced            func(childComplexity int) int
+		MfaEnrolled            func(childComplexity int) int
+		PasswordExpirationDate func(childComplexity int) int
+		PasswordExpires        func(childComplexity int) int
+		PasswordRequired       func(childComplexity int) int
+		Status                 func(childComplexity int) int
+		Suspended              func(childComplexity int) int
+		UserID                 func(childComplexity int) int
+		UserSid                func(childComplexity int) int
+		Username               func(childComplexity int) int
 	}
 
 	CPU struct {
@@ -1252,6 +1263,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AdapterDeviceUser.Username(childComplexity), true
 
+	case "AdapterUser.accountExpires":
+		if e.complexity.AdapterUser.AccountExpires == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.AccountExpires(childComplexity), true
+
 	case "AdapterUser.adapter":
 		if e.complexity.AdapterUser.Adapter == nil {
 			break
@@ -1296,6 +1314,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AdapterUser.Admin(childComplexity), true
+
+	case "AdapterUser.creationDate":
+		if e.complexity.AdapterUser.CreationDate == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.CreationDate(childComplexity), true
 
 	case "AdapterUser.data":
 		if e.complexity.AdapterUser.Data == nil {
@@ -1367,12 +1392,40 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AdapterUser.ID(childComplexity), true
 
+	case "AdapterUser.lastBadLogon":
+		if e.complexity.AdapterUser.LastBadLogon == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.LastBadLogon(childComplexity), true
+
+	case "AdapterUser.lastLogoff":
+		if e.complexity.AdapterUser.LastLogoff == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.LastLogoff(childComplexity), true
+
+	case "AdapterUser.lastLogon":
+		if e.complexity.AdapterUser.LastLogon == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.LastLogon(childComplexity), true
+
 	case "AdapterUser.lastName":
 		if e.complexity.AdapterUser.LastName == nil {
 			break
 		}
 
 		return e.complexity.AdapterUser.LastName(childComplexity), true
+
+	case "AdapterUser.lastPasswordChange":
+		if e.complexity.AdapterUser.LastPasswordChange == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.LastPasswordChange(childComplexity), true
 
 	case "AdapterUser.lastSeen":
 		if e.complexity.AdapterUser.LastSeen == nil {
@@ -1395,6 +1448,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AdapterUser.Locked(childComplexity), true
 
+	case "AdapterUser.logonCount":
+		if e.complexity.AdapterUser.LogonCount == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.LogonCount(childComplexity), true
+
 	case "AdapterUser.mail":
 		if e.complexity.AdapterUser.Mail == nil {
 			break
@@ -1415,6 +1475,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AdapterUser.MfaEnrolled(childComplexity), true
+
+	case "AdapterUser.passwordExpirationDate":
+		if e.complexity.AdapterUser.PasswordExpirationDate == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.PasswordExpirationDate(childComplexity), true
+
+	case "AdapterUser.passwordExpires":
+		if e.complexity.AdapterUser.PasswordExpires == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.PasswordExpires(childComplexity), true
+
+	case "AdapterUser.passwordRequired":
+		if e.complexity.AdapterUser.PasswordRequired == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.PasswordRequired(childComplexity), true
+
+	case "AdapterUser.status":
+		if e.complexity.AdapterUser.Status == nil {
+			break
+		}
+
+		return e.complexity.AdapterUser.Status(childComplexity), true
 
 	case "AdapterUser.suspended":
 		if e.complexity.AdapterUser.Suspended == nil {
@@ -3785,7 +3873,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	&ast.Source{Name: "../../api/generated/augmented_schema.graphql", Input: `# Code generated by go generate; DO NOT EDIT THIS FILE. 
-# This file was generated at 2020-05-12T12:53:21+03:00
+# This file was generated at 2020-05-20T16:51:52+03:00
 directive @generateInputs(where: String, orderBy: String) on OBJECT | UNION
 directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 directive @goModel(model: String, models: [String!]) on OBJECT | INPUT_OBJECT | SCALAR | ENUM | INTERFACE | UNION
@@ -4494,6 +4582,17 @@ type AdapterUser @generateInputs(where: "adapter_user_bool_exp", orderBy: "adapt
 	User email account
 	"""
 	mail: String
+	creationDate: Epoch
+	lastLogon: Epoch
+	lastLogoff: Epoch
+	accountExpires: Epoch
+	lastBadLogon: Epoch
+	lastPasswordChange: Epoch
+	logonCount: Int
+	status: String
+	passwordExpirationDate: Epoch
+	passwordExpires: Boolean
+	passwordRequired: Boolean
 	"""
 	User account has admin privileges
 	"""
@@ -5528,6 +5627,9 @@ type adapterDevicesAggregate {
 	Aggregate functions compute a single result value from a set of input values
 	"""
 	column: [adapterDevices_aggregate_max_columns!]!): Map
+	"""
+	Adapter devices that are correlated to this device
+	"""
 	adapterDevices("""
 	limit the number of rows returned.
 	"""
@@ -5537,7 +5639,7 @@ type adapterDevicesAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: adapter_device_bool_exp): [AdapterDevice]
+	where: adapter_device_bool_exp): [AdapterDevice] @relation(name: "adapter_devices", fkName: ["id","fetch_cycle"], relationFkName: ["device_id","fetch_cycle"], relType: ONE_TO_MANY)
 }
 enum adapterDevices_aggregate_avg_columns {
 	"""
@@ -5854,7 +5956,7 @@ type adapterUsersAggregate {
 	offset: Int = 0, """
 	filter the rows returned
 	"""
-	where: adapter_user_bool_exp): [AdapterUser] @relation(name: "adapter_users", fkName: ["id","fetch_cycle"], relationFkName: ["user_id","fetch_cycle"], relType: ONE_TO_MANY)
+	where: adapter_user_bool_exp): [AdapterUser]
 }
 enum adapterUsers_aggregate_avg_columns {
 	"""
@@ -5869,6 +5971,38 @@ enum adapterUsers_aggregate_avg_columns {
 	avg by lastSeen
 	"""
 	lastSeen
+	"""
+	avg by creationDate
+	"""
+	creationDate
+	"""
+	avg by lastLogon
+	"""
+	lastLogon
+	"""
+	avg by lastLogoff
+	"""
+	lastLogoff
+	"""
+	avg by accountExpires
+	"""
+	accountExpires
+	"""
+	avg by lastBadLogon
+	"""
+	lastBadLogon
+	"""
+	avg by lastPasswordChange
+	"""
+	lastPasswordChange
+	"""
+	avg by logonCount
+	"""
+	logonCount
+	"""
+	avg by passwordExpirationDate
+	"""
+	passwordExpirationDate
 }
 enum adapterUsers_aggregate_columns {
 	"""
@@ -5931,6 +6065,42 @@ enum adapterUsers_aggregate_columns {
 	groupBy by mail
 	"""
 	mail
+	"""
+	groupBy by creationDate
+	"""
+	creationDate
+	"""
+	groupBy by lastLogon
+	"""
+	lastLogon
+	"""
+	groupBy by lastLogoff
+	"""
+	lastLogoff
+	"""
+	groupBy by accountExpires
+	"""
+	accountExpires
+	"""
+	groupBy by lastBadLogon
+	"""
+	lastBadLogon
+	"""
+	groupBy by lastPasswordChange
+	"""
+	lastPasswordChange
+	"""
+	groupBy by logonCount
+	"""
+	logonCount
+	"""
+	groupBy by status
+	"""
+	status
+	"""
+	groupBy by passwordExpirationDate
+	"""
+	passwordExpirationDate
 }
 enum adapterUsers_aggregate_max_columns {
 	"""
@@ -5993,6 +6163,42 @@ enum adapterUsers_aggregate_max_columns {
 	max by mail
 	"""
 	mail
+	"""
+	max by creationDate
+	"""
+	creationDate
+	"""
+	max by lastLogon
+	"""
+	lastLogon
+	"""
+	max by lastLogoff
+	"""
+	lastLogoff
+	"""
+	max by accountExpires
+	"""
+	accountExpires
+	"""
+	max by lastBadLogon
+	"""
+	lastBadLogon
+	"""
+	max by lastPasswordChange
+	"""
+	lastPasswordChange
+	"""
+	max by logonCount
+	"""
+	logonCount
+	"""
+	max by status
+	"""
+	status
+	"""
+	max by passwordExpirationDate
+	"""
+	passwordExpirationDate
 }
 enum adapterUsers_aggregate_min_columns {
 	"""
@@ -6055,6 +6261,42 @@ enum adapterUsers_aggregate_min_columns {
 	min by mail
 	"""
 	mail
+	"""
+	min by creationDate
+	"""
+	creationDate
+	"""
+	min by lastLogon
+	"""
+	lastLogon
+	"""
+	min by lastLogoff
+	"""
+	lastLogoff
+	"""
+	min by accountExpires
+	"""
+	accountExpires
+	"""
+	min by lastBadLogon
+	"""
+	lastBadLogon
+	"""
+	min by lastPasswordChange
+	"""
+	lastPasswordChange
+	"""
+	min by logonCount
+	"""
+	logonCount
+	"""
+	min by status
+	"""
+	status
+	"""
+	min by passwordExpirationDate
+	"""
+	passwordExpirationDate
 }
 enum adapterUsers_aggregate_sum_columns {
 	"""
@@ -6069,6 +6311,38 @@ enum adapterUsers_aggregate_sum_columns {
 	sum by lastSeen
 	"""
 	lastSeen
+	"""
+	sum by creationDate
+	"""
+	creationDate
+	"""
+	sum by lastLogon
+	"""
+	lastLogon
+	"""
+	sum by lastLogoff
+	"""
+	lastLogoff
+	"""
+	sum by accountExpires
+	"""
+	accountExpires
+	"""
+	sum by lastBadLogon
+	"""
+	lastBadLogon
+	"""
+	sum by lastPasswordChange
+	"""
+	lastPasswordChange
+	"""
+	sum by logonCount
+	"""
+	logonCount
+	"""
+	sum by passwordExpirationDate
+	"""
+	passwordExpirationDate
 }
 """
 Boolean filter expression for Adapter
@@ -6751,6 +7025,50 @@ input adapter_user_bool_exp {
 	"""
 	mail: StringComparator
 	"""
+	filter by creationDate
+	"""
+	creationDate: EpochComparator
+	"""
+	filter by lastLogon
+	"""
+	lastLogon: EpochComparator
+	"""
+	filter by lastLogoff
+	"""
+	lastLogoff: EpochComparator
+	"""
+	filter by accountExpires
+	"""
+	accountExpires: EpochComparator
+	"""
+	filter by lastBadLogon
+	"""
+	lastBadLogon: EpochComparator
+	"""
+	filter by lastPasswordChange
+	"""
+	lastPasswordChange: EpochComparator
+	"""
+	filter by logonCount
+	"""
+	logonCount: IntComparator
+	"""
+	filter by status
+	"""
+	status: StringComparator
+	"""
+	filter by passwordExpirationDate
+	"""
+	passwordExpirationDate: EpochComparator
+	"""
+	filter by passwordExpires
+	"""
+	passwordExpires: BooleanComparator
+	"""
+	filter by passwordRequired
+	"""
+	passwordRequired: BooleanComparator
+	"""
 	filter by admin
 	"""
 	admin: BooleanComparator
@@ -6894,6 +7212,78 @@ enum adapter_user_order_by {
 	Order by mail in a descending order
 	"""
 	mail_DESC
+	"""
+	Order by creationDate in an ascending order
+	"""
+	creationDate_ASC
+	"""
+	Order by creationDate in a descending order
+	"""
+	creationDate_DESC
+	"""
+	Order by lastLogon in an ascending order
+	"""
+	lastLogon_ASC
+	"""
+	Order by lastLogon in a descending order
+	"""
+	lastLogon_DESC
+	"""
+	Order by lastLogoff in an ascending order
+	"""
+	lastLogoff_ASC
+	"""
+	Order by lastLogoff in a descending order
+	"""
+	lastLogoff_DESC
+	"""
+	Order by accountExpires in an ascending order
+	"""
+	accountExpires_ASC
+	"""
+	Order by accountExpires in a descending order
+	"""
+	accountExpires_DESC
+	"""
+	Order by lastBadLogon in an ascending order
+	"""
+	lastBadLogon_ASC
+	"""
+	Order by lastBadLogon in a descending order
+	"""
+	lastBadLogon_DESC
+	"""
+	Order by lastPasswordChange in an ascending order
+	"""
+	lastPasswordChange_ASC
+	"""
+	Order by lastPasswordChange in a descending order
+	"""
+	lastPasswordChange_DESC
+	"""
+	Order by logonCount in an ascending order
+	"""
+	logonCount_ASC
+	"""
+	Order by logonCount in a descending order
+	"""
+	logonCount_DESC
+	"""
+	Order by status in an ascending order
+	"""
+	status_ASC
+	"""
+	Order by status in a descending order
+	"""
+	status_DESC
+	"""
+	Order by passwordExpirationDate in an ascending order
+	"""
+	passwordExpirationDate_ASC
+	"""
+	Order by passwordExpirationDate in a descending order
+	"""
+	passwordExpirationDate_DESC
 }
 type csGroup @generateInputs(where: "cs_group_bool_exp", orderBy: "cs_group_order_by") {
 	id: String
@@ -15842,6 +16232,347 @@ func (ec *executionContext) _AdapterUser_mail(ctx context.Context, field graphql
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AdapterUser_creationDate(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreationDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_lastLogon(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastLogon, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_lastLogoff(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastLogoff, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_accountExpires(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AccountExpires, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_lastBadLogon(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastBadLogon, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_lastPasswordChange(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastPasswordChange, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_logonCount(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LogonCount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_status(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_passwordExpirationDate(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PasswordExpirationDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*internal.Epoch)
+	fc.Result = res
+	return ec.marshalOEpoch2ᚖbandicootᚋinternalᚐEpoch(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_passwordExpires(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PasswordExpires, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AdapterUser_passwordRequired(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AdapterUser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PasswordRequired, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AdapterUser_admin(ctx context.Context, field graphql.CollectedField, obj *AdapterUser) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -22710,8 +23441,44 @@ func (ec *executionContext) _adapterDevicesAggregate_adapterDevices(ctx context.
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.AdapterDevices, nil
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return obj.AdapterDevices, nil
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			name, err := ec.unmarshalNString2string(ctx, "adapter_devices")
+			if err != nil {
+				return nil, err
+			}
+			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"device_id", "fetch_cycle"})
+			if err != nil {
+				return nil, err
+			}
+			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.Relation == nil {
+				return nil, errors.New("directive relation is not implemented")
+			}
+			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, err
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*AdapterDevice); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.AdapterDevice`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -22999,44 +23766,8 @@ func (ec *executionContext) _adapterUsersAggregate_adapterUsers(ctx context.Cont
 	}
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		directive0 := func(rctx context.Context) (interface{}, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.AdapterUsers, nil
-		}
-		directive1 := func(ctx context.Context) (interface{}, error) {
-			name, err := ec.unmarshalNString2string(ctx, "adapter_users")
-			if err != nil {
-				return nil, err
-			}
-			fkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relationFkName, err := ec.unmarshalNString2ᚕstringᚄ(ctx, []interface{}{"user_id", "fetch_cycle"})
-			if err != nil {
-				return nil, err
-			}
-			relType, err := ec.unmarshalNRelationType2string(ctx, "ONE_TO_MANY")
-			if err != nil {
-				return nil, err
-			}
-			if ec.directives.Relation == nil {
-				return nil, errors.New("directive relation is not implemented")
-			}
-			return ec.directives.Relation(ctx, obj, directive0, name, fkName, relationFkName, relType, nil, nil)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, err
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*AdapterUser); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*bandicoot/pkg/gql.AdapterUser`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.AdapterUsers, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -28631,6 +29362,72 @@ func (ec *executionContext) unmarshalInputadapter_user_bool_exp(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
+		case "creationDate":
+			var err error
+			it.CreationDate, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lastLogon":
+			var err error
+			it.LastLogon, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lastLogoff":
+			var err error
+			it.LastLogoff, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "accountExpires":
+			var err error
+			it.AccountExpires, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lastBadLogon":
+			var err error
+			it.LastBadLogon, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "lastPasswordChange":
+			var err error
+			it.LastPasswordChange, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "logonCount":
+			var err error
+			it.LogonCount, err = ec.unmarshalOIntComparator2ᚖbandicootᚋpkgᚋgqlᚐIntComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "status":
+			var err error
+			it.Status, err = ec.unmarshalOStringComparator2ᚖbandicootᚋpkgᚋgqlᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "passwordExpirationDate":
+			var err error
+			it.PasswordExpirationDate, err = ec.unmarshalOEpochComparator2ᚖbandicootᚋpkgᚋgqlᚐEpochComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "passwordExpires":
+			var err error
+			it.PasswordExpires, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "passwordRequired":
+			var err error
+			it.PasswordRequired, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "admin":
 			var err error
 			it.Admin, err = ec.unmarshalOBooleanComparator2ᚖbandicootᚋpkgᚋgqlᚐBooleanComparator(ctx, v)
@@ -30102,6 +30899,28 @@ func (ec *executionContext) _AdapterUser(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._AdapterUser_lastName(ctx, field, obj)
 		case "mail":
 			out.Values[i] = ec._AdapterUser_mail(ctx, field, obj)
+		case "creationDate":
+			out.Values[i] = ec._AdapterUser_creationDate(ctx, field, obj)
+		case "lastLogon":
+			out.Values[i] = ec._AdapterUser_lastLogon(ctx, field, obj)
+		case "lastLogoff":
+			out.Values[i] = ec._AdapterUser_lastLogoff(ctx, field, obj)
+		case "accountExpires":
+			out.Values[i] = ec._AdapterUser_accountExpires(ctx, field, obj)
+		case "lastBadLogon":
+			out.Values[i] = ec._AdapterUser_lastBadLogon(ctx, field, obj)
+		case "lastPasswordChange":
+			out.Values[i] = ec._AdapterUser_lastPasswordChange(ctx, field, obj)
+		case "logonCount":
+			out.Values[i] = ec._AdapterUser_logonCount(ctx, field, obj)
+		case "status":
+			out.Values[i] = ec._AdapterUser_status(ctx, field, obj)
+		case "passwordExpirationDate":
+			out.Values[i] = ec._AdapterUser_passwordExpirationDate(ctx, field, obj)
+		case "passwordExpires":
+			out.Values[i] = ec._AdapterUser_passwordExpires(ctx, field, obj)
+		case "passwordRequired":
+			out.Values[i] = ec._AdapterUser_passwordRequired(ctx, field, obj)
 		case "admin":
 			out.Values[i] = ec._AdapterUser_admin(ctx, field, obj)
 		case "local":

@@ -24,10 +24,10 @@ func TestEpochFromInt64(t *testing.T) {
 func TestEpochFromTime(t *testing.T) {
 	ct := time.Now()
 	e := EpochFromTime(ct)
-	expectedTime := ct.Unix() + int64(ct.Nanosecond()/1e6)
+	expectedTime := ct.UnixNano()/1e6
 	assert.Equal(t, int64(e), expectedTime)
 
 	ct = time.Unix(253402293599, 1*1e6)
 	e = EpochFromTime(ct)
-	assert.Equal(t, int64(e), int64(253402293600))
+	assert.Equal(t, int64(e), int64(253402293599001))
 }

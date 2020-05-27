@@ -35,6 +35,9 @@ var mappingConversions = map[string]string{
 	"suspended": 	  "is_suspended",
 	"locked": 		  "is_locked",
 	"disabled": 	  "is_disabled",
+	"creationDate":	  "user_created",
+	"lastBadLogon":	  "last_bad_logon",
+	"passwordExpires": "password_never_expires",
 }
 
 var pathFolding = map[string]string{
@@ -52,11 +55,10 @@ func (d userResolver) CompatibilityAPI(ctx context.Context, obj *User) (map[stri
 
 func createCompatibility(f *graphql.FieldContext, op *graphql.OperationContext, obj interface{}) (map[string]interface{}, error) {
 	start := time.Now()
-	defer log.Debug().TimeDiff("elapsed", time.Now(), start).Msg("Time took to build compatibility API")
+	defer log.Trace().TimeDiff("elapsed", time.Now(), start).Msg("Time took to build compatibility API")
 	fields := graphql.CollectFields(op, f.Parent.Parent.Field.Selections, nil)
 	data, _ := json.ConfigFastest.Marshal(obj)
 	return buildCompatibility(createFieldMappings(op, fields), json.Get(data)), nil
-
 }
 
 func buildDetails(m map[string]interface{}) map[string]interface{} {
