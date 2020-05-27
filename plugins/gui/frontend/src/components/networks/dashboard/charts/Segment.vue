@@ -52,6 +52,8 @@
 <script>
 import { mapGetters } from 'vuex';
 import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
+import _cloneDeep from 'lodash/cloneDeep';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import XSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue';
@@ -73,6 +75,10 @@ import {
   ChartSortOrderLabelEnum, ChartViewEnum,
 } from '../../../../constants/dashboard';
 import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
+
+const initConfigFilter = [{
+  name: '', value: '',
+}];
 
 export default {
   name: 'XChartSegment',
@@ -102,7 +108,7 @@ export default {
         entity: '',
         view: '',
         field: { name: '' },
-        filters: [{ name: '', value: '' }],
+        filters: _cloneDeep(initConfigFilter),
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
@@ -134,12 +140,15 @@ export default {
         this.config = {
           ...this.config,
           field,
-          value_filter: [{ name: '', value: '' }],
+          value_filter: _cloneDeep(initConfigFilter),
         };
       },
     },
     filters: {
       get() {
+        if (_isEmpty(this.config.value_filter)) {
+          return _cloneDeep(initConfigFilter);
+        }
         if (Array.isArray(this.config.value_filter)) {
           return this.config.value_filter;
         }
@@ -263,7 +272,7 @@ export default {
         field: {
           name: '',
         },
-        value_filter: [{ name: '', value: '' }],
+        value_filter: _cloneDeep(initConfigFilter),
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
