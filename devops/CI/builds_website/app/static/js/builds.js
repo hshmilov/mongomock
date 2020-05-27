@@ -133,7 +133,7 @@
                         new_modal(title, f, fields, false, message, validation);
                         return false;
                 }));
-        }
+    }
 
     function exception_modal(data) {
                 $("#modal_error .modal-body")[0].innerText = data.responseText;
@@ -182,7 +182,6 @@
                         ip_link = "<a href='https://" + ip + "' target='_blank'>https://" + ip + "</a>";
                     }
                 }
-
                 // Push all of the data
                 data.push(parseInt(i) + 1);
                 data.push(db['name'] || cloud['name']);
@@ -190,7 +189,6 @@
                 data.push(capitalize_str(db["owner"]));
                 data.push(ip_link);
                 data.push(cloud['state']);
-
                 dataSet.push(data);
             }
         }
@@ -312,6 +310,12 @@
             security_groups = security_groups.join(',')
         }
 
+        var check_argo = inst['cloud']['tags']['argo_tunnel']
+        if (check_argo !== undefined) {
+            var argo_tunnel = 'https://' + inst['cloud']['tags']['argo_tunnel'] + '.builds.in.axonius.com';
+            argo_tunnel = '<a href="' + argo_tunnel + '" target="_blank">' + argo_tunnel + '</a>';
+        } else argo_tunnel = '';
+
         icon = '<img style="width: 32px" src="/static/images/' + inst['cloud']['cloud'] + '.png" />&nbsp;&nbsp;'
         var vm_info_data = [
             ["Cloud", icon + inst['cloud']['cloud']],
@@ -323,6 +327,7 @@
             ["Key Name", inst['cloud']['key_name'] || inst['db']['key_name']],
             ["Private IP Address", inst['cloud']['private_ip']],
             ["Public IP Address", inst['cloud']['public_ip']],
+            ["Argo Tunnel URL", argo_tunnel],
             ["Security Groups", security_groups],
             ["Subnet", inst['cloud']['subnet']]
         ];
@@ -352,7 +357,7 @@
                  actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
              }
              else {
-                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined)]);
+                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id'], inst['cloud']['private_ip']);}, [], undefined)]);
              }
 
              var bot_monitoring = inst['db']['bot_monitoring'];
@@ -426,7 +431,7 @@
                  actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop " + inst_name + "?", function (yes_function) { return stop_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
              }
              else {
-                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id']);}, [], undefined, inst_name)]);
+                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start " + inst_name + "?", function (yes_function) { return start_instance(yes_function, inst['cloud']['cloud'], inst['cloud']['id'], inst['cloud']['private_ip']);}, [], undefined, inst_name)]);
              }
         }
 
@@ -541,15 +546,19 @@
     }
 
     // Instance actions and API's to the backend
-    function start_instance(always_function, cloud, instance_id) {
-        var data = {};
-        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start?get_new_data=true&async=true", type: "POST", data: data})
+    function start_instance(always_function, cloud, instance_id, private_ip) {
+        $.ajax({url: "/api/instances/" + cloud + "/" + instance_id + "/start?get_new_data=true&async=true", type: "POST", data: {}})
             .done(function(result) {
                 rewrite_all_tables(result);
                 success_modal('Your instance is being started.<br>Please refresh the page to see the changes in a few seconds.')
             })
             .fail(exception_modal)
             .always(always_function);
+        var data = {"name": instance_id, "action": "start"};
+        $.post({url: "http://argo.axonius.lan/api" ,data: data, function(result)
+            {
+                $("span").html(result);
+            }});
     }
     function stop_instance(always_function, cloud, instance_id) {
         var data = {};
@@ -560,6 +569,10 @@
             })
             .fail(exception_modal)
             .always(always_function);
+        var data = {"name": instance_id, "action": "stop"};
+        $.post({url: "http://argo.axonius.lan/api" ,data: data,function(result){
+            $("span").html(result);
+        }});
     }
     function terminate_instance(always_function, cloud, instance_id) {
         console.log("terminating " + instance_id);
@@ -570,6 +583,10 @@
             })
             .fail(exception_modal)
             .always(always_function);
+        var data = {"name": instance_id, "action": "delete"};
+        $.post({url: "http://argo.axonius.lan/api", data: data, function(result){
+            $("span").html(result);
+        }});
     }
     function terminate_group(always_function, group_name) {
         console.log("terminating " + group_name);
@@ -587,6 +604,7 @@
             .fail(exception_modal)
             .always(always_function);
     }
+
     function add_new_instance() {
         var data = {};
         if (instance_vm_type === 'demo') {
@@ -603,6 +621,7 @@
         data["cloud"] = $("#new_vm_cloud")[0].value;
         data["public"] = is_public;
         data['vm_type'] = vm_type;
+
 
         data['config'] = {};
         data['config']["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
@@ -626,7 +645,6 @@
             data['image'] = $("#new_vm_image")[0].value;
             // No need to put a key to an image.
         }
-
         $("#new_instance_modal_add_button").prop("disabled", true).text('Loading..');
         $.ajax(
             {
@@ -696,6 +714,7 @@
         // $("#new_instance_adapters_cell").hide();
         $("#new_vm_empty_server_label").show();
         $('#new_instance_modal').modal();
+
     }
     function add_demo_modal() {
         instance_vm_type = "demo";

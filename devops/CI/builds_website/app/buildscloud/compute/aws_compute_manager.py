@@ -1,17 +1,20 @@
 from typing import List, Dict, Set
+import traceback
 
+import requests
 import boto3
+from haikunator import Haikunator
 
 
 class AWSComputeManager:
     def __init__(self, credentials: dict):
         super().__init__()
         self.ec2_client = boto3.client('ec2', **credentials)
+        self.ec2_resource = boto3.resource('ec2', **credentials)
         self.subnet_id_to_name = dict()
         self.image_id_to_name = dict()
         self.owner_amis = dict()
         self.refreshed_cache = False
-
         self.refresh_cache()
 
     @staticmethod
@@ -115,10 +118,11 @@ class AWSComputeManager:
             security_groups: List[str],
             is_public: bool,
             user_data: str,
+            tunnel: str,
     ):
         node_tags = [
             {'Key': 'Name', 'Value': name},
-            {'Key': 'Builds-VM', 'Value': 'true'}
+            {'Key': 'Builds-VM', 'Value': 'true'},
         ]
 
         for tag_name, tag_value in tags.items():
@@ -177,6 +181,18 @@ class AWSComputeManager:
                 waiter = self.ec2_client.get_waiter('instance_running')
                 waiter.wait(InstanceIds=[instance_id])
                 self.ec2_client.associate_address(AllocationId=allocation['AllocationId'], InstanceId=instance_id)
+        else:
+            if tunnel:
+                private_ip = raw[0]['PrivateIpAddress']
+                instance_id = raw[0]['InstanceId']
+                ENDPOINT = "http://argo.axonius.lan/api"
+                argo_tunnel = 'https://' + tunnel + '.builds.in.axonius.com'
+                data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
+                try:
+                    r = requests.post(url=ENDPOINT, data=data)
+                except Exception:
+                    traceback.print_exc()
+                    print(f"Failed sending {data} to {ENDPOINT}")
 
         generic = [{
             'id': raw_item['InstanceId'],
@@ -186,7 +202,37 @@ class AWSComputeManager:
         return generic, raw
 
     def start_instance(self, instance_id: str):
+        tag_exists = False
         self.ec2_client.start_instances(InstanceIds=[instance_id])
+        instance = self.ec2_resource.Instance(instance_id)
+        tags = instance.tags
+        for tag in tags:
+            if tag['Key'] == 'argo_tunnel':
+                tag_exists = True
+                break
+        if not tag_exists:
+            haikunator = Haikunator()
+            argo_token = haikunator.haikunate(token_length=5, token_hex=True)
+            response = self.ec2_client.create_tags(
+                Resources=[
+                    instance_id,
+                ],
+                Tags=[
+                    {
+                        'Key': 'argo_tunnel',
+                        'Value': argo_token,
+                    },
+                ],
+            )
+            private_ip = instance.private_ip_address
+            ENDPOINT = "http://argo.axonius.lan/api"
+            argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
+            data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
+            try:
+                requests.post(url=ENDPOINT, data=data, verify=False)
+            except Exception:
+                traceback.print_exc()
+                print(f"Failed sending {data} to {ENDPOINT}")
 
     def stop_instance(self, instance_id: str):
         self.ec2_client.stop_instances(InstanceIds=[instance_id])

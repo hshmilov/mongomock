@@ -5,10 +5,12 @@ WORKDIR /home/axonius
 ENV HOME /home/axonius
 ENV DOMAIN builds.in.axonius.lan
 
+# Added Axonius Nexus Pip Repo
+ADD pip.conf /etc/pip.conf
+
 # Install nginx-uwsgi-flask stack, pip3, pip2, python2
-RUN apt-get -y update && apt-get -y install python3-pip python3-dev python python-pip python-dev nginx
-RUN pip3 install uwsgi flask
-RUN pip2 install supervisor
+RUN apt-get -y update && apt-get -y install python3-pip python3-dev nginx && rm -rf /var/lib/apt/lists/*
+RUN pip3 install uwsgi flask supervisor
 
 # Copy the app and config
 RUN mkdir /home/axonius/logs

@@ -1,14 +1,16 @@
 import ipaddress
+import traceback
 import string
 import time
 from typing import Dict, List
-
+import requests
 import dateutil
 import libcloud
 import libcloud.compute.drivers.gce
 from libcloud.compute.base import Node
 
 from buildscloud.builds_cloud_consts import GCP_DFEAULT_ZONE, GCP_DEFAULT_REGION, CLOUD_KEYS
+from haikunator import Haikunator
 
 
 APPROVED_NODE_CHARACTERS = string.ascii_lowercase + string.digits + '-'
@@ -77,7 +79,7 @@ class GCPComputeManager:
             labels: Dict[str, str],
             is_public: bool,
             code: str,
-
+            tunnel: str,
     ):
         assert not (is_public and num != 1), 'Does not support multiple public instances'
         name = ''.join(c if c in APPROVED_NODE_CHARACTERS else '-' for c in name.lower()) + \
@@ -139,6 +141,22 @@ class GCPComputeManager:
             ex_disks_gce_struct=ex_disks_gce_struct
         )
 
+        try:
+            if tunnel:
+                instance_id = raw[0].name
+                private_ip = raw[0].private_ips[0]
+                ENDPOINT = "http://argo.axonius.lan/api"
+                argo_tunnel = 'https://' + tunnel + '.builds.in.axonius.com'
+                data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
+                try:
+                    requests.post(url=ENDPOINT, data=data)
+                except Exception:
+                    traceback.print_exc()
+                    print(f"Failed sending {data} to {ENDPOINT}")
+
+        except Exception as e:
+            print(raw, e)
+
         for instance in raw:
             if not isinstance(instance, Node):
                 raise ValueError(f'Failed creating: {str(instance)}')
@@ -164,8 +182,28 @@ class GCPComputeManager:
                 yield self.turn_raw_to_generic(node)
 
     def start_node(self, node_id: str):
+        label_exist = False
         node = self.client.ex_get_node(node_id, zone='all')
         self.client.ex_start_node(node)
+        labels = node.extra.get('labels')
+        for label in labels:
+            if label[0] == 'argo_tunnel':
+                label_exist = True
+                break
+        if not label_exist:
+            haikunator = Haikunator()
+            argo_token = haikunator.haikunate(token_length=5, token_hex=True)
+            labels.update({'argo_tunnel': argo_token})
+            self.client.ex_set_node_labels(node, labels=labels)
+            private_ip = node.private_ips[0]
+            ENDPOINT = "http://argo.axonius.lan/api"
+            argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
+            data = {'action': 'create', 'name': node.name, 'ip': private_ip, 'url': argo_tunnel}
+            try:
+                requests.post(url=ENDPOINT, data=data)
+            except Exception:
+                traceback.print_exc()
+                print(f"Failed sending {data} to {ENDPOINT}")
 
     def stop_node(self, node_id: str):
         node = self.client.ex_get_node(node_id, zone='all')

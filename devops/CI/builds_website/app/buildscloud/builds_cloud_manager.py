@@ -93,6 +93,7 @@ class BuildsCloudManager:
             image: str = None,
             code: str = None,
             network_security_options: str = None,
+            tunnel: str = '',
     ):
         if cloud == 'aws':
             if not image:
@@ -107,6 +108,11 @@ class BuildsCloudManager:
                 security_groups = AWS_REGULAR_INSTANCE_NO_INTERNET_SG
             else:
                 raise ValueError('Unknown network security options')
+
+            labels = {'VM-Type': vm_type, 'argo_tunnel': tunnel}
+            if not tunnel:
+                labels.pop('argo_tunnel')
+
             generic, raw = self.aws_compute.create_instance(
                 f'{vm_type}-{name}',
                 num,
@@ -115,10 +121,11 @@ class BuildsCloudManager:
                 key_name,
                 AWS_REGULAR_INSTANCE_SUBNET_ID,
                 hd_size,
-                {'VM-Type': vm_type},
+                labels,
                 security_groups,
                 False,
-                code if code else ''
+                code if code else '',
+                tunnel
             )
         elif cloud == 'gcp':
             assert network_security_options is None, \
@@ -128,6 +135,11 @@ class BuildsCloudManager:
                 hd_size = GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE
             else:
                 hd_size = 0  # use the image's hd size
+
+            labels = {'vm-type': vm_type.lower(), 'argo_tunnel': tunnel.lower()}
+            if not tunnel:
+                labels.pop('argo_tunnel')
+
             generic, raw = self.gcp_compute.create_node(
                 f'{vm_type}-{name}',
                 num,
@@ -137,9 +149,10 @@ class BuildsCloudManager:
                 GCP_REGULAR_INSTANCE_NETWORK_ID,
                 GCP_REGULAR_INSTANCE_SUBNETWORK_ID,
                 hd_size,
-                {'vm-type': vm_type.lower()},
+                labels,
                 False,
-                code
+                code,
+                tunnel
             )
         else:
             raise ValueError(f'Unsupported compute cloud type {cloud}')

@@ -102,7 +102,7 @@ class BuildsManager(object):
 
     def add_instances(
             self, cloud, vm_type, name, instance_type, num, image, key_name, public, code, network_security_options,
-            owner, fork, branch
+            owner, fork, branch, tunnel
     ) -> (List[str], str):
         if public is True:
             generic, _ = self.bcm.create_public_instances(
@@ -110,7 +110,7 @@ class BuildsManager(object):
             )
         else:
             generic, _ = self.bcm.create_regular_instances(
-                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options
+                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options, tunnel
             )
 
         owner_full_name, owner_slack_id = owner

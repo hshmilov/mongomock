@@ -22,6 +22,8 @@ from instancemonitor import MONITORING_BOT_METADATA_NAMESPACE, SHOULD_DELETE_OLD
 from buildsmanager import BuildsManager, LOCAL_BUILDS_HOST
 from github import Github
 
+from haikunator import Haikunator
+
 DEFAULT_CLOUD = 'gcp'
 
 SESSION_SECRET_KEY_PATH = os.path.join('..', 'secret.txt')
@@ -91,10 +93,9 @@ git init
 # Beware! do not save this token.
 git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
 ./devops/scripts/host_installation/init_host.sh
-cd ~/cortex/bandicoot
+cd /home/ubuntu/cortex/bandicoot
 sudo go mod vendor
-cd ~
-cd install
+cd /home/ubuntu/cortex/install
 chmod 777 *
 # Notice that this raises the system in debug mode (all ports are opened outside and files are mounted from the outside of the system).
 # The public up has only port 443 open but the private one is completely open.
@@ -229,14 +230,19 @@ def instances():
         instance_name = data['name']
         instance_type = data['type']
         vm_type = data['vm_type']
+        if vm_type != 'Auto-Test-VM':
+            haikunator = Haikunator()
+            argo_token = haikunator.haikunate(token_length=5, token_hex=True)
+        else:
+            argo_token = ''
         key_name = data.get('key_name')
         instance_cloud = data.get('cloud') or DEFAULT_CLOUD
         instance_image = data.get('image')
         is_public = data.get('public') is True
         num = int(data.get('num')) if data.get('num') else 1
         config = data.get('config') or {}
+        # argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
         force_custom_code_to_run = data.get('force_custom_code_to_run') or False
-
         config_code = None
         post_script = config.get('post_script') or ''
         if instance_image is None or force_custom_code_to_run:
@@ -283,7 +289,8 @@ def instances():
             config.get('network_security_options'),
             user_auth,
             config.get('fork'),
-            config.get('branch')
+            config.get('branch'),
+            argo_token
         )
         result = dict()
         is_async = request.args.get('async') and request.args.get('async').lower() == 'true'
