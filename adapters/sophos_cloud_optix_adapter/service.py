@@ -490,18 +490,19 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
 
                 try:
                     account_type = more_info.get('accountType')
-                    if account_type.upper() == 'AWS':
-                        user.arn = more_info.get('arn')
-                        if user.arn and isinstance(user.arn, str):
-                            user.username = user.arn.split('/')[-1]
-                        else:
-                            user.username = more_info.get('userId') or ''
-                    elif account_type.upper() == 'GCP':
-                        user.username = more_info.get('primaryEmail') or ''
-                    elif account_type.upper() == 'AZURE':
-                        user.username = more_info.get('signInName') or \
-                            more_info.get('mainNickname') or \
-                            more_info.get('principalName') or ''
+                    if isinstance(account_type, str):
+                        if account_type.upper() == 'AWS':
+                            user.arn = more_info.get('arn')
+                            if user.arn and isinstance(user.arn, str):
+                                user.username = user.arn.split('/')[-1]
+                            else:
+                                user.username = more_info.get('userId') or ''
+                        elif account_type.upper() == 'GCP':
+                            user.username = more_info.get('primaryEmail') or ''
+                        elif account_type.upper() == 'AZURE':
+                            user.username = more_info.get('signInName') or \
+                                more_info.get('mainNickname') or \
+                                more_info.get('principalName') or ''
                 except Exception:
                     logger.exception(f'Unable to set username: {user_raw}')
 
