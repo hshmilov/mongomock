@@ -336,8 +336,17 @@ class JsonAdapter(AdapterBase):
         return entity_raw.get(field, d_value)
 
     @staticmethod
-    def _get_entity_id(entity_raw, fields):
-        id_fields = fields.get('id')
+    def _get_entity_id(entity_raw, fields, is_user=False):
+        id_fields = None
+        if is_user:
+            req_id_fields = USERS_NEEDED_FIELDS
+        else:
+            req_id_fields = DEVICES_NEEDED_FIELDS
+        for id_field_attempt in req_id_fields:
+            id_fields_found = fields.get(id_field_attempt)
+            if id_fields_found:
+                id_fields = id_fields_found
+                break
         if not id_fields:
             return None
         entity_id = None
@@ -359,7 +368,7 @@ class JsonAdapter(AdapterBase):
             user.file_name = file_name
 
             # Generic Axonius stuff
-            entity_id = self._get_entity_id(user_raw, fields)
+            entity_id = self._get_entity_id(user_raw, fields, is_user=True)
             if entity_id is None:
                 logger.warning(f'No user id for {user_raw}.')
                 return None
