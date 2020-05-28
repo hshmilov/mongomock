@@ -60,7 +60,7 @@ class DigicertCertcentralConnection(RESTConnection):
     @staticmethod
     def _handle_http_error(error):
         try:
-            super()._handle_http_error(error)
+            RESTConnection._handle_http_error(error)
         except RESTRequestException as e:
 
             # Best effort error handling of the official Digicert error flow
