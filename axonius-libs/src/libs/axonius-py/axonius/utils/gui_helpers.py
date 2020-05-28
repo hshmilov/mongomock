@@ -865,11 +865,9 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                             sub_property_val = None
                     if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
                         val = sub_property_val
+                        last_seen = _adapter['last_seen']
                     elif specific_property in _adapter and not isinstance(sub_property, str):
                         val = _adapter[specific_property]
-                    else:
-                        val = ''
-                    if val != '':
                         last_seen = _adapter['last_seen']
 
             # Second priority is active-directory data
@@ -897,9 +895,6 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                             val = sub_property_val
                             last_seen = tmp_last_seen
                             val_changed_by_ad = True
-                        elif tmp_val is None or (tmp_val is not None and isinstance(sub_property, str)) and \
-                                (sub_property_val is None or sub_property_val == []):
-                            val = ''
                         elif tmp_val is not None and sub_property is None:
                             val = tmp_val
                             last_seen = tmp_last_seen
@@ -930,11 +925,9 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                             sub_property_val = None
                     if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
                         val = sub_property_val
+                        last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
                     elif specific_property in _adapter and not isinstance(sub_property, str):
                         val = _adapter[specific_property]
-                    else:
-                        val = ''
-                    if val != '':
                         last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
 
             # Forth priority is first adapter that has the value

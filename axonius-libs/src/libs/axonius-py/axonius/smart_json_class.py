@@ -40,6 +40,8 @@ class SmartJsonClassMetaclass(type):
         base_fields = []
         if bases:
             base_fields = getattr(bases[0], 'fields_info', [])
+            for more_bases in bases[1:]:
+                base_fields.extend(getattr(more_bases, 'fields_info', []))
 
         # if hostname = Field(str, 'Host Name') then field.name == 'hostname' and field.title = 'Host Name'
         # The following test failure should not be possible since python does not allow it from the first place

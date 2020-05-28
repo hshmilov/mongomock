@@ -118,7 +118,7 @@ def _perform_find(entity_views_db,
                                 sort=find_sort,
                                 projection=projection,
                                 limit=limit,
-                                skip=skip).collation({'locale': 'en_US', 'caseLevel': False})
+                                skip=skip)
 
 
 def _get_all_entities_raw(skip: int,

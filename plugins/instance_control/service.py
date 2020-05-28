@@ -272,20 +272,20 @@ class InstanceControlService(Triggerable, PluginBase):
             return return_error('file not exist', 404)
 
         execution_script_path = Path(UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
-        # copy execution python script aka AAAS
-        local_file_name = '/home/ubuntu/aaas.py'
+        # copy execution python script aka axcs
+        local_file_name = '/home/ubuntu/axcs.py'
         copy_cmd = f'sudo cp {execution_script_path} {local_file_name}'
         self.__exec_command_verbose(copy_cmd)
-        # chmod the AAAS
+        # chmod the axcs
         chmod_cmd = f'sudo chmod +x {local_file_name}'
         self.__exec_command_verbose(chmod_cmd)
-        # run the AAAS
+        # run the axcs
         timestamp = datetime.datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S')
         nohup_logs_directory = Path('/home/ubuntu/logs/axonius/offline')
         # create directory for logging the nohup action
         mkdir_cmd = 'mkdir -p /home/ubuntu/logs/axonius/offline'
         self.__exec_command_verbose(mkdir_cmd)
-        nohup_log_file_name = f'{nohup_logs_directory}/axonius_aaas.{timestamp}.log'
+        nohup_log_file_name = f'{nohup_logs_directory}/axonius_axcs.{timestamp}.log'
         logger.info(f'execute_file: got file to execute, follow up in host at '
                     f'{nohup_log_file_name}')
 

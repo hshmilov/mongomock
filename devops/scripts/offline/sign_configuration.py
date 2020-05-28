@@ -27,7 +27,7 @@ def main():
     configuration_script_file = args.file
 
     configuration_script_file_name = Path(configuration_script_file).name
-    output_file_name = 'aaas_job.axonius'
+    output_file_name = 'axcs_job.axonius'
     signature_file_name = 'axonius.sig'
     tar_file_name = f'{configuration_script_file_name}.tar'
 

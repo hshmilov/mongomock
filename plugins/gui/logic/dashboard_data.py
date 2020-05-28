@@ -750,7 +750,7 @@ def _generate_aggregate_unique_values_reduce(key):
     }
 
 
-def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_date: datetime):
+def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db, for_date: datetime):
     """
     Build the query and retrieve data for calculating the abstract chart for given field and view
     """
@@ -796,8 +796,8 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
             }
         ]
     }
-    if view:
-        base_view = find_view_config_by_id(entity, view)
+    if view_from_db:
+        base_view = view_from_db['view']
         if not base_view or not base_view.get('query'):
             return None, None
         base_query = {
@@ -806,7 +806,7 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view, for_dat
                 base_query
             ]
         }
-        base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
+        base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and '
 
     field_compare = 'true' if field['type'] == 'bool' else 'exists(true)'
     if field['type'] in ['number', 'integer']:
@@ -833,7 +833,8 @@ def fetch_chart_abstract(_: ChartViews, entity: EntityType, view, field, func, f
     # Query and data collections according to given module
 
     field_name = field['name']
-    base_view, results = _query_chart_abstract_results(field, entity, view, for_date)
+    view_from_db = find_view_by_id(entity, view) if view else None
+    base_view, results = _query_chart_abstract_results(field, entity, view_from_db, for_date)
     if not base_view or not results:
         return None
     count = 0
@@ -852,12 +853,14 @@ def fetch_chart_abstract(_: ChartViews, entity: EntityType, view, field, func, f
             count += 1
             sigma += field_values
 
+    view_name = view_from_db['name'] if view else 'ALL'
     if not count:
-        return [{'name': view, 'value': 0, 'view': base_view, 'module': entity.value}]
-    name = f'{func} of {field["title"]} on {view or "ALL"} results'
+        return [{'name': view_name, 'value': 0, 'view': base_view, 'module': entity.value}]
+    name = f'{func} of {field["title"]} on {view_name} results'
     if ChartFuncs[func] == ChartFuncs.average:
-        return [
-            {'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
+        return [{
+            'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value
+        }]
     return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
 
 

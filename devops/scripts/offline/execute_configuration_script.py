@@ -17,42 +17,59 @@ def main():
         # check tar file for original content
         all_files_valid = True
         with tarfile.open(new_file_path, 'r') as file:
-            for filename in ['aaas_job.axonius', 'axonius.sig']:
+            for filename in ['axcs_job.axonius', 'axonius.sig']:
                 try:
                     _ = file.getmember(filename)
                 except KeyError:
                     all_files_valid = False
             if all_files_valid:
-                file.extract('aaas_job.axonius')
+                file.extract('axcs_job.axonius')
                 file.extract('axonius.sig')
                 print('axonius tar extracted')
 
         if all_files_valid:
             # decrypting and validate files
-            encrypted_script = Path(working_dir, 'aaas_job.axonius')
+            encrypted_script = Path(working_dir, 'axcs_job.axonius')
             signature_file = Path(working_dir, 'axonius.sig')
             verify_configuration_script = Path(working_dir, 'cortex/devops/scripts/offline/', 'verify_configuration.py')
-            verify_command = subprocess.run([str(verify_configuration_script),
-                                             '--file', str(encrypted_script),
-                                             '--signature', str(signature_file)])
-            if verify_command.returncode == 0:
-                runnable_script = Path(working_dir, 'axonius_configuration')
+            try:
+                verify_configuration_script.chmod(0o755)
+                verify_command = subprocess.run([str(verify_configuration_script),
+                                                 '--file', str(encrypted_script),
+                                                 '--signature', str(signature_file)])
+
+                if verify_command.returncode == 0:
+                    runnable_script = Path(working_dir, 'axonius_configuration')
+                    try:
+                        print('axonius script valid')
+                        runnable_script.chmod(0o755)
+                        subprocess.run(['sudo', 'bash', '-c', str(runnable_script)])
+                        print('axonius script done')
+                    except Exception as e:
+                        print(f'axonius script error:{e}')
+                    finally:
+                        if runnable_script.exists():
+                            runnable_script.unlink()
+                else:
+                    print('axonius script not valid')
+            except Exception as e:
+                print(f'configuration verification error: {e}')
+            finally:
                 try:
-                    print('axonius script valid')
-                    runnable_script.chmod(0o755)
-                    subprocess.run(['sudo', 'bash', '-c', str(runnable_script)])
-                    print('AAAS was here')
+                    if encrypted_script.exists():
+                        encrypted_script.unlink()
                 except Exception as e:
-                    print(f'axonius script error:{e}')
-                finally:
-                    if runnable_script.exists():
-                        runnable_script.unlink()
-            else:
-                print('axonius script not valid')
-                if encrypted_script.exists():
-                    encrypted_script.unlink()
-                if signature_file.exists():
-                    signature_file.unlink()
+                    print(f'Failed removing encrypted script: {e}')
+                try:
+                    if signature_file.exists():
+                        signature_file.unlink()
+                except Exception as e:
+                    print(f'Failed removing signature file: {e}')
+                try:
+                    verify_configuration_script.chmod(0o644)
+                except Exception as e:
+                    print(f'Failed unchmoding verify_configuration file: {e}')
+
         else:
             print('not original axonius tar')
     finally:

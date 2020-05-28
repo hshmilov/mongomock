@@ -244,3 +244,40 @@ def test_configuring_dynamic_complex_fields():
 
     put_dynamic_field(device2, 'key', obj_example, 'Key1')
     assert device2.to_dict()['key'] == obj_example
+
+
+def test_smart_json_class_multiple_inheritance():
+    class MyDeviceMH1(SmartJsonClass):
+        field_1 = Field(str, 'Field 1')
+
+    class MyDeviceMH2(SmartJsonClass):
+        field_2 = Field(datetime.datetime, 'Field 2')
+
+    class MyMediumMH(MyDeviceMH1, MyDeviceMH2):
+        field_3 = Field(str, 'Field 3')
+
+    class MyFinalMH(MyMediumMH):
+        field_4 = Field(int, 'Field 4 (int)')
+
+    time_now = datetime.datetime.now()
+
+    device_mh = MyFinalMH()
+    device_mh.field_1 = '1'
+    device_mh.field_2 = time_now
+    device_mh.field_3 = '3'
+    device_mh.field_4 = 4
+    assert device_mh.get_fields_info() == {
+        'items': [
+            {'name': 'field_4', 'type': 'integer', 'title': 'Field 4 (int)'},
+            {'name': 'field_3', 'type': 'string', 'title': 'Field 3'},
+            {'name': 'field_1', 'type': 'string', 'title': 'Field 1'},
+            {'name': 'field_2', 'type': 'string', 'title': 'Field 2', 'format': 'date-time'}
+        ],
+        'type': 'array'
+    }
+    assert device_mh.to_dict() == {
+        'field_1': '1',
+        'field_2': time_now,
+        'field_3': '3',
+        'field_4': 4
+    }
