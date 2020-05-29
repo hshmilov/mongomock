@@ -32,7 +32,7 @@ def _sql_parse_raw_data(create_adapter_func, devices_raw_data):
             if not device_id:
                 logger.error(f'can not get device id for {device_raw}, continuing')
                 continue
-            device.id = device_id
+            device.id = device_id + '_' + client_config.get('table')
             device.table = client_config.get('table')
             if sql_type.lower() == SQLTypes.SQLITE.value.lower():
                 device.file_name = client_config.get('user_id')
