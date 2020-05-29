@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
@@ -55,6 +56,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'cmdb_ci_table',
                     'title': 'CMDB CI table name',
                     'type': 'string'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Additional fields',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -74,13 +80,15 @@ class ServiceNowComputerAction(ActionTypeBase):
             'password': None,
             'https_proxy': None,
             'cmdb_ci_table': 'cmdb_ci_computer',
+            'extra_fields': None,
             'verify_ssl': True
         })
 
+    # pylint: disable=too-many-arguments,too-many-branches
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,
                                      to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
-                                     cmdb_ci_table=None):
+                                     cmdb_ci_table=None, extra_fields=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
@@ -98,6 +106,13 @@ class ServiceNowComputerAction(ActionTypeBase):
             connection_dict['serial_number'] = serial_number
         if os_type:
             connection_dict['os'] = os_type
+        try:
+            if extra_fields:
+                extra_fields_dict = json.loads(extra_fields)
+                if isinstance(extra_fields_dict, dict):
+                    connection_dict.update(extra_fields_dict)
+        except Exception:
+            logger.exception(f'Problem parsing extra fields')
         request_json = {'snow': connection_dict,
                         'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
                                           'device_id': to_correlate_device_id}}
@@ -200,7 +215,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                             serial_number=serial_number_raw,
                                                             to_correlate_plugin_unique_name=corre_plugin_id,
                                                             to_correlate_device_id=to_correlate_device_id,
-                                                            cmdb_ci_table=self._config.get('cmdb_ci_table'))
+                                                            cmdb_ci_table=self._config.get('cmdb_ci_table'),
+                                                            extra_fields=self._config.get('extra_fields'))
 
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

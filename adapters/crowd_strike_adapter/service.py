@@ -93,7 +93,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config['domain'] + '_' + client_config['username']
+        return client_config['domain'] + '_' + client_config['username'] + (client_config.get('member_cid') or '')
 
     @staticmethod
     def _test_reachability(client_config):
@@ -338,7 +338,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting first seen')
                 device.external_ip = device_raw.get('external_ip')
-                device.device_manufacturer = device_raw.get('bios_manufacturer')
+                device.bios_manufacturer = device_raw.get('bios_manufacturer')
                 try:
                     device.groups = self.parse_groups(device_raw.get('groups_data'))
                     if self.__group_name_whitelist:

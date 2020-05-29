@@ -634,6 +634,14 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
             return True
         return result
 
+    def return_fields_sorted():
+        result = find_entity_field(entity_data, field_path, skip_unique=True)
+        try:
+            result = sorted(result, key=str.casefold)
+        except Exception:
+            pass
+        return result
+
     if not skip_unique:
         if field_path in MAX_SORTED_FIELDS:
             return return_field_max()
@@ -643,6 +651,8 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                           'specific_data.data.device_disabled',
                           'specific_data.data.os.is_windows_server']:
             return return_true_if_list()
+        if field_path in ['labels']:
+            return return_fields_sorted()
 
     if entity_data is None:
         # Return no value for this path

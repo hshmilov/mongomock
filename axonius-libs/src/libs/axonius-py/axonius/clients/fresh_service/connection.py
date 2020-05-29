@@ -24,7 +24,17 @@ class FreshServiceConnection(RESTConnection):
             raise RESTException('No API Key')
         self._get('cmdb/items.json', do_basic_auth=True)
 
-    def create_ticket(self, ticket_info):
+    def create_ticket(self, ticket_info, group_name=None):
+        if group_name:
+            group_id = None
+            groups = self._get('api/v2/groups', do_basic_auth=True)['groups']
+            for group_raw in groups:
+                if group_name == group_raw.get('name'):
+                    group_id = group_raw['id']
+            if group_id:
+                ticket_info['group_id'] = group_id
+            else:
+                raise RESTException('Group Name is invalid')
         self._post('api/v2/tickets', body_params=ticket_info, do_basic_auth=True)
 
     def _get_api_endpoint(self, api_endpoint):

@@ -22,6 +22,17 @@ logger = logging.getLogger(f'axonius.{__name__}')
 MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 
 
+class NexposePolicy(SmartJsonClass):
+    benchmark_name = Field(str, 'Benchmark Name')
+    benchmark_version = Field(str, 'Benchmark Version')
+    category = Field(str, 'Category')
+    description = Field(str, 'Description')
+    policy_name = Field(str, 'Policy Name')
+    scope = Field(str, 'Scope')
+    status = Field(str, 'Status')
+    title = Field(str, 'Title')
+
+
 class ScanData(SmartJsonClass):
     engine_name = Field(str, 'Engine Name')
     duration = Field(str, 'Duration')
@@ -165,7 +176,8 @@ class NexposeV3Client(NexposeClient):
         return scans_dict
 
     # pylint: disable=arguments-differ
-    def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False):
+    def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False,
+                        fetch_policies=False, fetch_ports=False, fetch_sw=False):
         logger.info(f'Stating to fetch devices on V3 for nexpose')
         scans_dict = self._get_scans()
         self.vuln_ids_dict = {}
@@ -203,12 +215,16 @@ class NexposeV3Client(NexposeClient):
                                     vuln_details = self.get_vuln_details(vuln_id=vuln_id) or {}
                                     item['vulnerability_details_full'].append(vuln_details)
                                 except Exception:
-                                    logger.exception(f'Problem getting details for vulnerability {vuln_id}')
+                                    logger.exception(f'Problem getting details for vulnerability {vuln}')
 
-                    if fetch_tags:
+                    if fetch_ports:
                         self._get_async_data(devices, 'services')
+                    if fetch_tags:
                         self._get_async_data(devices, 'tags')
+                    if fetch_sw:
                         self._get_async_data(devices, 'software')
+                    if fetch_policies:
+                        self._get_async_data(devices, 'policies')
                     yield from devices
 
                 except Exception:
@@ -444,6 +460,24 @@ class NexposeV3Client(NexposeClient):
             except Exception:
                 logger.exception(f'Problem adding CVES to device')
 
+        try:
+            policies_raw = device_raw.get('policies_details') or []
+            if policies_raw and isinstance(policies_raw, list):
+                for policies_data in policies_raw:
+                    try:
+                        policy_obj = NexposePolicy(benchmark_name=policies_data.get('benchmarkName'),
+                                                   benchmark_version=policies_data.get('benchmarkVersion'),
+                                                   category=policies_data.get('category'),
+                                                   description=policies_data.get('description'),
+                                                   policy_name=policies_data.get('policyName'),
+                                                   scope=policies_data.get('scope'),
+                                                   status=policies_data.get('status'),
+                                                   title=policies_data.get('title'))
+                        device.nexpose_policies.append(policy_obj)
+                    except Exception:
+                        logger.exception(f'Problem adding policies_data {policies_data}')
+        except Exception:
+            logger.exception(f'Problem parsing policies')
         try:
             services_raw = device_raw.get('services_details') or []
             if services_raw and isinstance(services_raw, list):

@@ -205,8 +205,11 @@ class TaniumSqAdapter(AdapterBase):
                 bitness = 32
                 arch = 'x86'
             else:
-                valids = DeviceAdapterCPU().enum
-                matches = [x for x in [re.search(v, arch) for v in valids] if x]
+                try:
+                    valids = DeviceAdapterCPU.bitness.enum
+                    matches = [x for x in [re.search(v, arch) for v in valids] if x]
+                except Exception:
+                    matches = []
                 arch = matches[0] if matches else None
                 bitness = None
 

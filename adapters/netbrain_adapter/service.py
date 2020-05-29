@@ -19,6 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NetbrainAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        netbrain_hostname = Field(str, 'Netbrain Name')
         mgmt_ip = Field(str, 'Management IP', converter=format_ip, json_format=JsonStringFormat.ip)
         mgmt_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
 
@@ -147,7 +148,19 @@ class NetbrainAdapter(AdapterBase):
                 return None
             # generic stuff
             device.id = f'{device_id}_{device_raw.get("hostname") or ""}'
-            device.hostname = device_raw.get('hostname')
+            device.netbrain_hostname = device_raw.get('hostname')
+            hostname = device_raw.get('hostname') or ''
+            if hostname.endswith('/act'):
+                hostname = hostname[:-len('/act')]
+            if hostname.endswith('/stby'):
+                hostname = hostname[:-len('/stby')]
+            if hostname.endswith('/admin'):
+                hostname = hostname[:-len('/admin')]
+            if hostname.endswith('/secondary'):
+                hostname = hostname[:-len('/secondary')]
+            if '/' in hostname and not hostname.endswith('/'):
+                hostname = hostname.split('/')[-1]
+            device.hostname = hostname
             device.description = device_raw.get('deviceTypeName')
             # set first and last seen if possible
             first_seen = parse_date(device_raw.get('firstDiscoverTime'))

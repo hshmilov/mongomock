@@ -8,6 +8,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.configurable import Configurable
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import normalize_var_name
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from solarwinds_orion_adapter.connection import SolarwindsConnection
@@ -82,7 +83,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                                               verify_ssl=client_config['verify_ssl'])
 
             connection.connect()
-            return connection
+            return connection, client_config
         except Exception as e:
             logger.error('Failed to connect to client %s', self._get_client_id(client_config))
             raise ClientConnectionException(str(e))
@@ -94,8 +95,11 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         :param session: instance of SolarWinds connection
         :return: device list of the patrolling user's devices
         """
-        client_data.connect()
-        yield from client_data.get_device_list(fetch_ipam=self.__fetch_ipam)
+        connection, client_config = client_data
+        custom_properties_list = client_config.get('custom_properties_list')
+        connection.connect()
+        yield from connection.get_device_list(fetch_ipam=self.__fetch_ipam,
+                                              custom_properties_list=custom_properties_list)
 
     def _clients_schema(self):
         """
@@ -125,6 +129,11 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
+                },
+                {
+                    'name': 'custom_properties_list',
+                    'type': 'string',
+                    'title': 'Custom Properties List'
                 }
             ],
             'required': [
@@ -219,6 +228,18 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
             device.id = str(id_check) + '_' + raw_device_data.get('NodeName')
             device.node_id = device.id
+            try:
+                custom_properties = raw_device_data.get('custom_properties')
+                for property_name, property_value in custom_properties.items():
+                    try:
+                        field_name = f'solarwinds_{normalize_var_name(property_name)}'
+                        if not device.does_field_exist(field_name):
+                            device.declare_new_field(field_name, Field(str, f'Custom Property - {property_name}'))
+                        device[field_name] = property_value
+                    except Exception:
+                        logger.exception(f'Problem with {property_name}')
+            except Exception:
+                logger.exception(f'Problem getting custom data')
             device.hostname = raw_device_data.get('NodeName')
             device.description = raw_device_data.get('Description')
             available_memory_gb = None

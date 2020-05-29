@@ -43,13 +43,14 @@ SCANNERS_TO_KEEP_ORINGAL_ID = ['nmap_adapter', 'edfs_csv_adapter']
 
 
 class ScannerCorrelatorBase(object):
-    def __init__(self, all_devices, plugin_name, *args, **kwargs):
+    def __init__(self, all_devices, plugin_name, allow_service_now_by_name_only, *args, **kwargs):
         """
         Base scanner correlator; base behavior is correlating with hostname
         :param all_devices: all axonius devices from DB
         """
         super().__init__(*args, **kwargs)
         self._plugin_name = plugin_name
+        self._allow_service_now_by_name_only = allow_service_now_by_name_only
         try:
             self._all_devices = list(all_devices)
         except Exception:
@@ -175,14 +176,16 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
+        predicates = [is_different_plugin,
+                      macs_do_not_contradict,
+                      hostnames_do_not_contradict,
+                      os_do_not_contradict,
+                      not_airwatch_adapters]
+        if not self._allow_service_now_by_name_only:
+            predicates.append(not_snow_adapters)
         return self.find_suitable_newest_by_ip(parsed_device=parsed_device,
                                                normalizations=[],
-                                               predicates=[is_different_plugin,
-                                                           macs_do_not_contradict,
-                                                           hostnames_do_not_contradict,
-                                                           os_do_not_contradict,
-                                                           not_snow_adapters,
-                                                           not_airwatch_adapters])
+                                               predicates=predicates)
 
     def find_correlation(self, parsed_device) -> Tuple[str, str]:
         """
@@ -248,10 +251,12 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             f'adapters.{PLUGIN_NAME}': 1,
             f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
             'adapters.data.id': 1,
+            'adapters.data.last_seen': 1,
             'adapters.data.network_interfaces.ips': 1,
             'adapters.data.os.type': 1,
         })
-        scanner = self._get_scanner_correlator(devices, self.plugin_name)
+        scanner = self._get_scanner_correlator(devices, self.plugin_name,
+                                               allow_service_now_by_name_only=self._allow_service_now_by_name_only)
         device_count = 0
 
         for device in parsed_data:

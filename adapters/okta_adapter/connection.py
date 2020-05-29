@@ -118,7 +118,7 @@ class OktaConnection:
                     # The answer could be an exception
                     if isinstance(raw_answer, Exception):
                         logger.error(f'Exception getting extra data for request {request_id_absolute}, yielding'
-                                     f' item with no data')
+                                     f' item with no data. Exception: {raw_answer}. Suffix: {url_suffix}')
 
                     # Or, it can be the actual response
                     elif isinstance(raw_answer, tuple) and isinstance(raw_answer[0], str) \

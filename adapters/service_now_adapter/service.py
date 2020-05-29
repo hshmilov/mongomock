@@ -138,6 +138,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         maintenance_schedule = Field(MaintenanceSchedule, 'Maintenance Schedule')
         company = Field(str, 'Company')
         model_u_classification = Field(str, 'Model Classification')
+        u_alias = Field(str, 'Alias')
         use_count = Field(int, 'Use Count')
         use_units = Field(str, 'Use Units')
         bandwidth = Field(int, 'Estimated bandwidth')
@@ -377,8 +378,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     (device_raw.get('support_group') or {}).get('value'))
                 if snow_support_group_value:
                     device.support_group = snow_support_group_value.get('name')
-                    director_value = (snow_support_group_value.get('u_director') or {}).get('value')
-                    device.u_director = self._get_optional_reference(director_value, users_table_dict, 'name')
+                    device.u_director = self._get_optional_reference(snow_support_group_value.get('u_director'),
+                                                                     users_table_dict, 'name')
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -517,6 +518,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.hostname = host_name.split('.')[0].strip()
                 else:
                     alias = device_raw.get('u_alias')
+                    device.u_alias = alias
                     if alias and ',' in alias and '|' in name:
                         alias_list = alias.split(',')
                         for alias_raw in alias_list:

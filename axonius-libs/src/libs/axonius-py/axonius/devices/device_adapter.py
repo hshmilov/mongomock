@@ -490,6 +490,11 @@ class ServiceData(SmartJsonClass):
     name = Field(str, 'Name')
     display_name = Field(str, 'Display Name')
     status = Field(str, 'Status')
+    start_name = Field(str, 'Start Name')
+    start_mode = Field(str, 'Start Mode')
+    path_name = Field(str, 'Path Name')
+    description = Field(str, 'Description')
+    caption = Field(str, 'Caption')
 
 
 # pylint: disable=too-many-instance-attributes
@@ -826,7 +831,7 @@ class DeviceAdapter(SmartJsonClass):
             for connected_device in self.connected_devices:
                 if (hasattr(connected_device, 'connection_type') and
                         connected_device.connection_type == ConnectionType.Direct.name) or \
-                        (isinstance(connected_device, 'dict') and 'connection_type' in connected_device and
+                        (isinstance(connected_device, dict) and 'connection_type' in connected_device and
                          connected_device['connection_type'] == ConnectionType.Direct.name):
                     self.direct_connected_devices.append(connected_device)
         except Exception:

@@ -73,9 +73,9 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                     'enum': FRESH_SERVICE_PRIORITY.keys()
                 },
                 {
-                    'name': 'group_id',
-                    'type': 'integer',
-                    'title': 'Group ID'
+                    'name': 'group_name',
+                    'type': 'string',
+                    'title': 'Group Name'
                 }
             ],
             'required': [
@@ -98,18 +98,16 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             'priority': 'low',
             'verify_ssl': True,
             'ticket_email': None,
-            'group_id': None
+            'group_name': None
         }
 
-    def _create_fresh_service_incident(self, description, subject, ticket_email, priority, group_id):
+    def _create_fresh_service_incident(self, description, subject, ticket_email, priority, group_name):
         fresh_service_dict = {'subject': subject,
                               'description': description,
                               'email': ticket_email,
                               'priority': priority,
                               'status': 2
                               }
-        if group_id:
-            fresh_service_dict['group_id'] = group_id
         try:
             if not self._config.get('domain') or not self._config.get('apikey'):
                 return 'Missing Parameters For Connection'
@@ -118,7 +116,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                                                               apikey=self._config.get('apikey'),
                                                               https_proxy=self._config.get('https_proxy'))
             with fresh_service_connection:
-                fresh_service_connection.create_ticket(fresh_service_dict)
+                fresh_service_connection.create_ticket(fresh_service_dict, group_name=group_name)
                 return ''
         except Exception as e:
             logger.exception(f'Got exception creating fresh_service incident wiht {fresh_service_dict}')
@@ -143,5 +141,5 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                                                       subject=self._config['subject'],
                                                       priority=FRESH_SERVICE_PRIORITY.get(self._config['priority']),
                                                       ticket_email=self._config['ticket_email'],
-                                                      group_id=self._config.get('group_id'))
+                                                      group_name=self._config.get('group_name'))
         return AlertActionResult(not message, message or 'Success')

@@ -41,7 +41,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                 "select SerialNumber from Win32_BaseBoard",
                 "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration",
                 'select Name from Win32_Process',
-                'select Name from Win32_Service',
+                'select Name, DisplayName, StartName, StartMode, Status, '
+                'PathName, Description, Caption from Win32_Service',
                 'select Name, Description, Path from Win32_Share',
             ]
         ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
@@ -332,7 +333,14 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             for service_data in win32_services['data']:
                 try:
                     if service_data.get('Name'):
-                        adapterdata_device.add_service(name=service_data.get('Name'))
+                        adapterdata_device.add_service(name=service_data.get('Name'),
+                                                       start_name=service_data.get('StartName'),
+                                                       display_name=service_data.get('DisplayName'),
+                                                       status=service_data.get('Status'),
+                                                       start_mode=service_data.get('StartMode'),
+                                                       path_name=service_data.get('PathName'),
+                                                       description=service_data.get('Description'),
+                                                       caption=service_data.get('Caption'))
                 except Exception:
                     self.logger.exception(f'Problem with service data {service_data}')
         except Exception:

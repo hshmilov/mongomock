@@ -71,7 +71,8 @@ N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
-               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL']
+               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL',
+               '0123456789ABCDEF']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
@@ -906,6 +907,9 @@ def hostname_not_problematic(adapter_device):
              and 'itadmins-macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro_root' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'dev' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'unknown' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
@@ -1261,7 +1265,8 @@ def is_start_with_valid_ip(value):
     return is_valid_ip(value)
 
 
-BAD_ASSETS = ['dev', 'localhost']
+BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air',
+              'unknown', 'test1', 'stage', 'ipad', 'iphone']
 
 
 def get_asset_snow_or_host(adapter_device):

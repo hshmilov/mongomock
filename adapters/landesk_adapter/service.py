@@ -135,6 +135,8 @@ class LandeskAdapter(AdapterBase):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
+        if devices_raw_data is None:
+            return
         for device_raw in devices_raw_data['Devices']['Device']:
             device = self._create_device(device_raw.__dict__['__values__'])
             if device:

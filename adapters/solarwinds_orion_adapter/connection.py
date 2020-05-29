@@ -40,7 +40,8 @@ class SolarwindsConnection:
         except Exception as e:
             raise ValueError(f'Error connecting to the server: {str(e)}')
 
-    def get_device_list(self, fetch_ipam=True):
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
+    def get_device_list(self, fetch_ipam=True, custom_properties_list=None):
         """
         Makes an SQL query using the SwisClient API that obtains the following
         information about each node in the network.
@@ -60,6 +61,24 @@ class SolarwindsConnection:
                     node_id_to_mac[node_id].append(current_mac)
         except Exception:
             logger.exception(f'Problem getting MACs')
+        logger.info('Fetching Custom properties')
+        node_id_to_custom = {}
+        try:
+            if custom_properties_list:
+                custom_properties_split = custom_properties_list.split(',')
+                custom_properties_list = [prop.strip() for prop in custom_properties_split]
+                if 'NodeID' not in custom_properties_list:
+                    custom_properties_list.append('NodeID')
+                custom_properties_list_final = ', '.join(custom_properties_list)
+                custom_q = self.client.query(f'SELECT {custom_properties_list_final} FROM Orion.NodesCustomProperties')
+                for node in custom_q.get('results') or []:
+                    node_id = node.get('NodeID')
+                    if node_id:
+                        if node_id not in node_id_to_custom:
+                            node_id_to_custom[node_id] = []
+                        node_id_to_custom[node_id].append(node)
+        except Exception:
+            logger.exception(f'Problem getting custom properties')
 
         node_id_to_sw = {}
         try:
@@ -99,6 +118,8 @@ class SolarwindsConnection:
                     node['MacAddresses'] = node_id_to_mac[node_id]
                 if node_id in node_id_to_sw:
                     node['sw_list'] = node_id_to_sw[node_id]
+                if node_id in node_id_to_custom:
+                    node['custom_properties'] = node_id_to_custom[node_id]
                 yield node, 'node'
             except Exception:
                 logger.exception(f'Problem parsing specific node {node}')

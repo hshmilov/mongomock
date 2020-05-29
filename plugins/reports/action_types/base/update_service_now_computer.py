@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
@@ -50,8 +51,12 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Additional fields',
+                    'type': 'string'
                 }
-
             ],
             'required': [
                 'use_adapter',
@@ -69,12 +74,14 @@ class UpdateServicenowComputerAction(ActionTypeBase):
             'username': None,
             'password': None,
             'https_proxy': None,
+            'extra_fields': None,
             'verify_ssl': True
         })
 
     # pylint: disable=too-many-arguments
     def _update_service_now_computer(self, class_name, sys_id, name, mac_address=None, ip_address=None,
-                                     manufacturer=None, os_type=None, serial_number=None):
+                                     manufacturer=None, os_type=None, serial_number=None,
+                                     extra_fields=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
@@ -92,6 +99,13 @@ class UpdateServicenowComputerAction(ActionTypeBase):
             connection_dict['serial_number'] = serial_number
         if os_type:
             connection_dict['os'] = os_type
+        try:
+            if extra_fields:
+                extra_fields_dict = json.loads(extra_fields)
+                if isinstance(extra_fields_dict, dict):
+                    connection_dict.update(extra_fields_dict)
+        except Exception:
+            logger.exception(f'Problem parsing extra fields')
         request_json = connection_dict
 
         if self._config['use_adapter'] is True:
@@ -105,7 +119,8 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                                                           verify_ssl=self._config.get('verify_ssl'),
                                                           username=self._config.get('username'),
                                                           password=self._config.get('password'),
-                                                          https_proxy=self._config.get('https_proxy'))
+                                                          https_proxy=self._config.get('https_proxy'),
+                                                          extra_fields=self._config.get('extra_fields'))
             with service_now_connection:
                 service_now_connection.update_service_now_computer(connection_dict)
                 return ''

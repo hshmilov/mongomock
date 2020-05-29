@@ -161,6 +161,7 @@ class NmapAdapter(ScannerAdapterBase):
                     continue
                 device = self._new_device_adapter()
                 device.file_name = file_name
+                device.open_ports = []
                 try:
                     if xml_device_raw.attrib.get('starttime'):
                         device.start_time = datetime.datetime.fromtimestamp(int(xml_device_raw.attrib.get('starttime')))
@@ -187,15 +188,21 @@ class NmapAdapter(ScannerAdapterBase):
                                 for xml_port in xml_property:
                                     if xml_port.tag == 'port':
                                         self._add_port_info(device, xml_port)
+                                        service_name_ = None
+                                        port_state = None
                                         for xml_port_property in xml_port:
                                             try:
                                                 if xml_port_property.tag == 'service':
                                                     service_name_ = (xml_port_property.attrib.get('name'))
-                                                    device.add_open_port(protocol=xml_port.attrib.get('protocol'),
-                                                                         port_id=xml_port.attrib.get('portid'),
-                                                                         service_name=service_name_)
+
+                                                elif xml_port_property.tag == 'state':
+                                                    port_state = xml_port_property.attrib.get('state')
                                             except Exception:
                                                 logger.exception(f'Could not add port for xml_port {xml_port}')
+                                        if port_state == 'open':
+                                            device.add_open_port(protocol=xml_port.attrib.get('protocol'),
+                                                                 port_id=xml_port.attrib.get('portid'),
+                                                                 service_name=service_name_)
                             except Exception:
                                 logger.exception(f'Could not add port for xml property {xml_property}')
                         elif xml_property.tag == 'hostscript':

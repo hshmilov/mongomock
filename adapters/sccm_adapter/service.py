@@ -97,6 +97,7 @@ class SccmAdapter(AdapterBase, Configurable):
         tpm_is_enabled = Field(bool, 'TPM Is Enabled')
         tpm_is_owned = Field(bool, 'TPM Is Owned')
         collections = ListField(str, 'Collections')
+        applications = ListField(str, 'Applications')
         compliance_status = Field(str, 'Compliance Status')
         drivers_data = ListField(DriverData, 'Drivers Data')
         network_drivers_data = ListField(DriverData, 'Network Drivers Data')
@@ -200,6 +201,19 @@ class SccmAdapter(AdapterBase, Configurable):
                     ram_dict[asset_id] = ram_data.get('Capacity0')
             except Exception:
                 logger.warning(f'Problem getting collections data', exc_info=True)
+
+            collections_apps_dict = dict()
+            try:
+                if not device_id:
+                    for application_collection_data in \
+                            client_data.query(consts.APPLICATION_ASSIGNMENT_QUERY):
+                        collection_id = application_collection_data.get('CollectionID')
+                        if not collection_id:
+                            continue
+                        collections_apps_dict[collection_id] = application_collection_data
+            except Exception:
+                logger.warning(f'Problem getting application collections data', exc_info=True)
+
             collections_data_dict = dict()
             try:
                 if not device_id:
@@ -503,6 +517,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 device_raw['users_raw'] = asset_users_dict.get(device_raw.get('ResourceID'))
                 device_raw['collections_data'] = collections_dict.get(device_raw.get('ResourceID'))
                 device_raw['collections_list'] = []
+                device_raw['applications_list'] = []
                 try:
                     collections_data = device_raw['collections_data']
                     if collections_data and isinstance(collections_data, list):
@@ -516,6 +531,11 @@ class SccmAdapter(AdapterBase, Configurable):
                                         collections_data_dict.get(collection_id).get('Name'):
                                     col_name = collections_data_dict.get(collection_id).get('Name')
                                     device_raw['collections_list'].append(col_name)
+                                if collections_apps_dict.get(collection_id) and \
+                                        isinstance(collections_apps_dict.get(collection_id), dict) and \
+                                        collections_apps_dict.get(collection_id).get('ApplicationName'):
+                                    app_name = collections_apps_dict.get(collection_id).get('ApplicationName')
+                                    device_raw['applications_list'].append(app_name)
                             except Exception:
                                 logger.exception(f'Problem with collection_raw {collection_raw}')
                 except Exception:
@@ -590,7 +610,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem adding users to {device_raw}')
                 device.collections = device_raw['collections_list']
-
+                device.applications = device_raw['applications_list']
                 try:
                     encryptions_raw = device_raw['encryptions_raw']
                     if encryptions_raw and isinstance(encryptions_raw, list):

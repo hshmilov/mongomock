@@ -65,3 +65,4 @@ DRIVERS_QUERY = 'select ResourceID, Name0, Description0, DriverVersion0 from v_G
 RAM_QUERY = 'select ResourceID, Capacity0 from v_GS_PHYSICAL_MEMORY'
 NETWORK_DRIVERS_QUERY = 'select ResourceID, DriverDesc0, DriverVersion0 , ProviderName0, DriverDate0 from v_GS_NETWORK_DRIVERS'
 NEW_SOFTWARE_QUERY = 'select ResourceID, ProductName, ProductVersion, CompanyName from v_GS_SoftwareProduct'
+APPLICATION_ASSIGNMENT_QUERY = 'select ApplicationName, CollectionID from v_ApplicationAssignment '

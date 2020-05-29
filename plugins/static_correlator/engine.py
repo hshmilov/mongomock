@@ -54,9 +54,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter', 'quest_kace_adapter']
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
-                      'counter_act_adapter', 'tanium_discover_adapter']
+                      'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
-                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter']
+                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
@@ -123,11 +123,15 @@ def is_zscaler_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'zscaler_adapter'
 
 
+def is_deep_security_device(adapter_device):
+    return adapter_device.get('plugin_name') == 'deep_security_adapter'
+
+
 def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
         or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)\
-        or is_service_now_and_no_other(adapter_device)
+        or is_service_now_and_no_other(adapter_device) or is_deep_security_device(adapter_device)
 
 
 def is_only_host_adapter_not_localhost(adapter_device):
@@ -477,7 +481,7 @@ def not_saltstack_enterprise_linux(adapter_device):
 
 
 def is_uuid_adapters(adapter_device):
-    if adapter_device.get('plugin_name') == 'tanium_adapter':
+    if adapter_device.get('plugin_name') in ['tanium_sq_adapter', 'tanium_adapter']:
         return True
     if adapter_device.get('plugin_name') == 'sentinelone_adapter' and get_os_type(adapter_device) == 'OS X':
         return True
@@ -594,6 +598,100 @@ def compare_host_or_asset_no_dash(adapter_device1, adapter_device2):
     return False
 
 
+def get_host_serial_g(adapter_device):
+    if is_snow_adapter(adapter_device):
+        asset = get_serial(adapter_device)
+        if not asset or not asset.strip():
+            return None
+        return asset.strip().lower()
+    asset = get_hostname(adapter_device)
+    if not asset or not asset.strip():
+        return None
+    asset = asset.strip().lower().split('.')[0]
+    if not asset.startswith('g') or not asset.endswith('e'):
+        return None
+    asset = asset[1:-1]
+    if not asset:
+        return None
+    return asset
+
+
+def compare_host_serial_g(adapter_device1, adapter_device2):
+    asset1 = get_host_serial_g(adapter_device1)
+    asset2 = get_host_serial_g(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def one_is_not_snow(adapter_device1, adapter_device2):
+    if is_snow_adapter(adapter_device1) and is_snow_adapter(adapter_device2):
+        return False
+    return True
+
+
+# pylint:disable=too-many-return-statements
+def get_v_dash_name(adapter_device):
+    if is_snow_adapter(adapter_device):
+        asset = get_asset_name(adapter_device)
+        if not asset or not asset.strip():
+            return None
+        return asset.lower()
+    if adapter_device.get('plugin_name') not in ['qualys_scans_adapter', 'tanium_discover_adapter']:
+        return None
+    if not get_hostname(adapter_device):
+        return None
+    asset = get_hostname(adapter_device)
+    asset = asset.split('.')[0].strip().lower()
+    if '-' not in asset:
+        return None
+    last_part = asset.split('-')[-1]
+    good_last_part = False
+    if last_part == 'mgt_ip':
+        good_last_part = True
+    if last_part.startswith('v') or last_part.startswith('l'):
+        last_int = last_part[1:]
+        try:
+            int(last_int)
+            good_last_part = True
+        except Exception:
+            pass
+    if not good_last_part:
+        return None
+    asset = '-'.join(asset.split('-')[:-1])
+    return asset
+
+
+def compare_v_dash_name(adapter_device1, adapter_device2):
+    asset1 = get_v_dash_name(adapter_device1)
+    asset2 = get_v_dash_name(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def get_alias_name(adapter_device):
+    if is_snow_adapter(adapter_device):
+        asset = adapter_device['data'].get('u_alias')
+        if not asset or not asset.strip():
+            return None
+        return asset.strip().lower()
+    if adapter_device.get('plugin_name') not in ['ca_spectrum_adapter', 'netbrain_adapter']:
+        return None
+    asset = get_hostname(adapter_device)
+    if not asset or not asset.strip():
+        return None
+    return asset.strip().lower()
+
+
+def compare_alias_name(adapter_device1, adapter_device2):
+    asset1 = get_alias_name(adapter_device1)
+    asset2 = get_alias_name(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 class StaticCorrelatorEngine(CorrelatorEngineBase):
     """
     For efficiency reasons this engine assumes a different structure (let's refer to it as compact structure)
@@ -625,6 +723,39 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
                 has_nessus_scan_no_id, has_resource_id, has_public_ips]
+
+    def _correlate_host_serial_g(self, adapters_to_correlate):
+        logger.info('Starting to correlate host serial g')
+        filtered_adapters_list = filter(get_host_serial_g, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_host_serial_g],
+                                      [compare_host_serial_g],
+                                      [is_snow_adapter],
+                                      [one_is_not_snow],
+                                      {'Reason': 'They have the same host serail with g'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_v_dash_name(self, adapters_to_correlate):
+        logger.info('Starting to correlate v dash name')
+        filtered_adapters_list = filter(get_v_dash_name, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_v_dash_name],
+                                      [compare_v_dash_name],
+                                      [is_snow_adapter],
+                                      [one_is_not_snow],
+                                      {'Reason': 'They have the same host without v dash'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_alias_hostname(self, adapters_to_correlate):
+        logger.info('Starting to alias snow hostname')
+        filtered_adapters_list = filter(get_alias_name, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_alias_name],
+                                      [compare_alias_name],
+                                      [is_snow_adapter],
+                                      [one_is_not_snow],
+                                      {'Reason': 'They have the same alias-hostname'},
+                                      CorrelationReason.StaticAnalysis)
 
     # pylint: disable=R0912,too-many-boolean-expressions
     def _correlate_mac(self, adapters_to_correlate, correlate_by_snow_mac):
@@ -1231,8 +1362,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         correlate_snow_no_dash = bool(self._correlation_config and
                                       self._correlation_config.get('correlate_snow_no_dash') is True)
         if correlate_snow_no_dash:
-            yield from self._correlate_snow_asset_host_snow_no_dash(adapters_to_correlate)
-            yield from self._correlate_snow_host_asset_snow_no_dash(adapters_to_correlate)
+            yield from self._correlate_v_dash_name(adapters_to_correlate)
+            yield from self._correlate_alias_hostname(adapters_to_correlate)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)
@@ -1306,6 +1437,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # Find adapters with the same serial
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
         yield from self._correlate_mac(adapters_to_correlate, correlate_by_snow_mac)
+        yield from self._correlate_host_serial_g(adapters_to_correlate)
 
     @staticmethod
     def _post_process(first_name, first_id, second_name, second_id, data, reason) -> bool:

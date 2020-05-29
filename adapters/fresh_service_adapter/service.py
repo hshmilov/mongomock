@@ -163,7 +163,7 @@ class FreshServiceAdapter(AdapterBase, Configurable):
                         device.last_used_users = [field_value]
                     elif field_name.startswith('computer_ip_address_'):
                         ips_raw = field_value
-                        ips = [ip.strip() for ip in ips_raw.split(',')]
+                        ips = [ip.strip().split('%')[0] for ip in ips_raw.split(',')]
                     elif field_name.startswith('mac_address_'):
                         mac = field_value
                 device.figure_os(os_str)

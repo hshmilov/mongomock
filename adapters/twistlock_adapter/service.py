@@ -220,7 +220,7 @@ class TwistlockAdapter(AdapterBase):
                 device_data = device_info.get('data')
                 if not device_data or not isinstance(device_data, dict):
                     device_data = {}
-                packages = device_data.get('packages')
+                packages = device_data.get('packages') or device_raw.get('packages')
                 if packages and isinstance(packages, list):
                     for package in packages:
                         try:

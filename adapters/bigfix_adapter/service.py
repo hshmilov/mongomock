@@ -63,6 +63,12 @@ class BigfixAdapter(AdapterBase):
         """
         try:
             client_data.connect()
+
+            try:
+                mac_dict = client_data.get_query_data_per_device_list('MAC Addresses')
+            except Exception:
+                mac_dict = dict()
+                logger.exception(f'Failed getting mac unix, continuing')
             try:
                 linux_installed_software_dict = client_data.get_query_data_per_device_list('Packages Installed '
                                                                                            '- Linux')
@@ -94,7 +100,7 @@ class BigfixAdapter(AdapterBase):
 
             for device_raw in client_data.get_device_list():
                 yield device_raw, installed_software_dict, identify_dict, \
-                    manufacturer_dict, model_dict, linux_installed_software_dict
+                    manufacturer_dict, model_dict, linux_installed_software_dict, mac_dict
         finally:
             client_data.close()
 
@@ -150,7 +156,7 @@ class BigfixAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw_xml, computer_id_to_installed_software, identify_dict,\
-            manufacturer_dict, model_dict, linux_installed_software_dict in \
+            manufacturer_dict, model_dict, linux_installed_software_dict, mac_dict in \
                 devices_raw_data:
             try:
                 device_raw = dict()
@@ -271,6 +277,15 @@ class BigfixAdapter(AdapterBase):
                             )
                 except Exception:
                     logger.exception(f'Problem with linux sw for {device_raw}')
+                try:
+                    mac_list = mac_dict.get(str(device_id))
+                    if isinstance(mac_list, list):
+                        for mac_str in mac_list:
+                            if isinstance(mac_str, str):
+                                mac = mac_str.split(': ')[-1]
+                                device.add_nic(mac=mac)
+                except Exception:
+                    logger.exception(f'Problem with MAC address')
 
                 try:
                     identify_list = identify_dict.get(str(device_id))
