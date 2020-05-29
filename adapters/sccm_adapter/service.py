@@ -497,14 +497,53 @@ class SccmAdapter(AdapterBase, Configurable):
             query_main = self._wrap_query_with_resource_id(consts.SCCM_MAIN_QUERY, device_id)
             devices_raw_query = list(client_data.query(query_main))
             for device_raw in devices_raw_query:
-                yield device_raw, client_data.server, asset_software_dict, asset_patch_dict, asset_program_dict, \
-                    asset_bios_dict, asset_users_dict, asset_top_dict, asset_malware_dict, \
-                    asset_lenovo_dict, asset_chasis_dict, asset_encryption_dict,\
-                    asset_vm_dict, owner_dict, tpm_dict, computer_dict,\
-                    clients_dict, os_dict, nics_dict, collections_dict,\
-                    collections_data_dict, compliance_dict, local_admins_dict,\
-                    drivers_dict, ram_dict, network_drivers_dict, new_software_dict,\
-                    local_groups_dict, shares_dict
+                device_raw['sccm_server'] = client_data.server
+                device_raw['os_data'] = os_dict.get(device_raw.get('ResourceID'))
+                device_raw['computer_data'] = computer_dict.get(device_raw.get('ResourceID'))
+                device_raw['users_raw'] = asset_users_dict.get(device_raw.get('ResourceID'))
+                device_raw['collections_data'] = collections_dict.get(device_raw.get('ResourceID'))
+                device_raw['collections_list'] = []
+                try:
+                    collections_data = device_raw['collections_data']
+                    if collections_data and isinstance(collections_data, list):
+                        for collection_raw in collections_data:
+                            try:
+                                if not isinstance(collection_raw, dict) or not collection_raw.get('CollectionID'):
+                                    continue
+                                collection_id = collection_raw.get('CollectionID')
+                                if collections_data_dict.get(collection_id) and \
+                                        isinstance(collections_data_dict.get(collection_id), dict) and \
+                                        collections_data_dict.get(collection_id).get('Name'):
+                                    col_name = collections_data_dict.get(collection_id).get('Name')
+                                    device_raw['collections_list'].append(col_name)
+                            except Exception:
+                                logger.exception(f'Problem with collection_raw {collection_raw}')
+                except Exception:
+                    logger.exception(f'Problem getting collections for {device_raw}')
+                device_raw['encryptions_raw'] = asset_encryption_dict.get(device_raw.get('ResourceID'))
+                device_raw['ram_data'] = ram_dict.get(device_raw.get('ResourceID'))
+                device_raw['new_sw_data'] = new_software_dict.get(device_raw.get('ResourceID'))
+                device_raw['asset_software_data'] = asset_software_dict.get(device_raw.get('ResourceID'))
+                device_raw['asset_program_data'] = asset_program_dict.get(device_raw.get('ResourceID'))
+                device_raw['lenovo_data'] = asset_lenovo_dict.get(device_raw.get('ResourceID'))
+                device_raw['patch_data'] = asset_patch_dict.get(device_raw.get('ResourceID'))
+                device_raw['malware_data'] = asset_malware_dict.get(device_raw.get('ResourceID'))
+                device_raw['chasis_data'] = asset_chasis_dict.get(device_raw.get('ResourceID'))
+                device_raw['client_data'] = clients_dict.get(device_raw.get('ResourceID'))
+                device_raw['owner_data'] = owner_dict.get(device_raw.get('ResourceID'))
+                device_raw['tpm_data'] = tpm_dict.get(device_raw.get('ResourceID'))
+                device_raw['vm_data'] = asset_vm_dict.get(device_raw.get('ResourceID'))
+                device_raw['nic_data'] = nics_dict.get(device_raw.get('ResourceID'))
+                device_raw['group_data'] = local_groups_dict.get(device_raw.get('ResourceID'))
+                device_raw['local_admin_data'] = local_admins_dict.get(device_raw.get('ResourceID'))
+                device_raw['drivers_data'] = drivers_dict.get(device_raw.get('ResourceID'))
+                device_raw['network_drivers_data'] = network_drivers_dict.get(device_raw.get('ResourceID'))
+                device_raw['share_data'] = shares_dict.get(device_raw.get('ResourceID'))
+                device_raw['top_data'] = asset_top_dict.get(device_raw.get('ResourceID'))
+                device_raw['compliance_data'] = compliance_dict.get(device_raw.get('ResourceID'))
+                device_raw['bios_data'] = asset_bios_dict.get(device_raw.get('ResourceID'))
+
+                yield device_raw
 
     def _clients_schema(self):
         return {
@@ -520,30 +559,7 @@ class SccmAdapter(AdapterBase, Configurable):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for (
-            device_raw,
-            sccm_server,
-            asset_software_dict,
-            asset_patch_dict,
-            asset_program_dict,
-            asset_bios_dict,
-            asset_users_dict,
-            asset_top_dict,
-            asset_malware_dict,
-            asset_lenovo_dict,
-            asset_chasis_dict,
-            asset_encryption_dict,
-            asset_vm_dict,
-            owner_dict,
-            tpm_dict,
-            computer_dict,
-            clients_dict,
-            os_dict,
-            nics_dict,
-            collections_dict, collections_data_dict, compliance_dict,
-            local_admins_dict, drivers_dict, ram_dict, network_drivers_dict,
-            new_software_dict, local_groups_dict, shares_dict
-        ) in devices_raw_data:
+        for device_raw in devices_raw_data:
             try:
                 device_id = device_raw.get('Distinguished_Name0')
                 if not device_id:
@@ -554,44 +570,29 @@ class SccmAdapter(AdapterBase, Configurable):
                         logger.error(f'Got a device with no distinguished name {device_raw}')
                         continue
                 device = self._new_device_adapter()
-                device.sccm_server = sccm_server
+                device.sccm_server = device_raw['sccm_server']
                 try:
                     device.ad_distinguished_name = device_raw.get('Distinguished_Name0')
                 except Exception:
                     pass
-                os_data = os_dict.get(device_raw.get('ResourceID'))
+                os_data = device_raw['os_data']
                 if not isinstance(os_data, dict):
                     os_data = {}
-                computer_data = computer_dict.get(device_raw.get('ResourceID'))
+                computer_data = device_raw['computer_data']
                 if not isinstance(computer_data, dict):
                     computer_data = {}
                 try:
-                    users_raw = asset_users_dict.get(device_raw.get('ResourceID'))
+                    users_raw = device_raw['users_raw']
                     if users_raw and isinstance(users_raw, list):
                         device.last_used_users = [
                             user_raw.get('UniqueUserName') for user_raw in users_raw if user_raw.get('UniqueUserName')
                         ]
                 except Exception:
                     logger.exception(f'Problem adding users to {device_raw}')
-                try:
-                    collections_data = collections_dict.get(device_raw.get('ResourceID'))
-                    if collections_data and isinstance(collections_data, list):
-                        for collection_raw in collections_data:
-                            try:
-                                if not isinstance(collection_raw, dict) or not collection_raw.get('CollectionID'):
-                                    continue
-                                collection_id = collection_raw.get('CollectionID')
-                                if collections_data_dict.get(collection_id) and \
-                                        isinstance(collections_data_dict.get(collection_id), dict) and \
-                                        collections_data_dict.get(collection_id).get('Name'):
-                                    device.collections.append(collections_data_dict.get(collection_id).get('Name'))
-                            except Exception:
-                                logger.exception(f'Problem with collection_raw {collection_raw}')
-                except Exception:
-                    logger.exception(f'Problem getting collections for {device_raw}')
+                device.collections = device_raw['collections_list']
 
                 try:
-                    encryptions_raw = asset_encryption_dict.get(device_raw.get('ResourceID'))
+                    encryptions_raw = device_raw['encryptions_raw']
                     if encryptions_raw and isinstance(encryptions_raw, list):
                         for drive_enc_data in encryptions_raw:
                             try:
@@ -681,7 +682,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         float(free_physical_memory) / (1024 ** 2) if free_physical_memory else None
                     )
                     total_physical_memory = device_raw.get('TotalPhysicalMemory0')\
-                        or ram_dict.get(device_raw.get('ResourceID'))
+                        or device_raw['ram_data']
                     device.total_physical_memory = (
                         float(total_physical_memory) / (1024 ** 1) if total_physical_memory else None
                     )
@@ -693,8 +694,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'problem adding memory stuff to {device_raw}')
                 device_manufacturer = None
                 try:
-                    if isinstance(asset_bios_dict.get(device_raw.get('ResourceID')), dict):
-                        bios_data = asset_bios_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['bios_data'], dict):
+                        bios_data = device_raw['bios_data']
                         device.bios_serial = bios_data.get('SerialNumber0')
                         device_manufacturer = bios_data.get('Manufacturer0')
                         device.device_manufacturer = device_manufacturer
@@ -702,8 +703,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 try:
-                    if isinstance(compliance_dict.get(device_raw.get('ResourceID')), dict):
-                        compliance_data = compliance_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['compliance_data'], dict):
+                        compliance_data = device_raw['compliance_data']
                         device.compliance_status = compliance_data.get('Status')
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
@@ -711,15 +712,15 @@ class SccmAdapter(AdapterBase, Configurable):
                 product_type_dict = {'1': 'WORKSTATION', '2': 'DOMAIN CONTROLLER', '3': 'SERVER'}
                 device.sccm_product_type = product_type_dict.get(str(device_raw.get('ProductType0')))
                 try:
-                    if isinstance(asset_top_dict.get(device_raw.get('ResourceID')), dict):
-                        top_data = asset_top_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['top_data'], dict):
+                        top_data = device_raw['top_data']
                         device.top_user = top_data.get('TopConsoleUser0')
                 except Exception:
                     logger.exception(f'Problem getting top user data dor {device_raw}')
 
                 try:
-                    if isinstance(shares_dict.get(device_raw.get('ResourceID')), list):
-                        for share_data in shares_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['share_data'], list):
+                        for share_data in device_raw['share_data']:
                             try:
                                 share_path = share_data.get('Path0')
                                 share_name = share_data.get('Name0')
@@ -735,8 +736,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting shares data dor {device_raw}')
 
                 try:
-                    if isinstance(network_drivers_dict.get(device_raw.get('ResourceID')), list):
-                        for network_drivers_data in network_drivers_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['network_drivers_data'], list):
+                        for network_drivers_data in device_raw['network_drivers_data']:
                             try:
                                 driver_name = network_drivers_data.get('name0')
                                 driver_description = network_drivers_data.get('DriverDesc0')
@@ -755,8 +756,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting drivers data dor {device_raw}')
 
                 try:
-                    if isinstance(drivers_dict.get(device_raw.get('ResourceID')), list):
-                        for drivers_data in drivers_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['drivers_data'], list):
+                        for drivers_data in device_raw['drivers_data']:
                             try:
                                 driver_name = drivers_data.get('Name0')
                                 driver_description = drivers_data.get('Description0')
@@ -776,8 +777,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     device.local_admins_local_users = []
                     device.local_admins_groups = []
                     device.local_admins_users = []
-                    if isinstance(local_admins_dict.get(device_raw.get('ResourceID')), list):
-                        for local_admin_data in local_admins_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['local_admin_data'], list):
+                        for local_admin_data in device_raw['local_admin_data']:
                             try:
                                 user_local_admin = local_admin_data.get('account0')
                                 domain_local_admin = local_admin_data.get('domain0')
@@ -809,8 +810,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting vm data dor {device_raw}')
                 try:
                     groups_dict = dict()
-                    if isinstance(local_groups_dict.get(device_raw.get('ResourceID')), list):
-                        for group_data in local_groups_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['group_data'], list):
+                        for group_data in device_raw['group_data']:
                             try:
                                 account_name = group_data.get('account0')
                                 domain_name = group_data.get('domain0')
@@ -843,8 +844,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting groups data')
                 try:
-                    if isinstance(nics_dict.get(device_raw.get('ResourceID')), list):
-                        for nic_data in nics_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['nic_data'], list):
+                        for nic_data in device_raw['nic_data']:
                             try:
                                 mac = nic_data.get('MACAddress0')
                                 ips = nic_data.get('IPAddress0')
@@ -868,8 +869,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting vm data dor {device_raw}')
 
                 try:
-                    if isinstance(asset_vm_dict.get(device_raw.get('ResourceID')), list):
-                        for vm_data in asset_vm_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['vm_data'], list):
+                        for vm_data in device_raw['vm_data']:
                             try:
                                 vm_dns_name = vm_data.get('DNSName0')
                                 vm_ip = vm_data.get('IPAddress0')
@@ -891,25 +892,24 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting vm data dor {device_raw}')
 
                 try:
-                    if isinstance(tpm_dict.get(device_raw.get('ResourceID')), dict):
-                        tpm_data = tpm_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['tpm_data'], dict):
+                        tpm_data = device_raw['tpm_data']
                         device.tpm_is_activated = tpm_data.get('IsActivated_InitialValue0') == 1
                         device.tpm_is_enabled = tpm_data.get('IsEnabled_InitialValue0') == 1
                         device.tpm_is_owned = tpm_data.get('IsOwned_InitialValue0') == 1
                 except Exception:
                     logger.exception(f'Problem getting tpm data dor {device_raw}')
                 try:
-                    if isinstance(owner_dict.get(device_raw.get('ResourceID')), dict):
-                        owner_data = owner_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['owner_data'], dict):
+                        owner_data = device_raw['owner_data']
                         device.owner = owner_data.get('Owner00')
                         device.department = owner_data.get('Department00')
                         device.purpose = owner_data.get('Purpose00')
                 except Exception:
                     logger.exception(f'Problem getting owner data dor {device_raw}')
-
                 try:
-                    if isinstance(clients_dict.get(device_raw.get('ResourceID')), dict):
-                        client_data = clients_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['client_data'], dict):
+                        client_data = device_raw['client_data']
                         last_seen = parse_date(client_data.get('LastActiveTime'))
                         if self.__drop_no_last_seen is True and not last_seen:
                             continue
@@ -918,10 +918,9 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                 except Exception:
                     logger.exception(f'Problem getting last seen data dor {device_raw}')
-
                 try:
-                    if isinstance(asset_chasis_dict.get(device_raw.get('ResourceID')), dict):
-                        chasis_data = asset_chasis_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['chasis_data'], dict):
+                        chasis_data = device_raw['chasis_data']
                         chasis_types = chasis_data.get('ChassisTypes0')
                         if chasis_types and isinstance(chasis_types, str):
                             device.chasis_value = CHASIS_VALUE_FULL_DICT.get(chasis_types)
@@ -932,8 +931,8 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting chasis data dor {device_raw}')
                 try:
-                    if isinstance(asset_malware_dict.get(device_raw.get('ResourceID')), dict):
-                        malware_data = asset_malware_dict.get(device_raw.get('ResourceID'))
+                    if isinstance(device_raw['malware_data'], dict):
+                        malware_data = device_raw['malware_data']
                         device.malware_engine_version = malware_data.get('EngineVersion')
                         device.malware_version = malware_data.get('Version')
                         device.malware_product_status = malware_data.get('ProductStatus')
@@ -942,11 +941,12 @@ class SccmAdapter(AdapterBase, Configurable):
                         device.malware_enabled = malware_data.get('Enabled')
                 except Exception:
                     logger.exception(f'Problem getting malware data dor {device_raw}')
+
                 try:
                     if not device_manufacturer or 'LENOVO' not in device_manufacturer.upper():
                         device.device_model = computer_data.get('Model0')
-                    elif isinstance(asset_lenovo_dict.get(device_raw.get('ResourceID')), dict):
-                        device.device_model = asset_lenovo_dict.get(device_raw.get('ResourceID')).get('Version0')
+                    elif isinstance(device_raw['lenovo_data'], dict):
+                        device.device_model = device_raw['lenovo_data'].get('Version0')
                 except Exception:
                     logger.exception(f'Problem getting model for {device_raw}')
                 processes = computer_data.get('NumberOfProcesses0')
@@ -959,8 +959,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     device.set_boot_time(boot_time=os_data.get('LastBootUpTime0'))
 
                 try:
-                    if isinstance(new_software_dict.get(device_raw.get('ResourceID')), list):
-                        for new_asset_data in new_software_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['new_sw_data'], list):
+                        for new_asset_data in device_raw['new_sw_data']:
                             try:
                                 device.add_installed_software(
                                     name=new_asset_data.get('ProductName'),
@@ -973,8 +973,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem adding software to {device_raw}')
 
                 try:
-                    if isinstance(asset_software_dict.get(device_raw.get('ResourceID')), list):
-                        for asset_data in asset_software_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['asset_software_data'], list):
+                        for asset_data in device_raw['asset_software_data']:
                             try:
                                 device.add_installed_software(
                                     name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0')
@@ -985,8 +985,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem adding software to {device_raw}')
 
                 try:
-                    if isinstance(asset_program_dict.get(device_raw.get('ResourceID')), list):
-                        for asset_data in asset_program_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['asset_program_data'], list):
+                        for asset_data in device_raw['asset_program_data']:
                             try:
                                 device.add_installed_software(
                                     name=asset_data.get('DisplayName0'), version=asset_data.get('Version0')
@@ -997,8 +997,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem adding program to {device_raw}')
 
                 try:
-                    if isinstance(asset_patch_dict.get(device_raw.get('ResourceID')), list):
-                        for patch_data in asset_patch_dict.get(device_raw.get('ResourceID')):
+                    if isinstance(device_raw['patch_data'], list):
+                        for patch_data in device_raw['patch_data']:
                             try:
                                 patch_description = patch_data.get('Description0') or ''
                                 if patch_data.get('FixComments0'):
