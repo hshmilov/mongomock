@@ -152,7 +152,7 @@ pip3 install python-crontab==2.4.0
 echo "Installing golang"
 _wait_for_apt install -yq golang-go
 echo "Installing docker-ce..."
-_wait_for_apt install -yq docker-ce=5:19.03.9~3-0~ubuntu-xenial containerd.io=1.2.13-2
+_wait_for_apt install -yq --allow-downgrades docker-ce=5:19.03.9~3-0~ubuntu-xenial containerd.io=1.2.13-2
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
