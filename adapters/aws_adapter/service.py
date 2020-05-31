@@ -28,12 +28,12 @@ from axonius.clients.aws.aws_clients import get_boto3_session, parse_roles_to_as
 from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, REGIONS_NAMES
 from axonius.clients.aws.utils import get_aws_config
 from axonius.clients.rest.connection import RESTConnection
+from axonius.consts.adapter_consts import DEFAULT_PARALLEL_COUNT
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f'axonius.{__name__}')
-DEFAULT_PARALLEL_COUNT = 5
 
 
 '''

@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames
+from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.build_modes import get_build_mode, BuildModes
@@ -169,6 +169,21 @@ class FeatureFlags(Configurable):
                         RootMasterNames.SMB_enabled,
                         RootMasterNames.delete_backups,
                     ],
+                },
+                {
+                    'name': ParallelSearch.root_key,
+                    'title': 'Parallel Adapters Search',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': ParallelSearch.enabled,
+                            'title': 'Enabled',
+                            'type': 'bool'
+                        }
+                    ],
+                    'required': [
+                        ParallelSearch.enabled
+                    ],
                 }
             ],
             'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
@@ -195,6 +210,9 @@ class FeatureFlags(Configurable):
                 RootMasterNames.enabled: False,
                 RootMasterNames.SMB_enabled: False,
                 RootMasterNames.delete_backups: False,
+            },
+            ParallelSearch.root_key: {
+                ParallelSearch.enabled: False
             },
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,

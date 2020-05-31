@@ -21,6 +21,11 @@ PROTOCOLS = {
 DEFAULT_PROTOCOL = 'snmp'
 
 
+def outside_query_devices_by_client(client_name, client_data):
+    for device in client_data.query_all():
+        yield client_name, 'devices', device
+
+
 class CiscoAdapter(AdapterBase):
     MyDeviceAdapter = CiscoDevice
 
@@ -39,6 +44,10 @@ class CiscoAdapter(AdapterBase):
                 self._get_client_id(client_config), get_exception_string())
             logger.exception(message)
             raise ClientConnectionException(str(e))
+
+    @staticmethod
+    def _query_devices_by_client_parallel():
+        return outside_query_devices_by_client
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:

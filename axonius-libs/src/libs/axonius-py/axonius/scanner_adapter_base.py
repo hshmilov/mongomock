@@ -269,8 +269,11 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             if device_count % 1000 == 0:
                 logger.info(f"Got {device_count} devices.")
 
-    def _try_query_data_by_client(self, client_name, entity_type: EntityType, use_cache=True):
-        raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
+    def _try_query_data_by_client(self, client_name, entity_type: EntityType, use_cache=True, parse_after_fetch=False,
+                                  thread_safe=False):
+        raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type,
+                                                                  parse_after_fetch=parse_after_fetch,
+                                                                  thread_safe=thread_safe)
         if entity_type == EntityType.Devices:
             return raw_data, self.__correlate_devices(parsed_data)
         return raw_data, parsed_data

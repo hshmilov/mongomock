@@ -24,18 +24,22 @@ from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 from retrying import retry
 
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL,\
-    CLIENT_ID, VAULT_PROVIDER
+
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, \
+    CONNECTION_LABEL, CLIENT_ID, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS, \
+    VAULT_PROVIDER
+from axonius.consts.gui_consts import ParallelSearch
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.metric_helper import log_metric
+from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.background_scheduler import LoggedBackgroundScheduler
 
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID
+    SYSTEM_SCHEDULER_PLUGIN_NAME, PARALLEL_ADAPTERS, NODE_ID, THREAD_SAFE_ADAPTERS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -393,21 +397,131 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             EntityType.Users.value: users_cleaned
         }
 
+    # pylint: disable=R1710
+    def _handle_insert_to_db_async(self, client_name, check_fetch_time):
+        """
+        Handles all asymmetric fetching of devices data, by creating a threadpool to handle each fetch in a
+        different thread, please notice that it only fetches the data asynchronously but parse in synchronously.
+        :param client_name: either a string or a list with client names to fetch
+        :param check_fetch_time: last fetch time as passed from the triggered function
+        """
+        data = {}
+        try:
+            if self.plugin_name in THREAD_SAFE_ADAPTERS:
+                return (yield from self._handle_insert_to_db_async_thread_safe(client_name, check_fetch_time))
+            if isinstance(client_name, list):
+                for client in client_name:
+                    data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
+                                                                             parse_after_fetch=True)]
+            else:
+                data[client_name] = [x['raw'] for x in self.insert_data_to_db(client_name,
+                                                                              check_fetch_time=check_fetch_time,
+                                                                              parse_after_fetch=True)]
+            time_before_query = datetime.now()
+            results = list(concurrent_multiprocess_yield([y for x in data for y in data[x] if y[0]],
+                                                         DEFAULT_PARALLEL_COUNT))
+            query_time = datetime.now() - time_before_query
+            logger.info(f'Querying {data} took {query_time.seconds} seconds')
+
+        except adapter_exceptions.AdapterException:
+            problematic_client = client_name if isinstance(client_name, str) else client if\
+                isinstance(client, str) else data[client]
+            logger.warning(f'Failed fetching data for client {problematic_client}', exc_info=True)
+            yield data[client], ''
+        except Exception as e:
+            logger.error(f'Failed fetching data asynchronously: {str(e)}', exc_info=True)
+
+        try:
+            for client, entity_type, values in results:
+                # Currently its only for devices
+                if values and entity_type == 'devices':
+                    yield client, \
+                        self._parse_and_save_data_from_client(client,
+                                                              raw_devices=values if isinstance(values, list)
+                                                              else [values])
+                elif values and entity_type == 'users':
+                    yield client, \
+                        self._parse_and_save_data_from_client(client,
+                                                              raw_users=values if isinstance(values, list)
+                                                              else [values])
+
+        except adapter_exceptions.AdapterException:
+            # pylint: disable=W0631
+            logger.warning(f'Failed parse and save data for client {client}', exc_info=True)
+            yield client, ''
+        except Exception as e:
+            # pylint: disable=W0631
+            logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
+
+    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time):
+        data = {}
+        finished = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_ASYNC_FETCH_WORKERS) as executor:
+            try:
+                if isinstance(client_name, list):
+                    for client in client_name:
+                        data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
+                                             parse_after_fetch=True, thread_safe=True)] = client
+                else:
+                    data[executor.submit(self.insert_data_to_db, client_name, check_fetch_time=check_fetch_time,
+                                         parse_after_fetch=True, thread_safe=True)] = client_name
+
+                # Wait until all fetches finish
+                for client in concurrent.futures.as_completed(data):
+                    finished[data[client]] = client
+
+            except adapter_exceptions.AdapterException:
+                problematic_client = client_name if isinstance(client_name, str) else client if \
+                    isinstance(client, str) else data[client]
+                logger.warning(f'Failed fetching data for client {problematic_client}', exc_info=True)
+                yield data[client], ''
+            except Exception as e:
+                logger.error(f'Failed fetching data asynchronously: {str(e)}', exc_info=True)
+
+            try:
+                for k, v in finished.items():
+                    yield k, self._parse_and_save_data_from_client(k, raw_devices=v.result()[0]['raw'],
+                                                                   raw_users=v.result()[1]['raw'])
+            except adapter_exceptions.AdapterException:
+                # pylint: disable=W0631
+                logger.warning(f'Failed parse and save data for client {k}', exc_info=True)
+                yield client, ''
+            except Exception as e:
+                # pylint: disable=W0631
+                logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
+
+    # pylint: disable=too-many-branches
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         self.__has_a_reason_to_live = True
+        # pylint: disable=too-many-nested-blocks
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
             check_fetch_time = False
             if post_json and post_json.get('check_fetch_time'):
                 check_fetch_time = post_json.get('check_fetch_time')
+            parallel_fetch = self.feature_flags_config()[ParallelSearch.root_key].get(ParallelSearch.enabled)
             try:
                 try:
-                    res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                    if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:
+                        res = {'devices_count': 0,
+                               'users_count': 0
+                               }
+                        for client, result in self._handle_insert_to_db_async(client_name, check_fetch_time):
+                            if result != '':
+                                result = json.loads(result)
+                                res['devices_count'] += result['devices_count']
+                                res['users_count'] += result['users_count']
+                            logger.info(f'Received from {client}: {result}')
+                        res = to_json(res)
+                    else:
+                        res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
                 except adapter_exceptions.AdapterException:
-                    logger.warning(f'Failed inserting data for client {client_name}', exc_info=True)
+                    logger.warning(f'Failed inserting data for client '
+                                   f'{client_name if isinstance(client_name, str) else client}', exc_info=True)
                     return ''
                 for entity_type in EntityType:
-                    self._save_field_names_to_db(entity_type)
+                    if json.loads(res)[f'{entity_type.value.lower()}_count']:
+                        self._save_field_names_to_db(entity_type)
                 return res
 
             except BaseException:
@@ -576,8 +690,86 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 raise adapter_exceptions.CredentialErrorException(
                     f'Could not update client {client_id} with status {status}')
 
+    # pylint: disable=dangerous-default-value
+    def _parse_and_save_data_from_client(self, client_name, raw_devices=[], raw_users=[]):
+        """
+        Takes all the raw devices and users for the async fetching and parse it synchronously.
+        :param client_name: the name of the fetched client
+        :param raw_devices: list of raw devices data
+        :param raw_users: list of raw users data
+        :return: json with count of devices and users for this client
+        """
+        timeout = self.__fetching_timeout
+        timeout = timeout.total_seconds() if timeout else None
+
+        try:
+            devices = {
+                'raw': [],
+                'parsed': timeout_iterator(self._parse_devices_raw_data_hook(raw_devices), timeout=timeout,
+                                           maxsize=3000)
+            }
+            users = {
+                'raw': [],
+                'parsed': timeout_iterator(self._parse_users_raw_data_hook(raw_users), timeout=timeout,
+                                           maxsize=3000)
+            }
+            devices_count = self._save_data_from_plugin(client_name, devices, EntityType.Devices)
+            users_count = self._save_data_from_plugin(client_name, users, EntityType.Users)
+        except Exception as e:
+            self._handle_insert_and_parse_exceptions(client_name, e)
+
+        self._update_client_status(client_name, 'success')
+        return to_json({'devices_count': devices_count, 'users_count': users_count})
+
+    def _handle_insert_and_parse_exceptions(self, client_name, execption):
+        """
+        Handles all the possiable exceptions during parsing the raw devices and users
+        :param client_name: the client name
+        :param execption: the exception while parsing
+        """
+        with self._clients_lock:
+            current_client = self._clients_collection.find_one({'client_id': client_name})
+            if not current_client or not current_client.get('client_config'):
+                # No credentials to attempt reconnection
+                raise adapter_exceptions.CredentialErrorException(
+                    'No credentials found for client {0}. Reason: {1}'.format(client_name, str(execption)))
+            self._decrypt_client_config(current_client.get('client_config'))
+            self._clean_unneeded_client_config_fields(current_client.get('client_config'))
+            if current_client.get('status') != 'success':
+                raise Exception
+        try:
+            with self._clients_lock:
+                self._clients[client_name] = self.__connect_client_facade(current_client['client_config'])
+        except Exception as e2:
+            # No connection to attempt querying
+            error_msg = f'Adapter {self.plugin_name} had connection error' \
+                        f' to server with the ID {client_name}. Error is {str(e2)}'
+            self.create_notification(error_msg)
+            self.send_external_info_log(error_msg)
+            if self.mail_sender and self._adapter_errors_mail_address:
+                email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
+                                                   self._adapter_errors_mail_address.split(','))
+                email.send(error_msg)
+            if self._adapter_errors_webhook:
+                try:
+                    resposne = requests.post(url=self._adapter_errors_webhook,
+                                             json={'error_message': error_msg},
+                                             headers={'Content-Type': 'application/json',
+                                                      'Accept': 'application/json'},
+                                             verify=False)
+                except Exception:
+                    pass
+
+            logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
+            log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
+                       metric_value={client_name},
+                       details=str(e2))
+            self._update_client_status(client_name, 'error', str(e2))
+            raise
+
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False):
+    def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False,
+                          parse_after_fetch: bool = False, thread_safe: bool = False):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
@@ -610,61 +802,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             devices_count = 0
             users_count = 0
             try:
+                if parse_after_fetch:
+                    return (self._get_data_by_client(client_name, EntityType.Devices,
+                                                     parse_after_fetch=parse_after_fetch, thread_safe=thread_safe),
+                            self._get_data_by_client(client_name, EntityType.Users,
+                                                     parse_after_fetch=parse_after_fetch, thread_safe=thread_safe))
+
                 devices_count = self._save_data_from_plugin_logged(
                     client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
                 users_count = self._save_data_from_plugin_logged(
                     client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
             except Exception as e:
-                with self._clients_lock:
-                    current_client = self._clients_collection.find_one({'client_id': client_name})
-                    if not current_client or not current_client.get('client_config'):
-                        # No credentials to attempt reconnection
-                        raise adapter_exceptions.CredentialErrorException(
-                            'No credentials found for client {0}. Reason: {1}'.format(client_name, str(e)))
-                    self._decrypt_client_config(current_client.get('client_config'))
-                    self._clean_unneeded_client_config_fields(current_client.get('client_config'))
-                    if current_client.get('status') != 'success':
-                        self._log_activity_connection_failure(client_name, e)
-                        raise
-                try:
-                    with self._clients_lock:
-                        self._clients[client_name] = self.__connect_client_facade(current_client['client_config'])
-                except Exception as e2:
-                    # No connection to attempt querying
-                    error_msg = f'Adapter {self.plugin_name} had connection error' \
-                                f' to server with the ID {client_name}. Error is {str(e2)}'
-                    self.create_notification(error_msg)
-                    self.send_external_info_log(error_msg)
-                    self._log_activity_connection_failure(client_name, e2)
-                    if self.mail_sender and self._adapter_errors_mail_address:
-                        email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
-                                                           self._adapter_errors_mail_address.split(','))
-                        email.send(error_msg)
-                    if self._adapter_errors_webhook:
-                        try:
-                            logger.info(f'Sending webhook error to: {self._adapter_errors_webhook}')
-                            resposne = requests.post(url=self._adapter_errors_webhook,
-                                                     json={'error_message': error_msg},
-                                                     headers={'Content-Type': 'application/json',
-                                                              'Accept': 'application/json'},
-                                                     verify=False)
-                            resposne.raise_for_status()
-                        except Exception:
-                            logger.exception(f'Problem sending webhook error error')
-                    try:
-                        opsgenie_connection = self.get_opsgenie_connection()
-                        if opsgenie_connection:
-                            with opsgenie_connection:
-                                opsgenie_connection.create_alert(message=error_msg)
-                    except Exception:
-                        logger.exception(f'Proble with Opsgenie message')
+                self._handle_insert_and_parse_exceptions(client_name, e)
 
-                    logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
-                    log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
-                               metric_value={client_name},
-                               details=str(e2))
-                    self._update_client_status(client_name, 'error', str(e2))
-                    raise
             self._update_client_status(client_name, 'success')
         else:
             devices_count = sum(
@@ -678,7 +828,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         return to_json({'devices_count': devices_count, 'users_count': users_count})
 
-    def _get_data_by_client(self, client_name: str, data_type: EntityType) -> dict:
+    def _get_data_by_client(self, client_name: str, data_type: EntityType, parse_after_fetch: bool = False,
+                            thread_safe: bool = False) -> dict:
         """
         Get all devices, both raw and parsed, from the given client name
         data_type is devices/users.
@@ -690,9 +841,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 raise adapter_exceptions.ClientDoesntExist('Client does not exist')
         try:
             time_before_query = datetime.now()
-            raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
-            query_time = datetime.now() - time_before_query
-            logger.info(f'Querying {client_name} took {query_time.seconds} seconds - {data_type}')
+            raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type,
+                                                                   parse_after_fetch=parse_after_fetch,
+                                                                   thread_safe=thread_safe)
+            if not parse_after_fetch:
+                query_time = datetime.now() - time_before_query
+                logger.info(f'Querying {client_name} took {query_time.seconds} seconds - {data_type}')
         except adapter_exceptions.CredentialErrorException as e:
             logger.exception(f'Credentials error for {client_name} on {self.plugin_unique_name}')
             raise adapter_exceptions.CredentialErrorException(
@@ -708,7 +862,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.exception(f'Error while trying to get {data_type} for {client_name}. Details: {repr(e)}')
             raise Exception(f'Error while trying to get {data_type} for {client_name}. Details: {repr(e)}')
         else:
-            data_list = {'raw': [],  # AD-HOC: Not returning any raw values
+            data_list = {'raw': [] if not parse_after_fetch else raw_data,  # AD-HOC: Not returning any raw values
                          'parsed': parsed_data}
 
             return data_list
@@ -1340,7 +1494,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         self._save_field_names_to_db(EntityType.Devices)
 
-    def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True):
+    def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True, parse_after_fetch=False,
+                                  thread_safe=False):
         """
         Try querying data for given client. If fails, try reconnecting to client.
         If successful, try querying data with new connection to the original client, up to 3 times.
@@ -1383,15 +1538,29 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 self._clients[client_id] = None
                 self._update_client_status(client_id, 'error', str(e))
                 raise
-            _raw_data = func_timeout.func_timeout(
-                timeout=timeout,
-                func=call_raw_as_stoppable,
-                args=(client_id, self._clients[client_id]))
-            logger.info('Got raw')
+            if not parse_after_fetch or thread_safe:
+                _raw_data = func_timeout.func_timeout(
+                    timeout=timeout,
+                    func=call_raw_as_stoppable,
+                    args=(client_id, self._clients[client_id]))
+                logger.info('Got raw')
+            else:
+                # Multiprocess date fetch
+                _raw_data = \
+                    (
+                        # pylint: disable=no-member
+                        self._query_devices_by_client_parallel() if entity_type.value == 'devices'
+                        else self._query_users_by_client_parallel()
+                        if hasattr(self.__class__, '_query_users_by_client_parallel') else [],
+                        (),
+                        {'client_name': client_id, 'client_data': self._clients[client_id]}
+                    )
 
             # maxsize=3000 means we won't hold more than 3k devices in memory
             # and will reduce the chances of thread exhaustion between the fetching thread (the adapter code)
             # and the insertion to db threads (plugin_base code)
+            if parse_after_fetch:
+                return _raw_data, []
             _parsed_data = timeout_iterator(parse(_raw_data), timeout=timeout, maxsize=3000)
 
             logger.info('Got parsed')
@@ -1399,6 +1568,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         self._save_field_names_to_db(entity_type)
         raw_data, parsed_data = _get_raw_and_parsed_data()
+        if parse_after_fetch:
+            return raw_data, parsed_data
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
     def refetch_device(self, client_id, device_id):

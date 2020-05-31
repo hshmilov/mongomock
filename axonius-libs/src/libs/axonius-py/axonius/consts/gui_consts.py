@@ -201,6 +201,11 @@ class RootMasterNames:
     delete_backups = 'delete_backups'
 
 
+class ParallelSearch:
+    root_key = 'parallel_search'
+    enabled = 'enabled'
+
+
 class Signup:
     SignupCollection = 'signup'
     SignupField = 'signup'
