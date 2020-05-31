@@ -1,7 +1,6 @@
 import time
 from datetime import datetime, timedelta
 
-import pytest
 from selenium.common.exceptions import ElementNotInteractableException
 
 from axonius.utils.wait import wait_until
@@ -91,13 +90,14 @@ class TestDiscoverySchedule(TestBase):
 
     def _test_lifecycle_next_scan_daily_scheduled(self):
         self.settings_page.switch_to_page()
-        self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=1))
+        self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=2))
+
         # before discovery
         wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
-                   total_timeout=60 * 10, interval=0.1)
+                   total_timeout=60 * 3, interval=5)
         # discovery started , verify next cycle timestamp update
         wait_until(lambda: self.check_next_cycle_start_in_hours(time_in_hours=24),
-                   total_timeout=60 * 10)
+                   total_timeout=60 * 5, interval=5)
 
     def _test_lifecycle_next_scan_interval_scheduled(self):
         interval_value = 0.1 / 6
@@ -113,17 +113,16 @@ class TestDiscoverySchedule(TestBase):
         self.settings_page.save_system_interval_schedule_settings(interval_value)
 
         wait_until(verify_schedule_interval_update,
-                   total_timeout=60 * 10, interval=0.1)
+                   total_timeout=60 * 5, interval=1)
 
         wait_until(lambda: self.check_next_cycle_start_in_min(time_in_min=1),
-                   total_timeout=60 * 10, interval=0.1)
+                   total_timeout=60 * 5, interval=1)
 
-    @pytest.mark.skip('AX-7081')
     def test_schedule_lifecycle_next_scan(self):
         self._test_lifecycle_next_scan_daily_scheduled()
 
         wait_until(lambda: self.check_last_cycle_completed(),
-                   total_timeout=60 * 10)
+                   total_timeout=60 * 10, interval=5)
 
         self._test_lifecycle_next_scan_interval_scheduled()
 
