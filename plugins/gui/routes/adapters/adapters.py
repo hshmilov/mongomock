@@ -263,6 +263,7 @@ class Adapters(Connections):
 
             adapters_to_return.append({
                 'plugin_name': adapter['plugin_name'],
+                'unique_plugin_name': adapter_name,
                 'status': status,
                 'supported_features': adapter['supported_features'],
                 'schema': schema,
