@@ -3867,7 +3867,7 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': UPDATE_CLIENTS_STATUS,
-                            'title': 'Update adapters clients status periodically (Every 1:30 hours)',
+                            'title': 'Update adapters connections status periodically (every 1:30 hours)',
                             'type': 'bool'
                         }
                     ],
@@ -3933,37 +3933,37 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Enable SMB Integration',
+                            'title': 'Enable SMB integration',
                             'type': 'bool',
                         },
                         {
                             'name': 'enable_backups',
-                            'title': 'Enable SMB Data Transfer',
+                            'title': 'Enable SMB data transfer',
                             'type': 'bool',
                         },
                         {
                             'name': 'hostname',
-                            'title': 'SMB Host Name',
+                            'title': 'SMB host name',
                             'type': 'string',
                         },
                         {
                             'name': 'ip',
-                            'title': 'SMB Host IP',
+                            'title': 'SMB host IP',
                             'type': 'string',
                         },
                         {
                             'name': 'port',
-                            'title': 'SMB Port',
+                            'title': 'SMB port',
                             'type': 'string',
                         },
                         {
                             'name': 'share_path',
-                            'title': 'SMB Share Path',
+                            'title': 'SMB share path',
                             'type': 'string',
                         },
                         {
                             'name': 'username',
-                            'title': 'User Name',
+                            'title': 'User name',
                             'type': 'string',
                         },
                         {
@@ -3974,13 +3974,13 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'preshared_key',
-                            'title': 'Data Encryption Passphrase',
+                            'title': 'Data encryption passphrase',
                             'type': 'string',
                             'format': 'password',
                         },
                         {
                             'name': 'use_nbns',
-                            'title': 'Use NetBIOS Name Server',
+                            'title': 'Use NetBIOS name server',
                             'type': 'bool',
                         },
                     ],
