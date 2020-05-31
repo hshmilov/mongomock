@@ -69,6 +69,7 @@ from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.logic.dashboard_data import (adapter_data)
+from gui.logic.filter_utils import filter_archived
 from gui.routes.app_routes import AppRoutes
 
 # pylint: disable=invalid-name,too-many-instance-attributes,inconsistent-return-statements,too-many-statements,no-else-return,no-self-use
@@ -446,8 +447,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             adapter_devices = adapter_data.call_uncached(EntityType.Devices)
             adapter_users = adapter_data.call_uncached(EntityType.Users)
 
+            axonius_roles = self._roles_collection.find({
+                IS_AXONIUS_ROLE: True
+            }, {'_id': 1})
             log_metric(logger, SystemMetric.GUI_USERS,
-                       self._users_collection.count_documents({'archived': {'$ne': True}}))
+                       self._users_collection.count_documents(filter_archived({
+                           'role_id': {
+                               '$nin': [role['_id'] for role in axonius_roles]
+                           }
+                       })))
             log_metric(logger, SystemMetric.DEVICES_SEEN, adapter_devices['seen'])
             log_metric(logger, SystemMetric.DEVICES_UNIQUE, adapter_devices['unique'])
 
@@ -470,7 +478,19 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             for view_type, view_collection in self.gui_dbs.entity_query_views_db_map.items():
                 log_metric(logger,
                            SystemMetric.STORED_VIEWS_COUNT,
-                           metric_value=view_collection.count_documents({}),
+                           metric_value=view_collection.count_documents(filter_archived({
+                               'query_type': 'saved',
+                               '$or': [
+                                   {
+                                       PREDEFINED_FIELD: False
+                                   },
+                                   {
+                                       PREDEFINED_FIELD: {
+                                           '$exists': False
+                                       }
+                                   }
+                               ]
+                           })),
                            view_type=str(view_type))
                 for view in view_collection.find({}, projection={'_id': False}):
                     log_metric(logger, SystemMetric.STORED_VIEW_RAW, metric_value=dumps(view),
