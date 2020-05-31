@@ -1,4 +1,5 @@
 import glob
+import time
 import multiprocessing
 import os
 import signal
@@ -10,6 +11,7 @@ import pytest
 pytestmark = pytest.mark.sanity
 
 NUMBER_OF_PROCESSES = 6
+TIMEOUT_MINUTES = 50
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [
     'devops',
@@ -60,6 +62,7 @@ def _is_pylint_ok_expected_false(file_name):
 
 
 def _is_pylint_ok(file_name, is_success_expected):
+    old_time = time.time()
     pylint_path = _get_pylint_path()
     child = subprocess.Popen(
         [pylint_path, '--rcfile', PYLINTRC_FILE, file_name],
@@ -71,7 +74,8 @@ def _is_pylint_ok(file_name, is_success_expected):
     if not good_file and is_success_expected:
         sys.stderr.write(f'ERROR: Found bad pylinted file {file_name}\n')
         sys.stderr.write(decoded)
-    return file_name, good_file, f'{good_file}:\n{decoded}'
+    elapsed = time.time() - old_time
+    return file_name, good_file, f'{good_file}:\n{decoded}', elapsed
 
 
 def _get_file_content(file_name):
@@ -112,6 +116,13 @@ def _get_pylint_exempt():
     return _get_pylint_exempt.pylint_exempt
 
 
+def _print_times_and_files(mapped_values):
+    sorted_values = sorted(mapped_values, key=lambda x: x[3], reverse=True)
+    print('sorted_values:')
+    for key in sorted_values:
+        print(f'{key[3]} : {key[0]}')
+
+
 def _get_unexpected_pylint_state(is_success_expected):
     files_to_map = [
         file_name
@@ -127,7 +138,7 @@ def _get_unexpected_pylint_state(is_success_expected):
         # we do this hassle because we can't pickle lambdas
         func = _is_pylint_ok_expected_true if is_success_expected else _is_pylint_ok_expected_false
         res = process_pool.map_async(func, files_to_map)  # return tuple
-        mapped_values = res.get(60 * 50)
+        mapped_values = res.get(60 * TIMEOUT_MINUTES)
     except KeyboardInterrupt:
         process_pool.terminate()
         process_pool.join()
@@ -135,6 +146,8 @@ def _get_unexpected_pylint_state(is_success_expected):
 
     process_pool.close()
     process_pool.join()
+
+    _print_times_and_files(mapped_values)
 
     return [(item[0], item[2]) for item in mapped_values if is_success_expected != item[1]]
 
