@@ -124,7 +124,13 @@ class NexposeAdapter(ScannerAdapterBase):
                 NEXPOSE_PORT,
                 USER,
                 PASSWORD,
-                VERIFY_SSL
+                VERIFY_SSL,
+                'drop_only_ip_devices',
+                'fetch_vulnerabilities',
+                'fetch_policies',
+                'fetch_ports',
+                'fetch_tags',
+                'fetch_sw'
             ],
             "type": "array"
         }
@@ -173,10 +179,18 @@ class NexposeAdapter(ScannerAdapterBase):
     def _connect_client(self, client_config):
         num_of_simultaneous_devices = client_config.get('num_of_simultaneous_devices') or 50
         try:
-            return nexpose_clients.NexposeV3Client(num_of_simultaneous_devices, **client_config),\
+            return nexpose_clients.NexposeV3Client(num_of_simultaneous_devices, host=client_config['host'],
+                                                   port=client_config['port'], username=client_config['username'],
+                                                   password=client_config['password'],
+                                                   verify_ssl=client_config['verify_ssl'],
+                                                   token=client_config.get('token')),\
                 client_config[NEXPOSE_HOST]
         except ClientConnectionException:
-            return nexpose_clients.NexposeV2Client(num_of_simultaneous_devices, **client_config),\
+            return nexpose_clients.NexposeV2Client(num_of_simultaneous_devices, host=client_config['host'],
+                                                   port=client_config['port'], username=client_config['username'],
+                                                   password=client_config['password'],
+                                                   verify_ssl=client_config['verify_ssl'],
+                                                   token=client_config.get('token')),\
                 client_config[NEXPOSE_HOST]
 
     def _test_reachability(self, client_config):

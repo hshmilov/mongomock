@@ -3,7 +3,14 @@ client_details = {
     'port': 3780,
     'username': 'readonly-user',
     'password': 'Password2',
-    'verify_ssl': False
+    'verify_ssl': False,
+    'fetch_vulnerabilities': False,
+    'drop_only_ip_devices': False,
+    'num_of_simultaneous_devices': 50,
+    'fetch_policies': False,
+    'fetch_ports': False,
+    'fetch_sw': False,
+    'fetch_tags': False,
 }
 
 SOME_DEVICE_ID = '11'
