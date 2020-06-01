@@ -4,7 +4,7 @@ from axonius.consts import remote_file_consts
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
 from axonius.utils.json import from_json
-from axonius.utils.parsing import get_exception_string
+from axonius.utils.parsing import get_exception_string, is_domain_valid
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -81,7 +81,21 @@ class EsentireJsonAdapter(ScannerAdapterBase):
             hostname = device_raw.get('hostname')
             device.id = f'{ip}_{hostname or ""}'
 
+            if isinstance(hostname, str) and ('[' in hostname) and (']' in hostname):
+                try:
+                    hostname = from_json(hostname)
+                    if isinstance(hostname, list) and hostname:
+                        hostname = hostname[0]
+                except Exception:
+                    logger.warning(f'Failed parsing json hostname: {hostname}')
+
             device.hostname = hostname
+
+            if (isinstance(hostname, str) and (hostname.count('.') > 2)):
+                domain = '.'.join(hostname.split('.')[1:])
+                if is_domain_valid(domain):
+                    device.domain = domain
+
             device.last_seen = parse_date(device_raw.get('last_seen'))
             device.add_ips_and_macs(ips=[ip])
 
