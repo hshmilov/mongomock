@@ -926,10 +926,14 @@ class Page:
     def click_remove_sign(self, context=None):
         self.click_button('X', should_scroll_into_view=False, context=context)
 
-    def clear_existing_date(self, context=None):
-        self.click_remove_sign(context=context)
-        # Make sure it is removed
-        time.sleep(0.5)
+    def clear_existing_date(self, context=None, allow_failures=False):
+        try:
+            self.click_remove_sign(context=context)
+            # Make sure it is removed
+            time.sleep(0.5)
+        except NoSuchElementException:
+            if not allow_failures:
+                raise
 
     def find_existing_date(self):
         return self.wait_for_element_present_by_css('.md-datepicker .md-clear')

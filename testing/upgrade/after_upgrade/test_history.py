@@ -13,7 +13,8 @@ def _check_history_of_entity(page: EntitiesPage):
         page.wait_for_table_to_load(retries=450)
         assert page.count_entities() >= History.entities_per_day
         page.close_datepicker()
-        page.clear_existing_date()
+        # We allow failures since if we are on the same day there won't be an 'X' button
+        page.clear_existing_date(allow_failures=True)
 
 
 class TestHistory(TestBase):

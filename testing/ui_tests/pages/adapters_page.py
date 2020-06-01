@@ -196,7 +196,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_NOT_SUPPORTED)
 
     def wait_for_problem_connecting_to_server(self):
-        self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM)
+        self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_PROBLEM, retries=600)
 
     def wait_for_credentials_problem_to_server(self):
         self.wait_for_element_present_by_text(self.TEST_CREDENTIALS_PROBLEM)
