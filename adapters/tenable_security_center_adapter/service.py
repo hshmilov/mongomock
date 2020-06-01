@@ -15,6 +15,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.clients.tenable_sc.connection import \
     TenableSecurityScannerConnection
+from axonius.clients.tenable_sc.consts import OS_IDENTIFICATION_PLUGIN_ID
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -272,11 +273,6 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             device.id = raw_device_data.get('biosGUID')
             device.uuid = raw_device_data.get('biosGUID')
 
-        # Parse all raw data
-        if raw_device_data.get('os'):
-            device.figure_os(raw_device_data.get('os'))
-        elif raw_device_data.get('osCPE'):
-            device.figure_os(raw_device_data.get('osCPE'))
         ip_list_raw = raw_device_data.get('ip', [])
         if isinstance(ip_list_raw, str):
             # maybe we have a couple of ip's. we don't know since we don't have it in the api docs.
@@ -341,6 +337,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         device.policy_name = raw_device_data.get('policyName')
         device.mcafee_guid = raw_device_data.get('mcafeeGUID')
 
+        linux_kernel_version = None
+        os_string = raw_device_data.get('os') or raw_device_data.get('osCPE') or ''
         for vulnerability in raw_device_data.get('vulnerabilities') or []:
             try:
                 plugin_name = vulnerability.get('pluginName')
@@ -358,7 +356,21 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 nessus_instance = None
                 if plugin_text and 'Nessus version' in plugin_text:
                     nessus_instance = self._get_nessus_instance(vulnerability.get('pluginText'))
+
                 plugin_id = vulnerability.get('pluginID')
+
+                # Specific Plugin (11936) in vulnerabilities include OS Identification which will help determine OS type
+                if plugin_id == OS_IDENTIFICATION_PLUGIN_ID and plugin_text:
+                    try:
+                        os_identification = re.search('Remote operating system : (.*)', plugin_text).group(1)
+                        try:
+                            linux_kernel_version = re.search('linux kernel (.*) on', os_identification.lower()).group(1)
+                        except Exception:
+                            pass
+                        os_string += ' ' + os_identification
+                    except Exception:
+                        logger.debug(
+                            f'Failed parsing OS Identification for Plugin {OS_IDENTIFICATION_PLUGIN_ID}: {plugin_text}')
 
                 device.add_tenable_vuln(plugin=plugin_name,
                                         severity=severity,
@@ -384,6 +396,10 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                             logger.exception(f'Problem adding CVE {cve}')
             except Exception:
                 logger.exception(f'Problem adding vulnerability {vulnerability}')
+
+        device.figure_os(os_string)
+        if linux_kernel_version:
+            device.os.kernel_version = linux_kernel_version
 
         last_auth_run = raw_device_data.get('lastAuthRun')
         if last_auth_run is not None and last_auth_run != '':
@@ -503,7 +519,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
     @staticmethod
     def _parse_info_vulns_plugin_ids_config(plugin_ids: str):
         raw_plugin_ids = (plugin_ids or '').split(',')
-        plugin_ids = []
+        plugin_ids = [OS_IDENTIFICATION_PLUGIN_ID]
         for plugin_id in raw_plugin_ids:
             if plugin_id.strip():
                 plugin_ids.append(plugin_id.strip())

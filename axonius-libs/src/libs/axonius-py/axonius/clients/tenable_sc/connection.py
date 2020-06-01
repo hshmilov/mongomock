@@ -10,6 +10,8 @@ from axonius.clients.tenable_sc import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+# pylint: disable=logging-format-interpolation
+
 
 class TenableSecurityScannerConnection(RESTConnection):
     # This code heavily relies on pyTenable https://github.com/tenable/pyTenable/blob/
@@ -172,19 +174,33 @@ class TenableSecurityScannerConnection(RESTConnection):
                 logger.exception(f'Failed to get device list for repository {repository_id}')
     # pylint: enable=arguments-differ, too-many-nested-blocks, too-many-branches
 
-    def _get_vuln_list(self, repository_id, include_info_vulns=False):
+    def _get_vuln_list(self, repository_id, vulns_plugin_ids=None):
+        try:
+            plugin_ids = None
+            if isinstance(vulns_plugin_ids, list):
+                plugin_ids = ','.join(vulns_plugin_ids)
 
-        severity_levels = consts.VULN_SEVERITY_ID_ALL_BUT_INFO
-        if include_info_vulns:
-            severity_levels.append(consts.VULN_SEVERITY_ID_INFO)
-        severity_levels_str = ','.join(severity_levels)
+            if plugin_ids:
+                filter_ = {'filterName': 'pluginID',
+                           'operator': '=',
+                           'type': 'vuln',
+                           'value': plugin_ids}
+
+                yield from self.do_analysis(repository_id=repository_id,
+                                            analysis_type='vuln',
+                                            source_type='cumulative',
+                                            query_tool='vulndetails',
+                                            query_type='vuln',
+                                            extra_filter=filter_)
+        except Exception:
+            logger.exception(f'Problem with repository {repository_id} for specific plugin ids')
 
         filter_ = {'filterName': 'severity',
                    'id': 'severity',
                    'isPredefined': True,
                    'operator': '=',
                    'type': 'vuln',
-                   'value': severity_levels_str}
+                   'value': ','.join(consts.VULN_SEVERITY_ID_ALL_BUT_INFO)}
         try:
             yield from self.do_analysis(repository_id=repository_id,
                                         analysis_type='vuln',
@@ -208,20 +224,12 @@ class TenableSecurityScannerConnection(RESTConnection):
         return severity_id == consts.VULN_SEVERITY_ID_INFO
 
     def _get_vuln_mapping(self, repository_id, info_vulns_plugin_ids):
-        include_info_vulns = (isinstance(info_vulns_plugin_ids, list) and (len(info_vulns_plugin_ids) > 0))
         result = defaultdict(list)
-        vuln_list = self._get_vuln_list(repository_id, include_info_vulns=include_info_vulns) or []
+        vuln_list = self._get_vuln_list(repository_id, vulns_plugin_ids=info_vulns_plugin_ids) or []
         for vuln in vuln_list:
             vuln_id = self._vuln_id(vuln)
             if not vuln_id:
                 continue
-            if include_info_vulns and self._is_info_vuln(vuln):
-                plugin_id = vuln.get('pluginID')
-                if not (plugin_id and isinstance(plugin_id, str)):
-                    continue
-
-                if plugin_id not in info_vulns_plugin_ids:
-                    continue
 
             result[vuln_id].append(vuln)
         return dict(result)
