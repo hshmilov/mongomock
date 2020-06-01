@@ -228,7 +228,36 @@ class SettingsPage(Page):
         ],
     }
 
+    VIEWER_ADDER_PERMISSIONS = {
+        'devices_assets': [
+            'View devices',
+            'Create saved query',
+        ],
+        'users_assets': [
+            'View users',
+        ],
+        'adapters': [
+            'View adapters',
+        ],
+        'enforcements': [
+            'View Enforcement Center',
+            'Add Enforcement'
+        ],
+        'reports': [
+            'View reports',
+            'Add report',
+        ],
+        'instances': [
+            'View instances',
+        ],
+        'dashboard': [
+            'View dashboard',
+            'Add chart',
+        ],
+    }
+
     AUTO_QUERY_CHECKBOX_ID = 'autoQuery'
+
     ONLY_REPORTS_PERMISSIONS = {
         'reports': 'all'
     }

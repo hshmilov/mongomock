@@ -50,6 +50,20 @@
             name="description"
           />
         </div>
+
+        <div
+          v-if="!isEdit"
+          class="form-item"
+        >
+          <ACheckbox
+            id="private_query_checkbox"
+            :checked="isPrivate"
+            :disabled="userCannotAddSavedQueries"
+            @change="onChangePrivate"
+          >
+            Private query
+          </ACheckbox>
+        </div>
       </section>
     </div>
   </XModal>
@@ -57,6 +71,7 @@
 
 <script>
 import { mapActions } from 'vuex';
+import { Checkbox } from 'ant-design-vue';
 import { required, maxLength } from 'vuelidate/lib/validators';
 import _get from 'lodash/get';
 import _isNull from 'lodash/isNull';
@@ -69,7 +84,7 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboard
 import { SAVE_QUERY } from '@constants/getting-started';
 
 import { fetchEntitySavedQueriesNames } from '@api/saved-queries';
-import { EntitiesEnum as Entities } from '@constants/entities';
+import { getEntityPermissionCategory, EntitiesEnum as Entities } from '@constants/entities';
 
 /**
    * @param {any} value - the input value to validate against
@@ -89,6 +104,7 @@ export default {
   name: 'XSaveModal',
   components: {
     XModal,
+    ACheckbox: Checkbox,
   },
   model: {
     prop: 'value',
@@ -113,6 +129,7 @@ export default {
       queryFormProxies: {
         name: null,
         description: null,
+        isPrivate: false,
       },
       existingQueriesNamesList: new Set(),
     };
@@ -134,6 +151,13 @@ export default {
     },
     query() {
       return this.view || {};
+    },
+    permissionCategory() {
+      return getEntityPermissionCategory(this.namespace);
+    },
+    userCannotAddSavedQueries() {
+      return this.$cannot(this.permissionCategory,
+        this.$permissionConsts.actions.Add, this.$permissionConsts.categories.SavedQueries);
     },
     name: {
       get() {
@@ -157,6 +181,18 @@ export default {
       },
       set(value) {
         this.queryFormProxies.description = value;
+      },
+    },
+    isPrivate: {
+      get() {
+        const privateQueryEditMode = this.isEdit && this.query.private;
+        if (privateQueryEditMode || this.userCannotAddSavedQueries) {
+          return true;
+        }
+        return this.queryFormProxies.isPrivate;
+      },
+      set(value) {
+        this.queryFormProxies.isPrivate = value;
       },
     },
     initialName() {
@@ -189,10 +225,14 @@ export default {
       this.resetForm();
       this.$emit('closed');
     },
+    onChangePrivate() {
+      this.isPrivate = !this.isPrivate;
+    },
     resetForm() {
       this.queryFormProxies = {
         name: null,
         description: null,
+        isPrivate: false,
       };
       this.$v.$reset();
     },
@@ -211,6 +251,7 @@ export default {
         module: this.namespace,
         name: this.name,
         description: this.description,
+        private: this.isPrivate,
         uuid: this.isEdit ? this.view.uuid : null,
       });
 
@@ -237,7 +278,7 @@ export default {
 <style lang="scss">
   .save-query-dialog {
     .modal-container {
-      max-height: 360px;
+      max-height: 400px;
     }
     .modal-body {
       padding: 20px 24px 32px 24px;

@@ -164,6 +164,11 @@ export default {
     },
     readOnly: Boolean,
   },
+  data() {
+    return {
+      showConditions: false,
+    };
+  },
   computed: {
     ...mapState({
       triggerPeriods(state) {
@@ -211,7 +216,7 @@ export default {
       return Boolean(!(this.config.view.id && this.config.view.entity));
     },
     currentViewOptions() {
-      return this.viewOptions(this.viewEntity, this.viewId);
+      return this.viewSelectOptionsGetter(true)(this.viewEntity, this.viewId);
     },
     showScheduling: {
       get() {
@@ -261,11 +266,6 @@ export default {
         this.conditions.below = parseInt(value, 10) > 0 ? parseInt(value, 10) : 0;
       },
     },
-  },
-  data() {
-    return {
-      showConditions: false,
-    };
   },
   mounted() {
     this.showConditions = this.anyConditions;

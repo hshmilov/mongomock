@@ -63,7 +63,7 @@
           ref="dashboardRef"
           v-model="dashboard.config"
           :entities="entityOptions"
-          :view-options="viewOptions"
+          :view-options="viewSelectOptionsGetter(!isPersonalDashboardSpaceId)"
           :chart-view="dashboard.view"
           class="grid-span2"
           @validate="configValid = $event"
@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'vuex';
+import { mapActions, mapGetters, mapState } from 'vuex';
 import { formatDate } from '@constants/utils';
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
@@ -99,7 +99,8 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules
 import { DASHBOARD_CREATED } from '../../../constants/getting-started';
 import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
-import { ChartViewEnum, ChartTypesEnum } from '../../../constants/dashboard';
+import { ChartViewEnum, ChartTypesEnum, SpaceTypesEnum } from '../../../constants/dashboard';
+
 
 const dashboard = {
   metric: '', view: '', name: '', config: null,
@@ -127,6 +128,12 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      isPersonalDashboardSpaceId(state) {
+        return state.dashboard.spaces.data
+          .find((space) => space.type === SpaceTypesEnum.personal).uuid === this.space;
+      },
+    }),
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
@@ -207,7 +214,7 @@ export default {
       this.configValid = false;
       this.$nextTick(() => {
         if (!this.availableViews.includes(this.dashboardView)) {
-          this.dashboardView = this.availableViews[0];
+          [this.dashboardView] = this.availableViews;
         }
       });
     },

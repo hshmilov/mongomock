@@ -4,7 +4,7 @@
       :permission-category="permissionCategory"
       :permission-section="$permissionConsts.categories.SavedQueries"
     >
-      <template slot-scope="{ canAdd, canUpdate }">
+      <template slot-scope="{ canUpdate }">
         <div class="header">
           <template v-if="enforcement">
             <div class="query-title">
@@ -15,7 +15,7 @@
             </div>
           </template>
           <XButton
-            v-else-if="selectedView && canUpdate"
+            v-else-if="selectedView && userCanUpdateSavedQuery"
             :disabled="selectedView.predefined"
             type="link"
             class="query-title"
@@ -46,7 +46,7 @@
           v-else-if="!selectedView || !isEdited"
           id="query_save"
           type="link"
-          :disabled="disabled || !canAdd"
+          :disabled="disabled"
           @click="openSaveView"
         >Save As</XButton>
         <XDropdown v-else>
@@ -59,7 +59,7 @@
           <div slot="content">
             <XButton
               type="link"
-              :disabled="disabled || !canAdd"
+              :disabled="disabled"
               @click="openSaveView"
             >Save As</XButton>
             <XButton
@@ -194,13 +194,19 @@ export default {
       const filterDiff = query.filter !== view.query.filter;
       const fieldsDiff = !_isEqual(fields, view.fields);
       const sortDiff = sort.field !== view.sort.field || sort.desc !== view.sort.desc;
-      const colFiltersDiff = colFilters && view.colFilters && !_isEqual(colFilters, view.colFilters);
+      const colFiltersDiff = colFilters
+        && view.colFilters && !_isEqual(colFilters, view.colFilters);
       return view && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff);
     },
     status() {
       if (this.enforcement) return '';
       const edited = this.isEdited ? '[Edited]' : '';
       return !this.selectedView ? '[Unsaved]' : edited;
+    },
+    userCanUpdateSavedQuery() {
+      return this.$can(this.permissionCategory,
+        this.$permissionConsts.actions.Update, this.$permissionConsts.categories.SavedQueries)
+        || this.selectedView.private;
     },
   },
   methods: {
@@ -230,6 +236,7 @@ export default {
         uuid: this.selectedView.uuid,
         name: this.selectedView.name,
         description: this.selectedView.description,
+        private: this.selectedView.private,
       };
     },
     saveSelectedView() {
@@ -249,9 +256,7 @@ export default {
       this.$emit('done');
     },
     hasColFilters() {
-      return Object.values(this.view.colFilters).some((cf) => {
-        return cf.some((f) => !f.include || f.term.trim() !== '');
-      });
+      return Object.values(this.view.colFilters).some((cf) => cf.some((f) => !f.include || f.term.trim() !== ''));
     },
   },
 };

@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import utc from 'dayjs/plugin/utc';
 import { DEFAULT_DATE_FORMAT } from '../store/modules/constants';
+import { ChartTypesEnum } from './dashboard'
 
 dayjs.extend(isoWeek);
 dayjs.extend(utc);
@@ -107,3 +108,41 @@ export const parseVaultError = (errorString) => {
 export const getParentFromField = (fieldName) => fieldName.split('.').slice(0, -1).join('.');
 
 export const validateClassName = (name) => /^([a-z_]|-[a-z_-])[a-z\d_-]*$/i.test(name);
+
+// Gets the chart views according to its metric type
+export const ChartViewGetter = (chart) => {
+
+  // The key for each getter is the chart metric
+  const getters = {
+    [ChartTypesEnum.intersect]: (config) => {
+      return config.intersecting.concat(config.base).map((view) => {
+        return {
+          id: view,
+          entity: config.entity,
+        }
+      });
+    },
+    [ChartTypesEnum.compare]: (config) => {
+      return config.views;
+    },
+    [ChartTypesEnum.segment]: (config) => {
+      return [{ id: config.view, entity: config.entity}];
+    },
+    [ChartTypesEnum.abstract]: (config) => {
+      return [{ id: config.view, entity: config.entity}];
+    },
+    [ChartTypesEnum.timeline]: (config) => {
+      return config.views;
+    },
+    [ChartTypesEnum.matrix]: (config) => {
+      return config.intersecting.concat(config.base).map((view) => {
+        return {
+          id: view,
+          entity: config.entity,
+        }
+      });
+    },
+  }
+
+  return getters[chart.metric](chart.config);
+};

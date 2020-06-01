@@ -337,7 +337,6 @@ class TestEntitiesPermissions(PermissionsTestBase):
         entities_page.reset_query()
         entities_page.fill_filter('cb')
         entities_page.enter_search()
-        assert entities_page.is_query_save_as_disabled()
         queries_page.switch_to_page()
         queries_page.is_row_checkbox_absent()
         queries_page.click_query_row_by_name(query_name)
@@ -354,8 +353,6 @@ class TestEntitiesPermissions(PermissionsTestBase):
 
         entities_page.check_search_list_for_names([query_name])
         entities_page.execute_saved_query(query_name)
-        assert entities_page.is_query_save_as_disabled()
-        assert not entities_page.can_rename_query(query_name)
         queries_page.switch_to_page()
         queries_page.is_row_checkbox_absent()
         queries_page.click_query_row_by_name(query_name)
@@ -372,8 +369,6 @@ class TestEntitiesPermissions(PermissionsTestBase):
 
         entities_page.check_search_list_for_names([query_name])
         entities_page.execute_saved_query(query_name)
-        assert entities_page.is_query_save_as_disabled()
-        assert entities_page.can_rename_query(query_name)
 
         queries_page.switch_to_page()
         queries_page.is_row_checkbox_absent()

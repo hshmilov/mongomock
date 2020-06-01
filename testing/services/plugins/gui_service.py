@@ -17,7 +17,8 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_READONLY,
                                        PREDEFINED_ROLE_VIEWER, PREDEFINED_ROLE_OWNER, FEATURE_FLAGS_CONFIG, Signup,
                                        EXEC_REPORT_TITLE, LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD, IS_AXONIUS_ROLE, PREDEFINED_ROLE_RESTRICTED_USER)
+                                       PREDEFINED_FIELD, IS_AXONIUS_ROLE, PREDEFINED_ROLE_RESTRICTED_USER,
+                                       PRIVATE_FIELD)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
@@ -69,7 +70,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 36:
+        if self.db_schema_version != 37:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -149,6 +150,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_35()
         if self.db_schema_version < 36:
             self._update_schema_version_36()
+        if self.db_schema_version < 37:
+            self._update_schema_version_37()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1359,6 +1362,32 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 36
         except Exception as e:
             print(f'Exception while upgrading gui db to version 36. Details: {e}')
+
+    def _update_schema_version_37(self):
+        """
+        For 3.5 - Add a default value "not private" for all the existing devices and users views in the system
+        :return:
+        """
+        print('Upgrade to schema 37')
+        try:
+            for entity_type in EntityType:
+                self._entity_views_map[entity_type].update_many({
+                    '$and': [
+                        {
+                            PREDEFINED_FIELD: {'$exists': False}
+                        },
+                        {
+                            PRIVATE_FIELD: {'$exists': False}
+                        }
+                    ]
+                },  {
+                    '$set': {
+                        PRIVATE_FIELD: False
+                    }
+                })
+            self.db_schema_version = 37
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 37. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

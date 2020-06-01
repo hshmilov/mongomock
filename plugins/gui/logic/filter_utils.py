@@ -1,7 +1,10 @@
 import logging
-
 from typing import List
 from bson import ObjectId
+
+from axonius.consts.gui_consts import (PRIVATE_FIELD, USER_ID_FIELD)
+from axonius.utils.gui_helpers import get_connected_user_id
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -38,4 +41,35 @@ def filter_by_ids(ids: List[str]):
         '_id': {
             '$in': [ObjectId(uuid) for uuid in ids]
         }
+    }
+
+
+def filter_by_access_and_user():
+    """
+    Filters out all private queries that weren't created by the current user
+    ( If the query is not private, it remains as well )
+    :return:
+    """
+    return {
+        '$or': [
+            {
+                PRIVATE_FIELD: {
+                    '$ne': True
+                }
+            },
+            {
+                '$and': [
+                    {
+                        PRIVATE_FIELD: {
+                            '$eq': True
+                        }
+                    },
+                    {
+                        USER_ID_FIELD: {
+                            '$eq': get_connected_user_id()
+                        }
+                    }
+                ]
+            }
+        ]
     }

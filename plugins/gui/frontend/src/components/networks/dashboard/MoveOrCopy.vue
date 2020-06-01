@@ -55,11 +55,19 @@
 </template>
 
 <script>
-import { mapMutations, mapActions, mapState } from 'vuex';
+import {
+  mapMutations, mapActions, mapState, mapGetters,
+} from 'vuex';
 import _find from 'lodash/find';
 import { Modal, Checkbox, Select } from 'ant-design-vue';
+import _some from 'lodash/some';
+import _flow from 'lodash/flow';
+import _get from 'lodash/get';
 import XButton from '../../axons/inputs/Button.vue';
+import viewsMixin from '../../../mixins/views';
 import { MOVE_OR_COPY_TOGGLE, MOVE_PANEL, COPY_PANEL } from '../../../store/modules/dashboard';
+import { ChartViewGetter } from '../../../constants/utils';
+import { SpaceTypesEnum } from '../../../constants/dashboard';
 
 export default {
   name: 'XMoveOrCopy',
@@ -70,6 +78,7 @@ export default {
     ASelectOption: Select.Option,
     XButton,
   },
+  mixins: [viewsMixin],
   data() {
     return {
       copy: true,
@@ -79,21 +88,33 @@ export default {
   computed: {
     ...mapState({
       spaces(state) {
-        const allSpaces = state.dashboard.spaces.data;
-        if (this.cannotCopy) {
-          return allSpaces.filter((space) => space.type !== 'personal');
-        }
-        return allSpaces;
+        const isQueryPrivate = (query) => {
+          const savedQuery = this.getSavedQueryById(query.id, query.entity);
+          return savedQuery && savedQuery.private;
+        };
+        const chartHasPrivateQuery = (chart) => _some(ChartViewGetter(chart),
+          (query) => isQueryPrivate(query));
+
+        return _flow([
+          (spaces) => (this.cannotCopy
+            ? spaces.filter((space) => space.type !== SpaceTypesEnum.personal) : spaces),
+          (spaces) => (chartHasPrivateQuery(state.dashboard.currentPanel)
+            ? spaces.filter((space) => space.uuid === this.currentSpace) : spaces),
+        ])(_get(state, 'dashboard.spaces.data', []));
       },
       currentSpace(state) {
         return state.dashboard.currentSpace;
       },
       personalSpace(state) {
-        return _find(state.dashboard.spaces.data, (space) => space.type === 'personal');
+        return _find(state.dashboard.spaces.data,
+          (space) => space.type === SpaceTypesEnum.personal);
       },
       currentPanel(state) {
         return state.dashboard.currentPanel;
       },
+    }),
+    ...mapGetters({
+      getSavedQueryById: 'getSavedQueryById',
     }),
     cannotCopy() {
       return this.$cannot(this.$permissionConsts.categories.Dashboard,

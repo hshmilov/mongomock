@@ -1,6 +1,7 @@
 import logging
 import pprint
 import typing
+import json
 import urllib3
 
 import requests
@@ -83,11 +84,12 @@ class RESTClient:
         params['filter'] = filter_
         return self.do_request('get', '/devices/views', params=params)
 
-    def create_new_device_view(self, name: str, view: dict, query_type: str):
+    def create_new_device_view(self, name: str, view: dict, query_type: str, private: bool):
         data = {
             'name': name,
             'view': view,
             'query_type': query_type,
+            'private': json.dumps(private),
         }
         return self.do_request('post', '/devices/views', json=data)
 
@@ -133,11 +135,12 @@ class RESTClient:
 
         return self.do_request('get', '/users/views', params=params)
 
-    def create_new_user_view(self, name: str, view: dict, query_type: str):
+    def create_new_user_view(self, name: str, view: dict, query_type: str, private: bool):
         data = {
             'name': name,
             'view': view,
             'query_type': query_type,
+            'private': json.dumps(private),
         }
         return self.do_request('post', '/users/views', json=data)
 

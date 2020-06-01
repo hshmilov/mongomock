@@ -59,6 +59,7 @@
               v-if="canAdd || canUpdate"
               id="move_or_copy_chart"
               key="3"
+              :disabled="chart.loading"
               @click="openMoveOrCopy"
             >
               Move or Copy

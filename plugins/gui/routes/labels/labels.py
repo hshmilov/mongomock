@@ -210,11 +210,13 @@ class Labels:
 
             'audit.devices.views': 'Device Saved Queries',
             'audit.devices.views.put': 'Create Saved Query',
-            'audit.devices.views.put.template': 'Created saved query {name}',
+            'audit.devices.views.put.template': 'Created saved query \'{name}\'',
             'audit.devices.views.post': 'Edit Saved Query',
-            'audit.devices.views.post.template': 'Edited saved query {name}',
+            'audit.devices.views.post.template': 'Edited saved query \'{name}\'',
             'audit.devices.views.delete': 'Delete Saved Query',
             'audit.devices.views.delete.template': 'Deleted {count} saved queries',
+            'audit.devices.views.publish': 'Set Query Access',
+            'audit.devices.views.publish.template': 'Set the access of query \'{name}\' to public',
 
             'audit.users.views': 'User Saved Query',
             'audit.users.views.put': 'Create Saved Query',
@@ -223,6 +225,8 @@ class Labels:
             'audit.users.views.post.template': 'Edited saved query \'{name}\'',
             'audit.users.views.delete': 'Delete Saved Query',
             'audit.users.views.delete.template': 'Deleted {count} saved queries',
+            'audit.users.views.publish': 'Set Query Access',
+            'audit.users.views.publish.template': 'Set the access of query \'{name}\' to public',
 
             'audit.dashboard': 'Dashboard',
             'audit.dashboard.delete': 'Delete Space',

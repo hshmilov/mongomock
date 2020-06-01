@@ -2,6 +2,8 @@ from ui_tests.pages.queries_page import QueriesPage
 
 
 class DevicesQueriesPage(QueriesPage):
+    ACCESS_COLUMN = 'Access'
+    NAME_COLUMN = 'Name'
 
     @property
     def url(self):

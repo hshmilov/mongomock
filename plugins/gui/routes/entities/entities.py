@@ -11,7 +11,7 @@ from flask import (jsonify,
                    request)
 
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
-                                       PREDEFINED_FIELD)
+                                       PREDEFINED_FIELD, PRIVATE_FIELD)
 from axonius.consts.metric_consts import Query
 from axonius.consts.plugin_consts import (DEVICE_CONTROL_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           REPORTS_PLUGIN_NAME)
@@ -64,7 +64,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             'timestamp': current_time,
             'user_id': '*',
             UPDATED_BY_FIELD: '*',
-            PREDEFINED_FIELD: True
+            PREDEFINED_FIELD: True,
+            PRIVATE_FIELD: False,
         }, upsert=True)
 
     def _disable_entity(self, entity_type: EntityType, mongo_filter):
@@ -169,6 +170,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             return return_error(f'Name is required in order to save a view', 400)
         if not view_data.get('view'):
             return return_error(f'View data is required in order to save one', 400)
+        is_private = view_data.get('private', False)
         view_to_update = {
             'name': view_data['name'],
             'description': view_data.get('description', ''),
@@ -176,6 +178,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             'query_type': 'saved',
             'tags': tags,
             'archived': False,
+            'private': is_private,
         }
         if view_data.get(PREDEFINED_FIELD):
             view_to_update[PREDEFINED_FIELD] = view_data[PREDEFINED_FIELD]
@@ -220,6 +223,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             view_set_data['description'] = view_data.get('description', '')
         if 'tags' in view_data:
             view_set_data['tags'] = view_data.get('tags', [])
+        if 'private' in view_data:
+            view_set_data['private'] = view_data.get('private', '')
         if not self.is_axonius_user():
             view_set_data[LAST_UPDATED_FIELD] = datetime.now()
             view_set_data[UPDATED_BY_FIELD] = get_connected_user_id()

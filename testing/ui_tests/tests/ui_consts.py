@@ -21,6 +21,8 @@ LOGS_AFTER_UPGRADE_PATH = os.path.join(CORTEX_PATH, 'install_dir', 'cortex', 'lo
 SYSTEM_SCHEDULER_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'system-scheduler', 'system_scheduler.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'
+VIEWER_USERNAME = 'ViewerUser'
+VIEWER_ADDER_USERNAME = 'ViewerAdderUser'
 UPDATE_USERNAME = 'UpdateUser'
 READ_ONLY_USERNAME = 'ReadOnlyUser'
 READ_WRITE_USERNAME = 'ReadWriteUser'

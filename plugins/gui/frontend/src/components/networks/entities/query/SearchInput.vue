@@ -111,9 +111,9 @@ import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
-
 import _snakeCase from 'lodash/snakeCase';
 import _size from 'lodash/size';
+import _flow from 'lodash/flow';
 import XDropdown from '@axons/popover/Dropdown.vue';
 import XSearchInput from '@neurons/inputs/SearchInput.vue';
 import XMenu from '@axons/menus/Menu.vue';
@@ -158,13 +158,14 @@ export default {
   computed: {
     ...mapState({
       savedViews(state) {
-        if (this.userCanRunSavedQueries) {
-          if (!this.isSearchSimple) return state[this.module].views.saved.content.data || [];
-          return state[this.module].views.saved.content.data
-            .filter((item) => item && item.name.toLowerCase()
-              .includes(this.searchInputValue.toLowerCase()));
-        }
-        return [];
+        const isQueryMatchingSearch = (query) => query.name.toLocaleLowerCase()
+          .includes(this.searchInputValue.toLocaleLowerCase());
+
+        const isQueryAllowed = (query) => query.private || this.userCanRunSavedQueries;
+        return _flow([
+          (queries) => (this.isSearchSimple ? queries.filter(isQueryMatchingSearch) : queries),
+          (queries) => queries.filter(isQueryAllowed),
+        ])(_get(state, `${this.module}.views.saved.content.data`, []));
       },
       historyViews(state) {
         if (!this.isSearchSimple) return state[this.module].views.saved.content.data;

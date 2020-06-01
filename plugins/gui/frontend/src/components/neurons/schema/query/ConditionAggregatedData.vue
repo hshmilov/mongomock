@@ -1,13 +1,13 @@
 <template>
   <div class="x-condition-aggregated-data x-condition__child">
-    <x-select-typed-field
+    <XSelectTypedField
       :value="field"
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
       :read-only="readOnly"
       @input="onChangeField"
     />
-    <x-condition-function
+    <XConditionFunction
       :schema="fieldSchema"
       :operator="condition.compOp"
       :argument="condition.value"
@@ -21,9 +21,8 @@
 import _isEmpty from 'lodash/isEmpty';
 import _get from 'lodash/get';
 import { mapState, mapGetters } from 'vuex';
-import xSelectTypedField from '../../inputs/SelectTypedField.vue';
-import xConditionFunction from './ConditionFunction.vue';
-
+import XSelectTypedField from '../../inputs/SelectTypedField.vue';
+import XConditionFunction from './ConditionFunction.vue';
 
 import {
   GET_DATA_SCHEMA_BY_NAME,
@@ -34,7 +33,7 @@ import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 export default {
   name: 'XConditionAggregatedData',
   components: {
-    xSelectTypedField, xConditionFunction,
+    XSelectTypedField, XConditionFunction,
   },
   props: {
     module: {
@@ -57,7 +56,8 @@ export default {
       },
     }),
     ...mapGetters({
-      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
+      getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
     }),
     field() {
       return this.condition.field;
@@ -78,9 +78,15 @@ export default {
           title: 'Saved Query',
           type: 'string',
           format: 'predefined',
-          enum: this.savedViews.filter((v) => v).map((view) => ({
-            name: _get(view, 'view.query.filter', ''), title: view ? view.name : '',
-          })),
+          enum: this.savedViews.reduce((filtered, view) => {
+            if (view && !view.private) {
+              filtered.push({
+                name: _get(view, 'view.query.filter', ''),
+                title: view ? view.name : '',
+              });
+            }
+            return filtered;
+          }, []),
         }, ...schema[0].fields],
       };
       return [firstSchemaWithSavedQuery, ...schema.slice(1)];

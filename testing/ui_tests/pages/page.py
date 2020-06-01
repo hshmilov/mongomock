@@ -749,6 +749,12 @@ class Page:
         options = self.driver.find_elements_by_css_selector(selected_options_css_selector)
         assert len(options) == 0
 
+    def get_all_select_options(self,
+                               dropdown_css_selector,
+                               selected_options_css_selector):
+        self.driver.find_element_by_css_selector(dropdown_css_selector).click()
+        return [option.text for option in self.driver.find_elements_by_css_selector(selected_options_css_selector)]
+
     @staticmethod
     def key_down_enter(element):
         element.send_keys(Keys.ENTER)
@@ -1140,6 +1146,10 @@ class Page:
     def assert_element_absent_by_css_selector(self, css_selector):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector(css_selector)
+
+    def assert_element_absent_by_id(self, element_id):
+        with pytest.raises(NoSuchElementException):
+            self.driver.find_element_by_id(element_id)
 
     def wait_for_side_panel(self):
         return self.wait_for_element_present_by_css('.x-side-panel')

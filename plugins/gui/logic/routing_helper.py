@@ -20,7 +20,7 @@ from axonius.utils.permissions_helper import (PermissionCategory,
                                               is_axonius_role)
 from gui.okta_login import OidcData
 
-# pylint: disable=keyword-arg-before-vararg,invalid-name,redefined-builtin
+# pylint: disable=keyword-arg-before-vararg,invalid-name,redefined-builtin,too-many-instance-attributes
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -30,6 +30,7 @@ def session_connection(func,
                        enforce_trial=True,
                        enforce_session=True,
                        enforce_permissions=True,
+                       proceed_and_set_access=False,
                        enforce_api_key=False):
     """
     Decorator stating that the view requires the user to be connected
@@ -43,6 +44,9 @@ def session_connection(func,
     :param enforce_trial: Restrict if system has a trial expiration date configured and it has passed
     :param enforce_session: if this endpoint requires a login
     :param enforce_permissions: if this endpoint need a permission
+    :param proceed_and_set_access: Skip error logging in case there are missing permissions
+    If set to true, the decorator won't generate an error but instead sends an argument "no_access" to the
+    wrapped function, and the error handling should be done there instead.
     :param enforce_api_key: use the api key instead of the session login
     :return:
     """
@@ -59,8 +63,11 @@ def session_connection(func,
                 is_expired = PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()
                 is_blocked = (enforce_trial and is_expired) and not is_axonius_role(user)
                 is_not_permitted = not check_permissions(user.get('permissions'), required_permission)
-                if is_not_permitted or is_blocked:
+                if (is_not_permitted and not proceed_and_set_access) or is_blocked:
                     return return_error('You are lacking some permissions for this request', 401)
+                # If continue on error is set, we return a new argument indicating whether or not we have access
+                if proceed_and_set_access:
+                    kwargs['no_access'] = is_not_permitted
                 oidc_data: OidcData = session.get('oidc_data')
                 if oidc_data:
                     try:
@@ -201,6 +208,7 @@ class gui_category_add_rules:
                                           enforce_trial=current_args.enforce_trial,
                                           enforce_session=current_args.enforce_session,
                                           enforce_permissions=current_args.enforce_permissions,
+                                          proceed_and_set_access=current_args.proceed_and_set_access,
                                           enforce_api_key=current_args.enforce_api_key)
 
             methods = current_args.kwargs.get('methods') or ('GET',)
@@ -268,6 +276,7 @@ class gui_route_logged_in:
                  enforce_trial=True,
                  enforce_session=True,
                  enforce_permissions=True,
+                 proceed_and_set_access=False,
                  enforce_api_key=False,
                  limiter_key_func=None,
                  shared_limit_scope=None,
@@ -280,6 +289,9 @@ class gui_route_logged_in:
         :param enforce_trial: Should this endpoint work when trial is over
         :param enforce_session: Should this endpoint work only when this caller has a valid session
         :param enforce_permissions: Should this endpoint work only when this session has the right permissions
+        :param proceed_and_set_access: Should the error reporting be skipped in case there are missing permissions.
+        If set to true, the decorator won't generate an error but instead sends an argument "no_access" to the
+        wrapped function, and the error handling should be done there instead.
         :param enforce_api_key: Should this endpoint work when the caller use the api key instead on session
         :param args:
         :param kwargs:
@@ -289,6 +301,7 @@ class gui_route_logged_in:
         self.enforce_trial = enforce_trial
         self.enforce_session = enforce_session
         self.enforce_permissions = enforce_permissions
+        self.proceed_and_set_access = proceed_and_set_access
         self.enforce_api_key = enforce_api_key
         self.limiter_key_func = limiter_key_func
         self.shared_limit_scope = shared_limit_scope

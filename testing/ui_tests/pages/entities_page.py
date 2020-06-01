@@ -133,10 +133,13 @@ class EntitiesPage(Page):
 
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_SELECTOR = '.name-input'
+    SAVE_QUERY_PRIVATE_CHECKBOX_XPATH = '//label[normalize-space()=\'Private query\']'
+    SAVE_QUERY_PRIVATE_CHECKBOX_ID = 'private_query_checkbox'
     SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
     ALL_ENTITIES_CSS = 'tbody>tr'
     UNSAVED_QUERY_STATUS = '[Unsaved]'
+    RANDOM_FILTER_VALUE = 'some random filter'
 
     JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     STRESSTEST_ADAPTER_FILTER = 'adapters == "stresstest_adapter"'
@@ -961,6 +964,9 @@ class EntitiesPage(Page):
     def fill_query_name(self, name):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_NAME_SELECTOR, name)
 
+    def set_query_private(self):
+        self.driver.find_element_by_id(self.SAVE_QUERY_PRIVATE_CHECKBOX_ID).click()
+
     def fill_query_description(self, description):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_DESCRIPTION_SELECTOR, description)
 
@@ -991,6 +997,11 @@ class EntitiesPage(Page):
         self.wait_for_element_present_by_xpath(
             self.DISABLED_BUTTON_XPATH.format(button_text=self.REMOVE_BUTTON))
 
+    def click_save_query_cancel_button(self):
+        context_element = self.wait_for_element_present_by_css('.save-query-dialog')
+        self.click_button(text='Cancel', context=context_element)
+        self.wait_for_element_absent_by_css(self.QUERY_MODAL_OVERLAY)
+
     def click_save_query_save_button(self, query_name=None):
         context_element = self.wait_for_element_present_by_css('.save-query-dialog')
         self.click_button(text='Save', context=context_element)
@@ -1016,22 +1027,33 @@ class EntitiesPage(Page):
         self.fill_query_name(query_name)
         self.click_save_query_save_button(query_name=query_name)
 
-    def save_query_as(self, query_name):
+    def save_query_as(self, query_name, is_private: bool = False):
         wait_until(lambda: not self.is_query_save_as_disabled())
         self.click_button(self.SAVE_AS_BUTTON)
         self.fill_query_name(query_name)
+        if is_private:
+            self.set_query_private()
         self.click_save_query_save_button()
 
     def save_existing_query(self):
         self.click_button('Save')
 
+    def create_private_query(self, query_name):
+        self.switch_to_page()
+        self.wait_for_table_to_be_responsive()
+        self.fill_filter(self.RANDOM_FILTER_VALUE)
+        self.enter_search()
+        self.save_query_as(query_name, is_private=True)
+
+    def assert_private_query_checkbox_hidden(self, query_name):
+        self.click_button(query_name)
+        self.assert_element_absent_by_id(self.SAVE_QUERY_PRIVATE_CHECKBOX_ID)
+        self.click_save_query_cancel_button()
+
     def rename_query(self, query_name, new_query_name):
         self.click_button(query_name)
         self.fill_query_name(new_query_name)
         self.click_save_query_save_button()
-
-    def can_rename_query(self, query_name):
-        return not self.is_button_absent(query_name)
 
     def run_filter_and_save(self,
                             query_name,

@@ -296,14 +296,42 @@ export const fetchDataContentCSV = ({ state, dispatch }, payload) => dispatch(RE
   downloadFile('csv', response, null, payload.source);
 });
 
-export const SAVE_VIEW = 'SAVE_VIEW';
-export const saveView = ({ dispatch, commit }, payload) => {
+export const PUBLISH_VIEW = 'PUBLISH_VIEW';
+export const publishView = ({ dispatch, commit }, payload) => {
   const {
-    name, description, view, tags, predefined, uuid, module,
+    name, description, private: is_private, view, tags, predefined, uuid, module,
   } = payload;
   const data = {
     name,
     description,
+    private: is_private,
+    tags,
+    view: {
+      query: view.query,
+      fields: view.fields,
+      sort: view.sort,
+      colFilters: view.colFilters,
+    },
+  };
+
+  return dispatch(REQUEST_API, {
+    rule: `${module}/views/${uuid}/publish`,
+    method: 'POST',
+    data,
+  }).then(() => {
+    commit(CHANGE_DATA_VIEW, payload);
+  });
+};
+
+export const SAVE_VIEW = 'SAVE_VIEW';
+export const saveView = ({ dispatch, commit }, payload) => {
+  const {
+    name, description, private: is_private, view, tags, predefined, uuid, module,
+  } = payload;
+  const data = {
+    name,
+    description,
+    private: is_private,
     tags,
     view: {
       query: view.query,

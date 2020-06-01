@@ -18,6 +18,7 @@ export default {
             .map((view) => ({
               name: view.uuid,
               title: view.name,
+              private: view.private,
             })),
         }), {});
       },
@@ -28,6 +29,13 @@ export default {
     ...mapGetters({
       isExpired: IS_EXPIRED,
     }),
+    publicViews() {
+      let publicViews = {};
+      this.entityList.forEach((entity) => {
+        publicViews[entity] = this.views[entity].filter((view) => !view.private);
+      });
+      return publicViews;
+    },
     entityList() {
       return this.entityOptions.map((entity) => entity.name);
     },
@@ -49,18 +57,22 @@ export default {
       }
     },
     viewsCallback() {},
-    viewOptions(entity, id) {
-      if (!entity) {
-        return [];
+    viewSelectOptionsGetter(onlyPublic) {
+      let views = onlyPublic ? this.publicViews : this.views;
+
+      return (entity, id) => {
+        if (!entity) {
+          return [];
+        }
+        if (!_isEmpty(views[entity])) {
+          return views[entity];
+        }
+        return id ? [{
+          name: id,
+          title: views[entity] ? 'Loading...' : 'Missing Permissions',
+        }] : [];
       }
-      if (!_isEmpty(this.views[entity])) {
-        return this.views[entity];
-      }
-      return id ? [{
-        name: id,
-        title: this.views[entity] ? 'Loading...' : 'Missing Permissions',
-      }] : [];
-    },
+    }
   },
   created() {
     if (this.isExpired) return;

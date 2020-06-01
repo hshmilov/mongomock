@@ -82,6 +82,7 @@ import {
   REMOVE_DASHBOARD_PANEL, SAVE_REORDERED_PANELS,
 } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
+import { SpaceTypesEnum } from '../../../constants/dashboard';
 
 export default {
   name: 'XPanels',
@@ -116,7 +117,8 @@ export default {
         return user.permissions.Dashboard === 'ReadOnly';
       },
       currentSpace(state) {
-        return state.dashboard.currentSpace || state.dashboard.spaces.data.find((space) => space.type === 'default').uuid;
+        return state.dashboard.currentSpace || state.dashboard.spaces.data
+          .find((space) => space.type === SpaceTypesEnum.default).uuid;
       },
       allowedDates(state) {
         return state.constants.allowedDates;

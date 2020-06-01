@@ -69,6 +69,7 @@ DEVICE_VIEW_VIEW = {'page': 0,
                              'i': 1}]},
                     'sort': {'field': '', 'desc': True}}
 DEVICE_VIEW_QUERY_TYPE = 'saved'
+DEVICE_VIEW_PRIVATE = False
 USER_VIEW_NAME = 'Not Local Users Example'
 USER_VIEW_VIEW = {'page': 0, 'pageSize': 20,
                   'historical': 'null',
@@ -91,6 +92,7 @@ USER_VIEW_VIEW = {'page': 0, 'pageSize': 20,
                                  'value': ''}]},
                   'sort': {'desc': True, 'field': ''}}
 USER_VIEW_QUERY_TYPE = 'saved'
+USER_VIEW_PRIVATE = False
 
 ALERT_NAME = 'Test Alert 3'
 
@@ -253,7 +255,8 @@ class RESTExample:
         # queried from both Rapid 7 Nexpose and Active Directory
         status_code, id_ = self._client.create_new_device_view(DEVICE_VIEW_NAME,
                                                                DEVICE_VIEW_VIEW,
-                                                               DEVICE_VIEW_QUERY_TYPE)
+                                                               DEVICE_VIEW_QUERY_TYPE,
+                                                               DEVICE_VIEW_PRIVATE)
         assert status_code == 200, 'failed to create new device view'
         assert len(id_) == 24 or len(id_) == 12, 'failed to get device view id'
 
@@ -334,7 +337,10 @@ class RESTExample:
 
     def create_and_delete_user_view(self):
         # Creates a new saved query named
-        status_code, id_ = self._client.create_new_user_view(USER_VIEW_NAME, USER_VIEW_VIEW, USER_VIEW_QUERY_TYPE)
+        status_code, id_ = self._client.create_new_user_view(USER_VIEW_NAME,
+                                                             USER_VIEW_VIEW,
+                                                             USER_VIEW_QUERY_TYPE,
+                                                             USER_VIEW_PRIVATE)
         assert status_code == 200, 'failed to create new user view'
         assert len(id_) == 24 or len(id_) == 12, 'failed to get user view id'
 

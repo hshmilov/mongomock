@@ -164,7 +164,11 @@ export const addDataView = (state, payload) => {
   const views = state[payload.module].views.saved.content;
   if (!views.data) views.data = [];
   views.data = [{
-    uuid: payload.uuid, name: payload.name, view: payload.view, description: payload.description,
+    uuid: payload.uuid,
+    name: payload.name,
+    view: payload.view,
+    description: payload.description,
+    private: payload.private,
   }, ...views.data.filter((item) => item.name !== payload.name)];
 };
 
@@ -178,7 +182,7 @@ export const changeDataView = (state, payload) => {
     // because of the way we handle paging, the last item in this array might be null
     if (item && (item.uuid === payload.uuid)) {
       const {
-        name, description, view, tags,
+        name, description, view, tags, private: is_private,
       } = payload;
       return {
         ...item,
@@ -186,6 +190,7 @@ export const changeDataView = (state, payload) => {
         description,
         view,
         tags,
+        private: is_private,
         last_updated: new Date().toGMTString(),
       };
     }

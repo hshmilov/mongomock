@@ -9,7 +9,7 @@ from axonius.plugin_base import PluginBase
 from axonius.entities import EntityType
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, PREDEFINED_FIELD)
 from gui.logic.fielded_plugins import get_fielded_plugins
-from gui.logic.filter_utils import filter_archived
+from gui.logic.filter_utils import filter_archived, filter_by_access_and_user
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -21,7 +21,7 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
     logger.info(f'Remaining plugins include: {fielded_plugins}')
 
     # If a query is predefined and has a reference to a plugin that doesn't exist - filter it out.
-    # If a query is not predefined, than we're fine
+    # If a query is not predefined and private and wasn't created by the current logged user - filter it out.
 
     mongo_filter['query_type'] = mongo_filter.get('query_type', 'saved')
     return filter_archived({
@@ -30,16 +30,30 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
             {
                 '$or': [
                     {
-                        PREDEFINED_FIELD: {
-                            '$ne': True
-                        }
+                        '$and': [
+                            {
+                                PREDEFINED_FIELD: {
+                                    '$ne': True
+                                }
+                            },
+                            filter_by_access_and_user()
+                        ]
                     },
                     {
-                        'view.query.filter': {
-                            '$not': {
-                                '$regex': f'adapters_data.(?!{"|".join(fielded_plugins)}).'
+                        '$and': [
+                            {
+                                PREDEFINED_FIELD: {
+                                    '$eq': True
+                                }
+                            },
+                            {
+                                'view.query.filter': {
+                                    '$not': {
+                                        '$regex': f'adapters_data.(?!{"|".join(fielded_plugins)}).'
+                                    }
+                                }
                             }
-                        }
+                        ]
                     }
                 ]
             }

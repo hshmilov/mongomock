@@ -24,6 +24,12 @@
             @change="applySearchAndFilter"
           />
         </div>
+        <XSwitch
+          :checked="showPrivateOnly"
+          class="private-switch"
+          label="Private queries only"
+          @change="togglePrivateSwitch"
+        />
         <XButton
           class="search__reset"
           type="link"
@@ -45,6 +51,7 @@
       @save-changes="saveQueryChanges"
       @close="closeQuerySidePanel"
       @new-enforcement="createEnforcement"
+      @set-public="setQueryPublic"
     />
     <XTable
       ref="table"
@@ -78,23 +85,23 @@ import _debounce from 'lodash/debounce';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
+import XSwitch from '@axons/inputs/Switch.vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
 
 import { UPDATE_DATA_VIEW } from '@store/mutations';
-import { DELETE_DATA, SAVE_VIEW } from '@store/actions';
+import { DELETE_DATA, SAVE_VIEW, PUBLISH_VIEW } from '@store/actions';
 import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 
 import { fetchEntityTags } from '@api/saved-queries';
 import { getEntityPermissionCategory } from '@constants/entities';
 import _get from 'lodash/get';
 
-
 export default {
   name: 'XQueriesTable',
   components: {
-    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip,
+    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip, XSwitch,
   },
   props: {
     namespace: {
@@ -110,6 +117,7 @@ export default {
       entityTags: [],
       filterTags: [],
       showEnforcementsLockTip: false,
+      showPrivateOnly: false,
     };
   },
   computed: {
@@ -162,6 +170,12 @@ export default {
           },
         },
         {
+          name: 'private',
+          title: 'Access',
+          type: 'bool',
+          cellRenderer: (isPrivate) => (isPrivate ? 'Private' : 'Public'),
+        },
+        {
           name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
         },
         {
@@ -175,7 +189,10 @@ export default {
         queryStringParts.push(`(name == regex("${this.searchValue}", "i"))`);
       } if (this.filterTags.length) {
         queryStringParts.push(`tags in ["${this.filterTags.join('","')}"]`);
+      } if (this.showPrivateOnly) {
+        queryStringParts.push(`(private == ${true})`);
       }
+
       return queryStringParts.join(' and ');
     },
     filterIcon() {
@@ -262,7 +279,7 @@ export default {
       /* Navigating to new enforcement - requested queries will be selected as triggers there */
       this.$router.push({ path: '/enforcements/new' });
     },
-    async handleSelectedQueriesDeletion(e, queryId) {
+    async handleSelectedQueriesDeletion(e, queryId, isPrivate) {
       if (queryId) {
         // The remover invoked from within the panel and the panel should be closed.
         this.closeQuerySidePanel();
@@ -280,13 +297,43 @@ export default {
           try {
             await this.removeData({
               module: this.pathToSavedQueryInState,
-              selection: !queryId ? this.selection : { ids: [queryId], include: true },
+              selection: !queryId ? this.selection : {
+                ids: [queryId],
+                include: true,
+                private: isPrivate,
+              },
             });
             this.updateCurrentView();
             this.closeQuerySidePanel();
           } catch (ex) {
             console.error(ex);
           }
+        },
+      });
+    },
+    async setQueryPublic({ queryData, done }) {
+      this.$safeguard.show({
+        text: `
+            The selected Saved Query will become publicly available to all users and cannot be reset to private.
+            <br />
+            Do you wish to continue?
+          `,
+        confirmText: 'Set Public',
+        onConfirm: async () => {
+          try {
+            await this.publishQuery({
+              module: this.namespace,
+              ...queryData,
+            });
+            this.updateCurrentView();
+            done();
+          } catch (ex) {
+            console.error(ex);
+            done();
+          }
+        },
+        onCancel: () => {
+          done();
         },
       });
     },
@@ -311,10 +358,12 @@ export default {
     ...mapActions({
       removeData: DELETE_DATA,
       updateQuery: SAVE_VIEW,
+      publishQuery: PUBLISH_VIEW,
     }),
     resetSearchAndFilters() {
       this.searchValue = '';
       this.filterTags = [];
+      this.showPrivateOnly = false;
       this.updateCurrentView();
     },
     openAxoniusDocs() {
@@ -345,6 +394,10 @@ export default {
     closeEnforcementsLockTip() {
       this.showEnforcementsLockTip = false;
     },
+    togglePrivateSwitch() {
+      this.showPrivateOnly = !this.showPrivateOnly;
+      this.applySearchAndFilter();
+    },
   },
 };
 </script>
@@ -367,13 +420,12 @@ export default {
     display: flex;
     justify-content: space-between;
     .queries-table-header__search {
-      width: 50%;
       display: flex;
       align-items: flex-end;
       .search__input {
         line-height: 32px;
         height: 32px;
-        width: 45%;
+        width: 400px;
 
         .input-icon {
           top: 0;
@@ -392,7 +444,10 @@ export default {
         }
       }
       .search__reset {
-        width: 10%;
+        margin-left: 16px;
+      }
+      .private-switch {
+        margin: 0 0 4px 36px;
       }
     }
   }

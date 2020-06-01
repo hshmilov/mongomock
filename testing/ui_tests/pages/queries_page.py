@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from services.axon_service import TimeoutException
 
 from ui_tests.pages.entities_page import EntitiesPage
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -17,11 +18,16 @@ class QueriesPage(EntitiesPage):
     CSS_SELECTOR_PANEL_ACTION_BY_NAME = '.saved-query-panel .actions .action-{action_name}'
     SAFEGUARD_REMOVE_BUTTON_SINGLE = 'Delete Saved Query'
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Delete Saved Queries'
+    SAFEGUARD_SET_PUBLIC = 'Set Public'
     RUN_QUERY_BUTTON_TEXT = 'Run Query'
     QUERY_EXPRESSION_VALUE_CSS = '.v-navigation-drawer .body .expression span'
     NO_EXPRESSIONS_DEFINED_MSG = 'No query defined'
     EXPRESSION_UNSUPPORTED_MSG = 'Query not supported for the existing data'
     SAVE_CHANGES_BUTTON_TEXT = 'Save Changes'
+    PANEL_ACTION_SET_PUBLIC = 'set-public'
+    SELECT_VIEW_ENTITY_CSS = '.x-select-symbol .x-select-trigger'
+    SELECT_QUERY_NAME_CSS = '.query-name .x-select-trigger'
+    SELECT_VIEW_NAME_CSS = '.view-name .x-select-trigger'
 
     @property
     def url(self):
@@ -77,6 +83,13 @@ class QueriesPage(EntitiesPage):
         self.wait_for_save_query_panel()
         self.get_enforce_panel_action().click()
 
+    def set_query_public(self):
+        self.get_set_public_panel_action().click()
+        self.wait_for_element_present(By.ID, self.SAFEGUARD_APPROVE_BUTTON_ID)
+        self.click_button(self.SAFEGUARD_SET_PUBLIC)
+        self.wait_for_element_absent_by_css(self.CSS_SELECTOR_PANEL_ACTION_BY_NAME.
+                                            format(action_name=self.PANEL_ACTION_SET_PUBLIC))
+
     def find_query_name_by_part(self, query_name_part):
         return self.find_elements_by_xpath(self.QUERY_NAME_BY_PART_XPATH.format(query_name_part=query_name_part))
 
@@ -98,6 +111,9 @@ class QueriesPage(EntitiesPage):
 
     def get_edit_panel_action(self):
         return self._find_panel_action_by_name(action_name='edit')
+
+    def get_set_public_panel_action(self):
+        return self._find_panel_action_by_name(action_name=self.PANEL_ACTION_SET_PUBLIC)
 
     def close_saved_query_panel(self):
         close_btn = self.wait_for_element_present_by_css(self.CSS_SELECTOR_CLOSE_PANEL_ACTION)
@@ -137,3 +153,13 @@ class QueriesPage(EntitiesPage):
     def click_save_changes(self):
         self.wait_for_element_present_by_text(self.SAVE_CHANGES_BUTTON_TEXT)
         self.get_enabled_button(self.SAVE_CHANGES_BUTTON_TEXT).click()
+
+    def assert_private_query_not_selectable(self,
+                                            private_query_string_identifier,
+                                            select_query_css,
+                                            entity='Devices'):
+        self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS,
+                                          self.DROPDOWN_SELECTED_OPTION_CSS, entity)
+        all_options = self.get_all_select_options(select_query_css, self.DROPDOWN_SELECTED_OPTION_CSS)
+        assert all(private_query_string_identifier not in option for option in all_options)
+        self.close_dropdown()

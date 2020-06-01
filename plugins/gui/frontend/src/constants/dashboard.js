@@ -34,3 +34,9 @@ export const ChartSortOrderEnum = {
   asc: 'asc',
   desc: 'desc',
 };
+
+export const SpaceTypesEnum = {
+  default: 'default',
+  personal: 'personal',
+  custom: 'custom',
+};

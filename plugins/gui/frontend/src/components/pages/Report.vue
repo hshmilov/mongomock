@@ -212,6 +212,7 @@ import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
 import XSelect from '../axons/inputs/select/Select.vue';
 import XRecurrence from '../axons/inputs/Recurrence.vue';
 import { formatDate, weekDays, monthDays } from '../../constants/utils';
+import { SpaceTypesEnum } from '../../constants/dashboard';
 import viewsMixin from '../../mixins/views';
 import XArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue';
 import configMixin from '../../mixins/config';
@@ -278,8 +279,10 @@ export default {
         return state.reports.current.fetching;
       },
       dashboardSpaces(state) {
-        const customSpaces = state.dashboard.spaces.data.filter((space) => space.type === 'custom');
-        const defaultSpace = state.dashboard.spaces.data.find((space) => space.type === 'default');
+        const customSpaces = state.dashboard.spaces.data
+          .filter((space) => space.type === SpaceTypesEnum.custom);
+        const defaultSpace = state.dashboard.spaces.data
+          .find((space) => space.type === SpaceTypesEnum.default);
         if (defaultSpace) {
           customSpaces.unshift(defaultSpace);
         }
@@ -614,7 +617,7 @@ export default {
         return false;
       }
       if (this.report.views[index] && this.report.views[index].entity) {
-        return Boolean(this.views[this.report.views[index].entity]);
+        return Boolean(this.publicViews[this.report.views[index].entity]);
       }
       return true;
     },
@@ -623,7 +626,7 @@ export default {
         return [];
       }
       const { entity, id } = this.report.views[index];
-      return this.viewOptions(entity, id);
+      return this.viewSelectOptionsGetter(true)(entity, id);
     },
     onNameChanged() {
       if (this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name') {

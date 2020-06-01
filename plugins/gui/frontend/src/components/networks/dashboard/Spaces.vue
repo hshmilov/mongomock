@@ -100,6 +100,8 @@ import {
   SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
   SET_CURRENT_SPACE, RESET_DASHBOARD_SORT,
 } from '../../../store/modules/dashboard';
+import { SpaceTypesEnum } from '../../../constants/dashboard';
+
 
 export default {
   name: 'XSpaces',
@@ -136,13 +138,13 @@ export default {
       },
     }),
     defaultSpace() {
-      return this.spaces.find((space) => space.type === 'default');
+      return this.spaces.find((space) => space.type === SpaceTypesEnum.default);
     },
     personalSpace() {
-      return this.spaces.find((space) => space.type === 'personal');
+      return this.spaces.find((space) => space.type === SpaceTypesEnum.personal);
     },
     customSpaces() {
-      return this.spaces.filter((space) => space.type === 'custom');
+      return this.spaces.filter((space) => space.type === SpaceTypesEnum.custom);
     },
     newSpaceName() {
       for (let i = this.customSpaces.length - 1; i >= 0; i--) {

@@ -16,7 +16,7 @@ import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import xCombobox from '@axons/inputs/combobox/index.vue';
 import { LAZY_FETCH_DATA_FIELDS } from '@store/actions';
 
-import { mdiPencil, mdiDelete } from '@mdi/js';
+import { mdiPencil, mdiDelete, mdiEyeOutline } from '@mdi/js';
 
 import './saved-query-panel.scss';
 
@@ -84,6 +84,7 @@ export default {
       },
       entityTags: [],
       existingQueriesNamesList: new Set(),
+      keepPanelStatic: false,
     };
   },
   computed: {
@@ -100,17 +101,24 @@ export default {
     permissionCategory() {
       return getEntityPermissionCategory(this.namespace);
     },
+    userCannotAddSavedQueries() {
+      return this.$cannot(this.permissionCategory,
+          this.$permissionConsts.actions.Add, this.$permissionConsts.categories.SavedQueries);
+    },
     userCannotRunSavedQueries() {
       return this.$cannot(this.permissionCategory,
-        this.$permissionConsts.actions.Run, this.$permissionConsts.categories.SavedQueries);
+        this.$permissionConsts.actions.Run, this.$permissionConsts.categories.SavedQueries)
+        && !this.query.private;
     },
     userCannotEditSavedQueries() {
       return this.$cannot(this.permissionCategory,
-        this.$permissionConsts.actions.Update, this.$permissionConsts.categories.SavedQueries);
+        this.$permissionConsts.actions.Update, this.$permissionConsts.categories.SavedQueries)
+        && !this.query.private;
     },
     userCanDeleteSavedQueries() {
       return this.$can(this.permissionCategory,
-        this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries);
+        this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries)
+        || this.query.private;
     },
     name: {
       get() {
@@ -252,6 +260,17 @@ export default {
     newEnforcement() {
       this.$emit('new-enforcement', this.query.uuid);
     },
+    setPublic() {
+      const queryData = {
+        ...this.query,
+        private: false,
+      };
+      this.keepPanelStatic = true;
+      this.$emit('set-public', {
+        queryData,
+        done: () => { this.keepPanelStatic = false },
+      });
+    },
     closePanel() {
       this.$emit('close');
     },
@@ -263,7 +282,7 @@ export default {
       }
     },
     removeQuery() {
-      this.$emit('delete', undefined, this.queryId);
+      this.$emit('delete', undefined, this.queryId, this.query.private);
     },
     runQuery() {
       this.$emit('run', this.queryId);
@@ -343,8 +362,19 @@ export default {
       let actions = [];
 
       if (!this.editingMode) {
-        if (this.$can(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.Add)) {
+        if (this.query.private && !this.userCannotAddSavedQueries) {
+          actions.push(<x-action-item
+            class="action-set-public"
+            title="Set Public"
+            onClick={this.setPublic}
+            size="20"
+            color="#fff"
+            icon={mdiEyeOutline}
+          />);
+        }
+        else if (this.$can(this.$permissionConsts.categories.Enforcements,
+                           this.$permissionConsts.actions.Add)
+                 && !this.query.private) {
           actions.push(<x-action-item
             class="action-enforce"
             title="New Enforcement"
@@ -403,6 +433,7 @@ export default {
             value={this.value}
             panelClass="saved-query-panel"
             title={this.name}
+            temporary={!this.keepPanelStatic}
             onInput={this.onPanelStateChange}
         >
             {
