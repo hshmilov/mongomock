@@ -2,6 +2,17 @@ import re
 
 from axonius.devices.device_adapter import DeviceRunningState
 
+AZURE_CHINA_LOGIN_URL = 'https://login.chinacloudapi.cn'
+AZURE_CHINA_MGMT_URL = 'https://management.chinacloudapi.cn'
+AZURE_USGOV_LOGIN_URL = 'https://login.microsoftonline.us'
+AZURE_USGOV_MGMT_URL = 'https://management.usgovcloudapi.net'
+AZURE_DEGOV_LOGIN_URL = 'https://login.microsoftonline.de'
+AZURE_DEGOV_MGMT_URL = 'https://management.microsoftazure.de'
+AZURE_DEFAULT_LOGIN_URL = 'https://login.microsoftonline.com'
+AZURE_DEFAULT_MGMT_URL = 'https://management.azure.com'
+AZURE_BASE_SUBSCRIPTION_URL = 'https://management.azure.com/subscriptions?api-version'
+SUBSCRIPTION_API_VERSION = '2019-11-01'
+
 # VM ID Format: /subscriptions/[subscription-id]/resourceGroups/[resource-group-name]/providers/Microsoft.Compute/
 #                virtualMachines/[virtual-machine-name]
 RE_VM_RESOURCEGROUP_CG = 'resource_group'

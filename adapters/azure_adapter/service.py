@@ -1,8 +1,10 @@
+# pylint: disable=abstract-class-instantiated
 import itertools
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.azure.utils import SubscriptionConnection
 from axonius.clients.azure.consts import AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, \
     AZURE_CLOUD_ENVIRONMENT, AZURE_VERIFY_SSL, AZURE_STACK_HUB_PROXY_SETTINGS, AzureStackHubProxySettings, \
     AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_URL, AZURE_ACCOUNT_TAG, AZURE_HTTPS_PROXY
@@ -11,7 +13,9 @@ from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
-from azure_adapter.consts import POWER_STATE_MAP
+from azure_adapter.consts import POWER_STATE_MAP, AZURE_BASE_SUBSCRIPTION_URL, \
+    SUBSCRIPTION_API_VERSION
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -51,46 +55,97 @@ class AzureAdapter(AdapterBase):
         azure_firewall_rules = ListField(AzureNetworkSecurityGroupRule, 'Azure Firewall Rules')
         resources_group = Field(str, 'Resource Group')
         custom_image_name = Field(str, 'Custom Image Name')
+        subscription_id = Field(str, 'Azure Subscription ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return f'{client_config[AZURE_SUBSCRIPTION_ID]}_{client_config[AZURE_TENANT_ID]}'
+        if not client_config.get('fetch_all_subscriptions'):
+            return f'{client_config.get(AZURE_SUBSCRIPTION_ID)}_{client_config[AZURE_TENANT_ID]}'
+        return f'all_subscriptions_for_{client_config[AZURE_TENANT_ID]}'
 
     def _test_reachability(self, client_config):
         raise NotImplementedError
 
+    @staticmethod
+    def get_subscription_connection(client_config):
+        connection = SubscriptionConnection(domain=f'{AZURE_BASE_SUBSCRIPTION_URL}={SUBSCRIPTION_API_VERSION}',
+                                            client_id=client_config.get(AZURE_CLIENT_ID),
+                                            client_secret=client_config.get(AZURE_CLIENT_SECRET),
+                                            directory_id=client_config.get(AZURE_TENANT_ID),
+                                            cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
+                                            https_proxy=client_config.get('https_proxy'),
+                                            verify_ssl=client_config.get(AZURE_VERIFY_SSL))
+        with connection:
+            pass
+        return connection
+
     def _connect_client(self, client_config):
-        try:
-            azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
-            azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
+        """ If fetch_all_subscriptions is checked, pull all associated
+        Subscriptions and create a client for each of them. If an error
+        occurs, that error will be reflected to the GUI as a connection
+        issue.
+
+        I'm thinking of loading each client, metadata_dict into a list of tuples,
+        then returning those at the end of the function. I'd then need to pick
+        those up in _query_devices_by_client and iterate through them
+        """
+        if client_config.get('fetch_all_subscriptions'):
+            subs_connection = self.get_subscription_connection(client_config)
+            with subs_connection:
+                subs_connection.populate_subscriptions()
+                subscriptions = subs_connection.subscriptions
+        else:
+            subscriptions = [client_config.get(AZURE_SUBSCRIPTION_ID)] if \
+                client_config.get(AZURE_SUBSCRIPTION_ID) else []
+
+        if not subscriptions:
+            raise ClientConnectionException(f'Unable to find a subscription')
+
+        connections = list()
+        for subscription_idx, subscription in enumerate(subscriptions):
+            logger.info(f'Working with subscription {subscription}: '
+                        f'({subscription_idx+1}/{len(subscriptions)})')
             try:
-                if azure_stack_hub_proxy_settings_value:
-                    azure_stack_hub_proxy_settings = [
-                        x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
-            except Exception:
-                logger.exception(f'Failed getting azure stack hub proxy settings')
-            connection = AzureClient(client_config[AZURE_SUBSCRIPTION_ID],
-                                     client_id=client_config[AZURE_CLIENT_ID],
-                                     client_secret=client_config[AZURE_CLIENT_SECRET],
-                                     tenant_id=client_config[AZURE_TENANT_ID],
-                                     cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
-                                     azure_stack_hub_resource=client_config.get(AZURE_STACK_HUB_RESOURCE),
-                                     azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
-                                     azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
-                                     https_proxy=client_config.get(AZURE_HTTPS_PROXY),
-                                     verify_ssl=client_config.get(AZURE_VERIFY_SSL))
-            connection.test_connection()
-            metadata_dict = dict()
-            if client_config.get(AZURE_ACCOUNT_TAG):
-                metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
-            return connection, metadata_dict
-        except Exception as e:
-            message = 'Error connecting to azure with subscription_id {0}, reason: {1}'.format(
-                client_config[AZURE_SUBSCRIPTION_ID], str(e))
-            logger.exception(message)
-            raise ClientConnectionException(message)
+                azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
+                azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
+                try:
+                    if azure_stack_hub_proxy_settings_value:
+                        azure_stack_hub_proxy_settings = [
+                            x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
+                except Exception:
+                    logger.exception(f'Failed getting azure stack hub proxy settings')
+                    # fallthrough
+
+                connection = AzureClient(subscription_id=subscription,
+                                         client_id=client_config[AZURE_CLIENT_ID],
+                                         client_secret=client_config[AZURE_CLIENT_SECRET],
+                                         tenant_id=client_config[AZURE_TENANT_ID],
+                                         cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
+                                         azure_stack_hub_resource=client_config.get(AZURE_STACK_HUB_RESOURCE),
+                                         azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
+                                         azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
+                                         https_proxy=client_config.get(AZURE_HTTPS_PROXY),
+                                         verify_ssl=client_config.get(AZURE_VERIFY_SSL))
+
+                connection.test_connection()
+
+                metadata_dict = dict()
+                if client_config.get(AZURE_ACCOUNT_TAG):
+                    metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
+
+                metadata_dict['subscription'] = subscription
+
+                connections.append((connection, metadata_dict))
+
+            except Exception as err:
+                message = f'Error connecting to azure with subscription_id (subscription),' \
+                          f' reason: {str(err)}'
+                logger.exception(message)
+                raise ClientConnectionException(message)
+
+        return connections
 
     def _clients_schema(self):
         return {
@@ -99,6 +154,12 @@ class AzureAdapter(AdapterBase):
                     'name': AZURE_SUBSCRIPTION_ID,
                     'title': 'Azure Subscription ID',
                     'type': 'string'
+                },
+                {
+                    'name': 'fetch_all_subscriptions',
+                    'title': 'Fetch All Subscriptions',
+                    'type': 'bool',
+                    'default': False
                 },
                 {
                     'name': AZURE_CLIENT_ID,
@@ -140,7 +201,7 @@ class AzureAdapter(AdapterBase):
                     'title': 'Azure Stack Hub Proxy Settings',
                     'type': 'string',
                     'enum': [x.value for x in AzureStackHubProxySettings],
-                    'default': AzureStackHubProxySettings.DoNotUseProxy.value
+                    'default': AzureStackHubProxySettings.ProxyOnlyAuth.value
                 },
                 {
                     'name': AZURE_ACCOUNT_TAG,
@@ -148,19 +209,19 @@ class AzureAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': AZURE_HTTPS_PROXY,
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                },
+                {
                     'name': AZURE_VERIFY_SSL,
                     'title': 'Verify SSL',
                     'type': 'bool',
                     'default': True
-                },
-                {
-                    'name': AZURE_HTTPS_PROXY,
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
                 }
             ],
             'required': [
-                AZURE_SUBSCRIPTION_ID,
+                'fetch_all_subscriptions',
                 AZURE_CLIENT_ID,
                 AZURE_CLIENT_SECRET,
                 AZURE_TENANT_ID,
@@ -173,180 +234,194 @@ class AzureAdapter(AdapterBase):
 
     # pylint: disable=arguments-differ
     def _query_devices_by_client(self, client_name, client_data_all):
-        client_data, metadata = client_data_all
-        return client_data.get_virtual_machines(), metadata
+        for connection in client_data_all:
+            try:
+                (client_data, metadata) = connection
+            except Exception:
+                logger.exception(f'Failed to process a connection: '
+                                 f'{str(connection)}')
+                continue
 
-    # pylint: disable=arguments-differ,too-many-nested-blocks,too-many-branches,too-many-statements,too-many-locals
+            logger.info(f'Querying vms for subscription '
+                        f'{metadata.get("subscription")}')
+
+            try:
+                yield client_data.get_virtual_machines(), metadata
+            except Exception as e:
+                logger.exception(f'Failed to query VMs for subscription {metadata.get("subscription")}: {str(e)}')
+                continue
+
+        logger.info(f'Finished querying all connections')
+
+    # pylint: disable=arguments-differ,too-many-nested-blocks,too-many-branches,too-many-statements,too-many-locals, inconsistent-return-statements
     def _parse_raw_data(self, devices_raw_data_all):
-        devices_raw_data, metadata = devices_raw_data_all
-        for device_raw in devices_raw_data:
-            device = self._new_device_adapter()
-            device.id = device_raw['id']
-            device_id = device_raw['id']
-            if device_id and '/resourceGroups/' in device_id:
-                device.resources_group = device_id[device_id.find('/resourceGroups/') +
-                                                   len('/resourceGroups/'):].split('/')[0]
-            device.cloud_id = device_raw['id']
-            device.cloud_provider = 'Azure'
-            device.name = device_raw['name']
-            device.location = device_raw.get('location')
-            device.instance_type = device_raw.get('hardware_profile', {}).get('vm_size')
-            image = device_raw.get('storage_profile', {}).get('image_reference')
-            os_disk = device_raw.get('storage_profile', {}).get('os_disk')
-            tags = device_raw.get('tags') or {}
+        for devices_raw_data, metadata in devices_raw_data_all:
+            for device_raw in devices_raw_data:
+                device = self._new_device_adapter()
+                device.id = device_raw['id']
+                device.cloud_id = device_raw['id']
+                device.cloud_provider = 'Azure'
+                device.name = device_raw['name']
+                device.location = device_raw.get('location')
+                device.instance_type = device_raw.get('hardware_profile', {}).get('vm_size')
+                image = device_raw.get('storage_profile', {}).get('image_reference')
+                os_disk = device_raw.get('storage_profile', {}).get('os_disk')
+                tags = device_raw.get('tags') or {}
 
-            if tags:
-                try:
-                    for tag_name, tag_value in tags.items():
-                        device.add_key_value_tag(tag_name, tag_value)
-                except Exception:
-                    logger.exception(f'Could not get tags')
+                if tags:
+                    try:
+                        for tag_name, tag_value in tags.items():
+                            device.add_key_value_tag(tag_name, tag_value)
+                    except Exception:
+                        logger.exception(f'Could not get tags')
 
-            os_info = []
-            if os_disk is not None:
-                # Add the OS's HD as a hard-drive
-                device.add_hd(total_size=os_disk.get('disk_size_gb'))
-                os_info.append(os_disk.get('os_type'))
-            if image is not None:
-                image_id = image.get('id')
-                if image_id and '/images/' in image_id:
-                    device.custom_image_name = image_id[image_id.find('/images/') + len('/images/'):].split('/')[0]
-                device.image = AzureImage(publisher=image.get('publisher'),
-                                          offer=image.get('offer'),
-                                          sku=image.get('sku'), version=image.get('version'))
-                os_info.extend([image.get('offer'), image.get('sku')])
-            device.figure_os(' '.join([v for v in os_info if v is not None]))
-            for disk in device_raw.get('storage_profile', {}).get('data_disks', []):
-                # add also the attached HDs
-                device.add_hd(total_size=disk.get('disk_size_gb'))
-            device.hostname = device_raw.get('os_profile', {}).get('computer_name')
-            device.admin_username = device_raw.get('os_profile', {}).get('admin_username')
-            device.vm_id = device_raw.get('vm_id')
-            for iface in device_raw.get('network_profile', {}).get('network_interfaces', []):
-                ips = []
-                subnets = []
-                for ip_config in iface.get('ip_configurations', []):
-                    private_ip = ip_config.get('private_ip_address')
-                    if private_ip:
-                        ips.append(private_ip)
-                    public_ip = ip_config.get('public_ip_address', {}).get('ip_address')
-                    if public_ip:
-                        ips.append(public_ip)
-                        device.add_public_ip(public_ip)
-                    subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
-                device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
-                               subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))
+                os_info = []
+                if os_disk is not None:
+                    # Add the OS's HD as a hard-drive
+                    device.add_hd(total_size=os_disk.get('disk_size_gb'))
+                    os_info.append(os_disk.get('os_type'))
+                if image is not None:
+                    device.image = AzureImage(publisher=image.get('publisher'), offer=image.get('offer'),
+                                              sku=image.get('sku'), version=image.get('version'))
+                    os_info.extend([image.get('offer'), image.get('sku')])
+                device.figure_os(' '.join([v for v in os_info if v is not None]))
+                for disk in device_raw.get('storage_profile', {}).get('data_disks', []):
+                    # add also the attached HDs
+                    device.add_hd(total_size=disk.get('disk_size_gb'))
+                device.hostname = device_raw.get('os_profile', {}).get('computer_name')
+                device.admin_username = device_raw.get('os_profile', {}).get('admin_username')
+                device.vm_id = device_raw.get('vm_id')
+                for iface in device_raw.get('network_profile', {}).get('network_interfaces', []):
+                    ips = []
+                    subnets = []
+                    for ip_config in iface.get('ip_configurations', []):
+                        private_ip = ip_config.get('private_ip_address')
+                        if private_ip:
+                            ips.append(private_ip)
+                        public_ip = ip_config.get('public_ip_address', {}).get('ip_address')
+                        if public_ip:
+                            ips.append(public_ip)
+                            device.add_public_ip(public_ip)
+                        subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
+                    device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
+                                   subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))
 
-                try:
-                    nsg = iface.get('network_security_group') or {}
-                    if not nsg:
-                        device.firewall_rules = []
-                        device.azure_firewall_rules = []
-                    else:
-                        for rule, is_default in itertools.chain(
-                                zip(nsg.get('security_rules') or [], itertools.repeat(False)),
-                                zip(nsg.get('default_security_rules') or [], itertools.repeat(True))
-                        ):
-                            access = rule.get('access')
-                            description = rule.get('description')
-                            direction = rule.get('direction')
-                            rule_id = rule.get('id')
-                            name = rule.get('name')
-                            priority = rule.get('Priority')
-                            protocol = rule.get('protocol')
-                            destination_address_prefix = rule.get('destination_address_prefix')
-                            destination_address_prefixes = rule.get('destination_address_prefixes') or []
-                            if destination_address_prefix:
-                                destination_address_prefixes.append(destination_address_prefix)
-                            destination_port_range = rule.get('destination_port_range')
-                            destination_port_ranges = rule.get('destination_port_ranges') or []
-                            if destination_port_range:
-                                destination_port_ranges.append(destination_port_range)
+                    try:
+                        nsg = iface.get('network_security_group') or {}
+                        if not nsg:
+                            device.firewall_rules = []
+                            device.azure_firewall_rules = []
+                        else:
+                            for rule, is_default in itertools.chain(
+                                    zip(nsg.get('security_rules') or [], itertools.repeat(False)),
+                                    zip(nsg.get('default_security_rules') or [], itertools.repeat(True))
+                            ):
+                                access = rule.get('access')
+                                description = rule.get('description')
+                                direction = rule.get('direction')
+                                rule_id = rule.get('id')
+                                name = rule.get('name')
+                                priority = rule.get('Priority')
+                                protocol = rule.get('protocol')
+                                destination_address_prefix = rule.get('destination_address_prefix')
+                                destination_address_prefixes = rule.get('destination_address_prefixes') or []
+                                if destination_address_prefix:
+                                    destination_address_prefixes.append(destination_address_prefix)
+                                destination_port_range = rule.get('destination_port_range')
+                                destination_port_ranges = rule.get('destination_port_ranges') or []
+                                if destination_port_range:
+                                    destination_port_ranges.append(destination_port_range)
 
-                            source_address_prefix = rule.get('source_address_prefix')
-                            source_address_prefixes = rule.get('source_address_prefixes') or []
-                            if source_address_prefix:
-                                source_address_prefixes.append(source_address_prefix)
-                            source_port_range = rule.get('source_port_range')
-                            source_port_ranges = rule.get('source_port_ranges') or []
-                            if source_port_range:
-                                source_port_ranges.append(source_port_range)
+                                source_address_prefix = rule.get('source_address_prefix')
+                                source_address_prefixes = rule.get('source_address_prefixes') or []
+                                if source_address_prefix:
+                                    source_address_prefixes.append(source_address_prefix)
+                                source_port_range = rule.get('source_port_range')
+                                source_port_ranges = rule.get('source_port_ranges') or []
+                                if source_port_range:
+                                    source_port_ranges.append(source_port_range)
 
-                            iface_name = iface.get('name')
+                                iface_name = iface.get('name')
 
-                            # First, build the specific rule
-                            rule = AzureNetworkSecurityGroupRule(
-                                iface_name=iface_name,
-                                access=access,
-                                description=description,
-                                direction=direction,
-                                rule_id=rule_id,
-                                name=name,
-                                priority=priority,
-                                protocol=protocol,
-                                source_address_prefixes=source_address_prefixes,
-                                source_port_ranges=source_port_ranges,
-                                destination_address_prefixes=destination_address_prefixes,
-                                destination_port_ranges=destination_port_ranges,
-                                is_default=is_default
-                            )
-                            device.azure_firewall_rules.append(rule)
+                                # First, build the specific rule
+                                rule = AzureNetworkSecurityGroupRule(
+                                    iface_name=iface_name,
+                                    access=access,
+                                    description=description,
+                                    direction=direction,
+                                    rule_id=rule_id,
+                                    name=name,
+                                    priority=priority,
+                                    protocol=protocol,
+                                    source_address_prefixes=source_address_prefixes,
+                                    source_port_ranges=source_port_ranges,
+                                    destination_address_prefixes=destination_address_prefixes,
+                                    destination_port_ranges=destination_port_ranges,
+                                    is_default=is_default
+                                )
+                                device.azure_firewall_rules.append(rule)
 
-                            # Next, parse the generic rule.
-                            # If that is an inbound rule, we care about the source prefix, but destination port.
-                            # If that is an outbound rule, we care about the destination prefix, and destination port.
-                            port_ranges_to_check = destination_port_ranges
-                            if str(direction).lower() == 'inbound':
-                                fw_direction = 'INGRESS'
-                                address_prefixes_to_check = source_address_prefixes
-                            elif str(direction).lower() == 'outbound':
-                                fw_direction = 'EGRESS'
-                                address_prefixes_to_check = destination_address_prefixes
-                            else:
-                                logger.error(f'Found unknown direction {str(direction)}, bypassing')
-                                continue
+                                # Next, parse the generic rule.
+                                # If that is an inbound rule, we care about the
+                                # source prefix, but destination port.
+                                # If that is an outbound rule, we care about the
+                                # destination prefix, and destination port.
+                                port_ranges_to_check = destination_port_ranges
+                                if str(direction).lower() == 'inbound':
+                                    fw_direction = 'INGRESS'
+                                    address_prefixes_to_check = source_address_prefixes
+                                elif str(direction).lower() == 'outbound':
+                                    fw_direction = 'EGRESS'
+                                    address_prefixes_to_check = destination_address_prefixes
+                                else:
+                                    logger.error(f'Found unknown direction {str(direction)}, bypassing')
+                                    continue
 
-                            for address_prefix in address_prefixes_to_check:
-                                for port_range in port_ranges_to_check:
-                                    if port_range == '*' or str(port_range).lower() == 'all' or \
-                                            str(port_range).lower() == 'any':
-                                        from_port = 0
-                                        to_port = 65535
-                                    elif '-' in port_range:
-                                        try:
-                                            from_port, to_port = port_range.split('-')
-                                        except Exception:
-                                            from_port, to_port = None, None
-                                    else:
-                                        try:
-                                            from_port, to_port = port_range, port_range
-                                        except Exception:
-                                            from_port, to_port = None, None
+                                for address_prefix in address_prefixes_to_check:
+                                    for port_range in port_ranges_to_check:
+                                        if port_range == '*' or str(port_range).lower() == 'all' or \
+                                                str(port_range).lower() == 'any':
+                                            from_port = 0
+                                            to_port = 65535
+                                        elif '-' in port_range:
+                                            try:
+                                                from_port, to_port = port_range.split('-')
+                                            except Exception:
+                                                from_port, to_port = None, None
+                                        else:
+                                            try:
+                                                from_port, to_port = port_range, port_range
+                                            except Exception:
+                                                from_port, to_port = None, None
 
-                                    if address_prefix == '*':
-                                        address_prefix = '0.0.0.0/0'
+                                        if address_prefix == '*':
+                                            address_prefix = '0.0.0.0/0'
 
-                                    if protocol == '*' or str(protocol).lower() == 'all' \
-                                            or str(protocol).lower() == 'any':
-                                        protocol = 'Any'
+                                        if protocol == '*' or str(protocol).lower() == 'all' \
+                                                or str(protocol).lower() == 'any':
+                                            protocol = 'Any'
 
-                                    device.add_firewall_rule(
-                                        name=f'{name} (iface {iface_name})',
-                                        source='Azure NIC network security group',
-                                        type='Allow' if str(access).lower() == 'allow' else 'Deny',
-                                        direction=fw_direction,
-                                        target=address_prefix,
-                                        protocol=protocol,
-                                        from_port=from_port,
-                                        to_port=to_port
-                                    )
+                                        device.add_firewall_rule(
+                                            name=f'{name} (iface {iface_name})',
+                                            source='Azure NIC network security group',
+                                            type='Allow' if str(access).lower() == 'allow' else 'Deny',
+                                            direction=fw_direction,
+                                            target=address_prefix,
+                                            protocol=protocol,
+                                            from_port=from_port,
+                                            to_port=to_port
+                                        )
 
-                except Exception:
-                    logger.exception(f'Failed to parse network security group, continuing')
-            self._fill_power_state(device, device_raw)
-            device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
-            device.set_raw(device_raw)
-            yield device
+                    except Exception:
+                        logger.exception(f'Failed to parse network security group, continuing')
+                self._fill_power_state(device, device_raw)
+
+                device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
+
+                device.subscription_id = metadata.get('subscription')
+
+                device.set_raw(device_raw)
+                yield device
 
     @staticmethod
     def _fill_power_state(device, device_raw):

@@ -27,11 +27,13 @@ class AzureClient:
                  azure_stack_hub_resource=None, azure_stack_hub_url=None,
                  azure_stack_hub_proxy_settings: AzureStackHubProxySettings = AzureStackHubProxySettings.ProxyOnlyAuth,
                  https_proxy=None, verify_ssl=None):
+
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
         self.cloud = cloud
         self.https_proxy = https_proxy
+
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
         self.using_azure_stack_hub = False
         self.azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
