@@ -112,9 +112,18 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
     if (operator) {
       cond = operator.replace(/{field}/g, field);
     }
-
-    const val = processedValue || value;
+    let val = processedValue || value;
     let iVal = Array.isArray(val) ? -1 : undefined;
+    if (compOp === 'days') {
+      const op = val < 0 ? '+' : '-';
+      val = Math.abs(val);
+      cond = cond.replace(/{op}/g, op);
+    }
+    else if (compOp === 'next_days') {
+      const op = val < 0 ? '-' : '+';
+      val = Math.abs(val);
+      cond = cond.replace(/{op}/g, op);
+    }
     return cond.replace(/{val}/g, () => {
       if (iVal === undefined) return val;
       iVal = (iVal + 1) % val.length;

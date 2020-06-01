@@ -78,8 +78,8 @@ const numerical = {
 const date = {
   '<': '{field} < date("{val}")',
   '>': '{field} > date("{val}")',
-  days: '{field} >= date("NOW - {val}d")',
-  next_days: '{field} <= date("NOW + {val}d")',
+  days: '{field} >= date("NOW {op} {val}d")',
+  next_days: '{field} <= date("NOW {op} {val}d")',
   exists,
 };
 export const compOps = {
