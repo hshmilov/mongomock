@@ -126,6 +126,8 @@ import {
 } from 'vuex';
 import _orderBy from 'lodash/orderBy';
 import _isEmpty from 'lodash/isEmpty';
+import _find from 'lodash/find';
+import _matchesProperty from 'lodash/matchesProperty';
 import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '@store/mutations';
 import { FETCH_DATA_CONTENT } from '@store/actions';
 import XSearchInput from '../inputs/SearchInput.vue';
@@ -363,10 +365,14 @@ export default {
         if (Array.isArray(value)) {
           value = value.join('');
         }
-        const dateValue = Date.parse(value);
-        if (dateValue) {
-          value = dateValue;
+
+        if (this.isDateType(this.view.sort.field)) {
+          const dateValue = Date.parse(value);
+          if (dateValue) {
+            value = dateValue;
+          }
         }
+
         return value;
       }], [this.view.sort && this.view.sort.desc ? 'desc' : 'asc']);
     },
@@ -554,6 +560,17 @@ export default {
         return;
       }
       this.fetchContentPages(true, true);
+    },
+    getSchemaFieldFormat(field) {
+      if (this.view.schema_fields) {
+        const item = _find(this.view.schema_fields, _matchesProperty('name', field));
+        return item && item.format;
+      }
+      return null;
+    },
+    isDateType(field) {
+      const fieldFormat = this.getSchemaFieldFormat(field);
+      return fieldFormat === 'date-time' || fieldFormat === 'date' || fieldFormat === 'time';
     },
   },
 };
