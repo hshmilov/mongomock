@@ -112,16 +112,6 @@ class AirwaveAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'verify_ssl',
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
-                },
-                {
                     'name': 'wireless_ssid_exclude_list',
                     'title': 'Wireless SSID Exclude List',
                     'type': 'string'
@@ -135,12 +125,23 @@ class AirwaveAdapter(AdapterBase, Configurable):
                     'name': 'exclude_no_ssid',
                     'title': 'Exclude Devices With No SSID',
                     'type': 'bool'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'domain',
                 'username',
                 'password',
+                'exclude_no_ssid',
                 'verify_ssl'
             ],
             'type': 'array'
@@ -250,7 +251,7 @@ class AirwaveAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'view_name',
-                    'title': 'View Name',
+                    'title': 'View name',
                     'type': 'string'
                 }
             ],

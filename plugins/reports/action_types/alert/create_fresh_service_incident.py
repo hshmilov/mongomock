@@ -75,7 +75,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                 {
                     'name': 'group_name',
                     'type': 'string',
-                    'title': 'Group Name'
+                    'title': 'Group name'
                 }
             ],
             'required': [

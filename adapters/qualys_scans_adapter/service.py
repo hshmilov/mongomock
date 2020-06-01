@@ -633,7 +633,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {
                     'name': 'use_dns_host_as_hostname',
                     'type': 'bool',
-                    'title': 'Use DNS Name as hostname before Netbios name'
+                    'title': 'Use DNS name as hostname even if Netbios name exists'
                 }
             ],
             'required': [

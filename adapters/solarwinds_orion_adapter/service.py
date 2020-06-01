@@ -139,7 +139,8 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
             'required': [
                 'domain',
                 'username',
-                'password'
+                'password',
+                'verify_ssl'
             ],
             'type': 'array'
         }
