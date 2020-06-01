@@ -1,6 +1,6 @@
 import pytest
 
-from test_credentials.test_gui_credentials import AXONIUS_USER
+from test_credentials.test_gui_credentials import AXONIUS_USER, DEFAULT_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AWS_ADAPTER_NAME, AWS_ADAPTER
@@ -11,11 +11,8 @@ from services.plugins.compliance_service import ComplianceService
 class TestCloudCompliance(TestBase):
 
     def test_cloud_compliance_tip(self):
-        self.devices_page.switch_to_page()
-        self.login_page.logout()
-        self.login_page.wait_for_login_page_to_load()
+        self.login_page.logout_and_login_with_admin()
 
-        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
         self.settings_page.fill_trial_expiration_by_remainder(None)
@@ -29,18 +26,13 @@ class TestCloudCompliance(TestBase):
         self._restore_feature_flags(False)
 
     def test_cloud_compliance_default_rules(self):
-        self.devices_page.switch_to_page()
-        self.login_page.logout()
-        self.login_page.wait_for_login_page_to_load()
+        self.login_page.logout_and_login_with_admin()
 
-        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
-        cloud_visible_toggle = self.settings_page.find_checkbox_by_label('Cloud Visible')
-        self.settings_page.click_toggle_button(cloud_visible_toggle, make_yes=True)
-        cloud_enabled_toggle = self.settings_page.find_checkbox_by_label('Cloud Enabled')
-        self.settings_page.click_toggle_button(cloud_enabled_toggle, make_yes=True)
+        self.settings_page.enable_and_display_compliance()
         self.settings_page.save_and_wait_for_toaster()
+
         self.settings_page.click_manage_users_settings()
         self.compliance_page.switch_to_page()
         self.compliance_page.wait_for_table_to_load()
@@ -50,6 +42,10 @@ class TestCloudCompliance(TestBase):
         self.compliance_page.click_specific_row_by_field_value('Section', '1.6')
         self.compliance_page.assert_compliance_panel_is_open()
         self._restore_feature_flags(True)
+
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(username=DEFAULT_USER['user_name'], password=DEFAULT_USER['password'])
 
     def _restore_feature_flags(self, restore_cloud_visible):
         self.login_page.logout()

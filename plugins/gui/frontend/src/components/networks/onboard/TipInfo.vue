@@ -1,8 +1,6 @@
 <template>
   <div class="x-tip-info">
-    <div class="content">
-      {{ content }}
-    </div>
+    <div class="content">{{content}}</div>
     <XButtonDismiss @click.native="$emit('dismiss')" />
   </div>
 </template>

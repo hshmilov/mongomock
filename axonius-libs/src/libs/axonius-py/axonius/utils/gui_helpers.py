@@ -1605,3 +1605,22 @@ def get_string_from_field_value(base_value):
     if isinstance(base_value, datetime):
         return base_value.strftime(JSONIFY_DEFAULT_TIME_FORMAT)
     return str(base_value)
+
+
+def email_properties():
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                email_props = content.get('email_properties', {})
+
+                email_list = email_props.get('emailList', [])
+                should_send_to_admins = email_props.get('accountAdmins', False)
+
+                if len(email_list) == 0 and not should_send_to_admins:
+                    return return_error(f'Missing email properties.', 400)
+
+            return func(self, email_props=email_props, *args, **kwargs)
+        return actual_wrapper
+    return wrap

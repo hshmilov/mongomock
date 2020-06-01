@@ -24,6 +24,13 @@
       id-field="id"
     >
       <template slot="actions">
+        <XEnforcementMenu
+            :cis-name="cisName"
+            :cis-title="cisTitle"
+            :accounts="accounts"
+            :module="module"
+            :disabled="false"
+        />
         <XButton
           type="link"
           class="compliance-action-button"
@@ -33,7 +40,7 @@
           <VIcon
             size="18"
           >$vuetify.icons.entityExport</VIcon>
-          Export CSV
+          <span class="export-csv-title">Export CSV</span>
         </XButton>
       </template>
     </XTable>
@@ -54,6 +61,8 @@ import XTable from '@components/neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
 import { DATE_FORMAT } from '../../../store/getters';
 import XCompliancePanel from './CompliancePanel';
+import XEnforcementMenu from './ComplianceEnforceMenu.vue';
+
 
 const tableFields = [{
   name: 'status', title: '', type: 'string', format: 'status',
@@ -80,6 +89,7 @@ export default {
     XTable,
     XButton,
     PulseLoader,
+    XEnforcementMenu,
   },
   props: {
     module: {
@@ -87,6 +97,10 @@ export default {
       default: '',
     },
     cisName: {
+      type: String,
+      default: '',
+    },
+    cisTitle: {
       type: String,
       default: '',
     },
@@ -301,6 +315,9 @@ export default {
           fill: $theme-blue;
         }
       }
+    }
+    .export-csv-title {
+      margin-left: 3px;
     }
   }
 </style>

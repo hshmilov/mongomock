@@ -86,7 +86,7 @@ import {
   mapState, mapActions, mapGetters, mapMutations,
 } from 'vuex';
 import _get from 'lodash/get';
-import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
+import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
 import XActionMenu from '../../neurons/data/ActionMenu.vue';
 import XActionMenuItem from '../../neurons/data/ActionMenuItem.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';

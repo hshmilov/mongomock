@@ -1,5 +1,7 @@
+import time
 import pytest
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 
 from ui_tests.pages.page import Page
 
@@ -11,6 +13,9 @@ class CompliancePage(Page):
     TITLE_FAILED_CSS = 'div[title="Failed"]'
     TITLE_PASSED_CSS = 'div[title="Passed"]'
     SCORE_VALUE_CSS = 'span.score-value'
+    ENFORCE_MENU_BUTTON = 'Enforce'
+    ENFORCEMENTS_FEATURE_LOCK_TIP_CSS = '.x-enforcements-feature-lock-tip'
+    ENFORCE_MENU_DROPDOWN_CSS = '.x-enforcement-menu'
 
     @property
     def url(self):
@@ -42,3 +47,21 @@ class CompliancePage(Page):
     def get_current_score_value(self):
         score_text = self.driver.find_element_by_css_selector(self.SCORE_VALUE_CSS).text
         return int(score_text.split('%')[0])
+
+    def click_enforce_menu(self):
+        self.click_button(self.ENFORCE_MENU_BUTTON)
+        time.sleep(0.1)  # wait for enforce menu dropdown to close.
+
+    def get_feature_lock_tip(self):
+        return self.driver.find_element_by_css_selector(self.ENFORCEMENTS_FEATURE_LOCK_TIP_CSS)
+
+    def close_feature_lock_tip(self):
+        modal = self.get_feature_lock_tip()
+        ActionChains(self.driver).move_to_element_with_offset(modal, -1, -1).click().perform()
+        time.sleep(0.5)  # wait for enforce lock tip to close. (clicking outside the modal)
+
+    def is_enforcement_lock_modal_visible(self):
+        return self.wait_for_element_present_by_css(self.ENFORCEMENTS_FEATURE_LOCK_TIP_CSS).is_displayed()
+
+    def is_enforcement_actions_menu_visible(self):
+        return self.wait_for_element_present_by_css(self.ENFORCE_MENU_DROPDOWN_CSS).is_displayed()

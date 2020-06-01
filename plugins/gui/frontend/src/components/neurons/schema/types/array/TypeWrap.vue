@@ -71,12 +71,4 @@ export default {
             width: 100%;
         }
     }
-
-  .inline-display {
-    display: flex;
-
-    .inline-label {
-      margin-left: 3px;
-    }
-  }
 </style>

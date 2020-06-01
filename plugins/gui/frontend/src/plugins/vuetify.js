@@ -29,6 +29,14 @@ const axoniusIcons = {
       fillColor: '#fff',
     },
   },
+  enforcementsDark: {
+    component: EnforcementsCustomIcon,
+    props: {
+      strokeWidth: '24px',
+      strokeColor: '#000',
+      fillColor: '#000',
+    },
+  },
   draggable: {
     component: DraggableCustomIcon,
   },

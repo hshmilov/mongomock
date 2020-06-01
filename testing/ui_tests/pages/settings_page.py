@@ -272,6 +272,11 @@ class SettingsPage(Page):
     RESET_PASSWORD_COPY_TO_CLIPBOARD_ICON_CSS = '.copy-to-clipboard-icon'
     RESET_PASSWORD_LINK_INPUT_CSS = '.reset-link__input'
 
+    LOCKED_FEATURES_INPUT_CSS = '.v-select__selections > input'
+    CLEAR_FEATURES_BUTTON_CSS = '.v-input__icon--clear'
+
+    ENFORCEMENTS_FEATURE_TAG_TITLE = 'Enable Enforcement Center'
+
     @property
     def url(self):
         return f'{self.base_url}/settings'
@@ -1143,6 +1148,19 @@ class SettingsPage(Page):
         self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()
         locked_actions_el.click()
 
+    def set_locked_actions_with_scroll(self, action_name):
+        locked_actions_el = self.get_locked_actions()
+        locked_actions_el.click()
+        self.driver.find_element_by_css_selector(
+            self.LOCKED_FEATURES_INPUT_CSS).send_keys(action_name)
+        matching_elements = self.driver.find_elements_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(
+            action_name=action_name))
+        matching_elements[len(matching_elements) - 1].click()  # Send Mail is the last one.
+        locked_actions_el.click()
+
+    def clear_locked_features(self):
+        self.driver.find_element_by_css_selector(self.CLEAR_FEATURES_BUTTON_CSS).click()
+
     def fill_trial_expiration_by_remainder(self, days_remaining=None):
         element = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))[0]
         try:
@@ -1527,3 +1545,10 @@ class SettingsPage(Page):
     def enable_and_display_compliance(self):
         self.toggle_compliance_visible_feature(True)
         self.toggle_compliance_enable_feature(True)
+
+    def toggle_enforcement_feature_tag(self, value):
+        self.switch_to_page()
+        self.click_feature_flags()
+        cloud_visible_toggle = self.find_checkbox_by_label(self.ENFORCEMENTS_FEATURE_TAG_TITLE)
+        self.click_toggle_button(cloud_visible_toggle, make_yes=value)
+        self.save_and_wait_for_toaster()

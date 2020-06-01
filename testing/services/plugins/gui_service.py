@@ -3,12 +3,11 @@ import logging
 import os
 import re
 import secrets
-from typing import List
 from collections import defaultdict
-
-import requests
+from typing import List
 from funcy import chunks
 from bson import ObjectId
+import requests
 
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION, USERS_CONFIG_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,

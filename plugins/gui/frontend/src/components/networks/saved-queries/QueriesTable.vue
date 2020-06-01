@@ -88,7 +88,7 @@ import XButton from '@axons/inputs/Button.vue';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
-import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
+import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
 
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { DELETE_DATA, SAVE_VIEW, PUBLISH_VIEW } from '@store/actions';

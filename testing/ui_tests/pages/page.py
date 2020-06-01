@@ -904,6 +904,9 @@ class Page:
     def wait_for_modal_close(self):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
+    def close_modal_overlay(self):
+        self.find_elements_by_css(self.MODAL_OVERLAY_CSS).click()
+
     def fill_datepicker_date(self, date_to_fill, context=None):
         self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS,
                                              normalize_timezone_date(date_to_fill.date().isoformat()),

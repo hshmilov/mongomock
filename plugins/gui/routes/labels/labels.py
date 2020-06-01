@@ -288,6 +288,8 @@ class Labels:
 
             'audit.compliance': 'Cloud Asset Compliance',
             'audit.compliance.csv': 'Export CSV',
-            'audit.compliance.csv.template': 'Exported to CSV compliance {name}'
+            'audit.compliance.csv.template': 'Exported to CSV compliance {name}',
+            'audit.compliance.send_email': 'Send Email',
+            'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
 
         }

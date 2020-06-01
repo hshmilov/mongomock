@@ -48,6 +48,7 @@ def _fetch_historical_entity(entity_type: EntityType, entity_id, projection=None
         raise
 
 
+# pylint: disable=W0212
 def fetch_raw_data(entity_type: EntityType, plugin_unique_name: str, id_: str, history_date: datetime = None) -> dict:
     """
     Returns the raw data of the entity
@@ -486,3 +487,51 @@ def entity_notes_update(entity_type: EntityType, entity_id, note_id, note_obj):
 
 def get_task_full_name(name, pretty_id):
     return f'{name} - Task {pretty_id}'
+
+
+def get_cloud_admin_users(cloud_name, account_ids):
+    """
+        Fetch all cloud (currently aws) admin users.
+        Get all users with  AdministratorAccess role. and then, get the users email
+        address which can be retrieved from other adapters (the email is fetched not only by aws adapter).
+
+        :param cloud_name:  The cis name, like aws or azure,
+        :param account_ids: Array of filtered account ids.
+        :return: the admin user emails list.
+        """
+    try:
+        users_raw_db = PluginBase.Instance._raw_adapter_entity_db_map[EntityType.Users]
+        users_db = PluginBase.Instance._entity_db_map[EntityType.Users]
+
+        admin_users = users_raw_db.find({
+            'plugin_unique_name': {'$regex': f'{cloud_name}_adapter_*'},
+            'raw_data.attached_policies': 'AdministratorAccess'
+        }, projection={'raw_data': 1})
+
+        mail_addresses = []
+        for user in admin_users:
+            user_id = user['raw_data'].get('UserId', None)
+            if not user_id:
+                continue
+            correlated_admin_users = users_db.find({
+                '$and': [
+                    {'adapters': {'$elemMatch': {
+                        'data.id': user_id,
+                        'data.aws_account_id': {'$in': account_ids},
+                        'plugin_name': f'{cloud_name}_adapter',
+                    }}},
+                    {'adapters': {'$elemMatch': {'data.mail': {'$exists': True}}}}
+                ]
+            }, projection={'adapters': {'$elemMatch': {'data.mail': {'$exists': True}}}})
+
+            if correlated_admin_users:
+                for correlated_user in correlated_admin_users:
+                    adapter = correlated_user.get('adapters', None)
+                    if not adapter:
+                        continue
+                    mail_addresses.append(adapter[0]['data']['mail'])
+
+        return mail_addresses
+    except Exception:
+        logger.info(f'Unable to fetch admin users', exc_info=True)
+        return []

@@ -55,10 +55,11 @@
       <XComplianceTable
         module="compliance"
         :cis-name="cisName"
+        :cis-title="cisTitle"
         :data="filteredData"
         :loading="loading"
         :error="error"
-        :accounts="accounts"
+        :accounts="accountsToHandle"
       />
     </div>
     <XComplianceTip
@@ -72,6 +73,7 @@ import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import _cloneDeep from 'lodash/cloneDeep';
 import _has from 'lodash/has';
+import _isEmpty from 'lodash/isEmpty';
 import { mapState, mapGetters } from 'vuex';
 
 import XPage from '@axons/layout/Page.vue';
@@ -156,6 +158,15 @@ export default {
       });
 
       return this.calculateFinalScore(res.totalChecked, res.totalFailed);
+    },
+    accountsToHandle() {
+      if (_isEmpty(this.filterAccounts)) {
+        return this.accounts;
+      }
+      return this.filterAccounts;
+    },
+    cisTitle() {
+      return this.complianceOptions.find((item) => item.name === this.cisName).title;
     },
   },
   mounted() {

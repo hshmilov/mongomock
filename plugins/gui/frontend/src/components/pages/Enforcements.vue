@@ -54,7 +54,7 @@
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _get from 'lodash/get';
 
-import XEnforcementsFeatureLockTip from '@networks/enforcement/XEnforcementsFeatureLockTip.vue';
+import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
 import XPage from '../axons/layout/Page.vue';
 import XSearch from '../neurons/inputs/SearchInput.vue';
 import XTable from '../neurons/data/Table.vue';
