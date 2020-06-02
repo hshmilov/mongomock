@@ -41,6 +41,7 @@ def common_db_indexes(db: Collection):
     create_index_safe(db, [(f'adapters.data.os.type', pymongo.ASCENDING)], background=True)
     create_index_safe(db, [(f'adapters.data.os.distribution', pymongo.ASCENDING)], background=True)
     create_index_safe(db, [(f'adapters.data.last_seen', pymongo.ASCENDING)], background=True)
+    create_index_safe(db, [(f'adapters.data.device_serial', pymongo.ASCENDING)], background=True)
     create_index_safe(db, [(f'adapters.data.hostname', pymongo.ASCENDING)], background=True)
     create_index_safe(db, [(f'adapters.data.name', pymongo.ASCENDING)], background=True)
     create_index_safe(db, [(f'adapters.data.network_interfaces.mac', pymongo.ASCENDING)], background=True)

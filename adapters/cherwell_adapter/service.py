@@ -31,6 +31,22 @@ class CherwellAdapter(AdapterBase, Configurable):
         location_building = Field(str, 'Location Building')
         primary_full_user_name = Field(str, 'Primary Full User Name')
         asset_type = Field(str, 'Asset Type')
+        asset_id = Field(str, 'Asset ID')
+        contact_group_email = Field(str, 'Contact Group Email')
+        critical = Field(bool, 'Critical Asset')
+        privacy = Field(bool, 'Privacy Asset')
+        sox = Field(bool, 'SOX Asset')
+        disposed_date = Field(datetime.datetime, 'Disposed Date')
+        friendly_name = Field(str, 'Friendly Name')
+        location_floor = Field(str, 'Location Floor')
+        location_room = Field(str, 'Location Room')
+        owned_by = Field(str, 'Owned By')
+        owned_by_team = Field(str, 'Owned By Team')
+        pci_asset = Field(str, 'PCI Asset')
+        pci_classification = Field(str, 'PCI Classification')
+        physical_inventory_date = Field(datetime.datetime, 'Physical Inventory Date')
+        primary_user_email = Field(str, 'Primary User Email')
+        primary_user_vip = Field(str, 'Primary User VIP')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -185,6 +201,8 @@ class CherwellAdapter(AdapterBase, Configurable):
             device.bus_ob_public_id = device_response.get('busObPublicId')
             mac = None
             ips = None
+            os_str = ''
+            os_ver_str = ''
             for field_raw in device_response.get('fields'):
                 try:
                     field_name = field_raw.get('name')
@@ -203,7 +221,9 @@ class CherwellAdapter(AdapterBase, Configurable):
                     elif field_name == 'UserName':
                         device.last_used_users = [field_value]
                     elif field_name == 'OperatingSystem':
-                        device.figure_os(field_value)
+                        os_str = field_value
+                    elif field_name == 'OperatingSystemVersion':
+                        os_ver_str = field_value
                     elif field_name == 'MACAddress':
                         mac = field_value
                     elif field_name == 'IPAddress':
@@ -239,10 +259,55 @@ class CherwellAdapter(AdapterBase, Configurable):
                         device.primary_full_user_name = field_value
                     elif field_name == 'LocationBuilding':
                         device.location_building = field_value
+                    elif field_name == 'AssetID':
+                        device.asset_id = field_value
+                    elif field_name == 'ContactGroupEmail':
+                        device.contact_group_email = field_value
+                    elif field_name == 'Sox':
+                        if field_value == 'True':
+                            device.sox = True
+                        elif field_value == 'False':
+                            device.sox = False
+                    elif field_name == 'Privacy':
+                        if field_value == 'True':
+                            device.privacy = True
+                        elif field_value == 'False':
+                            device.privacy = False
+                    elif field_name == 'Critical':
+                        if field_value == 'True':
+                            device.critical = True
+                        elif field_value == 'False':
+                            device.critical = False
+                    elif field_name == 'DisposedDate':
+                        device.disposed_date = parse_date(field_value)
+                    elif field_name == 'FriendlyName':
+                        device.friendly_name = field_value
+                    elif field_name == 'LocationFloor':
+                        device.location_floor = field_value
+                    elif field_name == 'LocationRoom':
+                        device.location_room = field_value
+                    elif field_name == 'OwnedBy':
+                        device.owner = field_value
+                        device.owned_by = field_value
+                    elif field_name == 'OwnedByTeam':
+                        device.owned_by_team = field_value
+                    elif field_name == 'PCI':
+                        device.pci_asset = field_value
+                    elif field_name == 'PCIClassification':
+                        device.pci_classification = field_value
+                    elif field_name == 'PhysicalInventoryDate':
+                        device.physical_inventory_date = parse_date(field_value)
+                    elif field_name == 'PrimaryUserEmail':
+                        device.email = field_value
+                        device.primary_user_email = field_value
+                    elif field_name == 'PrimaryUserVIP':
+                        device.primary_user_vip = field_value
+
                 except Exception:
                     logger.exception(f'Problem with field {field_raw}')
             if ips or mac:
                 device.add_nic(ips=ips, mac=mac)
+            device.figure_os((os_str or '') + ' ' + (os_ver_str or ''))
             device.set_raw(device_raw)
             return device
         except Exception:

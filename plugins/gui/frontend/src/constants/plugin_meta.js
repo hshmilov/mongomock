@@ -76,6 +76,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/kenna-security-platform',
         description: 'Kenna Security Platform is a vulnerability assessment solution that provides risk scoring, prioritization, and benchmarking.'
     },
+    sensu_adapter: {
+        title: 'Sensu',
+        link: 'https://docs.axonius.com/docs/sensu',
+        description: 'Sensu is a cloud monitoring solution that provides monitoring workflows automation and visibility into multi-cloud environments.'
+    },
     hp_nnmi_xml_adapter: {
         title: 'HP NNMi XML File',
         description: 'HP Network Node Manager i (NNMi) is a network health and performance monitoring software with scalability and device support.'
@@ -108,6 +113,10 @@ export const pluginMeta = {
         title: 'JSON',
         link: 'https://docs.axonius.com/docs/json',
         description: 'The JSON adapter is able to import .json files with information about: devices, users or installed software.'
+    },
+    pingaccess_adapter: {
+        title: 'Ping Access',
+        description: 'Ping Access'
     },
     digicert_certcentral_adapter: {
         title: 'DigiCert CertCentral',
@@ -154,10 +163,18 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/github',
         description: 'GitHub provides hosting for software development version control using Git, including distributed version control and source code management (SCM) functionality.'
     },
+    amd_db_adapter: {
+        title: 'Asset Owner',
+        description: 'Asset Owner'
+    },
     cscglobal_adapter: {
         title: 'CSCDomainManager',
         link: 'https://docs.axonius.com/docs/cscdomainmanager',
         description: 'CSCDomainManager is a web-based portfolio management platform consolidating domains alongside social media usernames, SSL digital certificates, and DNS.'
+    },
+    riskiq_csv_adapter: {
+        title: 'RiskIQ Digital Footprint - CSV',
+        description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
     },
     riskiq_adapter: {
         title: 'RiskIQ Digital Footprint',

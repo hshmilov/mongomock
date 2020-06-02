@@ -20,6 +20,9 @@
       "infinite_sleep",
       "mysql_special",
       "g_naapi",
+      "amd_db",
+      "riskiq_csv",
+      "pingaccess",
       "failover_cluster",
       "esentire_json"
     ],

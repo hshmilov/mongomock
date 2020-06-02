@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from desktop_central_adapter import consts
 from desktop_central_adapter.connection import DesktopCentralConnection
@@ -138,6 +139,30 @@ class DesktopCentralAdapter(AdapterBase):
                     logger.info(f'No Desktop Central device Id for {str(device_raw)}')
                     continue
                 device.id = str(device_raw.get('resource_id'))
+                try:
+                    sw_raw = device_raw.get('sw_raw')
+                    if not isinstance(sw_raw, list):
+                        sw_raw = []
+                    for ins_sw in sw_raw:
+                        if not isinstance(ins_sw, dict) or not ins_sw.get('software_name'):
+                            continue
+                        device.add_installed_software(name=ins_sw.get('software_name'),
+                                                      version=ins_sw.get('software_version'))
+                except Exception:
+                    logger.exception(f'Probelm getting sw for {device_raw}')
+                try:
+                    pa_raw = device_raw.get('pa_raw')
+                    if not isinstance(pa_raw, list):
+                        pa_raw = []
+                    for pa_data in pa_raw:
+                        if not isinstance(pa_data, dict) or not pa_data.get('patch_name'):
+                            continue
+                        device.add_security_patch(security_patch_id=pa_data.get('patch_name'),
+                                                  installed_on=parse_date(pa_data.get('installed_time')),
+                                                  severity=pa_data.get('severity_name'),
+                                                  bulletin_id=pa_data.get('bulletin_id'))
+                except Exception:
+                    logger.exception(f'Probelm getting sw for {device_raw}')
                 device.domain = device_raw.get('domain_netbios_name', '')
                 device.hostname = device_raw.get('fqdn_name', device_raw.get('full_name'))
                 try:
@@ -158,13 +183,14 @@ class DesktopCentralAdapter(AdapterBase):
                 except Exception:
                     logger.exception('Problem with adding nic to desktop central device')
                 device.add_agent_version(agent=AGENT_NAMES.desktop_central, version=device_raw.get('agent_version', ''))
+                os_version_list = ''
                 try:
                     os_version_list = device_raw.get('os_version', '').split('.')
                     os_major = os_version_list[0]
                     if os_major != '':
                         device.os.major = int(os_major)
                 except Exception:
-                    logger.exception(f'Problem getting major os for {os_version_list}')
+                    logger.exception(f'Problem getting major os for {device_raw}')
                 try:
                     if len(os_version_list) > 1 and '(' not in os_version_list[1]:
                         device.os.minor = int(os_version_list[1])

@@ -9,7 +9,6 @@ adapters/bomgar_adapter/json_utils.py
 adapters/chef_adapter/connection.py
 adapters/chef_adapter/exceptions.py
 adapters/cisco_meraki_adapter/exceptions.py
-adapters/desktop_central_adapter/connection.py
 adapters/desktop_central_adapter/service.py
 adapters/divvycloud_adapter/service.py
 adapters/dropbox_adapter/service.py

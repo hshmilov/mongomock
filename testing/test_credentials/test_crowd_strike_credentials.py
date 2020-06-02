@@ -6,4 +6,4 @@ client_details = {
     'verify_ssl': True
 }
 
-SOME_DEVICE_ID = '9c922b85705c41337f87d8a53d20840d'
+SOME_DEVICE_ID = '9c922b85705c41337f87d8a53d20840d_WINDOWS8'

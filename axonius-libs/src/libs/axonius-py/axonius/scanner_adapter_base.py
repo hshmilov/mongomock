@@ -39,7 +39,7 @@ def newest(devices):
     return max(devices, key=lambda device: device['accurate_for_datetime'])
 
 
-SCANNERS_TO_KEEP_ORINGAL_ID = ['nmap_adapter', 'edfs_csv_adapter']
+SCANNERS_TO_KEEP_ORINGAL_ID = ['nmap_adapter', 'edfs_csv_adapter', 'riskiq_csv_adapter']
 
 
 class ScannerCorrelatorBase(object):

@@ -873,7 +873,7 @@ def is_counter_act_adapter(adapter_device):
 
 
 def is_sql_adapter(adapter_device):
-    return adapter_device.get('plugin_name') == 'mssql_adapter'
+    return adapter_device.get('plugin_name') in ['mssql_adapter', 'mysql_special_adapter']
 
 
 def is_aqua_adapter(adapter_device):
@@ -903,6 +903,7 @@ def hostname_not_problematic(adapter_device):
              and 'cs' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'timeclock' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ops' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'null' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'n/a' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'itadmins-macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -924,10 +925,10 @@ def is_snow_device(adapter_device):
     return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
-def is_from_deeps_or_aws(adapter_device):
+def is_from_deeps_tenable_io_or_aws(adapter_device):
     return (adapter_device.get('plugin_name') == 'aws_adapter' and
             adapter_device['data'].get('aws_device_type') == 'EC2') \
-        or adapter_device.get('plugin_name') == 'deep_security_adapter'
+        or adapter_device.get('plugin_name') in ['deep_security_adapter', 'tenable_io_adapter']
 
 
 def get_cloud_id_or_hostname(adapter_device):
@@ -1224,10 +1225,15 @@ def compare_bios_serial_serial_no_s(adapter_device1, adapter_device2):
     return False
 
 
+def is_epo_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'epo_adapter'
+
+
 def get_asset_name(adapter_device):
     if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
             and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)) \
-            and not is_tenable_io_adapter(adapter_device)\
+            and not is_tenable_io_adapter(adapter_device) \
+            and not is_epo_adapter(adapter_device) \
             and not is_g_naapi_adapter(adapter_device):
         asset = adapter_device['data'].get('name').upper().strip()
         if asset not in ['UNKNOWN']:
@@ -1406,6 +1412,11 @@ def ips_do_not_contradict(adapter_device1, adapter_device2):
 
 
 def macs_do_not_contradict(adapter_device1, adapter_device2):
+    if (adapter_device1.get('plugin_name') == 'jamf_adapter' and
+        adapter_device2.get('plugin_name') == 'carbonblack_defense_adapter') \
+        or (adapter_device2.get('plugin_name') == 'jamf_adapter' and
+            adapter_device1.get('plugin_name') == 'carbonblack_defense_adapter'):
+        return True
     device1_macs = adapter_device1.get(NORMALIZED_MACS)
     device2_macs = adapter_device2.get(NORMALIZED_MACS)
     return not device1_macs or not device2_macs or have_mac_intersection(adapter_device1, adapter_device2)

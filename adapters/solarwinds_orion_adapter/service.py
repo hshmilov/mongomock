@@ -216,6 +216,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         lan_dict[(mac, ips)].append((node_id, lan_display_name, lan_name, description,
                                      connected_to, connection_type_name, port_number, port_name, solar_vlan))
 
+    # pylint: disable=too-many-nested-blocks
     def _create_node_device(self, raw_device_data):
         try:
             device = self._new_device_adapter()
@@ -231,14 +232,17 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
             device.node_id = device.id
             try:
                 custom_properties = raw_device_data.get('custom_properties')
-                for property_name, property_value in custom_properties.items():
-                    try:
-                        field_name = f'solarwinds_{normalize_var_name(property_name)}'
-                        if not device.does_field_exist(field_name):
-                            device.declare_new_field(field_name, Field(str, f'Custom Property - {property_name}'))
-                        device[field_name] = property_value
-                    except Exception:
-                        logger.exception(f'Problem with {property_name}')
+                if not custom_properties:
+                    custom_properties = []
+                for custom_property in custom_properties:
+                    for property_name, property_value in custom_property.items():
+                        try:
+                            field_name = f'solarwinds_{normalize_var_name(property_name)}'
+                            if not device.does_field_exist(field_name):
+                                device.declare_new_field(field_name, Field(str, f'Custom Property - {property_name}'))
+                            device[field_name] = property_value
+                        except Exception:
+                            logger.exception(f'Problem with {property_name}')
             except Exception:
                 logger.exception(f'Problem getting custom data')
             device.hostname = raw_device_data.get('NodeName')

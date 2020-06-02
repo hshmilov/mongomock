@@ -290,7 +290,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 device_id = device_raw.get('device_id')
                 if not device_id:
                     continue
-                device.id = device_id
+                device.id = device_id + '_' + (device_raw.get('hostname'))
                 device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'),
                                          status=device_raw.get('status'))
                 device.cs_agent_version = device_raw.get('agent_version')

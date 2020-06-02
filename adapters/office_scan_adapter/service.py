@@ -125,6 +125,7 @@ class OfficeScanAdapter(AdapterBase):
             try:
                 if isinstance(device_raw.get('ip_address_list'), str):
                     ips = device_raw.get('ip_address_list').split(',')
+                    ips = [ip.strip().split('%')[0] for ip in ips]
                 else:
                     ips = None
                 if isinstance(device_raw.get('mac_address_list'), str):

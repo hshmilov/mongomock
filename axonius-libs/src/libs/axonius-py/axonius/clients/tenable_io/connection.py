@@ -95,10 +95,10 @@ class TenableIoConnection(RESTConnection):
         for ip in ips:
             if ip not in ips_raw:
                 ips_raw.append(ip)
-        self._patch(f'target-groups/{target_group_id}',
-                    body_params={'members': ','.join(ips_raw),
-                                 'type': 'user',
-                                 'name': target_group_name})
+        self._put(f'target-groups/{target_group_id}',
+                  body_params={'members': ','.join(ips_raw),
+                               'type': 'system',
+                               'name': target_group_name})
         return True
 
     def create_target_group_with_ips(self, tenable_io_dict):

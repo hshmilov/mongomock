@@ -155,6 +155,7 @@ class PaloaltoPanoramaAdapter(AdapterBase):
                 mac = None
             ip = device_raw_dict.get('ip-address')
             if ip:
+                device.fw_ip = device_raw_dict.get('ip-address')
                 ips = [ip]
             else:
                 ips = None

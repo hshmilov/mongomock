@@ -172,7 +172,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_device_v3(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -186,6 +186,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                 return None
             device.basic_device_id = device_id
             hostname = device_raw.get('name')
+            if hostname and hostname.upper().endswith('.LOCAL'):
+                hostname = hostname[:-len('.LOCAL')]
             if hostname and ' (S-1-5-21' in hostname:
                 hostname = hostname[:hostname.find(' (S-1-5-21')]
             if hostname and '\\' in hostname:
@@ -231,6 +233,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             logger.exception(f'Problem with fetching CarbonblackDefense Device {device_raw}')
             return None
 
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_device_v6(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -244,6 +247,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                 return None
             device.basic_device_id = device_id
             hostname = device_raw.get('name')
+            if hostname and hostname.upper().endswith('.LOCAL'):
+                hostname = hostname[:-len('.LOCAL')]
             if hostname and ' (S-1-5-21' in hostname:
                 hostname = hostname[:hostname.find(' (S-1-5-21')]
             if hostname and '\\' in hostname:

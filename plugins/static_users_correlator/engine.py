@@ -21,7 +21,7 @@ def get_ad_upn(adapter_data):
 
 
 def get_aws_username(adapter_data):
-    if adapter_data.get('plugin_name') == 'aws_adapter' and get_username(adapter_data) \
+    if adapter_data.get('plugin_name') in ['aws_adapter', 'axonius_users_adapter'] and get_username(adapter_data) \
             and 'service_account@' not in get_username(adapter_data):
         return get_username(adapter_data)
     return None

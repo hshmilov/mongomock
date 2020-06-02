@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.utils.parsing import get_manufacturer_from_mac
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip
@@ -199,6 +200,9 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
                     device_ip = (format_ip(ip_numeric))
                 except Exception:
                     logger.exception(f'Failed to find IP for {device_raw}')
+            mac_manufacturer = get_manufacturer_from_mac(device_mac)
+            if mac_manufacturer and 'paloalto' in mac_manufacturer.lower().replace(' ', ''):
+                device.fw_ip = device_ip
             device.add_nic(device_mac, ips=[device_ip])
 
             # Now parse specific fields

@@ -255,3 +255,6 @@ MODEL_U_CLASSIFICATION_DICT = {
     157: 'Laptop Shop Floor',
     158: 'Inline Card',
 }
+
+BAD_ALIAS_NAME = ['iphone', 'ipad', 'samsung', 'unknown', 'service', 'sierra',
+                  'sim', 'netgear', 'mobile', 'google', 'motorola', 'dell', 'test', 'missing', 'wire']

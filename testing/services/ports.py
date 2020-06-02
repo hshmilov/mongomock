@@ -208,8 +208,12 @@ DOCKER_PORTS = {
     'bandicoot':                        9090,
     'httpd-service':                    8889,  # reserved
     'avamar-adapter':                   9930,
+    'riskiq-csv-adapter':               9931,
     'ivanti-sm-adapter':                9940,
     'spiceworks-adapter':               9941,
+    'sensu-adapter':                    9942,
+    'pingaccess-adapter':               9943,
+    'amd-db-adapter':                   9944,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,

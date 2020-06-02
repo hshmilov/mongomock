@@ -152,7 +152,6 @@ class EpoAdapter(AdapterBase, Configurable):
                 hostname = str(hostname)[:-len('.local')]
             if "Mac OS X" in str(device_raw.get('EPOLeafNode.os', '')) and str(hostname).strip().lower() == 'localhost':
                 hostname = None
-
             if 'EPOLeafNode.LastUpdate' not in device_raw:
                 # No date for this device, we don't want to enter devices with no date so continuing.
                 logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
@@ -163,12 +162,14 @@ class EpoAdapter(AdapterBase, Configurable):
             device.epo_id = epo_id
             if hostname and hostname.endswith('::1'):
                 hostname = hostname[:-len('::1')]
+            device.id = epo_id + (hostname if hostname else '')
+            if hostname and name and name.strip().lower().split('.')[0] != hostname.strip().lower().split('.')[0]:
+                hostname = name
             device.hostname = hostname
             device.name = name
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
             # I think that we get ePO duplications also in the field
-            device.id = epo_id + (hostname if hostname else '')
             parse_network(device_raw, device, exclude_ipv6=self.__exclude_ipv6)
             last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
             if last_seen:

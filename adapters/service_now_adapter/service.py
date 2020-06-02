@@ -518,6 +518,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     device.hostname = host_name.split('.')[0].strip()
                 else:
                     alias = device_raw.get('u_alias')
+                    if alias and any(bad_alias in alias.lower().strip() for bad_alias in BAD_ALIAS_NAME):
+                        alias = None
                     device.u_alias = alias
                     if alias and ',' in alias and '|' in name:
                         alias_list = alias.split(',')

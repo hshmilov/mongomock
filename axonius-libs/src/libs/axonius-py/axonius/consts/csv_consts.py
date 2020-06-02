@@ -30,7 +30,8 @@ IDENTIFIERS = {
     'packages': ['packages'],
     'networkinterfaces': ['networkinterfaces'],
     'etcissue': ['etcissue'],
-    'cve_id': ['cve', 'cveid', 'cvelist']
+    'cve_id': ['cve', 'cveid', 'cvelist'],
+    'email': ['email', 'mail']
 
 }
 

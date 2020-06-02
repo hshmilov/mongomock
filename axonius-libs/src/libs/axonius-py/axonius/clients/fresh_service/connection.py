@@ -32,10 +32,12 @@ class FreshServiceConnection(RESTConnection):
                 if group_name == group_raw.get('name'):
                     group_id = group_raw['id']
             if group_id:
+                logger.debug(f'Found group {group_id}')
                 ticket_info['group_id'] = group_id
             else:
                 raise RESTException('Group Name is invalid')
-        self._post('api/v2/tickets', body_params=ticket_info, do_basic_auth=True)
+        ticket_info = {'helpdesk_ticket': ticket_info}
+        self._post('helpdesk/tickets.json', body_params=ticket_info, do_basic_auth=True)
 
     def _get_api_endpoint(self, api_endpoint):
         page_num = 1

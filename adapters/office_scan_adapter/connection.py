@@ -42,7 +42,6 @@ class OfficeScanConnection(RESTConnection):
     def _connect(self):
         if not self._app_id or not self._apikey:
             raise RESTException('No Application ID or API Key')
-        list(self._get_agents_list())
 
     def _get_agents_list(self):
         self._create_jwt_token(request_body='',

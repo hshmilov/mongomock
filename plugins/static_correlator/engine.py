@@ -43,11 +43,12 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_serial_no_s, compare_serial_no_s,
                                    get_bios_serial_or_serial_no_s, compare_bios_serial_serial_no_s,
                                    get_hostname_or_serial, compare_hostname_serial,
-                                   is_from_deeps_or_aws, get_nessus_no_scan_id,
+                                   is_from_deeps_tenable_io_or_aws, get_nessus_no_scan_id,
                                    compare_nessus_no_scan_id,
                                    is_domain_valid, compare_uuid, get_uuid,
                                    get_azure_ad_id, compare_azure_ad_id, get_hostname_no_localhost, get_dns_names)
 
+# pylint: disable=too-many-branches, too-many-statements
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -103,6 +104,8 @@ def is_only_host_adapter(adapter_device):
                                               'flexera_adapter',
                                               'bigid_adapter',
                                               'json_adapter',
+                                              'epo_adapter',
+                                              'amd_db_adapter',
                                               'druva_adapter']):
         return True
     try:
@@ -131,7 +134,8 @@ def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
         or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)\
-        or is_service_now_and_no_other(adapter_device) or is_deep_security_device(adapter_device)
+        or is_service_now_and_no_other(adapter_device) or is_deep_security_device(adapter_device) \
+        or is_force_hostname_when_no_mac_device(adapter_device)
 
 
 def is_only_host_adapter_not_localhost(adapter_device):
@@ -178,7 +182,10 @@ def is_public_ip_correlation_adapter(adapter_device):
                                                  'shodan_adapter',
                                                  'bitsight_adapter',
                                                  'censys_adapter',
-                                                 'cycognito_adapter']
+                                                 'cycognito_adapter',
+                                                 'panorays_adapter',
+                                                 'riskiq_adapter',
+                                                 'riskiq_csv_adapter']
 
 
 def get_dst_name(adapter_device):
@@ -436,10 +443,28 @@ def compare_friendly_ad_name(adapter_device1, adapter_device2):
     return friendly1 == friendly2
 
 
+def is_force_hostname_when_no_mac_device(adapter_device):
+    if adapter_device.get('plugin_name') in ['carbonblack_defense_adapter'] and not adapter_device.get(NORMALIZED_MACS):
+        return True
+    return False
+
+
 def force_mac_adapters(adapter_device):
     return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter']
 
 # pylint: disable=global-statement
+
+
+def get_fw_ip(adapter_device):
+    return adapter_device['data'].get('fw_ip')
+
+
+def comapre_fw_ip(adapter_device1, adapter_device2):
+    asset1 = get_fw_ip(adapter_device1)
+    asset2 = get_fw_ip(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
 
 
 def is_a_record_device(adapter_device):
@@ -723,6 +748,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
                 has_nessus_scan_no_id, has_resource_id, has_public_ips]
+
+    def _correlate_fw_ip(self, adapters_to_correlate):
+        logger.info('Starting to correlate fw ip')
+        filtered_adapters_list = filter(get_fw_ip, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_fw_ip],
+                                      [comapre_fw_ip],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same host fw ip'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_host_serial_g(self, adapters_to_correlate):
         logger.info('Starting to correlate host serial g')
@@ -1128,9 +1164,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'Juniper devices with same asset name'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _correlate_deep_aws_id(self, adapters_to_correlate):
-        logger.info(f'Starting to correlate on deep aws is')
-        filtered_adapters_list = filter(is_from_deeps_or_aws, adapters_to_correlate)
+    def _correlate_deep_tenable_aws_id(self, adapters_to_correlate):
+        logger.info(f'Starting to correlate on deep-tenable_io aws is')
+        filtered_adapters_list = filter(is_from_deeps_tenable_io_or_aws, adapters_to_correlate)
         filtered_adapters_list = filter(get_cloud_id_or_hostname, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_cloud_id_or_hostname],
@@ -1424,7 +1460,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_nessus_no_scan_id(adapters_to_correlate)
         yield from self._correlate_uuid(adapters_to_correlate)
         yield from self._correlate_scep_sccm(adapters_to_correlate)
-        yield from self._correlate_deep_aws_id(adapters_to_correlate)
+        yield from self._correlate_deep_tenable_aws_id(adapters_to_correlate)
         yield from self._correlate_agent_uuid(adapters_to_correlate)
         yield from self._correlate_friendly_ad_name(adapters_to_correlate)
         if correlate_public_ip_only:
@@ -1438,6 +1474,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
         yield from self._correlate_mac(adapters_to_correlate, correlate_by_snow_mac)
         yield from self._correlate_host_serial_g(adapters_to_correlate)
+        yield from self._correlate_fw_ip(adapters_to_correlate)
 
     @staticmethod
     def _post_process(first_name, first_id, second_name, second_id, data, reason) -> bool:

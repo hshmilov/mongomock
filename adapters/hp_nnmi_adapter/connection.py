@@ -47,7 +47,7 @@ class HpNnmiConnection(RESTConnection):
 
         # Try fetching one device
         try:
-            self.client.service.getNodes(self.get_constraint('maxObjects', 1))
+            self.client.service.getNodeCount('*')
         except Exception as e:
             if 'This request requires HTTP authentication' in str(e):
                 raise ValueError(f'Invalid credentials: {str(e)}')
@@ -55,12 +55,14 @@ class HpNnmiConnection(RESTConnection):
 
     def get_constraint(self, name: str, value):
         # Try two methods of creating a constraint, for some reason this varies on different versions
-        try:
-            factory = self.client.type_factory('ns0')
-        except Exception:
-            factory = self.client.type_factory('ns3')
-
-        return factory.constraint(name=name, value=value)
+        factory_names = ['ns0', 'ns3']
+        for factory_name in factory_names:
+            try:
+                factory = self.client.type_factory(factory_name)
+                return factory.constraint(name=name, value=value)
+            except Exception:
+                logger.info(f'Probelem with factory {factory_name}', exc_info=True)
+        raise RESTException(f'Could not get proper XML format for pagination')
 
     def get_device_list(self):
         # The documentation does not specify any sign of pagination
@@ -79,4 +81,7 @@ class HpNnmiConnection(RESTConnection):
                 yield from assets
             except Exception:
                 logger.exception(f'Exception while getting device list at offset {offset}')
+                if offset == 0:
+                    yield from serialize_object(self.client.service.getNodes('*'))
+                    return
                 raise

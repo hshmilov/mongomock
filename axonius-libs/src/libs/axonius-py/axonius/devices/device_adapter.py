@@ -319,6 +319,7 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
     classification = Field(str, 'Classification')
     state = Field(str, 'State')
     severity = Field(str, 'Severity')
+    bulletin_id = Field(str, 'Bulletin ID')
 
 
 class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
@@ -700,6 +701,7 @@ class DeviceAdapter(SmartJsonClass):
     network_interfaces = ListField(
         DeviceAdapterNetworkInterface, 'Network Interfaces', json_format=JsonArrayFormat.table
     )
+    fw_ip = Field(str)
     os = Field(DeviceAdapterOS, 'OS')
     os_guess = Field(DeviceAdapterOS, 'OS Guess')
     last_used_users = ListField(str, "Last Used Users")

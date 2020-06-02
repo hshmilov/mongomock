@@ -272,6 +272,7 @@ class CsvAdapter(AdapterBase):
                     logger.debug(f'Problem adding last seen')
 
                 device.device_manufacturer = vals.get('manufacturer')
+                device.email = vals.get('email')
                 mem = vals.get('total_physical_memory_gb')
                 if mem:
                     try:
