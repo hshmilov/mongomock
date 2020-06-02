@@ -1,12 +1,15 @@
 # pylint: disable=R0915
 import time
 
+import pytest
+
 from test_credentials.test_ad_credentials import (ad_client1_details,
                                                   ad_client2_details)
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestStopDiscoverySanity(TestBase):
+    @pytest.mark.skip('ad change')
     def test_stop_discovery_sanity(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()

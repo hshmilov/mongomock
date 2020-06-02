@@ -9,6 +9,7 @@ CORRELATION_REASONS_TITLE = 'Correlation Reasons'
 
 
 class TestDevicesExcludedFields(TestBase):
+    @pytest.mark.skip('ad change')
     def test_correlation_reasons_not_shown_to_user(self):
         self.adapters_page.add_json_server(esx_json_file_mock_devices)
 

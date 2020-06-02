@@ -56,6 +56,7 @@ def _test_api(axonius_system):
         logger.info('\n\n')
 
 
+@pytest.mark.skip('ad change')
 def test_api_in_parallel(axonius_system):
     client = RESTExample('https://127.0.0.1',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),

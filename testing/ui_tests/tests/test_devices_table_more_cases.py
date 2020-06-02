@@ -1,3 +1,5 @@
+import pytest
+
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER
@@ -6,6 +8,7 @@ from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAP
 class TestDevicesTableMoreCases(TestEntitiesTable):
     QUERY_FILTER_LAST_SEEN = '(specific_data.data.last_seen >= date("NOW - 7d"))'
 
+    @pytest.mark.skip('ad change')
     def test_devices_last_seen_export_csv(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -31,6 +34,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.devices_page.wait_for_csv_loading_absent()
         assert not self.devices_page.find_table_options_open()
 
+    @pytest.mark.skip('ad change')
     def test_devices_save_query(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -53,6 +57,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         # Check loaded data is equal to original one whose view was saved
         assert self.devices_page.get_all_data() == view_data
 
+    @pytest.mark.skip('ad change')
     def test_wmi_info_shown(self):
         self.enforcements_page.switch_to_page()
         with GeneralInfoService().contextmanager(take_ownership=True):

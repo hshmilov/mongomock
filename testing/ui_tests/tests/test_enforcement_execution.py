@@ -1,6 +1,8 @@
 # pylint: disable=too-many-statements
 import time
 
+import pytest
+
 from axonius.utils.wait import wait_until
 from services.plugins.device_control_service import DeviceControlService
 from test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
@@ -20,6 +22,7 @@ SECOND_FILE_CONTENTS = 'second-file-contents'
 
 
 class TestEnforcementExecution(TestBase):
+    @pytest.mark.skip('ad change')
     def test_run_cmd_with_files(self):
         with DeviceControlService().contextmanager(take_ownership=True):
             self.base_page.run_discovery()

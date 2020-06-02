@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 from uuid import uuid4
 
+import pytest
 from pytest import raises
 
 from axonius.utils.hash import get_preferred_quick_adapter_id
@@ -87,6 +88,7 @@ class TestDevicesSimpleQuery(TestBase):
         assert len(all_data)
         assert any(text in x for x in all_data)
 
+    @pytest.mark.skip('ad change')
     def test_search_everywhere_exact_search_off(self):
         self.settings_page.set_exact_search(False)
         self.base_page.run_discovery()
@@ -105,6 +107,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.enter_search()
         self._check_search_text_result('Dom')
 
+    @pytest.mark.skip('ad change')
     def test_search_everywhere_exact_search_on(self):
         self.settings_page.set_exact_search(True)
         self.base_page.run_discovery()
@@ -157,6 +160,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_TRUE, parent=expressions[2])
         self.devices_page.click_search()
 
+    @pytest.mark.skip('ad change')
     def test_clear_query_wizard(self):
         columns_list = [self.devices_page.FIELD_OS_MAJOR, self.devices_page.FIELD_OS_BUILD,
                         self.devices_page.FIELD_PART_OF_DOMAIN]
@@ -179,6 +183,7 @@ class TestDevicesSimpleQuery(TestBase):
         self._check_all_columns_exist(columns_list)
         assert self.devices_page.find_query_title_text() == 'New Query'
 
+    @pytest.mark.skip('ad change')
     def test_change_comp_op_with_different_value_schema(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -198,6 +203,7 @@ class TestDevicesSimpleQuery(TestBase):
         assert self.devices_page.find_search_value() == query_filter
         assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
 
+    @pytest.mark.skip('ad change')
     def test_obj_network_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -308,6 +314,7 @@ class TestDevicesSimpleQuery(TestBase):
         assert results_count == self.devices_page.count_entities()
         assert query == self.devices_page.find_query_search_input()
 
+    @pytest.mark.skip('ad change')
     def test_exclude_entities_with_no_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -316,6 +323,7 @@ class TestDevicesSimpleQuery(TestBase):
 
         self._text_exclude_entities_on_current_data()
 
+    @pytest.mark.skip('ad change')
     def test_exclude_with_or_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -336,6 +344,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         self._text_exclude_entities_on_current_data()
 
+    @pytest.mark.skip('ad change')
     def test_exclude_clear_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

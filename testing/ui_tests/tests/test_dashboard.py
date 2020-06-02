@@ -142,6 +142,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.select_chart_wizard_adapter(JSON_ADAPTER_NAME)
         assert self.dashboard_page.get_chart_wizard_field_value() == 'Host Name'
 
+    @pytest.mark.skip('ad change')
     def test_dashboard_sanity(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -291,6 +292,7 @@ class TestDashboard(TestBase):
         card_id = segmentation_card.get_property('id')
         return card_id
 
+    @pytest.mark.skip('ad change')
     def test_check_segmentation_csv(self):
         histogram_items_title = []
         histograms_chart = \
@@ -322,6 +324,7 @@ class TestDashboard(TestBase):
         self.assert_data_devices_fit_pagination_data(histogram_titles_list, host_names_list)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
 
+    @pytest.mark.skip('ad change')
     def test_paginator_paginator_update_after_discovery(self):
         self.users_page.switch_to_page()
         self.base_page.run_discovery()
@@ -362,6 +365,7 @@ class TestDashboard(TestBase):
                 self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS))) == first_result_count)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
 
+    @pytest.mark.skip('ad change')
     def test_multi_page_histogram_linked_to_correct_filter(self):
         histograms_chart = \
             self._create_get_paginator_segmentation_card(run_discovery=True,
@@ -390,6 +394,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER)
 
+    @pytest.mark.skip('ad change')
     def test_paginator_on_segmentation_chart(self):
         histogram_items_title = []
         histograms_chart = self._create_get_paginator_segmentation_card(
@@ -476,6 +481,7 @@ class TestDashboard(TestBase):
         results = self.dashboard_page.get_all_table_rows()
         return len(results) > 1 and results[1]
 
+    @pytest.mark.skip('ad change')
     def test_dashboard_search_with_exact(self):
         """
         Test dashboard search when exact is turned on
@@ -499,6 +505,7 @@ class TestDashboard(TestBase):
         results = self.dashboard_page.get_all_table_rows()
         assert len(results) == 35
 
+    @pytest.mark.skip('ad change')
     def test_dashboard_search(self):
         self.settings_page.set_exact_search(False)
         string_to_search = 'be'
@@ -541,6 +548,7 @@ class TestDashboard(TestBase):
         hostname = self.devices_page.get_value_for_label_in_device_page(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert hostname == 'EC2AMAZ-61GTBER.TestDomain.test'
 
+    @pytest.mark.skip('ad change')
     def test_dashboard_search_url(self):
         self.settings_page.set_exact_search(False)
         self.dashboard_page.switch_to_page()
@@ -642,6 +650,7 @@ class TestDashboard(TestBase):
         self.settings_page.fill_schedule_rate(12)
         self.settings_page.save_and_wait_for_toaster()
 
+    @pytest.mark.skip('ad change')
     def test_dashboard_multi_page_query_comparison(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

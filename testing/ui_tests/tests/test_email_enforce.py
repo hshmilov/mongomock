@@ -1,3 +1,5 @@
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 from services.standalone_services.smtp_service import SmtpService, generate_random_valid_email
 
@@ -7,6 +9,7 @@ QUERY = 'Windows'
 
 
 class TestEmailEnforce(TestBase):
+    @pytest.mark.skip('ad change')
     def test_email_enforce(self):
         with SmtpService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
