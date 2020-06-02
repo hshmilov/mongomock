@@ -3,7 +3,12 @@
     class="x-pie"
     :class="{disabled: readOnly}"
   >
+    <div
+      v-if="tooManyValues"
+      class="pie-unavailable"
+    >Pie charts cannot exceed 100 different values</div>
     <XChartTooltip
+      v-else
       :header="tooltipDetails.header"
       :body="tooltipDetails.body"
       :additional-data="tooltipDetails.additionalData"
@@ -89,6 +94,9 @@ export default {
     };
   },
   computed: {
+    tooManyValues() {
+      return this.data.length > 100;
+    },
     processedData() {
       const processData = this.data.map((item, index) => {
         const { value, remainder } = item;
@@ -222,33 +230,48 @@ export default {
       width: 240px;
       position: relative;
 
-      g {
-          cursor: pointer;
+    .pie-unavailable {
+      font-size: 20px;
+      text-align: center;
+      position: absolute;
+      bottom: 50%;
 
-          path {
-              opacity: 0.8;
-              transition: opacity ease-in 0.4s;
-
-              &.in-hover {
-                  opacity: 1;
-              }
-          }
-
-          text {
-              font-size: 1%;
-              fill: $theme-black;
-          }
+      &::after {
+        content: '.';
+        font-size: 60px;
+        color: $theme-orange;
+        display: inline-block;
+        line-height: 20px;
       }
+    }
 
-      &.disabled g {
-          cursor: default;
-      }
+    g {
+        cursor: pointer;
 
-      .x-tooltip {
-        &.top {
-          bottom: auto;
+        path {
+            opacity: 0.8;
+            transition: opacity ease-in 0.4s;
+
+            &.in-hover {
+                opacity: 1;
+            }
         }
+
+        text {
+            font-size: 1%;
+            fill: $theme-black;
+        }
+    }
+
+    &.disabled g {
+        cursor: default;
+    }
+
+    .x-tooltip {
+      &.top {
+        bottom: auto;
       }
+    }
   }
 
 </style>
