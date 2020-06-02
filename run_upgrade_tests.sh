@@ -105,5 +105,5 @@ fi
 echo "#### node_maker does NOT exist after upgrade!!!"
 
 
-./clean_dockers.sh
+set +e; ./clean_dockers.sh; set -e # can fail and its ok;
 echo "#### After upgrade stop all"

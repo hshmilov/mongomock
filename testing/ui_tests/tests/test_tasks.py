@@ -251,7 +251,7 @@ class TestTasks(TestBase):
         assert self.devices_page.find_query_title_text() == task_name
 
         self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_load()
+        self.devices_queries_page.wait_for_table_to_be_responsive()
         self.devices_queries_page.click_query_row_by_name(query_name)
         self.devices_queries_page.wait_for_side_panel()
         self.devices_queries_page.run_query()

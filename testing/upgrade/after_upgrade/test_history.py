@@ -8,7 +8,7 @@ from ui_tests.tests.ui_consts import History
 def _check_history_of_entity(page: EntitiesPage):
     page.switch_to_page()
     page.wait_for_table_to_load()
-    for day in range(1, History.history_depth + 1):
+    for day in range(2, History.history_depth + 1):
         page.fill_datepicker_date(datetime.now() - timedelta(day))
         page.wait_for_table_to_load(retries=450)
         assert page.count_entities() >= History.entities_per_day
