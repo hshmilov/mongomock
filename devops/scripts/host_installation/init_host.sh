@@ -262,9 +262,7 @@ if [[ -d "/etc/scalyr-agent-2" ]]; then
     echo "scalyr exist"
 else
     echo "install scalyr agent"
-    wget --no-check-certificate https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.1_all.deb
-    openssl sha256 scalyr-repo-bootstrap_1.2.1_all.deb | grep "45855d8e653fd0e79d91b35c71a34a6efb780a0618df0df5c7af74bb3243478b"
-    # Scalyr currently has problems with its SSL, so we manually check its hash, should be deleted soon.
+    wget -q https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.1_all.deb
     dpkg -r scalyr-repo scalyr-repo-bootstrap  # Remove any previous repository definitions, if any.
     dpkg -i scalyr-repo-bootstrap_1.2.1_all.deb
     set +e
