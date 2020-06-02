@@ -29,7 +29,9 @@ def is_filter_in_value(value, filters):
     Check recursively if any string value inside given item, has the current field's filter
     """
     if isinstance(value, str):
-        return all((f['term'] in value.lower()) == f['include'] for f in filters)
+        return all((f['term'] in value.lower()) == f['include'] if isinstance(f, dict) and 'term' in f else
+                   f in value.lower()
+                   for f in filters)
     if isinstance(value, list):
         return any(is_filter_in_value(item, filters) for item in value)
     if isinstance(value, dict):
