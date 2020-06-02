@@ -132,7 +132,7 @@ export default {
       return ' ';
     },
     canRunDiscovery() {
-      return this.$can(this.$permissionConsts.categories.Dashboard,
+      return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.RunManualDiscovery);
     },
   },
