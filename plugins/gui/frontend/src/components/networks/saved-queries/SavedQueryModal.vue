@@ -276,6 +276,7 @@ export default {
 </script>
 
 <style lang="scss">
+  $input-label-color: rgba(0,0,0,0.65);
   .save-query-dialog {
     .modal-container {
       max-height: 400px;
@@ -307,6 +308,7 @@ export default {
 
           label {
             margin-bottom: 4px;
+            color: $input-label-color;
           }
 
           .error-input {
