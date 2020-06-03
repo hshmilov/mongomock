@@ -171,7 +171,10 @@ export const dashboard = {
         return;
       }
       panel.loading = payload.fetching;
-      if (panel.loading) return;
+      if (panel.loading) {
+        state.panels.data = [...state.panels.data];
+        return;
+      }
 
       // Set the panel loading indicator to true if payload is loading or fetching
       panel.loading = payload.loading || payload.fetching || false;
@@ -179,6 +182,7 @@ export const dashboard = {
       // In case the payload has a fetching status, it means that there is no need to continue processing the data.
       // We exit the code and only once fetching is done, we will continue.
       if (payload.fetching) {
+        state.panels.data = [...state.panels.data];
         return;
       }
 

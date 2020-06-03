@@ -73,14 +73,15 @@
           </div>
           <Component
             :is="`x-${chart.view}`"
-            v-else-if="!isChartEmpty(chart)"
+            v-if="chart.view && chart.data"
+            v-show="!chart.loading && !isChartEmpty(chart)"
             :data="chart.data"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
             @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
             @legend-data-modified="onlegendDataModified"
           />
           <div
-            v-else
+            v-if="chartDataNotFound"
             class="no-data-found"
           >
             <SvgIcon
@@ -197,6 +198,9 @@ export default {
         return state.constants.allowedDates[this.chart.config.entity];
       },
     }),
+    chartDataNotFound() {
+      return this.isChartEmpty(this.chart) && !this.chart.loading;
+    },
     dataFilter: {
       get() {
         return this.filter;

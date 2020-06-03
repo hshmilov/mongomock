@@ -289,6 +289,7 @@ class TestReportsPermissions(PermissionsTestBase):
             self.login_page.login(username=ui_consts.READ_ONLY_USERNAME, password=ui_consts.NEW_PASSWORD)
 
             self.reports_page.switch_to_page()
+            self.reports_page.wait_for_table_to_be_responsive()
             self.reports_page.is_disabled_new_report_button()
             self.reports_page.click_report(self.TEST_REPORT_READ_ONLY_NAME)
             self.reports_page.wait_for_spinner_to_end()
