@@ -582,6 +582,7 @@ class EnforcementsPage(EntitiesPage):
         return self.get_button(self.SAVE_AND_RUN_BUTTON_TEXT, context=context)
 
     def wait_for_task_in_progress_toaster(self):
+        self.wait_for_toaster(self.TASK_IN_PROGRESS)
         self.wait_for_toaster_to_end(self.TASK_IN_PROGRESS)
 
     def click_tasks_button(self):
@@ -744,7 +745,8 @@ class EnforcementsPage(EntitiesPage):
                                name=SPECIAL_TAG_ACTION,
                                tag=DEFAULT_TAG_NAME,
                                number_of_runs=0,
-                               action_cond=MAIN_ACTION_TEXT):
+                               action_cond=MAIN_ACTION_TEXT,
+                               save=True):
         self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
         self.select_trigger()
         self.check_scheduling()
@@ -755,7 +757,7 @@ class EnforcementsPage(EntitiesPage):
             for _ in range(number_of_runs):
                 self.click_run_button()
                 self.wait_for_task_in_progress_toaster()
-        else:
+        elif save:
             self.click_save_button()
             self.wait_for_spinner_to_end()
             self.wait_for_table_to_load()

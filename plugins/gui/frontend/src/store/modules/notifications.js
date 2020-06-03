@@ -41,11 +41,11 @@ export const notifications = {
 			if (payload.data) {
 				state.current.data = { ...payload.data }
 			}
-		},
+		}, 
 		[ SAVE_NOTIFICATIONS_SEEN ] (state, {ids}) {
 			state.content.data = [ ...state.content.data ]
 			state.content.data.forEach((notification) => {
-				if (ids.length === 0 || ids.indexOf(notification.uuid) > -1) {
+				if (notification && (ids.length === 0 || ids.indexOf(notification.uuid) > -1)) {
 					notification.seen = true
                     state.unseenCount.data--
 				}
