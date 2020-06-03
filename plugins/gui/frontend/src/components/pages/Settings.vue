@@ -122,6 +122,11 @@
             :data="systemInfo"
             :vertical="true"
           />
+          <label
+            v-if="newVersionAvailable"
+            class="new-version-available"
+          > <a href="mailto:support@axonius.com?subject=Request for upgrade">
+           Contact us</a> to request an update.</label>
         </div>
       </XTab>
     </XTabs>
@@ -307,6 +312,7 @@ export default {
       rule: 'settings/metadata',
     });
     this.systemInfo = response.data;
+    this.newVersionAvailable = 'Latest Available Version' in this.systemInfo;
   },
   methods: {
     ...mapMutations({

@@ -5,8 +5,11 @@ import secrets
 import subprocess
 import time
 import configparser
+from datetime import datetime
+from distutils.version import StrictVersion
 from typing import (List, Dict)
 from pathlib import Path
+
 from bson import ObjectId
 from bson.json_util import dumps
 
@@ -14,6 +17,7 @@ import pymongo
 import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from flask import session, g
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
@@ -37,7 +41,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        PREDEFINED_FIELD,
                                        PREDEFINED_ROLE_OWNER_RO,
                                        IS_AXONIUS_ROLE,
-                                       USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME)
+                                       USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
+                                       LATEST_VERSION_URL, INSTALLED_VERISON_KEY)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -216,6 +221,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self.cortex_root_dir = Path().cwd().parent
         self.upload_files_dir = Path(self.cortex_root_dir, 'uploaded_files')
         self.upload_files_list = {}
+        self.latest_version = None
 
         try:
             self._users_collection.create_index([('user_name', pymongo.ASCENDING),
@@ -247,12 +253,17 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                                         name=TEMP_MAINTENANCE_THREAD_ID,
                                         id=TEMP_MAINTENANCE_THREAD_ID,
                                         max_instances=1)
-
         self.metadata = self.load_metadata()
         self.encryption_key = self.load_encryption_key()
         self._set_first_time_use()
-
         self._trigger('clear_dashboard_cache', blocking=False)
+        self._job_scheduler.add_job(func=self.get_latest_version,
+                                    trigger=IntervalTrigger(minutes=30),
+                                    next_run_time=datetime.now(),
+                                    name='get_latest_version',
+                                    id='get_latest_version',
+                                    max_instances=1,
+                                    coalesce=True)
 
     def _add_default_roles(self):
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER}) is None:
@@ -371,6 +382,51 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         except Exception:
             logger.exception(f'Error adding default views')
 
+    def compare_versions(self) -> bool:
+        """
+        check if latest version release is newer than installed version. if so, update metadata
+        :return: True if there is a new release
+        """
+        installed_version = None
+        try:
+            if INSTALLED_VERISON_KEY not in self.metadata.keys() or not self.metadata[INSTALLED_VERISON_KEY] \
+                    or not self.latest_version:
+                return False
+            installed_version = self.metadata[INSTALLED_VERISON_KEY].replace('_', '.')
+            latest_version = self.latest_version.replace('_', '.')
+            # remove patch version number
+            splitted_installed_version = '.'.join(installed_version.split('.')[:2])
+            splitted_latest_version = '.'.join(latest_version.split('.')[:2])
+
+            if StrictVersion(splitted_latest_version) > StrictVersion(splitted_installed_version):
+                self.metadata['Latest Available Version'] = self.latest_version
+                return True
+        except Exception:
+            logger.exception(f'Error comparing versions. installed version: {installed_version}, '
+                             f'available version: {self.latest_version}')
+        return False
+
+    def get_latest_version(self):
+        """
+        Get latest Axonius release version
+        :return:
+        """
+        try:
+            # Use global gui proxies
+            proxies = {
+                'https': to_proxy_string(self._proxy_settings)
+            }
+            res = requests.get(LATEST_VERSION_URL, timeout=10, proxies=proxies,
+                               verify=self._proxy_settings[PROXY_VERIFY])
+
+            if res.status_code != 200:
+                logger.error(f'Error getting axonius latest version, status code: {res.status_code}')
+                return
+            self.latest_version = res.text
+            self.compare_versions()
+        except Exception:
+            logger.error(f'Error getting axonius latest version', exc_info=True)
+
     def load_metadata(self):
         try:
             metadata_bytes = ''
@@ -383,6 +439,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     if 'Commit Date' in metadata_json:
                         del metadata_json['Commit Date']
                     metadata_json['Customer ID'] = self.node_id
+                    metadata_json['Installed Version'] = metadata_json.pop('Version', None)
                     return metadata_json
         except Exception:
             logger.exception(f'Bad __build_metadata file {metadata_bytes}')
@@ -1098,10 +1155,10 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         instance = self._nodes_metadata_collection.find_one({NODE_USE_AS_ENV_NAME: True})
         return instance.get(NODE_NAME, '') if instance is not None else ''
 
-    def log_activity_user(self, category: AuditCategory, action: AuditAction, params: Dict[str, str]=None):
+    def log_activity_user(self, category: AuditCategory, action: AuditAction, params: Dict[str, str] = None):
         self.log_activity_user_default(category.value, action.value, params)
 
-    def log_activity_user_default(self, category: str, action: str, params: Dict[str, str]=None):
+    def log_activity_user_default(self, category: str, action: str, params: Dict[str, str] = None):
         if self.is_axonius_user():
             return
         super().log_activity_default(category, action, params, AuditType.User, get_connected_user_id())

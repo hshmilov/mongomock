@@ -73,6 +73,8 @@ class ResearchStatus(Enum):
 CONFIG_CONFIG = 'GuiService'
 FEATURE_FLAGS_CONFIG = 'FeatureFlags'
 
+LATEST_VERSION_URL = 'https://releases.pub.axonius.com/v1/latest-version-name'
+INSTALLED_VERISON_KEY = 'Installed Version'
 ######################
 # Users consts #
 ######################
