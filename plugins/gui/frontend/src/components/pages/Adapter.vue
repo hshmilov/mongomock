@@ -119,7 +119,7 @@
                   id="connectionLabel"
                   v-model="serverModal.connectionLabel"
                   :class="{ 'error-border': showConnectionLabelBorder }"
-                  :maxlength="20"
+                  :maxlength="50"
                   @input="onConnectionLabelInput"
                   @blur="onConnectionLabelBlur"
                 >
