@@ -18,6 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 PARALLEL_REQUESTS_DEFAULT = 75
 DEFAULT_SLEEP_TIME = 60
+_MAX_PAGE_COUNT = 1000
 
 
 class OktaConnection:
@@ -144,65 +145,68 @@ class OktaConnection:
                     msg = f'Error while parsing request {request_id_absolute} - {raw_answer}, continuing'
                     logger.exception(msg)
 
+    def _get_extra_data_paginated(self, obj_data, url_suffix, raw_param):
+        for i, obj_raw in enumerate(obj_data):
+            try:
+                if i % 10 == 0:
+                    logger.info(f'Got to offset {i} in {url_suffix}')
+                item_id = obj_raw['id']
+                obj_raw[raw_param] = self._get_url_paginated(url_suffix.format(item_id=item_id))
+            except Exception:
+                logger.exception(f'Problem with obj raw')
+
+    def _get_url_paginated(self, url):
+        obj_data = []
+        page_count = 0
+        response = self.__make_request(url)
+        if isinstance(response.json(), list):
+            obj_data.extend(response.json())
+        while 'next' in response.links and page_count < _MAX_PAGE_COUNT:
+            try:
+                response = self.__make_request(forced_url=response.links['next']['url'])
+                if isinstance(response.json(), list):
+                    obj_data.extend(response.json())
+            except Exception:
+                logger.exception(f'Problem getting group')
+                break
+        return obj_data
+
+    def _add_object_to_users(self, obj_name):
+        users_to_data = dict()
+        try:
+            obj_data = self._get_url_paginated(f'api/v1/{obj_name}')
+            try:
+                self._get_extra_data_paginated(obj_data, 'api/v1/' + obj_name + '/{item_id}/users', 'users_raw')
+            except Exception:
+                logger.exception(f'Problem getting async group')
+            for obj_raw in obj_data:
+                try:
+                    if obj_raw.get('id'):
+                        # group_name = (group_raw.get('profile') or {}).get('name')
+                        users_data = obj_raw.get('users_raw') or []
+                        for user_data_in_obj in users_data:
+                            if not isinstance(user_data_in_obj, dict):
+                                user_data_in_obj = {}
+                            user_id_for_obj = user_data_in_obj.get('id')
+                            if user_id_for_obj:
+                                if user_id_for_obj not in users_to_data:
+                                    users_to_data[user_id_for_obj] = []
+                                users_to_data[user_id_for_obj].append(obj_raw)
+                except Exception:
+                    logger.exception(f'Problem with group raw {obj_raw}')
+        except Exception:
+            logger.exception('Problem getting groups')
+        return users_to_data
+
     # pylint: disable=R1702,R0912,R0915
     def get_users(self, parallel_requests, fetch_apps=False, fetch_factors=False) -> Iterable[dict]:
         """
         Fetches all users
         :return: iterable of dict
         """
-        groups = []
-        _MAX_PAGE_COUNT = 1000
-        if parallel_requests <= 0:
-            parallel_requests = PARALLEL_REQUESTS_DEFAULT
-        self.__parallel_requests = parallel_requests
-        users_to_group = dict()
-        page_count = 0
-        try:
-            response = self.__make_request('api/v1/groups')
-            if isinstance(response.json(), list):
-                groups.extend(response.json())
-            while 'next' in response.links and page_count < _MAX_PAGE_COUNT:
-                try:
-                    response = self.__make_request(forced_url=response.links['next']['url'])
-                    if isinstance(response.json(), list):
-                        groups.extend(response.json())
-                except Exception:
-                    logger.exception(f'Problem getting group')
-                    break
-            try:
-                self._get_extra_data_async(groups, 'api/v1/groups/{item_id}/users', 'users_raw')
-            except Exception:
-                logger.exception(f'Problem getting async group')
-            for group_raw in groups:
-                try:
-                    if group_raw.get('id'):
-                        group_name = (group_raw.get('profile') or {}).get('name')
-                        group_data = group_raw.get('users_raw') or []
-                        for user_data_in_group in group_data:
-                            if not isinstance(user_data_in_group, dict):
-                                user_data_in_group = {}
-                            user_id_for_group = user_data_in_group.get('id')
-                            if user_id_for_group:
-                                if user_id_for_group not in users_to_group:
-                                    users_to_group[user_id_for_group] = set()
-                                if group_name not in users_to_group[user_id_for_group]:
-                                    users_to_group[user_id_for_group].add(group_name)
-
-                except Exception:
-                    logger.exception(f'Problem with group raw {group_raw}')
-        except Exception:
-            logger.exception('Problem getting groups')
-        try:
-            page_count = 0
-            response = self.__make_request('api/v1/users')
+        def get_users_page(api='', forced_url=None):
+            response = self.__make_request(api=api, forced_url=forced_url)
             users_page = response.json()
-            try:
-                if fetch_apps:
-                    self._get_extra_data_async(users_page,
-                                               'api/v1/apps?filter=user.id+eq+\"{item_id}\"&expand=user/{item_id}',
-                                               'apps')
-            except Exception:
-                logger.exception('Problem getting apps')
             try:
                 if fetch_factors:
                     self._get_extra_data_async(users_page, 'api/v1/users/{item_id}/factors', 'factors_raw')
@@ -210,26 +214,33 @@ class OktaConnection:
                 logger.exception(f'Problem getting factors')
             for user_raw in users_page:
                 if user_raw.get('id') and users_to_group.get(user_raw.get('id')):
-                    user_raw['groups_data'] = list(users_to_group.get(user_raw.get('id')))
+                    user_raw['groups_data'] = []
+                    for group_raw in users_to_group.get(user_raw.get('id')):
+                        if isinstance(group_raw.get('profile'), dict) and group_raw['profile'].get('name'):
+                            user_raw['groups_data'].append(group_raw['profile'].get('name'))
+                if user_raw.get('id') and users_to_apps.get(user_raw.get('id')):
+                    user_raw['apps_data'] = []
+                    for app_raw in users_to_apps.get(user_raw.get('id')):
+                        app_raw.pop('users_raw', None)
+                        user_raw['apps_data'].append(app_raw)
+            return users_page, response
+
+        if parallel_requests <= 0:
+            parallel_requests = PARALLEL_REQUESTS_DEFAULT
+        self.__parallel_requests = parallel_requests
+        logger.info('Starting to get groups')
+        users_to_group = self._add_object_to_users('groups')
+        users_to_apps = dict()
+        if fetch_apps:
+            logger.info('Starting to get apps')
+            users_to_apps = self._add_object_to_users('apps')
+        try:
+            logger.info('Starting to get users')
+            page_count = 0
+            users_page, response = get_users_page(api='api/v1/users')
             yield from users_page
             while 'next' in response.links and page_count < _MAX_PAGE_COUNT:
-                response = self.__make_request(forced_url=response.links['next']['url'])
-                users_page = response.json()
-                try:
-                    if fetch_apps:
-                        self._get_extra_data_async(users_page,
-                                                   'api/v1/apps?filter=user.id+eq+\"{item_id}\"&expand=user/{item_id}',
-                                                   'apps')
-                except Exception:
-                    logger.exception('Problem getting apps')
-                try:
-                    if fetch_factors:
-                        self._get_extra_data_async(users_page, 'api/v1/users/{item_id}/factors', 'factors_raw')
-                except Exception:
-                    logger.exception(f'Problem getting factors')
-                for user_raw in users_page:
-                    if user_raw.get('id') and users_to_group.get(user_raw.get('id')):
-                        user_raw['groups_data'] = list(users_to_group.get(user_raw.get('id')))
+                users_page, response = get_users_page(forced_url=response.links['next']['url'])
                 yield from users_page
                 page_count += 1
         except Exception:

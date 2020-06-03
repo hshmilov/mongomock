@@ -151,6 +151,7 @@ class SSLLabsScanner(ServiceScanner):
         endpoint_obj_lst = []
         ips = []
         for endpoint in data.get('endpoints', []):
+            device.add_nic(ips=[endpoint.get('ipAddress')])
             endpoint_obj = Endpoint(ip_address=endpoint.get('ipAddress'),
                                     server_name=endpoint.get('serverName'),
                                     grade=endpoint.get('grade'),

@@ -55,7 +55,8 @@ class ZscalerConnection(RESTConnection):
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
         self._post('sso.do', url_params=json, use_json_in_response=False, return_response_raw=True)
-        self._session_headers.update({'auth-token': self._session.cookies['mobile-token'][1:-1]})
+        if self._session.cookies.get('mobile-token'):
+            self._session_headers.update({'auth-token': self._session.cookies['mobile-token'][1:-1]})
 
     def _connect(self):
         pass

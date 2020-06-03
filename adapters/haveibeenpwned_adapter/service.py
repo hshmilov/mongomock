@@ -40,6 +40,7 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyUserAdapter(UserAdapter):
         breaches_data = ListField(BreachData, 'Breaches Data')
+        max_breach_date = Field(datetime.datetime, 'Max Breach Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -129,8 +130,12 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
             user = self._new_user_adapter()
             user.id = email
             user.mail = email
+            max_breach_date = None
             for breach_data in user_data:
                 try:
+                    breach_date = parse_date(breach_data.get('BreachDate'))
+                    if not max_breach_date or (breach_date and breach_date > max_breach_date):
+                        max_breach_date = breach_date
                     pwn_count = None
                     if isinstance(breach_data.get('PwnCount'), int):
                         pwn_count = breach_data.get('PwnCount')
@@ -156,6 +161,7 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
                     user.breaches_data.append(breach_data)
                 except Exception:
                     logger.exception(f'Problem with breach data {breach_data}')
+            user.max_breach_date = max_breach_date
             user.set_raw({'data': user_data})
             return user
         except Exception:

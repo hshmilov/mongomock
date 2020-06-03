@@ -75,9 +75,11 @@ class AmdDbAdapter(AdapterBase, Configurable):
                                                              'dbo.MachineOwner.ComputerName, '
                                                              'dbo.Employees.EmpLastName, dbo.Employees.EmpNTAccount, '
                                                              'dbo.Employees.EmpWorkPhone, dbo.Employees.EmpEmail, '
-                                                             'dbo.Employees.EmpBand FROM dbo.Employees LEFT OUTER JOIN '
-                                                             'dbo.MachineOwner ON '
-                                                             'dbo.Employees.EmpId = dbo.MachineOwner.EmpId'):
+                                                             'dbo.Employees.EmpBand FROM dbo.Employees '
+                                                             'LEFT OUTER JOIN dbo.MachineOwner '
+                                                             'ON '
+                                                             'CAST(CAST(dbo.Employees.EmpId AS int) '
+                                                             'AS varchar(10)) = dbo.MachineOwner.EmpId'):
                     yield device_raw, 'endpoint'
         except Exception:
             logger.exception(f'Problem with endoints')
@@ -191,13 +193,12 @@ class AmdDbAdapter(AdapterBase, Configurable):
                     device = self._new_device_adapter()
                     device_id = device_raw.get('ComputerName')
                     if not device_id:
-                        logger.warning(f'Bad device with no ID {device_id}')
                         continue
                     device.id = 'endpoint_amd_' + '_' + device_raw.get('ComputerName')
                     device.hostname = device_raw.get('ComputerName')
                     device.email = device_raw.get('EmpEmail')
-                    device.owner = (device_raw.get('EmpFirstName') or '') + ' ' + (device_raw.get('EmpFirstName') or '')
-                    device.set_raw(device_raw)
+                    device.owner = (device_raw.get('EmpFirstName') or '') + ' ' + (device_raw.get('EmpLastName') or '')
+                    device.set_raw({})
                     yield device
                 except Exception:
                     logger.exception(f'Problem adding endpoint device: {str(device_raw)}')

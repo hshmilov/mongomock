@@ -270,6 +270,14 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.software_cves = []
         for vuln_raw in vulns_info:
             try:
+                try:
+                    port_data = vuln_raw.get('port')
+                    if port_data.get('port'):
+                        device.add_open_port(port_id=port_data.get('port'),
+                                             service_name=port_data.get('service'),
+                                             protocol=port_data.get('protocol'))
+                except Exception:
+                    logger.exception(f'Problem adding port for {vuln_raw}')
                 severity = vuln_raw.get('severity', '')
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')

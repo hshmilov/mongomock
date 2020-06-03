@@ -87,7 +87,10 @@ class OktaAdapter(AdapterBase, Configurable):
                 user = self._new_user_adapter()
                 profile = user_raw['profile']
                 user.id = user_raw['id']
-                user.groups = user_raw.get('groups_data')
+                try:
+                    user.groups = user_raw.get('groups_data')
+                except Exception:
+                    logger.exception(f'Problem with groups for {user_raw}')
                 user.account_disabled = user_raw.get('status') not in ('PROVISIONED', 'ACTIVE')
                 user.user_status = user_raw.get('status')
                 user.last_seen = parse_date(user_raw.get('last_login'))
@@ -109,7 +112,7 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.user_country = profile.get('countryCode')
                 user.manager_id = profile.get('managerId')
                 try:
-                    for app in user_raw.get('apps') or []:
+                    for app in user_raw.get('apps_data') or []:
                         if app.get('status') != 'ACTIVE':
                             # We want only active apps
                             continue

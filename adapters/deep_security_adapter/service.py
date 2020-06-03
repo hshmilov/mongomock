@@ -232,7 +232,12 @@ class DeepSecurityAdapter(AdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('hostName') or '')
             device.policy_id = device_raw.get('policyID')
-            device.hostname = device_raw.get('displayName') or device_raw.get('hostName')
+            hostname = device_raw.get('displayName') or device_raw.get('hostName')
+            if hostname and hostname.upper().endswith('_OLD'):
+                hostname = hostname[:-len('_OLD')]
+            if hostname and hostname.upper().endswith('_RESTORE'):
+                hostname = hostname[:-len('_RESTORE')]
+            device.hostname = hostname
             if device_raw.get('lastIPUsed'):
                 device.add_nic(ips=[device_raw.get('lastIPUsed')])
             device.description = device_raw.get('description')

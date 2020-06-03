@@ -242,7 +242,10 @@ class JamfConnection(object):
                 if self.__threads_time_sleep:
                     time.sleep(self.__threads_time_sleep)
                 device_id = device['id']
-                device_details = self.get(url + '/id/' + device_id).get(device_type)
+                device_response = self.get(url + '/id/' + device_id)
+                if not device_response:
+                    return
+                device_details = device_response.get(device_type)
                 if should_fetch_department:
                     # Trying to add the department of local users
                     self.get_users_department(device_details)
