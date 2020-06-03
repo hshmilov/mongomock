@@ -91,7 +91,6 @@ cd "$(dirname "$0")"
 _wait_for_apt update
 echo "Installing various dependencies..."
 _wait_for_apt install -yq python3 python3-pip docker-ce  awscli
-cp ./daemon.json /etc/docker/daemon.json
 pip3 install -U docker pip
 systemctl restart docker
 usermod -aG docker ubuntu

@@ -137,7 +137,6 @@ echo "Installing various dependencies..."
 echo "Installing docker-ce..."
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 mkdir -p /etc/docker
-cp ./uploads/daemon.json /etc/docker/daemon.json
 _wait_for_yum install -y docker-ce
 systemctl start docker
 systemctl enable docker

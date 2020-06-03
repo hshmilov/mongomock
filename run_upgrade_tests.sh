@@ -26,7 +26,6 @@ mkdir -p logs
 mkdir -p ${install_dir}
 
 echo "Setting Up Docker Service"
-sudo cp daemon.json /etc/docker/daemon.json
 sudo systemctl restart docker
 
 echo "Installing golang"

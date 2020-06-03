@@ -166,7 +166,6 @@ ls -la
 
 
 echo "Installing weave"
-cp ./uploads/daemon.json /etc/docker/daemon.json
 cp ./uploads/weave-2.6.0 /usr/local/bin/weave
 echo "Restarting Docker Service for Registry setup"
 systemctl restart docker
