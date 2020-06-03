@@ -498,11 +498,12 @@ class Reports:
                                                                         second=0) < next_run_time):
                 # ￿Go to next month if the selected day of the month has passed
                 next_run_time = current_date + relativedelta(months=+1)
-            next_run_time = next_run_time.replace(day=monthly_day, hour=next_run_hour,
-                                                  minute=next_run_minute, second=0)
+
+            next_run_time = next_run_time.replace(day=(28 if monthly_day == 29 else monthly_day),
+                                                  hour=next_run_hour, minute=next_run_minute, second=0)
             # 29 means the end of the month
             if monthly_day == 29:
-                last_month_day = calendar.monthrange(current_date.year, current_date.month)[1]
+                last_month_day = calendar.monthrange(next_run_time.year, next_run_time.month)[1]
                 next_run_time.replace(day=last_month_day)
                 monthly_day = 'last'
             new_interval_triggger = CronTrigger(year='*', month='1-12',
