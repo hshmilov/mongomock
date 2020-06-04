@@ -18,6 +18,7 @@ from services.docker_service import DockerService, retry_if_timeout
 MAX_NUMBER_OF_RUN_TRIES = 10
 RETRY_SLEEP_TIME = 30
 WEAVE_API_URL = 'http://127.0.0.1:6784'
+DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
 
 
 def is_weave_up():
@@ -71,8 +72,9 @@ class WeaveService(DockerService):
         pass
 
     def is_unique_dns_registered(self):
+        env = {'DOCKER_BRIDGE': DOCKER_BRIDGE_INTERFACE_NAME}
         weave_dns_lookup_command = shlex.split(f'weave dns-lookup {self.fqdn}')
-        dns_lookup_result = subprocess.check_output(weave_dns_lookup_command)
+        dns_lookup_result = subprocess.check_output(weave_dns_lookup_command, env=env)
         return len(dns_lookup_result) > 0
 
     def start(self,
@@ -217,8 +219,9 @@ class WeaveService(DockerService):
         # it must be an old dead container. see:
         # * https://github.com/weaveworks/weave/issues/3432
         # * https://axonius.atlassian.net/browse/AX-4731
+        env = {'DOCKER_BRIDGE': DOCKER_BRIDGE_INTERFACE_NAME}
         dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-        response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
+        response = subprocess.check_output(dns_check_command, env=env).strip().decode('utf-8')
 
         if response:
             # We should not have any other ip associated with this hostname. Lets remove it.
@@ -236,7 +239,7 @@ class WeaveService(DockerService):
         subprocess.check_call(dns_add_command)
 
         dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-        response = subprocess.check_output(dns_check_command).strip()
+        response = subprocess.check_output(dns_check_command, env=env).strip()
         if not response:
             print(f'Error looking up dns {self.fqdn}. Retrying...', file=sys.stderr)
             raise ValueError(f'Error looking up dns {self.fqdn} after registration.')
@@ -247,8 +250,9 @@ class WeaveService(DockerService):
         Connect existing docker to weave network by running weave attach
         :return:
         """
+        env = {'DOCKER_BRIDGE': DOCKER_BRIDGE_INTERFACE_NAME}
         if not is_weave_up():
             raise Exception(f'Weave is down')
         weave_attach_command = shlex.split(f'{WEAVE_PATH} attach {self.id}')
-        subprocess.check_call(weave_attach_command)
+        subprocess.check_call(weave_attach_command, env=env)
         self.add_weave_dns_entry()

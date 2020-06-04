@@ -4,7 +4,9 @@ import string
 import subprocess
 import shlex
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH, DOCKERHUB_URL
+import netifaces
+
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
@@ -15,10 +17,11 @@ from services.standalone_services.core_proxy_service import CoreProxyService
 from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
+from services.weave_service import DOCKER_BRIDGE_INTERFACE_NAME
+
 DEFAULT_DOCKER_SUBNET_IP_RANGE = '174.17.0.0/16'
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
 DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
-DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
 
 
 def get_docker_subnet_ip_range():
@@ -45,6 +48,14 @@ def get_weave_subnet_ip_range():
         print(f'Using default weave ip range {weave_subnet}')
 
     return weave_subnet
+
+
+def get_weave_dns_server_ip():
+    try:
+        return netifaces.ifaddresses(DOCKER_BRIDGE_INTERFACE_NAME)[netifaces.AF_INET][0]['addr']
+    except Exception:
+        print(f'Error getting default dns server, using {DOCKER_NETOWRK_DEFAULT_DNS}')
+        return DOCKER_NETOWRK_DEFAULT_DNS
 
 
 def update_weave_connection_params(weave_encryption_key, master_ip):
@@ -91,12 +102,14 @@ def stop_tunnel_for_adapters_register():
 
 
 def connect_to_master(master_ip, weave_pass):
+    env = os.environ.copy()
+    env['DOCKER_BRIDGE'] = DOCKER_BRIDGE_INTERFACE_NAME
     print('Connecting to master')
     subnet_ip_range = get_weave_subnet_ip_range()
-    subprocess.check_call(shlex.split(f'weave reset --force'))
+    subprocess.check_call(shlex.split(f'weave reset --force'), env=env)
     subprocess.check_call(shlex.split(
-        f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'))
-    subprocess.check_call(shlex.split(f'weave connect {master_ip}'))
+        f'weave launch --dns-domain=axonius.local --ipalloc-range {subnet_ip_range} --password {weave_pass}'), env=env)
+    subprocess.check_call(shlex.split(f'weave connect {master_ip}'), env=env)
     print('Done weave connect')
     run_tunneler()
     print('Done run tunneler')
