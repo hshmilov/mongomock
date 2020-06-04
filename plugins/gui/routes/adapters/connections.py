@@ -250,8 +250,10 @@ class Connections:
         if connection_data is None:
             return return_error('Invalid client', 400)
 
-        response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=connection_data,
-                                              raise_on_network_error=True)
+        response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=connection_data)
+        if not response:
+            return return_error(f'Connection failure to adapter {adapter_unique_name}')
+
         self._adapters.clean_cache()
         self._adapters_v2.clean_cache()
         self._get_adapter_connections_data.clean_cache()
