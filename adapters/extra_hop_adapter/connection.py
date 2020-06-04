@@ -16,7 +16,7 @@ class ExtraHopConnection(RESTConnection):
                                   'Accept': 'application/json'},
                          **kwargs)
 
-        self._session_headers = {
+        self._permanent_headers = {
             'Authorization': f'ExtraHop apikey={self._apikey}'
         }
 

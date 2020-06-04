@@ -67,6 +67,8 @@ class SymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Symantec Server
         """
+        if client_data is None:
+            return
         connection, client_id = client_data
         with connection:
             for device_raw in connection.get_device_list():

@@ -14,12 +14,20 @@ from axonius.utils.datetime import parse_date
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.clients.rest.connection import RESTConnection
 from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.clients.tenable_io.connection import TenableIoConnection
 from axonius.clients.tenable_io.consts import AGENT_TYPE, ASSET_TYPE
 from tenable_io_adapter.client_id import get_client_id
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class ScanData(SmartJsonClass):
+    completed_at = Field(datetime.datetime, 'Completed At')
+    schedule_uuid = Field(str, 'Schedule UUID')
+    started_at = Field(datetime.datetime, 'Started At')
+    uuid = Field(str, 'UUID')
 
 
 class TenableIoAdapter(ScannerAdapterBase, Configurable):
@@ -35,6 +43,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         last_scan_time = Field(datetime.datetime, 'Last Scan Time')
         agent_uuid = Field(str, 'Agent UUID')
         risk_factor = Field(str, 'Risk Factor')
+        scans_data = ListField(ScanData, 'Scans Data')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -268,6 +277,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []
+        found_uuid = True
+        if self.__scan_uuid_white_list:
+            found_uuid = False
         for vuln_raw in vulns_info:
             try:
                 try:
@@ -282,6 +294,19 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
                 plugin_output = vuln_raw.get('output')
+                scan_raw = vuln_raw.get('scan')
+                if not isinstance(scan_raw, dict):
+                    scan_raw = {}
+                try:
+                    uuid = scan_raw.get('uuid')
+                    if uuid and self.__scan_uuid_white_list and uuid in self.__scan_uuid_white_list:
+                        found_uuid = True
+                    device.scans_data.append(ScanData(uuid=scan_raw.get('uuid'),
+                                                      schedule_uuid=scan_raw.get('schedule_uuid'),
+                                                      started_at=parse_date(scan_raw.get('started_at')),
+                                                      completed_at=parse_date(scan_raw.get('completed_at'))))
+                except Exception:
+                    logger.exception(f'Problem with scan raw {scan_raw}')
                 plugin_data = []
                 cpe = None
                 cve = None
@@ -321,7 +346,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
-
+        if not found_uuid:
+            return None
         tenble_sources = device_raw.get('sources')
         if not isinstance(tenble_sources, list):
             tenble_sources = []
@@ -490,7 +516,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'name': 'exclude_no_last_scan',
                     'title': 'Do not fetch devices with no \'Last Scan\'',
                     'type': 'bool'
-                }
+                },
+                {
+                    'name': 'scan_uuid_white_list',
+                    'title': 'Scan UUIDs whitelist',
+                    'type': 'string'
+                },
             ],
             'required': [
                 'exclude_no_last_scan'
@@ -502,11 +533,14 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'exclude_no_last_scan': False
+            'exclude_no_last_scan': False,
+            'scan_uuid_white_list': None
         }
 
     def _on_config_update(self, config):
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
+        self.__scan_uuid_white_list = config['scan_uuid_white_list'].split(',') \
+            if config.get('scan_uuid_white_list') else None
 
     def outside_reason_to_live(self) -> bool:
         """

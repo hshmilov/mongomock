@@ -127,6 +127,8 @@ class SnipeitAdapter(AdapterBase, Configurable):
                 name = device_raw.get('name')
                 if name:
                     device.name = name
+                    if self.__use_asset_name_as_hostname:
+                        device.hostname = name
                 device_serial = device_raw.get('serial')
                 if device_serial:
                     device.device_serial = device_serial
@@ -230,9 +232,14 @@ class SnipeitAdapter(AdapterBase, Configurable):
                     'name': 'use_asset_tag_as_hostname',
                     'title': 'Use asset tag as hostname',
                     'type': 'bool'
+                },
+                {
+                    'name': 'use_asset_name_as_hostname',
+                    'title': 'Use asset name as hostname',
+                    'type': 'bool'
                 }
             ],
-            'required': ['use_asset_tag_as_hostname'],
+            'required': ['use_asset_tag_as_hostname', 'use_asset_name_as_hostname'],
             'pretty_name': 'SnipeIT Configuration',
             'type': 'array'
         }
@@ -241,10 +248,12 @@ class SnipeitAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'snipeit_category_white_list': None,
-            'use_asset_tag_as_hostname': False
+            'use_asset_tag_as_hostname': False,
+            'use_asset_name_as_hostname': False
         }
 
     def _on_config_update(self, config):
         self.__snipeit_category_white_list = config.get('snipeit_category_white_list').split(',') \
             if config.get('snipeit_category_white_list') else None
         self.__use_asset_tag_as_hostname = config.get('use_asset_tag_as_hostname') or False
+        self.__use_asset_name_as_hostname = config.get('use_asset_name_as_hostname') or False

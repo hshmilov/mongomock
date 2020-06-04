@@ -81,7 +81,8 @@ class DruvaAdapter(AdapterBase):
                 {
                     'name': 'domain',
                     'title': 'Druva Domain',
-                    'type': 'string'
+                    'type': 'string',
+                    'default': 'https://apis.druva.com'
                 },
                 {
                     'name': 'client_id',

@@ -19,7 +19,7 @@ class VectraConnection(RESTConnection):
                                   'Accept': 'application/json'},
                          **kwargs)
         self._token = token
-        self._session_headers = {
+        self._permanent_headers = {
             'Authorization': 'Token ' + self._token
         }
 

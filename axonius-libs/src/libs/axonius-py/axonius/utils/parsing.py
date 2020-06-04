@@ -226,7 +226,7 @@ def figure_out_windows_dist(s):
         return '10'
     s = s.replace('Windows ', '').replace('Windows', '').replace('Win', '')
     dist_name = ''
-    if 'server' in s or 'windows 2003' in s:
+    if 'server' in s or 'windows 2003' in s or 'windows 2008' in s or 'windows 2012' in s or 'windows 2016' in s:
         dist_name = f'{dist_name} Server'
     else:
         dists_with_no_version = ['Vista', 'XP']

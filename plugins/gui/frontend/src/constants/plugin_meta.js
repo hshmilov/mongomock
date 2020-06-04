@@ -99,6 +99,11 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/keycloak',
         description: 'Keycloak is an open source identity and access management solution.'
     },
+    alcide_adapter: {
+        title: 'Alcide',
+        link: 'https://docs.axonius.com/docs/alcide',
+        description: 'Alcide provides cloud and Kubernetes discovery, K8s audit and compliance scanner, microservices anomaly detection and security policies management and enforcement.'
+    },
     ip_fabric_adapter: {
         title: 'IP Fabric',
         link: 'https://docs.axonius.com/docs/ip-fabric',
@@ -195,6 +200,10 @@ export const pluginMeta = {
         title: 'Red Hat Ansible Tower',
         description: 'Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the enterprise.',
         link: 'https://docs.axonius.com/docs/red-hat-ansible-tower'
+    },
+    upguard_adapter: {
+        title: 'UpGuard CyberRisk',
+        description: 'UpGuard CyberRisk allows you to monitor and control third-party vendor risk and improve your own external cyber risk posture. The platform comprises of two main modules: UpGuard BreachSight focuses on your external risk posture and Vendor Risk manages the risk posture of your vendors.'
     },
     google_big_query_adapter: {
         title: 'Google Big Query',
