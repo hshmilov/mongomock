@@ -106,7 +106,15 @@ export default {
       }
       // Filter all the complex fields
       schema.forEach((adapter) => {
-        adapter.fields = adapter.fields.filter((field) => field.type !== 'array');
+        let filteredFields = [];
+        adapter.fields.forEach((field) => {
+          if (field.type === 'array') {
+            filteredFields.push(field.name);
+          } else if (filteredFields.find((filtered_field) => field.name.includes(filtered_field))) {
+            filteredFields.push(field.name);
+          }
+        });
+        adapter.fields = adapter.fields.filter((field) => !filteredFields.find((filtered_field) => field.name == filtered_field));
       });
       return schema;
     },
