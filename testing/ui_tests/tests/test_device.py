@@ -1,17 +1,14 @@
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-import pytest
-
-from test_helpers.file_mock_credentials import FileForCredentialsMock
-
-from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME, CSV_NAME, CSV_PLUGIN_NAME
-from ui_tests.tests.ui_test_base import TestBase
-
-from testing.test_credentials.test_csv_credentials import CSV_FIELDS
 from axonius.utils.wait import wait_until
 from services.adapters.csv_service import CsvService
+from test_helpers.file_mock_credentials import FileForCredentialsMock
+from testing.test_credentials.test_csv_credentials import CSV_FIELDS
+from ui_tests.tests.ui_consts import (CSV_NAME, CSV_PLUGIN_NAME,
+                                      WINDOWS_QUERY_NAME)
+from ui_tests.tests.ui_test_base import TestBase
+
 AZURE_AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 
 
