@@ -526,9 +526,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self.log_activity(AuditCategory.Discovery, action, params)
 
         def _log_activity_phase(action: AuditAction):
-            _log_activity_research(action, {
-                'phase': self.state.SubPhase.value
-            })
+            if self.state and self.state.SubPhase:
+                _log_activity_research(action, {
+                    'phase': self.state.SubPhase.value
+                })
 
         def _start_subphase(subphase: scheduler_consts.ResearchPhases):
             with self.__realtime_lock:
