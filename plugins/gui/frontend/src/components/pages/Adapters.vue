@@ -1,18 +1,18 @@
 <template>
-  <x-page
+  <XPage
     title="adapters"
     class="x-adapters"
   >
     <div class="adapters-search">
-      <x-search-input
+      <XSearchInput
         v-model="searchText"
         class="adapters-search_input"
         placeholder="Search Adapters..."
       />
-      <md-switch
+      <MdSwitch
         v-model="showOnlyConfigured"
         class="md-primary"
-      >Configured Only ({{ configuredAdaptersCount }})</md-switch>
+      >Configured Only ({{ configuredAdaptersCount }})</MdSwitch>
     </div>
     <div
       v-if="!adaptersData.length"
@@ -30,9 +30,15 @@
       <table class="table">
         <thead>
           <tr class="table-row">
-            <th class="status">&nbsp;</th>
-            <th class="row-data">Name</th>
-            <th class="row-data">Description</th>
+            <th class="status">
+&nbsp;
+            </th>
+            <th class="row-data">
+              Name
+            </th>
+            <th class="row-data">
+              Description
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -45,18 +51,22 @@
             <td class="status">
               <div class="summary">
                 <div v-if="item.successClients">
-                  <md-icon
+                  <MdIcon
                     md-src="/src/assets/icons/symbol/success.svg"
                     class="icon-success"
                   />
-                  <p class="summary_count">{{ item.successClients }}</p>
+                  <p class="summary_count">
+                    {{ item.successClients }}
+                  </p>
                 </div>
-                <div  v-if="item.errorClients">
-                  <md-icon
+                <div v-if="item.errorClients">
+                  <MdIcon
                     md-src="/src/assets/icons/symbol/error.svg"
                     class="icon-error"
                   />
-                  <p class="summary_count">{{ item.errorClients }}</p>
+                  <p class="summary_count">
+                    {{ item.errorClients }}
+                  </p>
                 </div>
               </div>
               <div
@@ -68,103 +78,102 @@
               :id="item.id"
               class="row-data row-title"
             >
-              <x-title
+              <XTitle
                 :id="item.id"
                 class="adapter-title"
                 :logo="`adapters/${item.id}`"
-              >{{ item.title }}</x-title>
+              >{{ item.title }}</XTitle>
             </td>
             <td class="row-data description">
-              <div class="content">{{ item.description }}</div>
+              <div class="content">
+                {{ item.description }}
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </x-page>
+  </XPage>
 </template>
 
 
 <script>
-    import xPage from '../axons/layout/Page.vue'
-    import xTitle from '../axons/layout/Title.vue'
-    import xSearchInput from '../neurons/inputs/SearchInput.vue'
-    import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
+import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
+import { mapState, mapActions, mapGetters } from 'vuex';
+import XPage from '../axons/layout/Page.vue';
+import XTitle from '../axons/layout/Title.vue';
+import XSearchInput from '../neurons/inputs/SearchInput.vue';
 
-    import {mapState, mapActions} from 'vuex'
-    import {FETCH_ADAPTERS} from '../../store/modules/adapters'
-    import { CONNECT_ADAPTERS } from '../../constants/getting-started'
-    import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
+import { FETCH_ADAPTERS } from '../../store/modules/adapters';
+import { CONNECT_ADAPTERS } from '../../constants/getting-started';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 
-    function getConfiguredAdapters(adapter) {
-        // configured adapter is one that has at least 1 client configured
-        return adapter.clientsCount;
-    }
+function getConnectedAdapters(adapter) {
+  return adapter.successClients;
+}
 
-    function getConnectedAdapters(adapter) {
-        return adapter.successClients
-    }
-
-    export default {
-        name: 'XAdapters',
-        components: {xPage, xTitle, xSearchInput, PulseLoader },
-        computed: {
-            ...mapState({
-                adaptersData(state) {
-                    return state.adapters.adapters.data
-                }
-            }),
-            filteredData() {
-                const searchTerm = this.searchText.toLowerCase()
-                let res = this.adaptersData
-                if (this.searchText) {
-                    res = res.filter(a => a.title.toLowerCase().includes(searchTerm))
-                }
-                if (this.showOnlyConfigured) {
-                    res = res.filter(getConfiguredAdapters)
-                }
-                return res
-            },
-            configuredAdaptersCount() {
-                return this.filteredData.filter(getConfiguredAdapters).length
-            },
-            successfullyconfiguredAdapters() {
-              return this.adaptersData.filter(getConnectedAdapters).length
-            }
-        },
-        data() {
-            return {
-                searchText: '',
-                showOnlyConfigured: false,
-            }
-        },
-        methods: {
-            ...mapActions({fetchAdapters: FETCH_ADAPTERS, milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION}),
-            configAdapter(adapterId) {
-                /*
+export default {
+  name: 'XAdapters',
+  components: {
+    XPage, XTitle, XSearchInput, PulseLoader,
+  },
+  computed: {
+    ...mapState({
+      adaptersData(state) {
+        return state.adapters.adapters.data;
+      },
+    }),
+    ...mapGetters({
+      getConfiguredAdapters: 'getConfiguredAdapters',
+    }),
+    filteredData() {
+      const searchTerm = this.searchText.toLowerCase();
+      let res = this.showOnlyConfigured ? this.getConfiguredAdapters : this.adaptersData;
+      if (this.searchText) {
+        res = res.filter((a) => a.title.toLowerCase().includes(searchTerm));
+      }
+      return res;
+    },
+    configuredAdaptersCount() {
+      return this.getConfiguredAdapters.length;
+    },
+    successfullyconfiguredAdapters() {
+      return this.adaptersData.filter(getConnectedAdapters).length;
+    },
+  },
+  data() {
+    return {
+      searchText: '',
+      showOnlyConfigured: false,
+    };
+  },
+  methods: {
+    ...mapActions({ fetchAdapters: FETCH_ADAPTERS, milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION }),
+    configAdapter(adapterId) {
+      /*
                     Fetch adapters requested to be configured asynchronously, before navigating to the
                     configuration page, so it will return meanwhile
                  */
-                this.$router.push({path: `adapters/${adapterId}`})
-            },
-            notifyIfMilestoneCompleted() {
-                if (this.filteredData.filter(getConnectedAdapters).length >= 3) {
-                    this.milestoneCompleted({ milestoneName: CONNECT_ADAPTERS})
-                }
-            }
-        },
-        watch: {
-            successfullyconfiguredAdapters: function (value) {
-                this.notifyIfMilestoneCompleted()
-            }
-        },
-        created() {
-            this.fetchAdapters()
-        },
-        mounted() {
-            this.notifyIfMilestoneCompleted()
-        }
-    }
+      this.$router.push({ path: `adapters/${adapterId}` });
+    },
+    notifyIfMilestoneCompleted() {
+      if (this.filteredData.filter(getConnectedAdapters).length >= 3) {
+        this.milestoneCompleted({ milestoneName: CONNECT_ADAPTERS });
+      }
+    },
+  },
+  watch: {
+    successfullyconfiguredAdapters(value) {
+      this.notifyIfMilestoneCompleted();
+    },
+  },
+  created() {
+    this.fetchAdapters();
+  },
+  mounted() {
+    this.notifyIfMilestoneCompleted();
+  },
+};
 </script>
 
 

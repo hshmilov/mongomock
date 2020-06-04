@@ -366,5 +366,9 @@ export const adapters = {
       const pluginNameIndex = getters.getAdaptersMap;
       return pluginNameIndex.get(id);
     },
+    getConfiguredAdapters: (state) => {
+      // configured adapter is one that has at least 1 client configured
+      return state.adapters.data.filter((adapter) => adapter.clientsCount);
+    },
   },
 };

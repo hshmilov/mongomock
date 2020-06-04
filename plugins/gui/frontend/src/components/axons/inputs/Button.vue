@@ -28,7 +28,7 @@ export default {
   .ant-btn-primary {
     width: 120px;
   }
-  .ant-btn[disabled] {
+  .ant-btn[disabled], .ant-btn[disabled]:hover {
     border-color: transparent;
   }
   .ant-btn-emphasize {

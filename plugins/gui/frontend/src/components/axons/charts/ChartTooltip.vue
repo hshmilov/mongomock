@@ -32,7 +32,7 @@
           </div>
         </div>
         <div
-          v-else
+          v-else-if="body.value || body.percentage"
           class="body-content"
         >
           <span class="value">{{ body.value }}</span>
@@ -138,7 +138,6 @@ export default {
 
       .name, .value {
         max-width: 40ch;
-        text-overflow: ellipsis;
         overflow: hidden;
       }
 

@@ -22,11 +22,16 @@
         name="User"
         @filter="runFilterUsers"
       />
+      <XAdapterConnectionsStatus
+        v-if="canShowAdapterConnectionStatus"
+        :key="3"
+        :data="discoveryData.users.data"
+      />
     </template>
 
     <div
       v-if="canRunDiscovery"
-      :key="3"
+      :key="4"
       slot="post"
       class="x-card chart-lifecycle print-exclude"
     >
@@ -70,8 +75,9 @@
 import {
   mapState, mapMutations, mapGetters,
 } from 'vuex';
+import XDataDiscoveryCard from '@neurons/cards/DataDiscoveryCard.vue';
+import XAdapterConnectionsStatus from '@neurons/cards/AdapterConnectionsStatus.vue';
 import XPanels from './Panels.vue';
-import XDataDiscoveryCard from '../../neurons/cards/DataDiscoveryCard.vue';
 import XCycle from '../../axons/charts/Cycle.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
@@ -81,7 +87,7 @@ import { formatDate } from '../../../constants/utils';
 export default {
   name: 'XDefaultSpace',
   components: {
-    XPanels, XDataDiscoveryCard, XCycle,
+    XPanels, XDataDiscoveryCard, XCycle, XAdapterConnectionsStatus,
   },
   props: {
     panels: {
@@ -135,6 +141,10 @@ export default {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.RunManualDiscovery);
     },
+    canShowAdapterConnectionStatus() {
+      return this.$can(this.$permissionConsts.categories.Adapters,
+        this.$permissionConsts.actions.View);
+    },
   },
   methods: {
     ...mapMutations({
@@ -168,7 +178,7 @@ export default {
   .x-default-space {
     .chart-lifecycle {
       &.print-exclude{
-        grid-column: 3;
+        grid-column: 4;
         grid-row: 1;
       }
       display: flex;

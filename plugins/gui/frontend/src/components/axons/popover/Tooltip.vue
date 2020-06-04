@@ -10,9 +10,7 @@
           <slot name="header" />
         </div>
         <div class="tooltip-body">
-          <slot name="body">
-            no body: add a body
-          </slot>
+          <slot name="body"></slot>
         </div>
       </div>
     </transition>

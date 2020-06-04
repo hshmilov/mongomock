@@ -189,9 +189,6 @@ class DashboardPage(Page):
     def get_tooltip_title(self, card):
         return card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .name').text
 
-    def get_tooltip_header_value(self, card):
-        return card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .value').text
-
     def get_tooltip_header_percentage(self, card):
         percentage_element = card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .percentage')
         return self.get_percentage_number(percentage_element.get_attribute('textContent'))

@@ -81,9 +81,6 @@ class TestDashboardCardTooltip(TestBase):
 
     def test_intersection_pie_chart_tooltip(self):
         def _verify_excluding_or_intersection_tooltip():
-            assert self.dashboard_page.get_tooltip_header_value(card) != ''
-            assert self.dashboard_page.get_tooltip_body_percentage(card) == ''
-            assert self.dashboard_page.get_tooltip_body_value(card) == ''
             assert len(self.dashboard_page.get_tooltip_body_component_names(card)) > 0
             header_percentage = self.dashboard_page.get_tooltip_header_percentage(card)
             assert header_percentage != ''
