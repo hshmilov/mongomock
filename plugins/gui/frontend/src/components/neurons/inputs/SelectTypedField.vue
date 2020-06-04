@@ -6,6 +6,7 @@
       :options="options"
       :minimal="minimal"
       @input="updateAutoField"
+      :show-secondary-values="showSecondaryValues"
     />
     <XSelect
       :id="id"
@@ -54,6 +55,10 @@ export default {
       default: false,
     },
     autoFill: {
+      type: Boolean,
+      default: true,
+    },
+    showSecondaryValues: {
       type: Boolean,
       default: true,
     },

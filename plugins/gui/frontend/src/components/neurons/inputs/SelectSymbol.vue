@@ -6,11 +6,12 @@
     :read-only="readOnly"
     missing-items-label=""
     @input="selectOption"
+    :show-secondary-values="showSecondaryValues"
   >
     <template slot-scope="{ option }">
       <div class="x-type-img">
         <img
-          v-if="option && isFiltered(option)"
+          v-if="option && isFiltered(option) && showSecondaryValues"
           class="img-filtered"
           src="/src/assets/icons/logo/general_filtered.png"
           :alt="option.name"
@@ -64,7 +65,10 @@
         default: ''
       },
       minimal: Boolean,
-      readOnly: Boolean
+      showSecondaryValues: {
+        type: Boolean,
+        default: true,
+      },
     },
     methods: {
       selectOption (value) {

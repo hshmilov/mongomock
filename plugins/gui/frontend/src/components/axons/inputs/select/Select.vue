@@ -42,6 +42,7 @@
       :missing-items-label="missingItemsLabel"
       :allow-custom-option="allowCustomOption"
       @close="() => closeDropdown()"
+      :show-secondary-values="showSecondaryValues"
     >
       <slot
         slot-scope="{ option }"
@@ -110,6 +111,10 @@ export default {
     presentSelectionValue: {
       type: Boolean,
       default: false,
+    },
+    showSecondaryValues: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

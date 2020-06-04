@@ -26,7 +26,7 @@
           :key="index"
           ref="option"
           class="x-select-option"
-          :class="{active: index === activeOptionIndex, 'filter-adapters': currentOption.plugins}"
+          :class="{active: index === activeOptionIndex, 'filter-adapters': currentOption.plugins && showSecondaryValues}"
           :tabindex="-1"
           :title="currentOption.title"
           @click="() => selectOption(currentOption.name)"
@@ -42,7 +42,7 @@
           </slot>
         </div>
         <XSelectContent
-          v-if="currentOption.plugins !== undefined"
+          v-if="currentOption.plugins !== undefined && showSecondaryValues"
           slot="content"
           :key="currentOption.name"
           v-model="secondaryValues"
@@ -147,6 +147,10 @@ export default {
     allowCustomOption: {
       type: Boolean,
       default: false,
+    },
+    showSecondaryValues: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

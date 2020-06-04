@@ -5,6 +5,7 @@
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
       :read-only="readOnly"
+      :show-secondary-values="showSecondaryValues"
       @input="onChangeField"
     />
     <XConditionFunction
@@ -48,6 +49,16 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      disableAdaptersFilterQueriesList: [
+        'internal_axon_id',
+        'saved_query',
+        'adapter_list_length',
+        'adapters',
+      ],
+    };
   },
   computed: {
     ...mapState({
@@ -99,6 +110,9 @@ export default {
     },
     fieldSchema() {
       return this.getFieldSchema(this.field);
+    },
+    showSecondaryValues() {
+      return !this.disableAdaptersFilterQueriesList.includes(this.condition.field);
     },
   },
   methods: {
