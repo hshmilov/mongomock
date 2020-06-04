@@ -22,7 +22,6 @@ class TestDashboardPermissions(PermissionsTestBase):
     TEST_RENAME_SPACE_NAME = 'rename space'
     NOTE_TEXT = 'note text'
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_permissions(self):
         self.settings_page.disable_getting_started_feature()
         self.devices_page.switch_to_page()

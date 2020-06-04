@@ -36,7 +36,6 @@ class TestSavedQuery(TestBase):
     PUBLIC_QUERY_SAVE_NAME = 'This is a public query by {user_name}'
     PRIVATE_QUERY_SAVE_NAME = 'This is a private query by {user_name}'
 
-    @pytest.mark.skip('ad change')
     def test_query_state(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -86,7 +85,6 @@ class TestSavedQuery(TestBase):
         self.devices_page.check_search_list_for_names([self.CUSTOM_QUERY_SAVE_NAME_1, self.CUSTOM_QUERY_SAVE_NAME_3])
         assert self.devices_page.find_query_status_text() == ''
 
-    @pytest.mark.skip('ad change')
     def test_edit_saved_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -120,14 +118,13 @@ class TestSavedQuery(TestBase):
         self.devices_page.reset_query()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.FIELD_HOSTNAME_TITLE in self.devices_page.get_columns_header_text()
-        assert self.devices_page.count_entities() == 22
+        assert self.devices_page.count_entities() == 25
         self.devices_page.execute_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2)
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.FIELD_HOSTNAME_TITLE not in self.devices_page.get_columns_header_text()
-        assert self.devices_page.count_entities() == 21
+        assert self.devices_page.count_entities() == 24
         self.devices_page.check_sort_column(self.devices_page.FIELD_LAST_SEEN)
 
-    @pytest.mark.skip('ad change')
     def test_enforcement_query(self):
         with DeviceControlService().contextmanager(take_ownership=True):
             self.dashboard_page.switch_to_page()
@@ -193,7 +190,6 @@ class TestSavedQuery(TestBase):
         self.devices_page.open_actions_query()
         assert not self.devices_page.is_query_save_as_disabled()
 
-    @pytest.mark.skip('ad change')
     def test_saved_queries_execute(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_LINUX, LINUX_QUERY_NAME)
@@ -260,7 +256,6 @@ class TestSavedQuery(TestBase):
         _remove_queries_wait_count(0)
         assert self.devices_queries_page.get_all_table_rows() == []
 
-    @pytest.mark.skip('ad change')
     def test_saved_queries_search(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
         self.settings_page.switch_to_page()
@@ -437,7 +432,6 @@ class TestSavedQuery(TestBase):
                    .get_query_expression_eval_message() == self.devices_queries_page.EXPRESSION_UNSUPPORTED_MSG
         self.devices_queries_page.close_saved_query_panel()
 
-    @pytest.mark.skip('ad change')
     def test_saved_query_recompile(self):
         """
         Test that the predefined query that gets run from the saved queries page

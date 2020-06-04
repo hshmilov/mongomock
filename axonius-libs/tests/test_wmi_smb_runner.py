@@ -132,7 +132,6 @@ def test_pm():
     assert "[Update Start]" in response[0]["data"]
 
 
-@pytest.mark.skip('ad change')
 def test_getfile():
     # When we have relative paths, then it is concated to the default share we define.
     # Currently, its 'ADMIN$'. In case it changes, we have to change the relative paths across the entire
@@ -229,7 +228,6 @@ def test_axr():
     assert "2018-05 Cumulative Update for Windows Server 2016 for x64-based Systems (KB4103720)" in titles
 
 
-@pytest.mark.skip('ad change')
 def test_wmi():
     commands = [
         {"type": "shell", "args": ["dir .."]},

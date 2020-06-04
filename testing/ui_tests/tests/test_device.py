@@ -63,7 +63,6 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME) is not None
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
-    @pytest.mark.skip('ad change')
     def test_device_enforcement_tasks(self):
         print('starting test_device_enforcement_tasks', flush=True)
 

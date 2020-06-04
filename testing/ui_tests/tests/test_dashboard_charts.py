@@ -45,7 +45,6 @@ class TestDashboardCharts(TestBase):
     TEST_MOVE_PANEL = 'test move panel'
     TEST_EDIT_CHART_TITLE = 'test edit'
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_spaces(self):
         # Default space and Personal space existing
         self.settings_page.switch_to_page()
@@ -113,7 +112,6 @@ class TestDashboardCharts(TestBase):
         assert self.dashboard_page.is_missing_add_space()
         self._test_read_only_user_with_dashboard_read_write()
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_coverage_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -141,7 +139,6 @@ class TestDashboardCharts(TestBase):
         assert self.devices_page.is_query_error()
         self.devices_page.click_search()
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_intersection_chart(self):
         self.devices_page.create_saved_query(IPS_192_168_QUERY, IPS_192_168_QUERY_NAME)
         self.devices_page.create_saved_query(HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME)
@@ -168,7 +165,6 @@ class TestDashboardCharts(TestBase):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_card(self.TEST_INTERSECTION_TITLE)
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_summary_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -210,7 +206,6 @@ class TestDashboardCharts(TestBase):
             self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{j}')
             self.dashboard_page.wait_for_spinner_to_end()
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_segmentation_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -252,7 +247,6 @@ class TestDashboardCharts(TestBase):
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_PIE_TITLE)
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_empty_segmentation_chart(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
@@ -292,7 +286,6 @@ class TestDashboardCharts(TestBase):
         assert self.dashboard_page.find_no_data_label()
         self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_intersection_chart_config_reset(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -427,11 +420,11 @@ class TestDashboardCharts(TestBase):
         self.dashboard_page.fill_chart_segment_filter('Host Name', 'domain')
         self.dashboard_page.click_card_save()
         filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
-        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '21'
+        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '24'
 
         # Remove the filter - expected to generate as many bars as devices
         self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_chart_segment_filter()
         self.dashboard_page.click_card_save()
         filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
-        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '22'
+        assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '25'

@@ -150,7 +150,6 @@ class TestGlobalSettings(TestBase):
         self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_toaster(self.settings_page.BAD_PROXY_TOASTER)
 
-    @pytest.mark.skip('ad change')
     def test_require_connection_label_setting(self):
         # save without connection label
         assert not self.settings_page.get_connection_label_required_value()

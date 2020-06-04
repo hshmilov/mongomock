@@ -208,7 +208,6 @@ class TestAdapters(TestBase):
 
         self.wait_for_adapter_down(CARBONBLACKDEFENCE_PLUGIN_NAME)
 
-    @pytest.mark.skip('ad change')
     def test_query_wizard_dynamic_and_blacklist_fields(self):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()

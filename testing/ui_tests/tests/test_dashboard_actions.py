@@ -27,7 +27,6 @@ class TestDashboardActions(TestBase):
     AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
     SEARCH_ICON_CSS = '.actions__search'
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_chart_edit(self):
 
         # enable unlimited timeline range feature flag
@@ -48,16 +47,16 @@ class TestDashboardActions(TestBase):
                                                   second_query=MANAGED_DEVICES_QUERY_NAME,
                                                   title=self.TEST_EDIT_CARD_TITLE)
         card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
-        self.dashboard_page.assert_pie_slices_data(card, ['5', '91', '5'])
+        self.dashboard_page.assert_pie_slices_data(card, ['92'])
         self._test_intersection_chart_edit(card)
         self._change_card_to_comparison(self.TEST_EDIT_CARD_TITLE)
-        self.dashboard_page.assert_pie_slices_data(card, ['83', '17'])
+        self.dashboard_page.assert_pie_slices_data(card, ['77', '23'])
         self._test_comparison_chart_edit(card)
         self._change_card_to_segmentation(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_histogram_lines_data(card, ['2', '1'])
         self._test_segmentation_chart_edit(card)
         self._change_card_to_summary(self.TEST_EDIT_CARD_TITLE)
-        self.dashboard_page.assert_summary_text_data(card, ['20'])
+        self.dashboard_page.assert_summary_text_data(card, ['23'])
         self._test_summary_chart_edit(card)
         self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_timeline_svg_exist(card, self.TEST_TIMELINE_SVG_CSS)
@@ -107,21 +106,21 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.click_card_save()
 
     def _test_intersection_chart_edit(self, card):
-        with self.dashboard_page.edit_and_assert_chart(card, ['5', '18', '77'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['28', '68'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(HOSTNAME_DC_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['9', '18', '73'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['8', '28', '64'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(WINDOWS_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['53', '47'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['61', '39'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_intersection_chart_first_query(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_intersection_chart_second_query(self.AD_ADMINS_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['60', '40'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['50', '50'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(self.AD_BAD_CONFIG_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['33', '27', '20', '20'],
+        with self.dashboard_page.edit_and_assert_chart(card, ['28', '22', '17', '33'],
                                                        self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(self.AD_ADMINS_QUERY_NAME)
 
@@ -130,10 +129,10 @@ class TestDashboardActions(TestBase):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['21', '20'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['24', '23'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.change_chart_type(self.dashboard_page.HISTOGRAM_CHART_TYPE)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['20', '15'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['23', '18'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME, views_list[1])
@@ -142,24 +141,24 @@ class TestDashboardActions(TestBase):
         with self.dashboard_page.edit_and_assert_chart(card, ['2'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.fill_chart_segment_filter(OS_SERVICE_PACK_OPTION_NAME, '1')
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['13', '3'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['16', '3'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['5', '1'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['8', '1'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.AD_BAD_CONFIG_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['6'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['9'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_field(IS_LOCAL_OPTION_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['81', '19'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['84', '16'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.select_chart_wizard_field(IS_ADMIN_OPTION_NAME)
             self.dashboard_page.change_chart_type(self.dashboard_page.PIE_CHART_TYPE)
 
     def _test_summary_chart_edit(self, card):
-        with self.dashboard_page.edit_and_assert_chart(card, ['15'], self.dashboard_page.SUMMARY_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, ['18'], self.dashboard_page.SUMMARY_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_chart_wizard_field(USER_NAME_OPTION_NAME)
             self.dashboard_page.select_chart_summary_function(COUNT_OPTION_NAME)
@@ -247,7 +246,6 @@ class TestDashboardActions(TestBase):
         # wait for animation to finish
         time.sleep(1)
 
-    @pytest.mark.skip('ad change')
     def test_segmentation_chart_search_in_histogram(self):
         stress = stresstest_service.StresstestService()
         with stress.contextmanager(take_ownership=True):
@@ -305,7 +303,6 @@ class TestDashboardActions(TestBase):
         self.devices_page.toggle_select_all_rows_checkbox()
         assert self.devices_page.verify_no_entities_selected()
 
-    @pytest.mark.skip('ad change')
     def test_segmentation_chart_tags_filter(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -340,7 +337,6 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.wait_for_spinner_to_end()
         self.dashboard_page.remove_card(self.TEST_EDIT_CARD_TITLE)
 
-    @pytest.mark.skip('ad change')
     def test_fetching_data_during_edit_chart(self):
         """
         Tests that during the edit of a dashboard chart, the loading indicator
