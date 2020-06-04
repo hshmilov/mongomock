@@ -11,10 +11,8 @@ from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME,
-                                      VIEWER_USERNAME, VIEWER_ADDER_USERNAME, FIRST_NAME, LAST_NAME)
+                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME)
 from test_credentials.json_file_credentials import (DEVICE_FIRST_HOSTNAME, DEVICE_SECOND_NAME)
-from test_credentials.test_gui_credentials import DEFAULT_USER
 
 
 class TestSavedQuery(TestBase):
@@ -31,10 +29,6 @@ class TestSavedQuery(TestBase):
     ADMIN_DISPLAY_NAME = 'internal/admin'
 
     JSON_ASSET_ENTITY_QUERY_NAME = 'JSON Asset Entity Query'
-
-    INITIAL_QUERY_NAME = 'Initial query name'
-    PUBLIC_QUERY_SAVE_NAME = 'This is a public query by {user_name}'
-    PRIVATE_QUERY_SAVE_NAME = 'This is a private query by {user_name}'
 
     def test_query_state(self):
         self.dashboard_page.switch_to_page()
@@ -493,110 +487,3 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-
-    def test_private_query(self):
-        """
-        Testing private query operations, including filtering and making sure it appears only
-        on relevant pages with a series of checks:
-        1 - Check private query operations for user with "admin" role.
-        2 - Check private query operations for user with "viewer" role.
-        3 - Check private query operations for user with "view_and_add" role. ( User can also add query )
-        4 - Check that private query doesn't appear in: Reports, EC Config, Query Wizard, and also
-            doesn't appear in any chart wizard opened from dashboard spaces besides "My Dashboard"
-        5 - Check that private query appears in: Devices/Users query search input (inside the dropdown)
-            And also appears in chart wizard at "My Dashboard"
-        6 - Check that if a dashboard chart contains a private query, it cannot be moved/copied
-            to any space besides "My Dashboard"
-        """
-
-        # Check 1:
-        public_admin_query = self.PUBLIC_QUERY_SAVE_NAME.format(user_name='Admin')
-        self.devices_page.create_private_query(self.INITIAL_QUERY_NAME)
-        self.devices_page.assert_private_query_checkbox_hidden(self.INITIAL_QUERY_NAME)
-        self.devices_page.rename_query(self.INITIAL_QUERY_NAME, public_admin_query)
-        self._assert_private_query_created_and_renamed(public_admin_query)
-        self._assert_private_query_set_public(public_admin_query)
-
-        # Check 2:
-        self._create_and_login_user(VIEWER_USERNAME, self.settings_page.VIEWER_PERMISSIONS)
-        private_viewer_query = self.PRIVATE_QUERY_SAVE_NAME.format(user_name='Viewer')
-        self.devices_page.create_private_query(self.INITIAL_QUERY_NAME)
-        self.devices_page.rename_query(self.INITIAL_QUERY_NAME, private_viewer_query)
-        self._assert_private_query_created_and_renamed(private_viewer_query)
-        self.devices_queries_page.click_query_row_by_name(private_viewer_query)
-        with pytest.raises(SeleniumTimeoutException):
-            self.devices_queries_page.get_set_public_panel_action()
-        assert self.devices_queries_page.get_edit_panel_action()
-        self.devices_queries_page.get_remove_panel_action().click()
-        self.devices_queries_page.safeguard_click_confirm(self.devices_queries_page.SAFEGUARD_REMOVE_BUTTON_SINGLE)
-        self.devices_queries_page.wait_for_table_to_be_responsive()
-        name_cell_index = self.devices_queries_page.count_sort_column(self.devices_queries_page.NAME_COLUMN)
-        name = self.devices_queries_page.get_row_cell_text(1, name_cell_index)
-        assert name != private_viewer_query
-        self.devices_page.create_private_query(private_viewer_query)
-
-        # Check 3:
-        self.login_page.logout()
-        self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=DEFAULT_USER['user_name'], password=DEFAULT_USER['password'])
-        self._create_and_login_user(VIEWER_ADDER_USERNAME, self.settings_page.VIEWER_ADDER_PERMISSIONS)
-        public_viewer_adder_query = self.PUBLIC_QUERY_SAVE_NAME.format(user_name='Viewer Adder')
-        private_viewer_adder_query = self.PRIVATE_QUERY_SAVE_NAME.format(user_name='Viewer Adder')
-        self.devices_page.create_private_query(public_viewer_adder_query)
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_be_responsive()
-        self._assert_private_query_set_public(public_viewer_adder_query)
-        self.devices_page.create_private_query(private_viewer_adder_query)
-
-        # Check 4:
-        self.reports_page.get_to_new_report_page()
-        self.reports_page.click_include_queries()
-        self.devices_queries_page.assert_private_query_not_selectable(
-            self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''),
-            self.devices_queries_page.SELECT_QUERY_NAME_CSS)
-        self.enforcements_page.switch_to_page()
-        self.enforcements_page.click_new_enforcement()
-        self.enforcements_page.select_trigger()
-        self.devices_queries_page.assert_private_query_not_selectable(
-            self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''),
-            self.devices_queries_page.SELECT_QUERY_NAME_CSS)
-        self.dashboard_page.switch_to_page()
-        self.dashboard_page.open_new_card_wizard()
-        self.dashboard_page.select_chart_metric('Query Comparison')
-        self.devices_queries_page.assert_private_query_not_selectable(
-            self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''),
-            self.devices_queries_page.SELECT_VIEW_NAME_CSS)
-
-    def _assert_private_query_created_and_renamed(self, query_name):
-        self.devices_queries_page.switch_to_page()
-        self.devices_queries_page.wait_for_table_to_be_responsive()
-        access_cell_index = self.devices_queries_page.count_sort_column(self.devices_queries_page.ACCESS_COLUMN)
-        access = self.devices_queries_page.get_row_cell_text(1, access_cell_index)
-        assert access == 'Private'
-        name_cell_index = self.devices_queries_page.count_sort_column(self.devices_queries_page.NAME_COLUMN)
-        name = self.devices_queries_page.get_row_cell_text(1, name_cell_index)
-        assert name == query_name
-
-    def _assert_private_query_set_public(self, query_name):
-        self.devices_queries_page.click_query_row_by_name(query_name)
-        with pytest.raises(SeleniumTimeoutException):
-            self.devices_queries_page.get_enforce_panel_action()
-        self.devices_queries_page.set_query_public()
-        access_cell_index = self.devices_queries_page.count_sort_column(self.devices_queries_page.ACCESS_COLUMN)
-        access = self.devices_queries_page.get_row_cell_text(1, access_cell_index)
-        assert access == 'Public'
-        self.devices_page.switch_to_page()
-        self.devices_page.reset_query()
-
-    def _create_and_login_user(self, user_name, permissions):
-        self.settings_page.switch_to_page()
-        self.settings_page.click_manage_users_settings()
-        self.settings_page.create_new_user_with_new_permission(user_name,
-                                                               NEW_PASSWORD,
-                                                               FIRST_NAME,
-                                                               LAST_NAME,
-                                                               permissions)
-        self.settings_page.wait_for_user_created_toaster()
-        self.login_page.logout()
-        self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=user_name, password=NEW_PASSWORD)

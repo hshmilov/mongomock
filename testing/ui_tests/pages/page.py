@@ -118,6 +118,7 @@ class Page:
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
+    FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
     SAVE_AND_CONNECT_BUTTON = 'Save and Connect'
@@ -763,6 +764,9 @@ class Page:
     def key_down_arrow_down(element):
         element.send_keys(Keys.ARROW_DOWN)
 
+    def key_down_escape(self):
+        ActionChains(self.driver).send_keys(Keys.ESCAPE).perform()
+
     def key_down_tab(self, element=None):
         # If no element was sent, perform generic tab on the page
         if not element:
@@ -1076,6 +1080,10 @@ class Page:
     def safeguard_click_cancel(self):
         self.wait_for_element_present_by_id(self.SAFEGUARD_CANCEL_BUTTON_ID).click()
         self.wait_for_element_absent_by_css(self.SAFEGUARD_OVERLAY_CSS)
+
+    def feedback_modal_click_cancel(self):
+        self.driver.find_element_by_id(self.FEEDBACK_MODAL_CANCEL_BUTTON_ID).click()
+        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
 
     def remove_selected_with_safeguard(self, confirmation_label=None, confirmation_label_multi=None):
         self.click_button(self.DELETE_BUTTON)

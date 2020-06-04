@@ -129,6 +129,9 @@ class DashboardPage(Page):
     TOOLTIP_HEADER_CONTENT_CSS = '.x-tooltip .header-content'
     TOOLTIP_BODY_CONTENT_CSS = '.x-tooltip .body-content'
     MOVE_OR_COPY_MODAL_ID = 'move_or_copy'
+    MOVE_OR_COPY_SPACE_SELECT_ID = 'select_space'
+    MOVE_OR_COPY_SPACE_DROPDOWN_CSS = '.ant-select-dropdown'
+    MOVE_OR_COPY_SPACE_DROPDOWN_ITEM_CSS = '.ant-select-dropdown-menu-item'
 
     PIE_CHART_TYPE = 'pie'
     HISTOGRAM_CHART_TYPE = 'histogram'
@@ -593,9 +596,14 @@ class DashboardPage(Page):
         self.wait_for_element_present_by_css('.ant-modal')
 
     def select_space_for_move_or_copy(self, text_option):
-        self.driver.find_element_by_id('select_space').click()
-        dropdown = self.driver.find_element_by_css_selector('.ant-select-dropdown')
+        self.driver.find_element_by_id(self.MOVE_OR_COPY_SPACE_SELECT_ID).click()
+        dropdown = self.driver.find_element_by_css_selector(self.MOVE_OR_COPY_SPACE_DROPDOWN_CSS)
         self.find_element_by_text(text_option, element=dropdown).click()
+
+    def get_all_spaces_for_move_or_copy(self):
+        self.driver.find_element_by_id(self.MOVE_OR_COPY_SPACE_SELECT_ID).click()
+        return self.get_all_select_options(self.MOVE_OR_COPY_SPACE_DROPDOWN_CSS,
+                                           self.MOVE_OR_COPY_SPACE_DROPDOWN_ITEM_CSS)
 
     def find_move_or_copy_checkbox(self):
         return self.driver.find_element_by_id('create_panel_copy')

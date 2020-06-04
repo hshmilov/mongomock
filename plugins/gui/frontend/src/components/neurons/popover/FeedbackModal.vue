@@ -31,9 +31,9 @@
       <template v-else-if="status.error">
         <div class="t-center">
           <SvgIcon
-                  name="symbol/error"
-                  :original="true"
-                  height="48px"
+            name="symbol/error"
+            :original="true"
+            height="48px"
           />
           <div class="mt-12">{{ status.error }}</div>
         </div>
@@ -49,6 +49,7 @@
           class="text"
         >{{ note }}</div>
         <XButton
+          id="feedback_modal_cancel"
           type="link"
           @click="handleClose"
         >Cancel</XButton>
