@@ -15,17 +15,23 @@
             v-for="(group, groupIndex) in pageData"
             :key="groupIndex"
           >
-            <div class="intersection-group">
+            <div
+              class="intersection-group"
+              @mouseleave="clearHover()"
+            >
               <div
                 v-for="(intersection, index) in group.intersections"
                 :key="index"
-                class="intersection-slice"
-                :class="getColorClass(intersection.intersectionIndex)"
                 :style="getSliceStyle(intersection)"
+                :class="getSliceClass(intersection.intersectionIndex)"
+                class="intersection-slice"
                 @click="onClick(intersection.originalIndex)"
-                @mouseover="updateHover(intersection, group)"
-                @mouseout="clearHover()"
-              />
+              >
+                <div
+                  class="tooltip-invoker"
+                  @mouseenter="updateHover(intersection, group)"
+                />
+              </div>
               <div
                 class="group-total"
                 :title="group.value"
@@ -33,11 +39,13 @@
                 {{ group.value }}
               </div>
             </div>
-            <div
-              class="intersection-group group-name"
-              :title="group.name"
-            >
-              {{ group.name }}
+            <div class="intersection-group">
+              <span
+                class="group-name"
+                :title="group.name"
+              >
+                {{ group.name }}
+              </span>
             </div>
           </div>
         </div>
@@ -59,6 +67,8 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
+
 import XPaginator from '../layout/Paginator.vue';
 import XChartTooltip from './ChartTooltip.vue';
 
@@ -190,6 +200,13 @@ export default {
     getSliceWidth(sliceValue) {
       return (sliceValue / this.maxGroupValue) * this.maxBarWidth;
     },
+    getSliceClass(intersectionIndex) {
+      const colorClass = this.getColorClass(intersectionIndex);
+      const hoveredIntersection = _get(this.hover, 'intersection.intersectionIndex');
+      const hoverClass = hoveredIntersection === intersectionIndex ? 'hovered' : '';
+
+      return `${colorClass} ${hoverClass}`;
+    },
   },
 };
 
@@ -224,16 +241,24 @@ export default {
             display: flex;
 
             .intersection-slice {
+              height: 100%;
+              min-width: 6px;
               cursor: pointer;
+              padding: 0 2px;
               opacity: 0.8;
               transition: opacity ease-in 0.4s;
 
-              &:hover {
+              &.hovered {
                 opacity: 1;
+              }
+
+              .tooltip-invoker {
+                height: 20px;
               }
             }
 
             .group-total {
+              font-weight: 300;
               max-width: 60px;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -241,7 +266,7 @@ export default {
               padding-left: 4px;
             }
 
-            &.group-name {
+            .group-name {
               max-width: 250px;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -251,6 +276,7 @@ export default {
         }
 
         .matrix-total {
+          font-weight: 300;
           text-align: center;
           line-height: 24px;
         }

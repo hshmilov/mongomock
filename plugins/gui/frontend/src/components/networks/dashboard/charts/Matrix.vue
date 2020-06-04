@@ -219,7 +219,8 @@ export default {
   .x-chart-matrix {
     .base-query-container {
       max-height: 120px;
-      overflow: auto;
+      @include  y-scrollbar;
+      overflow-y: auto;
       margin-right: -8px;
       padding-right: 8px;
 
@@ -229,7 +230,7 @@ export default {
 
         label {
           align-self: center;
-          margin-right: 97px;
+          margin-right: 100px;
         }
 
         .x-dropdown  {
