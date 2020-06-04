@@ -1,5 +1,6 @@
 <template>
   <XFeedbackModal
+    class="compliance_email_dialog"
     v-model="isActive"
     :handle-save="sendEmail"
     :message="message"
@@ -131,40 +132,32 @@ export default {
 
 
 <style lang="scss">
-  .email-header {
-    font-size: 20px;
-    padding: 12px;
-    display: block;
-    .email-title {
-      display: flex;
+  .compliance_email_dialog {
+    .email-header {
+      font-size: 20px;
+      padding: 12px;
+      display: block;
+      .email-title {
+        display: flex;
+      }
+      .email-subtitle {
+        padding-top: 5px;
+        font-size: 14px;
+      }
     }
-    .email-subtitle {
-      padding-top: 5px;
-      font-size: 14px;
-    }
-  }
-  .body {
-    padding: 12px;
-    .body-title {
-      font-size: 16px;
-      font-weight: 400;
-      margin-bottom: 10px;
-    }
-
-    .x-form > .x-array-edit {
-      grid-template-columns: 1fr;
-      grid-gap: 24px 0;
-      display: grid;
-
-      #accountAdmins {
-        display: contents;
-        > div {
-          float: left;
-          margin-top: 4px;
-          margin-right: 3px;
-        }
+    .body {
+      padding: 12px;
+      .body-title {
+        font-size: 16px;
+        font-weight: 400;
+        margin-bottom: 10px;
       }
 
+      .x-form > .x-array-edit {
+        grid-template-columns: 1fr;
+        grid-gap: 24px 0;
+        display: grid;
+      }
     }
   }
 </style>
