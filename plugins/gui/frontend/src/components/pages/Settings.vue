@@ -187,6 +187,7 @@ export default {
       schedulerComplete: true,
       message: '',
       systemInfo: {},
+      newVersionAvailable: false,
     };
   },
   computed: {
