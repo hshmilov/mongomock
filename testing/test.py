@@ -196,7 +196,7 @@ class InstanceManager:
             self.instance_type,
             self.number_of_instances,
             instance_cloud=cloud,
-            instance_image='ubuntu-test-machine-2',
+            instance_image='ubuntu-base-tests-machine-patched-nexus',
             force_password_change=True
         )
         TC.set_environment_variable(BUILDS_GROUP_NAME_ENV, group_name_from_builds)
