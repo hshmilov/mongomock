@@ -196,6 +196,7 @@ def test_get_domains_in_forest(ldap_connection: LdapConnection):
     assert domains_in_forest['RAINDOMAIN']['msDS-Behavior-Version'] == 7
 
 
+@pytest.mark.skip('ad change')
 def test_get_report_statistics(ldap_connection: LdapConnection):
     fs = ldap_connection.get_report_statistics()
     fs = {o['name']: o['data'] for o in fs}
