@@ -19,6 +19,9 @@ class DesktopCentralAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         installation_status = Field(str, 'Installation Status')
+        device_type = Field(str, 'Device Type')
+        warranty_expiry_date = Field(datetime.datetime, 'Warranty Expiry Date')
+        shipping_date = Field(datetime.datetime, 'Shipping Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -164,6 +167,24 @@ class DesktopCentralAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Probelm getting sw for {device_raw}')
                 device.domain = device_raw.get('domain_netbios_name', '')
+                try:
+                    sum_raw = device_raw.get('sum_raw')
+                    if not isinstance(sum_raw, dict):
+                        sum_raw = {}
+                    computer_hardware_summary = sum_raw.get('computer_hardware_summary') or {}
+                    device.device_manufacturer = computer_hardware_summary.get('device_manufacturer')
+                    device.device_model = computer_hardware_summary.get('device_model')
+                    device.device_type = computer_hardware_summary.get('device_type')
+                    device.device_serial = computer_hardware_summary.get('serial_number')
+                    try:
+                        device.total_physical_memory = float(computer_hardware_summary.get('memory')) / 1000.0
+                    except Exception:
+                        pass
+                    device.shipping_date = parse_date(computer_hardware_summary.get('shipping_date'))
+                    device.warranty_expiry_date = parse_date(computer_hardware_summary.get('warranty_expiry_date'))
+
+                except Exception:
+                    logger.exception(f'Problem with sum raw {device_raw}')
                 device.hostname = device_raw.get('fqdn_name', device_raw.get('full_name'))
                 try:
                     last_seen = device_raw.get('agent_last_contact_time')

@@ -56,6 +56,7 @@ class AzureAdapter(AdapterBase):
         resources_group = Field(str, 'Resource Group')
         custom_image_name = Field(str, 'Custom Image Name')
         subscription_id = Field(str, 'Azure Subscription ID')
+        virtual_networks = ListField(str, 'Virtual Networks')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -259,6 +260,10 @@ class AzureAdapter(AdapterBase):
             for device_raw in devices_raw_data:
                 device = self._new_device_adapter()
                 device.id = device_raw['id']
+                device_id = device_raw['id']
+                if device_id and '/resourceGroups/' in device_id:
+                    device.resources_group = device_id[device_id.find('/resourceGroups/') +
+                                                       len('/resourceGroups/'):].split('/')[0]
                 device.cloud_id = device_raw['id']
                 device.cloud_provider = 'Azure'
                 device.name = device_raw['name']
@@ -281,7 +286,11 @@ class AzureAdapter(AdapterBase):
                     device.add_hd(total_size=os_disk.get('disk_size_gb'))
                     os_info.append(os_disk.get('os_type'))
                 if image is not None:
-                    device.image = AzureImage(publisher=image.get('publisher'), offer=image.get('offer'),
+                    image_id = image.get('id')
+                    if image_id and '/images/' in image_id:
+                        device.custom_image_name = image_id[image_id.find('/images/') + len('/images/'):].split('/')[0]
+                    device.image = AzureImage(publisher=image.get('publisher'),
+                                              offer=image.get('offer'),
                                               sku=image.get('sku'), version=image.get('version'))
                     os_info.extend([image.get('offer'), image.get('sku')])
                 device.figure_os(' '.join([v for v in os_info if v is not None]))
@@ -303,6 +312,10 @@ class AzureAdapter(AdapterBase):
                             ips.append(public_ip)
                             device.add_public_ip(public_ip)
                         subnets.append(ip_config.get('subnet', {}).get('address_prefix'))
+                        subnet_id = ip_config.get('subnet', {}).get('id')
+                        if subnet_id and '/virtualNetworks/' in subnet_id:
+                            device.virtual_networks.append(subnet_id[subnet_id.find('/virtualNetworks/') +
+                                                                     len('/virtualNetworks/'):].split('/')[0])
                     device.add_nic(mac=iface.get('mac_address'), ips=[ip for ip in ips if ip is not None],
                                    subnets=[subnet for subnet in subnets if subnet is not None], name=iface.get('name'))
 

@@ -24,26 +24,4 @@ MDM_FIELDS = 'ip,' \
              'meid,' \
              'imei,' \
              'iccid,' \
-             'simCarrierNetwork,' \
-             'cellularDataUsed,' \
-             'isHotspotEnabled,' \
-             'createdAt,' \
-             'batteryEstCharge,' \
-             'quarantined,' \
-             'avName,' \
-             'avRunning,' \
-             'asName,' \
-             'fwName,' \
-             'isRooted,' \
-             'loginRequired,' \
-             'screenLockEnabled,' \
-             'screenLockDelay,' \
-             'autoLoginDisabled,' \
-             'autoTags,' \
-             'hasMdm,' \
-             'hasDesktopAgent,' \
-             'diskEncryptionEnabled,' \
-             'hardwareEncryptionCaps,' \
-             'passCodeLock,' \
-             'usesHardwareKeystore,' \
-             'androidSecurityPatchVersion'
+             'simCarrierNetwork'

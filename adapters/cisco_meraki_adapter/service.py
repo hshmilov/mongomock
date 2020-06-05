@@ -409,7 +409,8 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem gettins mac for {device_raw}')
             device.has_chrome_mdm = device_raw.get('hasChromeMdm')
-            device.add_public_ip(device_raw.get('publicIp'))
+            if device_raw.get('publicIp'):
+                device.add_public_ip(device_raw.get('publicIp'))
             device.owner_username = device_raw.get('ownerUsername')
             device.email = device_raw.get('ownerEmail')
             device.is_rooted = device_raw.get('isRooted')

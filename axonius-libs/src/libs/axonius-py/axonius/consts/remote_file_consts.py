@@ -104,5 +104,6 @@ FILE_CLIENTS_SCHEMA = [
 
 FILE_SCHEMA_REQUIRED = [
     'user_id',
-    's3_use_ec2_attached_instance_profile'
+    's3_use_ec2_attached_instance_profile',
+    'suppress_netbios'
 ]
