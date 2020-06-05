@@ -2,6 +2,7 @@ from enum import Enum
 
 from axonius.fields import Field
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 
 
 class SQLServers(Enum):
@@ -25,6 +26,12 @@ class SQLTypes(Enum):
 
 
 class MySqlAdapter(DeviceAdapter):
+    server_tag = Field(str, 'Server Tag')
+    database = Field(str, 'DB Name')
+    table = Field(str, 'Table Name')
+
+
+class MySqlUserAdapter(UserAdapter):
     server_tag = Field(str, 'Server Tag')
     database = Field(str, 'DB Name')
     table = Field(str, 'Table Name')

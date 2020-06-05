@@ -82,8 +82,6 @@ def _sql_parse_raw_data(create_adapter_func, devices_raw_data):
             except Exception:
                 logger.exception(f'Problem getting nic and ips for {device_raw}')
 
-            device.set_raw(device_raw)
-
             for column_name, column_value in device_raw.items():
                 try:
                     if sql_type.lower() == SQLTypes.SQLITE.value.lower() or \

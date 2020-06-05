@@ -10,16 +10,22 @@ from axonius.clients.sql.sql_generic import _sql_parse_raw_data
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.network.sockets import test_reachability_tcp
-from axonius.utils.sql import SQLServers, MySqlAdapter
+from axonius.utils.sql import SQLServers, MySqlAdapter, MySqlUserAdapter
+from axonius.utils.dynamic_device_mixin import DynamicDeviceMixin
 from mssql_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class MssqlAdapter(AdapterBase, Configurable):
+class MssqlAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(MySqlAdapter):
         pass
+
+    class MyUserAdapter(MySqlUserAdapter):
+        pass
+
+    DYNAMIC_FIELD_TITLE_PREFIX = 'MSSQL'
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -88,7 +94,7 @@ class MssqlAdapter(AdapterBase, Configurable):
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all devices from a specific  domain
+        Get all devices from a specific domain
 
         :param str client_name: The name of the client
         :param obj client_data: The data that represent a connection
@@ -96,11 +102,32 @@ class MssqlAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         connection, client_config, sql_type = client_data
+        if client_config.get('is_users'):
+            return
         table = client_config['table']
         connection.set_devices_paging(self.__devices_fetched_at_a_time)
         with connection:
             for device_raw in connection.query(f'Select * from {table}'):
                 yield device_raw, client_config, sql_type
+
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(self, client_name, client_data):
+        """
+        Get all users from a specific domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        connection, client_config, sql_type = client_data
+        if not client_config.get('is_users'):
+            return
+        table = client_config['table']
+        connection.set_devices_paging(self.__devices_fetched_at_a_time)
+        with connection:
+            for user_raw in connection.query(f'Select * from {table}'):
+                yield user_raw, client_config, sql_type
 
     @staticmethod
     def _clients_schema():
@@ -149,6 +176,12 @@ class MssqlAdapter(AdapterBase, Configurable):
                     'enum': [db_type.value for db_type in SQLServers]
                 },
                 {
+                    'name': 'is_users',
+                    'title': 'Is Users Table',
+                    'type': 'bool',
+                    'default': False
+                },
+                {
                     'name': 'server_tag',
                     'title': 'Server Tag',
                     'type': 'string'
@@ -161,13 +194,35 @@ class MssqlAdapter(AdapterBase, Configurable):
                 'port',
                 'database',
                 'table',
-                'database_type'
+                'database_type',
+                'is_users'
             ],
             'type': 'array'
         }
 
     def _parse_raw_data(self, devices_raw_data):
         yield from _sql_parse_raw_data(self._new_device_adapter, devices_raw_data)
+
+    # pylint: disable=logging-format-interpolation
+    def _create_user(self, user_raw, client_config):
+        try:
+            user = self._new_user_adapter()
+            user.table = client_config.get('table')
+            user.database = client_config.get('database')
+            user.server_tag = client_config.get('server_tag')
+
+            self.fill_dynamic_user(user, user_raw)
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching User for {user_raw}')
+            return None
+
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw, client_config, sql_type in users_raw_data:
+            user = self._create_user(user_raw, client_config)
+            if user:
+                yield user
 
     @classmethod
     def adapter_properties(cls):
@@ -179,11 +234,13 @@ class MssqlAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'devices_fetched_at_a_time',
-                    'type': 'integer',
-                    'title': 'SQL pagination'
+                    'title': 'SQL pagination',
+                    'type': 'integer'
                 }
             ],
-            'required': ['devices_fetched_at_a_time'],
+            'required': [
+                'devices_fetched_at_a_time'
+            ],
             'pretty_name': 'SQL Configuration',
             'type': 'array'
         }

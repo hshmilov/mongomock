@@ -5,6 +5,8 @@ from typing import List, Dict, Callable, Tuple, Any, Optional
 
 from axonius.consts.csv_consts import get_csv_field_names
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.smart_json_class import SmartJsonClass
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.parsing import normalize_var_name
@@ -12,64 +14,54 @@ from axonius.utils.parsing import normalize_var_name
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class DynamicDeviceParsingCannotProceedError(Exception):
+class DynamicParsingCannotProceedError(Exception):
     """
-    An Exception thrown if dynamic device is lacking required information for the device
+    An Exception thrown if dynamic device/user is lacking required information for the device
     This is the only exception that is reraised from `_fill_field_safely`
     """
 
-# pylint: disable=no-self-use,missing-kwoa
+# pylint: disable=no-self-use,missing-kwoa,logging-format-interpolation
 
 
 class DynamicDeviceMixin:
-
     """
-    This mixin implements a generic parsing of dynamic adapters' devices.
-    Use it by:
-     - (required) Retrieve device object by calling the `fill_dynamic_device` method.
-            may throw DynamicDeviceParsingCannotProceedError
-     - (optionally) adjust `DYNAMIC_FIELD_COLLISION_TITLE_PREFIX`
-     - (optionally) override `get_dynamic_field_attributes` with your respective name altering algorithm
-
-    Method Types:
-    - _parse_A methods are responsible to return raw value of normalized field A from device_raw
-    - _fill_A methods are responsible to take the raw A and fill it into device.A (logically).
-
-    These methods may raise exceptions which would be safely suppressed and logged except for
-        `DynamicDeviceParsingCannotProceedError` which would be reraised to halt device parsing.
-
-    Fill free to override any sub-methods for your specific needs.
-    If you override is a generic enhancement, consider performing it in this mixin.
-    Warning: Do not call _parse methods from one such to the other to prevent loop.
-        There is one exception - _parse_id may call the other _parse methods.
-    """
+        This mixin implements a generic parsing and filling of raw_dict values into dynamic fields.
+        Use it by:
+         - (required) Retrieve device object by calling the `fill_dynamic_device`/`fill_dynamic_user` method.
+                may throw DynamicParsingCannotProceedError
+         - (optionally) adjust `DYNAMIC_FIELD_TITLE_PREFIX`
+         - (optionally) override `get_dynamic_field_attributes` with your respective name altering algorithm
+        Add Fields to parse:
+         - (required) add their normalized key and possible field names into csv_consts.IDENTIFIERS dict
+         - (required) add an entry into the filler_to_normalized_fields part of
+                      `fill_dynamic_device`/`fill_dynamic_user`
+        Method Types:
+        - _parse_A methods are responsible to return raw value of normalized field A from device_raw
+        - _fill_A methods are responsible to take the raw A and fill it into device.A (logically).
+        These methods may raise exceptions which would be safely suppressed and logged except for
+            `DynamicDeviceParsingCannotProceedError` which would be reraised to halt device parsing.
+        Fill free to override any sub-methods for your specific needs.
+        If you override is a generic enhancement, consider performing it in this mixin.
+        Warning: Do not call _parse methods from one such to the other to prevent loop.
+            There is one exception - _parse_id may call the other _parse methods.
+        """
 
     # This prefix is used for dynamic field names if there's already an existing field in the device with that name.
     #  It may be overriden.
-    DYNAMIC_FIELD_COLLISION_TITLE_PREFIX = 'Dynamic'
+    DYNAMIC_FIELD_TITLE_PREFIX = 'Dynamic'
 
     def get_dynamic_field_attributes(self, device, column_name) -> Tuple[str, str]:
         """
         normalized column name
         :param column_name:
         """
-        field_name = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX.lower()}_{normalize_var_name(column_name)}'
-        field_title = f'{self.DYNAMIC_FIELD_COLLISION_TITLE_PREFIX} {column_name.title()}'
+        field_name = f'{self.DYNAMIC_FIELD_TITLE_PREFIX.lower()}_{normalize_var_name(column_name)}'
+        field_title = f'{self.DYNAMIC_FIELD_TITLE_PREFIX} {column_name.title()}'
         return field_name, field_title
 
     def fill_dynamic_device(self, device: DeviceAdapter, device_raw: dict):
-        normalized_field_to_csv_columns = get_csv_field_names(device_raw.keys())  # type: Dict[str, List[str]]
-
-        # Note: all_values maps between normalized field names and the all the matching column's value
-        all_values = {field_name: [value for value in map(device_raw.get, csv_columns) if value]
-                      for field_name, csv_columns
-                      in normalized_field_to_csv_columns.items()}  # type: Dict[str, List[Any]]
-
-        # Note: gen_values is the same but only holds the first value of each field (or None)
-        gen_values = {field_name: next(iter(values), None)
-                      for field_name, values in all_values.items()}  # type: Dict[str, Optional[Any]]
-
-        filler_method_to_normalized_fields = {
+        # Normalized fields are the keys of csv_consts.IDENTIFIERS
+        filler_to_normalized_fields = {
             self._fill_id: ['id', 'hostname', 'mac', 'serial'],
             self._fill_name: ['name'],
             self._fill_hostname: ['hostname'],
@@ -81,13 +73,44 @@ class DynamicDeviceMixin:
             self._fill_total_physical_memory_gb: ['total_physical_memory_gb'],
             self._fill_cpu: ['cpu_speed'],
             self._fill_last_seen: ['last_seen'],
-            self._fill_mail: ['mail'],
+            self._fill_email: ['mail'],
             self._fill_domain: ['domain', 'hostname'],
             self._fill_username: ['username'],
             self._fill_installed_software: ['installed_sw_name', 'installed_sw_version',
                                             'installed_sw_vendor', 'packages'],
 
         }  # type: Dict[Callable, List[str]]
+
+        self._fill_dynamic_obj(device=device, device_raw=device_raw,
+                               fill_callable_to_norm_fields=filler_to_normalized_fields)
+
+    def fill_dynamic_user(self, user: UserAdapter, device_raw: dict):
+        # Normalized fields are the keys of csv_consts.IDENTIFIERS
+        filler_to_normalized_fields = {
+            self._fill_id: ['id'],
+            self._fill_domain: ['domain'],
+            self._fill_first_name: ['first_name'],
+            self._fill_last_name: ['last_name'],
+            self._fill_mail: ['mail'],
+            self._fill_display_name: ['name'],
+            self._fill_username: ['username'],
+        }  # type: Dict[Callable, List[str]]
+
+        self._fill_dynamic_obj(device=user, device_raw=device_raw,
+                               fill_callable_to_norm_fields=filler_to_normalized_fields)
+
+    def _fill_dynamic_obj(self, device: SmartJsonClass, device_raw: dict,
+                          fill_callable_to_norm_fields: Dict[Callable, List[str]]):
+        normalized_field_to_csv_columns = get_csv_field_names(device_raw.keys())  # type: Dict[str, List[str]]
+
+        # Note: all_values maps between normalized field names and the all the matching column's value
+        all_values = {field_name: [value for value in map(device_raw.get, csv_columns) if value]
+                      for field_name, csv_columns
+                      in normalized_field_to_csv_columns.items()}  # type: Dict[str, List[Any]]
+
+        # Note: gen_values is the same but only holds the first value of each field (or None)
+        gen_values = {field_name: next(iter(values), None)
+                      for field_name, values in all_values.items()}  # type: Dict[str, Optional[Any]]
 
         # prepare kwargs for filler methods call -
         #   each method may choose which kwargs it wants to use
@@ -99,7 +122,7 @@ class DynamicDeviceMixin:
         }
 
         # Handle generic fields
-        for filler_method, fields in filler_method_to_normalized_fields.items():
+        for filler_method, fields in fill_callable_to_norm_fields.items():
             # curr_values is a filtered version of all_values
             #   to contain only fields relevant to the current field group
             kwargs['curr_values'] = {field_name: values for field_name, values in all_values.items()
@@ -108,20 +131,33 @@ class DynamicDeviceMixin:
 
         # And now the dynamic fields....
         try:
-            self._fill_dynamic_fields(**kwargs)
-        except Exception:
-            message = f'Failed to parse dynamic fields for {device_raw}'
+            self._fill_dynamic_fields(smart_json_obj=device, **kwargs)
+        except Exception as e:
+            message = f'Failed to parse dynamic fields for {device_raw}, error {e}'
             logger.warning(message)
             logger.debug(message, exc_info=True)
 
     def _fill_field_safely(self, *, filler_method: Callable, **kwargs):
         try:
             filler_method(**kwargs)
-        except DynamicDeviceParsingCannotProceedError:
+        except DynamicParsingCannotProceedError:
             logger.warning(f'Parsing cannot proceed for values {kwargs["curr_values"]}')
             raise
         except Exception:
             logger.exception(f'Failed to fill fields {kwargs["curr_values"]}')
+
+    def _fill_dynamic_fields(self, smart_json_obj, *, device_raw, **_):
+        for key, val in device_raw.items():
+            try:
+                if not key or not val:
+                    logger.debug(f'Bad item. Key "{key}" ; Value "{val}"')
+                    continue
+                field_name, field_title = self.get_dynamic_field_attributes(smart_json_obj, key)
+                put_dynamic_field(smart_json_obj, field_name, val, field_title)
+            except Exception as e:
+                logger.warning(f'Failed to add {key}:{val} to entity {smart_json_obj.id}: '
+                               f'Got {str(e)}')
+                continue
 
     def _parse_id(self, *, gen_values, **_):
         return gen_values.get('id')
@@ -138,9 +174,9 @@ class DynamicDeviceMixin:
             hostname = None
 
         device_id = self._parse_id(**kwargs)
-        device_id = '_'.join(field for field in [device_id, serial, mac, hostname] if field)
+        device_id = '_'.join(str(field) for field in [device_id, serial, mac, hostname] if field)
         if not device_id:
-            raise DynamicDeviceParsingCannotProceedError('Bad device with no ID')
+            raise DynamicParsingCannotProceedError('Bad device with no ID')
         device.id = device_id
 
     def _parse_name(self, *, gen_values, **_):
@@ -148,6 +184,9 @@ class DynamicDeviceMixin:
 
     def _fill_name(self, device: DeviceAdapter, **kwargs):
         device.name = self._parse_name(**kwargs)
+
+    def _fill_display_name(self, device: DeviceAdapter, **kwargs):
+        device.display_name = self._parse_name(**kwargs)
 
     def _parse_hostname(self, *, gen_values, **_):
         hostname = gen_values.get('hostname')
@@ -310,8 +349,11 @@ class DynamicDeviceMixin:
     def _parse_mail(self, *, gen_values, **_):
         return gen_values.get('mail')
 
-    def _fill_mail(self, device: DeviceAdapter, **kwargs):
+    def _fill_email(self, device: DeviceAdapter, **kwargs):
         device.email = self._parse_mail(**kwargs)
+
+    def _fill_mail(self, device: DeviceAdapter, **kwargs):
+        device.mail = self._parse_mail(**kwargs)
 
     def _parse_domain(self, *, gen_values, **_):
 
@@ -384,15 +426,14 @@ class DynamicDeviceMixin:
         for cve_id in self._parse_cve_id(**kwargs) or []:
             device.add_vulnerable_software(cve_id=cve_id)
 
-    def _fill_dynamic_fields(self, device: DeviceAdapter, *, device_raw, **_):
-        for key, val in device_raw.items():
-            try:
-                if not key or not val:
-                    logger.debug(f'Bad item. Key "{key}" ; Value "{val}"')
-                    continue
-                field_name, field_title = self.get_dynamic_field_attributes(device, key)
-                put_dynamic_field(device, field_name, val, field_title)
-            except Exception as e:
-                logger.warning(f'Failed to add {key}:{val} to entity {device.id}: '
-                               f'Got {str(e)}')
-                continue
+    def _parse_first_name(self, *, gen_values, **_):
+        return gen_values.get('first_name')
+
+    def _fill_first_name(self, device: SmartJsonClass, **kwargs):
+        device.first_name = self._parse_first_name(**kwargs)
+
+    def _parse_last_name(self, *, gen_values, **_):
+        return gen_values.get('last_name')
+
+    def _fill_last_name(self, device: SmartJsonClass, **kwargs):
+        device.last_name = self._parse_last_name(**kwargs)
