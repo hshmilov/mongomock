@@ -1,6 +1,7 @@
 import logging
 
-from axonius.utils.parsing import format_ip, format_ip_raw
+from axonius.utils.dynamic_fields import put_dynamic_field
+from axonius.utils.parsing import format_ip, format_ip_raw, normalize_var_name
 
 from axonius.fields import Field, JsonStringFormat
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -22,6 +23,12 @@ class NetbrainAdapter(AdapterBase):
         netbrain_hostname = Field(str, 'Netbrain Name')
         mgmt_ip = Field(str, 'Management IP', converter=format_ip, json_format=JsonStringFormat.ip)
         mgmt_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
+        mgmt_if = Field(str, 'Management Interface')
+        oid = Field(str, 'SNMP System OID')
+        switch_iface = Field(str, 'Connected Switch Interface',
+                             description='Interface of the device that the endsystem connected to.')
+        switch_host = Field(str, 'Connected Switch Hostname',
+                            description='Hostname of the device that the endsystem connected to.')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -45,7 +52,8 @@ class NetbrainAdapter(AdapterBase):
             verify_ssl=client_config['verify_ssl'],
             https_proxy=client_config.get('https_proxy'),
             username=client_config['username'],
-            password=client_config['password']
+            password=client_config['password'],
+            backwards_compatible=client_config.get('backwards_compatible', True),
         )
         with connection:
             pass
@@ -118,6 +126,14 @@ class NetbrainAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'backwards_compatible',
+                    'title': 'Use Backwards-Compatible (pre-8.01) API',
+                    'description': 'Check this box when connecting to NetBrain versions earlier than v8.01'
+                                   ' (this includes v8.0, and all v7.x)',
+                    'default': True,
+                    'type': 'bool',
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -134,11 +150,13 @@ class NetbrainAdapter(AdapterBase):
                 'password',
                 'verify_ssl',
                 'domain_id',
-                'tenant_id'
+                'tenant_id',
+                'backwards_compatible'
             ],
             'type': 'array'
         }
 
+    # pylint: disable=too-many-statements
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -149,6 +167,7 @@ class NetbrainAdapter(AdapterBase):
             # generic stuff
             device.id = f'{device_id}_{device_raw.get("hostname") or ""}'
             device.netbrain_hostname = device_raw.get('hostname')
+            device.name = device_raw.get('name')
             hostname = device_raw.get('hostname') or ''
             if hostname.endswith('/act'):
                 hostname = hostname[:-len('/act')]
@@ -176,11 +195,50 @@ class NetbrainAdapter(AdapterBase):
                 message = f'No IP for {device_raw}'
                 logger.exception(message)
                 # Silence exception
+            device.device_manufacturer = device_raw.get('vendor')
+            device.device_model = device_raw.get('model')
+            try:
+                gb = 1024 * 1024 * 1024  # from bytes
+                device.total_physical_memory = float(device_raw.get('mem', 0)) / gb or None
+            except Exception as e:
+                logger.warning(f'Failed to parse device physical memory for {hostname}')
+                # continue to other stuff
+            device.device_serial = device_raw.get('sn')
+            # specific stuff
+            device.oid = device_raw.get('oid')
+            # connected switch stuff
+            if isinstance(device_raw.get('x_connected_switch'), dict):
+                conn_switch = device_raw.get('x_connected_switch')
+                device.switch_iface = conn_switch.get('interface')
+                device.switch_host = conn_switch.get('hostname')
+
+            # dynamic stuff
+            try:
+                self._parse_entity_dynamic(device, device_raw)
+            except Exception:
+                logger.warning(f'Failed to parse dynamic fields for {device_raw}', exc_info=True)
             device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching Netbrain Device for {device_raw}')
             return None
+
+    @staticmethod
+    def _parse_entity_dynamic(entity_obj, entity_raw):
+        for key, val in entity_raw.items():
+            try:
+                if not key or not val:
+                    logger.debug(f'Bad item. Key "{key}" ; Value "{val}"')
+                    continue
+                normalized_var_name = 'netbrain_' + normalize_var_name(key)
+                field_title = 'NetBrain ' + ' '.join(
+                    [word.capitalize() for word in key.split(' ')])
+
+                put_dynamic_field(entity_obj, normalized_var_name, val, field_title)
+            except Exception as e:
+                logger.warning(f'Failed to add {key}:{val} to entity {entity_obj.id}: '
+                               f'Got {str(e)}')
+                continue
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:

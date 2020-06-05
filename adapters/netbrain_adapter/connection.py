@@ -10,7 +10,13 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class NetbrainConnection(RESTConnection):
     """ rest client for Netbrain adapter """
 
-    def __init__(self, *args, auth_id: str = None, tenant_id: str = None, domain_id: str = None, **kwargs):
+    def __init__(self,
+                 *args,
+                 auth_id: str = None,
+                 tenant_id: str = None,
+                 domain_id: str = None,
+                 backwards_compatible: bool = True,
+                 **kwargs):
         super().__init__(*args, url_base_prefix='ServicesAPI/API/V1/',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
@@ -18,6 +24,7 @@ class NetbrainConnection(RESTConnection):
         self._auth_id = auth_id
         self._tenant_id = tenant_id
         self._domain_id = domain_id
+        self._use_backcompat_api = backwards_compatible
         self._token = None
 
     def _login(self):
@@ -91,10 +98,26 @@ class NetbrainConnection(RESTConnection):
         self._logout()
         super().close()
 
-    def get_device_list(self):
-        url = consts.URL_DEVICES
+    def _get_switch_port(self, device_ip):
+        url_topology = f'CMDB/Topology/Devices/{device_ip}/ConnectedSwitchPort'
         try:
-            response = self._get(url)
+            response = self._get(url_topology)
+            if response.get('hostname') and response.get('interface'):
+                return {
+                    'hostname': response['hostname'],
+                    'interface': response['interface']
+                }
+        except Exception as e:
+            logger.warning(f'Failed to get connected switch port information for {device_ip}: got {str(e)}')
+        return None
+
+    def get_device_list(self):
+        if self._use_backcompat_api:
+            url_params = None
+        else:
+            url_params = {'version': 1, 'fullattr': 1}
+        try:
+            response = self._get(consts.URL_DEVICES, url_params=url_params)
         except Exception as e:
             message = f'Get devices failed! Details: {str(e)}'
             logger.error(message)
@@ -105,4 +128,20 @@ class NetbrainConnection(RESTConnection):
             raise RESTException(f'Expected devices as list, got instead {response.get("devices")}')
         if 'devices' not in response:
             raise RESTException(f'Expected devices in dict, got instead {response}')
-        yield from response.get('devices') or []
+        for device in response.get('devices') or []:
+            hostname = device.get('hostname')
+            # Only check that hostname is str. Rhe request checks the hostname actual validity
+            # and keeps minimum reliable information if details request fails, so we at least get _something_.
+            if self._use_backcompat_api and isinstance(hostname, str):
+                try:
+                    url_params = {
+                        'hostname': hostname,
+                        'attributeName': None
+                    }
+                    attrs_response = self._get(consts.URL_ATTRIBUTES, url_params=url_params)
+                    attrs = attrs_response.get('attributes')
+                    device.update(attrs)  # Flattening the dictionary to stay consistent across different API versions
+                except Exception as e:
+                    logger.warning(f'Got {str(e)} trying to fetch attributes for hostname {hostname}, device {device}')
+            device['x_connected_switch'] = self._get_switch_port(device.get('mgmtIP'))
+            yield device
