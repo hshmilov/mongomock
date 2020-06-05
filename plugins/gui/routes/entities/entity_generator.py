@@ -82,6 +82,11 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             if 'specific_data.data.image' in mongo_projection:
                 del mongo_projection['specific_data.data.image']
 
+            delimiter = request.get_json().get('delimiter')
+            if delimiter:
+                delimiter = delimiter.replace('\\n', '\n')
+            max_rows = request.get_json().get('max_rows')
+
             return get_csv_from_heavy_lifting_plugin(mongo_filter,
                                                      mongo_sort,
                                                      mongo_projection,
@@ -90,7 +95,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                                      self._system_settings.get(
                                                          'defaultSort'),
                                                      field_filters,
-                                                     cell_joiner=self._system_settings.get('cell_joiner'))
+                                                     delimiter,
+                                                     max_rows)
 
         @allow_experimental(count=True)
         @filtered_entities()

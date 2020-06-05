@@ -45,7 +45,7 @@
       type="link"
       class="entityMenu"
       :disabled="disableExportCsv || exportInProgress"
-      @click.stop.prevent="exportTableToCSV"
+      @click.stop.prevent="openCsvExportConfig"
     >
       <div v-if="exportInProgress">
         <VProgressCircular
@@ -71,6 +71,11 @@
       @close="closeColumnEditor"
       @reset-user-fields="resetColumnsToUserDefault"
     />
+    <XCsvExportConfig
+      v-if="showCsvExportConfig"
+      @close-csv-export-config="closeCsvExportConfig"
+      @run-csv-export-config="exportTableToCSV"
+    />
   </div>
 </template>
 
@@ -87,13 +92,15 @@ import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW, CLEAR_DATA_VIEW_FILTERS } from 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { defaultFields } from '@constants/entities';
 import { FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES } from '@store/getters';
-import XButton from '../../axons/inputs/Button.vue';
 import XFieldConfig from './FieldConfig.vue';
+import XCsvExportConfig from './CsvExportConfig.vue';
+import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XOptionMenu',
   components: {
     XFieldConfig,
+    XCsvExportConfig,
     XButton,
     ADropdown: Dropdown,
     AMenu: Menu,
@@ -118,6 +125,7 @@ export default {
       exportInProgress: false,
       showColumnEditor: false,
       dropDownOpened: false,
+      showCsvExportConfig: false,
     };
   },
   computed: {
@@ -199,10 +207,13 @@ export default {
       });
       this.done();
     },
-    exportTableToCSV() {
+    exportTableToCSV(delimiter, maxRows) {
+      this.closeCsvExportConfig();
       this.exportInProgress = true;
       this.fetchContentCSV({
         module: this.module,
+        delimiter,
+        maxRows,
       }).then(() => {
         this.exportInProgress = false;
       });
@@ -213,6 +224,12 @@ export default {
     done() {
       this.dropDownOpened = false;
       this.$emit('done');
+    },
+    openCsvExportConfig() {
+      this.showCsvExportConfig = true;
+    },
+    closeCsvExportConfig() {
+      this.showCsvExportConfig = false;
     },
   },
 };

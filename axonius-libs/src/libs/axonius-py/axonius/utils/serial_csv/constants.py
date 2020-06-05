@@ -40,5 +40,5 @@ DTFMT = '%Y-%m-%d %H:%M:%S'
 MAX_ROWS_LEN = 1048500
 # max row count in excel, entities more than this will be trimmed to this
 
-MAX_ROWS_STR = f'MAX ROW LIMIT OF {MAX_ROWS_LEN} EXCEEDED'
+MAX_ROWS_STR = 'MAX ROW LIMIT OF {MAX_ROWS_LEN} EXCEEDED'
 # a fake entry with this as the first columns value will be added to top of CSV if MAX_ROWS_LEN is hit

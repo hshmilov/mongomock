@@ -272,6 +272,8 @@ class SettingsPage(Page):
     RESET_PASSWORD_COPY_TO_CLIPBOARD_ICON_CSS = '.copy-to-clipboard-icon'
     RESET_PASSWORD_LINK_INPUT_CSS = '.reset-link__input'
 
+    CSV_DELIMITER_ID = 'cell_joiner'
+
     LOCKED_FEATURES_INPUT_CSS = '.v-select__selections > input'
     CLEAR_FEATURES_BUTTON_CSS = '.v-input__icon--clear'
 
@@ -833,6 +835,9 @@ class SettingsPage(Page):
     def fill_session_timeout(self, timeout):
         self.fill_text_field_by_element_id(self.TIMEOUT_ID, timeout)
 
+    def fill_csv_delimiter(self, delimiter):
+        self.fill_text_field_by_element_id(self.CSV_DELIMITER_ID, delimiter)
+
     def find_email_port_error(self):
         return self.find_element_by_text('\'Port\' has an illegal value')
 
@@ -1353,6 +1358,12 @@ class SettingsPage(Page):
         self.select_option_without_search(self.DATE_FORMAT_CSS,
                                           self.SELECT_OPTION_CSS,
                                           date_format)
+
+    def set_csv_delimiter(self, delimiter):
+        self.switch_to_page()
+        self.click_gui_settings()
+        self.fill_csv_delimiter(delimiter)
+        self.click_save_gui_settings()
 
     def _set_discovery_schedule_settings(self, mode='', time_value=0, negative_flow=False):
         self.switch_to_page()

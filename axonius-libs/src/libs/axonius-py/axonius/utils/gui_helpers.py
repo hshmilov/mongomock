@@ -1355,7 +1355,7 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
 
 def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
                      default_sort=True, history: datetime = None, field_filters: dict = None,
-                     cell_joiner=None) -> Iterable[str]:
+                     cell_joiner=None, max_rows=None) -> Iterable[str]:
     """
     See '_get_csv' docs.
     Returns an iterator of string lines
@@ -1372,7 +1372,7 @@ def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: En
 
     s = MyStringIo()
     return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters,
-                    cell_joiner=cell_joiner)
+                    cell_joiner=cell_joiner, max_rows=max_rows)
 
 
 def get_csv_canonized_value(value: Union[str, list, int, datetime, float, bool]) -> Union[List[str], str]:
@@ -1390,7 +1390,7 @@ def get_csv_canonized_value(value: Union[str, list, int, datetime, float, bool])
 
 def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, file_obj,
              default_sort=True, history: datetime = None, field_filters: dict = None,
-             cell_joiner=None) -> Iterable[None]:
+             cell_joiner=None, max_rows=None) -> Iterable[None]:
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
@@ -1422,6 +1422,7 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
         entities=entities,
         excluded=[ADAPTERS_LIST_LENGTH],
         cell_joiner=cell_joiner,
+        max_rows=max_rows,
     )
 
 

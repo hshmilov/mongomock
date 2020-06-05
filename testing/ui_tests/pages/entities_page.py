@@ -14,6 +14,7 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
+from axonius.utils.serial_csv.constants import (MAX_ROWS_LEN, CELL_JOIN_DEFAULT)
 from ui_tests.pages.page import Page, TableRow
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
@@ -26,6 +27,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class EntitiesPage(Page):
+    EXPORT_CSV_CONFIG_MODAL_ID = 'csv_export_config'
+    EXPORT_CSV_DELIMITER_ID = 'csv_delimiter'
+    EXPORT_CSV_MAX_ROWS_ID = 'csv_max_rows'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
     EXPORT_CSV_LOADING_TEXT = 'Exporting...'
     EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS = '.x-dropdown.x-select.x-select-symbol'
@@ -873,12 +877,6 @@ class EntitiesPage(Page):
     def find_table_option_by_title(self, option_title):
         return self.driver.find_element_by_xpath(self.TABLE_OPTIONS_ITEM_XPATH.format(option_title=option_title))
 
-    def close_table_options(self):
-        self.driver.find_elements_by_css_selector('.v-application--wrap').click()
-
-    def find_table_options_open(self):
-        return self.driver.find_elements_by_css_selector('.x-option-menu__content .menuable__content__active')
-
     def open_edit_columns(self):
         self.open_columns_menu()
         self.driver.find_element_by_id(self.EDIT_COLUMN_BUTTON_ID).click()
@@ -1158,8 +1156,41 @@ class EntitiesPage(Page):
     def search_note(self, search_text):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
+    def close_csv_config_dialog(self):
+        self.get_cancel_button(self.driver.find_element_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)).click()
+        self.wait_for_csv_config_dialog_to_be_absent()
+
+    def confirm_csv_config_dialog(self):
+        self.get_export_button(self.driver.find_element_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)).click()
+        self.wait_for_csv_config_dialog_to_be_absent()
+
+    def get_export_button(self, context=None):
+        return self.get_button('Export', context=context)
+
+    def wait_for_csv_config_dialog_to_be_absent(self):
+        self.wait_for_element_absent_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
+
+    def get_csv_delimiter_field(self):
+        return self.driver.find_element_by_id(self.EXPORT_CSV_DELIMITER_ID).get_attribute('value')
+
+    def get_csv_max_rows_field(self):
+        return int(self.driver.find_element_by_id(self.EXPORT_CSV_MAX_ROWS_ID).get_attribute('value'))
+
+    def set_csv_delimiter_field(self, delimiter):
+        self.fill_text_field_by_element_id(self.EXPORT_CSV_DELIMITER_ID, delimiter)
+
+    def set_csv_max_rows_field(self, max_rows):
+        self.fill_text_field_by_element_id(self.EXPORT_CSV_MAX_ROWS_ID, max_rows)
+
+    def is_csv_config_matching_default_fields(self):
+        # Little hack to fix delimiter format
+        delimiter = self.get_csv_delimiter_field().replace('\\n', '\n')
+        return delimiter == CELL_JOIN_DEFAULT and self.get_csv_max_rows_field() == MAX_ROWS_LEN
+
     def click_export_csv(self):
         self.click_button(self.EXPORT_CSV_BUTTON_TEXT)
+        self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
+        time.sleep(0.1)  # wait for modal to open
 
     def wait_for_csv_loading_absent(self):
         self.wait_for_element_absent_by_text(self.EXPORT_CSV_LOADING_TEXT, retries=450)
@@ -1174,7 +1205,7 @@ class EntitiesPage(Page):
         resp.close()
         return csrf_token
 
-    def generate_csv(self, entity_type, fields, filters):
+    def generate_csv(self, entity_type, fields, filters, delimiter=None, max_rows=None):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
@@ -1182,7 +1213,7 @@ class EntitiesPage(Page):
         session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
         result = session.post(f'https://127.0.0.1/api/{entity_type}/csv',
-                              json={'fields': fields, 'filter': filters},
+                              json={'fields': fields, 'filter': filters, 'delimiter': delimiter, 'max_rows': max_rows},
                               timeout=CSV_TIMEOUT
                               )
         content = result.content
@@ -1206,8 +1237,8 @@ class EntitiesPage(Page):
         session.close()
         return content
 
-    def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True):
-        self.assert_csv_match_ui_data_with_content(result, ui_data, ui_headers, sort_columns)
+    def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True, max_rows=MAX_ROWS_LEN):
+        self.assert_csv_match_ui_data_with_content(result, max_rows, ui_data, ui_headers, sort_columns)
 
     @staticmethod
     def handle_bom(content):
@@ -1222,7 +1253,8 @@ class EntitiesPage(Page):
         return content
 
     # pylint: disable=too-many-locals, too-many-branches
-    def assert_csv_match_ui_data_with_content(self, content, ui_data=None, ui_headers=None, sort_columns=True):
+    def assert_csv_match_ui_data_with_content(self, content, max_rows=MAX_ROWS_LEN, ui_data=None, ui_headers=None,
+                                              sort_columns=True):
         content = self.handle_bom(content)
         all_csv_rows = content.decode('utf-8').split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
@@ -1255,7 +1287,7 @@ class EntitiesPage(Page):
         # for every cell in the ui_data_rows we check if its in the csv_data_row
         # the reason we check it is because the csv have more columns with data
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
-        for index, data_row in enumerate(csv_data_rows):
+        for index, data_row in enumerate(csv_data_rows[:max_rows]):
             for ui_data_cell in ui_data_rows[index]:
                 cell_value = ui_data_cell.strip().split(', ')[0]
                 # the boolean field return 'Yes' or 'No' instead of the regular true/false boolean

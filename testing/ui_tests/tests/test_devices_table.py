@@ -22,7 +22,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-
         self.devices_page.wait_for_csv_to_update_cache()
 
         # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
@@ -32,6 +31,13 @@ class TestDevicesTable(TestEntitiesTable):
                                                 self.QUERY_FIELDS,
                                                 self.QUERY_FILTER_DEVICES)
         self.devices_page.assert_csv_match_ui_data(result)
+
+        # Do the same but this time with row limitation
+        result = self.devices_page.generate_csv('devices',
+                                                self.QUERY_FIELDS,
+                                                self.QUERY_FILTER_DEVICES,
+                                                max_rows=1)
+        self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()

@@ -1,6 +1,7 @@
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER
+from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -21,15 +22,67 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
                                                 self.QUERY_FILTER_LAST_SEEN)
         self.devices_page.assert_csv_match_ui_data(result)
 
-    def test_export_csv_progress_icon(self):
-        self.settings_page.switch_to_page()
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.wait_for_spinner_to_end()
+    def test_export_csv_config(self):
+        """
+        Check the export csv modal config:
+        1 - Check that default values are appearing
+        2 - When changing the default delimiter in config, see that it gets filled
+        3 - Clean up the config and make sure default values are appearing again
+        4 - If entering max rows value outside the range, see that it gets reset
+        5 - Export the csv then open again and see that values are default
+        :return:
+        """
 
+        # Check 1
+        self._check_default_csv_config()
+
+        # Check 2
+        self._check_delimiter_setting_set()
+
+        # Check 3
+        self._check_delimiter_setting_reset()
+
+        # Check 4
+        self._check_max_rows_range()
+
+        # Check 5
+        self._check_csv_config_after_export()
+
+    def _check_default_csv_config(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.click_export_csv()
+        assert self.devices_page.is_csv_config_matching_default_fields()
+        self.devices_page.close_csv_config_dialog()
+
+    def _check_delimiter_setting_set(self):
+        self.settings_page.set_csv_delimiter('B')
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_export_csv()
+        assert self.devices_page.get_csv_delimiter_field() == 'B'
+
+    def _check_delimiter_setting_reset(self):
+        self.devices_page.close_csv_config_dialog()
+        self.settings_page.set_csv_delimiter('')
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_export_csv()
+        assert self.devices_page.is_csv_config_matching_default_fields()
+
+    def _check_max_rows_range(self):
+        self.devices_page.set_csv_max_rows_field(MAX_ROWS_LEN + 1)
+        self.devices_page.key_down_tab()
+        assert self.devices_page.get_csv_max_rows_field() == MAX_ROWS_LEN
+        self.devices_page.set_csv_max_rows_field(-1)
+        self.devices_page.key_down_tab()
+        assert self.devices_page.get_csv_max_rows_field() == 1
+
+    def _check_csv_config_after_export(self):
+        self.devices_page.confirm_csv_config_dialog()
         self.devices_page.wait_for_csv_loading_absent()
-        assert not self.devices_page.find_table_options_open()
+        self.devices_page.click_export_csv()
+        assert self.devices_page.is_csv_config_matching_default_fields()
 
     def test_devices_save_query(self):
         self.settings_page.switch_to_page()

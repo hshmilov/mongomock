@@ -130,7 +130,6 @@ class TestUsersTable(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.users_page.switch_to_page()
-
         self.users_page.wait_for_csv_to_update_cache()
 
         # filter the ui to fit the QUERY_FILTER_USERNAME of the csv
@@ -139,6 +138,13 @@ class TestUsersTable(TestEntitiesTable):
                                               self.QUERY_FIELDS,
                                               self.QUERY_FILTER_USERNAME)
         self.users_page.assert_csv_match_ui_data(result)
+
+        # Do the same but this time with row limitation
+        result = self.devices_page.generate_csv('users',
+                                                self.QUERY_FIELDS,
+                                                self.QUERY_FILTER_USERNAME,
+                                                max_rows=1)
+        self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
     def _test_column_data_expanded_row(self, col_name):
         merged_data = self.users_page.get_column_data_slicer(col_name)[0].split('\n')

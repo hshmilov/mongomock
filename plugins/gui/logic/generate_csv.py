@@ -19,7 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection, history: datetime,
                                       entity_type: EntityType, default_sort: bool,
-                                      field_filters: dict = None, cell_joiner=None) -> Response:
+                                      field_filters: dict = None, cell_joiner=None, max_rows=None) -> Response:
     """
     Queries the heavy lifting plugin and asks it to process the csv request.
     All the params are documented in the respected decorators in gui/service.py
@@ -31,7 +31,7 @@ def get_csv_from_heavy_lifting_plugin(mongo_filter, mongo_sort, mongo_projection
     }
     res = _get_csv_from_heavy_lifting(
         default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
-        field_filters, cell_joiner=cell_joiner)
+        field_filters, cell_joiner=cell_joiner, max_rows=max_rows)
 
     is_valid, response = validate_response(res)
     if not is_valid:
@@ -74,7 +74,7 @@ def get_csv_file_from_heavy_lifting_plugin(query_name, mongo_filter, mongo_sort,
 
 
 def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter, mongo_projection, mongo_sort,
-                                field_filters: dict = None, cell_joiner=None):
+                                field_filters: dict = None, cell_joiner=None, max_rows=None):
     try:
         return PluginBase.Instance.request_remote_plugin('generate_csv', HEAVY_LIFTING_PLUGIN_NAME,
                                                          'post',
@@ -85,6 +85,7 @@ def _get_csv_from_heavy_lifting(default_sort, entity_type, history, mongo_filter
                                                              'entity_type': entity_type.value,
                                                              'default_sort': default_sort,
                                                              'cell_joiner': cell_joiner,
+                                                             'max_rows': max_rows,
                                                              'history': history,
                                                              'field_filters': field_filters
                                                          }, stream=True, timeout=GENERATE_CSV_TIMEOUT)

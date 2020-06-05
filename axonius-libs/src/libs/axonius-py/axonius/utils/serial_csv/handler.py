@@ -25,7 +25,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[dict, List[str]], entities: List[dict],
-                    excluded: List[str] = None, cell_joiner: str = None) -> Iterable[str]:
+                    excluded: List[str] = None, cell_joiner: str = None, max_rows: int = None) -> Iterable[str]:
     """Return an iterator of csv lines.
 
     - Will get predicted headers from selected_map from build_selected_map.
@@ -48,6 +48,9 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
     if not cell_joiner:
         cell_joiner = CELL_JOIN_DEFAULT
 
+    if not max_rows:
+        max_rows = MAX_ROWS_LEN
+
     bom = codecs.BOM_UTF8.decode('utf-8')
     stream.write(bom)
     yield bom
@@ -59,10 +62,10 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
     entity_cnt = 0
     for entity in entities:
         entity_cnt += 1
-        if entity_cnt >= MAX_ROWS_LEN:
-            msg = f'{entity_cnt} entities is more than {MAX_ROWS_LEN}, trimming'
+        if entity_cnt > max_rows:
+            msg = f'{entity_cnt} entities is more than {max_rows}, trimming'
             logger.warning(msg)
-            yield writer.writerow({headers[0]: MAX_ROWS_STR})
+            yield writer.writerow({headers[0]: MAX_ROWS_STR.format(MAX_ROWS_LEN=max_rows)})
             break
 
         row = process_entity(entity, selected_map, cell_joiner)

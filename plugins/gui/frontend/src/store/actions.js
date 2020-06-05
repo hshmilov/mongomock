@@ -206,6 +206,12 @@ const createPostContentRequest = (state, payload) => {
   if (payload.accounts) {
     params.accounts = payload.accounts;
   }
+  if (payload.delimiter !== undefined) {
+    params.delimiter = payload.delimiter;
+  }
+  if (payload.maxRows !== undefined) {
+    params.max_rows = payload.maxRows;
+  }
   return params;
 };
 

@@ -11,6 +11,7 @@ from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME, CSRF_TOKEN_LENG
 from axonius.types.enforcement_classes import TriggerPeriod
 from axonius.utils.gui_helpers import (add_rule_unauth)
 from axonius.utils.permissions_helper import is_axonius_role
+from axonius.utils.serial_csv.constants import (MAX_ROWS_LEN, CELL_JOIN_DEFAULT)
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.adapters.adapters import Adapters
 from gui.routes.compliance.compliance import Compliance
@@ -60,6 +61,7 @@ class AppRoutes(Signup,
         constants = dict()
         order = [TriggerPeriod.all, TriggerPeriod.daily, TriggerPeriod.weekly, TriggerPeriod.monthly]
         constants['trigger_periods'] = [{x.name: x.value} for x in order]
+        constants['csv_configs'] = {'max_rows': MAX_ROWS_LEN, 'cell_joiner': repr(CELL_JOIN_DEFAULT)}
         return jsonify(constants)
 
     @gui_route_logged_in('system/expired', enforce_session=False)
