@@ -11,7 +11,7 @@ from bson import json_util
 from bson.objectid import ObjectId
 import pymongo
 from pymongo.results import DeleteResult, UpdateResult
-from flask import jsonify, request
+from flask import jsonify
 from dataclasses import dataclass
 
 from axonius.consts import plugin_consts
@@ -209,55 +209,46 @@ class ReportsService(Triggerable, PluginBase):
             result['name'] = enforcement_name
             return result
 
+        if job_name == 'process':
+            enforcement_id = None
+            try:
+                enforcement_id = post_json['enforcement_id']
+                return self._process_enforcement_triggers(enforcement_id)
+            except Exception:
+                logger.exception(f'Failed processing results for trigger of enforcement {enforcement_id}')
+                return ''
+
         raise NotImplementedError('No such job')
 
-    @add_rule('reports/<report_id>/<trigger_name>', methods=['POST', 'DELETE'])
-    def edit_trigger_by_id(self, report_id: str, trigger_name: str):
+    def _process_enforcement_triggers(self, enforcement_id: str):
         """
-        Modify some report trigger
-        POST   - update or create
-        DELETE - delete
-        :param report_id: the report _id
-        :param trigger_name: the name of the trigger to change, create or update
-        """
-        if request.method == 'POST':
-            processed_trigger = self.__process_trigger(self.get_request_data_as_object())
-            # remove trigger field for EC update
-            processed_trigger.pop(LAST_TRIGGERED_FIELD, None)
-            processed_trigger.pop(TIMES_TRIGGERED_FIELD, None)
+        Iterate all triggers of requested enforcement
+        Find and save query results for each one
+        Update the enforcement with processed triggers
 
-            with self.__reports_collection.start_session() as session:
-                with session.start_transaction():
+        :param enforcement_id: Stringified id of the requested enforcement
+        """
+        with self.__reports_collection.start_session() as session:
+            with session.start_transaction():
+                enforcement = session.find_one({
+                    '_id': ObjectId(enforcement_id)
+                })
+                if not enforcement:
+                    raise LookupError('Can not find such a report')
+                for trigger in enforcement[TRIGGERS_FIELD]:
+                    trigger_obj = Trigger.from_dict(trigger)
+                    view_run_results = self.get_view_results(trigger_obj.view.id, trigger_obj.view.entity)
                     result = session.update_one({
-                        '_id': ObjectId(report_id),
-                        'triggers.name': trigger_name
+                        '_id': ObjectId(enforcement_id),
+                        'triggers.name': trigger_obj.name
                     }, {
                         '$set': {
-                            f'triggers.$.{k}': v
-                            for k, v
-                            in processed_trigger.items()
+                            f'triggers.$.result': self.__insert_new_list_internal_axon_ids(view_run_results),
+                            f'triggers.$.result_count': len(view_run_results)
                         }
                     })
                     if result.matched_count == 0:
-                        # this means the update failed, now we need to push it
-                        logger.info(f'Failed to update trigger {trigger_name} - adding it to list')
-                        session.update_one({
-                            '_id': ObjectId(report_id),
-                        }, {
-                            '$push': {
-                                'triggers': processed_trigger
-                            }
-                        })
-        elif request.method == 'DELETE':
-            self.__reports_collection.update_one({
-                '_id': ObjectId(report_id),
-            }, {
-                '$pull': {
-                    'triggers': {
-                        'name': trigger_name
-                    }
-                }
-            })
+                        logger.info(f'Failed to process trigger {trigger["name"]}')
         return ''
 
     @add_rule('reports/<report_id>', methods=['POST'])
@@ -272,12 +263,31 @@ class ReportsService(Triggerable, PluginBase):
         if report_data.get(UPDATED_BY_FIELD):
             report_set_data[LAST_UPDATED_FIELD] = report_data[LAST_UPDATED_FIELD]
             report_set_data[UPDATED_BY_FIELD] = report_data[UPDATED_BY_FIELD]
-        result = self.__reports_collection.update_one({
-            '_id': ObjectId(report_id),
-        }, {
-            '$set': report_set_data
-        })
-        return jsonify({'modified': result.modified_count})
+
+        with self.__reports_collection.start_session() as session:
+            with session.start_transaction():
+                report_result = self.__reports_collection.update_one({
+                    '_id': ObjectId(report_id),
+                }, {
+                    '$set': report_set_data
+                })
+                processed_triggers = self.__process_triggers(report_data[TRIGGERS_FIELD])
+                for trigger in processed_triggers:
+                    trigger_result = session.update_one({
+                        '_id': ObjectId(report_id),
+                        'triggers.name': trigger['name']
+                    }, {
+                        '$set': {
+                            f'triggers.$.view': trigger['view'],
+                            f'triggers.$.conditions': trigger['conditions'],
+                            f'triggers.$.run_on': trigger['run_on'],
+                            f'triggers.$.period': trigger['period'],
+                        }
+                    })
+                    if trigger_result.matched_count == 0:
+                        logger.info(f'Failed to process trigger {trigger["name"]}')
+
+                return jsonify({'modified': report_result.modified_count})
 
     @add_rule('reports', methods=['PUT', 'DELETE'])
     def report(self):
@@ -303,19 +313,13 @@ class ReportsService(Triggerable, PluginBase):
             return obj.value
         return json_util.default(obj)
 
-    def __process_trigger(self, trigger):
-        trigger_obj = Trigger.from_dict(trigger)
-        view_result = self.get_view_results(trigger_obj.view.id, trigger_obj.view.entity)
-        trigger_obj.result = self.__insert_new_list_internal_axon_ids(view_result)
-        trigger_obj.result_count = len(view_result)
-        return json.loads(trigger_obj.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
-
-    def __processed_triggers(self, triggers: List[dict]) -> Iterable[Trigger]:
+    def __process_triggers(self, triggers: List[dict]) -> Iterable[Trigger]:
         """
         Create internal Trigger types from given GUI triggers
         """
         for trigger in triggers:
-            yield self.__process_trigger(trigger)
+            trigger_obj = Trigger.from_dict(trigger)
+            yield json.loads(trigger_obj.to_json(default=self.__default_for_trigger), object_hook=json_util.object_hook)
 
     def _add_report(self, report_data):
         """Adds a reports on a query.
@@ -330,7 +334,7 @@ class ReportsService(Triggerable, PluginBase):
             report_resource = {
                 ACTIONS_FIELD: report_data['actions'],
                 'name': report_data['name'],
-                TRIGGERS_FIELD: list(self.__processed_triggers(report_data[TRIGGERS_FIELD])),
+                TRIGGERS_FIELD: list(self.__process_triggers(report_data[TRIGGERS_FIELD])),
             }
             if report_data.get(UPDATED_BY_FIELD):
                 report_resource['user_id'] = ObjectId(report_data['user_id'])

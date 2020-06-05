@@ -110,6 +110,12 @@ class Enforcements(Tasks):
             enforcement_to_add[TRIGGERS_FIELD][0]['name'] = enforcement_to_add['name']
         response = self.request_remote_plugin('reports', REPORTS_PLUGIN_NAME, method='put', json=enforcement_to_add,
                                               raise_on_network_error=True)
+        if not response:
+            return return_error(f'No response whether enforcement {enforcement_to_add["name"]} was saved', 400)
+
+        self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'process', data={
+            'enforcement_id': response.text
+        }, priority=True, blocking=False)
         return response.text, response.status_code
 
     def delete_enforcement(self, enforcement_selection):
@@ -275,11 +281,9 @@ class Enforcements(Tasks):
         if response is None:
             return return_error('No response whether enforcement was updated')
 
-        for trigger in enforcement_to_update['triggers']:
-            trigger_res = self.request_remote_plugin(f'reports/{enforcement_id}/{trigger.get("id", trigger["name"])}',
-                                                     REPORTS_PLUGIN_NAME, method='post', json=trigger)
-            if trigger_res is None or trigger_res.status_code == 500:
-                logger.error(f'Failed to save trigger {trigger["name"]}')
+        self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'process', data={
+            'enforcement_id': enforcement_id
+        }, priority=True, blocking=False)
 
         return Response(response.text, response.status_code, mimetype='application/json')
 
