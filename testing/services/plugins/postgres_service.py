@@ -33,7 +33,7 @@ class PostgresService(WeaveService):
 
     @property
     def volumes(self):
-        return [f'{self.container_name}_data_v3_3:/var/lib/postgresql/data']
+        return [f'{self.container_name}_data_v3_5:/var/lib/postgresql/data']
 
     def remove_image(self):
         pass  # We never want to remove this static image...

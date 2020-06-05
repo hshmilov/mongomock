@@ -34,7 +34,8 @@ VALUE_COMPARISON_METHODS = {
     '$not': lambda x: _build_value(x, reverse=True),
     '$size': lambda x: {'size': x},
     '$overlap': lambda x: {'overlap': x if isinstance(x, list) else [x]},
-    '$no_overlap': lambda x: {'no_overlap': x if isinstance(x, list) else [x]}
+    '$no_overlap': lambda x: {'no_overlap': x if isinstance(x, list) else [x]},
+    '$contains_regex': lambda x: {'contains_regex': f'%{x.lstrip("^").rstrip("$")}%'}
 
 }
 
@@ -54,6 +55,13 @@ REVERSE_OPERATORS = {
 SIMPLE_TO_RELATION = {
     'adapter_properties': lambda k, v: {'adapter': {'properties': _build_value(v, operator_override='$overlap',
                                                                                reverse=('$not' in v))}},
+}
+
+# Special cases changes the way we query in certain scenarios, the key must be a full key, and the function
+# must return a dict if successful, or None if not.
+SPECIAL_CASES = {
+    'specific_data.data.hostname':
+        lambda v: {'hostnames': VALUE_COMPARISON_METHODS['$contains_regex'](v['$regex'])} if '$regex' in v else None
 }
 
 
@@ -218,6 +226,11 @@ class Translator:
         we either split and build the nested SqlGen filter or use special cases.
 
         """
+        if key in SPECIAL_CASES:
+            r = SPECIAL_CASES[key](value)
+            if r:
+                return r
+
         if key.startswith('specific_data.data'):
             return {
                 self._specific_data_converter: self._build_comparison(key.split('.', 2)[-1], value)

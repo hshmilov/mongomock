@@ -5,16 +5,19 @@ CREATE INDEX adapter_devices_device_id_idx ON public.adapter_devices USING btree
 
 CREATE INDEX hostname_trgm_idx ON public.adapter_devices USING gin (hostname COLLATE pg_catalog."default" gin_trgm_ops);
 CREATE INDEX last_used_users_trgm_idx ON public.adapter_devices USING gin (arrayToText(last_used_users) COLLATE pg_catalog."default" gin_trgm_ops) WHERE last_used_users is not null;
+
+
 CREATE INDEX name_trgm_idx ON public.adapter_devices USING gin (name COLLATE pg_catalog."default" gin_trgm_ops);
 
 CREATE INDEX adapter_users_users_id_idx ON public.adapter_users USING btree (user_id);
 
 CREATE INDEX username_trgm_idx ON public.adapter_users USING gin (username COLLATE pg_catalog."default" gin_trgm_ops);
 CREATE INDEX mail_trgm_idx ON public.adapter_users USING gin (mail COLLATE pg_catalog."default" gin_trgm_ops);
-CREATE INDEX first_name_trgm_idx ON public.adapter_users USING gin (mail COLLATE pg_catalog."default" gin_trgm_ops);
-CREATE INDEX last_name_trgm_idx ON public.adapter_users USING gin (mail COLLATE pg_catalog."default" gin_trgm_ops);
+CREATE INDEX first_name_trgm_idx ON public.adapter_users USING gin (first_name COLLATE pg_catalog."default" gin_trgm_ops);
+CREATE INDEX last_name_trgm_idx ON public.adapter_users USING gin (last_name COLLATE pg_catalog."default" gin_trgm_ops);
 
 CREATE INDEX devices_adapter_count_idx ON public.devices (adapter_count DESC);
+CREATE INDEX devices_hostnames_trgm_idx ON public.devices USING gin (arrayToText(hostnames) COLLATE pg_catalog."default" gin_trgm_ops);
 
 CREATE INDEX users_adapter_count_idx ON public.users (adapter_count DESC);
 

@@ -144,9 +144,8 @@ class TestTranslator(unittest.TestCase):
         """
         w = Translator(EntityType.Devices).translate(self.REGEX_QUERY_W_OR)
         self.assertEqual({'OR': [
-            {'adapterDevices': {'hostname': {'ilike': '%66%'}}},
-            {'adapterDevices': {'hostname': {'eq': 'ttt'}}}
-        ]}, w)
+            {'hostnames': {'contains_regex': '%66%'}},
+            {'adapterDevices': {'hostname': {'eq': 'ttt'}}}]}, w)
         w = Translator(EntityType.Devices).translate(self.ADAPTER_PROP_W_OR)
         self.assertEqual({'OR': [
             {'adapterDevices': {'adapter': {'properties': {'overlap': ['Agent']}}}},
