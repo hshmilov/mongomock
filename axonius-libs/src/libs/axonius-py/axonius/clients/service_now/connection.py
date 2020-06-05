@@ -39,16 +39,11 @@ class ServiceNowConnection(RESTConnection):
                    files_param={'file': ('report.csv', csv_bytes, 'text/csv', {'Expires': '0'})},
                    extra_headers={'Content-Type': None})
 
-    def get_user_list(self):
+    def get_user_list(self, async_chunks=consts.DEFAULT_ASYNC_CHUNK_SIZE):
+        subtables_by_key = self._get_subtables_by_key(consts.USER_SUB_TABLES, async_chunks=async_chunks)
 
         # prepare users dict by sys_id
-        users_table_dict = dict()
-        # Note: we only have a single table so we ignore the returned table_key
-        for _, users_chunk in self._iter_async_table_chunks_by_key({consts.USERS_TABLE_KEY: consts.USERS_TABLE}):
-            for user in users_chunk:
-                if user.get('sys_id'):
-                    users_table_dict[user.get('sys_id')] = user
-
+        users_table_dict = subtables_by_key.get(consts.USERS_TABLE_KEY) or {}
         for user in users_table_dict.values():
             user_to_yield = user.copy()
             try:
@@ -56,14 +51,34 @@ class ServiceNowConnection(RESTConnection):
                     user_to_yield['manager_full'] = users_table_dict.get(user.get('manager').get('value'))
             except Exception:
                 logger.exception(f'Problem getting manager for user {user}')
+
+            # add subtables
+            user_to_yield[consts.SUBTABLES_KEY] = subtables_by_key
             yield user_to_yield
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
-        subtables_by_key = self._get_subtables_by_key(fetch_users_info_for_devices=fetch_users_info_for_devices,
-                                                      fetch_ci_relations=fetch_ci_relations)
+    def get_device_list(self, fetch_users_info_for_devices=False, fetch_ci_relations=False,
+                        async_chunks=consts.DEFAULT_ASYNC_CHUNK_SIZE):
+        sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
+        # if users were not requested, dont fetch them
+        if not fetch_users_info_for_devices:
+            del sub_tables_to_request_by_key[consts.USERS_TABLE_KEY]
+
+        additional_params_by_table_key = {}
+        if fetch_ci_relations:
+            additional_params_by_table_key = {
+                consts.RELATIONS_TABLE: {'sysparm_fields': self._prepare_relations_fields()},
+            }
+        else:
+            del sub_tables_to_request_by_key[consts.RELATIONS_TABLE]
+
+        subtables_by_key = self._get_subtables_by_key(sub_tables_to_request_by_key,
+                                                      additional_params_by_table_key=additional_params_by_table_key,
+                                                      async_chunks=async_chunks)
         self.__users_table = subtables_by_key.get(consts.USERS_TABLE_KEY) or {}
-        for device_type, table_name, table_chunk in self.__iter_device_table_chunks_by_details():
+        for device_type, table_name, table_chunk in self.__iter_device_table_chunks_by_details(
+                async_chunks=async_chunks):
+
             yield {
                 consts.TABLE_NAME_KEY: table_name,
                 consts.DEVICE_TYPE_NAME_KEY: device_type,
@@ -89,27 +104,14 @@ class ServiceNowConnection(RESTConnection):
                 if (isinstance(k, str) and k.startswith(f'{relation}.'))}
 
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals
-    def _get_subtables_by_key(self, fetch_users_info_for_devices=False, fetch_ci_relations=False):
+    def _get_subtables_by_key(self, subtables_key_to_name: dict,
+                              additional_params_by_table_key: Optional[dict] = None,
+                              async_chunks: int = consts.DEFAULT_ASYNC_CHUNK_SIZE):
         tables_by_key = {}
 
-        sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
-        # if users were not requested, dont fetch them
-        if not fetch_users_info_for_devices:
-            tables_by_key.setdefault(consts.USERS_TABLE_KEY, dict())
-            del sub_tables_to_request_by_key[consts.USERS_TABLE_KEY]
-
-        additional_url_params_by_table_key = {}
-        if fetch_ci_relations:
-            additional_url_params_by_table_key = {
-                consts.RELATIONS_TABLE: {'sysparm_fields': self._prepare_relations_fields()},
-            }
-        else:
-            # if relations were not requested, dont fetch them
-            tables_by_key.setdefault(consts.RELATIONS_TABLE, dict())
-            del sub_tables_to_request_by_key[consts.RELATIONS_TABLE]
-
         for table_key, table_results_chunk in self._iter_async_table_chunks_by_key(
-                sub_tables_to_request_by_key, additional_params_by_table_key=additional_url_params_by_table_key):
+                subtables_key_to_name, additional_params_by_table_key=additional_params_by_table_key,
+                async_chunks=async_chunks):
             # Note: all checks for validity of table_results_chunk are performed by the generator
             for sub_table_result in table_results_chunk:
                 if not isinstance(sub_table_result, dict):
@@ -122,7 +124,8 @@ class ServiceNowConnection(RESTConnection):
                 if table_key in [consts.USERS_TABLE_KEY, consts.LOCATION_TABLE_KEY,
                                  consts.USER_GROUPS_TABLE_KEY, consts.DEPARTMENT_TABLE_KEY,
                                  consts.ALM_ASSET_TABLE, consts.COMPANY_TABLE, consts.U_SUPPLIER_TABLE,
-                                 consts.MAINTENANCE_SCHED_TABLE, consts.SOFTWARE_PRODUCT_TABLE, consts.MODEL_TABLE]:
+                                 consts.MAINTENANCE_SCHED_TABLE, consts.SOFTWARE_PRODUCT_TABLE, consts.MODEL_TABLE,
+                                 consts.LOGICALCI_TABLE]:
                     sys_id = sub_table_result.get('sys_id')
                     if not sys_id:
                         continue
@@ -207,10 +210,13 @@ class ServiceNowConnection(RESTConnection):
         return {table_details[consts.DEVICE_TYPE_NAME_KEY]: table_details[consts.TABLE_NAME_KEY]
                 for table_details in consts.TABLES_DETAILS}
 
-    def __iter_device_table_chunks_by_details(self) -> Generator[Tuple[str, str, List[dict]], None, None]:
+    def __iter_device_table_chunks_by_details(self, async_chunks: int = consts.DEFAULT_ASYNC_CHUNK_SIZE) \
+            -> Generator[Tuple[str, str, List[dict]], None, None]:
+
         # prepare table_name_by_key for async requests
         table_name_by_device_type = self.__get_table_name_by_device_type()
-        for device_type, table_results_chunk in self._iter_async_table_chunks_by_key(table_name_by_device_type):
+        for device_type, table_results_chunk in self._iter_async_table_chunks_by_key(table_name_by_device_type,
+                                                                                     async_chunks=async_chunks):
             # Note: all checks for validity of table_results_chunk are performed by the generator
             yield (device_type, table_name_by_device_type[device_type], table_results_chunk)
 
@@ -233,7 +239,8 @@ class ServiceNowConnection(RESTConnection):
                                **additional_url_params}}
 
     def _iter_async_table_chunks_by_key(self, table_name_by_key: dict,
-                                        additional_params_by_table_key: Optional[dict] = None) \
+                                        additional_params_by_table_key: Optional[dict] = None,
+                                        async_chunks: int = consts.DEFAULT_ASYNC_CHUNK_SIZE) \
             -> Generator[Tuple[str, dict], None, None]:
         """ yields table chunks in the form of (table_key, List[table_result_dict]) tuple.
             When pagination has stopped for a specific table_key, it yields a last (table_key, None)"""
@@ -255,7 +262,7 @@ class ServiceNowConnection(RESTConnection):
         table_total_counts_by_key = {}
         for table_key, raw_response in zip(initial_request_params_by_key.keys(),
                                            self._async_get(list(initial_request_params_by_key.values()),
-                                                           retry_on_error=True)):
+                                                           retry_on_error=True, chunks=async_chunks)):
             if not (self._is_async_response_good(raw_response) and isinstance(raw_response, ClientResponse)):
                 logger.warning(f'Async response returned bad, its {raw_response}')
                 continue
@@ -284,7 +291,7 @@ class ServiceNowConnection(RESTConnection):
 
         # run all the async requests
         for table_key, response in zip(table_keys, self._async_get(chunk_requests, retry_on_error=True,
-                                                                   chunks=consts.ASYNC_CHUNK_SIZE)):
+                                                                   chunks=async_chunks)):
             table_results_chunk = self.__parse_results_chunk_from_response(response, table_key)
             # Note: Invalid response and data validity in response are audited and checked in the parse method
             if not table_results_chunk:

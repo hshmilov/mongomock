@@ -67,6 +67,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         u_saved_groups = ListField(str, 'Saved Groups')
         u_saved_roles = ListField(str, 'Saved Roles')
         u_profession = Field(str, 'Profession')
+        u_company = Field(str, 'Company')
+        u_department = Field(str, 'Department')
 
     class MyDeviceAdapter(DeviceAdapter):
         table_type = Field(str, 'Table Type')
@@ -86,6 +88,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         assigned_to_division = Field(str, 'Assigned To Business')
         assigned_to_business_unit = Field(str, 'Assigned To Business Unit')
         manager_email = Field(str, 'Manager Email')
+        u_business_unit = Field(str, 'Business Unit')
         purchase_date = Field(datetime.datetime, 'Purchase date')
         substatus = Field(str, 'Substatus')
         u_shared = Field(str, 'Shared')
@@ -124,6 +127,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         u_number = Field(str, 'U Number')
         support_group = Field(str, 'Support Group')
         u_director = Field(str, 'Director')
+        u_manager = Field(str, 'Manager')
         is_virtual = Field(bool, 'Is Virtual')
         ci_ips = ListField(CiIpData, 'CI IP Data')
         u_supplier = Field(str, 'Supplier')
@@ -257,11 +261,15 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                            relations_info_dict=None,
                            snow_software_product_table_dict=None,
                            snow_maintenance_sched_dict=None,
-                           snow_model_dict=None):
+                           snow_model_dict=None,
+                           snow_logicalci_dict=None,
+                           operational_status_dict=None):
         got_nic = False
         got_serial = False
         if not install_status_dict:
             install_status_dict = INSTALL_STATUS_DICT
+        if not operational_status_dict:
+            operational_status_dict = INSTALL_STATUS_DICT
         if ci_ips_table_dict is None:
             ci_ips_table_dict = dict()
         if users_username_dict is None:
@@ -294,6 +302,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             snow_maintenance_sched_dict = dict()
         if snow_model_dict is None:
             snow_model_dict = dict()
+        if snow_logicalci_dict is None:
+            snow_logicalci_dict = dict()
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('sys_id')
@@ -376,10 +386,21 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             try:
                 snow_support_group_value = snow_user_groups_table_dict.get(
                     (device_raw.get('support_group') or {}).get('value'))
-                if snow_support_group_value:
+
+                if not snow_support_group_value:
+                    # Some clients have support_group through u_cmdb_ci_logicalci table
+                    snow_logicalci_value = snow_logicalci_dict.get(
+                        (device_raw.get('u_logical_ci') or {}).get('value'))
+                    if isinstance(snow_logicalci_value, dict):
+                        snow_support_group_value = snow_user_groups_table_dict.get(
+                            (snow_logicalci_value.get('support_group') or {}).get('value'))
+
+                if isinstance(snow_support_group_value, dict):
                     device.support_group = snow_support_group_value.get('name')
                     device.u_director = self._get_optional_reference(snow_support_group_value.get('u_director'),
                                                                      users_table_dict, 'name')
+                    device.u_manager = self._get_optional_reference(snow_support_group_value.get('u_manager'),
+                                                                    users_table_dict, 'name')
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -513,14 +534,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.warning(f'Problem getting ram at {device_raw}', exc_info=True)
             try:
+                alias = device_raw.get('u_alias')
+                device.u_alias = alias
                 host_name = device_raw.get('host_name') or device_raw.get('fqdn') or device_raw.get('u_fqdn')
                 if host_name and name and name.lower() in host_name.lower():
                     device.hostname = host_name.split('.')[0].strip()
                 else:
-                    alias = device_raw.get('u_alias')
-                    if alias and any(bad_alias in alias.lower().strip() for bad_alias in BAD_ALIAS_NAME):
-                        alias = None
-                    device.u_alias = alias
                     if alias and ',' in alias and '|' in name:
                         alias_list = alias.split(',')
                         for alias_raw in alias_list:
@@ -682,6 +701,13 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                 device.assigned_to_business_unit = assgined_to_bus_name
                     except Exception:
                         logger.exception(f'Problem with business unit')
+                    try:
+                        u_business_unit_raw = device_raw.get('u_business_unit')
+                        device.u_business_unit = (
+                            self._get_optional_reference(u_business_unit_raw, snow_department_table_dict, 'name') or
+                            self._get_optional_reference(u_business_unit_raw, companies_table_dict, 'name'))
+                    except Exception:
+                        logger.exception(f'Problem with device_raw u_business_unit')
                     try:
                         manager_value = (assigned_to.get('manager') or {}).get('value')
                         manager_raw = users_table_dict.get(users_username_dict.get(manager_value)) or {}
@@ -878,7 +904,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             device.firmware_version = device_raw.get('u_firmware_version')
             device.model_version_number = device_raw.get('u_model_version_number')
             if self.__fetch_operational_status:
-                device.operational_status = install_status_dict.get(device_raw.get('operational_status'))
+                device.operational_status = operational_status_dict.get(device_raw.get('operational_status'))
             device.hardware_status = device_raw.get('hardware_status')
             hardware_sub_status = device_raw.get('hardware_substatus')
             if isinstance(hardware_sub_status, str):
@@ -926,30 +952,35 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config), self._get_install_status_dict(client_config)
+            return (self.get_connection(client_config),
+                    self._get_config_enum_from_file(client_config.get('install_status_file')),
+                    self._get_config_enum_from_file(client_config.get('operational_status_file')))
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.warning(message, exc_info=True)
             raise ClientConnectionException(message)
 
-    def _get_install_status_dict(self, client_config):
-        install_status_dict = dict()
-        try:
-            if client_config.get('install_status_file'):
-                csv_data_bytes = self._grab_file_contents(client_config['install_status_file'])
-                encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
-                encoding = encoding or 'utf-8'
-                csv_data = csv_data_bytes.decode(encoding)
-                csv_data = make_dict_from_csv(csv_data)
-                if 'Value' in csv_data.fieldnames and 'Label' in csv_data.fieldnames:
-                    for csv_line in csv_data:
-                        if csv_line.get('Value') and csv_line.get('Label'):
-                            install_status_dict[str(csv_line['Value'])] = csv_line['Label']
+    def _get_config_enum_from_file(self, file_config):
 
+        if not file_config:
+            return None
+
+        result_dict = dict()
+        try:
+            csv_data_bytes = self._grab_file_contents(file_config)
+            encoding = chardet.detect(csv_data_bytes)['encoding']  # detect decoding automatically
+            encoding = encoding or 'utf-8'
+            csv_data = csv_data_bytes.decode(encoding)
+            csv_data = make_dict_from_csv(csv_data)
+            if 'Value' in csv_data.fieldnames and 'Label' in csv_data.fieldnames:
+                for csv_line in csv_data:
+                    if csv_line.get('Value') and csv_line.get('Label'):
+                        result_dict[str(csv_line['Value'])] = csv_line['Label']
         except Exception:
-            logger.exception(f'Problem parsing install status dict')
-        return install_status_dict
+            logger.exception(f'Problem parsing config enum - {file_config}')
+
+        return result_dict
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -960,18 +991,18 @@ class ServiceNowAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        connection, install_status_dict = client_data
+        connection, install_status_dict, operational_status_dict = client_data
         with connection:
             for device_raw in connection.get_device_list(
                     fetch_users_info_for_devices=self.__fetch_users_info_for_devices,
-                    fetch_ci_relations=self.__fetch_ci_relations):
-                yield device_raw, install_status_dict
+                    fetch_ci_relations=self.__fetch_ci_relations, async_chunks=self.__async_chunks):
+                yield device_raw, install_status_dict, operational_status_dict
 
     def _query_users_by_client(self, key, data):
-        connection, _ = data
+        connection, _, _ = data
         if self.__fetch_users:
             with connection:
-                yield from connection.get_user_list()
+                yield from connection.get_user_list(async_chunks=self.__async_chunks)
 
     def _clients_schema(self):
         """
@@ -1010,6 +1041,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 {
                     'name': 'install_status_file',
                     'title': 'Install Status ENUM CSV File',
+                    'type': 'file'
+                },
+                {
+                    'name': 'operational_status_file',
+                    'title': 'Operational Status ENUM CSV File',
                     'type': 'file'
                 },
             ],
@@ -1109,6 +1145,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
     def _parse_users_raw_data(self, raw_data):
         for user_raw in raw_data:
             try:
+                # remove subtables from user_raw (otherwise query will fail due to large user_raw)
+                subtables = user_raw.pop(SUBTABLES_KEY, {})
+                snow_department_table_dict = subtables.get(DEPARTMENT_TABLE_KEY) or {}
+                companies_table_dict = subtables.get(COMPANY_TABLE) or {}
+
                 user = self._new_user_adapter()
                 sys_id = user_raw.get('sys_id')
                 if not sys_id:
@@ -1161,6 +1202,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 user.u_studio = user_raw.get('u_studio')
                 user.u_sub_department = user_raw.get('u_sub_department')
                 user.u_profession = user_raw.get('u_profession')
+                user.u_company = self._get_optional_reference((user_raw.get('u_company') or
+                                                               user_raw.get('company')),
+                                                              companies_table_dict, 'name')
+                user.u_department = self._get_optional_reference((user_raw.get('u_department') or
+                                                                  user_raw.get('department')),
+                                                                 snow_department_table_dict, 'name')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
@@ -1241,7 +1288,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             logger.warning(f'Problem adding maintenance schedule to {maintenance_schedule_dict}', exc_info=True)
 
     def _parse_raw_data(self, devices_raw_data):
-        for table_devices_data, install_status_dict in devices_raw_data:
+        for table_devices_data, install_status_dict, operational_status_dict in devices_raw_data:
             users_table_dict = table_devices_data.get(USERS_TABLE_KEY)
             users_username_dict = table_devices_data.get(USERS_USERNAME_KEY)
             snow_department_table_dict = table_devices_data.get(DEPARTMENT_TABLE_KEY)
@@ -1258,6 +1305,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             maintenance_sched_dict = table_devices_data.get(MAINTENANCE_SCHED_TABLE)
             software_product_dict = table_devices_data.get(SOFTWARE_PRODUCT_TABLE)
             model_dict = table_devices_data.get(MODEL_TABLE)
+            snow_logicalci_dict = table_devices_data.get(LOGICALCI_TABLE)
 
             for device_raw in table_devices_data[DEVICES_KEY]:
                 device = self.create_snow_device(device_raw=device_raw,
@@ -1279,7 +1327,9 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                                                  relations_info_dict=relations_info_dict,
                                                  snow_maintenance_sched_dict=maintenance_sched_dict,
                                                  snow_software_product_table_dict=software_product_dict,
-                                                 snow_model_dict=model_dict)
+                                                 snow_model_dict=model_dict,
+                                                 snow_logicalci_dict=snow_logicalci_dict,
+                                                 operational_status_dict=operational_status_dict)
                 if device:
                     yield device
 
@@ -1355,7 +1405,12 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                     'name': 'fetch_ci_relations',
                     'type': 'bool',
                     'title': 'Fetch device relations'
-                }
+                },
+                {
+                    'name': 'async_chunks',
+                    'type': 'integer',
+                    'title': 'Number of requests to perform in parallel'
+                },
             ],
             "required": [
                 'fetch_users',
@@ -1367,7 +1422,8 @@ class ServiceNowAdapter(AdapterBase, Configurable):
                 'fetch_only_active_users',
                 'fetch_only_virtual_devices',
                 'fetch_operational_status',
-                'fetch_ci_relations'
+                'fetch_ci_relations',
+                'async_chunks',
             ],
             "pretty_name": "ServiceNow Configuration",
             "type": "array"
@@ -1389,9 +1445,11 @@ class ServiceNowAdapter(AdapterBase, Configurable):
             'fetch_only_virtual_devices': False,
             'fetch_operational_status': True,
             'fetch_ci_relations': False,
+            'async_chunks': DEFAULT_ASYNC_CHUNK_SIZE,
         }
 
     def _on_config_update(self, config):
+        logger.info(f"Loading Snow config: {config}")
         self.__fetch_users = config['fetch_users']
         self.__fetch_ips = config['fetch_ips']
         self.__fetch_users_info_for_devices = config['fetch_users_info_for_devices']
@@ -1406,6 +1464,7 @@ class ServiceNowAdapter(AdapterBase, Configurable):
         self.__install_status_exclude_list = config.get('install_status_exclude_list').split(',') \
             if config.get('install_status_exclude_list') else None
         self.__fetch_ci_relations = config['fetch_ci_relations']
+        self.__async_chunks = config.get('async_chunks') or DEFAULT_ASYNC_CHUNK_SIZE
 
     def outside_reason_to_live(self) -> bool:
         """

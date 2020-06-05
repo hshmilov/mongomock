@@ -11,7 +11,7 @@ TABLES_DETAILS = [{TABLE_NAME_KEY: 'cmdb_ci_computer', DEVICE_TYPE_NAME_KEY: 'Co
                   {TABLE_NAME_KEY: 'cmdb_ci_cluster', DEVICE_TYPE_NAME_KEY: 'Cluster'},
                   {TABLE_NAME_KEY: 'cmdb_ci_cluster_vip', DEVICE_TYPE_NAME_KEY: 'Cluster VIP'},
                   {TABLE_NAME_KEY: 'cmdb_ci_facility_hardware', DEVICE_TYPE_NAME_KEY: 'Facility Hardware'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_msd', DEVICE_TYPE_NAME_KEY: 'MSD'}]
+                  {TABLE_NAME_KEY: 'cmdb_ci_msd', DEVICE_TYPE_NAME_KEY: 'Multi Storage Device'}]
 NUMBER_OF_OFFSETS = 100000
 OFFSET_SIZE = 200
 USERS_TABLE = 'sys_user'
@@ -33,6 +33,7 @@ U_SUPPLIER_TABLE = 'u_supplier'
 MAINTENANCE_SCHED_TABLE = 'cmn_schedule'
 SOFTWARE_PRODUCT_TABLE = 'cmdb_software_product_model'
 MODEL_TABLE = 'cmdb_model'
+LOGICALCI_TABLE = 'u_cmdb_ci_logicalci'
 # Note: Relations Details are performed as part of cmdb_rel_ci, they are not queried from snow separately!
 RELATIONS_DETAILS_TABLE_KEY = 'RELATION_DETAILS'
 # pylint: disable=C0103
@@ -98,6 +99,7 @@ RELATIONS_KEY_TO_FIELD = {
 }
 
 DEVICE_SUB_TABLES_KEY_TO_NAME = {
+    LOGICALCI_TABLE: LOGICALCI_TABLE,
     USERS_TABLE_KEY: USERS_TABLE,
     LOCATION_TABLE_KEY: LOCATIONS_TABLE,
     USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
@@ -113,7 +115,14 @@ DEVICE_SUB_TABLES_KEY_TO_NAME = {
     SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,
     MODEL_TABLE: MODEL_TABLE,
 }
-ASYNC_CHUNK_SIZE = 50
+USER_SUB_TABLES = {
+    DEPARTMENT_TABLE_KEY: DEPARTMENTS_TABLE,
+    COMPANY_TABLE: COMPANY_TABLE,
+    USERS_TABLE_KEY: USERS_TABLE,
+}
+SUBTABLES_KEY = '_SUBTABLES'
+
+DEFAULT_ASYNC_CHUNK_SIZE = 50
 
 MODEL_U_CLASSIFICATION_DICT = {
     1: 'App Server',
