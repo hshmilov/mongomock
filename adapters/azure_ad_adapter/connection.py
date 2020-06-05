@@ -268,14 +268,18 @@ class AzureAdClient(RESTConnection):
         if request.startswith('user'):
             return request.split('/')[1], 'memberOf'
         if request.startswith('reports'):
-            return request.partition('$filter=')[-1], 'credsDetails'
+            fltr_str = request_dict.get('url_params').get('$filter')
+            return fltr_str.partition('eq')[-1].strip().replace('\'', ''), 'credsDetails'
         return None
 
+    # pylint: disable=too-many-branches
     def _get_graph_user_list(self):
-        user_by_user_pn = {}  # dict of userPrincipalName to user object
-        async_requests = []  # list of requests to perform asynchronously
+        user_by_user_pn = dict()  # dict of userPrincipalName to user object
+        async_requests_chunks = list()  # list of chunks of requests to perform asynchronously
+        requests_chunk = list()  # list of requests, aka chunk
+        internal_chunk_size = min(self._parallel_count * 5, 50)  # To improve async performance
         # Get all users immediately because paging in Graph API is unpredictable
-        for user in self._iter_graph_users():
+        for idx, user in enumerate(self._iter_graph_users()):
             # check that user has a principal name
             try:
                 user_pn = user.get('userPrincipalName')
@@ -295,36 +299,49 @@ class AzureAdClient(RESTConnection):
             user_by_user_pn.setdefault(user_pn, user)
 
             # add memberOf() request for the user
-            # Note: Looks like async requests require putting url_params into a param and not as part of the url!
-            async_requests.append({
-                'name': f'users/{user_pn}/memberOf',
-                'url_params': {'$select': 'displayName'}
-            })
-
-            # handle mfa
-            if self._allow_fetch_mfa:
-                # READ ME!
-                # using beta api to fetch! Will fail if beta api not allowed
-                # Unless this functionality is added to GA. So we do not check if it's enabled,
-                # for future-proofing.
-                # requires Reports.Read.All permission
-                async_requests.append({
-                    'name': 'reports/credentialUserRegistrationDetails',
-                    'url_params': {'$filter': f'userDisplayName eq \'{user_pn}\''}
+            if '#EXT#' not in user_pn:
+                # Skip #EXT# users!!!
+                requests_chunk.append({
+                    'name': f'users/{user_pn}/memberOf',
+                    'url_params': {'$select': 'displayName'}
                 })
-
-        # now run through the responses, match each response to a user
-        for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
-            if not self._is_async_response_good(response):
-                logger.warning(f'Bad async response for {request_dict}, got: {response} ')
-                continue
-            try:
-                user_pn, endpoint = self._extract_user_pn_and_endpoint(request_dict)
-                user = user_by_user_pn[user_pn]
-                user[endpoint] = response['value']
-            except Exception:
-                logger.exception(f'Failed to parse response for request {request_dict}')
-                continue
+                # handle mfa
+                if self._allow_fetch_mfa:
+                    # READ ME!
+                    # using beta api to fetch! Will fail if beta api not allowed
+                    # Unless this functionality is added to GA. So we do not check if it's enabled,
+                    # for future-proofing.
+                    # requires Reports.Read.All permission
+                    requests_chunk.append({
+                        'name': 'reports/credentialUserRegistrationDetails',
+                        'url_params': {'$filter': f'userPrincipalName eq \'{user_pn}\''}
+                    })
+            # add this chunk to queue if the chunk is full
+            if idx and idx % internal_chunk_size == 0:
+                logger.info(f'Chunk has {len(requests_chunk)} requests. Flushing...')
+                async_requests_chunks.append(requests_chunk)
+                logger.info(f'Flushing chunk: {idx}, total chunks: {len(async_requests_chunks)}')
+                requests_chunk = list()
+        # add last chunk if needed
+        if requests_chunk:
+            async_requests_chunks.append(requests_chunk)
+        # iterate over chunks, perform each chunk asynchronously
+        for idx, async_requests in enumerate(async_requests_chunks):
+            logger.info(f'Dealing with chunk {idx} of {len(async_requests_chunks)}')
+            # All that was done so that the token can be refreshed between chunks
+            # async_get refreshes token
+            # now run through the responses, match each response to a user
+            for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
+                if not self._is_async_response_good(response):
+                    logger.warning(f'Bad async response for {request_dict}, got: {response} ')
+                    continue
+                try:
+                    user_pn, endpoint = self._extract_user_pn_and_endpoint(request_dict)
+                    user = user_by_user_pn[user_pn]
+                    user[endpoint] = response['value']
+                except Exception:
+                    logger.exception(f'Failed to parse response for request {request_dict}')
+                    continue
 
         yield from user_by_user_pn.values()
 
