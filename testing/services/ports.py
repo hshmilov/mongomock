@@ -76,6 +76,7 @@ DOCKER_PORTS = {
     'oracle-cloud-adapter':             5779,
     'edgescan-adapter':                 5780,
     'splunk-adapter':                   5781,
+    'iboss-cloud-adapter':              5782,
     'cyberark-pas-adapter':             5783,
     'mobi-control-adapter':             5784,
     'infoblox-adapter':                 5794,
