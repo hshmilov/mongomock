@@ -361,6 +361,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     cve_count = Field(str, 'CVE Count')
     sw_license = Field(str, 'License')
     path = Field(str, 'Software Path')
+    source = Field(str, 'Source')
     version_raw = Field(str, hidden=True)
 
 
@@ -1046,6 +1047,8 @@ class DeviceAdapter(SmartJsonClass):
         :param subnets: a Subnet list (format {ip}/{int/ipv4_subnet_mask})
         :param name: the interface name
         """
+        if not mac and not ips and not name and not subnets:
+            return
         nic = DeviceAdapterNetworkInterface()
         if mac is not None:
             mac = str(mac)

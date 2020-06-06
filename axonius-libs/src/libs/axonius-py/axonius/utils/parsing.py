@@ -308,7 +308,8 @@ def figure_out_os(s):
             distribution = version[0]
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
-        linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo', 'Arch', 'Oracle']
+        linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo',
+                               'Arch', 'Oracle', 'SuSe']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:

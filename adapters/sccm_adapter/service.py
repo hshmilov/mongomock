@@ -161,6 +161,16 @@ class SccmAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data, device_id=None):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
+            product_files_dict = dict()
+            try:
+                if not device_id:
+                    for file_data in client_data.query(consts.FILE_PRODUCT_QUERY):
+                        product_id = file_data.get('ProductId')
+                        if not product_id:
+                            continue
+                        product_files_dict[product_id] = file_data
+            except Exception:
+                logger.exception(f'Problem with product file dict')
 
             shares_dict = dict()
             try:
@@ -542,7 +552,20 @@ class SccmAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem getting collections for {device_raw}')
                 device_raw['encryptions_raw'] = asset_encryption_dict.get(device_raw.get('ResourceID'))
                 device_raw['ram_data'] = ram_dict.get(device_raw.get('ResourceID'))
-                device_raw['new_sw_data'] = new_software_dict.get(device_raw.get('ResourceID'))
+                new_sw_data = new_software_dict.get(device_raw.get('ResourceID'))
+                try:
+                    if isinstance(new_sw_data, list):
+                        for new_asset_data in new_sw_data:
+                            try:
+                                product_id = new_asset_data.get('ProductId')
+                                if not product_id or not product_files_dict.get(product_id):
+                                    continue
+                                new_asset_data['file_data'] = product_files_dict[product_id]
+                            except Exception:
+                                logger.exception(f'Problem adding new sw asset {new_asset_data}')
+                except Exception:
+                    logger.exception(f'Problem parsing file names')
+                device_raw['new_sw_data'] = new_sw_data
                 device_raw['asset_software_data'] = asset_software_dict.get(device_raw.get('ResourceID'))
                 device_raw['asset_program_data'] = asset_program_dict.get(device_raw.get('ResourceID'))
                 device_raw['lenovo_data'] = asset_lenovo_dict.get(device_raw.get('ResourceID'))
@@ -982,10 +1005,20 @@ class SccmAdapter(AdapterBase, Configurable):
                     if isinstance(device_raw['new_sw_data'], list):
                         for new_asset_data in device_raw['new_sw_data']:
                             try:
+                                path = None
+                                try:
+                                    file_data = new_asset_data.get('file_data')
+                                    if not isinstance(file_data, dict):
+                                        file_data = {}
+                                    path = file_data.get('FileName')
+                                except Exception:
+                                    logger.warning(f'Problem with file data {new_asset_data}', exc_info=True)
                                 device.add_installed_software(
                                     name=new_asset_data.get('ProductName'),
                                     version=new_asset_data.get('ProductVersion'),
-                                    vendor=new_asset_data.get('CompanyName')
+                                    vendor=new_asset_data.get('CompanyName'),
+                                    source='SCCM SoftwareProduct Table',
+                                    path=path
                                 )
                             except Exception:
                                 logger.exception(f'Problem adding new sw asset {new_asset_data}')
@@ -997,7 +1030,8 @@ class SccmAdapter(AdapterBase, Configurable):
                         for asset_data in device_raw['asset_software_data']:
                             try:
                                 device.add_installed_software(
-                                    name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0')
+                                    name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0'),
+                                    source='SCCM INSTALLED_SOFTWARE Table'
                                 )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
@@ -1009,7 +1043,8 @@ class SccmAdapter(AdapterBase, Configurable):
                         for asset_data in device_raw['asset_program_data']:
                             try:
                                 device.add_installed_software(
-                                    name=asset_data.get('DisplayName0'), version=asset_data.get('Version0')
+                                    name=asset_data.get('DisplayName0'), version=asset_data.get('Version0'),
+                                    source='SCCM ADD_REMOVE_PROGRAMS Table'
                                 )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')

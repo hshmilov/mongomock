@@ -17,6 +17,18 @@ from orca_adapter.client_id import get_client_id
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class AlertState(SmartJsonClass):
+    alert_status = Field(str, 'Status')
+    alert_status_time = Field(datetime.datetime, 'Status Time')
+    alert_created_at = Field(datetime.datetime, 'Created At')
+    alert_severity = Field(str, 'Severity')
+    alert_last_seen = Field(datetime.datetime, 'Last Seen')
+    alert_score = Field(str, 'Score')
+    alert_low_reason = Field(str, 'Low Reason')
+    alert_low_since = Field(datetime.datetime, 'low_since')
+    alert_high_since = Field(datetime.datetime, 'high_since')
+
+
 class AlertData(SmartJsonClass):
     alert_id = Field(str, 'Alert Id')
     score = Field(int, 'Score')
@@ -25,7 +37,7 @@ class AlertData(SmartJsonClass):
     details = Field(str, 'Details')
     recommendation = Field(str, 'Recommendation')
     alert_labels = ListField(str, 'Alert Labels')
-    alert_state = Field(str, 'Alert State')
+    alert_state = Field(AlertState, 'Alert State')
     alert_source = Field(str, 'Alert Source')
 
 
@@ -83,6 +95,9 @@ class OrcaAdapter(AdapterBase):
         asset_state = Field(str, 'Asset State')
         asset_labels = ListField(str, 'Asset Labels')
         asset_score = Field(int, 'Asset Score')
+        asset_severity = Field(str, 'Asset Severity')
+        asset_status = Field(str, 'Asset Status')
+        status_time = Field(datetime.datetime, 'Status Time')
         region = Field(str, 'Region')
         alerts_data = ListField(AlertData, 'Alerts Data')
         malware_data = ListField(MalwareData, 'Malware Data')
@@ -293,7 +308,28 @@ class OrcaAdapter(AdapterBase):
                         recommendation = alert_raw.get('recommendation')
                         alert_labels = alert_raw.get('alert_labels')\
                             if isinstance(alert_raw.get('alert_labels'), list) else None
+                        alert_state_obj = None
                         alert_state = alert_raw.get('state')
+                        if isinstance(alert_state, dict):
+                            alert_status = alert_state.get('status')
+                            alert_status_time = parse_date(alert_state.get('status_time'))
+                            alert_created_at = parse_date(alert_state.get('created_at'))
+                            alert_severity = alert_state.get('severity')
+                            alert_last_seen = parse_date(alert_state.get('last_seen'))
+                            alert_score = alert_state.get('score')
+                            alert_low_reason = alert_state.get('low_reason')
+                            alert_low_since = parse_date(alert_state.get('low_since'))
+                            alert_high_since = parse_date(alert_state.get('high_since'))
+                            alert_state_obj = AlertState(alert_status=alert_status,
+                                                         alert_status_time=alert_status_time,
+                                                         alert_created_at=alert_created_at,
+                                                         alert_severity=alert_severity,
+                                                         alert_last_seen=alert_last_seen,
+                                                         alert_score=alert_score,
+                                                         alert_low_reason=alert_low_reason,
+                                                         alert_low_since=alert_low_since,
+                                                         alert_high_since=alert_high_since)
+
                         alert_source = alert_raw.get('source')
                         finding_raw = alert_raw.get('findings')
                         if not isinstance(finding_raw, dict):
@@ -338,7 +374,7 @@ class OrcaAdapter(AdapterBase):
                                                             details=details,
                                                             recommendation=recommendation,
                                                             alert_labels=alert_labels,
-                                                            alert_state=alert_state,
+                                                            alert_state=alert_state_obj,
                                                             alert_source=alert_source))
                     except Exception:
                         logger.exception(f'Problem with alert {alert_raw}')
@@ -357,6 +393,10 @@ class OrcaAdapter(AdapterBase):
                         device.add_key_value_tag(tag_name, tag_value)
                 except Exception:
                     logger.exception(f'Could not get tags')
+            if isinstance(device_raw.get('tags_list'), list):
+                for tag_list_raw in device_raw.get('tags_list'):
+                    if isinstance(tag_list_raw, dict) and tag_list_raw.get('key'):
+                        device.add_key_value_tag(key=tag_list_raw.get('key'), value=tag_list_raw.get('value'))
             device.asset_type = device_raw.get('asset_type')
             if isinstance(device_raw.get('private_ips'), list):
                 device.add_nic(ips=device_raw.get('private_ips'))
@@ -365,6 +405,15 @@ class OrcaAdapter(AdapterBase):
                 for public_ip in device_raw.get('public_ips'):
                     device.add_public_ip(ip=public_ip)
             device.first_seen = parse_date(device_raw.get('create_time'))
+
+            state_raw = device_raw.get('state')
+            if isinstance(state_raw, dict):
+                device.first_seen = parse_date(state_raw.get('created_at'))
+                device.last_seen = parse_date(state_raw.get('last_seen'))
+                device.asset_score = state_raw.get('score') if isinstance(state_raw.get('score'), int) else None
+                device.asset_severity = state_raw.get('severity')
+                device.asset_status = state_raw.get('status')
+                device.status_time = parse_date(state_raw.get('status_time'))
             device.set_raw(device_raw)
             return device
         except Exception:

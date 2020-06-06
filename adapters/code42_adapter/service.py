@@ -10,6 +10,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.users.user_adapter import UserAdapter
 from axonius.smart_json_class import SmartJsonClass
+from axonius.mixins.configurable import Configurable
 from axonius.fields import Field, ListField
 from code42_adapter.connection import Code42Connection
 from code42_adapter.client_id import get_client_id
@@ -48,7 +49,7 @@ class BackupUsage(SmartJsonClass):
     using = Field(bool, 'Using')
 
 
-class Code42Adapter(AdapterBase):
+class Code42Adapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         product_version = Field(str, 'Product Version')
@@ -171,6 +172,8 @@ class Code42Adapter(AdapterBase):
                     continue
                 device.id = device_id + '_' + (device_raw.get('name') or '')
                 device.hostname = device_raw.get('name')
+                if self.__use_os_hostname_as_hostname:
+                    device.hostname = device_raw.get('osHostname')
                 try:
                     device.last_seen = parse_date(device_raw.get('lastConnected'))
                 except Exception:
@@ -318,3 +321,29 @@ class Code42Adapter(AdapterBase):
             user = self._create_user(user_raw)
             if user:
                 yield user
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'use_os_hostname_as_hostname',
+                    'title': 'Use os_hostname field as hostname',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'use_os_hostname_as_hostname'
+            ],
+            'pretty_name': 'Code42 Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'use_os_hostname_as_hostname': False
+        }
+
+    def _on_config_update(self, config):
+        self.__use_os_hostname_as_hostname = config['use_os_hostname_as_hostname']
