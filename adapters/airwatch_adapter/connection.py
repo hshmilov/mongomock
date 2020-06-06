@@ -6,7 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.json import from_json
 from airwatch_adapter.consts import ENROLLED_DEVICE, NOT_ENROLLED_DEVICE, PAGE_SIZE, MAX_APPS_NUMBER, \
-    MAX_DEVICES_NUMBER, ERROR_MUTED_SUBENDPOINTS
+    MAX_DEVICES_NUMBER, ERROR_MUTED_SUBENDPOINTS, DEVICE_EXTENDED_INFO_KEY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -53,21 +53,18 @@ class AirwatchConnection(RESTConnection):
 
         return response
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals
-    def get_device_list(self):
-        serials_imei_set = set()
+    def _paginated_async_get_devices(self, endpoint: str):
 
         # get first page of raw devices
-        devices_raw_list = []
         try:
             devices_search_raw = self._get(
-                'mdm/devices/search', url_params={'pagesize': PAGE_SIZE, 'page': 0}, do_basic_auth=True)
+                endpoint, url_params={'pagesize': PAGE_SIZE, 'page': 0}, do_basic_auth=True)
             pages_count = 1
         except Exception:
             devices_search_raw = self._get(
-                'mdm/devices/search', url_params={'pagesize': PAGE_SIZE, 'page': 1}, do_basic_auth=True)
+                endpoint, url_params={'pagesize': PAGE_SIZE, 'page': 1}, do_basic_auth=True)
             pages_count = 2
-        devices_raw_list += (devices_search_raw.get('Devices') or [])
+        yield from (devices_search_raw.get('Devices') or [])
 
         # retrieve the rest of the raw devices using async requests
         device_raw_requests = []
@@ -75,7 +72,7 @@ class AirwatchConnection(RESTConnection):
         while total_count > pages_count * PAGE_SIZE:
             try:
                 device_raw_requests.append({
-                    'name': 'mdm/devices/search',
+                    'name': endpoint,
                     'url_params': {'pagesize': PAGE_SIZE,
                                    'page': pages_count},
                     'do_basic_auth': True,
@@ -94,13 +91,16 @@ class AirwatchConnection(RESTConnection):
                 logger.warning(f'Invalid response returned: {response}')
                 continue
 
-            devices_raw_list += (response.get('Devices') or [])
-        logger.info(f'Got {len(devices_raw_list)} Devices')
+            yield from (response.get('Devices') or [])
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+    def get_device_list(self):
+        serials_imei_set = set()
 
         # prepare async requests for device info
         device_raw_by_device_id = {}
         async_requests = []
-        for device_raw in devices_raw_list:
+        for device_raw in self._paginated_async_get_devices('mdm/devices/search'):
             try:
                 device_id = (device_raw.get('Id') or {}).get('Value') or 0
                 if device_id == 0:
@@ -111,7 +111,8 @@ class AirwatchConnection(RESTConnection):
                 continue
             device_raw_by_device_id.setdefault(str(device_id), device_raw)
             async_requests.extend(self._prepare_async_dict(request_dict) for request_dict in
-                                  [{'name': f'mdm/devices/{str(device_id)}/apps',
+                                  [{'name': f'mdm/devices/{str(device_id)}'},
+                                   {'name': f'mdm/devices/{str(device_id)}/apps',
                                     # Retrieve apps initial page. if needed, additional pages would be requested later
                                     'url_params': {'pagesize': PAGE_SIZE, 'page': 0}},
                                    {'name': f'mdm/devices/{str(device_id)}/network'},
@@ -131,7 +132,14 @@ class AirwatchConnection(RESTConnection):
         for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
             try:
                 # Note: if this line does not evaluate correctly - it is a serious bug that be caught at except below.
-                device_id, response_subendpoint = request_dict.get('name').rstrip('/').rsplit('/', 2)[-2:]
+                # extract subendpoint part from url, e.g. mdm/devices/1/apps -> "1/apps"
+                devices_subendpoint_part = request_dict.get('name').split('/', 2)[2]
+                if '/' in devices_subendpoint_part:
+                    device_id, response_subendpoint = devices_subendpoint_part.split('/', 2)[:2]
+                else:
+                    # Handle devices endpoint (mdm/devices/DEVICE_ID)
+                    device_id, response_subendpoint = devices_subendpoint_part, DEVICE_EXTENDED_INFO_KEY
+
                 device_raw = device_raw_by_device_id[device_id]
                 # default subendpoint response to None to mark we got its response,
                 #   it would be adjusted to the correct value later
@@ -146,7 +154,7 @@ class AirwatchConnection(RESTConnection):
 
             if not isinstance(response, (dict, list)):
                 logger.warning(f'invalid {response_subendpoint} response returned: {response}')
-                return None
+                return
 
             if response_subendpoint == 'network':
                 device_raw['Network'] = response
@@ -155,7 +163,7 @@ class AirwatchConnection(RESTConnection):
             # the rest of the endpoints require a dict
             if not isinstance(response, dict):
                 logger.warning(f'invalid {response_subendpoint} response returned: {response}')
-                return None
+                return
 
             if response_subendpoint == 'apps':
                 device_raw.setdefault('DeviceApps', []).extend(response.get('DeviceApps') or [])
@@ -188,6 +196,10 @@ class AirwatchConnection(RESTConnection):
 
             elif response_subendpoint == 'profiles':
                 device_raw['profiles_raw'] = response.get('DeviceProfiles')
+                continue
+
+            elif response_subendpoint == DEVICE_EXTENDED_INFO_KEY:
+                device_raw[DEVICE_EXTENDED_INFO_KEY] = response
                 continue
 
             else:

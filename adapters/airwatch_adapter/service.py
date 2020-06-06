@@ -11,7 +11,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTConnection
 from airwatch_adapter.connection import AirwatchConnection
-from airwatch_adapter.consts import NOT_ENROLLED_DEVICE, ENROLLED_DEVICE
+from airwatch_adapter.consts import NOT_ENROLLED_DEVICE, ENROLLED_DEVICE, DEVICE_EXTENDED_INFO_KEY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -289,13 +289,21 @@ class AirwatchAdapter(AdapterBase):
                                                       version=app_raw.get('Version'))
                 except Exception:
                     logger.exception(f'Problem adding software to Airwatch {device_raw}')
-                device.security_patch_date = parse_date(device_raw.get('SecurityPatchDate'))
                 device.compliance_status = device_raw.get('ComplianceStatus')
                 compliance_summaries = self._parse_compliance_summary(device_raw.get('ComplianceSummary'))
                 if compliance_summaries:
                     device.compliance_summaries = compliance_summaries
                 if isinstance(device_raw.get('CompromisedStatus'), bool):
                     device.compromised_status = device_raw.get('CompromisedStatus')
+                try:
+                    security_patch_date = parse_date(device_raw.get('SecurityPatchDate'))
+                    if not security_patch_date:
+                        device_extended_info = device_raw.get(DEVICE_EXTENDED_INFO_KEY)
+                        if isinstance(device_extended_info, dict):
+                            security_patch_date = parse_date(device_extended_info.get('SecurityPatchDate'))
+                    device.security_patch_date = security_patch_date
+                except Exception:
+                    logger.warning(f'Failed parsing extensivesearch information for device {device_raw}', exc_info=True)
 
                 device.set_raw(device_raw)
                 yield device

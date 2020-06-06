@@ -3,5 +3,6 @@ MAX_DEVICES_NUMBER = 200000
 MAX_APPS_NUMBER = 10000
 ENROLLED_DEVICE = 'Enrolled Device'
 NOT_ENROLLED_DEVICE = 'Not Enrolled Device'
+DEVICE_EXTENDED_INFO_KEY = 'DeviceExtendedInfo'
 
 ERROR_MUTED_SUBENDPOINTS = ['tags', 'profiles', 'notes']
