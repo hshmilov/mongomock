@@ -177,11 +177,6 @@ export const pluginMeta = {
         link: 'https://docs.axonius.com/docs/cscdomainmanager',
         description: 'CSCDomainManager is a web-based portfolio management platform consolidating domains alongside social media usernames, SSL digital certificates, and DNS.'
     },
-    iboss_cloud_adapter: {
-        title: 'iboss cloud',
-        link: 'https://docs.axonius.com/docs/iboss-cloud',
-        description: 'iboss cloud is cloud-based platform that secures user Internet access in the cloud.',
-    }
     riskiq_csv_adapter: {
         title: 'RiskIQ Digital Footprint - CSV',
         description: 'RiskIQ Digital Footprint software provides an active, comprehensive inventory of all of the organization’s IPs, domains, and hosts.'
