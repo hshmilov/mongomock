@@ -497,6 +497,7 @@ class ServiceData(SmartJsonClass):
     path_name = Field(str, 'Path Name')
     description = Field(str, 'Description')
     caption = Field(str, 'Caption')
+    service_type = Field(str, 'Service Type')
 
 
 # pylint: disable=too-many-instance-attributes
