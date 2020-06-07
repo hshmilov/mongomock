@@ -84,10 +84,9 @@
             v-if="chartDataNotFound"
             class="no-data-found"
           >
-            <SvgIcon
-              name="illustration/binocular"
-              :original="true"
-              height="50"
+            <XIcon
+              family="illustration"
+              type="binocular"
             />
             <div>No data found</div>
           </div>
@@ -129,6 +128,7 @@ import _debounce from 'lodash/debounce';
 import _uniq from 'lodash/uniq';
 import _merge from 'lodash/merge';
 import _isNil from 'lodash/isNil';
+import XIcon from '@axons/icons/Icon';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import XCard from '../../axons/layout/Card.vue';
@@ -158,6 +158,7 @@ export default {
     XChartLegend,
     PanelActions,
     XStacked,
+    XIcon,
   },
   props: {
     chart: {
@@ -391,6 +392,11 @@ export default {
   }
 
   .x-panels {
+    .body {
+      .no-data-found > .x-icon {
+        font-size: 50px;
+      }
+    }
     .footer {
       display: flex;
       margin: -2px;

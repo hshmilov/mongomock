@@ -16,9 +16,10 @@
     height="24"
     class="logo md-image"
   >
-  <MdIcon
+  <XIcon
     v-else-if="schema.format && schema.format === 'icon'"
-    :md-src="`/src/assets/icons/symbol/${value}.svg`"
+    family="symbol"
+    :type="value"
     :class="`icon-${value}`"
   />
   <div
@@ -41,12 +42,13 @@
 
 <script>
 import { mapGetters } from 'vuex';
-import _get from 'lodash/get';
+import XIcon from '@axons/icons/Icon';
 import { formatDate } from '../../../../../constants/utils';
 import { DATE_FORMAT } from '../../../../../store/getters';
 
 export default {
   name: 'XStringView',
+  components: { XIcon },
   props: {
     schema: {
       type: Object,
@@ -111,7 +113,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .md-icon {
+  .x-icon {
     height: 16px;
     width: auto;
     display: flex;

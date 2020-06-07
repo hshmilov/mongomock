@@ -80,8 +80,6 @@
 </template>
 
 <script>
-import { mdiDotsHorizontal } from '@mdi/js';
-
 import {
   mapMutations, mapActions, mapState, mapGetters,
 } from 'vuex';
@@ -140,9 +138,6 @@ export default {
     ...mapGetters({
       fillUserFieldGroups: FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
     }),
-    dotsIcon() {
-      return mdiDotsHorizontal;
-    },
     userFieldsGroupsSync: {
       get() {
         return this.userFieldsGroups;

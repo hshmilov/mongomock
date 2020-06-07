@@ -106,9 +106,10 @@ export default {
       width: 30px;
       text-align: left;
 
-      .md-icon {
+      .x-icon {
         margin: unset;
         width: inherit;
+        justify-content: center;
       }
     }
   }

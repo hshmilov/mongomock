@@ -13,9 +13,10 @@
       class="item-link"
       :title="name"
     >
-      <md-icon
+      <XIcon
         v-if="icon"
-        :md-src="`/src/assets/icons/navigation/${icon}.svg`"
+        family="navigation"
+        :type="icon"
       />
       <div
         v-else
@@ -28,8 +29,10 @@
 </template>
 
 <script>
+    import XIcon from '../icons/Icon';
     export default {
-		name: 'XNavItem',
+        name: 'XNavItem',
+        components: { XIcon },
 		props: [ 'name', 'path', 'title', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
         computed: {
             link() {
@@ -78,10 +81,10 @@
             background-color: $theme-black;
             border: 0;
             cursor: pointer;
-            .md-icon {
+            .x-icon {
                 transition: all ease-in 0.2s;
-                margin-right: 10px;
                 display: inline-block;
+                font-size: 24px;
                 .svg-fill {  fill: $grey-4  }
                 .svg-stroke {  stroke: $grey-4; fill: $theme-black; }
             }
@@ -96,7 +99,7 @@
             }
         }
         &.disabled {
-            .md-icon {
+            .x-icon {
                 .svg-fill {  fill: $grey-5;  }
                 .svg-stroke {  stroke: $grey-5; }
             }
@@ -108,7 +111,7 @@
             >.item-link {
                 color: $theme-orange;
             }
-            .md-icon {
+            .x-icon {
                 .svg-fill {  fill: $theme-orange;  }
                 .svg-stroke {  stroke: $theme-orange; fill: $theme-black;  }
             }

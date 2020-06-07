@@ -50,10 +50,9 @@
               :for="view"
               class="type-label"
             >
-              <SvgIcon
-                :name="`symbol/${view}`"
-                :original="true"
-                height="24"
+              <XIcon
+                family="symbol"
+                :type="view"
               />
             </label>
           </template>
@@ -81,6 +80,7 @@
 
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
+import XIcon from '@axons/icons/Icon';
 import { formatDate } from '@constants/utils';
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
@@ -108,7 +108,7 @@ const dashboard = {
 export default {
   name: 'XChartWizard',
   components: {
-    XFeedbackModal, XSelect, intersect, compare, segment, abstract, timeline, matrix,
+    XFeedbackModal, XSelect, intersect, compare, segment, abstract, timeline, matrix, XIcon,
   },
   mixins: [viewsMixin],
   props: {
@@ -265,8 +265,10 @@ export default {
       margin-right: 24px;
       margin-bottom: 0;
 
-      .svg-icon {
+      .x-icon {
         margin-left: 8px;
+        font-size: 20px;
+        padding-top: 4px;
 
         .svg-fill {
           fill: $grey-4;

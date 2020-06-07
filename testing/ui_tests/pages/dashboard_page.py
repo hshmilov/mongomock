@@ -326,12 +326,22 @@ class DashboardPage(Page):
                                          self.DROPDOWN_SELECTED_OPTION_CSS, view_name)
 
     def select_intersection_chart_first_query(self, query):
-        self.select_option_without_search(self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
-                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+        self.select_option(
+            self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
+            self.DROPDOWN_TEXT_BOX_CSS,
+            self.DROPDOWN_SELECTED_OPTION_CSS,
+            query,
+            parent=None
+        )
 
     def select_intersection_chart_second_query(self, query):
-        self.select_option_without_search(self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS,
-                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+        self.select_option(
+            self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS,
+            self.DROPDOWN_TEXT_BOX_CSS,
+            self.DROPDOWN_SELECTED_OPTION_CSS,
+            query,
+            parent=None
+        )
 
     def select_matrix_wizard_base_query(self, index, query):
         self.select_option_without_search(self.MATRIX_WIZARD_BASE_QUERY_CSS.format(index=index),

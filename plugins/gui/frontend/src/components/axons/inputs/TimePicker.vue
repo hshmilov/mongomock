@@ -22,10 +22,9 @@
           />
         </div>
         <span class="server-time">
-          <SvgIcon
-            name="symbol/info"
-            :original="true"
-            height="16"
+          <XIcon
+            family="symbol"
+            type="info"
           />
           Timezone is UTC
         </span>
@@ -43,6 +42,7 @@
 
 <script>
 import dayjs from 'dayjs';
+import XIcon from '@axons/icons/Icon';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import primitiveMixin from '../../../mixins/primitive';
 
@@ -50,6 +50,7 @@ dayjs.extend(customParseFormat);
 
 export default {
   name: 'XTimePicker',
+  components: { XIcon },
   mixins: [primitiveMixin],
   props: {
     value: {
@@ -115,6 +116,9 @@ export default {
     input {
       font-size: 14px;
       padding-left: 3px;
+    }
+    .x-icon {
+      font-size: 16px;
     }
   }
 </style>

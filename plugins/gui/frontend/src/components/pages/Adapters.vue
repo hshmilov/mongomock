@@ -31,7 +31,7 @@
         <thead>
           <tr class="table-row">
             <th class="status">
-&nbsp;
+              &nbsp;
             </th>
             <th class="row-data">
               Name
@@ -51,17 +51,19 @@
             <td class="status">
               <div class="summary">
                 <div v-if="item.successClients">
-                  <MdIcon
-                    md-src="/src/assets/icons/symbol/success.svg"
+                  <XIcon
+                    family="symbol"
+                    type="success"
                     class="icon-success"
                   />
                   <p class="summary_count">
                     {{ item.successClients }}
                   </p>
                 </div>
-                <div v-if="item.errorClients">
-                  <MdIcon
-                    md-src="/src/assets/icons/symbol/error.svg"
+                <div  v-if="item.errorClients">
+                  <XIcon
+                    family="symbol"
+                    type="error"
                     class="icon-error"
                   />
                   <p class="summary_count">
@@ -98,6 +100,7 @@
 
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import { mapState, mapActions, mapGetters } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
@@ -115,7 +118,7 @@ function getConnectedAdapters(adapter) {
 export default {
   name: 'XAdapters',
   components: {
-    XPage, XTitle, XSearchInput, PulseLoader,
+    XPage, XTitle, XSearchInput, PulseLoader, XIcon,
   },
   computed: {
     ...mapState({
@@ -269,10 +272,6 @@ export default {
                 display: flex;
                 flex-direction: column;
                 justify-content: space-around;
-              }
-              .md-icon {
-                min-width: 16px;
-                width: 16px;
               }
               &_count {
                 margin: 0;

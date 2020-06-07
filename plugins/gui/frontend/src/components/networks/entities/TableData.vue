@@ -20,19 +20,13 @@
         </XTooltip>
       </div>
       <div class="details-table-container">
-        <MdIcon
+        <XIcon
           v-if="showExpand"
-          class="trigger"
           :class="{active: expandData}"
+          :style="{padding: '0 4px'}"
+          :type="expandData ? 'left-circle' : 'right-circle'"
           @click.native.stop="toggleCell"
-        >
-          <template v-if="expandData">
-            chevron_left
-          </template>
-          <template v-else>
-            chevron_right
-          </template>
-        </MdIcon>
+        />
         <div
           ref="popup"
           class="popup"
@@ -82,6 +76,7 @@ import _extend from 'lodash/extend';
 import { mapState, mapGetters } from 'vuex';
 import { pluginMeta } from '@constants/plugin_meta';
 import { GET_CONNECTION_LABEL } from '@store/getters';
+import XIcon from '@axons/icons/Icon';
 import XTable from '@axons/tables/Table.vue';
 import XTableData from '@neurons/data/TableData';
 import XTooltip from '@axons/popover/Tooltip.vue';
@@ -93,6 +88,7 @@ export default {
     XTable,
     XTableData,
     XTooltip,
+    XIcon,
   },
   props: {
     module: {
@@ -285,20 +281,9 @@ export default {
       min-width: 24px;
       position: relative;
 
-      .trigger {
-        font-size: 16px !important;
-        border: 1px solid $theme-black;
-        border-radius: 100%;
-        height: 14px;
-        min-width: 14px;
-        width: 14px;
-        margin-left: 4px;
-        transition: all .4s cubic-bezier(.4,0,.2,1);
-        &:hover, &.active {
-          border-color: $theme-orange;
-        }
+      .x-icon:hover {
+        color: $theme-orange;
       }
-
       .popup {
         overflow: visible;
         position: absolute;

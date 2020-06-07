@@ -3,10 +3,7 @@ import Vue from 'vue';
 import Vuex from 'vuex';
 import { createVuetifyConfigObject } from '../src/plugins/vuetify'
 
-import 'vue-svgicon/dist/polyfill';
-import * as svgicon from 'vue-svgicon';
 import ProgressGauge from '../src/components/axons/visuals/ProgressGauge.vue';
-import '../src/components/axons/icons';
 import {
   MdSwitch, MdDatepicker, MdField, MdIcon,
   MdDialog, MdCard, MdList, MdChips,
@@ -25,7 +22,6 @@ Vue.use(MdList)
 Vue.use(MdChips)
 Vue.use(MdProgress)
 Vue.use(MdDrawer)
-Vue.use(svgicon, { tagName: 'svg-icon' })
 Vue.component('x-progress-gauge', ProgressGauge);
 
 addDecorator(() => ({

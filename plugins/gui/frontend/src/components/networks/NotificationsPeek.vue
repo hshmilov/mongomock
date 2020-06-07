@@ -9,10 +9,10 @@
     @click.native="clearNotifications"
   >
     <div slot="trigger">
-      <SvgIcon
-        name="navigation/notifications"
-        :original="true"
-        height="20"
+      <XIcon
+        family="navigation"
+        type="notifications"
+        :style="{fontSize: '20px', position: 'relative', top: '4px'}"
       />
       <div
         v-if="notificationUnseenCount"
@@ -33,10 +33,9 @@
         @click="navigateNotification(notification.uuid)"
       >
         <div class="status">
-          <SvgIcon
-            :name="`symbol/${notification.severity}`"
-            :original="true"
-            height="16"
+          <XIcon
+            family="symbol"
+            :type="notification.severity"
           />
         </div>
         <div class="content">
@@ -61,10 +60,10 @@
         v-if="!notificationAggregatedList.length"
         class="t-center"
       >
-        <SvgIcon
-          name="symbol/success"
-          :original="true"
-          height="20px"
+        <XIcon
+          family="symbol"
+          type="success"
+          :style="{height: '20px'}"
         />
       </div>
       <XButton
@@ -79,6 +78,7 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
+import XIcon from '@axons/icons/Icon';
 import XButton from '../axons/inputs/Button.vue';
 import XDropdown from '../axons/popover/Dropdown.vue';
 
@@ -91,7 +91,7 @@ import {
 
 export default {
   name: 'XNotificationPeek',
-  components: { XButton, XDropdown },
+  components: { XButton, XDropdown, XIcon },
   computed: {
     ...mapState({
       notificationUnseenCount(state) {

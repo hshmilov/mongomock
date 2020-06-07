@@ -35,11 +35,9 @@
               Axonius {{ name }} Correlation
             </div>
             <div class="quantity">
-              <SvgIcon
-                name="symbol/funnel"
-                :original="true"
-                width="48"
-                height="48"
+              <XIcon
+                family="symbol"
+                type="funnel"
               />
             </div>
           </div>
@@ -58,11 +56,12 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import XHistogram from '../../axons/charts/Histogram.vue';
 
 export default {
   name: 'XDiscoveryCard',
-  components: { XHistogram },
+  components: { XHistogram, XIcon },
   props: {
     data: {
       type: Object,
@@ -172,13 +171,13 @@ export default {
             font-weight: 500;
             width: 120px;
             text-align: center;
-          }
-
-          .svg-icon {
-            margin: 6px 0;
-
-            .svg-fill {
-              fill: $theme-orange;
+            .x-icon {
+              font-size: 48px;
+              color: $theme-orange;
+              margin: 4px 0;
+              .svg-fill {
+                fill: $theme-orange;
+              }
             }
           }
         }

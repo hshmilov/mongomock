@@ -66,7 +66,6 @@ import XButton from '@axons/inputs/Button.vue';
 import { calcMaxIndex } from '@constants/utils';
 import { expression } from '@constants/filter';
 import Draggable from 'vuedraggable';
-import { mdiDrag } from '@mdi/js';
 import XExpression from './Expression.vue';
 
 export default {
@@ -93,7 +92,6 @@ export default {
   data() {
     return {
       filters: [],
-      dragIconPath: mdiDrag,
     };
   },
   computed: {

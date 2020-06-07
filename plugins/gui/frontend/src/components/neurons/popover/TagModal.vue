@@ -9,10 +9,9 @@
       v-if="!entities.include"
       class="tag-modal-info"
     >
-      <SvgIcon
-        name="symbol/info"
-        :original="true"
-        height="16"
+      <XIcon
+        family="symbol"
+        type="info"
       />
       With all {{ module }} selected, you can add new tags but cannot remove existing ones.
     </div>
@@ -37,6 +36,7 @@ import _uniq from 'lodash/uniq';
 import _intersection from 'lodash/intersection';
 
 import { mapState, mapActions } from 'vuex';
+import XIcon from '@axons/icons/Icon';
 import XCombobox from '../../axons/inputs/combobox/index.vue';
 import XFeedbackModal from './FeedbackModal.vue';
 import {
@@ -49,7 +49,7 @@ import { TAG_DEVICE } from '../../../constants/getting-started';
 
 export default {
   name: 'XTagModal',
-  components: { XFeedbackModal, XCombobox },
+  components: { XFeedbackModal, XCombobox, XIcon },
   props: {
     module: {
       type: String,
@@ -168,9 +168,11 @@ export default {
   }
 
   .tag-modal-info {
+    padding: 8px;
     display: flex;
     align-items: center;
-    .svg-icon {
+    .x-icon {
+      font-size: 16px;
       margin-right: 4px;
     }
   }

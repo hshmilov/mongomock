@@ -1,7 +1,11 @@
 <template>
     <div class="x-action-group">
         <template v-if="isSuccessive">
-            <svg-icon :name="`symbol/${condition}`" :original="true" height="20px" class="condition"></svg-icon>
+            <XIcon
+                :type="condition"
+                family="symbol"
+                class="condition"
+            />
             <div class="connection"></div>
         </template>
         <transition-group name="list" tag="div" class="group-items">
@@ -15,13 +19,14 @@
 </template>
 
 <script>
+    import XIcon from '@axons/icons/Icon';
     import xTextBox from '../../axons/layout/TextBox.vue'
     import xAction from './Action.vue'
 
     export default {
         name: 'x-action-group',
         components: {
-            xTextBox, xAction
+            xTextBox, xAction, XIcon,
         },
         props: {
             id: String,
@@ -71,6 +76,7 @@
         display: flex;
         align-items: flex-start;
         .condition {
+            font-size: 20px;
             margin-left: 12px;
             margin-top: 14px;
         }

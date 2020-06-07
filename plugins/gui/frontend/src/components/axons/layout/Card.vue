@@ -55,20 +55,6 @@ export default {
         border-radius: 2px;
         border: 2px solid transparent;
 
-        &.card__item .header {
-            > .header__title .card-title {
-
-                .md-icon {
-                  visibility: hidden;
-                  font-size: 24px !important;
-                  fill: $grey-3;
-                  min-width: 16px;
-                  width: 16px;
-                  margin: 0 12px 0 -4px;
-                }
-            }
-        }
-
         .header {
           display: flex;
           padding: 12px;

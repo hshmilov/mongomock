@@ -8,13 +8,18 @@
     @click="onClick"
     @keyup.enter="onClick"
   >
-    <div class="item-content">{{ title }}<svg-icon
-      v-if="disabled"
-      name="symbol/info"
-      :original="true"
-      height="16"
-      :title="disabledDescription"
-    />
+    <div
+      class="item-content"
+    >
+      <ATooltip>
+        <template slot="title">
+          {{ disabledDescription }}
+        </template>{{ title }}</ATooltip>
+      <XIcon
+        v-if="disabled"
+        family="symbol"
+        type="info"
+      />
     </div>
     <div v-show="isActive && !disabled">
       <slot />
@@ -23,8 +28,12 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
+import { Tooltip as ATooltip } from 'ant-design-vue';
+
 export default {
   name: 'XMenuItem',
+  components: { XIcon, ATooltip },
   props: {
     title: { required: true },
     selected: { default: false },

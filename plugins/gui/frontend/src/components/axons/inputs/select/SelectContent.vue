@@ -37,9 +37,7 @@
             :data="getAdapterValue(currentOption.name)"
             @change="(value) => selectOption(currentOption.name, value)"
           />
-          <slot :option="getOption(currentOption)">
-            {{ currentOption.title }}
-          </slot>
+          <slot :option="getOption(currentOption)">{{ currentOption.title }}</slot>
         </div>
         <XSelectContent
           v-if="currentOption.plugins !== undefined && showSecondaryValues"

@@ -4,15 +4,19 @@
       v-if="interactive"
       class="x-milestone-status"
     >
-      <MdIcon
+      <XIcon
         v-if="completed"
         class="x-milestone-status--completed"
-        style="color: #0FBC18;"
-      >check_circle</MdIcon>
-      <MdIcon
+        :style="{color: '#0FBC18', fontSize: '18px'}"
+        type="check-circle"
+        theme="filled"
+      />
+      <XIcon
         v-else
-        style="color: #efefef;"
-      >radio_button_unchecked</MdIcon>
+        :style="{color: '#efefef', fontSize: '18px'}"
+        family="custom"
+        type="circle"
+      />
     </span>
     <div class="x-miestone_container">
       <section class="x-milestone_header">
@@ -25,8 +29,7 @@
             class="x-milestone_expand"
             @click="toggleExpantionPanel"
           >
-            <MdIcon v-if="expand">keyboard_arrow_up</MdIcon>
-            <MdIcon v-else>keyboard_arrow_down</MdIcon>
+            <XIcon :type="expand ? 'up' : 'down'" />
           </span>
           <XButton
             type="primary"
@@ -58,12 +61,13 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import XButton from '../../axons/inputs/Button.vue';
 import { GettingStartedPubSub } from '../../App.vue';
 import XTransitionExpand from '../../transitions/TransitionExpand.vue';
 
 export default {
-  components: { XButton, XTransitionExpand },
+  components: { XButton, XTransitionExpand, XIcon },
   props: {
     completed: {
       type: Boolean,
@@ -122,7 +126,6 @@ export default {
         align-content: flex-start;
         position: relative;
         padding: 10px 0;
-
         &::after {
             background-color: #efefef;
             bottom: -5px;
@@ -137,7 +140,7 @@ export default {
 
         .x-milestone-status {
             position: relative;
-            top: 8px;
+            top: 11px;
         }
         .x-miestone_container {
             flex-grow: 1;
@@ -157,7 +160,11 @@ export default {
             .x-milestone_header_actions {
                 display: flex;
                 justify-content: center;
-                align-content: center;
+                align-items: center;
+
+                .x-button {
+                  margin-left: 8px;
+                }
             }
             .x-milestone_action {
                 width: 90px;

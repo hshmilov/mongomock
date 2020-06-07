@@ -27,7 +27,7 @@ JSON_NAME = 'JSON File'
 # Junk that shouldn't be here
 ADAPTER_THYCOTIC_VAULT_BUTTON = 'cyberark-button'
 ADAPTER_THYCOTIC_VAULT_QUERY_ID = 'cyberark-query'
-ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .md-icon'
+ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .x-icon'
 CONNECTION_LABEL = 'AXON'
 CONNECTION_LABEL_UPDATED = 'AXON2'
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
@@ -51,10 +51,10 @@ class AdaptersPage(EntitiesPage):
     TEST_CREDENTIALS_PROBLEM = 'Failed to save connection details. ' \
                                'Changing connection details requires re-entering credentials'
 
-    ERROR_ICON_CLASS = '.md-icon.icon-error'
-    SUCCESS_ICON_CLASS = '.x-table-row:nth-child({position}) .md-icon.icon-success'
-    ADAPTERS_SUCCESS_ICON_CLASS = '.adapters-table .table-row:nth-child({position}) .md-icon.icon-success'
-    TYPE_ICON_CSS = '.md-icon.icon-{status_type}'
+    ERROR_ICON_CLASS = '.x-icon.icon-error'
+    SUCCESS_ICON_CLASS = '.x-table-row:nth-child({position}) .x-icon.icon-success'
+    ADAPTERS_SUCCESS_ICON_CLASS = '.adapters-table .table-row:nth-child({position}) .x-icon.icon-success'
+    TYPE_ICON_CSS = '.x-icon.icon-{status_type}'
     WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'

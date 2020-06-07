@@ -8,7 +8,11 @@
     </header>
     <header v-if="completed && settings.interactive" class="x-getting-started_completion">
       <span>
-          <svg-icon class="completion_icon" :name="`symbol/troffy`" :original="true" height="20px"></svg-icon>
+          <XIcon
+            class="completion_icon"
+            type="troffy"
+            family="symbol"
+          />
       </span>
       <div class="completion_info">
         <h4>Congratulations!</h4>
@@ -47,6 +51,7 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import XMilestone from "./Milestone.vue";
 import XButton from "../../axons/inputs/Button.vue";
 import XProgressGauge from "../../axons/visuals/ProgressGauge.vue";
@@ -64,7 +69,7 @@ function getCompletedMilestones(item) {
 }
 
 export default {
-  components: { XMilestone, XProgressGauge, XCheckbox, XButton },
+  components: { XMilestone, XProgressGauge, XCheckbox, XButton, XIcon },
   props: {
     value: {
       type: Boolean,
@@ -151,6 +156,10 @@ $footer_section: 60px;
   footer {
     display: flex;
     padding: 10px 20px;
+  }
+
+  .completion_icon {
+    font-size: 20px;
   }
 
   footer {

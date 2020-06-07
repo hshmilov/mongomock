@@ -16,7 +16,10 @@
         class="list__item"
         :class="{ dragging }"
       >
-        <md-icon md-src="/src/assets/icons/action/drag.svg"></md-icon>
+        <XIcon
+          family="action"
+          type="drag"
+        />
         <x-checkbox
           :value="item.name"
           :label="item.title"
@@ -33,12 +36,13 @@
 
 <script>
   import draggable from 'vuedraggable'
+  import XIcon from '@axons/icons/Icon';
   import xCheckbox from '../../axons/inputs/Checkbox.vue'
 
   export default {
     name: 'XCheckboxList',
     components: {
-      draggable, xCheckbox
+      draggable, xCheckbox, XIcon,
     },
     props: {
       items: {
@@ -108,13 +112,13 @@
                 display: flex;
                 padding-right: 16px;
 
-                .md-icon {
+                .x-icon {
                   visibility: hidden;
-                    font-size: 24px !important;
-                    fill: $grey-3;
-                    min-width: 16px;
-                    width: 16px;
-                    margin: 0 -8px 0 -4px;
+                  color: $grey-3;
+                  font-size: 16px;
+                  min-width: 16px;
+                  width: 16px;
+                  margin: 4px -8px 0 -4px;
                 }
 
 
@@ -127,7 +131,7 @@
               .list__item:not(.dragging):hover {
                 border: 1px solid $grey-2;
 
-                .md-icon {
+                .x-icon {
                   visibility: visible;
                 }
               }

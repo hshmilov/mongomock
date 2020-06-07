@@ -81,17 +81,16 @@
                 title="More information about connecting this adapter"
                 @click="openHelpLink"
               >
-                <MdIcon>help_outline</MdIcon>Help
+                <XIcon type="question-circle" />Help
               </XButton>
             </XTitle>
             <div
               v-if="serverModal.error"
               class="server-error"
             >
-              <SvgIcon
-                name="symbol/error"
-                :original="true"
-                height="12"
+              <XIcon
+                family="symbol"
+                type="error"
               />
               <div class="error-text">
                 {{ serverModal.error }}
@@ -185,6 +184,7 @@
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
 import _get from 'lodash/get';
+import XIcon from '@axons/icons/Icon';
 import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
@@ -225,6 +225,7 @@ export default {
     XToast,
     XInstancesSelect,
     AIcon: Icon,
+    XIcon,
     XAdapterAdvancedSettings,
   },
   data() {
@@ -637,14 +638,18 @@ export default {
 
       .server-error {
         display: flex;
-        align-items: baseline;
+        justify-content: center;
         margin-bottom: 12px;
+        align-items: center;
 
         .error-text {
           margin-left: 8px;
           width: 100%;
           text-overflow: ellipsis;
           overflow: hidden;
+        }
+        .x-icon {
+          font-size: 14px;
         }
       }
     }

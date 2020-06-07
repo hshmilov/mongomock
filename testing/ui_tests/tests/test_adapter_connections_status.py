@@ -48,16 +48,16 @@ class TestAdapterConnectionStatus(AdapterTestBase):
                 self.dashboard_page.switch_to_page()
 
                 adapters = self.driver.find_elements_by_css_selector('.adapter-connections-status .adapter')
-                icons = adapters[0].find_elements_by_css_selector('.md-icon')
+                icons = adapters[0].find_elements_by_css_selector('.x-icon')
                 assert len(icons) == 1
                 assert self.adapters_page.has_class(icons[0], 'icon-error')
 
-                icons = adapters[1].find_elements_by_css_selector('.md-icon')
+                icons = adapters[1].find_elements_by_css_selector('.x-icon')
                 assert len(icons) == 2
                 assert self.adapters_page.has_class(icons[0], 'icon-error')
                 assert self.adapters_page.has_class(icons[1], 'icon-success')
 
-                icons = adapters[2].find_elements_by_css_selector('.md-icon')
+                icons = adapters[2].find_elements_by_css_selector('.x-icon')
                 assert len(icons) == 1
                 assert self.adapters_page.has_class(icons[0], 'icon-success')
 

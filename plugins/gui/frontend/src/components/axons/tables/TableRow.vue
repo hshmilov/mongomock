@@ -19,17 +19,11 @@
       v-if="expandable"
       class="top"
     >
-      <md-icon
-        v-if="expandRow"
-        class="active"
+      <XIcon
+        :class="expandRow ? 'active' : ''"
+        :type="expandRow ? 'up' : 'down'"
         @click.native.stop="onToggleExpand"
-      >
-        expand_less
-      </md-icon>
-      <md-icon
-        v-else
-        @click.native.stop="onToggleExpand"
-      >expand_more</md-icon>
+      />
     </td>
     <td
       v-for="schema in fields"
@@ -47,6 +41,7 @@
 
 <script>
 import _isFunction from 'lodash/isFunction';
+import XIcon from '@axons/icons/Icon';
 import xCheckbox from '../inputs/Checkbox.vue';
 import { validateClassName } from '../../../constants/utils';
 
@@ -54,6 +49,7 @@ export default {
   name: 'XTableRow',
   components: {
     xCheckbox,
+    XIcon,
   },
   props: {
     data: {
@@ -176,7 +172,7 @@ export default {
       min-height: 24px;
     }
 
-    .md-icon {
+    .x-icon {
       &:hover, &.active {
         color: $theme-orange;
       }

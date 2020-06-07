@@ -1,10 +1,7 @@
-/* eslint-disable */
-var icon = require('vue-svgicon')
-icon.register({
-  'navigation/devices': {
-    width: 24,
-    height: 16,
-    viewBox: '0 0 24 16',
-    data: '<path pid="0" class="svg-fill" fill-rule="evenodd" d="M4 2h18V0H4C2.9 0 2 .9 2 2v11H0v3h14v-3H4V2zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 9h-4V6h4v7z"/>'
-  }
-})
+export default {
+  template: `
+  <svg width="24px" height="16px" viewBox="0 0 24 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <path class="svg-fill" fill-rule="evenodd" transform="translate(0.000000, -4.000000)" d="M4,6 L22,6 L22,4 L4,4 C2.9,4 2,4.9 2,6 L2,17 L0,17 L0,20 L14,20 L14,17 L4,17 L4,6 L4,6 Z M23,8 L17,8 C16.45,8 16,8.45 16,9 L16,19 C16,19.55 16.45,20 17,20 L23,20 C23.55,20 24,19.55 24,19 L24,9 C24,8.45 23.55,8 23,8 L23,8 Z M22,17 L18,17 L18,10 L22,10 L22,17 L22,17 Z"/>
+  </svg>
+  `,
+};

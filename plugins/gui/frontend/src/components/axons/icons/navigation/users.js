@@ -1,10 +1,12 @@
-/* eslint-disable */
-var icon = require('vue-svgicon')
-icon.register({
-  'navigation/users': {
-    width: 22,
-    height: 14,
-    viewBox: '0 0 22 14',
-    data: '<g _fill="none" fill-rule="evenodd"><path pid="0" d="M7 6c1.66 0 2.99-1.34 2.99-3S8.66 0 7 0C5.34 0 4 1.34 4 3s1.34 3 3 3zM15 6c1.66 0 2.99-1.34 2.99-3S16.66 0 15 0c-1.66 0-3 1.34-3 3s1.34 3 3 3zM15 8c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V14h6v-2.5C22 9.17 17.33 8 15 8zM7 8c-2.33 0-7 1.17-7 3.5V14h14v-2.5C14 9.17 9.33 8 7 8z" class="svg-fill"/></g>'
-  }
-})
+export default {
+  template: `
+  <svg width="22px" height="14px" viewBox="0 0 22 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+          <path d="M7,6 C8.66,6 9.99,4.66 9.99,3 C9.99,1.34 8.66,0 7,0 C5.34,0 4,1.34 4,3 C4,4.66 5.34,6 7,6 Z" class="svg-fill" fill-rule="nonzero"></path>
+          <path d="M15,6 C16.66,6 17.99,4.66 17.99,3 C17.99,1.34 16.66,0 15,0 C13.34,0 12,1.34 12,3 C12,4.66 13.34,6 15,6 Z" class="svg-fill"></path>
+          <path d="M15,8 C14.71,8 14.38,8.02 14.03,8.05 C15.19,8.89 16,10.02 16,11.5 L16,14 L22,14 L22,11.5 C22,9.17 17.33,8 15,8 Z" class="svg-fill"></path>
+          <path d="M7,8 C4.67,8 0,9.17 0,11.5 L0,14 L14,14 L14,11.5 C14,9.17 9.33,8 7,8 Z" class="svg-fill"></path>
+      </g>
+  </svg>
+  `,
+};

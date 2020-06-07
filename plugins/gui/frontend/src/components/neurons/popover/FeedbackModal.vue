@@ -20,20 +20,20 @@
       </template>
       <template v-else-if="status.success">
         <div class="t-center">
-          <SvgIcon
-            name="symbol/success"
-            :original="true"
-            height="48px"
+          <XIcon
+            class="feedback-modal-body__success-icon"
+            family="symbol"
+            type="success"
           />
           <div class="mt-12">{{ message }}</div>
         </div>
       </template>
       <template v-else-if="status.error">
         <div class="t-center">
-          <SvgIcon
-            name="symbol/error"
-            :original="true"
-            height="48px"
+          <XIcon
+            class="feedback-modal-body__error-icon"
+            family="symbol"
+            type="error"
           />
           <div class="mt-12">{{ status.error }}</div>
         </div>
@@ -75,13 +75,14 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 export default {
   name: 'XFeedbackModal',
-  components: { XButton, XModal, PulseLoader },
+  components: { XButton, XModal, PulseLoader, XIcon },
   model: {
     prop: 'launch',
     event: 'change',
@@ -137,6 +138,10 @@ export default {
 <style lang="scss">
     .feedback-modal-body {
         min-height: 120px;
+        &__success-icon, &__error-icon {
+          font-size: 48px;
+        }
+
     }
     .modal-footer {
         .text {

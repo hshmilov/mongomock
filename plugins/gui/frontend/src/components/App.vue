@@ -23,7 +23,7 @@
           title="Getting Started"
           @click="changeChecklistOpenState"
         >
-          <MdIcon>list</MdIcon>
+          <XIcon type="unordered-list" />
         </div>
       </XFabTransition>
       <RouterView />
@@ -56,7 +56,6 @@ import {
 } from 'vuex';
 import _get from 'lodash/get';
 import { FETCH_FETURE_FLAGS } from '@store/modules/settings';
-import { FETCH_ADAPTERS } from '@store/modules/adapters';
 import { SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import XTopBar from './networks/navigation/TopBar.vue';
 import XBottomBar from './networks/navigation/BottomBar.vue';
@@ -64,6 +63,7 @@ import XSideBar from './networks/navigation/SideBar.vue';
 import XLogin from './networks/system/Login.vue';
 import XAccessModal from './neurons/popover/AccessModal.vue';
 import XToast from './axons/popover/Toast.vue';
+import Icon from './axons/icons/Icon';
 import sessionTimeoutMixin from '../mixins/session_timeout';
 
 import { GET_USER } from '../store/modules/auth';
@@ -81,8 +81,6 @@ import {
 import { GET_GETTING_STARTED_DATA } from '../store/modules/onboarding';
 
 import XGettingStarted from './networks/getting-started/GettingStarted.vue';
-
-import './axons/icons';
 
 export const GettingStartedPubSub = new Vue();
 
@@ -124,6 +122,7 @@ export default {
     XToast,
     XGettingStarted,
     XFabTransition,
+    XIcon: Icon,
   },
   mixins: [sessionTimeoutMixin],
   data() {
@@ -272,6 +271,9 @@ export default {
       width: 20px;
       height: 20px;
       font-size: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
   }
   .md-drawer.md-temporary.md-active {

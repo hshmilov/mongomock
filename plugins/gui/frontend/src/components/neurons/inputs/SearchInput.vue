@@ -5,10 +5,9 @@
     @click="focus"
   >
     <div class="input-icon">
-      <SvgIcon
-        name="action/search"
-        :original="true"
-        height="18"
+      <XIcon
+        family="action"
+        type="search"
       />
     </div>
     <slot name="badge" />
@@ -29,8 +28,11 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
+
 export default {
   name: 'XSearchInput',
+  components: { XIcon },
   props: {
     value: {
       type: String,
@@ -97,12 +99,13 @@ export default {
         }
 
         .input-icon {
+            font-size: 18px;
             border: 0;
             position: absolute;
             left: 0;
             top: 0;
             z-index: 100;
-            padding: 0 12px;
+            padding: 2px 12px;
             line-height: 24px;
 
             .svg-fill {

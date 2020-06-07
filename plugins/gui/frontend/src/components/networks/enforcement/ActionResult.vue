@@ -13,10 +13,9 @@
       v-if="isResultAlertAction"
       class="result-container"
     >
-      <svg-icon
-        :name="`symbol/${alertStatus}`"
-        :original="true"
-        height="20px"
+      <XIcon
+        :type="alertStatus"
+        family="symbol"
       />
       <div
         class="result"
@@ -33,6 +32,7 @@
 </template>
 
 <script>
+  import XIcon from '@axons/icons/Icon';
   import xSummary from '../../axons/charts/Summary.vue'
   import xArrayView from '../../neurons/schema/types/array/ArrayView.vue'
   import actionsMixin from '../../../mixins/actions'
@@ -40,7 +40,7 @@
   export default {
     name: 'XActionResult',
     components: {
-      xArrayView, xSummary
+      xArrayView, xSummary, XIcon,
     },
     mixins: [actionsMixin],
     props: {
@@ -108,7 +108,8 @@
 
         .result-container {
             display: flex;
-            .svg-icon {
+            .x-icon {
+                font-size: 20px;
                 margin-right: 4px;
             }
             .result {

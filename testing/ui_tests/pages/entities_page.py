@@ -55,7 +55,7 @@ class EntitiesPage(Page):
     QUERY_ADAPTER_DROPDOWN_SECONDARY_OPTIONS_CSS = 'div.x-select-options > .x-secondary-select-content >' \
                                                    '.x-select-options'
 
-    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
+    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//span[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
     QUERY_NEST_EXPRESSION_CSS = '.x-expression .expression-nest'
@@ -94,9 +94,9 @@ class EntitiesPage(Page):
     TABLE_FIRST_ROW_CSS = 'tbody .x-table-row.clickable'
     TABLE_FIRST_ROW_DATA_CSS = f'{TABLE_FIRST_ROW_CSS} td:not(.top)'
     TABLE_FIRST_ROW_TAG_CSS = f'{TABLE_FIRST_ROW_CSS} td:last-child'
-    TABLE_ROW_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(2) .md-icon'
+    TABLE_ROW_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({child_index}) td:nth-child(2) .x-icon'
     TABLE_CELL_CSS = 'tbody .x-table-row.clickable td:nth-child({cell_index})'
-    TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .md-icon'
+    TABLE_CELL_EXPAND_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) .x-icon'
     TABLE_CELL_HOVER_REMAINDER_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) ' \
                                      '.x-data .x-slice .remainder'
     TABLE_DATA_ROWS_TEXT_CSS = '.x-data > div'

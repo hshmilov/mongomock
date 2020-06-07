@@ -7,20 +7,23 @@
       class="bar-toggle"
       @click="toggleSidebar"
     >
-      <MdIcon md-src="/src/assets/icons/navigation/menu.svg" />
+      <XIcon
+        family="navigation"
+        type="menu"
+      />
     </div>
     <div
       class="bar-logo"
     >
-      <SvgIcon
-        name="logo/logo"
-        height="30"
-        :original="true"
+      <XIcon
+        family="logo"
+        type="logo"
+        class="icon"
       />
-      <SvgIcon
-        name="logo/axonius"
-        height="16"
-        :original="true"
+      <XIcon
+        family="logo"
+        type="axonius"
+        class="name"
       />
     </div>
     <XTrialBanner />
@@ -32,9 +35,10 @@
           class="item-link research-link"
           disabled
         >
-          <MdIcon
-            md-src="/src/assets/icons/symbol/running.svg"
-            class="rotating"
+          <XIcon
+            family="symbol"
+            type="running"
+            spin
           />
           <div>Initiating...</div>
         </button>
@@ -44,9 +48,10 @@
           disabled
           @click="stopResearchNow"
         >
-          <MdIcon
-            md-src="/src/assets/icons/symbol/running.svg"
-            class="rotating"
+          <XIcon
+            family="symbol"
+            type="running"
+            spin
           />
           <div>Stopping...</div>
         </button>
@@ -57,7 +62,10 @@
           :disabled="cannotRunDiscovery"
           @click="startResearchNow"
         >
-          <MdIcon md-src="/src/assets/icons/action/start.svg" />
+          <XIcon
+            family="action"
+            type="start"
+          />
           <div>Discover Now</div>
         </button>
         <button
@@ -67,18 +75,21 @@
           :disabled="cannotRunDiscovery"
           @click="stopResearchNow"
         >
-          <MdIcon md-src="/src/assets/icons/action/stop.svg" />
+          <XIcon
+            family="action"
+            type="stop"
+          />
           <div>Stop Discovery</div>
         </button>
       </li>
       <li class="nav-item">
         <a class="item-link">
           <XNotificationPeek v-if="!isExpired" />
-          <SvgIcon
+          <XIcon
             v-else
-            name="navigation/notifications"
-            :original="true"
-            height="20"
+            family="navigation"
+            type="notifications"
+            :style="{fontSize: '20px', position: 'relative', top: '4px'}"
           />
         </a>
       </li>
@@ -91,10 +102,10 @@
           class="item-link"
           @click="navigateSettings"
         >
-          <SvgIcon
-            name="navigation/settings"
-            :original="true"
-            height="20"
+          <XIcon
+            family="navigation"
+            type="settings"
+            :style="{fontSize: '20px', position: 'relative', top: '4px'}"
           />
         </a>
         <XTipInfo
@@ -142,6 +153,7 @@
 import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
+import XIcon from '@axons/icons/Icon';
 import XNotificationPeek from '../NotificationsPeek.vue';
 import XTipInfo from '../onboard/TipInfo.vue';
 import XTrialBanner from '../onboard/TrialBanner.vue';
@@ -157,7 +169,7 @@ import { entities } from '../../../constants/entities';
 export default {
   name: 'XTopBar',
   components: {
-    XNotificationPeek, XTipInfo, XTrialBanner, XContractBanner,
+    XNotificationPeek, XTipInfo, XTrialBanner, XContractBanner, XIcon,
   },
   data() {
     return {
@@ -303,6 +315,7 @@ export default {
             }
 
             &:hover {
+                cursor: pointer;
                 .svg-stroke {
                     stroke: $theme-orange;
                 }
@@ -316,6 +329,16 @@ export default {
         .bar-logo {
             margin-left: 24px;
             line-height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            .icon {
+              font-size: 30px;
+              padding: 4px;
+            }
+            .name {
+              font-size: 100px;
+            }
         }
 
         .bar-nav {
@@ -384,8 +407,9 @@ export default {
                         font-weight: 400;
                         font-family: $font-stack;
 
-                        .md-icon {
-                          height: 20px;
+                        .x-icon {
+                          height: 22px;
+                          font-size: 22px;
                           display: flex;
                         }
 

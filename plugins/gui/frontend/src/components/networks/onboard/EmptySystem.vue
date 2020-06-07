@@ -1,9 +1,9 @@
 <template>
   <div class="x-empty-system">
-    <SvgIcon
-      name="illustration/see_all"
-      :original="true"
-      height="420"
+    <XIcon
+      family="illustration"
+      class="icon_see-all"
+      type="see_all"
     />
     <div class="system-title">
       SEE ALL TO SECURE ALL
@@ -24,6 +24,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import XIcon from '@axons/icons/Icon';
 import XButton from '../../axons/inputs/Button.vue';
 import { GettingStartedPubSub } from '../../App.vue';
 
@@ -31,7 +32,7 @@ import { IS_USER_ADMIN } from '../../../store/modules/auth';
 
 export default {
   name: 'XEmptySystem',
-  components: { XButton },
+  components: { XButton, XIcon },
   computed: {
     ...mapGetters({
       isUserAdmin: IS_USER_ADMIN,
@@ -48,6 +49,10 @@ export default {
 <style lang="scss">
     .x-empty-system {
         text-align: center;
+
+        .icon_see-all {
+          font-size: 420px;
+        }
 
         .system-title {
             font-size: 24px;

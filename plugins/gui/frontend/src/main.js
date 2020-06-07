@@ -8,7 +8,6 @@ import {
   MdDatepicker,
   MdField,
   MdButton,
-  MdIcon,
   MdDialog,
   MdCard,
   MdList,
@@ -17,8 +16,6 @@ import {
   MdDrawer,
   MdContent,
 } from 'vue-material/dist/components';
-import 'vue-svgicon/dist/polyfill';
-import * as svgicon from 'vue-svgicon';
 
 import { createVuetifyConfigObject } from './plugins/vuetify';
 import App from './components/App.vue';
@@ -33,7 +30,6 @@ Vue.use(Vuelidate);
 Vue.use(MdSwitch);
 Vue.use(MdDatepicker);
 Vue.use(MdField);
-Vue.use(MdIcon);
 Vue.use(MdDialog);
 Vue.use(MdCard);
 Vue.use(MdList);
@@ -49,8 +45,6 @@ Vue.use(VueWorker);
 Vue.use(SafeguardPlugin);
 Vue.use(MessageModalPlugin);
 Vue.use(RoleGatewayPlugin);
-
-Vue.use(svgicon, { tagName: 'SvgIcon' });
 
 new Vue({
   el: '#app',

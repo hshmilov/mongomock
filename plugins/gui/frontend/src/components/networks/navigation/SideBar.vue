@@ -13,10 +13,9 @@
           title="Logout"
           @click="onLogout"
         >
-          <SvgIcon
-            name="navigation/logout"
-            height="16"
-            :original="true"
+          <XIcon
+            family="navigation"
+            type="logout"
           />
         </a>
         <RouterLink
@@ -25,10 +24,9 @@
           title="My Account"
           @click.native="$emit('click')"
         >
-          <SvgIcon
-            name="navigation/settings"
-            height="16"
-            :original="true"
+          <XIcon
+            family="navigation"
+            type="settings"
           />
         </RouterLink>
       </div>
@@ -66,6 +64,7 @@
 import { mapState, mapActions, mapMutations } from 'vuex';
 import _invert from 'lodash/invert';
 import _get from 'lodash/get';
+import XIcon from '@axons/icons/Icon';
 import { REMOVE_TOASTER } from '@store/mutations';
 import XNav from '../../axons/menus/Nav.vue';
 import XNavItem from '../../axons/menus/NavItem.vue';
@@ -74,7 +73,7 @@ import { LOGOUT } from '../../../store/modules/auth';
 
 export default {
   name: 'XSideBar',
-  components: { XNav, XNavItem },
+  components: { XNav, XNavItem, XIcon },
   computed: {
     ...mapState({
       featureFlags(state) {

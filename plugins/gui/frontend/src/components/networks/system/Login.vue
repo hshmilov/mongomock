@@ -6,15 +6,13 @@
       class="login-container"
     >
       <div class="header">
-        <SvgIcon
-          name="logo/logo"
-          height="36"
-          :original="true"
+        <XIcon
+          family="logo"
+          type="logo"
         />
-        <SvgIcon
-          name="logo/axonius"
-          height="20"
-          :original="true"
+        <XIcon
+          family="logo"
+          type="axonius"
           class="logo-subtext"
         />
       </div>
@@ -53,6 +51,7 @@
 <script>
 import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
+import XIcon from '@axons/icons/Icon';
 import XSignupForm from './SignupForm.vue';
 import XLoginForm from './LoginForm.vue';
 import XLoginOptions from './LoginOptions.vue';
@@ -63,7 +62,7 @@ import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '../../../store/modules/auth';
 export default {
   name: 'XLogin',
   components: {
-    XLoginForm, XSignupForm, XLoginOptions, XResetPasswordForm,
+    XLoginForm, XSignupForm, XLoginOptions, XResetPasswordForm, XIcon,
   },
   data() {
     return {
@@ -137,6 +136,16 @@ export default {
         display: flex;
         flex-flow: column;
         justify-content: center;
+
+        .x-icon {
+          font-size: 36px;
+          &.logo-subtext {
+            font-size: 20px;
+            svg {
+              width: 7em;
+            }
+          }
+        }
       }
 
       > .body {

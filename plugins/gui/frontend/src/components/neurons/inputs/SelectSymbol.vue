@@ -10,22 +10,21 @@
   >
     <template slot-scope="{ option }">
       <div class="x-type-img">
-        <img
+        <XIcon
           v-if="option && isFiltered(option) && showSecondaryValues"
           class="img-filtered"
-          src="/src/assets/icons/logo/general_filtered.png"
-          :alt="option.name"
-        >
+          type="filter"
+          family="custom"
+        />
         <img
           v-else-if="type === 'img' && option"
           :src="require(`Logos/adapters/${option.name}.png`)"
           :alt="option.name"
         >
-        <svg-icon
+        <XIcon
           v-else-if="type === 'icon'"
-          :name="`navigation/${option.name}`"
-          :original="true"
-          width="30"
+          :type="option.name"
+          family="navigation"
         />
       </div>
       <div v-if="option" class="logo-text">{{ option.title }}</div>
@@ -34,11 +33,12 @@
 </template>
 
 <script>
+  import XIcon from '@axons/icons/Icon';
   import xSelect from '../../axons/inputs/select/Select.vue'
 
   export default {
     name: 'XSelectSymbol',
-    components: { xSelect },
+    components: { xSelect, XIcon },
     props: {
       readOnly: {
         type: Boolean,
@@ -104,11 +104,12 @@
             vertical-align: middle;
 
             img {
-                max-width: 30px;
-                max-height: 24px;
+              max-width: 30px;
+              max-height: 24px;
             }
 
-            .svg-icon {
+            .x-icon {
+                font-size: 20px;
                 .svg-stroke {
                     stroke: $grey-4;
                 }

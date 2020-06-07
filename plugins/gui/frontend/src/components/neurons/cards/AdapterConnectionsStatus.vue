@@ -45,8 +45,10 @@
               @mouseover="hoveredItem = { header: 'Number of connections with errors', body: adapter.errorClients }"
               @mouseout="hoveredItem = null"
             >
-              <MdIcon
-                md-src="/src/assets/icons/symbol/error.svg"
+              <XIcon
+                family="symbol"
+                type="error"
+                theme="filled"
                 class="icon-error"
               />
               <span class="quantity">{{ adapter.errorClients }}</span>
@@ -57,8 +59,10 @@
               @mouseover="hoveredItem = { header: 'Number of connections with no errors', body: adapter.successClients }"
               @mouseout="hoveredItem = null"
             >
-              <MdIcon
-                md-src="/src/assets/icons/symbol/success.svg"
+              <XIcon
+                family="symbol"
+                type="success"
+                theme="filled"
                 class="icon-success"
               />
               <span class="quantity">{{ adapter.successClients }}</span>
@@ -108,6 +112,7 @@
 </template>
 
 <script>
+import XIcon from '@axons/icons/Icon';
 import _orderBy from 'lodash/orderBy';
 import XPaginator from '@axons/layout/Paginator.vue';
 import XChartTooltip from '@axons/charts/ChartTooltip.vue';
@@ -116,7 +121,7 @@ import { FETCH_ADAPTERS } from '@store/modules/adapters';
 
 export default {
   name: 'XAdapterConnectionsStatus',
-  components: { XPaginator, XChartTooltip },
+  components: { XPaginator, XChartTooltip, XIcon },
   props: {
     data: {
       type: Object,
@@ -204,15 +209,16 @@ export default {
         width: 30%;
         display: flex;
         align-items: center;
-        .md-icon {
+        .x-icon {
           margin: 0px 6px 0px 0px;
         }
         .quantity {
           font-weight: 400;
           font-size: 16px;
         }
-        .icon-error svg, .icon-success svg {
-          width: 18px;
+        .icon-error svg, .icon-success {
+          font-size: 20px;
+          margin-right: 4px;
         }
       }
     }

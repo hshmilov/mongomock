@@ -1,10 +1,10 @@
-/* eslint-disable */
-var icon = require('vue-svgicon')
-icon.register({
-  'symbol/error': {
-    width: 18,
-    height: 15,
-    viewBox: '0 0 18 15',
-    data: '<defs><path pid="0" d="M0 15L9 0l9 15H0zm10-2v-2H8v2h2zm0-4V5H8v4h2z" id="svgicon_symbol_error_a"/></defs><g _fill="none" fill-rule="evenodd"><mask id="svgicon_symbol_error_b" class="svg-bg"><use xlink:href="#svgicon_symbol_error_a"/></mask><use _fill="#D0011B" xlink:href="#svgicon_symbol_error_a"/><g mask="url(#svgicon_symbol_error_b)"><path pid="1" d="M-3-5h24v24H-3z"/></g></g>'
-  }
-})
+export default {
+    template: `
+    <svg width="16px" height="16px" viewBox="0 0 18 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <title>Error</title>
+        <g stroke="none" stroke-width="1" fill-rule="evenodd" fill="#D0011B">
+            <path d="M0,15 L9,0 L18,15 L0,15 Z M10,13 L10,11 L8,11 L8,13 L10,13 Z M10,9 L10,5 L8,5 L8,9 L10,9 Z"></path>
+        </g>
+    </svg>
+    `,
+};

@@ -2,7 +2,7 @@
     <div class="upload-file">
         <template v-if="uploading">
             <div class="file-name">
-                <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
+                <XIcon family="symbol" type="running" spin />
                 <div class="name-placeholder">Uploading...</div>
             </div>
         </template>
@@ -15,15 +15,15 @@
 </template>
 
 <script>
+    import XIcon from '@axons/icons/Icon';
     import xButton from '../../../../axons/inputs/Button.vue'
-
     import {currentHost} from '../../../../../store/actions'
 
     import axiosClient from '@api/axios.js'
 
     export default {
         name: 'x-array-edit',
-        components: { xButton },
+        components: { xButton, XIcon },
         props: ['schema', 'value', 'apiUpload', 'readOnly'],
         data() {
             return {
@@ -105,7 +105,7 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
-            .svg-icon {
+            .x-icon {
                 margin-right: 8px;
                 .svg-stroke {
                     stroke: $grey-3;

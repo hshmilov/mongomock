@@ -9,10 +9,10 @@
       class="body"
     >
       <div class="content">
-        <SvgIcon
-          name="navigation/compliance"
-          :original="true"
-          height="49px"
+        <XIcon
+          class="compliance-icon"
+          family="navigation"
+          type="compliance"
         />
         <div class="compliance-title">
           <span>Ready to see how your cloud assets comply with standards and benchmarks?</span>
@@ -33,34 +33,26 @@
       <XButton
         type="link"
         @click="openMail"
-      >Upgrade<VIcon
-        size="20px"
-        color="white"
-      >{{ arrowIcon }}</VIcon>
+      >Upgrade<XIcon type="arrow-right" />
       </XButton>
     </div>
   </XModal>
 </template>
 
 <script>
-import { mdiArrowRight } from '@mdi/js';
+import XIcon from '@axons/icons/Icon';
 import XModal from '../../axons/popover/Modal/index.vue';
 import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XComplianceTip',
   components: {
-    XModal, XButton,
+    XModal, XButton, XIcon,
   },
   props: {
     enabled: {
       type: Boolean,
       default: true,
-    },
-  },
-  computed: {
-    arrowIcon() {
-      return mdiArrowRight;
     },
   },
   methods: {
@@ -108,6 +100,13 @@ export default {
       justify-content: center;
 
       .content {
+        .x-icon {
+          font-size: 48px;
+          svg {
+            fill: $theme-white;
+            stroke: $theme-orange;
+          }
+        }
         text-align: center;
         margin-top: 12px;
         width: 380px;
