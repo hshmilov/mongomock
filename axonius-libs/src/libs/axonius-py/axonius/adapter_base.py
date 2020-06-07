@@ -1793,47 +1793,49 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'items': [
                 {
                     'name': 'last_seen_threshold_hours',
-                    'title': 'Do not fetch device if not seen by source in last X hours',
-                    'type': 'number'
+                    'title': 'Ignore devices that have not been seen by the source in the last X hours',
+                    'type': 'number',
                 },
                 {
                     'name': 'last_fetched_threshold_hours',
-                    'title': 'Delete device if not fetched from source in last X hours',
-                    'type': 'number'
+                    'title': 'Delete devices that have not been returned from the source in the last X hours',
+                    'type': 'number',
                 },
                 {
                     'name': 'user_last_seen_threshold_hours',
-                    'title': 'Do not fetch user if not seen by source in last X hours',
-                    'type': 'number'
+                    'title': 'Ignore users that have not been seen by the source in the last X hours',
+                    'type': 'number',
                 },
                 {
                     'name': 'user_last_fetched_threshold_hours',
-                    'title': 'Delete user if not fetched from source in last X hours',
+                    'title': 'Delete users that have not been returned from the source in the last X hours',
                     'type': 'number',
                 },
                 {
                     'name': 'minimum_time_until_next_fetch',
-                    'title': 'Minimum hours to wait before next discovery cycle for this adapter',
+                    'title': 'Override the global discovery schedule for this adapter to wait X hours before fetching',
                     'type': 'number',
                 },
                 {
                     'name': 'connect_client_timeout',
-                    'title': 'Adapter connection timeout in seconds',
+                    'title': 'Wait for a connection to the source for up to X seconds',
                     'type': 'number',
                 },
                 {
                     'name': 'fetching_timeout',
-                    'title': 'Entity fetching timeout in seconds',
+                    'title': 'Wait for a response from the source for up to X seconds',
                     'type': 'number',
                 },
                 {
                     'name': 'last_seen_prioritized',
-                    'title': 'Discard entity data if \'Last Seen\' fetched is older than \'Last Seen\' saved',
+                    'title': 'Ignore matching assets from the source if a subsequent asset was seen by the source '
+                             'before the previously fetched asset',
                     'type': 'bool',
                 },
                 {
                     'name': 'realtime_adapter',
-                    'title': 'Run as a real-time adapter',
+                    'title': 'Enable real-time adapter (Ignores all discovery cycle settings and continuously '
+                             'repeats fetches from the source)',
                     'type': 'bool',
                 }
             ],
