@@ -158,6 +158,12 @@ input:disabled {
   opacity: 0.6;
 }
 
+.ant-checkbox {
+  input:disabled {
+    opacity: 0;
+  }
+}
+
 textarea {
   border-style: solid;
   border-width: 1px;
