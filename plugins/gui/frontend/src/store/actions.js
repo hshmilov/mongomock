@@ -109,18 +109,19 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
       },
       payload,
     });
-
-    await dispatch(REQUEST_API, {
-      rule: `${path}/count`,
-      type: UPDATE_DATA_COUNT_QUICK,
-      method: 'POST',
-      data: {
-        filter: view.query.filter,
-        history: view.historical,
-        quick: true,
-      },
-      payload,
-    });
+    if (!payload.isExperimentalAPI) {
+      await dispatch(REQUEST_API, {
+        rule: `${path}/count`,
+        type: UPDATE_DATA_COUNT_QUICK,
+        method: 'POST',
+        data: {
+          filter: view.query.filter,
+          history: view.historical,
+          quick: true,
+        },
+        payload,
+      });
+    }
   } else {
     const params = [];
 
@@ -132,6 +133,11 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
         params.push(`search=${encodeURIComponent(view.query.search)}`);
       }
     }
+
+    if (payload.isExperimentalAPI) {
+      params.push(`experimental=${encodeURIComponent(payload.isExperimentalAPI)}`);
+    }
+
     if (view.historical) {
       params.push(`history=${encodeURIComponent(view.historical)}`);
     }
@@ -141,13 +147,15 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
       type: UPDATE_DATA_COUNT,
       payload,
     });
-
-    params.push('quick=True');
-    dispatch(REQUEST_API, {
-      rule: `${path}/count?${params.join('&')}`,
-      type: UPDATE_DATA_COUNT_QUICK,
-      payload,
-    });
+    // if we are using experimental skip "stupid" quick count
+    if (!payload.isExperimentalAPI) {
+      params.push('quick=True');
+      dispatch(REQUEST_API, {
+        rule: `${path}/count?${params.join('&')}`,
+        type: UPDATE_DATA_COUNT_QUICK,
+        payload,
+      });
+    }
   }
 };
 

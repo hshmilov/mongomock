@@ -1,5 +1,6 @@
 import _pickBy from 'lodash/pickBy';
 import _isEmpty from 'lodash/isEmpty';
+import _toString from 'lodash/toString'
 import { getModule } from './actions';
 import { pluginMeta } from '../constants/plugin_meta';
 import { initCustomData } from '../constants/entities';
@@ -72,8 +73,11 @@ export const updateDataCount = (state, payload) => {
   count.rule = payload.rule;
 
   if (payload.isExperimentalAPI && payload.data !== undefined) {
-    count.data = payload.data.data[`${payload.module}_aggregate`][0].count;
-    count.data_to_show = payload.data.data[`${payload.module}_aggregate`][0].count;
+    const [data] = payload.data.data[`${payload.module}_aggregate`];
+    const { count: resCount } = data;
+    const strCountValue = _toString(resCount);
+    count.data = strCountValue;
+    count.data_to_show = strCountValue;
     return;
   }
   if (payload.data !== undefined) {

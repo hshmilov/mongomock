@@ -33,6 +33,7 @@ SEARCH_DEVICES_API = """
               hostname
               name
               lastUsedUsers
+              lastSeen
               interfaces {
                 macAddr
                 ipAddrs
@@ -48,7 +49,7 @@ SEARCH_DEVICES_API = """
 
 SEARCH_DEVICES_API_COUNT = """
 
-    query($where: device_bool_exp!, $limit: Int = 0, $offset: Int = 0) {
+    query($where: device_bool_exp!, $limit: Int, $offset: Int) {
         devices_aggregate(where: $where, limit: $limit, offset: $offset) {
             count
         }
@@ -120,7 +121,7 @@ def allow_experimental(count=False):
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             if not content.get('experimental', False):
                 return func(self, *args, **kwargs)
-            # fallback... fallback to minas... mongodb...
+            # fallback... fallback to mongodb...
             if content.get('sort') is not None:
                 return func(self, *args, **kwargs)
             # don't execute quick on experimental
@@ -134,13 +135,13 @@ def allow_experimental(count=False):
                     raise ValueError('Missing AQL')
                 time1 = time.time()
                 resp = execute_query(translators[self.entity_type], self.entity_type,
-                                     aql=aql, offset=content.get('offset', 0), limit=content.get('limit', 0),
+                                     aql=aql, offset=content.get('offset', None), limit=content.get('limit', None),
                                      fields_query=content.get('fields'),
                                      count=count)
                 if resp.status_code != 200:
                     raise ValueError(f'Query failed. Response: {resp.json()}')
                 time2 = time.time()
-                logger.info('GraphQL Request function took {:.3f} ms'.format((time2 - time1) * 1000.0))
+                logger.info('GraphQL Request count={} function took {:.3f} ms'.format(count, (time2 - time1) * 1000.0))
                 return resp.text
             except (ValueError, NotImplementedError, Exception) as err:
                 logger.warning('failed to use GraphQL using Mongo. Reason: %s', err)
@@ -150,7 +151,7 @@ def allow_experimental(count=False):
     return wrap
 
 
-def execute_query(translator, entity_type, aql: typing.AnyStr, limit: int, offset: int,
+def execute_query(translator, entity_type, aql: typing.AnyStr, limit: int = None, offset: int = None,
                   fields_query: str = None, count: bool = False) -> typing.Optional[requests.Response]:
     vars_ = {
         "where": translator.translate(aql) if aql else {},
@@ -160,7 +161,7 @@ def execute_query(translator, entity_type, aql: typing.AnyStr, limit: int, offse
     }
     logger.debug(f'Translating AQL {aql} -> {vars_["where"]}')
 
-    if fields_query:
+    if not count and fields_query:
         query = translator.build_gql(fields_query)
         logger.debug(f'built GraphQL project query {fields_query} -> {query}')
     else:
