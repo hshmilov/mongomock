@@ -591,6 +591,7 @@ class DashboardPage(Page):
         self.open_close_card_menu(panel)
         self.driver.find_element_by_id('move_or_copy_chart').click()
         self.wait_for_element_present_by_css('.ant-modal')
+        time.sleep(0.4)  # Wait for opening animation to end
 
     def select_space_for_move_or_copy(self, text_option):
         self.driver.find_element_by_id(self.MOVE_OR_COPY_SPACE_SELECT_ID).click()

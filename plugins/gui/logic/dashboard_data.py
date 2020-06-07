@@ -64,16 +64,20 @@ def adapter_data(entity_type: EntityType):
     # If an Axonius entity has 2 adapter entities from the same plugin it will be counted for each time it is there
     entities_per_adapters = defaultdict(lambda: {'value': 0, 'meta': 0})
     aggregate_query = [{'$group': {'_id': f'$adapters.{PLUGIN_NAME}', 'count': {'$sum': 1}}}]
+    total = 0
     for res in entity_collection.aggregate(aggregate_query):
         for plugin_name in set(res['_id']):
             entities_per_adapters[plugin_name]['value'] += res['count']
+            total += res['count']
             adapter_entities['seen'] += res['count']
 
         for plugin_name in res['_id']:
             entities_per_adapters[plugin_name]['meta'] += res['count']
             adapter_entities['seen_gross'] += res['count']
     for name, value in entities_per_adapters.items():
-        adapter_entities['counters'].append({'name': name, **value})
+        adapter_entities['counters'].append({
+            'name': name, 'portion': value['value'] / total, **value
+        })
 
     return adapter_entities
 
@@ -129,13 +133,9 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         total += data_item['value']
 
     data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
-
-    if chart_view == ChartViews.pie:
-        return_data = []
-        if total:
-            return_data.extend(map(lambda x: {**x, 'value': x['value'] / total, 'numericValue': x['value']}, data))
-        return return_data
-    return data
+    if chart_view == ChartViews.pie and not total:
+        return []
+    return [{**x, 'portion': (x['value'] / total if total else 0)} for x in data]
 
 # pylint: disable=R0914
 
@@ -210,9 +210,12 @@ def fetch_chart_intersect(
             numeric_value = data_collection.count_documents({
                 '$and': base_queries + [child1_query]
             })
-        data.append({'name': child1_name, 'view': child1_view, 'module': entity.value,
-                     'numericValue': numeric_value,
-                     'value': numeric_value / total})
+        data.append({
+            'name': child1_name,
+            'view': child1_view,
+            'module': entity.value,
+            'value': numeric_value,
+            'portion': numeric_value / total})
     else:
         child2_from_db = find_view_by_id(entity, intersecting[1])
         if not child2_from_db or not child2_from_db.get('view', {}).get('query'):
@@ -244,8 +247,13 @@ def fetch_chart_intersect(
                     }
                 ]
             })
-        data.append({'name': child1_name, 'numericValue': numeric_value,
-                     'value': numeric_value / total, 'module': entity.value, 'view': child1_view})
+        data.append({
+            'name': child1_name,
+            'value': numeric_value,
+            'portion': numeric_value / total,
+            'module': entity.value,
+            'view': child1_view
+        })
 
         # Intersection
         if is_where_count_query(base_filter) or \
@@ -260,13 +268,14 @@ def fetch_chart_intersect(
                 '$and': base_queries + [
                     child1_query, child2_query
                 ]})
-        data.append(
-            {'name': f'{child1_name} + {child2_name}',
-             'intersection': True,
-             'numericValue': numeric_value,
-             'value': numeric_value / total,
-             'view': {**base_view, 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
-             'module': entity.value})
+        data.append({
+            'name': f'{child1_name} + {child2_name}',
+            'intersection': True,
+            'value': numeric_value,
+            'portion': numeric_value / total,
+            'view': {**base_view, 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
+            'module': entity.value
+        })
 
         # Child2 + Parent - Intersection
         child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
@@ -290,15 +299,27 @@ def fetch_chart_intersect(
                     }
                 ]
             })
-        data.append({'name': child2_name, 'numericValue': numeric_value,
-                     'value': numeric_value / total, 'module': entity.value, 'view': child2_view})
+        data.append({
+            'name': child2_name,
+            'value': numeric_value,
+            'portion': numeric_value / total,
+            'module': entity.value,
+            'view': child2_view
+        })
 
-    remainder = 1 - sum([x['value'] for x in data])
-    numeric_remainder = total - sum([x['numericValue'] for x in data])
+    remainder = 1 - sum([x['portion'] for x in data])
+    numeric_remainder = total - sum([x['value'] for x in data])
     child2_or = f' or ({child2_filter})' if child2_filter else ''
-    return [{'name': base_name, 'value': remainder, 'numericValue': numeric_remainder, 'remainder': True, 'view': {
-        **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
-    }, 'module': entity.value}, *data]
+    return [{
+        'name': base_name,
+        'portion': remainder,
+        'value': numeric_remainder,
+        'remainder': True,
+        'view': {
+            **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
+        },
+        'module': entity.value
+    }, *data]
 
 
 # pylint: disable-msg=too-many-locals
@@ -564,10 +585,8 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
         })
 
     data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
-    if chart_view == ChartViews.pie:
-        total = sum([x['value'] for x in data])
-        return [{**x, 'value': x['value'] / total, 'numericValue': x['value']} for x in data]
-    return data
+    total = sum([x['value'] for x in data])
+    return [{**x, 'portion': x['value'] / total} for x in data]
 
 
 def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
@@ -1110,11 +1129,12 @@ def fetch_chart_matrix(
     if not has_results:
         return None
 
+    total = sum(total_values.values())
     for intersection in data:
         intersection['value'] = total_values[intersection['baseIndex']]
+        intersection['portion'] = intersection['value'] / total
 
-    data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
-    return data
+    return _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
 
 
 @dashboard_call_limit(10)

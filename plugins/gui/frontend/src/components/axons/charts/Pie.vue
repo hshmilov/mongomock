@@ -52,13 +52,13 @@
             :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"
           />
           <text
-            v-if="showPercentageText(slice.value)"
+            v-if="showPercentageText(slice.portion)"
             class="scaling"
             text-anchor="middle"
             :x="slice.middle.x"
             :y="slice.middle.y"
           >
-            {{ Math.round(slice.value * 100) }}%
+            {{ Math.round(slice.portion * 100) }}%
           </text>
         </g>
       </svg>
@@ -68,6 +68,7 @@
 
 <script>
 import XChartTooltip from './ChartTooltip.vue';
+import { formatPercentage } from '../../../constants/utils'
 
 export default {
   name: 'XPie',
@@ -99,10 +100,10 @@ export default {
     },
     processedData() {
       const processData = this.data.map((item, index) => {
-        const { value, remainder } = item;
+        const { portion, remainder } = item;
         const modifiedItem = item;
         modifiedItem.index = index;
-        modifiedItem.percentage = this.getPercentage(value);
+        modifiedItem.percentage = formatPercentage(portion);
         modifiedItem.name = remainder ? 'Excluding' : modifiedItem.name;
         modifiedItem.class = this.getItemClass(item, index);
         return modifiedItem;
@@ -116,15 +117,15 @@ export default {
       return this.processedData.map((slice) => {
         // Starting slice at the end of previous one, and ending after percentage defined for item
         const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion);
-        cumulativePortion += slice.value / 2;
+        cumulativePortion += slice.portion / 2;
         const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion);
-        cumulativePortion += slice.value / 2;
+        cumulativePortion += slice.portion / 2;
         const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion);
         return {
           ...slice,
           path: [
             `M ${startX} ${startY}`, // Move
-            `A 1 1 0 ${slice.value > 0.5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
+            `A 1 1 0 ${slice.portion > 0.5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
             'L 0 0', // Line
           ].join(' '),
           middle: { x: middleX * 0.7, y: middleY * (middleY > 0 ? 0.8 : 0.5) },
@@ -135,13 +136,9 @@ export default {
       if (!this.data || this.data.length === 0 || this.inHover === -1) {
         return {};
       }
-
       const {
-        percentage, name, remainder, intersection,
+        percentage, name, remainder, intersection, value, class: colorClass,
       } = this.processedData[this.inHover];
-
-      const value = this.processedData[this.inHover].numericValue;
-      const colorClass = this.processedData[this.inHover].class;
       let tooltip;
       if (intersection) {
         tooltip = this.getIntersectionTooltip(name, value, percentage, colorClass);
@@ -156,21 +153,13 @@ export default {
   methods: {
     getItemClass(item) {
       if (this.data.length === 2 && item.index === 1 && this.data[0].remainder) {
-        return `indicator-fill-${Math.ceil(item.value * 4)}`;
+        return `indicator-fill-${Math.ceil(item.portion * 4)}`;
       }
       const modIndex = (item.index % 10) + 1;
       if (item.intersection) {
         return `fill-intersection-${modIndex - 1}-${modIndex + 1}`;
       }
       return `pie-fill-${modIndex}`;
-    },
-    getPercentage(value) {
-      let percentage = value * 100;
-      percentage = percentage % 1 ? percentage.toFixed(2) : percentage;
-      if (percentage < 0) {
-        percentage = 100 + percentage;
-      }
-      return `(${percentage}%)`;
     },
     getNormalTooltip(name, value, percentage, colorClass) {
       return {

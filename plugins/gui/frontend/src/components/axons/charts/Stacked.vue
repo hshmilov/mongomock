@@ -6,7 +6,7 @@
     >
       <div
         slot="tooltipActivator"
-        class="matrix-container"
+        class="stacked-container"
       >
         <div
           class="groups-container"
@@ -49,11 +49,9 @@
             </div>
           </div>
         </div>
-        <div class="matrix-footer">
+        <div>
           <div class="separator" />
-          <div class="matrix-total">
-            {{ 'Total ' + totalValue }}
-          </div>
+          <div class="stacked-total">Total {{totalValue}}</div>
           <XPaginator
             :from.sync="dataFrom"
             :to.sync="dataTo"
@@ -71,6 +69,7 @@ import _get from 'lodash/get';
 
 import XPaginator from '../layout/Paginator.vue';
 import XChartTooltip from './ChartTooltip.vue';
+import { formatPercentage } from '@constants/utils';
 
 export default {
   name: 'XStacked',
@@ -105,10 +104,11 @@ export default {
       return this.intersectionGroups.slice(this.dataFrom - 1, this.dataTo);
     },
     totalValue() {
-      // eslint-disable-next-line arrow-body-style
-      return this.intersectionGroups.reduce((totalValue, currentGroup) => {
-        return totalValue + currentGroup.value;
-      }, 0);
+      if (!this.data.length) {
+        return 0;
+      }
+      const [{ portion, value }] = this.data;
+      return portion === 1 ? value : Math.round(1 / (portion / value));
     },
     intersectionGroups() {
       let currentBaseIndex = -1;
@@ -134,16 +134,13 @@ export default {
       }, []);
     },
     maxGroupValue() {
-      // eslint-disable-next-line arrow-body-style
-      return this.intersectionGroups.reduce((maxValue, currentGroup) => {
-        return currentGroup.value > maxValue ? currentGroup.value : maxValue;
-      }, 0);
+      return this.intersectionGroups.reduce((maxValue, currentGroup) => (
+        currentGroup.value > maxValue ? currentGroup.value : maxValue), 0);
     },
     tooltipDetails() {
       if (!this.hover.intersection) {
         return {};
       }
-
       const { value } = this.hover.intersection;
       const intersectionName = this.hover.intersection.name;
       const headerClass = `tooltip-header-content ${this.getColorClass(this.hover.intersection.intersectionIndex)}`;
@@ -159,7 +156,7 @@ export default {
         body: {
           name: intersectionName,
           value,
-          percentage: this.getValuePercentage(value, groupValue),
+          percentage: formatPercentage(value / groupValue),
         },
       };
     },
@@ -182,15 +179,6 @@ export default {
     },
     getColorClass(intersectionIndex) {
       return `pie-fill-${this.pieFillArray[intersectionIndex]}`;
-    },
-    getValuePercentage(value, groupValue) {
-      let percentage = (value / groupValue) * 100;
-      if (percentage) {
-        percentage = `(${percentage % 1 ? percentage.toFixed(2) : percentage}%)`;
-      } else {
-        percentage = '';
-      }
-      return percentage;
     },
     getSliceStyle(intersection) {
       return {
@@ -230,7 +218,7 @@ export default {
     .x-chart-tooltip {
       height: 100%;
 
-      .matrix-container {
+      .stacked-container {
         height: 100%;
 
         .groups-container {
@@ -275,7 +263,7 @@ export default {
           }
         }
 
-        .matrix-total {
+        .stacked-total {
           font-weight: 300;
           text-align: center;
           line-height: 24px;

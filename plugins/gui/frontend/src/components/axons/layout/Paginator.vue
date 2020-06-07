@@ -147,14 +147,16 @@ export default {
     }
 
     .x-button {
-      width: 15px;
+      width: 12px;
       background: transparent;
       display: flex;
       justify-content: center;
-      color: black;
-      &:hover:not(:disabled) {
-          color: black;
-          box-shadow: 1px 1px 3px grey;
+      line-height: 30px;
+      &:not(:disabled) {
+        color: $theme-black;
+        &:hover {
+          text-shadow: $text-shadow;
+        }
       }
     }
     .active:hover {

@@ -79,7 +79,7 @@ export default {
           onClick: () => this.$emit('on-item-click', legendItem.index),
         });
         columnValues.push({
-          value: legendItem.numericValue,
+          value: legendItem.value,
           class: 'column-value',
           onClick: () => {},
         });

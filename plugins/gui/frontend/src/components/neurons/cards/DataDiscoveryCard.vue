@@ -82,8 +82,7 @@ export default {
       return [...this.data.counters]
         .sort((first, second) => second.value - first.value)
         .map((item) => ({
-          name: item.name,
-          value: item.value,
+          ...item,
           title: (item.value !== item.meta) ? `${item.value} (${item.meta})` : item.value,
         }));
     },

@@ -397,7 +397,7 @@ class ReportGenerator:
         """
         queries = [item for item in queries_data[1:] if item.get('value')]
         queries.insert(0, queries_data[0])
-        portions = [{'portion': item['value'], 'title': item['name'], 'remainder': False} for item in queries]
+        portions = [{'portion': item['portion'], 'title': item['name'], 'remainder': False} for item in queries]
 
         colours = ['#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
         slices = []
@@ -459,7 +459,7 @@ class ReportGenerator:
         remainder = None
         for chart_row in chart_data:
             portion = {
-                'portion': chart_row['value'],
+                'portion': chart_row['portion'],
                 'title': chart_row['name'],
                 'remainder': chart_row.get('remainder')
             }

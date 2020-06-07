@@ -8,9 +8,7 @@
       class="x-histogram"
       :class="{disabled: readOnly, condensed}"
     >
-      <div
-        class="histogram-container"
-      >
+      <div class="histogram-container">
         <div
           v-for="(item, index) in pageData"
           :key="index"
@@ -51,6 +49,10 @@
       </div>
       <template v-if="dataLength">
         <div class="separator" />
+        <div
+          v-if="!condensed"
+          class="histogram-total"
+        >Total {{totalValue}}</div>
         <XPaginator
           :from.sync="dataFrom"
           :to.sync="dataTo"
@@ -63,9 +65,10 @@
 </template>
 
 <script>
+import { formatPercentage } from '@constants/utils';
+import { pluginMeta } from '@constants/plugin_meta';
 import XPaginator from '../layout/Paginator.vue';
 import XChartTooltip from './ChartTooltip.vue';
-import { pluginMeta } from '../../../constants/plugin_meta';
 
 export default {
   name: 'XHistogram',
@@ -138,10 +141,9 @@ export default {
         return {};
       }
 
-      const { value } = this.hoveredItem;
+      const { portion, value } = this.hoveredItem;
       let { name } = this.hoveredItem;
       name = pluginMeta[name] ? pluginMeta[name].title : name;
-
       return {
         header: {
           class: 'tooltip-header-content pie-fill-1',
@@ -149,24 +151,19 @@ export default {
         },
         body: {
           value,
-          percentage: this.getValuePercentage(value),
+          percentage: formatPercentage(portion),
         },
       };
     },
     totalValue() {
-      return this.data.reduce((total, item) => (total + item.value), 0);
+      if (!this.data.length) {
+        return 0;
+      }
+      const [{ value, portion }] = this.data;
+      return portion === 1 ? value : Math.round(1 / (portion / value));
     },
   },
   methods: {
-    getValuePercentage(value) {
-      let percentage = (value / this.totalValue) * 100;
-      if (percentage) {
-        percentage = `(${percentage % 1 ? percentage.toFixed(2) : percentage}%)`;
-      } else {
-        percentage = '';
-      }
-      return percentage;
-    },
     calculateBarWidth(quantity) {
       return (this.maxWidth * quantity) / this.maxQuantity;
     },
@@ -190,7 +187,7 @@ export default {
       display: flex;
       flex-direction: column;
       flex: 1 0 auto;
-      min-height: 225px
+      min-height: 240px
     }
 
     .histogram-item {
@@ -288,6 +285,12 @@ export default {
       &.disabled .histogram-item .bar:hover {
         background-color: rgba($grey-2, 0.8);
       }
+    }
+
+    .histogram-total {
+      text-align: center;
+      line-height: 24px;
+      width: 100%;
     }
   }
 </style>

@@ -109,6 +109,14 @@ export const getParentFromField = (fieldName) => fieldName.split('.').slice(0, -
 
 export const validateClassName = (name) => /^([a-z_]|-[a-z_-])[a-z\d_-]*$/i.test(name);
 
+export const formatPercentage = (portion) => {
+  const percentage = portion * 100;
+  if (!percentage) {
+    return '';
+  }
+  return `(${percentage % 1 ? percentage.toFixed(2) : percentage}%)`;
+};
+
 // Gets the chart views according to its metric type
 export const ChartViewGetter = (chart) => {
 
