@@ -81,6 +81,11 @@ class PluginService(WeaveService):
             EntityType.Devices: self.db.client['aggregator']['devices_db'],
         }
 
+        self._all_fields_db_map: Dict[EntityType, Collection] = {
+            EntityType.Users: self.db.client['aggregator']['users_fields'],
+            EntityType.Devices: self.db.client['aggregator']['devices_fields']
+        }
+
         self._entity_views_map: Dict[EntityType, Collection] = {
             EntityType.Users: self.db.client['gui']['user_views'],
             EntityType.Devices: self.db.client['gui']['device_views'],

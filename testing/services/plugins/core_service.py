@@ -60,7 +60,13 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 17:
             self._update_schema_version_17()
 
-        if self.db_schema_version != 17:
+        if self.db_schema_version < 18:
+            self._update_schema_version_18()
+
+        if self.db_schema_version < 19:
+            self._update_schema_version_19()
+
+        if self.db_schema_version != 19:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -908,6 +914,91 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             print(f'Exception while upgrading core db to version 17. Details: {e}')
             traceback.print_exc()
             raise e
+
+    def _update_schema_version_18(self):
+        print(f'Upgrading to schema version 18 - Nexpose adapter')
+        try:
+            nexpose_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'nexpose_adapter'}))
+            nexpose_plugin_unique_names = [doc[PLUGIN_UNIQUE_NAME] for doc in nexpose_adapters]
+
+            advanced_settings = None
+
+            # 1. get advanced settings
+            for plugin_unique_name in nexpose_plugin_unique_names:
+                # Take the first one we find. It should be the same for all plugins
+                advanced_settings = self.db.client[plugin_unique_name]['configurable_configs'].find_one(
+                    {
+                        'config_name': 'NexposeAdapter'
+                    }
+                )
+
+                if advanced_settings:
+                    advanced_settings = advanced_settings.get('config') or {}
+                    break
+
+            if not advanced_settings:
+                print(f'Warning - no advanced settings found for nexpose. Continuing')
+                self.db_schema_version = 18
+                return
+
+            for plugin_unique_name in nexpose_plugin_unique_names:
+                # Go over all the different nexpose plugin unique names we have. If we have
+                # clients there then we must add some configurations to this client.
+
+                for client in self.db.client[plugin_unique_name]['clients'].find():
+                    # If we found this client, we have
+                    new_client_config = client['client_config'].copy()
+                    self.decrypt_dict(new_client_config)
+
+                    fetch_tags_config = advanced_settings.get('fetch_tags', True)
+
+                    new_client_config['fetch_tags'] = fetch_tags_config
+                    new_client_config['fetch_sw'] = fetch_tags_config
+                    new_client_config['fetch_ports'] = fetch_tags_config
+                    new_client_config['fetch_policies'] = fetch_tags_config
+
+                    new_client_config['fetch_vulnerabilities'] = advanced_settings.get('fetch_vulnerabilities', False)
+                    new_client_config['num_of_simultaneous_devices'] = advanced_settings.get(
+                        'num_of_simultaneous_devices', 50)
+                    new_client_config['drop_only_ip_devices'] = advanced_settings.get('drop_only_ip_devices', False)
+
+                    self.encrypt_dict(plugin_unique_name, new_client_config)
+                    self.db.client[plugin_unique_name]['clients'].update(
+                        {
+                            '_id': client['_id']
+                        },
+                        {
+                            '$set':
+                                {
+                                    'client_config': new_client_config
+                                }
+                        })
+
+            self.db_schema_version = 18
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 18. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_19(self):
+        print(f'Upgrading to schema version 19 - Nexpose advanced settings')
+        try:
+            nexpose_adapters = list(self.db.client['core']['configs'].find({PLUGIN_NAME: 'nexpose_adapter'}))
+            nexpose_plugin_unique_names = [doc[PLUGIN_UNIQUE_NAME] for doc in nexpose_adapters]
+
+            # After we have finished the clients changing let's remove the advanced config
+            for plugin_unique_name in nexpose_plugin_unique_names:
+                self.db.client[plugin_unique_name]['configurable_configs'].remove(
+                    {
+                        'config_name': 'NexposeAdapter'
+                    }
+                )
+
+            self.db_schema_version = 19
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 19. Details: {e}')
+            traceback.print_exc()
+            raise
 
     def register(self, api_key=None, plugin_name=''):
         headers = {}

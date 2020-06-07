@@ -43,6 +43,13 @@ class SmartJsonClassMetaclass(type):
             for more_bases in bases[1:]:
                 base_fields.extend(getattr(more_bases, 'fields_info', []))
 
+        # Check multiple inheritance conflicts
+        assert sorted(list(set([field.name for field in base_fields]))) == sorted(
+            [field.name for field in base_fields]), f'Multiple inheritance same-name definition!'
+
+        assert sorted(list(set([field.title for field in base_fields if field.title]))) == sorted(
+            [field.title for field in base_fields if field.title]), 'Multiple inheritance same-title definition!'
+
         # if hostname = Field(str, 'Host Name') then field.name == 'hostname' and field.title = 'Host Name'
         # The following test failure should not be possible since python does not allow it from the first place
         # but since Saiag did this before and it runs only once on a class declaration, i leave it here.

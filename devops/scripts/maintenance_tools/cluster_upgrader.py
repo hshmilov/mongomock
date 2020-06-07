@@ -15,7 +15,7 @@ from scripts.maintenance_tools.cluster_reader import read_cluster_data
 def curl_in_docker_network(docker_dns, endpoint):
     env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
     output = subprocess.check_output(
-        shlex.split(f'docker run --rm appropriate/curl -kfsSL https://{docker_dns}.axonius.local:443/api/{endpoint}'),
+        shlex.split(f'docker exec core curl -kfsSL https://{docker_dns}.axonius.local:443/api/{endpoint}'),
         env=env, timeout=60 * 30)
     output = output.decode().strip()
     print(output)

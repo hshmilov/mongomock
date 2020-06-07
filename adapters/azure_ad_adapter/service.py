@@ -201,7 +201,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
             # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
             device = self._new_device_adapter()
             device.azure_ad_device_type = AZURE_AD_DEVICE_TYPE
-            device.id = raw_device_data['id']
+            device.id = raw_device_data['id'] + '_' + (raw_device_data.get('displayName') or '')
 
             account_enabled = raw_device_data.get('accountEnabled')
             if isinstance(account_enabled, bool):

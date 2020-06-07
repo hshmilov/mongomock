@@ -24,7 +24,7 @@ class InstanceControlService(PluginService):
 
         # ssh-keygen -b 2048 -t rsa -f rsa_keys -q -N ""
         print(f'making ssh key with uid {os.getuid()}')
-        assert subprocess.check_call(['ssh-keygen', '-b', '2048', '-t', 'rsa', '-f', rsa_keys,
+        assert subprocess.check_call(['ssh-keygen', '-b', '2048', '-m', 'PEM', '-t', 'rsa', '-f', rsa_keys,
                                       '-q', '-N', '']) == 0
         print('made ssh key!')
 

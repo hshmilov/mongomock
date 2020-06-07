@@ -273,6 +273,13 @@ else
     _wait_for_apt install -yq scalyr-agent-2 # upgrade to latest
 fi
 
+# Install Zscaler root certificate
+set +e
+sudo cp ./uploads/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/
+sudo chown root:root /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
+sudo chmod 0444 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
+sudo update-ca-certificates
+set -e
 
 touch $INIT_FILE
 echo "Done successfully"

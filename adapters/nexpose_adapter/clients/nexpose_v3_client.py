@@ -1,4 +1,5 @@
 import datetime
+import functools
 import logging
 import math
 
@@ -9,7 +10,7 @@ import urllib3
 from axonius.utils.datetime import parse_date
 from axonius.adapter_exceptions import (ClientConnectionException,
                                         GetDevicesError)
-from axonius.async.utils import async_request
+from axonius.async.utils import async_request, async_http_request
 from axonius.utils.json import from_json
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_cloud
@@ -20,6 +21,7 @@ from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(f'axonius.{__name__}')
 MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
+VULNERABILITIES_PAGINATION = 500
 
 
 class NexposePolicy(SmartJsonClass):
@@ -69,6 +71,62 @@ class NexposeVuln(SmartJsonClass):
 
 
 class NexposeV3Client(NexposeClient):
+    async def get_api_paginated(self, text, response, session, device, page, data_type, endpoint):
+        """
+        Get network interfaces for the given device
+        """
+        if response.status != 200 or not text:
+            return None
+        try:
+            current_result = from_json(text)
+            current_resources = current_result['resources']
+            total_pages = (current_result.get('page') or {}).get('totalPages')
+
+            if not current_resources:
+                # logger.info(f'No current resources at page {page} out of {str(total_pages)}. Done')
+                return
+
+            device[f'{data_type}_details'].extend(current_resources)
+
+            if total_pages and isinstance(total_pages, int) and (page + 1) >= total_pages and page > 0:
+                logger.info(f'finished handling {total_pages} pages for device {str(device.get("id"))}, '
+                            f'total_resources is {len(device[f"{data_type}_details"])}. done')
+                return
+
+            if len(current_resources) < VULNERABILITIES_PAGINATION:
+                # logger.info(f'Got Less than {VULNERABILITIES_PAGINATION} at page {page} out of {str(total_pages)}. '
+                #             f'done')
+                return
+
+            aio_req = dict()
+            aio_req['method'] = 'GET'
+            aio_req['url'] = endpoint
+            aio_req['url'] += f'?page={page + 1}&size={VULNERABILITIES_PAGINATION}'
+            aio_req['auth'] = (self.username, self.password)
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
+            if headers:
+                aio_req['headers'] = headers
+            aio_req['timeout'] = (5, 30)
+            aio_req['callback'] = functools.partial(
+                self.get_api_paginated,
+                device=device,
+                page=page + 1,
+                data_type=data_type,
+                endpoint=endpoint
+            )
+
+            if self.verify_ssl is False:
+                aio_req['ssl'] = False
+
+            await async_http_request(
+                session,
+                **aio_req
+            )
+
+        except Exception:
+            logger.exception(f'Error getting api paginated')
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _get_async_data(self, devices, data_type):
@@ -82,11 +140,21 @@ class NexposeV3Client(NexposeClient):
                 logger.warning('Got device with no id, not yielding')
                 continue
 
+            endpoint = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
+
             aio_req = dict()
             aio_req['method'] = 'GET'
-            aio_req['url'] = f'https://{self.host}:{self.port}/api/3/assets/{item_id}/{data_type}'
+            aio_req['url'] = endpoint
             if data_type == 'vulnerabilities':
-                aio_req['url'] += '?size=500'
+                devices[i]['vulnerabilities_details'] = []
+                aio_req['url'] += f'?size={VULNERABILITIES_PAGINATION}'
+                aio_req['callback'] = functools.partial(
+                    self.get_api_paginated,
+                    device=devices[i],
+                    page=0,
+                    data_type=data_type,
+                    endpoint=endpoint
+                )
             aio_req['auth'] = (self.username, self.password)
             headers = None
             if self._token:
@@ -114,7 +182,13 @@ class NexposeV3Client(NexposeClient):
             for i, raw_answer in enumerate(all_answers):
                 request_id_absolute = MAX_ASYNC_REQUESTS_IN_PARALLEL * chunk_id + i
                 current_device = devices[aio_ids[request_id_absolute]]
+                current_aio_request = aio_requests[request_id_absolute]
                 try:
+
+                    if current_aio_request.get('callback'):
+                        # callback handling is done somewhere else
+                        continue
+
                     # The answer could be an exception
                     if isinstance(raw_answer, Exception):
                         logger.debug(f'Exception getting tags for request {request_id_absolute}, yielding'
@@ -268,7 +342,7 @@ class NexposeV3Client(NexposeClient):
             if self._token:
                 headers = {'Token': self._token}
             vulnerabilities = requests.get(f'https://{self.host}:{self.port}/api/3/assets/{device_id}/vulnerabilities',
-                                           params={'size': 500},
+                                           params={'size': VULNERABILITIES_PAGINATION},
                                            auth=(self.username, self.password),
                                            verify=self.verify_ssl,
                                            timeout=(30, 300),

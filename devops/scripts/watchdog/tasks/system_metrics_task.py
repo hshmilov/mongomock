@@ -5,7 +5,7 @@ import docker
 import netifaces
 
 from axonius.consts.metric_consts import SystemMetric
-from axonius.utils.mongo_administration import get_collection_storage_size
+from axonius.utils.mongo_administration import get_collection_stats
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.axonius_service import AxoniusService
 
@@ -94,10 +94,13 @@ class SystemMetricsTask(WatchdogTask):
             all_collections = sorted(list(ax.db.client['aggregator'].list_collection_names()))
 
             for collection_name in all_collections:
-                storage = get_collection_storage_size(ax.db.client['aggregator'][collection_name])
+                storage = get_collection_stats(ax.db.client['aggregator'][collection_name])
 
                 metric_name = f'{SystemMetric.MONGO_AGGREGATOR_KEY}.{collection_name}'
-                self.report_metric(metric_name, bytes_to_gb(storage))
+                self.report_metric(metric_name + '.data', bytes_to_gb(storage['storageSize']))
+                self.report_metric(metric_name + '.indexes', bytes_to_gb(storage['totalIndexSize']))
+                self.report_metric(metric_name + '.total',
+                                   bytes_to_gb(storage['storageSize'] + storage['totalIndexSize']))
 
         except Exception as e:
             self.report_error(f'Failed reporting collection stats - {e}')

@@ -7,6 +7,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin, urlparse
 
+import funcy
 import requests
 
 import aiohttp
@@ -14,6 +15,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
+DEFAULT_ASYNC_CHUNKS = 50
 
 
 class RedSealException(Exception):
@@ -152,7 +154,7 @@ class RedSealClient:
                     continue
                 yield tree['URL']
 
-    async def _get_devices(self, loop):
+    async def _get_devices(self, loop, async_chunks: int):
         pool = ThreadPoolExecutor(10)
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
             response = await self.get(session, 'data/host/all')
@@ -163,19 +165,20 @@ class RedSealClient:
 
             results = []
             urls = self.get_urls(response)
-            tasks = map(lambda url: loop.create_task(self.get(session, url)), urls)
+            for i, chunk_of_urls in enumerate(funcy.chunks(async_chunks, urls)):
+                tasks = map(lambda url: loop.create_task(self.get(session, url)), chunk_of_urls)
 
-            for future in asyncio.as_completed(tasks):
-                try:
-                    result = await loop.run_in_executor(pool, self.reassemble_device_json, await future)
-                    if result is not None:
-                        results.append(result)
-                except Exception:
-                    logging.exception('Exception while handling device')
+                for future in asyncio.as_completed(tasks):
+                    try:
+                        result = await loop.run_in_executor(pool, self.reassemble_device_json, await future)
+                        if result is not None:
+                            results.append(result)
+                    except Exception:
+                        logging.exception('Exception while handling device')
 
         return results
 
-    def get_devices(self):
+    def get_devices(self, async_chunks=DEFAULT_ASYNC_CHUNKS):
         """
         Get device list using RedSeal API.
         Requires active session.
@@ -189,7 +192,7 @@ class RedSealClient:
             asyncio.set_event_loop(loop)
 
         try:
-            devices = loop.run_until_complete(self._get_devices(loop))
+            devices = loop.run_until_complete(self._get_devices(loop, async_chunks))
         finally:
             # Wait for connection close (took from aiohttp manual)
             loop.run_until_complete(asyncio.sleep(0.250))

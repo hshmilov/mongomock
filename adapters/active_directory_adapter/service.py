@@ -332,7 +332,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                             # Try to add at least one domain.
                             success_domains[found_domain.lower()] = self._get_ldap_connection(found_dc_details)
                     except Exception as e:
-                        logger.exception(f'Problem adding dc found by gc: {found_domain}: {get_exception_string()}')
+                        logger.exception(f'Problem adding dc found by gc: {found_domain}: '
+                                         f'{get_exception_string(force_show_traceback=True)}')
                         failure_domains[found_domain.lower()] = str(e)
 
                 if not success_domains:
@@ -392,8 +393,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             message = f'Error: {additional_msg}.'
             logger.exception(message)
         except Exception:
-            message = 'Error - please check your credentials.'
-            logger.exception(f'Error in _connect_client: {get_exception_string()}')
+            ex_str = get_exception_string(force_show_traceback=True)
+            message = f'Error - please check your credentials: {ex_str}'
+            logger.exception(f'Error in _connect_client: {ex_str}')
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -1585,12 +1587,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                       "stderr: {2}, exception: {3}".format(MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS,
                                                            str(command_stdout),
                                                            str(command_stderr),
-                                                           get_exception_string())
+                                                           get_exception_string(force_show_traceback=True))
             logger.warning(err_log)
             raise ValueError(err_log)
         except subprocess.SubprocessError:
             # This is a base class for all the rest of subprocess excpetions.
-            err_log = f"General Execution error! command, exception: {get_exception_string()}"
+            err_log = f"General Execution error! command, exception: {get_exception_string(force_show_traceback=True)}"
             logger.warning(err_log, exc_info=True)
             raise ValueError(err_log)
 

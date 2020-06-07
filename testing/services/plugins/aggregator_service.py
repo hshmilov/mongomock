@@ -6,7 +6,7 @@ import pymongo
 import shutil
 import traceback
 from collections import defaultdict
-from typing import List, Tuple
+from typing import List, Tuple, Callable, Union
 
 from bson import Code
 from pymongo.errors import OperationFailure, PyMongoError, BulkWriteError
@@ -95,8 +95,16 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_31()
         if self.db_schema_version < 32:
             self._update_schema_version_32()
+        if self.db_schema_version < 33:
+            self._update_schema_version_33()
+        if self.db_schema_version < 34:
+            self._update_schema_version_34()
+        if self.db_schema_version < 35:
+            self._update_schema_version_35()
+        if self.db_schema_version < 36:
+            self._update_schema_version_36()
 
-        if self.db_schema_version != 32:
+        if self.db_schema_version != 36:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1537,6 +1545,245 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading core db to version 32. Details: {e}')
             traceback.print_exc()
+            raise
+
+    def _update_schema_version_33(self):
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            # migrate only azure ad device type
+            if data.get('azure_ad_device_type') != 'Azure AD':
+                return False
+
+            azure_display_name = data.get('azure_display_name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{azure_display_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{azure_display_name}'
+
+        try:
+            print(f'Migrating to new Azure AD ID format')
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'azure_ad_adapter',
+                {
+                    'adapters.data.azure_ad_device_type': 1,
+                    'adapters.data.azure_display_name': 1
+                },
+                new_id_func
+            )
+            print(f'Migrate complete')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 33. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        self.db_schema_version = 33
+
+    def _update_schema_version_34(self):
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            crowdstrike_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{crowdstrike_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{crowdstrike_hostname}'
+
+        try:
+            print(f'Migrating to new Crowdstrike ID format')
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'crowd_strike_adapter',
+                {
+                    'adapters.data.hostname': 1,
+                },
+                new_id_func
+            )
+            print(f'Migrate complete')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 34. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        self.db_schema_version = 34
+
+    def _update_schema_version_35(self):
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            sql_table = data.get('table') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{sql_table}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{sql_table}'
+
+        try:
+            print(f'Migrating to new Generic-SQL ID format: MSSQL')
+            self._migrate_entity_id_generic(
+                EntityType.Devices, 'mssql_adapter', {'adapters.data.table': 1}, new_id_func)
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 35. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        try:
+            print(f'Migrating to new Generic-SQL ID format: MSSQL (Users)')
+            self._migrate_entity_id_generic(
+                EntityType.Users, 'mssql_adapter', {'adapters.data.table': 1}, new_id_func)
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 35. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        try:
+            print(f'Migrating to new Generic-SQL ID format: SQLite')
+            self._migrate_entity_id_generic(
+                EntityType.Devices, 'sqlite_adapter', {'adapters.data.table': 1}, new_id_func)
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 35. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        try:
+            print(f'Migrating to new Generic-SQL ID format: Hyper-SQL')
+            self._migrate_entity_id_generic(
+                EntityType.Devices, 'hyper_sql_adapter', {'adapters.data.table': 1}, new_id_func)
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 35. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        # Set db schema version anyway
+        self.db_schema_version = 35
+
+    def _update_schema_version_36(self):
+        print(f'Upgrading to schema version 36 - remove empty network interfaces')
+        try:
+            to_fix = []
+            entities_db = self._entity_db_map[EntityType.Devices]
+            for entity_with_empty_nic in entities_db.find(
+                {
+                    'adapters.data.network_interfaces': {'$elemMatch': {'$eq': {}}}
+                },
+                projection={
+                    '_id': 1,
+                    'adapters.quick_id': 1,
+                    'adapters.data.network_interfaces': 1
+                }
+            ):
+                for entity in (entity_with_empty_nic.get('adapters') or []):
+                    nics = ((entity.get('data') or {}).get('network_interfaces') or [])
+                    if {} in nics:
+                        to_fix.append(
+                            pymongo.operations.UpdateOne(
+                                {
+                                    '_id': entity_with_empty_nic['_id'],
+                                    f'adapters.quick_id': entity.get('quick_id')
+                                },
+                                {
+                                    '$set':
+                                        {
+                                            'adapters.$.data.network_interfaces': [x for x in nics if x],
+                                        }
+                                }
+                            )
+                        )
+
+            if to_fix:
+                print(f'Removing empty nics. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'Empty nics upgrade: Nothing to fix. Moving on')
+
+            self.db_schema_version = 36
+        except BulkWriteError as e:
+            print(f'BulkWriteError: {e.details}')
+            raise
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 36. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _migrate_entity_id_generic(
+            self,
+            entity_type: EntityType,
+            plugin_name: str,
+            projection: dict,
+            new_id_function: Callable[[str, dict], Union[bool, str]]
+    ):
+        try:
+            entities_db = self._entity_db_map[entity_type]
+            to_fix = []
+            # Get all devices which have the plugin adapter
+
+            projection.update({
+                '_id': 1,
+                f'adapters.{PLUGIN_NAME}': 1,
+                f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
+                f'adapters.data.id': 1,
+            })
+
+            for entity in entities_db.find({f'adapters.{PLUGIN_NAME}': plugin_name}, projection=projection):
+                # Then go on all plugin entity-adapters on each entity
+
+                all_entity_adapters = [x for x in entity['adapters'] if x[PLUGIN_NAME] == plugin_name]
+                for entity_adapter in all_entity_adapters:
+                    current_id = entity_adapter['data'].get('id')
+                    if not current_id:
+                        continue
+
+                    new_id = new_id_function(current_id, entity_adapter)
+                    if not new_id:
+                        continue
+
+                    if not isinstance(new_id, str):
+                        continue
+
+                    if new_id == current_id:
+                        continue
+
+                    # Else, add to the list of fixes
+                    to_fix.append(pymongo.operations.UpdateOne({
+                        '_id': entity['_id'],
+                        f'adapters.quick_id': get_preferred_quick_adapter_id(
+                            entity_adapter[PLUGIN_UNIQUE_NAME], current_id
+                        )
+                    }, {
+                        '$set': {
+                            'adapters.$.data.id': new_id,
+                            'adapters.$.quick_id': get_preferred_quick_adapter_id(
+                                entity_adapter[PLUGIN_UNIQUE_NAME], new_id
+                            )
+                        }
+                    }))
+
+            if to_fix:
+                print(f'Upgrading {plugin_name} ID format. Found {len(to_fix)} records..')
+                for i in range(0, len(to_fix), 1000):
+                    entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+            else:
+                print(f'{plugin_name} ID upgrade: Nothing to fix. Moving on')
+        except BulkWriteError as e:
+            print(f'BulkWriteError: {e.details}')
             raise
 
     def _fix_db_for_entity(self, entity_type: EntityType):

@@ -768,6 +768,8 @@ class LdapConnection(object):
         one_device = None
         devices_count = 0
         logger.info(f'LDAP - Starting to get device list')
+        if self.__ldap_ou_whitelist:
+            logger.info(f'LDAP OU Whitelist: {str(self.__ldap_ou_whitelist)}')
         for one_device in devices_generator:
             device_dict = dict(one_device)
             try:

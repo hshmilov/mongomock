@@ -3,6 +3,7 @@ import ipaddress
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.fields import Field, ListField
@@ -40,7 +41,7 @@ class RedSealVulnerability(SmartJsonClass):
     application_name = Field(str, "Application Name")
 
 
-class RedsealAdapter(AdapterBase):
+class RedsealAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         rs_primary_capability = Field(str, 'Primary Capability', enum=PRIMARY_CAPABILITY)
         rs_imported_from = Field(str, 'Imported from')
@@ -66,7 +67,7 @@ class RedsealAdapter(AdapterBase):
             raise ClientConnectionException(str(exc))
 
     def _query_devices_by_client(self, client_name, session):
-        return session.get_devices()
+        return session.get_devices(self.__async_chunks)
 
     def _clients_schema(self):
         return {
@@ -187,3 +188,27 @@ class RedsealAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'async_chunks',
+                    'type': 'integer',
+                    'title': 'Number of requests in parallel'
+                }
+            ],
+            'required': ['async_chunks'],
+            'pretty_name': 'Redseal Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'async_chunks': 50
+        }
+
+    def _on_config_update(self, config):
+        self.__async_chunks = config.get('async_chunks') or 50

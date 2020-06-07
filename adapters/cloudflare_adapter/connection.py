@@ -32,6 +32,12 @@ class CloudflareConnection(RESTConnection):
     def _connect(self):
         if not self._username or not self._apikey:
             raise RESTException('No username or password')
+
+        # Clean all incase you have something from previous runs
+        self._permanent_headers.pop('Authorization', None)
+        self._permanent_headers.pop('X-Auth-Email', None)
+        self._permanent_headers.pop('X-Auth-Key', None)
+
         try:
             # First, we try api key
             self._permanent_headers['X-Auth-Email'] = self._username

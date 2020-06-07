@@ -1,6 +1,6 @@
 import sys
 
-from axonius.utils.mongo_administration import get_collection_storage_size
+from axonius.utils.mongo_administration import get_collection_stats
 from services.axonius_service import AxoniusService
 
 
@@ -12,8 +12,16 @@ def main():
     for collection_name in all_collections:
         if not collection_name.startswith('historical_') or collection_name.endswith('_db_view'):
             continue
-        storage = get_collection_storage_size(ax.db.client['aggregator'][collection_name])
-        print(f'Collection {collection_name}: {round(storage / (1024 ** 3), 2)} GB')
+        storage_stats = get_collection_stats(ax.db.client['aggregator'][collection_name])
+        storage = storage_stats['storageSize']
+        indexes = storage_stats['totalIndexSize']
+        total = storage + indexes
+        print(
+            f'Collection {collection_name}: '
+            f'Storage {round(storage / (1024 ** 3), 2)} GB ',
+            f'Indexes {round(indexes / (1024 ** 3), 2)} GB ',
+            f'Total {round(total / (1024 ** 3), 2)} GB ',
+        )
 
 
 if __name__ == '__main__':

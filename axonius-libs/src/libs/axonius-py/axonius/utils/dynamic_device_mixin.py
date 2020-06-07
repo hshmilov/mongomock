@@ -87,7 +87,6 @@ class DynamicDeviceMixin:
     def fill_dynamic_user(self, user: UserAdapter, device_raw: dict):
         # Normalized fields are the keys of csv_consts.IDENTIFIERS
         filler_to_normalized_fields = {
-            self._fill_id: ['id'],
             self._fill_domain: ['domain'],
             self._fill_first_name: ['first_name'],
             self._fill_last_name: ['last_name'],

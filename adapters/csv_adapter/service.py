@@ -348,6 +348,8 @@ class CsvAdapter(AdapterBase):
                 if should_parse_all_columns:
                     for column_name, column_value in device_raw.items():
                         try:
+                            if not column_name:
+                                continue
                             normalized_column_name = 'csv_' + normalize_var_name(column_name)
                             field_type = column_types.get(column_name) or str
                             if not device.does_field_exist(normalized_column_name):

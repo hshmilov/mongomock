@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -9,7 +10,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.network.sockets import test_reachability_tcp
-from axonius.utils.parsing import get_exception_string, is_domain_valid
+from axonius.utils.parsing import get_exception_string, is_domain_valid, parse_bool_from_raw, int_or_none
 from flexera_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -17,12 +18,38 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class FlexeraAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
-        computer_system_status = Field(str, 'Computer System Status')
+        computer_system_status = Field(str, 'IM Computer System Status')
         computer_system_vm_name = Field(str, 'VM Name')
         computer_system_vm_id = Field(str, 'VM ID')
         computer_system_vm_type = Field(str, 'VM Type')
-        computer_system_domain_role = Field(str, 'Domain Role')
-        ad_distinguished_name = Field(str, 'AD Distinguished Name (DN)')
+        computer_system_domain_role = Field(str, 'IM Domain Role')
+        ad_distinguished_name = Field(str, 'IM AD Distinguished Name (DN)')
+
+        # FNMP
+        asset_id = Field(str, 'Asset ID')
+        last_inventory_date = Field(datetime.datetime, 'Last inventory date')
+        last_inventory_agent = Field(str, 'Last inventory source')
+        untrusted_serial_no = Field(bool, 'Untrusted Serial')
+        hardware_inventory_date = Field(str, 'Hardware inventory date')
+        creation_date = Field(datetime.datetime, 'Creation Date')
+        creation_user = Field(str, 'Creation User')
+        updated_date = Field(datetime.datetime, 'Updated Date')
+        updated_user = Field(str, 'Updated User')
+        md_schedule_contains_pvu_scan = Field(bool, 'MD Schedule Contains PVU Scan')
+        md_schedule_generated_date = Field(datetime.datetime, 'MD Schedule Generated Date')
+        machine_id = Field(str, 'Machine ID')
+        number_of_sockets = Field(int, 'Number of sockets')
+        processor_type = Field(str, 'Processor Type')
+        total_disk_space = Field(int, 'Total Disk Space (GB)')
+        fnmp_role = Field(str, 'FNMP Role')
+        inventory_device_type = Field(str, 'Inventory Device Type')
+        assigned_username = Field(str, 'Assigned Username')
+        assigned_user_email = Field(str, 'Assigned User Email')
+        business_unit = Field(str, 'Corporate Unit')
+        fnmp_location = Field(str, 'FNMP Location')
+        cost_center = Field(str, 'Cost Center')
+        cloud_service_provider_name = Field(str, 'Cloud Service Provider Name')
+        hosted_in = Field(str, 'Hosted In', enum=['On-Premises', 'Cloud'])
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -38,6 +65,16 @@ class FlexeraAdapter(AdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
+            database_type = consts.FlexeraDBType.IM     # old default was IM. new connections will not be FNMP
+            database_type_value = client_config.get(consts.FLEXERA_DATABASE_TYPE)
+            try:
+                if database_type_value:
+                    database_type = [x for x in consts.FlexeraDBType if x.value == database_type_value][0]
+            except Exception:
+                logger.exception(f'Failed getting flexera database type value ({database_type_value}), continuing')
+
+            logger.info(f'Flexera Database Type: {database_type.value}')
+
             connection = MSSQLConnection(database=client_config.get(consts.FLEXERA_DATABASE),
                                          server=client_config[consts.FLEXERA_HOST],
                                          port=client_config.get(consts.FLEXERA_PORT, consts.DEFAULT_FLEXERA_PORT),
@@ -46,8 +83,8 @@ class FlexeraAdapter(AdapterBase, Configurable):
                                        password=client_config[consts.PASSWORD])
             with connection:
                 pass  # check that the connection credentials are valid
-            return connection
-        except Exception as err:
+            return connection, database_type
+        except Exception:
             message = f'Error connecting to client host: {client_config[consts.FLEXERA_HOST]}  ' \
                       f'database: ' \
                       f'{client_config.get(consts.FLEXERA_DATABASE)}'
@@ -55,8 +92,8 @@ class FlexeraAdapter(AdapterBase, Configurable):
             raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks, too-many-locals
-    def _query_devices_by_client(self, client_name, client_data):
-        client_data.set_devices_paging(self.__devices_fetched_at_a_time)
+    @staticmethod
+    def _query_from_im(client_data: MSSQLConnection):
         with client_data:
             computers = dict()
             logger.info('Fetching from ComputerSystem...')
@@ -123,6 +160,24 @@ class FlexeraAdapter(AdapterBase, Configurable):
 
                 yield computer_data
 
+    @staticmethod
+    def _query_from_fnmp(client_data):
+        with client_data:
+            yield from client_data.query(consts.FNMP_BASE_QUERY)
+
+    def _query_devices_by_client(self, client_name, client_data):
+        connection, db_type = client_data
+        connection.set_devices_paging(self.__devices_fetched_at_a_time)
+
+        if db_type == consts.FlexeraDBType.IM:
+            for device in self._query_from_im(connection):
+                yield device, db_type
+        elif db_type == consts.FlexeraDBType.FNMP:
+            for device in self._query_from_fnmp(connection):
+                yield device, db_type
+        else:
+            raise ValueError(f'Unknown DB type {db_type.value}')
+
     def _clients_schema(self):
         return {
             'items': [
@@ -140,8 +195,14 @@ class FlexeraAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': consts.FLEXERA_DATABASE,
-                    'title': 'Database',
+                    'title': 'Database Name',
                     'type': 'string',
+                },
+                {
+                    'name': consts.FLEXERA_DATABASE_TYPE,
+                    'title': 'Database Type',
+                    'type': 'string',
+                    'enum': [x.value for x in consts.FlexeraDBType]
                 },
                 {
                     'name': consts.USER,
@@ -159,19 +220,26 @@ class FlexeraAdapter(AdapterBase, Configurable):
                 consts.FLEXERA_HOST,
                 consts.USER,
                 consts.PASSWORD,
-                consts.FLEXERA_DATABASE
+                consts.FLEXERA_DATABASE,
+                consts.FLEXERA_DATABASE_TYPE
             ],
             'type': 'array'
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self.create_device(device_raw, self._new_device_adapter())
+        for device_raw, db_type in devices_raw_data:
+            if db_type == consts.FlexeraDBType.IM:
+                device = self.create_device_im(device_raw, self._new_device_adapter())
+            elif db_type == consts.FlexeraDBType.FNMP:
+                device = self.create_device_fnmp(device_raw, self._new_device_adapter())
+            else:
+                raise ValueError(f'Unknown DB type {db_type.value}')
+
             if device:
                 yield device
 
     @staticmethod
-    def create_device(device_raw, device: MyDeviceAdapter):
+    def create_device_im(device_raw, device: MyDeviceAdapter):
         try:
             # Initialize tables
             computer_system = device_raw.get('ComputerSystem') or {}
@@ -191,7 +259,7 @@ class FlexeraAdapter(AdapterBase, Configurable):
 
             device_id = computer_system.get('ComputerID')
             if not device_id:
-                logger.warning(f'Bad device with no ID {device_id}')
+                logger.warning(f'Bad device with no ID')
                 return None
 
             # ComputerSystem
@@ -321,6 +389,115 @@ class FlexeraAdapter(AdapterBase, Configurable):
             return device
         except Exception:
             logger.exception(f'Problem adding device: {str(device_raw)}')
+
+    @staticmethod
+    def create_device_fnmp(device_raw, device: MyDeviceAdapter):
+        try:
+            device_id = device_raw.get('ComplianceComputerID')
+            if not device_id:
+                logger.warning(f'Bad device with no ID: {device_raw}')
+                return None
+
+            device.id = str(device_id) + '_' + (device_raw.get('ComputerName') or '')
+            device.hostname = device_raw.get('ComputerName')
+            device.figure_os(str(device_raw.get('OperatingSystem')))
+            try:
+                device.os.sp = device_raw.get('ServicePack')
+            except Exception:
+                pass
+
+            try:
+                # pylint: disable=consider-using-set-comprehension
+                ips = set([x.strip() for x in device_raw.get('IPAddress').split(',')]) if \
+                    isinstance(device_raw.get('IPAddress'), str) else None
+                macs = set([x.strip() for x in device_raw.get('MACAddress').split(',')]) if \
+                    isinstance(device_raw.get('MACAddress'), str) else None
+                if ips or macs:
+                    device.add_ips_and_macs(macs, ips)
+            except Exception:
+                logger.exception(f'Failed adding network interfaces')
+
+            device.asset_id = device_raw.get('Asset ID')
+            device.last_inventory_date = parse_date(device_raw.get('InventoryDate'))
+            device.last_seen = parse_date(device_raw.get('InventoryDate'))
+            device.last_inventory_agent = device_raw.get('InventoryAgent')
+            device.uuid = device_raw.get('UUID')
+            device.untrusted_serial_no = parse_bool_from_raw(device_raw.get('UntrustedSerialNo'))
+            device.hardware_inventory_date = parse_date(device_raw.get('HardwareInventoryDate'))
+            device.first_seen = parse_date(device_raw.get('CreationDate'))
+            device.creation_date = parse_date(device_raw.get('CreationDate'))
+            device.creation_user = device_raw.get('CreationUser')
+            device.updated_date = device_raw.get('UpdatedDate')
+            device.updated_user = device_raw.get('UpdatedUser')
+            device.md_schedule_contains_pvu_scan = parse_bool_from_raw(device_raw.get('MDScheduleContainsPVUScan'))
+            device.md_schedule_generated_date = parse_date(device_raw.get('MDScheduleGeneratedDate'))
+            device.machine_id = device_raw.get('MachineID')
+
+            device.device_manufacturer = device_raw.get('Manufacturer')
+            device.device_model = device_raw.get('ModelNo')
+            device.total_number_of_cores = int_or_none(device_raw.get('NumberOfCores'))
+            device.total_number_of_physical_processors = int_or_none(device_raw.get('NumberOfProcessors'))
+            device.number_of_sockets = int_or_none(device_raw.get('NumberOfSockets'))
+            device.processor_type = device_raw.get('ProcessorType')
+            device.total_physical_memory = device_raw.get('TotalMemory') / (1024 ** 3) \
+                if device_raw.get('TotalMemory') else None
+            device.total_disk_space = device_raw.get('TotalDiskSpace') / (1024 ** 3) \
+                if device_raw.get('TotalDiskSpace') else None
+
+            device.bios_serial = device_raw.get('FirmwareSerialNumber')
+            device.device_serial = device_raw.get('SerialNo')
+
+            device.fnmp_role = {
+                1: 'Production',
+                2: 'Warm Standby / Passive Failover',
+                3: 'Hot Standby / Active Failover',
+                4: 'Backup / Archive',
+                5: 'Test',
+                6: 'Training',
+                7: 'Cold Standby / Disaster recovery',
+                8: 'Development',
+            }.get(device_raw.get('ComplianceComputerRoleID'))
+
+            device.inventory_device_type = {
+                1: 'Computer',
+                2: 'VM Host',
+                3: 'Virutal Machine',
+                4: 'Remote Device',
+                5: 'Mobile Device',
+                6: 'VDI Template'
+            }.get(device_raw.get('ComplianceComputerTypeID'))
+
+            device.assigned_username = device_raw.get('AssignedUserUserName')
+            device.assigned_user_email = device_raw.get('AssignedUserEmail')
+            device.business_unit = device_raw.get('BusinessUnit')
+            device.fnmp_location = device_raw.get('LocationName')
+            device.cost_center = device_raw.get('CostCenter')
+            device.domain = device_raw.get('DomainQualifiedName')
+            device.computer_system_vm_id = device_raw.get('VMID')
+            device.computer_system_vm_name = device_raw.get('VMName')
+            device.computer_system_vm_type = {
+                1: 'VMware',
+                2: 'Hyper-V',
+                3: 'LPAR',
+                4: 'WPAR',
+                5: 'nPar',
+                6: 'vPar',
+                7: 'SRP',
+                8: 'Zone',
+                9: 'Unknown',
+                10: 'Oracle VM',
+                11: 'AWS EC2',
+            }.get(device_raw.get('VMTypeID'))
+
+            cloud_service_provider_name = device_raw.get('CloudServiceProviderName')
+            device.cloud_service_provider_name = cloud_service_provider_name
+
+            device.hosted_in = 'Cloud' if cloud_service_provider_name else 'On-Premises'
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Failed parsing FNMP device')
 
     @classmethod
     def adapter_properties(cls):

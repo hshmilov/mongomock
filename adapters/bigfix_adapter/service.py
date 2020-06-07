@@ -216,10 +216,10 @@ class BigfixAdapter(AdapterBase):
                                 break
                         mac_addresses = []
                         if mac_key:
-                            if ',' in device_raw[mac_key]:
-                                mac_addresses = device_raw[mac_key].split(',')
-                            elif ';' in device_raw[mac_key]:
+                            if ';' in device_raw[mac_key]:
                                 mac_addresses = device_raw[mac_key].split(';')
+                            else:
+                                mac_addresses = device_raw[mac_key].split(',')
                         mac_addresses = [mac_address.strip() for mac_address in mac_addresses]
                     except Exception:
                         mac_addresses = []

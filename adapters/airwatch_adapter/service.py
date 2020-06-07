@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -24,7 +25,7 @@ class DeviceCompliance(SmartJsonClass):
     next_compliance_check = Field(datetime.datetime, 'Next Compliance Check')
 
 
-class AirwatchAdapter(AdapterBase):
+class AirwatchAdapter(AdapterBase, Configurable):
 
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
@@ -83,7 +84,11 @@ class AirwatchAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Airwatch Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(
+                async_chunks=self.__async_chunks,
+                page_size=self.__page_size,
+                socket_recv_session_timeout=self.__recv_session_timeout
+            )
 
     def _clients_schema(self):
         """
@@ -313,3 +318,41 @@ class AirwatchAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent, AdapterProperty.MDM]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'async_chunks',
+                    'type': 'integer',
+                    'title': 'Async Chunks in parallel'
+                },
+                {
+                    'name': 'page_size',
+                    'type': 'integer',
+                    'title': 'Page Size'
+                },
+                {
+                    'name': 'recv_session_timeout',
+                    'type': 'integer',
+                    'title': 'Socket Recv Session Timeout'
+                }
+            ],
+            'required': ['async_chunks', 'recv_session_timeout', 'page_size'],
+            'pretty_name': 'Airwatch Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'async_chunks': 50,
+            'page_size': 500,
+            'recv_session_timeout': 300
+        }
+
+    def _on_config_update(self, config):
+        self.__async_chunks = config.get('async_chunks') or 50
+        self.__page_size = config.get('page_size') or 500
+        self.__recv_session_timeout = config.get('recv_session_timeout') or 300

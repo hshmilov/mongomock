@@ -53,27 +53,27 @@ class AirwatchConnection(RESTConnection):
 
         return response
 
-    def _paginated_async_get_devices(self, endpoint: str):
+    def _paginated_async_get_devices(self, endpoint: str, page_size: int, async_chunks: int):
 
         # get first page of raw devices
         try:
             devices_search_raw = self._get(
-                endpoint, url_params={'pagesize': PAGE_SIZE, 'page': 0}, do_basic_auth=True)
+                endpoint, url_params={'pagesize': page_size, 'page': 0}, do_basic_auth=True)
             pages_count = 1
         except Exception:
             devices_search_raw = self._get(
-                endpoint, url_params={'pagesize': PAGE_SIZE, 'page': 1}, do_basic_auth=True)
+                endpoint, url_params={'pagesize': page_size, 'page': 1}, do_basic_auth=True)
             pages_count = 2
         yield from (devices_search_raw.get('Devices') or [])
 
         # retrieve the rest of the raw devices using async requests
         device_raw_requests = []
         total_count = min(devices_search_raw.get('Total', 1), MAX_DEVICES_NUMBER)
-        while total_count > pages_count * PAGE_SIZE:
+        while total_count > pages_count * page_size:
             try:
                 device_raw_requests.append({
                     'name': endpoint,
-                    'url_params': {'pagesize': PAGE_SIZE,
+                    'url_params': {'pagesize': page_size,
                                    'page': pages_count},
                     'do_basic_auth': True,
                 })
@@ -82,7 +82,7 @@ class AirwatchConnection(RESTConnection):
             pages_count += 1
 
         # fill up device_raw_list
-        for response in self._async_get(device_raw_requests, retry_on_error=True):
+        for response in self._async_get(device_raw_requests, retry_on_error=True, chunks=async_chunks):
             if not self._is_async_response_good(response):
                 logger.error(f'Async response returned bad, its {response}')
                 continue
@@ -93,14 +93,27 @@ class AirwatchConnection(RESTConnection):
 
             yield from (response.get('Devices') or [])
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals
-    def get_device_list(self):
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, arguments-differ
+    def get_device_list(
+            self,
+            async_chunks: Optional[int] = None,
+            page_size: Optional[int] = None,
+            socket_recv_session_timeout: Optional[int] = None
+    ):
         serials_imei_set = set()
+
+        page_size = page_size if page_size else PAGE_SIZE
 
         # prepare async requests for device info
         device_raw_by_device_id = {}
         async_requests = []
-        for device_raw in self._paginated_async_get_devices('mdm/devices/search'):
+
+        # For the initial pagination the session timeout should be big
+        self._requested_session_timeout = (10, 300)
+        self.revalidate_session_timeout()
+        # Notice that the page size here stays the default and not what the user configured.
+        # We do this to get better results in particular in this request which could be slower.
+        for device_raw in self._paginated_async_get_devices('mdm/devices/search', PAGE_SIZE, async_chunks):
             try:
                 device_id = (device_raw.get('Id') or {}).get('Value') or 0
                 if device_id == 0:
@@ -114,7 +127,7 @@ class AirwatchConnection(RESTConnection):
                                   [{'name': f'mdm/devices/{str(device_id)}'},
                                    {'name': f'mdm/devices/{str(device_id)}/apps',
                                     # Retrieve apps initial page. if needed, additional pages would be requested later
-                                    'url_params': {'pagesize': PAGE_SIZE, 'page': 0}},
+                                    'url_params': {'pagesize': page_size, 'page': 0}},
                                    {'name': f'mdm/devices/{str(device_id)}/network'},
                                    {'name': f'mdm/devices/{str(device_id)}/notes'},
                                    {'name': f'mdm/devices/{str(device_id)}/tags'},
@@ -124,12 +137,24 @@ class AirwatchConnection(RESTConnection):
             if device_raw.get('Imei'):
                 serials_imei_set.add(device_raw.get('Imei'))
 
+        # now each response should be smaller and so the recv timeout can be smaller as well.
+        if socket_recv_session_timeout:
+            session_timeout = self._session_timeout
+            if not session_timeout:
+                session_timeout = (5, socket_recv_session_timeout)
+            else:
+                session_timeout = (session_timeout[0], socket_recv_session_timeout)
+
+            self._requested_session_timeout = session_timeout
+            self.revalidate_session_timeout()
+
         # run the async requests
         # prepare for additional requests, e.g. apps additional pages
         additional_async_requests = []
 
         # Note: we zip together responses with their originating request
-        for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
+        for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True,
+                                                                          chunks=async_chunks)):
             try:
                 # Note: if this line does not evaluate correctly - it is a serious bug that be caught at except below.
                 # extract subendpoint part from url, e.g. mdm/devices/1/apps -> "1/apps"
@@ -172,11 +197,11 @@ class AirwatchConnection(RESTConnection):
                 try:
                     total_count = min(response.get('Total', 1), MAX_APPS_NUMBER)
                     pages_count = 1
-                    while total_count > pages_count * PAGE_SIZE:
+                    while total_count > pages_count * page_size:
                         try:
                             additional_async_requests.append(self._prepare_async_dict({
                                 'name': f'mdm/devices/{str(device_id)}/apps',
-                                'url_params': {'pagesize': PAGE_SIZE, 'page': pages_count}}))
+                                'url_params': {'pagesize': page_size, 'page': pages_count}}))
                         except Exception:
                             logger.exception(f'Got problem fetching app for {device_raw} in page {pages_count}')
                         pages_count += 1
@@ -208,7 +233,8 @@ class AirwatchConnection(RESTConnection):
 
         # perform the additional apps pages requests
         for request_dict, response in zip(additional_async_requests,
-                                          self._async_get(additional_async_requests, retry_on_error=True)):
+                                          self._async_get(additional_async_requests, retry_on_error=True,
+                                                          chunks=async_chunks)):
             try:
                 # Note: if this line does not evaluate correctly - it is a serious bug that be caught at except below.
                 device_id, response_subendpoint = request_dict.get('name').rstrip('/').rsplit('/', 2)[-2:]
@@ -245,7 +271,8 @@ class AirwatchConnection(RESTConnection):
             group_devices_requests = [self._prepare_async_dict({'name': f'mdm/dep/groups/{uuid_id}/devices'})
                                       for uuid_id in uuid_list]
             for request_dict, response in zip(group_devices_requests,
-                                              self._async_get(group_devices_requests, retry_on_error=True)):
+                                              self._async_get(group_devices_requests, retry_on_error=True,
+                                                              chunks=async_chunks)):
 
                 group_device_raw_list = self._parse_subendpoint_async_response(response, 'group devices', request_dict)
                 if not isinstance(group_device_raw_list, list):

@@ -50,7 +50,8 @@ def get_ssh_connection() -> paramiko.SSHClient:
     """
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-    client.connect(get_default_gateway_linux(), username='ubuntu', key_filename='/home/axonius/app/rsa_keys')
+    key = paramiko.RSAKey.from_private_key_file('/home/axonius/app/rsa_keys')   # directly parse as rsa
+    client.connect(get_default_gateway_linux(), username='ubuntu', pkey=key)
     return client
 
 

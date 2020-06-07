@@ -65,12 +65,15 @@ def usage():
     {name} db rf [device/user] [plugin_name] [field] - removes a field from an adapter. 
                                                        e.g. `db rf device aws_adapter _old`
                                                        will remove '_old' from all aws devices.
+    {name} fields remove_dynamic [plugin_unique_name] - remove all dynamic fields of a certain plugin. requires a
+                                                        restart and a refetch of the adapter for it to apply in gui! 
     {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
     {name} s3_backup - Trigger s3 backup
     {name} smb_backup - Trigger SMB backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     {name} root_master_smb_restore - Trigger 'Root Master mode' SMB restore
     {name} compliance run (aws/azure) - Run Compliance Report
+    {name} tag remove [devices/users] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     '''
 
@@ -119,7 +122,7 @@ def main():
 
         print(f'Fetching & Rebuilding db (Blocking) for {pun}...')
         try:
-            blocking = not (sys.argv[3] == '--nonblock')
+            blocking = sys.argv[3] != '--nonblock'
         except Exception:
             blocking = True
         ag.query_devices(pun, blocking=blocking)
@@ -139,7 +142,7 @@ def main():
             print(f'No such adapter "{action}"!')
             return -1
         try:
-            blocking = not (sys.argv[4] == '--nonblock')
+            blocking = sys.argv[4] != '--nonblock'
         except Exception:
             blocking = True
 
@@ -340,6 +343,149 @@ def main():
                             f'is deleted. please run this script again.')
             else:
                 print('Done')
+        else:
+            print(usage())
+            return -1
+
+    elif component == 'fields':
+
+        if action == 'remove_dynamic':
+
+            try:
+
+                entity, plugin_unique_name = sys.argv[3], sys.argv[4]
+
+            except Exception:
+
+                print(usage())
+
+                return -1
+
+            entity = entity.lower()
+
+            assert entity in ['device', 'user']
+
+            if entity == 'device':
+                entity_db = ag.db.client['aggregator']['devices_fields']
+            else:
+                entity_db = ag.db.client['aggregator']['users_fields']
+
+            dynamic_schema = {
+                'plugin_unique_name': plugin_unique_name,
+                'name': 'dynamic'
+            }
+
+            all_items = entity_db.find_one(dynamic_schema)
+
+            if not all_items:
+                redprint(f'Did not found any dynamic fields declaration. Are you sure this plugin unique name exists?')
+                return -1
+
+            count = len(all_items['schema']['items'])
+
+            redprint(f'You are going to remove the {count} dynamic fields from {plugin_unique_name} {entity}s. '
+
+                     f'This is unrecoverable!')
+
+            redprint(f'Are you sure? [yes/no]')
+
+            res = input()
+
+            if res != 'yes':
+                print(f'Not continuing.')
+
+                return 0
+
+            entity_db.update_one(
+
+                dynamic_schema,
+
+                {
+                    '$set': {
+                        'schema.items': []
+                    }
+                }
+
+            )
+
+            print('Done')
+
+        else:
+
+            print(usage())
+
+            return -1
+
+    elif component == 'tag':
+        if action == 'remove':
+            try:
+                entity_type, query, tag_filter = sys.argv[3], sys.argv[4], sys.argv[5]
+            except Exception:
+                print(usage())
+                return -1
+
+            print(f'Entity Type: {entity_type}')
+            print(f'Query: {query}')
+            print(f'Filter: {tag_filter}')
+
+            entity_type = entity_type.lower()
+
+            assert entity_type in ['device', 'user']
+
+            if entity_type == 'device':
+                entity_db = ag._entity_db_map[entity_type]
+            else:
+                entity_db = ag._entity_db_map[entity_type]
+
+            if query == '*':
+                query = {}
+
+            op, string = tag_filter.split('=')
+            op = op.strip()
+            string = string.strip()
+
+            if op == 'eq':
+                value = string
+            elif op == 'startswith':
+                value = {'$regex': f'^{string}'}
+            else:
+                raise ValueError(f'Unknown op {op}')
+
+            query = {
+                '$and': {
+                    query,
+                    {
+                        'tags': {
+                            '$elemMatch': {
+                                'type': 'label',
+                                'label_value': value
+                            }
+                        }
+                    }
+                }
+            }
+
+            query_count = entity_db.find(query).count()
+
+            redprint(f'You are going to remove the {query_count} tags. This is unrecoverable!')
+            redprint(f'Are you sure? [yes/no]')
+
+            res = input()
+
+            if res != 'yes':
+                print(f'Not continuing.')
+
+                return 0
+
+            print(f'Deleting tags...')
+            entity_db.update_many(
+                query,
+                {
+                    '$set': {'tags.$.label_value': ''}
+                }
+            )
+            print(f'Done deleting tags')
+
         else:
             print(usage())
             return -1

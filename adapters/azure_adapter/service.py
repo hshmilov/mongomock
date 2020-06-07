@@ -116,7 +116,8 @@ class AzureAdapter(AdapterBase):
                         azure_stack_hub_proxy_settings = [
                             x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
                 except Exception:
-                    logger.exception(f'Failed getting azure stack hub proxy settings')
+                    logger.warning(f'Failed getting azure stack hub proxy settings. '
+                                   f'Original value is {str(azure_stack_hub_proxy_settings_value)}', exc_info=True)
                     # fallthrough
 
                 connection = AzureClient(subscription_id=subscription,

@@ -16,7 +16,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.postgres.consts import DEFAULT_POSTGRES_PORT
 from axonius.utils.network.sockets import test_reachability_tcp
-from axonius.utils.parsing import int_to_mac
+from axonius.utils.parsing import int_to_mac, format_mac
 from bluecat_adapter.connection import BluecatConnection
 from bluecat_adapter.consts import DEVICE_PER_PAGE
 from bluecat_adapter.client_id import get_client_id
@@ -255,14 +255,15 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         for device_raw in devices_raw_data:
             try:
                 device_state = None
+
                 device = self._new_device_adapter()
                 device_id = device_raw.get('id')
                 if device_id is None:
                     logger.warning(f'Bad device with no id {device_id}')
                     continue
-                device.id = str(device_id) + '_' + (device_raw.get('name') or '')
                 device.name = device_raw.get('name').split(',')[0] if device_raw.get('name') else None
-                device.hostname = device_raw.get('dns_name')
+                hostname = device_raw.get('dns_name')
+                device.hostname = hostname
                 device_properties = device_raw.get('properties')
                 mac = None
                 ips = None
@@ -294,6 +295,15 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                         device.add_nic(mac, ips)
                 except Exception:
                     logger.exception(f'Problem getting properties for {device_raw}')
+
+                formatted_mac = format_mac(mac)
+
+                device.id = '_'.join([
+                    str(device_id),
+                    (device_raw.get('name') or ''),
+                    (hostname or ''),
+                    (formatted_mac or '')
+                ])
 
                 try:
                     if isinstance(device_properties, str) and device_properties:

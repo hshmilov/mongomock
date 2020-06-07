@@ -94,7 +94,7 @@ class BluecatConnection(RESTConnection):
             yield ip4block['id']
             yield from self.get_blocks_recursively(ip4block['id'])
 
-    # pylint: disable=R0912,arguments-differ
+    # pylint: disable=R0912,arguments-differ, too-many-statements
     def get_device_list(self, sleep_between_requests_in_sec, get_extra_host_data=True, device_per_page=None):
         self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
         if device_per_page:
@@ -142,9 +142,40 @@ class BluecatConnection(RESTConnection):
                             self._refresh_token()
                             dns_name_raw = self._get(f'getLinkedEntities?entityId={host_id}&type=HostRecord&'
                                                      f'start=0&count={self._device_per_page}')
+
                             if isinstance(dns_name_raw, list) and len(dns_name_raw) > 0:
-                                device_raw['dns_name'] = dns_name_raw[0].get('name')
                                 device_raw['all_dns_names'] = dns_name_raw
+
+                                # Optimize
+                                if len(dns_name_raw) == 1:
+                                    device_raw['dns_name'] = dns_name_raw[0].get('name')
+                                    continue
+
+                                # Otherwise if we have more than 1 in the list, we have to find the real one
+
+                                real_dns_name = None
+                                device_name = device_raw.get('name')
+
+                                # First, compare to the 'name' attribute if it exists
+                                if isinstance(device_name, str) and device_name:
+                                    for dns_candidate in dns_name_raw:
+                                        if dns_candidate.get('name').lower() == device_name.lower():
+                                            real_dns_name = dns_candidate.get('name')
+                                            break
+
+                                # Second, take the first one which is not ttl=0 in it
+                                if not real_dns_name:
+                                    for dns_candidate in dns_name_raw:
+                                        properties = dns_candidate.get('properties')
+                                        if isinstance(properties, str) and 'ttl=0' not in properties:
+                                            real_dns_name = dns_candidate.get('name')
+                                            break
+
+                                # Otherwise just take the first one
+                                if not real_dns_name:
+                                    real_dns_name = dns_name_raw[0].get('name')
+
+                                device_raw['dns_name'] = real_dns_name
                     except Exception:
                         logger.exception(f'Problem getting dns name for {device_raw}')
                     yield device_raw
