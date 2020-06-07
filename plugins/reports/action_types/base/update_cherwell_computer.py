@@ -158,13 +158,20 @@ class CherwellUpdateComputerAction(ActionTypeBase):
                 serial_number_raw = None
                 os_raw = None
                 os_build = None
+                cherwell_manufacturer = None
                 found_cherwell = False
+                cherwell_serial = None
+                cherwell_name = None
                 found_two_cherwell = False
                 for from_adapter in entry['adapters']:
                     data_from_adapter = from_adapter['data']
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
                         bus_ob_id = data_from_adapter.get('bus_ob_id')
                         bus_ob_rec_id = data_from_adapter.get('bus_ob_rec_id')
+                        bus_ob_public_id = data_from_adapter.get('bus_ob_public_id')
+                        cherwell_manufacturer = data_from_adapter.get('device_manufacturer')
+                        cherwell_serial = data_from_adapter.get('device_serial')
+                        cherwell_name = data_from_adapter.get('hostname')
                         if bus_ob_id and bus_ob_rec_id:
                             if found_cherwell:
                                 found_two_cherwell = True
@@ -206,7 +213,12 @@ class CherwellUpdateComputerAction(ActionTypeBase):
                     continue
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
-
+                if cherwell_name:
+                    name_raw = None
+                if cherwell_manufacturer:
+                    manufacturer_raw = None
+                if cherwell_serial:
+                    serial_number_raw = None
                 message = self._update_cherwell_computer(bus_ob_id=bus_ob_id,
                                                          bus_ob_rec_id=bus_ob_rec_id,
                                                          bus_ob_public_id=bus_ob_public_id,

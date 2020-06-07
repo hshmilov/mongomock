@@ -161,12 +161,18 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                 os_raw = None
                 found_snow = False
                 found_two_snow = False
+                snow_manufacturer = None
+                snow_serial = None
+                snow_name = None
                 for from_adapter in entry['adapters']:
                     data_from_adapter = from_adapter['data']
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
                         class_name = data_from_adapter.get('class_name')
                         sys_id = data_from_adapter.get('id')
                         if class_name and sys_id:
+                            snow_manufacturer = data_from_adapter.get('device_manufacturer')
+                            snow_serial = data_from_adapter.get('device_serial')
+                            snow_name = data_from_adapter.get('name')
                             if found_snow:
                                 found_two_snow = True
                             found_snow = True
@@ -211,7 +217,12 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                     continue
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
-
+                if snow_manufacturer:
+                    manufacturer_raw = None
+                if snow_serial:
+                    serial_number_raw = None
+                if snow_name:
+                    name_raw = None
                 message = self._update_service_now_computer(class_name=class_name,
                                                             sys_id=sys_id,
                                                             name=name_raw,
