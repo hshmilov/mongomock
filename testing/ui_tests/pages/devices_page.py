@@ -86,7 +86,6 @@ class DevicesPage(EntitiesPage):
                                           '//div[contains(text(),\'{query_name_text}\')]'
     SPECIFIC_SEARCH_CLOSE_BUTTON_CSS = '.search-input-badge__remove'
     SPECIFIC_SEARCH_DROPDOWN_CONTENT_CSS = '#specific_search_select .menu-content .x-menu-item'
-    AD_PREDEFINED_QUERY_NAME = 'Devices seen in last 7 days'
 
     PartialState = {
         'PARTIAL': 'mixed',

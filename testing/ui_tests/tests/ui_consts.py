@@ -75,7 +75,12 @@ WINDOWS_QUERY_NAME = 'Windows Operating System'
 LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
 MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
+MANAGED_DEVICES_QUERY = '(specific_data.data.adapter_properties == "Agent") ' \
+                        'or (specific_data.data.adapter_properties == "Manager")'
 UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
+DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME = 'Devices not seen in last 30 days'
+DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME = 'Devices seen in last 7 days'
+DEVICES_SEEN_IN_LAST_7_DAYS_QUERY = '(specific_data.data.last_seen >= date("NOW - 7d"))'
 
 HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
 HOSTNAME_DC_QUERY_NAME = 'DC Devices'

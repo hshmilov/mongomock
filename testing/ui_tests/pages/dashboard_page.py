@@ -58,6 +58,15 @@ class DashboardPage(Page):
     CHART_FIELD_TEXT_BOX_CSS = 'div.x-search-input.x-select-search > input'
     CHART_FUNCTION_CSS = 'div.x-chart-metric.grid-span2 > div:nth-child(8)'
     CHART_TITLE_ID = 'chart_name'
+    MATRIX_WIZARD_BASE_QUERY_CSS = '.base-query-row:nth-child({index}) .x-dropdown.x-select'
+    MATRIX_WIZARD_ADD_BASE_QUERY_CSS = '#add-base-query'
+    MATRIX_WIZARD_INTERSECTING_QUERY_CSS = '.intersection-query-row:nth-child({index}) .x-dropdown.x-select'
+    MATRIX_WIZARD_ADD_INTERSECTING_QUERY_CSS = '#add-intersecting-query'
+    MATRIX_GROUP_CSS = '.intersection-group:nth-child(odd)'
+    MATRIX_GROUP_NAME_CSS = '.group-name'
+    MATRIX_GROUP_TOTAL_CSS = '.group-total'
+    MATRIX_GROUP_SLICES = '.intersection-slice'
+    MATRIX_TOTAL_COUNT_CSS = '.matrix-total'
     SEGMENTATION_FILTER_INPUT_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) input'
     SEGMENTATION_FILTER_DELETE_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) button'
     SEGMENTATION_FILTER_DROP_DOWN_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index})' \
@@ -186,12 +195,15 @@ class DashboardPage(Page):
     def hover_over_pie_chart_slice(self, pie_chart, index):
         self.hover_over_element(self.get_histogram_line_from_histogram(pie_chart, index))
 
-    def get_tooltip_title(self, card):
+    def get_tooltip_header_name(self, card):
         return card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .name').text
 
     def get_tooltip_header_percentage(self, card):
         percentage_element = card.find_element_by_css_selector(f'{self.TOOLTIP_HEADER_CONTENT_CSS} .percentage')
         return self.get_percentage_number(percentage_element.get_attribute('textContent'))
+
+    def get_tooltip_body_name(self, card):
+        return card.find_element_by_css_selector(f'{self.TOOLTIP_BODY_CONTENT_CSS} .name').text
 
     def get_tooltip_body_value(self, card):
         return card.find_element_by_css_selector(f'{self.TOOLTIP_BODY_CONTENT_CSS} .value').text
@@ -319,6 +331,14 @@ class DashboardPage(Page):
 
     def select_intersection_chart_second_query(self, query):
         self.select_option_without_search(self.INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS,
+                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+
+    def select_matrix_wizard_base_query(self, index, query):
+        self.select_option_without_search(self.MATRIX_WIZARD_BASE_QUERY_CSS.format(index=index),
+                                          self.WIZARD_OPTIONS_CSS, query, parent=None)
+
+    def select_matrix_wizard_intersecting_query(self, index, query):
+        self.select_option_without_search(self.MATRIX_WIZARD_INTERSECTING_QUERY_CSS.format(index=index),
                                           self.WIZARD_OPTIONS_CSS, query, parent=None)
 
     def select_chart_wizard_module(self, entity, parent=None):
@@ -455,6 +475,56 @@ class DashboardPage(Page):
         self.select_chart_summary_function(func_name)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
+
+    def add_matrix_card(self, module, title, base_queries, intersecting_queries, sort_by='value', sort_order='desc'):
+        self.switch_to_page()
+        self.open_new_card_wizard()
+        self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+        self.select_chart_metric('Matrix Data')
+        self.select_chart_wizard_module(module)
+
+        if base_queries[0]:
+            self.select_matrix_wizard_base_query(1, base_queries[0])
+        base_query_count = len(base_queries)
+        if base_query_count > 1:
+            for index in range(2, base_query_count + 1):
+                self.add_matrix_wizard_base_query()
+                query = base_queries[index - 1]
+                if query:
+                    self.select_matrix_wizard_base_query(index, query)
+
+        self.select_matrix_wizard_intersecting_query(1, intersecting_queries[0])
+        intersecting_query_count = len(intersecting_queries)
+        if intersecting_query_count > 1:
+            for index in range(2, intersecting_query_count + 1):
+                self.add_matrix_wizard_intersecting_query()
+                query = intersecting_queries[index - 1]
+                self.select_matrix_wizard_intersecting_query(index, query)
+
+        self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()
+        self.driver.find_element_by_css_selector(self.WIZARD_SORT_ORDER.format(sort_order=sort_order)).click()
+
+        self.click_card_save()
+        return self.get_card(title)
+
+    def add_matrix_wizard_base_query(self):
+        self.driver.find_element_by_css_selector(self.MATRIX_WIZARD_ADD_BASE_QUERY_CSS).click()
+
+    def add_matrix_wizard_intersecting_query(self):
+        self.driver.find_element_by_css_selector(self.MATRIX_WIZARD_ADD_INTERSECTING_QUERY_CSS).click()
+
+    def get_matrix_chart_group_names(self, card):
+        return [group.text for group in card.find_elements_by_css_selector(self.MATRIX_GROUP_NAME_CSS)]
+
+    def get_matrix_chart_group_values(self, card):
+        return [int(group.text) for group in card.find_elements_by_css_selector(self.MATRIX_GROUP_TOTAL_CSS)]
+
+    def get_matrix_chart_group_slices(self, card, index):
+        group = card.find_elements_by_css_selector(self.MATRIX_GROUP_CSS)[index]
+        return group.find_elements_by_css_selector(self.MATRIX_GROUP_SLICES)
+
+    def get_matrix_chart_total_value(self, card):
+        return card.find_element_by_css_selector(self.MATRIX_TOTAL_COUNT_CSS).text
 
     def click_card_save(self):
         self.get_enabled_button('Save').click()
@@ -1184,6 +1254,7 @@ class DashboardPage(Page):
             sort_by=sort_by))).perform()
         actions.click(self.driver.find_element_by_id(
             self.CHART_PANEL_SORT_ORDER_ID.format(sort_by=sort_by, sort_order=sort_order))).perform()
+        self.wait_for_card_spinner_to_end()
 
     def edit_dashboard_chart_default_sort(self, sort_by, sort_order):
         self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()

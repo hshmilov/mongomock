@@ -1,6 +1,5 @@
 import time
 from datetime import datetime, timedelta
-
 from axonius.utils.wait import wait_until
 from services.adapters.csv_service import CsvService
 from test_helpers.file_mock_credentials import FileForCredentialsMock

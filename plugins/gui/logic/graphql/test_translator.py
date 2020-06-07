@@ -6,6 +6,7 @@ import datetime
 from axonius.entities import EntityType
 import axonius.pql.matching
 from gui.logic.graphql.translator import Translator
+from ui_tests.tests.ui_consts import DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
 
 # hack parse date so it will return a constant date
 axonius.pql.matching.parse_date = lambda x: datetime.datetime(year=2020, month=6, day=6)
@@ -97,7 +98,6 @@ class TestTranslator(unittest.TestCase):
 
     SIMPLE_ADAPTER_PROPERTIES = '(specific_data.data.adapter_properties == "Vulnerability_Assessment")'
     SIZE_QUERY_INTERFACES = '(specific_data.data.network_interfaces.ips == size(1))'
-    BASIC_DAYS_QUERY = '(specific_data.data.last_seen >= date("NOW - 7d"))'
     REGEX_QUERY_W_OR = '(specific_data.data.hostname == regex("66", "i")) or (specific_data.data.hostname == "ttt")'
     ADAPTER_PROP_W_OR = '(specific_data.data.adapter_properties == "Agent")' \
                         'or (specific_data.data.adapter_properties == "Manager")'
@@ -122,7 +122,7 @@ class TestTranslator(unittest.TestCase):
         self.assertEqual({'adapterDevices': {'adapter': {'properties': {'overlap': ['Vulnerability_Assessment']}}}}, w)
         w = Translator(EntityType.Devices).translate(self.SIZE_QUERY_INTERFACES)
         self.assertEqual({'adapterDevices': {'interfaces': {'ipAddrs': {'size': 1}}}}, w)
-        w = Translator(EntityType.Devices).translate(self.BASIC_DAYS_QUERY)
+        w = Translator(EntityType.Devices).translate(DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
 
         # Note: that we can use the Days operator but since AQL converts it already into a datetime, we use GTE
         self.assertEqual({'adapterDevices': {'lastSeen': {'gte': get_timestamp()}}}, w)

@@ -1,7 +1,8 @@
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME,
-                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME)
+                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME,
+                                      DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
 
 
 class TestDashboardCardTooltip(TestBase):
@@ -13,7 +14,7 @@ class TestDashboardCardTooltip(TestBase):
     DEVICES_QUERY = {'module': DEVICES_MODULE, 'query': MANAGED_DEVICES_QUERY_NAME}
 
     def _verify_histogram_tooltip_and_get_percentage(self, card, item_title, item_value):
-        assert self.dashboard_page.get_tooltip_title(card) == item_title
+        assert self.dashboard_page.get_tooltip_header_name(card) == item_title
         assert self.dashboard_page.get_tooltip_body_value(card) == item_value
         return self.dashboard_page.get_tooltip_body_percentage(card)
 
@@ -46,7 +47,7 @@ class TestDashboardCardTooltip(TestBase):
         self._test_histogram_tooltip(self.TEST_SEGMENTATION_TITLE)
 
     def _verify_pie_chart_tooltip_and_get_percentage(self, card):
-        assert self.dashboard_page.get_tooltip_title(card) != ''
+        assert self.dashboard_page.get_tooltip_header_name(card) != ''
         assert self.dashboard_page.get_tooltip_body_value(card) != ''
         body_percentage = self.dashboard_page.get_tooltip_body_percentage(card)
         assert body_percentage != ''
@@ -76,7 +77,8 @@ class TestDashboardCardTooltip(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.dashboard_page.add_segmentation_card(
-            DEVICES_MODULE, 'Last Seen', self.TEST_SEGMENTATION_TITLE, 'pie', 'Devices not seen in last 30 days')
+            DEVICES_MODULE, 'Last Seen', self.TEST_SEGMENTATION_TITLE, 'pie',
+            DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
         self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE)
 
     def test_intersection_pie_chart_tooltip(self):
@@ -104,7 +106,7 @@ class TestDashboardCardTooltip(TestBase):
 
         for index, pie_chart_slice in enumerate(pie_chart_slices, 0):
             self.dashboard_page.hover_over_element(pie_chart_slices[index])
-            tooltip_title = self.dashboard_page.get_tooltip_title(card)
+            tooltip_title = self.dashboard_page.get_tooltip_header_name(card)
             if tooltip_title == 'Excluding':
                 excluding_slice_exists = True
                 total_percentage += _verify_excluding_or_intersection_tooltip()

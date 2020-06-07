@@ -1,11 +1,10 @@
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER
+from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
 from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
-    QUERY_FILTER_LAST_SEEN = '(specific_data.data.last_seen >= date("NOW - 7d"))'
 
     def test_devices_last_seen_export_csv(self):
         self.settings_page.switch_to_page()
@@ -19,7 +18,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
         result = self.devices_page.generate_csv('devices',
                                                 self.QUERY_FIELDS,
-                                                self.QUERY_FILTER_LAST_SEEN)
+                                                DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
         self.devices_page.assert_csv_match_ui_data(result)
 
     def test_export_csv_config(self):

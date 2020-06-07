@@ -3,7 +3,7 @@ import math
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME,
-                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME)
+                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY)
 
 
 class TestDashboardCardLegend(TestBase):
@@ -12,8 +12,6 @@ class TestDashboardCardLegend(TestBase):
     TEST_SEGMENTATION_TITLE = 'test segmentation'
     TEST_INTERSECTION_TITLE = 'test intersection'
 
-    COMPARISON_QUERY_SEARCH_TEXT = \
-        '(specific_data.data.adapter_properties == "Agent") or (specific_data.data.adapter_properties == "Manager")'
     SEGMENTATION_QUERY_SEARCH_TEXT = 'specific_data.data.os.type == "Windows"'
     INTERSECTION_QUERY_SEARCH_TEXT = 'not ((specific_data.data.network_interfaces.ips == regex("192.168", "i")) ' \
                                      'or (specific_data.data.hostname == regex("dc", "i")))'
@@ -69,7 +67,7 @@ class TestDashboardCardLegend(TestBase):
         self.dashboard_page.add_comparison_card(
             module_query_list, title=self.TEST_COMPARISON_TITLE, chart_type='pie')
         self._test_pie_chart_legend(self.TEST_COMPARISON_TITLE,
-                                    self.COMPARISON_QUERY_SEARCH_TEXT, [MANAGED_DEVICES_QUERY_NAME] * 5)
+                                    MANAGED_DEVICES_QUERY, [MANAGED_DEVICES_QUERY_NAME] * 5)
 
     def test_segmentation_pie_chart_legend(self):
         self.dashboard_page.switch_to_page()

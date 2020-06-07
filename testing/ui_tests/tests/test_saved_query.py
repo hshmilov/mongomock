@@ -11,7 +11,8 @@ from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME)
+                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME,
+                                      DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME)
 from test_credentials.json_file_credentials import (DEVICE_FIRST_HOSTNAME, DEVICE_SECOND_NAME)
 
 
@@ -448,7 +449,7 @@ class TestSavedQuery(TestBase):
         # Check 1
         self.devices_queries_page.switch_to_page()
         self.devices_queries_page.wait_for_table_to_be_responsive()
-        self.devices_queries_page.click_query_row_by_name(self.devices_page.AD_PREDEFINED_QUERY_NAME)
+        self.devices_queries_page.click_query_row_by_name(DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME)
         self.devices_queries_page.run_query()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
@@ -463,7 +464,7 @@ class TestSavedQuery(TestBase):
 
         # Check 2
         self.devices_page.switch_to_page()
-        self.devices_page.execute_saved_query(self.devices_page.AD_PREDEFINED_QUERY_NAME)
+        self.devices_page.execute_saved_query(DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME)
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
