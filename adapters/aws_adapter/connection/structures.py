@@ -69,9 +69,27 @@ class AwsSSMSchemas(Enum):
     WindowsUpdate = 'AWS:WindowsUpdate'
 
 
+class AWSIAMPolicyPermission(SmartJsonClass):
+    policy_action = ListField(str, 'Policy Action')
+    policy_effect = Field(str, 'Policy Effect')
+    policy_resource = Field(str, 'Policy Resource')
+    policy_sid = Field(str, 'Policy SID')
+
+
 class AWSIAMPolicy(SmartJsonClass):
+    policy_arn = Field(str, 'Policy ARN')
+    policy_attachment_count = Field(int, 'Policy Attachment Count')
+    policy_create_date = Field(datetime.datetime, 'Policy Creation Date')
+    policy_description = Field(str, 'Policy Description')
+    policy_id = Field(str, 'Policy ID')
+    policy_is_attachable = Field(bool, 'Policy Is Attachable')
     policy_name = Field(str, 'Policy Name')
+    policy_permissions = ListField(AWSIAMPolicyPermission, 'Policy Actions')
+    policy_permission_boundary_count = Field(int, 'Policy Permission Boundary Count')
     policy_type = Field(str, 'Policy Type', enum=['Managed', 'Inline', 'Group Managed'])
+    policy_updated_date = Field(datetime.datetime, 'Policy Updated Date')
+    policy_version = Field(str, 'Policy Version')
+    policy_version_id = Field(str, 'Policy Version ID')
 
 
 class AWSIAMAccessKey(SmartJsonClass):

@@ -263,3 +263,191 @@ def create_custom_waiter(boto_client: boto3.session.Session.client, name: str,
         # push this up the stack and surface in aws_users
 
     return custom_waiter
+
+# pylint: disable=too-many-branches, too-many-statements
+
+
+def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
+    new_attached_policy = dict()
+
+    # get the policy name
+    policy_name = attached_policy.get('PolicyName')
+    if not isinstance(policy_name, str):
+        logger.warning(f'Malformed policy name. Expected a str, got '
+                       f'{type(policy_name)}: {str(policy_name)}')
+        policy_name = None
+
+    new_attached_policy['name'] = policy_name
+
+    # get the policy arn
+    policy_arn = attached_policy.get('PolicyArn')
+    if isinstance(policy_arn, str):
+        new_attached_policy['arn'] = policy_arn
+    else:
+        logger.warning(f'Malformed policy ARN. Expected a str, got '
+                       f'{type(policy_arn)}: {str(policy_arn)}')
+
+    # pylint: disable=too-many-nested-blocks
+    # fetch the policy details
+    iam_policy = iam_client.get_policy(PolicyArn=policy_arn)
+    if isinstance(iam_policy, dict):
+        # pull out the important bits
+        policy = iam_policy.get('Policy')
+
+        if isinstance(policy, dict):
+            # populate most of the policy
+            new_attached_policy['attachment_count'] = policy.get('AttachmentCount')
+            new_attached_policy['create_date'] = policy.get('CreateDate')
+            new_attached_policy['description'] = policy.get('Description')
+            new_attached_policy['is_attachable'] = policy.get('IsAttachable')
+            new_attached_policy['permission_boundary_count'] = policy.get('PermissionsBoundaryUsageCount')
+            new_attached_policy['id'] = policy.get('PolicyId')
+            new_attached_policy['update_date'] = policy.get('UpdateDate')
+
+            # get the version ID of the policy
+            version_id = policy.get('DefaultVersionId')
+            if isinstance(version_id, str):
+                new_attached_policy['version_id'] = version_id
+
+                # fetch the policy version details
+                version_policy = iam_client.get_policy_version(
+                    PolicyArn=policy_arn,
+                    VersionId=version_id)
+
+                if isinstance(version_policy, dict):
+                    # get the policy version
+                    policy_version = version_policy.get('PolicyVersion')
+                    if isinstance(policy_version, dict):
+                        policy_document = policy_version.get('Document')
+                        if isinstance(policy_document, dict):
+                            version = policy_document.get('Version')
+                            if isinstance(version, str):
+                                new_attached_policy['version'] = version
+                                # pull out the policy permissions by actions
+                                policy_statements = policy_document.get('Statement')
+                                if isinstance(policy_statements, list):
+                                    # get the permission actions
+                                    new_attached_policy['permissions'] = list()
+
+                                    for statement in policy_statements:
+                                        if not isinstance(statement, dict):
+                                            logger.warning(f'Malformed statement. '
+                                                           f'Expected dict, got '
+                                                           f'{type(statement)}: '
+                                                           f'{str(statement)}')
+                                            break
+
+                                        # can get a str or a list here
+                                        actions = statement.get('Action')
+                                        if isinstance(actions, str):
+                                            policy_actions = [actions]
+                                        elif isinstance(actions, list):
+                                            policy_actions = actions
+                                        else:
+                                            policy_actions = []
+                                            logger.warning(f'Malformed policy '
+                                                           f'actions. Expected '
+                                                           f'a list, got '
+                                                           f'{type(actions)}: '
+                                                           f'{str(actions)}')
+
+                                        actions_dict = dict()
+                                        actions_dict['effect'] = statement.get('Effect')
+                                        actions_dict['resource'] = statement.get('Resource')
+                                        actions_dict['actions'] = policy_actions
+                                        actions_dict['sid'] = statement.get('Sid')
+
+                                        new_attached_policy['permissions'].append(actions_dict)
+                                else:
+                                    logger.warning(f'Malformed policy statements. '
+                                                   f'Expected list, got '
+                                                   f'{type(policy_statements)}: '
+                                                   f'{str(policy_statements)}')
+                            else:
+                                logger.warning(f'Malformed policy version. '
+                                               f'Expected str, got '
+                                               f'{type(version)}: '
+                                               f'{str(version)}')
+                        else:
+                            logger.warning(f'Malformed policy document. '
+                                           f'Expected a dict, got '
+                                           f'{type(policy_document)}: '
+                                           f'{str(policy_document)}')
+                    else:
+                        logger.warning(f'Malformed policy version. '
+                                       f'Expected a dict, got '
+                                       f'{type(policy_version)}: '
+                                       f'{str(policy_version)}')
+                else:
+                    logger.warning(f'Malformed policy version. '
+                                   f'Expected dict, got '
+                                   f'{type(version_policy)}: '
+                                   f'{str(version_policy)}')
+            else:
+                logger.warning(f'Malformed policy version ID. '
+                               f'Expected str, got '
+                               f'{type(version_id)}: {str(version_id)}')
+        else:
+            logger.warning(f'Malformed policy declaration. Expected dict, got '
+                           f'{type(policy)}: {str(policy)}')
+    else:
+        logger.warning(f'Malformed IAM policy. Expected dict, got '
+                       f'{type(iam_policy)}: {str(iam_policy)}')
+
+    return new_attached_policy
+
+
+def process_inline_iam_policy(client, user_name: str, policy: str) -> dict:
+
+    new_inline_policy = dict()
+
+    # fetch the inline policy
+    policy_response = client.get_user_policy(UserName=user_name,
+                                             PolicyName=policy)
+    if not isinstance(policy_response, dict):
+        raise ValueError(f'Malformed policy response. Expected dict, got '
+                         f'{type(policy_response)}: {str(policy_response)}')
+
+    # pull out the interesting bits
+    policy_document = policy_response.get('PolicyDocument')
+    if not isinstance(policy_document, dict):
+        raise ValueError(f'Malformed policy document. Expected a dict, got '
+                         f'{type(policy_document)}: {str(policy_document)}')
+
+    new_inline_policy['id'] = policy_document.get('Id')
+    new_inline_policy['version'] = policy_document.get('Version')
+
+    # pull out the policy permissions
+    statements = policy_document.get('Statement')
+    if not isinstance(statements, list):
+        raise ValueError(f'Malformed policy statements. Expected a list, got '
+                         f'{type(statements)}: {str(statements)}')
+
+    # get the permission actions
+    new_inline_policy['permissions'] = list()
+    policy_actions = list()
+
+    for statement in statements:
+        if not isinstance(statement, dict):
+            raise ValueError(f'Malformed policy statement. Expected a dict, '
+                             f'got {type(statement)}: {str(statement)}')
+
+        actions = statement.get('Action')
+        if isinstance(actions, list):
+            policy_actions = actions
+        elif isinstance(actions, str):
+            policy_actions = [actions]
+        else:
+            logger.warning(f'Malformed policy actions. Expected a list, got '
+                           f'{type(policy_actions)}: {str(policy_actions)}')
+            policy_actions = []
+
+        actions_dict = dict()
+        actions_dict['effect'] = statement.get('Effect')
+        actions_dict['resource'] = statement.get('Resource')
+        actions_dict['actions'] = policy_actions
+        actions_dict['sid'] = statement.get('Sid')
+
+        new_inline_policy['permissions'].append(actions_dict)
+
+    return new_inline_policy

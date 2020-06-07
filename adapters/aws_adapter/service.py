@@ -623,6 +623,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_workspaces = config.get('fetch_workspaces') or False
         self.__fetch_lambda = config.get('fetch_lambda') or False
         self.__fetch_iam_users = config.get('fetch_iam_users') or False
+        self.__parse_iam_policies = config.get('parse_iam_policies') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
         self.__fetch_route53 = config.get('fetch_route53') or False
@@ -690,6 +691,16 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'parse_iam_policies',
+                    'title': 'Parse IAM policies',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'accessed_services',
+                    'title': 'Fetch IAM Users\' AWS Services',
+                    'type': 'bool'
+                },
+                {
                     'name': 'fetch_workspaces',
                     'title': 'Fetch information about Workspaces',
                     'type': 'bool'
@@ -735,11 +746,6 @@ class AwsAdapter(AdapterBase, Configurable):
                     'title': 'Number of accounts to fetch in parallel',
                     'type': 'integer'
                 },
-                {
-                    'name': 'accessed_services',
-                    'title': 'Fetch IAM Users\' AWS Services',
-                    'type': 'bool'
-                }
             ],
             'required': [
                 'correlate_ecs_ec2',
@@ -749,6 +755,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_rds',
                 'fetch_s3',
                 'fetch_iam_users',
+                'parse_iam_policies',
+                'accessed_services',
                 'fetch_workspaces',
                 'fetch_lambda',
                 'fetch_ssm',
@@ -760,7 +768,6 @@ class AwsAdapter(AdapterBase, Configurable):
                 'verify_primary_account',
                 'drop_turned_off_machines',
                 'parallel_count',
-                'accessed_services'
             ],
             'pretty_name': 'AWS Configuration',
             'type': 'array'
@@ -776,6 +783,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_rds': False,
             'fetch_s3': False,
             'fetch_iam_users': False,
+            'parse_iam_policies': False,
             'fetch_workspaces': False,
             'fetch_lambda': False,
             'fetch_ssm': False,
