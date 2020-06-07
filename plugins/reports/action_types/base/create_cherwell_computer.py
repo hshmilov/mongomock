@@ -2,6 +2,7 @@ import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 from axonius.clients.cherwell.connection import CherwellConnection
+from axonius.clients.cherwell.consts import IT_ASSET_BUS_OB_ID
 from reports.action_types.action_type_base import ActionTypeBase, add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -11,9 +12,9 @@ ADAPTER_NAME = 'cherwell_adapter'
 # pylint: disable=W0212
 
 
-class CherwellUpdateComputerAction(ActionTypeBase):
+class CherwellCreateComputerAction(ActionTypeBase):
     """
-    Updates an computer in the Cherwell account
+    Create a computer in the Cherwell account
     """
 
     @staticmethod
@@ -59,7 +60,7 @@ class CherwellUpdateComputerAction(ActionTypeBase):
             ],
             'required': [
                 'use_adapter',
-                'verify_ssl'
+                'verify_ssl',
             ],
             'type': 'array'
         }
@@ -78,8 +79,9 @@ class CherwellUpdateComputerAction(ActionTypeBase):
         })
 
     # pylint: disable=too-many-arguments
-    def _update_cherwell_computer(self, bus_ob_id, bus_ob_rec_id, bus_ob_public_id,
+    def _create_cherwell_computer(self, bus_ob_id, bus_ob_rec_id, bus_ob_public_id,
                                   name, mac_address=None, ip_address=None,
+                                  to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
                                   manufacturer=None, os_type=None, serial_number=None,
                                   os_build=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
@@ -102,10 +104,12 @@ class CherwellUpdateComputerAction(ActionTypeBase):
             connection_dict['os'] = os_type
         if os_build:
             connection_dict['os_build'] = os_build
-        request_json = connection_dict
+        request_json = {'cherwell': connection_dict,
+                        'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
+                                          'device_id': to_correlate_device_id}}
 
         if self._config['use_adapter'] is True:
-            response = self._plugin_base.request_remote_plugin('update_computer', adapter_unique_name, 'post',
+            response = self._plugin_base.request_remote_plugin('create_computer', adapter_unique_name, 'post',
                                                                json=request_json)
             return response.text
         try:
@@ -147,29 +151,25 @@ class CherwellUpdateComputerAction(ActionTypeBase):
 
         for entry in current_result:
             try:
-                bus_ob_id = None
-                bus_ob_rec_id = None
-                bus_ob_public_id = None
                 name_raw = None
                 asset_name_raw = None
                 mac_address_raw = None
                 ip_address_raw = None
+                corre_plugin_id = None
+                to_correlate_device_id = None
                 manufacturer_raw = None
                 serial_number_raw = None
                 os_raw = None
                 os_build = None
                 found_cherwell = False
-                found_two_cherwell = False
                 for from_adapter in entry['adapters']:
                     data_from_adapter = from_adapter['data']
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
-                        bus_ob_id = data_from_adapter.get('bus_ob_id')
-                        bus_ob_rec_id = data_from_adapter.get('bus_ob_rec_id')
-                        if bus_ob_id and bus_ob_rec_id:
-                            if found_cherwell:
-                                found_two_cherwell = True
-                            found_cherwell = True
-                        continue
+                        found_cherwell = True
+                        break
+                    if corre_plugin_id is None:
+                        corre_plugin_id = from_adapter.get('plugin_unique_name')
+                        to_correlate_device_id = data_from_adapter.get('id')
                     if name_raw is None:
                         name_raw = data_from_adapter.get('hostname')
                     if asset_name_raw is None:
@@ -196,23 +196,24 @@ class CherwellUpdateComputerAction(ActionTypeBase):
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                     continue
-                if not found_cherwell:
+                if found_cherwell:
                     results.append(EntityResult(entry['internal_axon_id'], False,
-                                                'Device doesn\'t contain Cherwell adapter'))
+                                                'Device already with Cherwell adapter'))
                     continue
-                if found_two_cherwell:
-                    results.append(EntityResult(entry['internal_axon_id'], False,
-                                                'Device ontains more than one Cherwell adapter'))
-                    continue
+                bus_ob_rec_id = ''
+                bus_ob_public_id = ''
+                bus_ob_id = IT_ASSET_BUS_OB_ID
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
 
-                message = self._update_cherwell_computer(bus_ob_id=bus_ob_id,
+                message = self._create_cherwell_computer(bus_ob_id=bus_ob_id,
                                                          bus_ob_rec_id=bus_ob_rec_id,
                                                          bus_ob_public_id=bus_ob_public_id,
                                                          name=name_raw,
                                                          mac_address=mac_address_raw,
                                                          ip_address=ip_address_raw,
+                                                         to_correlate_plugin_unique_name=corre_plugin_id,
+                                                         to_correlate_device_id=to_correlate_device_id,
                                                          manufacturer=manufacturer_raw,
                                                          os_type=os_raw,
                                                          serial_number=serial_number_raw,

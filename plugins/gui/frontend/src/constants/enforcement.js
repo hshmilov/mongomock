@@ -104,6 +104,9 @@ export const actionsMeta = {
     update_cherwell_computer: {
         title: 'Update Cherwell Computer'
     },
+    create_cherwell_computer: {
+        title: 'Create Cherwell Computer'
+    },
     update_service_now_computer: {
         title: 'Update ServiceNow Computer'
     },
@@ -225,7 +228,7 @@ export const actionsMeta = {
     },
     create_cmdb_computer: {
         title: 'Manage CMDB Computer',
-        items: ['create_service_now_computer', 'update_service_now_computer','update_cherwell_computer']
+        items: ['create_service_now_computer', 'update_service_now_computer', 'create_cherwell_computer','update_cherwell_computer']
     },
     manage_directory: {
         title: 'Manage Microsoft Active Directory (AD) Services',

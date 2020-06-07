@@ -60,10 +60,12 @@ from reports.action_types.base.aws_ec2_start_instance import AwsEc2StartInstance
 from reports.action_types.base.aws_ec2_stop_instance import AwsEc2StopInstanceAction
 from reports.action_types.base.qualys_add_tag import QualysAddTag
 from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
-from reports.action_types.base.update_cherwell_computer import CherwellComputerAction
+from reports.action_types.base.create_cherwell_computer import CherwellCreateComputerAction
+from reports.action_types.base.update_cherwell_computer import CherwellUpdateComputerAction
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
-    'update_cherwell_computer': CherwellComputerAction,
+    'update_cherwell_computer': CherwellUpdateComputerAction,
+    'create_cherwell_computer': CherwellCreateComputerAction,
     'create_service_now_computer': ServiceNowComputerAction,
     'tag': TagAllEntitiesAction,
     'create_cherwell_incident': CherwellIncidentAction,

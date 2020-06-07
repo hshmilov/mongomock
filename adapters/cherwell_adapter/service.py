@@ -8,6 +8,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.types.correlation import CorrelationResult, CorrelationReason
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error, EntityType
 from axonius.utils.datetime import parse_date
@@ -51,8 +52,48 @@ class CherwellAdapter(AdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
-    @add_rule('update_computer', methods=['POST'])
+    @add_rule('create_computer', methods=['POST'])
     def create_cherwell_computer(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        request_json = self.get_request_data_as_object()
+        cherwell_connection = request_json.get('cherwell')
+        success = False
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, device_raw = conn.update_cherwell_computer(cherwell_connection)
+                    success = success or result_status
+                    if success is True:
+                        device = self._create_device(device_raw=device_raw)
+                        if device:
+                            device_id = device.id
+                            device_dict = device.to_dict()
+                            self._save_data_from_plugin(
+                                client_id,
+                                {'raw': [], 'parsed': [device_dict]},
+                                EntityType.Devices, False)
+                            self._save_field_names_to_db(EntityType.Devices)
+                            to_correlate = request_json.get('to_ccorrelate')
+                            if isinstance(to_correlate, dict):
+                                to_correlate_plugin_unique_name = to_correlate.get('to_correlate_plugin_unique_name')
+                                to_correlate_device_id = to_correlate.get('device_id')
+                                if to_correlate_plugin_unique_name and to_correlate_device_id:
+                                    associated_adapters = [(to_correlate_plugin_unique_name,
+                                                            to_correlate_device_id),
+                                                           (self.plugin_unique_name, device_id)]
+                                    correlation_param = CorrelationResult(associated_adapters=associated_adapters,
+                                                                          data={'reason': 'Cherwell Device Creation'},
+                                                                          reason=CorrelationReason.CherwellCreation)
+                                    self.link_adapters(EntityType.Devices, correlation_param)
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return 'Failure', 400
+
+    @add_rule('update_computer', methods=['POST'])
+    def update_cherwell_computer(self):
         if self.get_method() != 'POST':
             return return_error('Method not supported', 405)
         cherwell_connection = self.get_request_data_as_object()
