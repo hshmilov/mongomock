@@ -149,3 +149,6 @@ class LoginPage(Page):
         self.wait_for_login_page_to_load()
         assert self.get_error_msg() == 'You are lacking some permissions for this request'
         self.change_current_tab_url(current_url)
+
+    def wait_for_user_name(self):
+        self.wait_for_element_present_by_id(self.LOGIN_USERNAME_ID)

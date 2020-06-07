@@ -138,6 +138,7 @@ class TestGettingStarted(TestBase):
 
         # logout from admin account and login to the new user account
         self.login_page.logout()
+        self.login_page.wait_for_user_name()
         self.login_page.login(READ_ONLY_USERNAME, NEW_PASSWORD)
 
         # assert the Getting started FAB is missing

@@ -77,6 +77,8 @@ class TestDevice(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.enforcements_page.click_tasks_button()
         self.enforcements_page.wait_for_table_to_load()
+        # wait for some rendering and animation that cause StaleElementReferenceException
+        time.sleep(3)
         self.enforcements_page.click_row()
 
         def _check_task_finished():

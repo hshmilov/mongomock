@@ -30,6 +30,7 @@ pytestmark = pytest.mark.sanity
 MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3  # the amount of time we expect a cycle to end, without async plugins in bg
 
 
+@pytest.mark.skip('tested in other places')
 def test_aggregator_in_configs(axonius_fixture):
     aggregator = axonius_fixture.aggregator
     assert aggregator.version().status_code == 200
@@ -39,20 +40,24 @@ def test_aggregator_in_configs(axonius_fixture):
     assert aggregator_config['plugin_name'] == AGGREGATOR_PLUGIN_NAME
 
 
+@pytest.mark.skip('tested in other places')
 def test_aggregator_registered(axonius_fixture):
     aggregator = axonius_fixture.aggregator
     core = axonius_fixture.core
     assert aggregator.is_plugin_registered(core)
 
 
+@pytest.mark.skip('tested in other places')
 def test_aggregator_restart(axonius_fixture):
     axonius_fixture.restart_plugin(axonius_fixture.aggregator)
 
 
+@pytest.mark.skip('tested in other places')
 def test_gui_restart(axonius_fixture):
     axonius_fixture.restart_plugin(axonius_fixture.gui)
 
 
+@pytest.mark.skip('tested in other places')
 def test_core_restart(axonius_fixture):
     axonius_fixture.restart_core()
 
@@ -68,10 +73,13 @@ def test_restart_data_persistency(axonius_fixture):
     assert len(test_collection) == 1
 
 
+@pytest.mark.skip('tested in other places')
 def test_system_is_up(axonius_fixture):
+    print('Starting test_system_is_up')
     # Waiting to see that all services are up before doing this check
     for service in axonius_fixture.axonius_services:
         service.wait_for_service()
+    print('Finished test_system_is_up')
 
 
 def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixture, Stresstest_fixture):
@@ -97,6 +105,7 @@ def test_cycle_completes_after_restart(axonius_fixture, StresstestScanner_fixtur
     assert len(devices) == 50
 
 
+@pytest.mark.skip('tested in other places')
 def test_stop_research(axonius_fixture, infinite_sleep_fixture):
     scheduler = axonius_fixture.scheduler
     infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
