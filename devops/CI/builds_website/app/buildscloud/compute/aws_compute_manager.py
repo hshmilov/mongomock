@@ -118,7 +118,7 @@ class AWSComputeManager:
             security_groups: List[str],
             is_public: bool,
             user_data: str,
-            tunnel: str,
+            tunnel: str='',
     ):
         node_tags = [
             {'Key': 'Name', 'Value': name},

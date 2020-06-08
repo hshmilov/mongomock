@@ -79,7 +79,7 @@ class GCPComputeManager:
             labels: Dict[str, str],
             is_public: bool,
             code: str,
-            tunnel: str,
+            tunnel: str='',
     ):
         assert not (is_public and num != 1), 'Does not support multiple public instances'
         name = ''.join(c if c in APPROVED_NODE_CHARACTERS else '-' for c in name.lower()) + \
