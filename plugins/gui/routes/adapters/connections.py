@@ -125,9 +125,9 @@ class Connections:
         client_id = connection_from_db['client_id']
         if request.method == 'DELETE' and request.args.get('deleteEntities', False):
             self._remove_connection_assets(adapter_name, client_id)
-        self.request_remote_plugin('clients/' + connection_id, adapter_unique_name, method='delete')
 
         if request.method == 'DELETE':
+            self.request_remote_plugin('clients/' + connection_id, adapter_unique_name, method='delete')
             self._adapters.clean_cache()
             self._adapters_v2.clean_cache()
             self.clients_labels.clean_cache()
