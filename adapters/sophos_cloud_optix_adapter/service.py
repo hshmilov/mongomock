@@ -489,20 +489,27 @@ class SophosCloudOptixAdapter(AdapterBase, Configurable):
                 user.account_id = user_raw.get('accountId')
 
                 try:
-                    account_type = more_info.get('accountType')
-                    if isinstance(account_type, str):
-                        if account_type.upper() == 'AWS':
-                            user.arn = more_info.get('arn')
-                            if user.arn and isinstance(user.arn, str):
-                                user.username = user.arn.split('/')[-1]
-                            else:
-                                user.username = more_info.get('userId') or ''
-                        elif account_type.upper() == 'GCP':
-                            user.username = more_info.get('primaryEmail') or ''
-                        elif account_type.upper() == 'AZURE':
-                            user.username = more_info.get('signInName') or \
-                                more_info.get('mainNickname') or \
-                                more_info.get('principalName') or ''
+                    account_type = user_raw.get('accountType') or ''
+                    if not isinstance(account_type, str):
+                        raise ValueError(f'Malformed account type. Expected a str, '
+                                         f'got {type(account_type)}: '
+                                         f'{str(account_type)}')
+
+                    if account_type.upper() == 'AWS':
+                        user.arn = more_info.get('arn')
+                        if user.arn and isinstance(user.arn, str):
+                            user.username = user.arn.split('/')[-1]
+                        else:
+                            user.username = more_info.get('userId') or ''
+                    elif account_type.upper() == 'GCP':
+                        user.username = more_info.get('primaryEmail') or ''
+                    elif account_type.upper() == 'AZURE':
+                        user.username = more_info.get('mainNickname') or \
+                            more_info.get('signInName') or \
+                            more_info.get('principalName') or ''
+                    else:
+                        logger.warning(f'Found a unexpected account type: '
+                                       f'{str(account_type)}')
                 except Exception:
                     logger.exception(f'Unable to set username: {user_raw}')
 
