@@ -1,3 +1,5 @@
+import pytest
+
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
@@ -21,6 +23,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
                                                 DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
         self.devices_page.assert_csv_match_ui_data(result)
 
+    @pytest.mark.skip('AX-7866')
     def test_export_csv_config(self):
         """
         Check the export csv modal config:
