@@ -65,10 +65,14 @@ class Audit:
             return self._get_labels().get(f'audit.{code}', code)
 
         def _get_message_from_activity(activity):
-            template = _get_label(f'{_get_category_action(activity)}.template')
-            if not activity.get('params'):
-                return re.sub(r' {\w+}', '', template)
-            return template.format(**activity['params'])
+            try:
+                template = _get_label(f'{_get_category_action(activity)}.template')
+                activity_params = activity['params'] or {}
+                for match in re.finditer(r'\{(\w+)\}', template):
+                    template = re.sub(match.group(0), activity_params.get(match.group(1), ''), template)
+                return template
+            except Exception:
+                logger.warning(f'Fatal Error processing audit message activity {activity} ')
 
         audit_field_to_processor = {
             'type': lambda activity: activity.get('type', ''),
