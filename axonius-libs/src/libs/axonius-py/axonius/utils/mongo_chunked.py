@@ -3,7 +3,7 @@ from typing import Iterable, Tuple
 
 from bson import ObjectId
 from funcy import take
-from pymongo import ASCENDING
+from pymongo import ASCENDING, DESCENDING
 from pymongo.collection import Collection
 from pymongo.errors import DocumentTooLarge
 
@@ -104,7 +104,7 @@ def read_chunked(collection: Collection, id_: ObjectId, projection=None) -> Iter
 
     first = collection.find_one({
         'chunk_group_id': id_
-    }, projection=projection)
+    }, projection=projection, sort=[('chunk_number', DESCENDING)])
     yield from first['chunk']
 
     id_ = first.get('next')
@@ -134,7 +134,7 @@ def get_chunks_length(collection: Collection, id_: ObjectId) -> int:
 
     first = collection.find_one({
         'chunk_group_id': id_
-    }, projection=projection)
+    }, projection=projection, sort=[('chunk_number', DESCENDING)])
     total = first['count']
 
     id_ = first.get('next')
