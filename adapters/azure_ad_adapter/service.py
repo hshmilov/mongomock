@@ -442,7 +442,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     user.last_logon = parse_date(login_dict.get('lastSignInDateTime'))
                 else:
                     # warn, but continue running
-                    logger.warning(f'Sign in activity not available for {user_id}')
+                    logger.debug(f'Sign in activity not available for {user_id}')  # suppress useless log message
 
                 # mfa
                 user_mfa_data = raw_user_data.get('credsDetails')

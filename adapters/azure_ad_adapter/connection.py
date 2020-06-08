@@ -57,7 +57,7 @@ USERS_ATTRIBUTES = [
 
 USERS_ATTRIBUTES_BETA = [
     'signInActivity',
-]
+]  # Unused because of bug in MS Graph API BETA as of 4 Jun 2020
 
 DEVICE_ATTRIBUTES = [
     'accountEnabled',
@@ -347,8 +347,9 @@ class AzureAdClient(RESTConnection):
 
     def _iter_graph_users(self):
         attrs = USERS_ATTRIBUTES
-        if self._allow_beta_api:
-            attrs += USERS_ATTRIBUTES_BETA
+        # if self._allow_beta_api:
+        #     attrs = USERS_ATTRIBUTES + USERS_ATTRIBUTES_BETA
+        # These two lines commented out due to bug in MS Graph API BETA, as of 4 JUN 2020
         # We have to specify the attributes, "*" is not supported.
         yield from self._paged_get(f'users?$select={",".join(attrs)}')
 
@@ -359,8 +360,7 @@ class AzureAdClient(RESTConnection):
                 for _ in self._paged_get(f'users?api-version=1.6'):
                     break
             else:
-                for _ in self._paged_get(f'users?$top=1'):
-                    break
+                self._get(f'users?$top=1')
         except Exception as e:
             if 'insufficient privileges to complete the operation' in str(e).lower():
                 raise RESTException(f'Insufficient permissions. Did you grant this application '
