@@ -410,8 +410,79 @@ def accounts():
             accounts_list = []
             if request.method == 'POST':
                 content = self.get_request_data_as_object()
-                accounts_list = content.get('accounts')
+                accounts_list = content.get('accounts', [])
             return func(self, accounts=accounts_list, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
+def rules():
+    """
+        Relevant only if the request.method is POST
+        Decorator stating that the rules array=['<section> <rule name>', '<section> <rule name>'...]
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            rules_list = []
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                rules_list = content.get('rules', [])
+            return func(self, rules=rules_list, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def rules_for_score():
+    """
+        Relevant only if the request.method is POST
+        Decorator stating that the rules dict=[<rule 1>: true/false, <rule 2>: true/false ...]
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            if request.method == 'POST':
+                rules_dict = self.get_request_data_as_object()
+                if rules_dict is None:
+                    rules_dict = {}
+                logger.info(f'rules: {rules_dict}')
+            return func(self, rules=rules_dict, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
+def categories():
+    """
+        Relevant only if the request.method is POST
+        Decorator stating that the categories array=['<category 1>', '<category 2>'...]
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            categories_list = []
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                categories_list = content.get('categories', [])
+            return func(self, categories=categories_list, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
+def failed_rules():
+    """
+        Relevant only if the request.method is POST
+        Decorator stating that the failed_rules is True/False
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            failed_only = False
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                failed_only = content.get('failedOnly', [])
+            return func(self, failed_only=failed_only, *args, **kwargs)
         return actual_wrapper
     return wrap
 

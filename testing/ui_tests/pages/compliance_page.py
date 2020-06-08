@@ -16,6 +16,17 @@ class CompliancePage(Page):
     ENFORCE_MENU_BUTTON = 'Enforce'
     ENFORCEMENTS_FEATURE_LOCK_TIP_CSS = '.x-enforcements-feature-lock-tip'
     ENFORCE_MENU_DROPDOWN_CSS = '.x-enforcement-menu'
+    SCORE_RULES_MODAL_CSS = '.x-compliance-active-rules'
+
+    RULES_FILTER_DROPDOWN_CSS = '.rules-filter .x-combobox'
+    CATEGORIES_FILTER_DROPDOWN_CSS = '.categories-filter .x-combobox'
+
+    FILTER_ROW_XPATH = '//div[contains(@class, \'v-select-list\')]//div[contains(@class, \'v-list\')]//' \
+                       'div[contains(@class, \'v-list-item\')]//' \
+                       'div[contains(@title,\'{filter_text}\')]'
+    SCORE_RULES_DIALOG_CSS = '.score-card .score-header .ant-btn'
+    SCORE_RULES_ROWS_CSS = '.rules-selection .v-list-item'
+    SCORE_RULES_SAVE_BUTTON_CSS = '.ant-modal-footer .ant-btn-primary'
 
     @property
     def url(self):
@@ -65,3 +76,43 @@ class CompliancePage(Page):
 
     def is_enforcement_actions_menu_visible(self):
         return self.wait_for_element_present_by_css(self.ENFORCE_MENU_DROPDOWN_CSS).is_displayed()
+
+    def open_rule_filter_dropdown(self):
+        self.driver.find_element_by_css_selector(self.RULES_FILTER_DROPDOWN_CSS).click()
+
+    def open_category_filter_dropdown(self):
+        self.driver.find_element_by_css_selector(self.CATEGORIES_FILTER_DROPDOWN_CSS).click()
+
+    def toggle_filter(self, filter_text):
+        self.driver.find_element_by_xpath(self.FILTER_ROW_XPATH.format(filter_text=filter_text)).click()
+        self.wait_for_table_to_load()
+
+    def get_all_rules(self):
+        return self.get_all_table_rows_elements()
+
+    def open_rules_dialog(self):
+        self.driver.find_element_by_css_selector(self.SCORE_RULES_DIALOG_CSS).click()
+        time.sleep(0.5)  # wait for dialog to open
+
+    def get_rules_dialog_modal(self):
+        return self.driver.find_element_by_css_selector(self.SCORE_RULES_MODAL_CSS)
+
+    def close_without_save_rules_dialog(self):
+        modal = self.get_rules_dialog_modal()
+        ActionChains(self.driver).move_to_element_with_offset(modal, -1, -1).click().perform()
+        time.sleep(0.5)  # wait for enforce lock tip to close. (clicking outside the modal)
+
+    def is_score_rules_modal_visible(self):
+        return self.get_rules_dialog_modal().is_displayed()
+
+    def get_score_rules_items(self):
+        return self.find_elements_by_css(self.SCORE_RULES_ROWS_CSS)
+
+    def toggle_exclude_rule(self, positions):
+        rules = self.get_score_rules_items()
+        for position in positions:
+            rules[position].click()
+
+    def save_score_rules(self):
+        self.get_rules_dialog_modal().find_element_by_css_selector(self.SCORE_RULES_SAVE_BUTTON_CSS).click()
+        time.sleep(0.5)  # wait for dialog to close

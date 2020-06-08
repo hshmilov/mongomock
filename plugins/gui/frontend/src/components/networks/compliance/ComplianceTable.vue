@@ -12,7 +12,7 @@
       slot="table"
       v-model="selectedRules"
       title="Rules"
-      module="compliance/cis_aws/report"
+      :module="modulePath"
       :static-data="data"
       :row-class="getRowClass"
       :pagination="true"
@@ -30,6 +30,9 @@
             :accounts="accounts"
             :module="module"
             :disabled="false"
+            :rules="rules"
+            :categories="categories"
+            :failed-only="failedOnly"
         />
         <XButton
           type="link"
@@ -120,6 +123,18 @@ export default {
       type: Array,
       default: () => [],
     },
+    rules: {
+      type: Array,
+      default: () => [],
+    },
+    categories: {
+      type: Array,
+      default: () => [],
+    },
+    failedOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -152,6 +167,9 @@ export default {
         return this.complianceRulesById[this.currentRuleId];
       }
       return null;
+    },
+    modulePath() {
+      return `${this.module}/cis/${this.cisName}/report`;
     },
   },
   watch: {
@@ -189,6 +207,9 @@ export default {
         endpoint: `${this.module}/${this.cisName}`,
         source: 'cloud',
         accounts: this.accounts,
+        rules: this.rules,
+        categories: this.categories,
+        failedOnly: this.failedOnly,
       }).then(() => {
         this.exporting = false;
       });

@@ -1,13 +1,14 @@
-import json
 import logging
-import os
 from enum import Enum
 
 from typing import Tuple, Optional
 
+from axonius.plugin_base import PluginBase
+from axonius.compliance.compliance import get_compliance_rules_collection
+
 logger = logging.getLogger(f'axonius.{__name__}')
-AWS_CIS_RULES_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'aws_cis_rules.json')
-AZURE_CIS_RULES_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'azure_cis_rules.json')
+
+# pylint: disable=protected-access
 
 
 class RuleStatus(Enum):
@@ -19,10 +20,25 @@ class AccountReport:
     def __init__(self):
         self.rules = []
         self.sections_added = []
-        with open(AWS_CIS_RULES_FILE, 'rt') as f:
-            self.aws_rules_by_section = json.loads(f.read())
-        with open(AZURE_CIS_RULES_FILE, 'rt') as f:
-            self.azure_rules_by_section = json.loads(f.read())
+        self.plugin_base: PluginBase = PluginBase.Instance
+
+        aws_rules_collection = get_compliance_rules_collection('aws')
+        azure_rules_collection = get_compliance_rules_collection('azure')
+
+        self.aws_rules_by_section = self._prepare_rules(aws_rules_collection.find({}))
+        self.azure_rules_by_section = self._prepare_rules(azure_rules_collection.find({}))
+
+    @staticmethod
+    def _prepare_rules(rules):
+        result = {}
+        for rule in rules:
+            result[rule['section']] = {
+                'rule_name': rule['rule_name'],
+                'category': rule['category'],
+                'description': rule['description'],
+                'remediation': rule['remediation'],
+                'cis': rule['cis']}
+        return result
 
     def add_rule(
             self,

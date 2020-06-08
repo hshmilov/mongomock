@@ -8,6 +8,7 @@ from typing import List
 from funcy import chunks
 from bson import ObjectId
 import requests
+from pymongo import UpdateOne
 
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION, USERS_CONFIG_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
@@ -69,7 +70,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 37:
+        if self.db_schema_version != 38:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -151,6 +152,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_36()
         if self.db_schema_version < 37:
             self._update_schema_version_37()
+        if self.db_schema_version < 38:
+            self._update_schema_version_38()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1387,6 +1390,48 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 37
         except Exception as e:
             print(f'Exception while upgrading gui db to version 37. Details: {e}')
+
+    def _update_schema_version_38(self):
+        """
+        For 3.5 - Add compliance rules update role.
+        :return:
+        """
+        print('Upgrade to schema 38')
+        try:
+            roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+            bulk_updates = []
+            roles = roles_collection.find({})
+
+            for role in roles:
+                rule_name = role['name']
+                if rule_name in ['Owner', 'OwnerReadOnly', 'Admin']:
+                    bulk_updates.append(UpdateOne(
+                        {
+                            '_id': role['_id'],
+                        },
+                        {
+                            '$set': {
+                                'permissions.compliance.post': True
+                            }
+                        }
+                    ))
+                else:
+                    bulk_updates.append(UpdateOne(
+                        {
+                            '_id': role['_id'],
+                        },
+                        {
+                            '$set': {
+                                'permissions.compliance.post': False
+                            }
+                        }
+                    ))
+
+            if len(bulk_updates) > 0:
+                roles_collection.bulk_write(bulk_updates)
+            self.db_schema_version = 38
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 38. Details: {e}')
 
     def _update_default_locked_actions(self, new_actions):
         """

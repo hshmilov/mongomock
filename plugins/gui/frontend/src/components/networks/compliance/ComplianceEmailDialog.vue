@@ -67,6 +67,18 @@ export default {
       type: String,
       default: '',
     },
+    rules: {
+      type: Array,
+      default: () => [],
+    },
+    categories: {
+      type: Array,
+      default: () => [],
+    },
+    failedOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -119,6 +131,9 @@ export default {
           this.mail_properties,
           this.schema_fields,
           this.cisTitle,
+          this.rules,
+          this.categories,
+          this.failedOnly,
         );
         return;
       } catch (error) {

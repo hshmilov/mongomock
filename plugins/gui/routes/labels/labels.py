@@ -78,6 +78,7 @@ class Labels:
 
             'permissions.compliance': 'Cloud Asset Compliance',
             'permissions.compliance.get': 'View Cloud Asset Compliance',
+            'permissions.compliance.post': 'Update Score Settings',
 
             'audit.session': 'User Session',
             'audit.session.login': 'Login',

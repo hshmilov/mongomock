@@ -1563,3 +1563,18 @@ class SettingsPage(Page):
         cloud_visible_toggle = self.find_checkbox_by_label(self.ENFORCEMENTS_FEATURE_TAG_TITLE)
         self.click_toggle_button(cloud_visible_toggle, make_yes=value)
         self.save_and_wait_for_toaster()
+
+    def restore_feature_flags(self, restore_cloud_visible):
+        self.switch_to_page()
+        self.click_feature_flags()
+        self.fill_trial_expiration_by_remainder(28)
+        self.toggle_compliance_enable_feature(False)
+        if restore_cloud_visible:
+            self.toggle_compliance_visible_feature(False)
+        self.save_and_wait_for_toaster()
+
+    def toggle_compliance_feature(self):
+        self.switch_to_page()
+        self.click_feature_flags()
+        self.enable_and_display_compliance()
+        self.save_and_wait_for_toaster()

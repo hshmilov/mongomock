@@ -1,4 +1,22 @@
 // eslint-disable-next-line import/prefer-default-export
+export const UPDATE_COMPLIANCE_FILTERS = 'UPDATE_COMPLIANCE_FILTERS';
+const getComplianceReportState = () => {
+  return {
+    content: { data: [], fetching: false, error: '' },
+    count: { data: 0, fetching: false, error: '' },
+    view: {
+      page: 0,
+      pageSize: 50,
+      query: {
+        filter: '', expressions: [],
+      },
+      filters: {
+        accounts: [], rules: [], categories: [],
+      },
+    },
+  };
+};
+
 export const compliance = {
   state: {
     /* Compliance DataTable State */
@@ -6,17 +24,12 @@ export const compliance = {
     content: { data: [], fetching: false, error: '' },
     allCloudComplianceRules: [],
     count: { data: 0, fetching: false, error: '' },
-    cis_aws: {
-      report: {
-        content: { data: [], fetching: false, error: '' },
-        count: { data: 0, fetching: false, error: '' },
-        view: {
-          page: 0,
-          pageSize: 50,
-          query: {
-            filter: '', expressions: [],
-          },
-        },
+    cis: {
+      aws: {
+        report: getComplianceReportState(),
+      },
+      azure: {
+        report: getComplianceReportState(),
       },
     },
     view: {
@@ -57,5 +70,14 @@ export const compliance = {
     },
     /* Data of Rule currently being shown */
     current: { fetching: false, data: {}, error: '' },
+  },
+  mutations: {
+    [UPDATE_COMPLIANCE_FILTERS](state, payload) {
+      const { cisName, filterName, value } = payload;
+      state.cis[cisName].report.view.filters = {
+        ...state.cis[cisName].report.view.filters,
+        [filterName]: value,
+      };
+    },
   },
 };

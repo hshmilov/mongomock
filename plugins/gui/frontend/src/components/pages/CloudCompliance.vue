@@ -21,19 +21,50 @@
         </div>
 
         <div class="cis-row cis-filter">
-          <div class="accounts-filter">
+          <div class="filter-item table-filter">
             <XCombobox
               v-if="accounts"
-              v-model="filterAccounts"
+              v-model="filteredAccounts"
               height="30"
-              :selection-display-limit="2"
+              :selection-display-limit="1"
               :items="accounts"
               label="Accounts"
               multiple
               :allow-create-new="false"
               :hide-quick-selections="false"
-              :menu-props="{maxWidth: 500}"
-              @change="applySearchAndFilter"
+              :menu-props="{maxWidth: 300}"
+              @change="fetchAllData"
+            />
+          </div>
+          <div class="filter-item rules-filter table-filter">
+            <XCombobox
+              v-if="rules"
+              v-model="filteredRules"
+              height="30"
+              :selection-display-limit="1"
+              :items="rulesFilterOptions"
+              label="Rule"
+              multiple
+              :allow-create-new="false"
+              :hide-quick-selections="false"
+              :menu-props="{maxWidth: 265}"
+              :custom-sort="rulesSort"
+              @change="fetchAllData"
+            />
+          </div>
+          <div class="filter-item categories-filter table-filter">
+            <XCombobox
+              v-if="categories"
+              v-model="filteredCategories"
+              height="30"
+              :selection-display-limit="1"
+              :items="categories"
+              label="Category"
+              multiple
+              :allow-create-new="false"
+              :hide-quick-selections="false"
+              :menu-props="{maxWidth: 265}"
+              @change="fetchAllData"
             />
           </div>
           <XSwitch
@@ -49,17 +80,27 @@
           >Reset</XButton>
         </div>
         <div class="cis-score">
-          <XComplianceScore :score="getCurrentScore" />
+          <XComplianceScore
+            v-model="selectedActiveRules"
+            :score="getCurrentScore"
+            :all-cis-rules="rulesLabels"
+            :custom-sort="rulesSort"
+            :cis-title="cisTitle"
+            @save-rules="updateActiveRules"
+          />
         </div>
       </div>
       <XComplianceTable
-        module="compliance"
+        :module="module"
         :cis-name="cisName"
         :cis-title="cisTitle"
-        :data="filteredData"
+        :data="allCloudComplianceRules"
         :loading="loading"
         :error="error"
         :accounts="accountsToHandle"
+        :rules="filteredRules"
+        :categories="filteredCategories"
+        :failed-only="failedOnly"
       />
     </div>
     <XComplianceTip
@@ -68,13 +109,13 @@
   </XPage>
 </template>
 <script>
-import _filter from 'lodash/filter';
-import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import _cloneDeep from 'lodash/cloneDeep';
 import _has from 'lodash/has';
 import _isEmpty from 'lodash/isEmpty';
-import { mapState, mapGetters } from 'vuex';
+import { mapState, mapGetters, mapMutations } from 'vuex';
+
+import { UPDATE_COMPLIANCE_FILTERS } from '@store/modules/compliance';
 
 import XPage from '@axons/layout/Page.vue';
 import XButton from '@axons/inputs/Button.vue';
@@ -83,7 +124,9 @@ import XSwitch from '@axons/inputs/Switch.vue';
 import XComplianceTable from '@components/networks/compliance/ComplianceTable.vue';
 import XComplianceTip from '@components/networks/compliance/ComplianceTip.vue';
 import XComplianceScore from '@components/networks/compliance/ComplianceScore.vue';
-import { fetchCompliance, fetchComplianceAccounts } from '@api/compliance';
+import {
+  fetchCompliance, fetchComplianceInitialCis, fetchComplianceReportFilters, updateComplianceRules,
+} from '@api/compliance';
 import { IN_TRIAL } from '@store/modules/settings';
 import XComplianceSelect from '../networks/compliance/ComplianceSelect.vue';
 
@@ -101,20 +144,20 @@ export default {
   },
   data() {
     return {
+      module: 'compliance',
       cisName: 'aws',
       allCloudComplianceRules: [],
-      accounts: null,
-      filterAccounts: [],
+      accounts: [],
+      rules: [],
       failedOnly: false,
       loading: false,
       error: null,
       complianceOptions: [
         { name: 'aws', title: 'CIS Amazon Web Services Foundations Benchmark V1.2' },
-        /*{ name: 'azure', title: 'CIS Microsoft Azure Foundations Benchmark V1.1' },*/
+        /* { name: 'azure', title: 'CIS Microsoft Azure Foundations Benchmark V1.1' }, */
       ],
-      score: {
-        totalScore: null, totalChecked: 0, totalFailed: 0, accounts: {},
-      },
+      score: 0,
+      activeRules: [],
     };
   },
   computed: {
@@ -128,82 +171,137 @@ export default {
         }
         return state.settings.configurable.gui.FeatureFlags.config;
       },
+      filters(state) {
+        return state[this.module].cis[this.cisName].report.view.filters;
+      },
     }),
     name() {
       return 'compliance';
-    },
-    filteredData() {
-      if (this.failedOnly) {
-        return _filter(this.allCloudComplianceRules,
-          (rule) => rule.status === 'Failed');
-      }
-      return this.allCloudComplianceRules;
     },
     enabled() {
       const cisEnabled = _get(this.featureFlags, 'cloud_compliance.cis_enabled');
       return this.inTrial || cisEnabled;
     },
     getCurrentScore() {
-      if (this.filterAccounts.length === 0) {
-        return this.score.totalScore;
-      }
-
-      const res = {
-        totalChecked: 0,
-        totalFailed: 0,
-      };
-      this.filterAccounts.forEach((account) => {
-        res.totalChecked += this.score.accounts[account].totalChecked;
-        res.totalFailed += this.score.accounts[account].totalFailed;
-      });
-
-      return this.calculateFinalScore(res.totalChecked, res.totalFailed);
-    },
-    accountsToHandle() {
-      if (_isEmpty(this.filterAccounts)) {
-        return this.accounts;
-      }
-      return this.filterAccounts;
+      return this.score;
     },
     cisTitle() {
       return this.complianceOptions.find((item) => item.name === this.cisName).title;
     },
+    accountsToHandle() {
+      if (_isEmpty(this.filters.accounts)) {
+        return this.accounts;
+      }
+      return this.filters.accounts;
+    },
+    filteredAccounts: {
+      get() {
+        return this.filters.accounts;
+      },
+      set(value) {
+        this.updateComplianceFilters(value, 'accounts');
+      },
+    },
+    filteredRules: {
+      get() {
+        return this.filters.rules;
+      },
+      set(value) {
+        this.updateComplianceFilters(value, 'rules');
+      },
+    },
+    rulesFilterOptions() {
+      return this.rules.filter((rule) => rule.include_in_score).map((rule) => this.prepareRuleOptionName(rule));
+    },
+    filteredCategories: {
+      get() {
+        return this.filters.categories;
+      },
+      set(value) {
+        this.updateComplianceFilters(value, 'categories');
+      },
+    },
+    selectedActiveRules: {
+      get() {
+        return this.activeRules;
+      },
+      set(value) {
+        this.activeRules = value;
+      },
+    },
+    activeRulesSet() {
+      const rulesSet = new Set();
+      this.activeRules.forEach((ruleTitle) => {
+        const ruleName = ruleTitle.substr(ruleTitle.indexOf(' ') + 1); // get only rule name, without section.
+        rulesSet.add(ruleName);
+      });
+      return rulesSet;
+    },
+    rulesLabels() {
+      return this.rules.map((rule) => this.prepareRuleOptionName(rule));
+    },
+    categories() {
+      const uniqueCategories = new Set();
+      this.rules.forEach((rule) => {
+        if (rule.include_in_score) {
+          uniqueCategories.add(rule.category);
+        }
+      });
+      return Array.from(uniqueCategories);
+    },
   },
   mounted() {
-    this.fetchAllData();
+    this.fetchInitData();
   },
   methods: {
+    ...mapMutations({ updateFilters: UPDATE_COMPLIANCE_FILTERS }),
     async fetchAllData() {
       this.loading = true;
-      await this.fetchComplianceAccounts();
       await this.fetchComplianceRows();
-      this.calculateScore();
       this.loading = false;
+    },
+    async fetchComplianceFilters() {
+      const filters = await fetchComplianceReportFilters(this.cisName);
+      this.accounts = _get(filters, 'accounts', []);
+      this.rules = _get(filters, 'rules', []);
+
+      const filteredActiveRules = this.rules.filter((rule) => rule.include_in_score);
+      this.activeRules = filteredActiveRules.map((rule) => this.prepareRuleOptionName(rule));
     },
     async fetchComplianceRows() {
       try {
-        this.allCloudComplianceRules = await fetchCompliance(this.cisName, this.filterAccounts);
+        const data = await fetchCompliance(
+          this.cisName,
+          this.filteredAccounts,
+          this.filteredRules,
+          this.filteredCategories,
+          this.failedOnly,
+        );
+        this.allCloudComplianceRules = data.rules;
+        this.score = data.score;
       } catch (ex) {
         this.error = 'Internal Server Error';
         this.loading = false;
       }
     },
-    async fetchComplianceAccounts() {
+    async fetchInitData() {
       try {
-        this.accounts = await fetchComplianceAccounts(this.cisName);
+        const reportsInfo = await fetchComplianceInitialCis();
+        this.cisName = _get(reportsInfo, 'cis', 'aws');
+        await this.fetchComplianceFilters();
+        await this.fetchAllData();
       } catch (ex) {
         this.error = 'Internal Server Error';
         this.loading = false;
       }
     },
     resetAccountsFilter() {
-      this.filterAccounts = [];
+      this.filteredAccounts = [];
+      this.filteredRules = [];
+      this.filteredCategories = [];
       this.updateCurrentView();
       this.failedOnly = false;
     },
-    applySearchAndFilter: _debounce(function applySearchAndFilter() {
-      this.updateCurrentView();
-    }, 250),
     async updateCurrentView() {
       this.loading = true;
       await this.fetchComplianceRows();
@@ -211,51 +309,45 @@ export default {
     },
     complianceSelected(cis) {
       this.cisName = cis;
+      this.accounts = [];
       this.fetchAllData();
-    },
-    calculateScore() {
-      const { totalChecked, totalFailed, checkedAccounts } = this.iterateRulesForScoring();
-      this.score.totalScore = this.calculateFinalScore(
-        totalChecked,
-        totalFailed,
-      );
-      this.score.totalChecked = totalChecked;
-      this.score.totalFailed = totalFailed;
-      this.score.accounts = checkedAccounts;
-    },
-    iterateRulesForScoring() {
-      const accumulator = { totalChecked: 0, totalFailed: 0, checkedAccounts: {} };
-      return this.allCloudComplianceRules.reduce(this.handleRuleScore, accumulator);
-    },
-    handleRuleScore(accumulator, rule) {
-      const { account } = rule;
-      const score = _cloneDeep(accumulator);
-
-      if (!_has(score.checkedAccounts, account)) {
-        score.checkedAccounts[account] = {
-          totalChecked: 0,
-          totalFailed: 0,
-        };
-      }
-
-      if (this.isRuleFailed(rule.status)) {
-        score.totalFailed += 1;
-        score.checkedAccounts[account].totalFailed += 1;
-      }
-      score.totalChecked += 1;
-      score.checkedAccounts[account].totalChecked += 1;
-
-      return score;
-    },
-    calculateFinalScore(checked, failed) {
-      const totalPassed = checked - failed;
-      return Math.round((totalPassed / checked) * 100);
     },
     isRuleFailed(status) {
       return status === 'Failed' || status === 'No Data';
     },
     toggleFailedSwitch() {
       this.failedOnly = !this.failedOnly;
+      this.fetchAllData();
+    },
+    async updateComplianceFilters(value, filterName) {
+      this.updateFilters({
+        cisName: this.cisName,
+        filterName,
+        value,
+      });
+    },
+    rulesSort(item1, item2) {
+      return item1.toLowerCase().localeCompare(item2.toLowerCase(), undefined, { numeric: true });
+    },
+    prepareActiveRulesMap() {
+      // Instead of updating all rules in db, will update only relevant rules.
+      const includeScoreMap = this.allCloudComplianceRules.reduce((acc, item) => {
+        acc[item.rule] = false;
+        return acc;
+      }, {});
+      this.activeRules.forEach((ruleTitle) => {
+        const ruleName = ruleTitle.substr(ruleTitle.indexOf(' ') + 1); // get only rule name, without section.
+        includeScoreMap[ruleName] = true;
+      });
+      return includeScoreMap;
+    },
+    async updateActiveRules() {
+      await updateComplianceRules(this.cisName, this.prepareActiveRulesMap());
+      await this.fetchComplianceFilters();
+      await this.updateCurrentView();
+    },
+    prepareRuleOptionName(rule) {
+      return `${rule.section} ${rule.name}`;
     },
   },
 };
@@ -306,8 +398,10 @@ export default {
           grid-column: 1;
           grid-row: 2;
 
-          .accounts-filter {
-            width: 555px;
+          .filter-item {
+            max-width: 265px;
+            flex: 1 1 250px;
+
             .x-combobox {
               font-size: 14px;
 
@@ -316,6 +410,11 @@ export default {
               }
             }
           }
+
+          .table-filter {
+            margin-right: 5px;
+          }
+
           .search__reset {
             padding-top: 2px;
             width: 85px;

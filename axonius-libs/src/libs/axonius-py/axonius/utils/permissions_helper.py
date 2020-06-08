@@ -151,6 +151,7 @@ def get_permissions_structure(default_permission: bool) -> dict:
         },
         PermissionCategory.Compliance: {
             PermissionAction.View: default_permission,
+            PermissionAction.Update: default_permission,
         },
     }
 

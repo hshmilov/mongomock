@@ -219,29 +219,6 @@
 import _isEmpty from 'lodash/isEmpty';
 import _trim from 'lodash/trim';
 
-function compare(item1, item2) {
-  // 2 levels of comparison
-  // first: by type ([0] selected items, [1] indeterminate items, [2] unselected items)
-  // second: alphabetical order
-  const typeClassifier = (item) => {
-    if (this.value.includes(item)) {
-      // type of selected
-      return 0;
-    }
-    if (this.indeterminate.includes(item)) {
-      // type of indeterminate
-      return 1;
-    }
-    // type of new
-    return 2;
-  };
-
-  const type1 = typeClassifier(item1);
-  const type2 = typeClassifier(item2);
-
-  return type1 - type2 || item1.toLowerCase().localeCompare(item2.toLowerCase());
-}
-
 export default {
   name: 'Xcombobox',
   props: {
@@ -293,12 +270,16 @@ export default {
       type: Object,
       default: () => {},
     },
+    customSort: {
+      type: Function,
+      default: null,
+    },
   },
   data() {
     return {
       showCreateNewForSubMatches: true,
       searchField: null,
-      sortedItems: [...this.items].sort(compare.bind(this)),
+      sortedItems: [...this.items].sort(this.sortMethod()),
       newItems: [],
       sourceData: {
         indeterminate: new Set(this.indeterminate),
@@ -325,12 +306,14 @@ export default {
       },
     },
     sortedNewItems() {
-      return [...this.newItems].sort();
+      return [...this.newItems].sort(this.sortMethod());
     },
     mergedItemsList() {
       // return a merged list of predefined items, and new items generated on runtime.
-
       const mergedItems = [...this.sortedNewItems, ...this.sortedItems];
+      if (this.customSort) {
+        return mergedItems.sort(this.customSort);
+      }
       return mergedItems;
     },
     keepOpen__mergedItemsList() {
@@ -355,7 +338,6 @@ export default {
       if (this.allowCreateNew && noMatchFound) {
         return true;
       }
-
 
       // eslint-disable-next-line max-len
       const exactMatchFound = this.keepOpen__mergedItemsList.findIndex((item) => item.toLocaleLowerCase() === this.searchField.toLocaleLowerCase()) > -1;
@@ -481,7 +463,41 @@ export default {
       const indeterminateOrUnchecked = this.isIndeterminateItem(item) ? 'checkbox--partial' : 'checkbox--unchecked';
       return active ? 'checkbox--checked' : indeterminateOrUnchecked;
     },
+    sortMethod() {
+      // Combobox options could contain strings with numeric values or other combinations.
+      // To display the items correctly, sometimes it is necessary to send a custom sort function.
+      // For example, 1.10 should come after 1.2
+      const valueComparator = this.customSort || ((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+      return (item1, item2) => this.compare(item1, item2, valueComparator);
+    },
+    compare(item1, item2, compareMethod) {
+      // 2 levels of comparison
+      // first: by type ([0] selected items, [1] indeterminate items, [2] unselected items)
+      // second: by value according to given comparator
+      const typeClassifier = (item) => {
+        if (this.value.includes(item)) {
+          // type of selected
+          return 0;
+        }
+        if (this.indeterminate.includes(item)) {
+          // type of indeterminate
+          return 1;
+        }
+        // type of new
+        return 2;
+      };
+
+      const type1 = typeClassifier(item1);
+      const type2 = typeClassifier(item2);
+
+      return type1 - type2 || compareMethod(item1, item2);
+    },
   },
+  watch: {
+    items(value) {
+      this.sortedItems = [...value].sort(this.sortMethod());
+    },
+  }
 };
 </script>
 

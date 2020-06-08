@@ -1,5 +1,6 @@
 import logging
 import math
+import json
 from datetime import datetime
 from itertools import islice
 from typing import List
@@ -1515,7 +1516,9 @@ class APIMixin:
     @api_add_rule('compliance/<compliance_name>/<method>', methods=['GET', 'POST'],
                   required_permission=PermissionValue.get(None, PermissionCategory.Compliance))
     def api_get_compliance(self, compliance_name, method, accounts):
-        return self._get_compliance(compliance_name, method, accounts)
+        response = self._get_compliance(compliance_name, method, accounts)
+        response_dict = json.loads(response.data)
+        return jsonify(response_dict.get('rules', []))
 
     @accounts_filter()
     @schema()

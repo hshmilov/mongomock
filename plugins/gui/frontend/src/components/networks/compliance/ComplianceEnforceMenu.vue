@@ -39,6 +39,9 @@
       :cis-title="cisTitle"
       :accounts="accounts"
       :module="module"
+      :rules="rules"
+      :categories="categories"
+      :failed-only="failedOnly"
     />
     <XEnforcementsFeatureLockTip
       :enabled="displayFeatureLockTip"
@@ -85,6 +88,18 @@ export default {
     module: {
       type: String,
       default: '',
+    },
+    rules: {
+      type: Array,
+      default: () => [],
+    },
+    categories: {
+      type: Array,
+      default: () => [],
+    },
+    failedOnly: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

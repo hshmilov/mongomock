@@ -211,15 +211,27 @@ const createPostContentRequest = (state, payload) => {
     params.is_refresh = 1;
   }
 
+  // Compliance
   if (payload.accounts) {
     params.accounts = payload.accounts;
   }
+  if (payload.rules) {
+    params.rules = payload.rules;
+  }
+  if (payload.categories) {
+    params.categories = payload.categories;
+  }
+  if (payload.failedOnly) {
+    params.failedOnly = payload.failedOnly;
+  }
+
   if (payload.delimiter !== undefined) {
     params.delimiter = payload.delimiter;
   }
   if (payload.maxRows !== undefined) {
     params.max_rows = payload.maxRows;
   }
+
   return params;
 };
 

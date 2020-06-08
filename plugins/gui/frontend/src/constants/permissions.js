@@ -145,6 +145,7 @@ export const PermissionsStructure = [
     category: 'permissions.compliance',
     actions: [
       'permissions.compliance.get',
+      'permissions.compliance.post',
     ],
   },
 ];
