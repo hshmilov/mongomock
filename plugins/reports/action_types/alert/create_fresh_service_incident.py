@@ -79,7 +79,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                 }
             ],
             'required': [
-                'domain', 'apikey', 'priority',
+                'domain', 'apikey', 'priority', 'verify_ssl',
                 'description_default', 'ticket_email',
                 'incident_description', 'subject',
             ],

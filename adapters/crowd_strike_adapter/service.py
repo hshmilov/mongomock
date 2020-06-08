@@ -165,6 +165,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
+                    'name': 'member_cid',
+                    'type': 'string',
+                    'title': 'Member CID'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -173,11 +178,6 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
-                },
-                {
-                    'name': 'member_cid',
-                    'type': 'string',
-                    'title': 'Member CID'
                 }
             ],
             'required': [

@@ -126,14 +126,14 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
-                    'name': 'verify_ssl',
-                    'title': 'Verify SSL',
-                    'type': 'bool'
-                },
-                {
                     'name': 'custom_properties_list',
                     'type': 'string',
                     'title': 'Custom Properties List'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
                 }
             ],
             'required': [

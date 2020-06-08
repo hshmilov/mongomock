@@ -328,7 +328,7 @@ class Code42Adapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'use_os_hostname_as_hostname',
-                    'title': 'Use os_hostname field as hostname',
+                    'title': 'Use osHostname field as hostname',
                     'type': 'bool'
                 }
             ],

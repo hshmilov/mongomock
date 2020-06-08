@@ -974,7 +974,7 @@ export const pluginMeta = {
         description: 'RescueAssist (formerly GoToAssist) is a cloud-based toolset for IT and customer support teams including remote support, IT monitoring, and service desk management.'
     },
     airwatch_adapter: {
-        title: 'VMWare Workspace ONE (Airwatch)',
+        title: 'VMWare Workspace ONE (AirWatch)',
         link: 'https://docs.axonius.com/docs/vmware-airwatch',
         description: 'VMWare Workspace ONE (formerly AirWatch) provides enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },

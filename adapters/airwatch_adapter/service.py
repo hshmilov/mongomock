@@ -100,7 +100,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Airwatch Domain',
+                    'title': 'AirWatch Domain',
                     'type': 'string'
                 },
                 {
@@ -326,21 +326,21 @@ class AirwatchAdapter(AdapterBase, Configurable):
                 {
                     'name': 'async_chunks',
                     'type': 'integer',
-                    'title': 'Async Chunks in parallel'
+                    'title': 'Async chunks in parallel'
                 },
                 {
                     'name': 'page_size',
                     'type': 'integer',
-                    'title': 'Page Size'
+                    'title': 'Page size'
                 },
                 {
                     'name': 'recv_session_timeout',
                     'type': 'integer',
-                    'title': 'Socket Recv Session Timeout'
+                    'title': 'Socket recv session timeout'
                 }
             ],
             'required': ['async_chunks', 'recv_session_timeout', 'page_size'],
-            'pretty_name': 'Airwatch Configuration',
+            'pretty_name': 'AirWatch Configuration',
             'type': 'array'
         }
 
