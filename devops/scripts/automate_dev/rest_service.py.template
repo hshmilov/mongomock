@@ -92,7 +92,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
             'items': [
                 {{
                     'name': 'domain',
-                    'title': '{seperated_capital_adapter_name} Domain',
+                    'title': '{seperated_capital_adapter_name} Host Name',
                     'type': 'string'
                 }},
                 {{

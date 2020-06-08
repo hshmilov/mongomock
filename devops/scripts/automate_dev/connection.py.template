@@ -23,8 +23,8 @@ class {capital_adapter_name}Connection(RESTConnection):
 
         try:
             pass
-        except Exception:
-            raise ValueError(f'Error: Invalid response from server, please check domain or credentials')
+        except Exception as e:
+            raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {{str(e)}}')
 
     # TODO: implement
     def _paginated_device_get(self):
