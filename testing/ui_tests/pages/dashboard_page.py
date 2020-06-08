@@ -66,7 +66,7 @@ class DashboardPage(Page):
     MATRIX_GROUP_NAME_CSS = '.group-name'
     MATRIX_GROUP_TOTAL_CSS = '.group-total'
     MATRIX_GROUP_SLICES = '.intersection-slice'
-    MATRIX_TOTAL_COUNT_CSS = '.matrix-total'
+    MATRIX_TOTAL_COUNT_CSS = '.stacked-total'
     SEGMENTATION_FILTER_INPUT_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) input'
     SEGMENTATION_FILTER_DELETE_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) button'
     SEGMENTATION_FILTER_DROP_DOWN_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index})' \

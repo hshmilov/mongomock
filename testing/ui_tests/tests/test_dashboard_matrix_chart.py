@@ -1,5 +1,3 @@
-import pytest
-
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME, DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME,
                                       DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
@@ -43,7 +41,6 @@ class TestDashboardMatrixChart(TestBase):
         group_data_sorted.sort(reverse=is_descending)
         assert group_data == group_data_sorted
 
-    @pytest.mark.skip('AX-7856')
     def test_matrix_chart_groups(self):
         base_queries = [MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME,
                         DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, None]
