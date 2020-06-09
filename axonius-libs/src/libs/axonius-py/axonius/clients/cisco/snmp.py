@@ -20,7 +20,7 @@ from axonius.clients.cisco.constants import (AUTH_PROTOCOLS,
                                              PRIV_PROTOCOLS,
                                              SNMP_ARGUMENTS_KEYS,
                                              SNMPV3_ARGUMENTS_KEYS,
-                                             get_oid_name, VLAN_ID, VLAN_NAME)
+                                             get_oid_name, VLAN_ID, VLAN_NAME, SNMPV3_KEY_AUTH, SNMPV3_KEY_PRIV)
 
 from axonius.utils.singleton import Singleton
 
@@ -274,9 +274,14 @@ class CiscoSnmpV3Client(AbstractSnmpClient):
     REQUIRED_ARGS = SNMPV3_ARGUMENTS_KEYS
     PROTOCOL = 'SNMPV3'
 
+    # pylint: disable=invalid-name
     def __init__(self, *args, **kwargs):
         if 'secure_level' not in kwargs:
             kwargs['secure_level'] = 'authPriv'
+        if 'noAuth' not in kwargs['secure_level'] or kwargs.get('auth_protocol', 'no_auth') != 'no_auth':
+            self.REQUIRED_ARGS += (SNMPV3_KEY_AUTH, )
+        if 'NoPriv' not in kwargs['secure_level'] or kwargs.get('priv_protocol', 'no_priv') != 'no_priv':
+            self.REQUIRED_ARGS += (SNMPV3_KEY_PRIV, )
         super().__init__(**kwargs)
 
     @staticmethod

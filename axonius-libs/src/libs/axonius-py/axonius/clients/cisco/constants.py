@@ -96,13 +96,14 @@ def get_command_name(command):
 SNMP_ARGUMENTS_KEYS = ('community', 'host', 'port')
 
 SNMPV3_ARGUMENTS_KEYS = ('username',
-                         'auth_passphrase',
-                         'priv_passphrase',
                          'priv_protocol',
                          'auth_protocol',
                          'host',
                          'port',
                          'secure_level')
+
+SNMPV3_KEY_AUTH = 'auth_passphrase'
+SNMPV3_KEY_PRIV = 'priv_passphrase'
 
 AuthProtocols = namedtuple('authprotocols', ('hmac_md5',
                                              'hmac_sha1',
