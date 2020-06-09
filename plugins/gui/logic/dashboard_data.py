@@ -18,7 +18,7 @@ from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
 from axonius.utils.gui_helpers import (find_view_config_by_id, find_entity_field, get_string_from_field_value,
-                                       is_where_count_query, find_view_by_id)
+                                       is_where_count_query, find_view_by_id, get_adapters_metadata)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
@@ -1137,6 +1137,60 @@ def fetch_chart_matrix(
     return _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
 
 
+def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, selected_view, sort,
+                                selected_sort_by=None, selected_sort_order=None, for_date=None):
+    # Query and data collections according to given parent's module
+    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    adapters_metadata = get_adapters_metadata()
+
+    view_query_config = {'query': {'filter': '', 'expressions': []}}
+    base_queries = []
+    if selected_view:
+        view_query_config = find_view_by_id(entity, selected_view).get('view')
+        if not view_query_config or not view_query_config.get('query'):
+            return None
+        base_queries = [parse_filter(view_query_config['query']['filter'], for_date)]
+
+    # If we have a date and this isn't an historical collection add a filter
+    if for_date and is_date_filter_required:
+        base_queries.append({'accurate_for_datetime': for_date})
+
+    condition = {'$and': base_queries} if base_queries else {}
+    matching_devices = data_collection.find(condition, {'adapters.plugin_name': 1})
+
+    total_count = matching_devices.count()
+    if total_count == 0:
+        return None
+
+    count_per_adapter = defaultdict(int)
+    for device_adapters in matching_devices:
+        adapter_names = {adapter['plugin_name'] for adapter in device_adapters['adapters']}
+        for adapter_name in adapter_names:
+            count_per_adapter[adapter_name] += 1
+
+    data = []
+    query_filter = view_query_config['query']['filter']
+    for adapter_name in count_per_adapter.keys():
+        adapter_view = {'query': {}, 'expressions': []}
+        adapter_filter = f'(adapters == \"{adapter_name}\")'
+        if not query_filter:
+            adapter_view['query']['filter'] = adapter_filter
+        else:
+            adapter_view['query']['filter'] = f'{query_filter} and {adapter_filter}'
+        data.append({
+            'name': adapter_name,
+            'fullName': adapters_metadata[adapter_name]['title'],
+            'value': count_per_adapter[adapter_name],
+            'portion': count_per_adapter[adapter_name] / total_count,
+            'uniqueDevices': total_count,
+            'module': entity.value,
+            'view': adapter_view
+        })
+    # when sorting by name use adapter title
+    data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort, name_field='fullName')
+    return data
+
+
 @dashboard_call_limit(10)
 def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
@@ -1151,6 +1205,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
         ChartMetrics.compare: fetch_chart_compare,
         ChartMetrics.intersect: fetch_chart_intersect,
         ChartMetrics.segment: fetch_chart_segment,
+        ChartMetrics.adapter_segment: fetch_chart_adapter_segment,
         ChartMetrics.abstract: fetch_chart_abstract,
         ChartMetrics.timeline: fetch_chart_timeline,
         ChartMetrics.matrix: fetch_chart_matrix
@@ -1158,7 +1213,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
     config = {**dashboard['config']}
 
     def call_dashboard_handler(metric):
-        if metric in [ChartMetrics.segment, ChartMetrics.compare, ChartMetrics.matrix]:
+        if metric in [ChartMetrics.segment, ChartMetrics.compare, ChartMetrics.matrix, ChartMetrics.adapter_segment]:
             return handler_by_metric[metric](ChartViews[dashboard['view']],
                                              selected_sort_by=sort_by,
                                              selected_sort_order=sort_order,
@@ -1261,6 +1316,16 @@ def fetch_chart_segment_historical(card, from_given_date, to_given_date, selecte
                                selected_sort_by=selected_sort_by, selected_sort_order=selected_sort_order)
 
 
+def fetch_chart_adapter_segment_historical(card, from_given_date, to_given_date):
+    if not card.get('config') or not card['config'].get('entity') or not card.get('view'):
+        return []
+    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
+    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
+    if not latest_date:
+        return []
+    return fetch_chart_adapter_segment(ChartViews[card['view']], **config, for_date=latest_date)
+
+
 def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
     """
     Get historical data for card of metric 'abstract'
@@ -1306,6 +1371,7 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
             ChartMetrics.compare: fetch_chart_compare_historical,
             ChartMetrics.intersect: fetch_chart_intersect_historical,
             ChartMetrics.segment: fetch_chart_segment_historical,
+            ChartMetrics.adapter_segment: fetch_chart_adapter_segment_historical,
             ChartMetrics.abstract: fetch_chart_abstract_historical,
             ChartMetrics.matrix: fetch_chart_matrix_historical
         }
@@ -1334,7 +1400,8 @@ def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, t
     return dashboard_historical_uncached(dashboard_id, from_date, to_date, sort_by, sort_order)
 
 
-def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_chart_sort):
+def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_chart_sort,
+                         value_field='value', name_field='name'):
     # If nothing received from client, get the default sorting from chart config, If exists.
     sort_by = selected_sort_by or (default_chart_sort.get('sort_by', SortType.VALUE.value)
                                    if default_chart_sort else SortType.VALUE.value)
@@ -1342,5 +1409,5 @@ def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_ch
                                          if default_chart_sort else SortOrder.DESC.value)
     should_reverse = sort_order == SortOrder.DESC.value
 
-    return sorted(data, key=lambda x: x['value'], reverse=should_reverse) if sort_by == SortType.VALUE.value \
-        else sorted(data, key=lambda x: str(x['name']).upper(), reverse=should_reverse)
+    return sorted(data, key=lambda x: x[value_field], reverse=should_reverse) if sort_by == SortType.VALUE.value \
+        else sorted(data, key=lambda x: str(x[name_field]).upper(), reverse=should_reverse)

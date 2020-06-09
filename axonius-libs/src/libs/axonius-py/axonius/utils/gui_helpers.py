@@ -1696,3 +1696,12 @@ def email_properties():
             return func(self, email_props=email_props, *args, **kwargs)
         return actual_wrapper
     return wrap
+
+
+def get_adapters_metadata():
+    try:
+        with open('gui/frontend/src/constants/plugin_meta.json', encoding='utf-8') as adapters_file:
+            return json.load(adapters_file)
+    except IOError:
+        logger.error('Failed to access plugin_meta.json')
+    return defaultdict(lambda: defaultdict(str))

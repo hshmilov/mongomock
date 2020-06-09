@@ -72,7 +72,7 @@
             <span>Fetching data...</span>
           </div>
           <Component
-            :is="`x-${chart.view}`"
+            :is="chartView"
             v-if="chart.view && chart.data"
             v-show="!chart.loading && !isChartEmpty(chart)"
             :data="chart.data"
@@ -141,8 +141,9 @@ import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XChartLegend from '../../axons/charts/ChartLegend.vue';
 import PanelActions from './PanelActions.vue';
 import XStacked from '../../axons/charts/Stacked.vue';
+import XAdapterHistogram from '../../axons/charts/AdapterHistogram.vue';
 import {
-  ChartTypesEnum, ChartViewEnum,
+  ChartTypesEnum, ChartViewEnum, ChartComponentByViewEnum,
 } from '../../../constants/dashboard';
 
 export default {
@@ -151,6 +152,7 @@ export default {
     XCard,
     XHistoricalDate,
     XHistogram,
+    XAdapterHistogram,
     XPie,
     XSummary,
     XLine,
@@ -217,6 +219,9 @@ export default {
     },
     legendIcon() {
       return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
+    },
+    chartView() {
+      return ChartComponentByViewEnum[this.chart.view];
     },
   },
   mounted() {
@@ -298,7 +303,8 @@ export default {
     isSortable(chart) {
       return (((chart.metric === ChartTypesEnum.segment || chart.metric === ChartTypesEnum.compare)
               && chart.view === ChartViewEnum.histogram)
-              || chart.view === ChartViewEnum.stacked);
+              || chart.view === ChartViewEnum.stacked
+              || chart.view === ChartViewEnum.adapter_histogram);
     },
   },
 };

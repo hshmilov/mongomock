@@ -10,6 +10,7 @@ class ChartMetrics(Enum):
     compare = auto()
     intersect = auto()
     segment = auto()
+    adapter_segment = auto()
     abstract = auto()
     timeline = auto()
     matrix = auto()
@@ -20,6 +21,7 @@ class ChartViews(Enum):
     Possible representations for charts
     """
     histogram = auto()
+    adapter_histogram = auto()
     pie = auto()
     summary = auto()
     line = auto()

@@ -134,10 +134,10 @@ export const ChartViewGetter = (chart) => {
       return config.views;
     },
     [ChartTypesEnum.segment]: (config) => {
-      return [{ id: config.view, entity: config.entity}];
+      return [{ id: config.view, entity: config.entity }];
     },
     [ChartTypesEnum.abstract]: (config) => {
-      return [{ id: config.view, entity: config.entity}];
+      return [{ id: config.view, entity: config.entity }];
     },
     [ChartTypesEnum.timeline]: (config) => {
       return config.views;
@@ -147,10 +147,13 @@ export const ChartViewGetter = (chart) => {
         return {
           id: view,
           entity: config.entity,
-        }
+        };
       });
     },
-  }
+    [ChartTypesEnum.adapter_segment]: (config) => {
+      return [{ id: config.selected_view, entity: config.entity }];
+    },
+  };
 
   return getters[chart.metric](chart.config);
 };

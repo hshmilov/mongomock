@@ -1,5 +1,6 @@
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 import { REQUEST_API, downloadFile } from '../actions';
+import { pluginMeta } from '../../constants/plugin_meta';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';
@@ -33,7 +34,7 @@ export const CHANGE_PANEL_SPACE = 'CHANGE_PANEL_SPACE';
 
 export const FETCH_DASHBOARD_FIRST_USE = 'FETCH_DASHBOARD_FIRST_USE';
 export const UPDATE_DASHBOARD_FIRST_USE = 'UPDATE_DASHBOARD_FIRST_USE';
-export const FETCH_CHART_SEGMENTS_CSV = 'FETCH_CHART_SEGMENTS_CSV';
+export const FETCH_CHART_CSV = 'FETCH_CHART_CSV';
 
 export const SET_CURRENT_SPACE = 'SET_CURRENT_SPACE';
 export const GET_PANEL_MAP = 'GET_PANEL_MAP';
@@ -462,7 +463,7 @@ export const dashboard = {
         type: UPDATE_DASHBOARD_FIRST_USE,
       });
     },
-    [FETCH_CHART_SEGMENTS_CSV]({ dispatch }, { uuid, name, historical }) {
+    [FETCH_CHART_CSV]({ dispatch }, { uuid, name, historical }) {
       let rule = `dashboard/charts/${uuid}/csv`;
       if (historical) {
         const encodedDate = encodeURI(historical);

@@ -1,5 +1,5 @@
 import os
-import re
+import json
 
 from services.adapters.eset_service import EsetService
 from services.adapters.gotoassist_service import GotoassistService
@@ -70,8 +70,7 @@ class TestAdaptersPage(TestBase):
         # switch to th new tab
         self.adapters_page.driver.switch_to_window(self.adapters_page.driver.window_handles[1])
 
-        object_match = self._get_adapter_link('active_directory_adapter')
-        assert self.adapters_page.current_url in object_match.group(0)
+        assert self.adapters_page.current_url == self.plugin_meta['active_directory_adapter']['link']
 
     def test_adapters_page_no_help_link(self):
         self.adapters_page.wait_for_adapter(JSON_ADAPTER_NAME)
@@ -80,16 +79,11 @@ class TestAdaptersPage(TestBase):
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_new_server()
 
-        object_match = self._get_adapter_link('json_file_adapter')
-        assert 'http' not in object_match.group(0)
-
+        assert not self.plugin_meta['json_file_adapter']['link']
         assert not self.adapters_page.find_help_link()
 
-    @staticmethod
-    def _get_adapter_link(adapter):
-        plugin_meta = os.path.join(get_cortex_dir(), 'plugins/gui/frontend/src/constants/plugin_meta.js')
-        with open(plugin_meta, 'r', errors='ignore') as plugin_meta_file:
-            data = plugin_meta_file.read()
-            match = re.search(adapter + r':\s+{.*?}', data.strip().replace('\n', ''), re.MULTILINE)
-            object_match = re.search(r'link: \'.*?\'', match.group(0), re.MULTILINE)
-        return object_match
+    @property
+    def plugin_meta(self):
+        plugin_meta_path = os.path.join(get_cortex_dir(), 'plugins/gui/frontend/src/constants/plugin_meta.json')
+        with open(plugin_meta_path, encoding='utf-8') as plugin_meta_file:
+            return json.load(plugin_meta_file)

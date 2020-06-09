@@ -49,10 +49,11 @@
       </div>
       <template v-if="dataLength">
         <div class="separator" />
+        <slot name="footer" />
         <div
           v-if="!condensed"
           class="histogram-total"
-        >Total {{totalValue}}</div>
+        >Total {{ totalValue }}</div>
         <XPaginator
           :from.sync="dataFrom"
           :to.sync="dataTo"

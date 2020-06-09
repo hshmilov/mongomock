@@ -20,6 +20,8 @@ from axonius.utils.permissions_helper import (PermissionAction,
 from axonius.utils.revving_cache import WILDCARD_ARG, NoCacheException
 from gui.logic.dashboard_data import (fetch_chart_segment,
                                       fetch_chart_segment_historical,
+                                      fetch_chart_adapter_segment,
+                                      fetch_chart_adapter_segment_historical,
                                       generate_dashboard_historical)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
@@ -49,6 +51,7 @@ class ChartTitle(Enum):
     intersect = 'Query Intersection'
     compare = 'Query Comparison'
     segment = 'Field Segmentation'
+    adapter_segment = 'Adapter Segmentation'
     abstract = 'Field Summary'
     timeline = 'Query Timeline'
 
@@ -312,25 +315,48 @@ class Charts:
     @historical_range()
     @gui_route_logged_in('<panel_id>/csv', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard))
-    def chart_segment_csv(self, panel_id, from_date: datetime, to_date: datetime):
+    def generate_chart_csv(self, panel_id, from_date: datetime, to_date: datetime):
         card = self._dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
         })
-        if (not card.get('view') or not card.get('config') or not card['config'].get('entity')
-                or not card['config'].get('field')):
+
+        handler_by_metric = {
+            'segment': self.generate_segment_csv,
+            'adapter_segment': self.generate_adapter_segment_csv
+        }
+
+        if not card.get('view') or not card.get('config') or not card['config'].get('entity'):
             return return_error('Error: no such data available ', 400)
+
         card['config']['entity'] = EntityType(card['config']['entity'])
+        column_headers, rows = handler_by_metric[card['metric']](card, from_date, to_date)
+        string_output = io.StringIO()
+        dw = csv.DictWriter(string_output, column_headers)
+        dw.writeheader()
+        dw.writerows(rows)
+        output_file = make_response(string_output.getvalue().encode('utf-8'))
+        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
+        output_file.headers['Content-Disposition'] = \
+            f'attachment; filename=axonius-chart-{card["name"]}_{timestamp}.csv'
+        output_file.headers['Content-type'] = 'text/csv'
+        return output_file
+
+    @staticmethod
+    def generate_segment_csv(card, from_date, to_date):
+        if not card['config'].get('field'):
+            return return_error('Error: no such data available ', 400)
+
         if from_date and to_date:
             data = fetch_chart_segment_historical(card, from_date, to_date)
         else:
             data = fetch_chart_segment(ChartViews[card['view']], **card['config'])
         name = card['config']['field']['title']
-        string_output = io.StringIO()
-        dw = csv.DictWriter(string_output, [name, 'count'])
-        dw.writeheader()
-        dw.writerows([{name: x['name'], 'count': x['value']} for x in data])
-        outputFile = make_response(string_output.getvalue().encode('utf-8'))
-        timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
-        outputFile.headers['Content-Disposition'] = f'attachment; filename=axonius-chart-{card["name"]}_{timestamp}.csv'
-        outputFile.headers['Content-type'] = 'text/csv'
-        return outputFile
+        return [name, 'count'], [{name: x['name'], 'count': x['value']} for x in data]
+
+    @staticmethod
+    def generate_adapter_segment_csv(card, from_date, to_date):
+        if from_date and to_date:
+            data = fetch_chart_adapter_segment_historical(card, from_date, to_date)
+        else:
+            data = fetch_chart_adapter_segment(ChartViews[card['view']], **card['config'])
+        return ['Adapter Name', 'count'], [{'Adapter Name': x['fullName'], 'count': x['value']} for x in data]

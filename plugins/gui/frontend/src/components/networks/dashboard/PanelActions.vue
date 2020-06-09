@@ -45,10 +45,10 @@
               key="1"
               @click="$emit('remove')"
             >
-              Remove
+              Delete
             </AMenuItem>
             <AMenuItem
-              v-if="chart.metric==='segment'"
+              v-if="chart.metric==='segment' || chart.metric==='adapter_segment'"
               id="export_chart"
               key="2"
               @click="() => exportCSV(chart.uuid, chart.name, chart.historical)"
@@ -212,7 +212,7 @@ import _capitalize from 'lodash/capitalize';
 import {
   MOVE_OR_COPY_TOGGLE,
   FETCH_DASHBOARD_PANEL,
-  FETCH_CHART_SEGMENTS_CSV,
+  FETCH_CHART_CSV,
 } from '../../../store/modules/dashboard';
 import {
   ChartSortTypeEnum,
@@ -275,7 +275,7 @@ export default {
     }),
     ...mapActions({
       fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
-      fetchChartSegmentsCSV: FETCH_CHART_SEGMENTS_CSV,
+      fetchChartCSV: FETCH_CHART_CSV,
     }),
     getPopupContainer() {
       return document.querySelector('.x-tabs .body');
@@ -300,7 +300,7 @@ export default {
       });
     },
     exportCSV() {
-      this.fetchChartSegmentsCSV({
+      this.fetchChartCSV({
         uuid: this.chart.uuid,
         name: this.chart.name,
         historical: this.chart.historical,

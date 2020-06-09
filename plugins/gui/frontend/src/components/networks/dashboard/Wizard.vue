@@ -52,13 +52,13 @@
             >
               <XIcon
                 family="symbol"
-                :type="view"
+                :type="getChartIcon(view)"
               />
             </label>
           </template>
         </div>
         <Component
-          :is="dashboard.metric"
+          :is="chartComponent"
           ref="dashboardRef"
           v-model="dashboard.config"
           :entities="entityOptions"
@@ -85,12 +85,13 @@ import { formatDate } from '@constants/utils';
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
 
-import intersect from './charts/Intersect.vue';
-import compare from './charts/Compare.vue';
-import segment from './charts/Segment.vue';
-import abstract from './charts/Abstract.vue';
-import timeline from './charts/Timeline.vue';
-import matrix from './charts/Matrix.vue';
+import XChartIntersect from './charts/Intersect.vue';
+import XChartCompare from './charts/Compare.vue';
+import XChartSegment from './charts/Segment.vue';
+import XChartAbstract from './charts/Abstract.vue';
+import XChartTimeline from './charts/Timeline.vue';
+import XChartMatrix from './charts/Matrix.vue';
+import XChartAdapterSegment from './charts/AdapterSegment.vue';
 
 import viewsMixin from '../../../mixins/views';
 
@@ -99,7 +100,7 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules
 import { DASHBOARD_CREATED } from '../../../constants/getting-started';
 import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
-import { ChartViewEnum, ChartTypesEnum, SpaceTypesEnum } from '../../../constants/dashboard';
+import { ChartViewEnum, ChartTypesEnum, SpaceTypesEnum, ChartWizardComponentByMetricEnum, ChartIconByViewEnum } from '../../../constants/dashboard';
 
 
 const dashboard = {
@@ -108,7 +109,16 @@ const dashboard = {
 export default {
   name: 'XChartWizard',
   components: {
-    XFeedbackModal, XSelect, intersect, compare, segment, abstract, timeline, matrix, XIcon,
+    XFeedbackModal,
+    XSelect,
+    XChartIntersect,
+    XChartCompare,
+    XChartSegment,
+    XChartAdapterSegment,
+    XChartAbstract,
+    XChartTimeline,
+    XChartMatrix,
+    XIcon,
   },
   mixins: [viewsMixin],
   props: {
@@ -153,6 +163,7 @@ export default {
         { name: ChartTypesEnum.intersect, title: 'Query Intersection' },
         { name: ChartTypesEnum.compare, title: 'Query Comparison' },
         { name: ChartTypesEnum.segment, title: 'Field Segmentation' },
+        { name: ChartTypesEnum.adapter_segment, title: 'Adapter Segmentation' },
         { name: ChartTypesEnum.abstract, title: 'Field Summary' },
         { name: ChartTypesEnum.timeline, title: 'Query Timeline' },
         { name: ChartTypesEnum.matrix, title: 'Matrix Data' },
@@ -174,6 +185,9 @@ export default {
       if (this.dashboard.metric === ChartTypesEnum.matrix) {
         return [ChartViewEnum.stacked];
       }
+      if (this.dashboard.metric === ChartTypesEnum.adapter_segment) {
+        return [ChartViewEnum.adapter_histogram];
+      }
       return [ChartViewEnum.summary];
     },
     isDisabled() {
@@ -191,6 +205,9 @@ export default {
     note() {
       if (!this.dashboard.updated) return '';
       return `Last edited on ${formatDate(this.dashboard.updated, undefined, this.dateFormat)}`;
+    },
+    chartComponent() {
+      return ChartWizardComponentByMetricEnum[this.dashboard.metric];
     },
   },
   async created() {
@@ -237,6 +254,9 @@ export default {
     },
     finishNewDashboard() {
       this.$emit('close');
+    },
+    getChartIcon(view) {
+      return ChartIconByViewEnum[view];
     },
   },
 };
