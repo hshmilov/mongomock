@@ -4,7 +4,7 @@ from flask import (jsonify)
 from bson import ObjectId
 
 from axonius.plugin_base import return_error
-from axonius.consts.gui_consts import PREDEFINED_FIELD, IS_AXONIUS_ROLE
+from axonius.consts.gui_consts import PREDEFINED_FIELD, IS_AXONIUS_ROLE, ROLE_ID
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue, \
     get_permissions_structure, serialize_db_permissions
 from gui.logic.db_helpers import beautify_db_entry
@@ -49,7 +49,7 @@ class Roles:
         PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles))
     def get_role_assignees(self, role_id):
         match_users = {
-            'role_id': ObjectId(role_id)
+            ROLE_ID: ObjectId(role_id)
         }
         existing_users = self._users_collection.find(filter_archived(match_users))
         return str(existing_users.count())

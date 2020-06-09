@@ -7,6 +7,7 @@ from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_S
 from axonius.consts.plugin_consts import (NODE_ID, NODE_NAME, NODE_HOSTNAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_DATA_INSTANCE_ID, NODE_STATUS,
                                           NODE_USE_AS_ENV_NAME)
+from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import (PermissionCategory, PermissionAction, PermissionValue)
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in, is_valid_node_hostname
@@ -40,12 +41,13 @@ class Instances:
         for attribute in attributes:
             if instance_data.get(attribute, None) is not None:
                 node_id = instance_data.get(NODE_DATA_INSTANCE_ID)
+                self._log_activity_instances(instance_data, attribute)
                 self.request_remote_plugin(f'node/{node_id}', method='POST',
                                            json={'key': attribute, 'value': instance_data.get(attribute)})
             else:
                 logger.error(f'{attribute} is null - wrong parameters. ')
 
-    @gui_route_logged_in(methods=['POST'], activity_params=['node_name'])
+    @gui_route_logged_in(methods=['POST'], skip_activity=True)
     def update_instances(self):
         data = self.get_request_data_as_object()
 
@@ -66,7 +68,8 @@ class Instances:
         return ''
 
     @gui_route_logged_in(methods=['DELETE'],
-                         required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances))
+                         required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances),
+                         skip_activity=True)
     def delete_instances(self):
         data = self.get_request_data_as_object()
         node_ids = data[NODE_DATA_INSTANCE_ID]
@@ -94,8 +97,11 @@ class Instances:
                         'clients/' + str(current_client['_id']), plugin_unique_name, method='delete')
 
             # Deactivate node
-            self.request_remote_plugin(f'node/{current_node}', method='POST',
-                                       json={'key': 'status', 'value': DEACTIVATED_NODE_STATUS})
+            deactivated_data = {'key': 'status', 'value': DEACTIVATED_NODE_STATUS}
+            self.request_remote_plugin(f'node/{current_node}', method='POST', json=deactivated_data)
+            self._log_activity_instances(instance_data={NODE_DATA_INSTANCE_ID: current_node,
+                                                        NODE_STATUS: DEACTIVATED_NODE_STATUS},
+                                         attributes=NODE_STATUS)
         return ''
 
     def _is_node_activated(self, target_node_id=None) -> bool:
@@ -155,3 +161,44 @@ class Instances:
         data = self.get_request_data_as_object()
         self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='DELETE', json={'tags': data['tags']})
         return ''
+
+    def _log_activity_instances(self, instance_data: dict, attributes: str):
+        def audit(action: str, params: dict):
+            self.log_activity_user_default(AuditCategory.Instances.value, action, params)
+
+        try:
+            if attributes and instance_data:
+                node = self._nodes_metadata_collection.find_one({NODE_ID: instance_data.get(NODE_DATA_INSTANCE_ID)})
+
+            if not node:
+                logger.warning(f'Skipping audit for node id {NODE_DATA_INSTANCE_ID}')
+                return
+
+            if NODE_STATUS in attributes:
+                audit(action='node_update_status', params={
+                    NODE_NAME: node.get(NODE_NAME, ''),
+                    NODE_STATUS: instance_data.get(NODE_STATUS, '')
+                })
+
+            if NODE_HOSTNAME in attributes and instance_data.get(NODE_HOSTNAME) != node.get(NODE_HOSTNAME):
+                audit(action='node_update_hostname', params={
+                    NODE_NAME: node.get(NODE_NAME, ''),
+                    NODE_HOSTNAME: node.get(NODE_HOSTNAME, ''),
+                    f'update_{NODE_HOSTNAME}': instance_data.get(NODE_HOSTNAME, '')
+                })
+
+            if NODE_NAME in attributes and instance_data.get(NODE_NAME) != node.get(NODE_NAME):
+                audit(action='node_update_name', params={
+                    NODE_NAME: node.get(NODE_NAME, ''),
+                    f'update_{NODE_NAME}': instance_data.get(NODE_NAME, '')
+                })
+
+            if NODE_USE_AS_ENV_NAME in attributes and \
+                    instance_data.get(NODE_USE_AS_ENV_NAME) != node.get(NODE_USE_AS_ENV_NAME, False):
+                audit(action='node_update_indication', params={
+                    NODE_NAME: node.get(NODE_NAME, ''),
+                    f'update_indication': 'enabled' if instance_data.get(NODE_USE_AS_ENV_NAME) else 'disabled'
+                })
+
+        except Exception:
+            logger.exception(f'error during instances auditing')

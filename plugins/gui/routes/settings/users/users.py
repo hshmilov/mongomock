@@ -1,30 +1,36 @@
 import logging
-import secrets
 import re
-import json
-
+import secrets
 from datetime import datetime
+
 import pymongo
 from bson import ObjectId
-from flask import (jsonify)
+from flask import jsonify
 from passlib.hash import bcrypt
 
-from axonius.consts.gui_consts import (PREDEFINED_ROLE_RESTRICTED, UNCHANGED_MAGIC_FOR_GUI, IS_AXONIUS_ROLE)
-
-from axonius.consts.plugin_consts import (PASSWORD_LENGTH_SETTING,
-                                          PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_UPPERCASE,
-                                          PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
-                                          PASSWORD_NO_MEET_REQUIREMENTS_MSG, PREDEFINED_USER_NAMES, ADMIN_USER_NAME)
+from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
+                                       PREDEFINED_ROLE_RESTRICTED,
+                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID)
+from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
+                                          PASSWORD_LENGTH_SETTING,
+                                          PASSWORD_MIN_LOWERCASE,
+                                          PASSWORD_MIN_NUMBERS,
+                                          PASSWORD_MIN_SPECIAL_CHARS,
+                                          PASSWORD_MIN_UPPERCASE,
+                                          PASSWORD_NO_MEET_REQUIREMENTS_MSG)
+from axonius.logging.audit_helper import AuditAction, AuditType, AuditCategory
 from axonius.plugin_base import return_error
-from axonius.utils.gui_helpers import (paginated, sorted_endpoint)
-from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
-
+from axonius.utils.gui_helpers import paginated, sorted_endpoint
+from axonius.utils.permissions_helper import (PermissionAction,
+                                              PermissionCategory,
+                                              PermissionValue)
 from gui.logic.db_helpers import translate_user_id_to_details
 from gui.logic.filter_utils import filter_archived
-from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
+from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.logic.users_helper import beautify_user_entry
-
 # pylint: disable=no-member
+from gui.routes.settings.users.tokens.user_token import USER_NAME
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -55,7 +61,7 @@ class Users:
         role_ids_to_display = self._get_system_users_role_ids()
         users_collection = self._users_collection
         return jsonify(users_collection.count_documents(filter_archived({
-            'role_id': {
+            ROLE_ID: {
                 '$in': role_ids_to_display
             }
         })))
@@ -69,11 +75,11 @@ class Users:
         """
         users = self._users_collection.find(
             filter_archived({'source': 'internal'}),
-            {'_id': False, 'user_name': 1}
+            {'_id': False, USER_NAME: 1}
         )
-        return jsonify([user.get('user_name', '') for user in users])
+        return jsonify([user.get(USER_NAME, '') for user in users])
 
-    @gui_route_logged_in(methods=['PUT'], activity_params=['user_name'])
+    @gui_route_logged_in(methods=['PUT'], activity_params=[USER_NAME])
     def add_users(self):
         """
         PUT Create a new user
@@ -96,8 +102,8 @@ class Users:
         password = post_data.get('password')
         if post_data.get('auto_generated_password'):
             password = secrets.token_urlsafe()
-        user_name = post_data.get('user_name')
-        role_id = post_data.get('role_id')
+        user_name = post_data.get(USER_NAME)
+        role_id = post_data.get(ROLE_ID)
 
         # Make sure all required fields provided
         if (not password) or (not role_id) or (not user_name):
@@ -105,7 +111,7 @@ class Users:
 
         # Make sure user is unique by combo of name and source (no two users can have same name and same source)
         user_filter = filter_archived({
-            'user_name': post_data['user_name'],
+            USER_NAME: post_data[USER_NAME],
             'source': 'internal'
         })
 
@@ -138,13 +144,13 @@ class Users:
             password = bcrypt.hash(password)
 
         match_user = {
-            'user_name': username,
+            USER_NAME: username,
             'source': source
         }
         user = self._users_collection.find_one(filter_archived(match_user))
         if not user:
             user = {
-                'user_name': username,
+                USER_NAME: username,
                 'first_name': first_name,
                 'last_name': last_name,
                 'pic_name': picname or self.DEFAULT_AVATAR_PIC,
@@ -163,14 +169,19 @@ class Users:
                 if not role_doc or 'permissions' not in role_doc:
                     logger.error(f'The role id {role_id} was not found and default permissions will be used.')
                 else:
-                    user['role_id'] = ObjectId(role_id)
-            if 'role_id' not in user:
+                    user[ROLE_ID] = ObjectId(role_id)
+            if ROLE_ID not in user:
                 role_doc = self._roles_collection.find_one(filter_archived({
                     'name': PREDEFINED_ROLE_RESTRICTED
                 }))
-                user['role_id'] = role_doc.get('_id')
+                user[ROLE_ID] = role_doc.get('_id')
             try:
                 self._users_collection.replace_one(match_user, user, upsert=True)
+                if source != 'internal':
+                    self.log_activity_default('settings.users',
+                                              'add_external_user',
+                                              {USER_NAME: username, 'source': source.upper()},
+                                              AuditType.Info)
             except pymongo.errors.DuplicateKeyError:
                 logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
             user = self._users_collection.find_one(filter_archived(match_user))
@@ -207,7 +218,7 @@ class Users:
         return jsonify(beautify_user_entry(n) for n in
                        self._users_collection.find(filter_archived(
                            {
-                               'role_id': {
+                               ROLE_ID: {
                                    '$in': role_ids_to_display
                                }
                            })).sort(find_sort)
@@ -220,64 +231,7 @@ class Users:
         })
         return [role.get('_id', '') for role in axonius_roles]
 
-    @gui_route_logged_in('assign_role', methods=['POST'], activity_params=['name', 'count'])
-    def users_assign_role_bulk(self):
-        """
-        set new role_id to all users or all users with id found in a given set.
-        :return:
-        status code 200 - updated all requested users
-        status code 202 - the request partially succeed. Not akk users archived
-        status code 400 - invalid request. role_id not supplied
-        status code 500 - server error. Operation failed.
-        """
-        users_collection = self._users_collection
-        request_data = self.get_request_data_as_object()
-        ids = request_data.get('ids', [])
-        include = request_data.get('include', True)
-        role_id = request_data.get('role_id')
-
-        # axonius roles is not assignable
-        axonius_roles_ids = self._get_axonius_roles_ids()
-        if ObjectId(role_id) in axonius_roles_ids:
-            logger.info('Attempt to assign axonius role to users')
-            return return_error('role is not assignable', 400)
-
-        if not role_id:
-            return return_error('role id is required', 400)
-
-        # if include value is False, all users should be updated (beside admin, _axonius and _axonius_ro)
-        if not include:
-            find_query = filter_archived({
-                '_id': {'$nin': [ObjectId(user_id) for user_id in ids]},
-                'user_name': {'$nin': PREDEFINED_USER_NAMES},
-            })
-        else:
-            find_query = filter_archived({
-                '_id': {'$in': [ObjectId(user_id) for user_id in ids]},
-                'user_name': {'$nin': PREDEFINED_USER_NAMES},
-            })
-
-        result = users_collection.update_many(find_query, {
-            '$set': {'role_id': ObjectId(role_id), 'last_updated': datetime.now()}
-        })
-
-        if result.modified_count < 1:
-            logger.info('operation failed, could not update users\' role')
-            return return_error('operation failed, could not update users\' role', 400)
-        user_ids = [str(user_id.get('_id')) for user_id in users_collection.find(find_query, {'_id': 1})]
-        self._invalidate_sessions(user_ids)
-        response_str = json.dumps({
-            'count': str(result.modified_count),
-            'name': self._roles_collection.find_one({'_id': ObjectId(role_id)}, {'name': 1}).get('name', '')
-        })
-        if result.matched_count != result.modified_count:
-            logger.info(f'Bulk assign role modified {result.modified_count} out of {result.matched_count}')
-            return response_str, 202
-
-        logger.info(f'Bulk assign role modified succeeded')
-        return response_str, 200
-
-    @gui_route_logged_in('<user_id>', methods=['POST'], activity_params=['user_name'])
+    @gui_route_logged_in('<user_id>', methods=['POST'], activity_params=[USER_NAME])
     def update_user(self, user_id):
         """
             Updates user info
@@ -289,7 +243,7 @@ class Users:
         source = user.get('source')
 
         post_data = self.get_request_data_as_object()
-        role_id = post_data.get('role_id')
+        role_id = post_data.get(ROLE_ID)
 
         # axonius roles are not assignable
         axonius_roles_ids = self._get_axonius_roles_ids()
@@ -298,11 +252,11 @@ class Users:
             return return_error('role is not assignable', 400)
 
         # Only admin users can update the 'admin' user
-        if not self.is_admin_user() and user.get('user_name') == ADMIN_USER_NAME:
-            return return_error(f'Not allowed to update {user["user_name"]} user', 401)
+        if not self.is_admin_user() and user.get(USER_NAME) == ADMIN_USER_NAME:
+            return return_error(f'Not allowed to update {user[USER_NAME]} user', 401)
 
         new_user_info = {
-            'role_id': ObjectId(role_id),
+            ROLE_ID: ObjectId(role_id),
             'last_updated': datetime.now()
         }
 
@@ -326,93 +280,33 @@ class Users:
         if not updated_user:
             return '', 400
         translate_user_id_to_details.clean_cache()
+
+        self._audit_assign_user_role(user_name=user.get(USER_NAME, ''),
+                                     current_role_id=user.get(ROLE_ID),
+                                     update_role_id=updated_user.get(ROLE_ID))
+
         self._invalidate_sessions([user_id])
         return jsonify({'user': beautify_user_entry(updated_user), 'uuid': user_id}), 200
 
-    @gui_route_logged_in('<user_id>', methods=['DELETE'])
+    @gui_route_logged_in('<user_id>', methods=['DELETE'], activity_params=[USER_NAME])
     def delete_user(self, user_id):
         """
             Deleting a user
         """
-        self._users_collection.update_one({'_id': ObjectId(user_id)},
-                                          {'$set': {'archived': True}})
+        user = self._users_collection.find_one_and_update({'_id': ObjectId(user_id)},
+                                                          {'$set': {'archived': True}},
+                                                          {USER_NAME: 1})
         self._invalidate_sessions([user_id])
 
         translate_user_id_to_details.clean_cache()
-        return '', 200
+        return jsonify({USER_NAME: user.get(USER_NAME, '')})
 
-    @gui_route_logged_in(methods=['DELETE'], activity_params=['count'])
-    def delete_users_bulk(self):
-        """
-        archive all users or all users with id found in a given set.
-        :return:
-        status code 200 - archived all requested users and invalidate their session
-        status code 202 - the request partially succeed. Not akk users archived
-        status code 400 - server error. Operation failed.
-        """
-        users_collection = self._users_collection
-        request_data = self.get_request_data_as_object()
-        ids = request_data.get('ids', [])
-        include = request_data.get('include', True)
-
-        # if include is equal to False, all users should be deleted beside admin, _axonius & _axonius_ro
-        if not include:
-            logger.info('Update users with include = False')
-            result = users_collection.update_many(filter_archived({
-                'user_name': {'$nin': PREDEFINED_USER_NAMES},
-                '_id': {'$nin': [ObjectId(user_id) for user_id in ids]}
-            }), {
-                '$set': {'archived': True}
-            })
-
-            # handle response
-            if result.modified_count < 1:
-                err_msg = 'operation failed, could not delete users\''
-                logger.info(err_msg)
-                return return_error(err_msg, 400)
-
-            response_str = json.dumps({
-                'count': str(result.modified_count)
-            })
-            if result.matched_count != result.modified_count:
-                logger.info(f'Deleted {result.modified_count} out of {result.matched_count} users')
-                return response_str, 202
-
-            logger.info(f'Bulk deletion users succeeded')
-            return response_str, 200
-
-        partial_success = False
-        deletion_success = False
-        deletion_count = 0
-        for user_id in ids:
-            existed_user = users_collection.find_one_and_update(filter_archived({
-                '_id': ObjectId(user_id)
-            }), {
-                '$set': {'archived': True}
-            }, projection={
-                'user_name': 1
-            })
-
-            if existed_user is None:
-                logger.info(f'User with id {user_id} does not exists')
-                partial_success = True
+    def _audit_assign_user_role(self, user_name: str, current_role_id: ObjectId, update_role_id: ObjectId):
+        if current_role_id != update_role_id:
+            role = self._roles_collection.find_one({'_id': update_role_id})
+            if role:
+                self.log_activity_user(AuditCategory.UserManagement,
+                                       AuditAction.AssignedRole,
+                                       {USER_NAME: user_name, 'role': role.get('name', '')})
             else:
-                deletion_count += 1
-            deletion_success = True
-            self._invalidate_sessions([user_id])
-            name = existed_user['user_name']
-            logger.info(f'Users {name} with id {user_id} has been archive')
-
-        # handle response
-        if not deletion_success:
-            err_msg = 'operation failed, could not delete users\''
-            logger.info(err_msg)
-            return return_error(err_msg, 400)
-        response_str = json.dumps({
-            'count': str(deletion_count)
-        })
-        if deletion_success and partial_success:
-            logger.info('Deletion partially succeeded')
-            return response_str, 202
-        logger.info(f'Bulk deletion users succeeded')
-        return response_str, 200
+                logger.error(f'Skipping audit of missing Role Assigned {update_role_id} to user {user_name}')

@@ -11,7 +11,7 @@ from axonius.consts.gui_consts import (USERS_TOKENS_EMAIL_INVITE_SUBJECT,
                                        USERS_TOKENS_EMAIL_SUBJECT,
                                        USERS_TOKENS_INVITE_EMAIL_CONTENT,
                                        USERS_TOKENS_RESET_EMAIL_CONTENT,
-                                       USERS_TOKENS_RESET_LINK)
+                                       USERS_TOKENS_RESET_LINK, USER_NAME)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           CONFIGURABLE_CONFIGS_COLLECTION,
                                           CORE_UNIQUE_NAME,
@@ -26,8 +26,6 @@ from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 # pylint: disable=no-member
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-USER_NAME = 'user_name'
 
 
 @gui_section_add_rules('users/tokens', permission_section=PermissionCategory.Users)
@@ -54,7 +52,7 @@ class UserToken:
 
         # Only admin users can create a reset link for the 'admin' user
         if not self.is_admin_user() and user.get('user_name') == ADMIN_USER_NAME:
-            return return_error(f'Not allowed to reset {user["user_name"]} user', 401)
+            return return_error(f'Not allowed to reset {user[USER_NAME]} user', 401)
 
         token = secrets.token_urlsafe()
         result = self._users_tokens_collection.update_one({
@@ -159,7 +157,7 @@ class UserToken:
         reset_link = USERS_TOKENS_RESET_LINK.format(server_name=server_name,
                                                     token=user_token['token'])
         try:
-            self._send_reset_password_email(reset_link, email_address, invite, user['user_name'])
+            self._send_reset_password_email(reset_link, email_address, invite, user[USER_NAME])
         except RuntimeWarning as e:
             return return_error(str(e), 412)
         except Exception as e:

@@ -2,12 +2,14 @@ from enum import Enum
 
 
 class AuditCategory(Enum):
+    UserManagement = 'settings.users'
     UserSession = 'session'
     Discovery = 'discovery'
     GettingStarted = 'getting_started'
     Adapters = 'adapters'
     Reports = 'reports'
     Enforcements = 'enforcements'
+    Instances = 'instances'
 
 
 class AuditAction(Enum):
@@ -23,6 +25,8 @@ class AuditAction(Enum):
     Trigger = 'trigger'
     Download = 'download'
     ChangedPassword = 'changed_password'
+    AssignedRole = 'assigned_role'
+    TagReimaged = 'tag_reimaged'
 
 
 class AuditType(Enum):

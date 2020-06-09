@@ -261,6 +261,8 @@ LABELS_FIELD = 'labels'
 # Common Values #
 #########################
 
+USER_NAME = 'user_name'
+ROLE_ID = 'role_id'
 USER_ID_FIELD = 'user_id'
 PRIVATE_FIELD = 'private'
 PREDEFINED_FIELD = 'predefined'
@@ -305,6 +307,7 @@ EXCLUDED_CSRF_ENDPOINTS = ('api/login', 'api/signup', 'api/login/ldap', 'api/log
 ACTIVITY_PARAMS_ARG = 'activity_params'
 SKIP_ACTIVITY_ARG = 'skip_activity'
 ACTIVITY_PARAMS_COUNT = 'count'
+ACTIVITY_PARAMS_NAME = 'name'
 
 
 class SortType(Enum):

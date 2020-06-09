@@ -31,7 +31,7 @@ from retrying import retry
 from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, \
     CONNECTION_LABEL, CLIENT_ID, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS, \
     VAULT_PROVIDER
-from axonius.consts.gui_consts import ParallelSearch
+from axonius.consts.gui_consts import ParallelSearch, ACTIVITY_PARAMS_COUNT
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.metric_helper import log_metric
@@ -386,16 +386,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if self._notify_on_adapters is True and (devices_cleaned or users_cleaned):
             self.create_notification(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
         logger.info(f'Cleaned {devices_cleaned} devices and {users_cleaned} users')
-        self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
-            'asset': EntityType.Devices.value,
-            'adapter': self.plugin_name,
-            'count': str(devices_cleaned)
-        })
-        self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
-            'asset': EntityType.Users.value,
-            'adapter': self.plugin_name,
-            'count': str(users_cleaned)
-        })
+        self._log_activity_adapters_cleanup(EntityType.Devices, self.plugin_name, devices_cleaned)
+        self._log_activity_adapters_cleanup(EntityType.Users, self.plugin_name, users_cleaned)
         return {
             EntityType.Devices.value: devices_cleaned,
             EntityType.Users.value: users_cleaned
@@ -812,10 +804,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                             self._get_data_by_client(client_name, EntityType.Users,
                                                      parse_after_fetch=parse_after_fetch, thread_safe=thread_safe))
 
-                devices_count = self._save_data_from_plugin_logged(
+                devices_count = self._save_data_from_plugin(
                     client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
-                users_count = self._save_data_from_plugin_logged(
+                users_count = self._save_data_from_plugin(
                     client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
+
+                self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
+
             except Exception as e:
                 self._handle_insert_and_parse_exceptions(client_name, e)
 
@@ -829,6 +824,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 self._save_data_from_plugin(*data, EntityType.Users)
                 for data
                 in self._query_data(EntityType.Users))
+            self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
 
         return to_json({'devices_count': devices_count, 'users_count': users_count})
 
@@ -870,16 +866,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                          'parsed': parsed_data}
 
             return data_list
-
-    def _save_data_from_plugin_logged(self, client_name: str, client_data: dict, entity_type: EntityType):
-        data_count = self._save_data_from_plugin(client_name, client_data, entity_type)
-        self.log_activity(AuditCategory.Adapters, AuditAction.Fetch, {
-            'asset': entity_type.value,
-            'adapter': self.plugin_name,
-            'client_id': client_name,
-            'count': str(data_count)
-        })
-        return data_count
 
     def _route_test_reachability(self, *args, **kwargs):
         if self.is_in_mock_mode:
@@ -1932,3 +1918,32 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'client_id': client_id,
             'error': error
         }, AuditType.Error)
+
+    def _log_activity_adapters_cleanup(self, asset: EntityType, plugin_name: str, entity_cleaned: int):
+        if not entity_cleaned:
+            logger.info(f'Skipping audit of empty Clean adapter {plugin_name} for entity {asset.value}')
+        else:
+            self.log_activity(AuditCategory.Adapters, AuditAction.Clean, {
+                'asset': asset.value,
+                'adapter': self.plugin_name,
+                ACTIVITY_PARAMS_COUNT: str(entity_cleaned)
+            })
+
+    def _log_activity_adapter_client_fetch_summary(self, client_name: str, fetch_start_time: datetime,
+                                                   users_count: int = 0, devices_count: int = 0):
+        """
+        log audit for adapter client fetch ( devices and users ) summary
+
+        """
+        try:
+            duration = str(datetime.utcnow() - fetch_start_time).split('.')[0]
+            self.log_activity(AuditCategory.Adapters, AuditAction.Fetch, {
+                'adapter': self.plugin_name,
+                'client_id': client_name or '',
+                'users_count': str(users_count),
+                'devices_count': str(devices_count),
+                'duration': duration
+            })
+
+        except Exception:
+            logger.exception(f'Error logging audit for client name {client_name}')

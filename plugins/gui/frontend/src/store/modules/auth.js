@@ -433,7 +433,7 @@ export const auth = {
         return Promise.reject(new Error('ids[] should be supplied'));
       }
       return dispatch(REQUEST_API, {
-        rule: 'settings/users',
+        rule: payload.ids.length > 1 ? 'settings/users/bulk' : `settings/users/${payload.ids[0]}`,
         method: 'DELETE',
         data: payload,
       }).then((res) => {
@@ -499,7 +499,7 @@ export const auth = {
         return Promise.reject(new Error('roleId is a mandatory parameter'));
       }
       return dispatch(REQUEST_API, {
-        rule: 'settings/users/assign_role',
+        rule: 'settings/users/bulk/assign_role',
         method: 'POST',
         data: { ids, include, role_id: roleId },
       }).then((res) => {

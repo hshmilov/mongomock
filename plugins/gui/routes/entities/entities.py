@@ -211,6 +211,20 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         })
         return update_result.modified_count
 
+    def _delete_entity_view(self,  entity_type: EntityType, entity_view_id: str) -> dict:
+        """
+         delete entity VIEW by id .
+        :param entity_type: EntityType.Users, EntityType.Devices
+        :param entity_view_id:
+        :return: None or the Object to be deleted
+        """
+        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        update_result = entity_views_collection.find_one_and_update(
+            {'_id': ObjectId(entity_view_id)},
+            {'$set': {'archived': True}},
+            {'name': 1})
+        return update_result
+
     def _update_entity_views(self, entity_type: EntityType, query_id):
         view_data = self.get_request_data_as_object()
         if not view_data.get('name'):

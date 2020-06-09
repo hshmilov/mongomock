@@ -5,7 +5,7 @@ from flask import (jsonify,
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
-from axonius.consts.gui_consts import ACTIVITY_PARAMS_COUNT
+from axonius.consts.gui_consts import ACTIVITY_PARAMS_COUNT, ACTIVITY_PARAMS_NAME
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 from gui.logic.views_data import get_views_count
 # pylint: disable=no-member
@@ -55,6 +55,22 @@ def views_generator(base_permission_category: PermissionCategory):
                 return return_error('You are lacking some permissions for this request', 401)
 
             return jsonify({ACTIVITY_PARAMS_COUNT: str(self._delete_entity_views(self.entity_type, mongo_filter))})
+
+        @gui_route_logged_in('view/<view_id>', methods=['DELETE'], proceed_and_set_access=True,
+                             activity_params=[ACTIVITY_PARAMS_NAME])
+        def delete_sq_from_panel(self, view_id, no_access):
+            """
+            Delete Entity View by ID
+            """
+            if no_access and not request.get_json().get('private'):
+                return return_error('You are lacking some permissions for this request', 401)
+
+            deleted_entity = self._delete_entity_view(self.entity_type, view_id)
+            if deleted_entity:
+                return jsonify({
+                    ACTIVITY_PARAMS_NAME: deleted_entity.get(ACTIVITY_PARAMS_NAME, '')
+                })
+            return return_error(f'Entity ID {view_id} type {self.entity_type.value} not found !', 400)
 
         @gui_route_logged_in('<query_id>', methods=['POST'], proceed_and_set_access=True)
         def views_update(self, query_id, no_access):

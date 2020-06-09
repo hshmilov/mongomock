@@ -4,7 +4,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import DefaultDict, List, Tuple, Iterable
 
+from axonius.consts.gui_consts import ACTIVITY_PARAMS_COUNT
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditCategory, AuditType, AuditAction
 from axonius.utils.parsing import normalize_hostname, compare_normalized_hostnames
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, AdapterProperty
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -78,6 +80,12 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
                     adapter_identity = [(older_adapter_device[PLUGIN_UNIQUE_NAME], older_adapter_device['data']['id'])]
                     self.add_label_to_entity(EntityType.Devices, adapter_identity, tagname)
                 count_of_labels += 1
+
+        if count_of_labels:
+            self.log_activity_default(AuditCategory.Discovery,
+                                      AuditAction.TagReimaged,
+                                      {ACTIVITY_PARAMS_COUNT: str(count_of_labels)},
+                                      AuditType.Info)
 
         logger.info(f'Performed {count_of_labels} labels, thresholds are - {old_threshold}, {new_threshold}')
 

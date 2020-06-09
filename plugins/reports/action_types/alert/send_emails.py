@@ -9,6 +9,7 @@ from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGI
 
 from axonius.consts.report_consts import LOGOS_PATH
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditAction, AuditCategory, AuditType
 
 from axonius.utils import gui_helpers
 
@@ -122,6 +123,7 @@ class SendEmailsAction(ActionTypeAlert):
         }
 
     # pylint: disable=too-many-branches
+    # pylint: disable=E1101
     def _run(self) -> AlertActionResult:
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
@@ -240,6 +242,9 @@ class SendEmailsAction(ActionTypeAlert):
             {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
 
         email.send(html_data)
+        self.log_activity(AuditCategory.Reports, AuditAction.Trigger, {
+            'name': self._report_data['name']
+        }, AuditType.Info)
         return AlertActionResult(True, 'Sent email')
 
     def __create_table_in_email(self, email, data: Iterable[dict], sections: list, images_cids: dict,

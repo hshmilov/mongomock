@@ -89,11 +89,9 @@ import XSwitch from '@axons/inputs/Switch.vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
-
 import { UPDATE_DATA_VIEW } from '@store/mutations';
-import { DELETE_DATA, SAVE_VIEW, PUBLISH_VIEW } from '@store/actions';
+import { DELETE_DATA, SAVE_VIEW, DELETE_VIEW_DATA, PUBLISH_VIEW } from '@store/actions';
 import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
-
 import { fetchEntityTags } from '@api/saved-queries';
 import { getEntityPermissionCategory } from '@constants/entities';
 import _get from 'lodash/get';
@@ -284,25 +282,39 @@ export default {
         // The remover invoked from within the panel and the panel should be closed.
         this.closeQuerySidePanel();
       }
+      /*
+        0 : for Select all entries form all pages
+        1 : single selection from panel
+        1 < : multiple selection
+      */
+      const isSingularSelection = this.numberOfSelections === 1
       this.$safeguard.show({
         text: `
-            The selected Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} will be completely deleted from the
+            The selected Saved ${isSingularSelection ? 'Query' : 'Queries'} will be completely deleted from the
             system and no other user will be able to use it.
             <br />
-            Deleting the Saved ${this.numberOfSelections > 1 ? 'Queries' : 'Query'} is an irreversible action.
+            Deleting the Saved ${isSingularSelection ? 'Query' : 'Queries'} is an irreversible action.
             <br />Do you wish to continue?
           `,
-        confirmText: this.numberOfSelections > 1 ? 'Delete Saved Queries' : 'Delete Saved Query',
+        confirmText: isSingularSelection ? 'Delete Saved Query' : 'Delete Saved Queries',
         onConfirm: async () => {
           try {
-            await this.removeData({
-              module: this.pathToSavedQueryInState,
-              selection: !queryId ? this.selection : {
-                ids: [queryId],
-                include: true,
+            if (!isSingularSelection) {
+              await this.removeData({
+                module: this.pathToSavedQueryInState,
+                selection: !queryId ? this.selection : {
+                  ids: [queryId],
+                  include: true,
+                  private: isPrivate,
+                },
+              });
+            } else {
+              await this.removeDrawerData({
+                module: `${this.namespace}/views/view`,
                 private: isPrivate,
-              },
-            });
+                selection: queryId || this.selection.ids[0],
+              });
+            }
             this.updateCurrentView();
             this.closeQuerySidePanel();
           } catch (ex) {
@@ -357,6 +369,7 @@ export default {
     }),
     ...mapActions({
       removeData: DELETE_DATA,
+      removeDrawerData: DELETE_VIEW_DATA,
       updateQuery: SAVE_VIEW,
       publishQuery: PUBLISH_VIEW,
     }),

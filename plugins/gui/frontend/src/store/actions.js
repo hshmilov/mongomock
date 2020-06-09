@@ -524,6 +524,17 @@ export const deleteData = ({ state, dispatch }, payload) => {
   });
 };
 
+export const DELETE_VIEW_DATA = 'DELETE_VIEW_DATA';
+export const deleteViewData = ({ dispatch }, payload) => {
+  if (!payload.selection) return;
+
+  return dispatch(REQUEST_API, {
+    rule: `${payload.module}/${payload.selection}`,
+    method: 'DELETE',
+    data: { private: payload.private },
+  });
+};
+
 export const LINK_DATA = 'LINK_DATA';
 export const linkData = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);

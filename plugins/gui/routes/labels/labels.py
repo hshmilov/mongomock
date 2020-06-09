@@ -97,9 +97,17 @@ class Labels:
             'audit.settings.users.post': 'Edit User',
             'audit.settings.users.post.template': 'Edited user \'{user_name}\'',
             'audit.settings.users.delete': 'Delete User',
-            'audit.settings.users.delete.template': 'Deleted {count} users',
-            'audit.settings.users.assign_role': 'Assign Role',
-            'audit.settings.users.assign_role.template': 'Assigned role \'{name}\' to {count} users',
+            'audit.settings.users.delete.template': 'Deleted user \'{user_name}\'',
+
+            'audit.settings.users.bulk': 'User Management',
+            'audit.settings.users.bulk.delete': 'Delete User',
+            'audit.settings.users.bulk.delete.template': 'Deleted {count} users',
+            'audit.settings.users.bulk.assign_role': 'Assign Role',
+            'audit.settings.users.bulk.assign_role.template': 'Assigned role \'{name}\' to {count} users',
+            'audit.settings.users.assigned_role': 'Assign Role',
+            'audit.settings.users.assigned_role.template': 'Assigned role {role} to user \'{user_name}\'',
+            'audit.settings.users.add_external_user': 'Add External User',
+            'audit.settings.users.add_external_user.template': 'External user mapping \'{user_name}\' from {source}',
 
             'audit.settings.roles': 'Role Management',
             'audit.settings.roles.put': 'Add Role',
@@ -149,6 +157,8 @@ class Labels:
             'audit.discovery.complete_phase.template': 'Discovery phase \'{phase}\' ended',
             'audit.discovery.complete': 'Discovery Ended',
             'audit.discovery.complete.template': 'Discovery cycle ended',
+            'audit.discovery.tag_reimaged': 'Tag Reimaged Devices',
+            'audit.discovery.tag_reimaged.template': '{count} reimaged devices were tagged',
 
             'audit.getting_started': 'Getting Started',
             'audit.getting_started.complete_phase': 'Getting Started Phase Completed',
@@ -159,6 +169,17 @@ class Labels:
             'audit.instances': 'Instances',
             'audit.instances.post': 'Edit Instance',
             'audit.instances.post.template': 'Edited instance \'{node_name}\'',
+            'audit.instances.node_update_name': 'Edit Instance',
+            'audit.instances.node_update_name.template':
+                'Renamed instance \'{node_name}\'  to \'{update_node_name}\'',
+            'audit.instances.node_update_hostname': 'Edit Instance',
+            'audit.instances.node_update_hostname.template':
+                'Renamed hostname  \'{hostname}\' to \'{update_hostname}\' on instance \'{node_name}\' ',
+            'audit.instances.node_update_status': 'Edit Instance',
+            'audit.instances.node_update_status.template': '{status} instance \'{node_name}\'',
+            'audit.instances.node_update_indication': 'Edit Instance',
+            'audit.instances.node_update_indication.template':
+                'Instance indication {update_indication} on instance \'{node_name}\' ',
 
             'audit.reports': 'Reports',
             'audit.reports.put': 'Add Report',
@@ -171,11 +192,14 @@ class Labels:
             'audit.reports.download.template': 'Downloaded report \'{name}\'',
             'audit.reports.send_email': 'Manual Sent Report',
             'audit.reports.send_email.template': 'Manually sent report \'{name}\'',
+            'audit.reports.trigger': 'Sent Report',
+            'audit.reports.trigger.template': 'Report \'{name}\' sent',
+
 
             'audit.adapters': 'Adapters',
             'audit.adapters.fetch': 'Fetch',
-            'audit.adapters.fetch.template':
-                'Fetched {count} {asset} for adapter \'{adapter}\' with connection ID {client_id}',
+            'audit.adapters.fetch.template': 'Fetched {users_count} users and {devices_count} devices for adapter '
+                                             '\'{adapter}\' with connection ID {client_id}. Duration: {duration}',
             'audit.adapters.clean': 'Cleanup',
             'audit.adapters.clean.template': 'Removed {count} {asset} from adapter \'{adapter}\'',
             'audit.adapters.post': 'Edit Advanced Settings',
@@ -208,14 +232,18 @@ class Labels:
             'audit.enforcements.complete.template': 'Enforcement \'{enforcement}\' with task ID {task} completed',
             'audit.enforcements.trigger': 'Run Enforcement',
             'audit.enforcements.trigger.template': 'Executed enforcement \'{name}\'',
+            'audit.enforcements.update_tags': 'Update Tags',
+            'audit.enforcements.update_tags.template': 'Enforcement \'{enforcement}\' updated tags',
 
             'audit.devices.views': 'Device Saved Queries',
             'audit.devices.views.put': 'Create Saved Query',
-            'audit.devices.views.put.template': 'Created saved query \'{name}\'',
+            'audit.devices.views.put.template': 'Created saved query {name}',
             'audit.devices.views.post': 'Edit Saved Query',
-            'audit.devices.views.post.template': 'Edited saved query \'{name}\'',
+            'audit.devices.views.post.template': 'Edited saved query {name}',
             'audit.devices.views.delete': 'Delete Saved Query',
             'audit.devices.views.delete.template': 'Deleted {count} saved queries',
+            'audit.devices.views.view': 'Delete Saved Query',
+            'audit.devices.views.view.template': 'Deleted saved query \'{name}\'',
             'audit.devices.views.publish': 'Set Query Access',
             'audit.devices.views.publish.template': 'Set the access of query \'{name}\' to public',
 
@@ -226,6 +254,8 @@ class Labels:
             'audit.users.views.post.template': 'Edited saved query \'{name}\'',
             'audit.users.views.delete': 'Delete Saved Query',
             'audit.users.views.delete.template': 'Deleted {count} saved queries',
+            'audit.users.views.view': 'Delete Saved Query',
+            'audit.users.views.view.template': 'Deleted saved query \'{name}\'',
             'audit.users.views.publish': 'Set Query Access',
             'audit.users.views.publish.template': 'Set the access of query \'{name}\' to public',
 
@@ -289,8 +319,7 @@ class Labels:
 
             'audit.compliance': 'Cloud Asset Compliance',
             'audit.compliance.csv': 'Export CSV',
-            'audit.compliance.csv.template': 'Exported to CSV compliance {name}',
+            'audit.compliance.csv.template': 'Exported to CSV compliance \'{name}\'',
             'audit.compliance.send_email': 'Send Email',
             'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
-
         }

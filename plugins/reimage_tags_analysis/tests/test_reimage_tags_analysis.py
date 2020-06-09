@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
-from typing import Iterable, Tuple, List, NamedTuple
+from typing import Iterable, Tuple, List, NamedTuple, Dict
+
+from bson import ObjectId
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditType
 from reimage_tags_analysis.service import ReimageTagsAnalysisService
 
 
@@ -20,10 +23,16 @@ class PluginMock(ReimageTagsAnalysisService):
         # not calling super!
         self.devices_to_return = devices_to_return
         self.results = []
+        self.mongo_client = ''
 
     def _ReimageTagsAnalysisService__get_devices_from_db(self) -> Iterable[dict]:
         # Overriding private method
         return self.devices_to_return
+
+    def log_activity_default(self, category: str, action: str, params: Dict[str, str],
+                             activity_type: AuditType, user_id: ObjectId = None):
+        # Overriding audit method because there is no mongo client instance on UT
+        pass
 
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True,
                             additional_data=None):
