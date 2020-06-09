@@ -52,7 +52,7 @@ class NexposeAdapter(ScannerAdapterBase):
             "items": [
                 {
                     "name": NEXPOSE_HOST,
-                    "title": "Host Name",
+                    "title": "Host name",
                     "type": "string"
                 },
                 {
@@ -63,7 +63,7 @@ class NexposeAdapter(ScannerAdapterBase):
                 },
                 {
                     "name": USER,
-                    "title": "User Name",
+                    "title": "User name",
                     "type": "string"
                 },
                 {
@@ -71,11 +71,6 @@ class NexposeAdapter(ScannerAdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
-                },
-                {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
-                    "name": VERIFY_SSL,
-                    "title": "Verify SSL",
-                    "type": "bool"
                 },
                 {
                     'name': 'token',
@@ -91,16 +86,16 @@ class NexposeAdapter(ScannerAdapterBase):
                 {
                     'name': 'fetch_sw',
                     'type': 'bool',
-                    'title': 'Fetch Installed Software'
+                    'title': 'Fetch installed software'
                 },
                 {
                     'name': 'fetch_ports',
                     'type': 'bool',
-                    'title': 'Fetch Open Ports'
+                    'title': 'Fetch open ports'
                 },
                 {
                     'name': 'fetch_policies',
-                    'title': 'Fetch Policies',
+                    'title': 'Fetch policies',
                     'type': 'bool'
                 },
                 {
@@ -110,14 +105,19 @@ class NexposeAdapter(ScannerAdapterBase):
                 },
                 {
                     'name': 'num_of_simultaneous_devices',
-                    'title': 'Number Of simultaneous devices',
+                    'title': 'Number of simultaneous devices',
                     'type': 'integer'
                 },
                 {
                     'name': 'drop_only_ip_devices',
-                    'title': 'Do not fetch devices with only IP address',
+                    'title': 'Do not fetch devices with no MAC address and no hostname',
                     'type': 'bool'
                 },
+                {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                    "name": VERIFY_SSL,
+                    "title": "Verify SSL",
+                    "type": "bool"
+                }
             ],
             "required": [
                 NEXPOSE_HOST,
