@@ -124,6 +124,9 @@ class SettingsPage(Page):
     PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab' \
                                         ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                         ' > div:nth-child(5) > div > div > div.file-name '
+    CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab > .tab-settings > .x-form > .x-array-edit > ' \
+                                  'div:nth-child(16) > div > div > div:nth-child(3) > div > div > div:nth-child(2) > ' \
+                                  'div > div > input[type="file"]'
 
     LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'v-select\')]' \
                                  '//div[contains(@class, \'v-list-item\') and .//text()=\'{action_name}\']'

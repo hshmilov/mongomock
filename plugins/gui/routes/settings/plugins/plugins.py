@@ -1,8 +1,12 @@
+import csv
 import logging
 import urllib.parse
 import json
 
 import copy
+from io import StringIO
+from ipaddress import ip_network
+
 import OpenSSL
 import pymongo
 import requests
@@ -20,7 +24,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
-                                          RESET_PASSWORD_SETTINGS, DEFAULT_ROLE_ID)
+                                          RESET_PASSWORD_SETTINGS, DEFAULT_ROLE_ID, STATIC_ANALYSIS_SETTINGS,
+                                          DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -192,6 +197,23 @@ class Plugins:
 
                 if not ssl_check_result:
                     return return_error(f'Private key and public certificate do not match each other', 400)
+
+            try:
+                data_enrichment_settings = config_to_set.get(STATIC_ANALYSIS_SETTINGS, None)
+                if data_enrichment_settings and data_enrichment_settings.get(DEVICE_LOCATION_MAPPING, None) and \
+                        data_enrichment_settings.get(DEVICE_LOCATION_MAPPING).get(CSV_IP_LOCATION_FILE, None):
+                    csv_file = self._grab_file_contents(
+                        data_enrichment_settings.get(DEVICE_LOCATION_MAPPING).get(CSV_IP_LOCATION_FILE),
+                        stored_locally=False).decode('utf-8')
+                    reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
+                    if any(not row['location'] or not ip_network(row['subnet'], strict=False) for row in reader):
+                        return return_error('Uploaded CSV file is not in the desired format', 400)
+            except ValueError:
+                return return_error('Uploaded CSV file is not in the desired format', 400)
+            except KeyError:
+                return return_error('Uploaded CSV file does not have the required headers', 400)
+            except Exception:
+                return return_error('Error while parsing the uploaded CSV file', 400)
 
             aws_s3_settings = config_to_set.get('aws_s3_settings')
             if aws_s3_settings and aws_s3_settings.get('enabled') is True:

@@ -178,6 +178,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mac = Field(str, 'MAC', converter=format_mac)
     manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    locations = ListField(str, 'Locations', description='Recognized Geo locations of the IPs')
     subnets = ListField(
         str,
         'Subnets',

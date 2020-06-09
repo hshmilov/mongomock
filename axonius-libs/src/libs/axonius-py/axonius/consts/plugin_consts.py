@@ -103,6 +103,8 @@ MAX_WORKERS = 'max_workers'
 SOCKET_READ_TIMEOUT = 'socket_read_timeout'
 UPPERCASE_HOSTNAMES = 'uppercase_hostnames'
 UPDATE_CLIENTS_STATUS = 'update_clients_status'
+DEVICE_LOCATION_MAPPING = 'device_location_mapping'
+CSV_IP_LOCATION_FILE = 'csv_ip_location_file'
 
 # PASSWORD SETTINGS #
 PASSWORD_SETTINGS = 'password_policy_settings'

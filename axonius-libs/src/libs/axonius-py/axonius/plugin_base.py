@@ -25,7 +25,7 @@ import uuid
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime, timedelta
-from itertools import groupby
+from itertools import groupby, chain
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -98,7 +98,8 @@ from axonius.consts.plugin_consts import (
     THYCOTIC_SS_HOST, THYCOTIC_SS_PORT, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL,
     THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
     CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
-    UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE)
+    UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
+    CSV_IP_LOCATION_FILE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices import deep_merge_only_dict
@@ -416,6 +417,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
+        self.core_configurable_configs = self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs']
         try:
             self._current_feature_flag_config = self.feature_flags_config()
         except TypeError:
@@ -775,6 +777,10 @@ class PluginBase(Configurable, Feature, ABC):
             logger.exception('Exception when calling _delayed_initialization')
             raise
         logger.info('Finished delayed initialization')
+
+    @staticmethod
+    def lower_and_strip_first_line(iterator):
+        return chain([next(iterator).strip().lower()], iterator)
 
     def _delayed_initialization(self):
         """
@@ -3841,12 +3847,29 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
                             'title': 'Fetch software vulnerabilities even when the vendor name is unknown',
                             'type': 'bool'
+                        },
+                        {
+                            'name': DEVICE_LOCATION_MAPPING,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': 'enabled',
+                                    'title': 'Enable device location mapping',
+                                    'type': 'bool'
+                                },
+                                {
+                                    'name': CSV_IP_LOCATION_FILE,
+                                    'title': 'Device location mapping CSV file',
+                                    'type': 'file'
+                                }
+                            ],
+                            'required': ['enabled', CSV_IP_LOCATION_FILE]
                         }
                     ],
                     'name': STATIC_ANALYSIS_SETTINGS,
-                    'title': 'Static Analysis Settings',
+                    'title': 'Data Enrichment Settings',
                     'type': 'array',
-                    'required': [FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES]
+                    'required': [FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES, DEVICE_LOCATION_MAPPING]
                 },
                 {
                     'items': [
@@ -4132,6 +4155,10 @@ class PluginBase(Configurable, Feature, ABC):
             },
             STATIC_ANALYSIS_SETTINGS: {
                 FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES: False,
+                DEVICE_LOCATION_MAPPING: {
+                    'enabled': False,
+                    CSV_IP_LOCATION_FILE: None
+                }
             },
             AGGREGATION_SETTINGS: {
                 MAX_WORKERS: 20,

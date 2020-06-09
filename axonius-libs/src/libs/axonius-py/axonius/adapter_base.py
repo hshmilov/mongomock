@@ -5,12 +5,15 @@ It implements API calls that are expected to be present in all adapters.
 # pylint: disable=C0302
 import concurrent.futures
 import copy
+import csv
 import json
 import logging
 import sys
 import os
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
+from io import StringIO
+from ipaddress import ip_network, ip_address
 from threading import Event, RLock, Thread
 from typing import Any, Dict, Iterable, List, Tuple, Optional
 
@@ -39,7 +42,8 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    SYSTEM_SCHEDULER_PLUGIN_NAME, PARALLEL_ADAPTERS, NODE_ID, THREAD_SAFE_ADAPTERS
+    SYSTEM_SCHEDULER_PLUGIN_NAME, PARALLEL_ADAPTERS, NODE_ID, THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, \
+    DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -1479,6 +1483,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     continue
                 device_ids_and_last_seen[parsed_device_id] = parsed_device_last_seen
 
+            try:
+                parsed_device = self.__ip_to_location_csv(parsed_device)
+            except Exception:
+                logger.error('Error while trying to check and update ip location', exc_info=True)
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))
             if self._is_adapter_old_by_last_seen(parsed_device, last_seen_cutoff):
@@ -1493,6 +1501,50 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.warning('No old devices filtered (did you choose ttl period on the config file?)')
 
         self._save_field_names_to_db(EntityType.Devices)
+
+    def __ip_to_location_csv(self, device):
+        """
+        Checks every device that have ip address in its network interfaces, if the ip_to_location_csv option
+        is enabled and the csv is valid then it adds another field to the network_interfaces with the desired location
+        :param device: a Device dict
+        :return: Device with location in its network interfaces
+        """
+        static_analysis_settings = self.core_configurable_configs.find_one({})['config'].get(
+            STATIC_ANALYSIS_SETTINGS, None)
+        if static_analysis_settings and static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get('enabled') and \
+                static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get(CSV_IP_LOCATION_FILE):
+
+            csv_file = self._grab_file_contents(static_analysis_settings.get(DEVICE_LOCATION_MAPPING)
+                                                [CSV_IP_LOCATION_FILE], stored_locally=False).decode('utf-8')
+
+            reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
+            ip_location_map = [(ip_network(row['subnet'], strict=False), row['location']) for row in reader]
+
+            nics = device.network_interfaces
+            for i, nic in enumerate(nics):
+                ip_location = self.get_geolocation_of_ip(ip_location_map, nic['ips'] if
+                                                         isinstance(nic, dict) and 'ips' in nic else nic.ips)
+                if ip_location:
+                    if isinstance(nic, dict):
+                        nic['locations'] = ip_location
+                    else:
+                        nic.locations = ip_location
+        return device
+
+    @staticmethod
+    def get_geolocation_of_ip(ip_location_map, ips):
+        """
+        Return the geo locations of ips if listed in the map, otherwise return []
+        :param ip_location_map: a list with tuples of (IP, Location)
+        :param ips: IP addresses
+        :return: Location or []
+        """
+        locations = []
+        for subnet, location in ip_location_map:
+            for ip in ips:
+                if ip_address(ip) in subnet:
+                    locations.append(location.strip())
+        return locations
 
     def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True, parse_after_fetch=False,
                                   thread_safe=False):
