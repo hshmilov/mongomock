@@ -74,7 +74,7 @@ class UpguardAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Upguard Domain',
+                    'title': 'UpGuard Domain',
                     'type': 'string',
                     'default': 'https://cyber-risk.upguard.com'
                 },

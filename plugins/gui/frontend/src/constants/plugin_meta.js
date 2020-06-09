@@ -208,7 +208,8 @@ export const pluginMeta = {
     },
     upguard_adapter: {
         title: 'UpGuard CyberRisk',
-        description: 'UpGuard CyberRisk allows you to monitor and control third-party vendor risk and improve your own external cyber risk posture. The platform comprises of two main modules: UpGuard BreachSight focuses on your external risk posture and Vendor Risk manages the risk posture of your vendors.'
+        description: 'UpGuard CyberRisk provides third-party vendor risk and external cyber risk monitoring. The platform has two main modules: UpGuard BreachSight which monitors company external risk posture and Vendor Risk monitors and helps manages the risk posture of third party vendors.',
+        link: 'https://docs.axonius.com/docs/upguard-cyberrisk'
     },
     google_big_query_adapter: {
         title: 'Google Big Query',
