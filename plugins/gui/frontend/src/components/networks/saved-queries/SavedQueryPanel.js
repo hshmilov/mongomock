@@ -352,7 +352,7 @@ export default {
             <div class="name">
                 <h5>Name</h5>
                 {nameError && <p class="error-input indicator-error--text">{nameRequired ? 'Query Name is a required field' : 'Query Name is used by another query'}</p>}
-                <input class="name_input" value={this.name} onInput={this.setNameField}/>
+                <input type="text" class="name_input" value={this.name} onInput={this.setNameField}/>
             </div>
       ) : null;
 

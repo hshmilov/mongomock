@@ -7,6 +7,7 @@
     />
     <input
       v-model="fieldValue"
+      type="text"
       placeholder="Segment by..."
     >
     <XButton

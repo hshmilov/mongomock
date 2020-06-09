@@ -331,6 +331,7 @@ export default {
             <h5>Name</h5>
             <input
               value={this.name}
+              type="text"
               onInput={this.setNameField}
               placeholder="New Role"
               class="name_input"

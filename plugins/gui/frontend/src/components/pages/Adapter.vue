@@ -117,6 +117,7 @@
                 <input
                   id="connectionLabel"
                   v-model="serverModal.connectionLabel"
+                  type="text"
                   :class="{ 'error-border': showConnectionLabelBorder }"
                   :maxlength="50"
                   @input="onConnectionLabelInput"

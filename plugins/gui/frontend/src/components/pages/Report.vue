@@ -26,12 +26,14 @@
             id="report_name"
             ref="name"
             v-model="report.name"
+            type="text"
             :disabled="cannotEditReport"
             class="report-name-textbox"
             @keyup="onNameChanged"
           >
           <input
             v-else
+            type="text"
             :value="report.name"
             disabled
             class="report-name-textbox"

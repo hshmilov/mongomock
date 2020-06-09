@@ -6,6 +6,7 @@
       <h5>User Name</h5>
       <input
         v-model="$v.userName.$model"
+        type="text"
         placeholder="Enter User Name"
         class="username__input"
       >
@@ -22,6 +23,7 @@
       <h5>First Name</h5> (optional)
       <input
         v-model="firstName"
+        type="text"
         placeholder="Enter First Name"
         class="first-name__input"
       >
@@ -32,6 +34,7 @@
       <h5>Last Name</h5> (optional)
       <input
         v-model="lastName"
+        type="text"
         placeholder="Enter Last Name"
         class="last-name__input"
       >
@@ -42,6 +45,7 @@
       <h5>Email</h5> (optional)
       <input
         v-model="$v.email.$model"
+        type="text"
         placeholder="Enter Email"
         class="email__input"
       >
@@ -103,6 +107,7 @@
         <h5>Password</h5>
         <input
           v-model="$v.password.$model"
+          type="text"
           placeholder="Enter Password"
           class="password__input"
         >

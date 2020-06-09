@@ -14,10 +14,12 @@
             id="enforcement_name"
             ref="name"
             v-model="enforcement.name"
+            type="text"
             :disabled="userCannotChangeThisEnforcement"
           >
           <input
             v-else
+            type="text"
             :value="enforcement.name"
             disabled
           >

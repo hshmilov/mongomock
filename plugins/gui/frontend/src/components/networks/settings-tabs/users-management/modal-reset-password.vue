@@ -18,6 +18,7 @@
           <h5>Password reset link has been generated </h5> (valid for {{ validForHours }} hours)
           <input
             v-model="link"
+            type="text"
             class="reset-link__input"
             disabled
           >
@@ -35,6 +36,7 @@
           <h5>Email reset password link to:</h5>
           <input
             v-model="$v.email.$model"
+            type="text"
             :disabled="!canSendEmail"
             placeholder="Enter Email"
             class="email__input"

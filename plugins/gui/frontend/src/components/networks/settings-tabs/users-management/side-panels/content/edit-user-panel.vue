@@ -6,6 +6,7 @@
         <h5>First Name</h5> (optional)
         <input
           v-model="firstName"
+          type="text"
           placeholder="Enter First Name"
           class="first-name__input"
           :disabled="isExternalUser || isSystemAdminPanel"
@@ -17,6 +18,7 @@
         <h5>Last Name</h5> (optional)
         <input
           v-model="lastName"
+          type="text"
           placeholder="Enter Last Name"
           class="last-name__input"
           :disabled="isExternalUser || isSystemAdminPanel"
@@ -28,6 +30,7 @@
         <h5>Email</h5> (optional)
         <input
           v-model="$v.email.$model"
+          type="text"
           placeholder="Enter Email"
           class="email__input"
           :disabled="isExternalUser"
