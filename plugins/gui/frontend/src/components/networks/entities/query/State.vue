@@ -49,25 +49,38 @@
           :disabled="disabled"
           @click="openSaveView"
         >Save As</XButton>
-        <XDropdown v-else>
-          <XButton
-            slot="trigger"
-            type="link"
-            :disabled="disabled || selectedView.predefined || !canUpdate"
-            @click.stop="saveSelectedView"
-          >Save</XButton>
-          <div slot="content">
+        <ADropDown
+          v-else
+          :trigger="['click']"
+          class="save-as-dropdown"
+        >
+          <div>
             <XButton
               type="link"
               :disabled="disabled"
-              @click="openSaveView"
+              @click.stop="openSaveView"
             >Save As</XButton>
-            <XButton
-              type="link"
-              @click="reloadSelectedView"
-            >Discard Changes</XButton>
+            <XIcon
+              type="caret-down"
+              class="arrowIcon"
+            />
           </div>
-        </XDropdown>
+          <AMenu slot="overlay">
+            <AMenuItem
+              key="0"
+              id="saveChanges"
+              :disabled="disabled || selectedView.predefined || !canUpdate"
+              @click="onSaveClicked"
+            >Save
+            </AMenuItem>
+            <AMenuItem
+              key="1"
+              @click="reloadSelectedView"
+              id="discardChanges"
+            >Discard Changes
+            </AMenuItem>
+          </AMenu>
+        </ADropDown>
         <XButton
           type="link"
           @click="resetQuery"
@@ -93,7 +106,8 @@ import { mapState, mapMutations, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
 import { defaultViewForReset, getEntityPermissionCategory } from '@constants/entities';
 import XButton from '@axons/inputs/Button.vue';
-import XDropdown from '@axons/popover/Dropdown.vue';
+import { Menu, Dropdown } from 'ant-design-vue';
+import XIcon from '@axons/icons/Icon';
 import XHistoricalDate from '@neurons/inputs/HistoricalDate.vue';
 import XSaveModal from '../../saved-queries/SavedQueryModal.vue';
 
@@ -104,7 +118,13 @@ import { SAVE_DATA_VIEW } from '../../../../store/actions';
 export default {
   name: 'XQueryState',
   components: {
-    XButton, XDropdown, XHistoricalDate, XSaveModal,
+    XButton,  
+    XHistoricalDate,
+    XSaveModal,
+    ADropDown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
+    XIcon,
   },
   props: {
     module: {
@@ -258,11 +278,21 @@ export default {
     hasColFilters() {
       return Object.values(this.view.colFilters).some((cf) => cf.some((f) => !f.include || f.term.trim() !== ''));
     },
+    onSaveClicked() {
+      this.$safeguard.show({
+        text: 'The selected Saved Query will be overridden. Do you wish to continue?',
+        confirmText: 'Yes, Save',
+        onConfirm: () => {
+          this.saveSelectedView();
+        },
+      });
+    },
   },
 };
 </script>
 
 <style lang="scss">
+
   .x-query-state {
     .role-gateway {
       display: flex;
@@ -303,28 +333,17 @@ export default {
         padding: 4px;
         margin-right: 16px;
       }
+      .save-as-dropdown {
+        font-size: 16px;
 
-      .x-dropdown {
-        margin-right: 16px;
-
-        .trigger {
-          padding-right: 8px;
-
-          &:after {
-            margin-top: -2px;
-          }
-        }
-
-        .content {
-          &.expand {
-            min-width: max-content;
-          }
-
-          .x-button {
-            display: block;
-          }
+        .arrowIcon{
+        font-size: .7em;
+        padding: 5px 5px 0px 5px;
+        transform: translateX(-1.4em);
+        cursor: pointer;
         }
       }
     }
   }
+
 </style>

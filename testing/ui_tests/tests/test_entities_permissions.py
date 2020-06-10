@@ -389,7 +389,9 @@ class TestEntitiesPermissions(PermissionsTestBase):
         entities_page.wait_for_table_to_load()
         entities_page.fill_filter('cb')
         entities_page.enter_search()
+        entities_page.open_actions_query()
         assert not entities_page.is_query_save_disabled()
+        entities_page.open_actions_query()
         entities_page.run_filter_and_save(query_name, self.devices_page.JSON_ADAPTER_FILTER)
 
     @staticmethod

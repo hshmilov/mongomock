@@ -24,6 +24,7 @@ class TestSavedQuery(TestBase):
     CUSTOM_QUERY_SAVE_NAME_2 = 'Another Saved Query'
     CUSTOM_QUERY_SAVE_NAME_3 = 'Alternate Saved Query'
     ENFORCEMENT_NAME = 'An Enforcement'
+    SAVE_QUERY_APPROVE_TEXT = 'Yes, Save'
 
     ADMIN_NAME = 'administrator'
 
@@ -101,14 +102,15 @@ class TestSavedQuery(TestBase):
         assert self.devices_page.find_query_status_text() == ''
         self.devices_page.click_sort_column(self.devices_page.FIELD_LAST_SEEN)
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-        self.devices_page.open_actions_query()
         self.devices_page.save_query_as(self.CUSTOM_QUERY_SAVE_NAME_2)
         assert self.devices_page.find_query_status_text() == ''
         assert self.devices_page.find_query_title_text() == self.CUSTOM_QUERY_SAVE_NAME_2
         self.devices_page.edit_columns(remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE])
         assert self.devices_page.FIELD_HOSTNAME_TITLE not in self.devices_page.get_columns_header_text()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
+        self.devices_page.open_actions_query()
         self.devices_page.save_existing_query()
+        self.devices_page.safeguard_click_confirm(self.SAVE_QUERY_APPROVE_TEXT)
         wait_until(lambda: self.devices_page.find_query_status_text() == '')
         self.devices_page.reset_query()
         self.devices_page.wait_for_table_to_load()
@@ -181,9 +183,9 @@ class TestSavedQuery(TestBase):
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.click_sort_column(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-        assert self.devices_page.is_query_save_disabled()
-        self.devices_page.open_actions_query()
         assert not self.devices_page.is_query_save_as_disabled()
+        self.devices_page.open_actions_query()
+        assert self.devices_page.is_query_save_disabled()
 
     def test_saved_queries_execute(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
@@ -346,7 +348,9 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.run_query()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.fill_enter_table_search('test')
+        self.devices_page.open_actions_query()
         self.devices_page.save_existing_query()
+        self.devices_page.safeguard_click_confirm(self.SAVE_QUERY_APPROVE_TEXT)
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, self.username, self.ADMIN_NAME)
 
     def test_saved_query_with_entity_asset(self):
@@ -481,7 +485,6 @@ class TestSavedQuery(TestBase):
         self.devices_page.enter_search()
         self.devices_page.wait_for_table_to_load()
         query_save_name = 'user saved query'
-        self.devices_page.open_actions_query()
         self.devices_page.save_query_as(query_save_name)
         self.devices_page.reset_query()
         self.devices_page.execute_saved_query(query_save_name)

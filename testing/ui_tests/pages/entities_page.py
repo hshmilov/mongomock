@@ -141,6 +141,9 @@ class EntitiesPage(Page):
     SAVE_QUERY_PRIVATE_CHECKBOX_ID = 'private_query_checkbox'
     SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
+    SAVE_AS_DROPDOWN_ARROW = '.x-query-state .save-as-dropdown .arrowIcon'
+    SAVE_AS_DROPDOWN_DISCARD_ID = 'discardChanges'
+    SAVE_AS_DROPDOWN_SAVE_CHANGES_ID = 'saveChanges'
     ALL_ENTITIES_CSS = 'tbody>tr'
     UNSAVED_QUERY_STATUS = '[Unsaved]'
     RANDOM_FILTER_VALUE = 'some random filter'
@@ -957,7 +960,8 @@ class EntitiesPage(Page):
         return self.is_element_disabled(self.get_button(self.SAVE_AS_BUTTON))
 
     def is_query_save_disabled(self):
-        return self.is_element_disabled(self.get_save_button())
+        el = self.driver.find_element_by_id(self.SAVE_AS_DROPDOWN_SAVE_CHANGES_ID)
+        return el.get_attribute('aria-disabled') == 'true'
 
     def fill_query_name(self, name):
         self.fill_text_field_by_css_selector(self.SAVE_QUERY_NAME_SELECTOR, name)
@@ -1011,12 +1015,13 @@ class EntitiesPage(Page):
         self.click_button('Reset')
 
     def open_actions_query(self):
-        el = self.driver.find_element_by_css_selector('.x-query-state .x-dropdown .arrow')
-        ActionChains(self.driver).move_to_element_with_offset(el, 60, 12).click().perform()
+        el = self.driver.find_element_by_css_selector(self.SAVE_AS_DROPDOWN_ARROW)
+        el.click()
 
     def discard_changes_query(self):
         self.open_actions_query()
-        self.click_button('Discard Changes')
+        el = self.driver.find_element_by_id(self.SAVE_AS_DROPDOWN_DISCARD_ID)
+        el.click()
         self.wait_for_table_to_load()
 
     def save_query(self, query_name):
@@ -1034,7 +1039,8 @@ class EntitiesPage(Page):
         self.click_save_query_save_button()
 
     def save_existing_query(self):
-        self.click_button('Save')
+        el = self.driver.find_element_by_id(self.SAVE_AS_DROPDOWN_SAVE_CHANGES_ID)
+        el.click()
 
     def create_private_query(self, query_name):
         self.switch_to_page()
@@ -1046,6 +1052,11 @@ class EntitiesPage(Page):
     def assert_private_query_checkbox_hidden(self, query_name):
         self.click_button(query_name)
         self.assert_element_absent_by_id(self.SAVE_QUERY_PRIVATE_CHECKBOX_ID)
+        self.click_save_query_cancel_button()
+
+    def assert_private_query_checkbox_is_disabled(self, query_name):
+        self.click_button(query_name)
+        assert self.is_element_disabled(self.driver.find_element_by_id(self.SAVE_QUERY_PRIVATE_CHECKBOX_ID))
         self.click_save_query_cancel_button()
 
     def rename_query(self, query_name, new_query_name):

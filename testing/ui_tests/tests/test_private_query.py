@@ -55,7 +55,7 @@ class TestPrivateQuery(TestBase):
     def _test_admin_private_query(self):
         public_admin_query = self.PUBLIC_QUERY_SAVE_NAME.format(user_name='Admin')
         self.devices_page.create_private_query(self.INITIAL_QUERY_NAME)
-        self.devices_page.assert_private_query_checkbox_hidden(self.INITIAL_QUERY_NAME)
+        self.devices_page.assert_private_query_checkbox_is_disabled(self.INITIAL_QUERY_NAME)
         self.devices_page.rename_query(self.INITIAL_QUERY_NAME, public_admin_query)
         self._assert_private_query_created_and_renamed(public_admin_query)
         self._assert_private_query_set_public(public_admin_query)

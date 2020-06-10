@@ -2,6 +2,8 @@
   <VDialog
     v-model="visible"
     max-width="500"
+    @keydown.enter="onConfirm"
+    @keydown.esc="onCancel"
   >
     <VCard>
       <VCardText v-html="params.text" />

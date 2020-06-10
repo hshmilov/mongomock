@@ -14,6 +14,9 @@
       slot="body"
     >
       <section class="form">
+        <h3 class="modal-title">
+          {{ modalTitle }}
+        </h3>
         <div class="form-item">
           <label for="name">Query name</label>
           <span
@@ -30,6 +33,7 @@
             v-model="name"
             class="name-input"
             @keyup.enter="onConfirm"
+            @keyup.esc="onClose"
           >
         </div>
 
@@ -48,17 +52,17 @@
             v-model="description"
             rows="5"
             name="description"
+            @keyup.esc="onClose"
           />
         </div>
 
         <div
-          v-if="!isEdit"
           class="form-item"
         >
           <ACheckbox
             id="private_query_checkbox"
             :checked="isPrivate"
-            :disabled="userCannotAddSavedQueries"
+            :disabled="userCannotAddSavedQueries || isEdit"
             @change="onChangePrivate"
           >
             Private query
@@ -201,6 +205,9 @@ export default {
     initialDescription() {
       return _get(this.query, 'description');
     },
+    modalTitle() {
+      return this.isEdit ? 'Update Query' : 'Save as a New Query';
+    },
   },
   watch: {
     value(isOpen) {
@@ -279,7 +286,10 @@ export default {
   $input-label-color: rgba(0,0,0,0.65);
   .save-query-dialog {
     .modal-container {
-      max-height: 400px;
+      max-height: 470px;
+      .modal-body {
+        overflow-y: hidden;
+      }
     }
     .modal-body {
       padding: 20px 24px 32px 24px;
@@ -291,9 +301,11 @@ export default {
         width: 100%;
 
         &.form {
-          margin-bottom: 32px;
         }
-
+        .modal-title{
+          font-size: 18px;
+          margin :0 0 12px 0;
+        }
         .form-item {
           display: flex;
           flex-direction: column;
