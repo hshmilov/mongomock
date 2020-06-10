@@ -672,10 +672,13 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
 
         try:
             if ad_primary_group_dn:
-                if ad_primary_group_dn not in ad_entity.ad_member_of:
-                    ad_entity.ad_member_of.append(ad_primary_group_dn)
-                if ad_primary_group_dn not in ad_entity.ad_member_of_full:
-                    ad_entity.ad_member_of_full.append(ad_primary_group_dn)
+                ad_primary_group_dn_nice = get_member_of_list_from_memberof([ad_primary_group_dn])
+                if ad_primary_group_dn_nice:
+                    ad_primary_group_dn_nice = ad_primary_group_dn_nice[0]
+                    if ad_primary_group_dn_nice not in ad_entity.ad_member_of:
+                        ad_entity.ad_member_of.append(ad_primary_group_dn_nice)
+                    if ad_primary_group_dn_nice not in ad_entity.ad_member_of_full:
+                        ad_entity.ad_member_of_full.append(ad_primary_group_dn_nice)
         except Exception:
             logger.exception(f'Can not add ad primary group dn')
 

@@ -3,9 +3,12 @@ System engineering common tasks.
 """
 # pylint: disable=too-many-locals, too-many-return-statements, protected-access
 import importlib
+import json
 import sys
 import os
 import subprocess
+
+import pymongo
 
 from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, ADAPTER_SETTINGS
 from axonius.consts.plugin_subtype import PluginSubtype
@@ -73,7 +76,7 @@ def usage():
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     {name} root_master_smb_restore - Trigger 'Root Master mode' SMB restore
     {name} compliance run (aws/azure) - Run Compliance Report
-    {name} tag remove [devices/users] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
+    {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     '''
 
@@ -433,12 +436,16 @@ def main():
             assert entity_type in ['device', 'user']
 
             if entity_type == 'device':
-                entity_db = ag._entity_db_map[entity_type]
+                entity_db = ag._entity_db_map[EntityType.Devices]
             else:
-                entity_db = ag._entity_db_map[entity_type]
+                entity_db = ag._entity_db_map[EntityType.Users]
 
             if query == '*':
                 query = {}
+            elif query == 'input':
+                query = json.loads(input('Query: '))
+            else:
+                query = json.loads(query)
 
             op, string = tag_filter.split('=')
             op = op.strip()
@@ -452,7 +459,7 @@ def main():
                 raise ValueError(f'Unknown op {op}')
 
             query = {
-                '$and': {
+                '$and': [
                     query,
                     {
                         'tags': {
@@ -462,12 +469,40 @@ def main():
                             }
                         }
                     }
-                }
+                ]
             }
 
-            query_count = entity_db.find(query).count()
+            tag_removal_count = 0
+            affected_entities_count = 0
+            to_fix = []
+            for entity in entity_db.find(query, projection={'tags': 1, '_id': 1}):
+                original_tags = entity.get('tags') or []
+                if op == 'eq':
+                    new_tags = [
+                        tag for tag in original_tags
+                        if not (tag.get('type') == 'label' and tag.get('label_value') == string)
+                    ]
 
-            redprint(f'You are going to remove the {query_count} tags. This is unrecoverable!')
+                elif op == 'startswith':
+                    new_tags = [
+                        tag for tag in original_tags
+                        if not (tag.get('type') == 'label' and (tag.get('label_value') or '').startswith(string))
+                    ]
+                else:
+                    raise ValueError(f'Unknown op {op}')
+
+                affected_entities_count += 1
+                tag_removal_count += len(original_tags) - len(new_tags)
+
+                to_fix.append(
+                    pymongo.operations.UpdateOne(
+                        {'_id': entity['_id']},
+                        {'$set': {'tags': new_tags}}
+                    )
+                )
+
+            redprint(f'You are going to remove {tag_removal_count} tags '
+                     f'from {affected_entities_count} entities. This is unrecoverable!')
             redprint(f'Are you sure? [yes/no]')
 
             res = input()
@@ -478,13 +513,14 @@ def main():
                 return 0
 
             print(f'Deleting tags...')
-            entity_db.update_many(
-                query,
-                {
-                    '$set': {'tags.$.label_value': ''}
-                }
-            )
-            print(f'Done deleting tags')
+            if to_fix:
+                for i in range(0, len(to_fix), 1000):
+                    entity_db.bulk_write(to_fix[i: i + 1000], ordered=False)
+                    print(f'Fixed Chunk of {i + 1000} records')
+
+                print(f'Done deleting tags')
+            else:
+                print('Nothing to delete.')
 
         else:
             print(usage())

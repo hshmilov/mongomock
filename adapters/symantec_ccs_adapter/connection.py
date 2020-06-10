@@ -1,5 +1,7 @@
 import datetime
 import logging
+import urllib.parse
+
 from typing import List
 
 import funcy
@@ -27,11 +29,11 @@ class SymantecCcsConnection(RESTConnection):
         if self._last_refresh and self._expires_in \
                 and self._last_refresh + datetime.timedelta(seconds=self._expires_in) > datetime.datetime.now():
             return
+
+        password = urllib.parse.quote(self._password)
         response = self._post('oauth/tokens',
                               use_json_in_body=False,
-                              body_params={'username': self._username,
-                                           'password': self._password,
-                                           'grant_type': 'password'})
+                              body_params=f'grant_type=password&username={self._username}&password={password}')
         if not response.get('access_token'):
             raise RESTException(f'Bad login response: {response}')
         self._token = response['access_token']
