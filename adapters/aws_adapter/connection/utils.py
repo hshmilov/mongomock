@@ -264,9 +264,8 @@ def create_custom_waiter(boto_client: boto3.session.Session.client, name: str,
 
     return custom_waiter
 
+
 # pylint: disable=too-many-branches, too-many-statements
-
-
 def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
     new_attached_policy = dict()
 

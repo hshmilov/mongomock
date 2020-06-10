@@ -6,7 +6,8 @@ import concurrent.futures
 from collections import defaultdict
 from typing import Optional
 
-from aws_adapter.connection.aws_cis import append_aws_cis_data_to_device, append_aws_cis_data_to_user
+from aws_adapter.connection.aws_cis import append_aws_cis_data_to_device, \
+    append_aws_cis_data_to_user
 from aws_adapter.connection.aws_connections import connect_client_by_source
 from aws_adapter.connection.aws_devices import query_devices_for_one_account
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import parse_raw_data_inner_regular
@@ -16,16 +17,21 @@ from aws_adapter.connection.aws_rds import parse_raw_data_inner_rds
 from aws_adapter.connection.aws_route53 import parse_raw_data_inner_route53
 from aws_adapter.connection.aws_s3 import parse_raw_data_inner_s3
 from aws_adapter.connection.aws_ssm import parse_raw_data_inner_ssm
-from aws_adapter.connection.aws_users import parse_raw_data_inner_users, query_users_by_client_for_all_sources
+from aws_adapter.connection.aws_users import parse_raw_data_inner_users, \
+    query_users_by_client_for_all_sources, query_roles_by_client_for_all_sources
 from aws_adapter.connection.aws_workspaces import parse_raw_data_inner_workspaces
 from aws_adapter.connection.aws_lambda import parse_raw_data_inner_lambda
-from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, AWSAdapter, AwsRawDataTypes, \
-    AWS_ACCESS_KEY_ID, AWS_ENDPOINT_FOR_REACHABILITY_TEST, REGION_NAME, GET_ALL_REGIONS, AWS_SECRET_ACCESS_KEY, \
-    USE_ATTACHED_IAM_ROLE, ROLES_TO_ASSUME_LIST, PROXY, ACCOUNT_TAG
+from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, \
+    AWSAdapter, AwsRawDataTypes, AWS_ACCESS_KEY_ID, \
+    AWS_ENDPOINT_FOR_REACHABILITY_TEST, REGION_NAME, GET_ALL_REGIONS, \
+    AWS_SECRET_ACCESS_KEY, USE_ATTACHED_IAM_ROLE, ROLES_TO_ASSUME_LIST, \
+    PROXY, ACCOUNT_TAG
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.aws.aws_clients import get_boto3_session, parse_roles_to_assume_file
-from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, REGIONS_NAMES
+from axonius.clients.aws.aws_clients import get_boto3_session, \
+    parse_roles_to_assume_file
+from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, \
+    REGIONS_NAMES
 from axonius.clients.aws.utils import get_aws_config
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import DEFAULT_PARALLEL_COUNT
@@ -327,67 +333,142 @@ class AwsAdapter(AdapterBase, Configurable):
                 content=content)
 
     def _query_users_by_client(self, client_name, client_data_credentials):
-        # This is relevant just for IAM users, so we bail out if its not enabled.
-        if not self.__fetch_iam_users:
-            return
+        if self.__fetch_iam_users:
+            # we must re-create all credentials (const and temporary)
+            client_data, client_config = self._connect_client_once(
+                client_data_credentials, notify_assume_role_errors=True
+            )
 
-        # we must re-create all credentials (const and temporary)
-        client_data, client_config = self._connect_client_once(client_data_credentials, notify_assume_role_errors=True)
-        # First, we must get clients for everything we need
-        client_data_aws_clients = dict()
-        successful_connections = []
-        failed_connections = []
-        warnings_messages = []
-        for account, account_regions_clients in client_data.items():
-            if account not in client_data_aws_clients:
-                client_data_aws_clients[account] = dict()
-            for region_name, client_data_by_region in account_regions_clients.items():
-                current_try = f'{account}_{region_name}'
-                try:
-                    client_data_aws_clients[account][region_name], warnings = \
-                        connect_client_by_source(
-                            get_boto3_session(*client_data_by_region), region_name, client_config, 'users')
-                    successful_connections.append(current_try)
-                    if warnings:
-                        for service_name, service_error in warnings.items():
-                            error_string = f'{current_try}: {service_name} - {service_error}'
-                            logger.warning(error_string)
-                            warnings_messages.append(error_string)
-                except Exception as e:
-                    logger.warning(f'problem with {current_try}', exc_info=True)
-                    failed_connections.append(f'{current_try}: {str(e)}')
+            # First, we must get clients for everything we need
+            client_data_aws_clients = dict()
+            successful_connections = []
+            failed_connections = []
+            warnings_messages = []
+            for account, account_regions_clients in client_data.items():
+                if account not in client_data_aws_clients:
+                    client_data_aws_clients[account] = dict()
+                for region_name, client_data_by_region in account_regions_clients.items():
+                    current_try = f'{account}_{region_name}'
+                    try:
+                        client_data_aws_clients[account][region_name], warnings = \
+                            connect_client_by_source(
+                                get_boto3_session(*client_data_by_region), region_name, client_config, 'users')
+                        successful_connections.append(current_try)
+                        if warnings:
+                            for service_name, service_error in warnings.items():
+                                error_string = f'{current_try}: {service_name} - {service_error}'
+                                logger.warning(error_string)
+                                warnings_messages.append(error_string)
+                    except Exception as e:
+                        logger.warning(f'problem with {current_try}', exc_info=True)
+                        failed_connections.append(f'{current_try}: {str(e)}')
 
-        total_connections = len(successful_connections) + len(failed_connections)
-        content = ''
-        if len(failed_connections) > 0:
-            connections_failures = '\n'.join(failed_connections)
-            content = f'Failed connections: \n{connections_failures}\n\n'
-        if len(warnings_messages) > 0:
-            warnings_str = '\n'.join(warnings_messages)
-            content = f'Warnings: \n{warnings_str}'
+            total_connections = len(successful_connections) + len(failed_connections)
+            content = ''
+            if len(failed_connections) > 0:
+                connections_failures = '\n'.join(failed_connections)
+                content = f'Failed connections: \n{connections_failures}\n\n'
+            if len(warnings_messages) > 0:
+                warnings_str = '\n'.join(warnings_messages)
+                content = f'Warnings: \n{warnings_str}'
 
-        if self.__verbose_auth_notifications is True or len(successful_connections) == 0:
-            self.create_notification(
-                f'AWS Adapter (Users): {len(successful_connections)} / {total_connections} successful connections, '
-                f'{len(warnings_messages)} warnings.',
-                content=content)
+            if self.__verbose_auth_notifications is True or len(successful_connections) == 0:
+                self.create_notification(
+                    f'AWS Adapter (Users): {len(successful_connections)} / {total_connections} successful connections, '
+                    f'{len(warnings_messages)} warnings.',
+                    content=content)
 
-        for account, account_regions_clients in client_data_aws_clients.items():
-            logger.info(f'query_users_by_client account: {account}')
-            did_yield = None
-            for region_name, client_data_by_region in account_regions_clients.items():
-                source_name = f'{account}_{region_name}'
-                try:
-                    if not did_yield:
-                        account_metadata = get_account_metadata(client_data_by_region)
-                        account_metadata['region'] = region_name
+            for account, account_regions_clients in client_data_aws_clients.items():
+                logger.info(f'query_users_by_client account: {account}')
+                did_yield = None
+                for region_name, client_data_by_region in account_regions_clients.items():
+                    source_name = f'{account}_{region_name}'
+                    try:
+                        if not did_yield:
+                            account_metadata = get_account_metadata(client_data_by_region)
+                            account_metadata['region'] = region_name
 
-                        for user_raw in query_users_by_client_for_all_sources(client_data_by_region):
-                            yield source_name, account_metadata, user_raw, AwsRawDataTypes.Users
-                        did_yield = True
-                        break
-                except Exception:
-                    logger.exception(f'Problem querying source {source_name}')
+                            for user_raw in query_users_by_client_for_all_sources(client_data_by_region):
+                                yield source_name, account_metadata, user_raw, AwsRawDataTypes.Users
+                            did_yield = True
+                            break
+                    except Exception:
+                        logger.exception(f'Problem querying source {source_name}')
+
+        if self.__fetch_roles_as_users:
+            # we must re-create all credentials (const and temporary)
+            client_data, client_config = self._connect_client_once(
+                client_data_credentials,
+                notify_assume_role_errors=True)
+
+            # First, we must get clients for everything we need
+            client_data_aws_clients = dict()
+            successful_connections = []
+            failed_connections = []
+            warnings_messages = []
+
+            for account, account_regions_clients in client_data.items():
+                if account not in client_data_aws_clients:
+                    client_data_aws_clients[account] = dict()
+                for region_name, client_data_by_region in account_regions_clients.items():
+                    current_try = f'{account}_{region_name}'
+                    try:
+                        client_data_aws_clients[account][region_name], warnings = \
+                            connect_client_by_source(
+                                get_boto3_session(*client_data_by_region),
+                                region_name,
+                                client_config,
+                                'roles')
+                        successful_connections.append(current_try)
+                        if warnings:
+                            for service_name, service_error in warnings.items():
+                                error_string = f'{current_try}: ' \
+                                               f'{service_name} - ' \
+                                               f'{service_error}'
+                                logger.warning(error_string)
+                                warnings_messages.append(error_string)
+                    except Exception as e:
+                        logger.warning(f'problem with {current_try}', exc_info=True)
+                        failed_connections.append(f'{current_try}: {str(e)}')
+
+            total_connections = len(successful_connections) + len(failed_connections)
+            content = ''
+            if len(failed_connections) > 0:
+                connections_failures = '\n'.join(failed_connections)
+                content = f'Failed connections: \n{connections_failures}\n\n'
+            if len(warnings_messages) > 0:
+                warnings_str = '\n'.join(warnings_messages)
+                content = f'Warnings: \n{warnings_str}'
+
+            if self.__verbose_auth_notifications is True or \
+                    len(successful_connections) == 0:
+                self.create_notification(
+                    f'AWS Adapter (Roles): {len(successful_connections)} / '
+                    f'{total_connections} successful connections, '
+                    f'{len(warnings_messages)} warnings.',
+                    content=content)
+
+            for account, account_regions_clients in client_data_aws_clients.items():
+                logger.info(f'query_roles_by_client account: {account}')
+                did_yield = None
+                for region_name, client_data_by_region in account_regions_clients.items():
+                    source_name = f'{account}_{region_name}'
+                    try:
+                        if not did_yield:
+                            account_metadata = get_account_metadata(
+                                client_data_by_region)
+                            account_metadata['region'] = region_name
+
+                            for role_raw in query_roles_by_client_for_all_sources(
+                                    client_data_by_region):
+                                yield source_name, \
+                                    account_metadata, \
+                                    role_raw, \
+                                    AwsRawDataTypes.Users
+                            did_yield = True
+                            break
+                    except Exception:
+                        logger.exception(f'Problem querying source {source_name}')
 
     @staticmethod
     def _clients_schema():
@@ -450,8 +531,8 @@ class AwsAdapter(AdapterBase, Configurable):
         }
 
     def __parse_raw_data(self, devices_raw_data):
-        for aws_source, account_metadata, devices_raw_data_by_source, generic_resources, raw_data_type \
-                in devices_raw_data:
+        for aws_source, account_metadata, devices_raw_data_by_source, \
+                generic_resources, raw_data_type in devices_raw_data:
             try:
                 if raw_data_type == AwsRawDataTypes.Regular:
                     for device in parse_raw_data_inner_regular(
@@ -461,7 +542,9 @@ class AwsAdapter(AdapterBase, Configurable):
                             self.__options
                     ):
                         if device:
-                            self.append_metadata_to_entity(device, account_metadata, aws_source)
+                            self.append_metadata_to_entity(device,
+                                                           account_metadata,
+                                                           aws_source)
                             yield device
                 elif raw_data_type == AwsRawDataTypes.SSM:
                     try:
@@ -551,9 +634,13 @@ class AwsAdapter(AdapterBase, Configurable):
             try:
                 if raw_data_type == AwsRawDataTypes.Users:
                     try:
-                        user = parse_raw_data_inner_users(self._new_user_adapter(), users_raw_data_by_source)
+                        user = parse_raw_data_inner_users(self._new_user_adapter(),
+                                                          users_raw_data_by_source)
                         if user:
-                            self.append_metadata_to_entity(user, account_metadata, aws_source, {'region': 'Global'})
+                            self.append_metadata_to_entity(user,
+                                                           account_metadata,
+                                                           aws_source,
+                                                           {'region': 'Global'})
                             yield user
                     except Exception:
                         logger.exception(f'Problem parsing user')
@@ -623,6 +710,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_workspaces = config.get('fetch_workspaces') or False
         self.__fetch_lambda = config.get('fetch_lambda') or False
         self.__fetch_iam_users = config.get('fetch_iam_users') or False
+        self.__fetch_roles_as_users = config.get('fetch_roles_as_users')
         self.__parse_iam_policies = config.get('parse_iam_policies') or False
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
@@ -691,6 +779,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_roles_as_users',
+                    'title': 'Fetch IAM roles as users',
+                    'type': 'bool'
+                },
+                {
                     'name': 'parse_iam_policies',
                     'title': 'Parse IAM policies',
                     'type': 'bool'
@@ -755,6 +848,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_rds',
                 'fetch_s3',
                 'fetch_iam_users',
+                'fetch_roles_as_users',
                 'parse_iam_policies',
                 'accessed_services',
                 'fetch_workspaces',
@@ -783,7 +877,9 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_rds': False,
             'fetch_s3': False,
             'fetch_iam_users': False,
+            'fetch_roles_as_users': False,
             'parse_iam_policies': False,
+            'accessed_services': False,
             'fetch_workspaces': False,
             'fetch_lambda': False,
             'fetch_ssm': False,
@@ -796,7 +892,6 @@ class AwsAdapter(AdapterBase, Configurable):
             'verify_primary_account': True,
             'drop_turned_off_machines': False,
             'parallel_count': DEFAULT_PARALLEL_COUNT,
-            'accessed_services': False
         }
 
     @classmethod

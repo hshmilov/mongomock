@@ -9,7 +9,7 @@ import boto3
 
 from aws_adapter.connection.structures import AWSMFADevice, AWSIAMAccessKey, \
     AWSTagKeyValue, AWSIAMPolicy, AWSUserAdapter, AWSUserService, \
-    AWSIAMPolicyPermission
+    AWSIAMPolicyPermission, AWSIAMPolicyPrincipal, AWSIAMPolicyCondition
 from aws_adapter.connection.utils import get_paginated_marker_api, \
     create_custom_waiter, process_attached_iam_policy, process_inline_iam_policy
 from axonius.utils.datetime import parse_date
@@ -20,10 +20,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class AwsUserType(Enum):
     Regular = auto()
     Root = auto()
+    Role = auto()
 
 
 # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-locals,
-# pylint: disable=too-many-statements, logging-format-interpolation
+# pylint: disable=too-many-statements, logging-format-interpolation, too-many-lines
 def query_users_by_client_for_all_sources(client_data):
     iam_client = client_data.get('iam')
     if not iam_client:
@@ -119,6 +120,7 @@ def query_users_by_client_for_all_sources(client_data):
                 if 'list_groups_for_users' not in error_logs_triggered:
                     logger.exception(f'Problem with list_groups_for_user')
                     error_logs_triggered.append('list_groups_for_users')
+                # fallthrough
 
             # user attached policies
             try:
@@ -146,40 +148,46 @@ def query_users_by_client_for_all_sources(client_data):
 
                         # get the policy name to check for AdministratorAccess
                         for policy in attached_policies:
-                            if not isinstance(policy, dict):
-                                raise ValueError(f'Malformed attached policy. '
-                                                 f'Expected dict, got '
-                                                 f'{type(policy)}: '
-                                                 f'{str(policy)}')
+                            if isinstance(policy, dict):
+                                policy_name = policy.get('PolicyName')
+                                if not isinstance(policy_name, str):
+                                    logger.warning(f'Malformed policy name, '
+                                                   f'expected str, got '
+                                                   f'{type(policy_name)}: '
+                                                   f'{str(policy_name)}')
+                                    continue
 
-                            policy_name = policy.get('PolicyName')
-                            if not isinstance(policy_name, str):
-                                logger.warning(f'Malformed policy name, '
-                                               f'expected str, got '
-                                               f'{type(policy_name)}: '
-                                               f'{str(policy_name)}')
-                                continue
-
-                            if policy_name == 'AdministratorAccess':
-                                user['has_administrator_access'] = True
-
-                            attached_user_policy = process_attached_iam_policy(
-                                iam_client=iam_client,
-                                attached_policy=policy)
-
-                            if not isinstance(attached_user_policy, dict):
-                                logger.warning(f'Malformed user policy. '
+                                if policy_name == 'AdministratorAccess':
+                                    user['has_administrator_access'] = True
+                            else:
+                                logger.warning(f'Malformed attached policy. '
                                                f'Expected dict, got '
-                                               f'{type(attached_user_policy)}: '
-                                               f'{str(attached_user_policy)}')
+                                               f'{type(policy)}: '
+                                               f'{str(policy)}')
                                 continue
+                            try:
+                                attached_user_policy = process_attached_iam_policy(
+                                    iam_client=iam_client,
+                                    attached_policy=policy)
 
-                            user['attached_policies'].append(attached_user_policy)
+                                if not isinstance(attached_user_policy, dict):
+                                    raise ValueError(f'Malformed user policy. '
+                                                     f'Expected dict, got '
+                                                     f'{type(attached_user_policy)}: '
+                                                     f'{str(attached_user_policy)}')
+
+                                user['attached_policies'].append(attached_user_policy)
+
+                            except Exception:
+                                logger.exception(f'Unable to fetch user\'s '
+                                                 f'attached policy.')
+                                continue
 
             except Exception:
                 if 'list_attached_user_policies' not in error_logs_triggered:
                     logger.exception(f'Problem with list_attached_user_policies')
                     error_logs_triggered.append('list_attached_user_policies')
+                # fallthrough
 
             # user inline policies
             try:
@@ -189,38 +197,50 @@ def query_users_by_client_for_all_sources(client_data):
                         functools.partial(iam_client.list_user_policies,
                                           UserName=username)
                 ):
-                    if not isinstance(page, dict):
-                        raise ValueError(f'Malformed inline policy page, '
-                                         f'expected a dict, got '
-                                         f'{type(page)}: {str(page)}')
 
-                    for inline_policy in page.get('PolicyNames') or []:
-                        if not isinstance(inline_policy, str):
-                            raise ValueError(f'Malformed inline policies. '
-                                             f'Expected str, got '
-                                             f'{type(inline_policy)}: '
-                                             f'{str(inline_policy)}')
+                    if isinstance(page, dict):
+                        policy_names = page.get('PolicyNames')
+                        if isinstance(policy_names, list):
+                            for inline_policy in policy_names:
+                                if isinstance(inline_policy, str):
+                                    if inline_policy == 'AdministratorAccess':
+                                        user['has_administrator_access'] = True
 
-                        if inline_policy == 'AdministratorAccess':
-                            user['has_administrator_access'] = True
+                                    inline_user_policy = process_inline_iam_policy(
+                                        client=iam_client,
+                                        user_name=username,
+                                        policy=inline_policy)
 
-                        inline_user_policy = process_inline_iam_policy(
-                            client=iam_client,
-                            user_name=username,
-                            policy=inline_policy)
+                                    if not isinstance(inline_user_policy, dict):
+                                        logger.warning(f'Malformed inline user '
+                                                       f'policy. Expected dict, got '
+                                                       f'{type(inline_user_policy)}: '
+                                                       f'{str(inline_user_policy)}')
+                                        continue
 
-                        if not isinstance(inline_user_policy, dict):
-                            logger.warning(f'Malformed inline user policy. '
-                                           f'Expected dict, got '
-                                           f'{type(inline_user_policy)}: '
-                                           f'{str(inline_user_policy)}')
-
-                        user['inline_policies'].append(inline_user_policy)
+                                    user['inline_policies'].append(inline_user_policy)
+                                else:
+                                    logger.warning(f'Malformed inline policies. '
+                                                   f'Expected str, got '
+                                                   f'{type(inline_policy)}: '
+                                                   f'{str(inline_policy)}')
+                                    continue
+                        else:
+                            logger.warning(f'Malformed policy names. Expected a'
+                                           f'list, got {type(policy_names)}: '
+                                           f'{str(policy_names)}')
+                            continue
+                    else:
+                        logger.warning(f'Malformed inline policy page, '
+                                       f'expected a dict, got '
+                                       f'{type(page)}: {str(page)}')
+                        continue
 
             except Exception:
                 if 'list_user_policies' not in error_logs_triggered:
                     logger.exception(f'Problem with list_user_policies')
                     error_logs_triggered.append('list_user_policies')
+                # fallthrough
 
             try:
                 access_keys = []
@@ -314,6 +334,7 @@ def query_users_by_client_for_all_sources(client_data):
             pass
 
         yield root_user, AwsUserType.Root
+
     except Exception:
         pass
 
@@ -378,11 +399,14 @@ def parse_root_user(user: AWSUserAdapter, root_user: dict):
     return None
 
 
+# pylint: disable=no-else-return
 def parse_raw_data_inner_users(user: AWSUserAdapter, user_raw_data: Tuple[Dict, AwsUserType]):
     try:
         user_raw, user_type = user_raw_data
         if user_type == AwsUserType.Root:
             return parse_root_user(user, user_raw)
+        elif user_type == AwsUserType.Role:
+            return parse_user_role(user, user_raw)
 
         # Else, this is a regular user
         if user_type == AwsUserType.Regular and user_raw.get('Arn'):
@@ -581,83 +605,602 @@ def parse_iam_policy(user: AWSUserAdapter, policies: list, policy_type: str):
                  f'{user.user_arn}')
 
     for policy in policies:
-        if not isinstance(policy, dict):
-            raise ValueError(f'Malformed policy. Exptected a dict, got'
-                             f'{type(policy)}: {str(policy)}')
+        if isinstance(policy, dict):
+            name = policy.get('name')
+            if not isinstance(name, str):
+                logger.warning(f'Malformed policy name. Expected a str, got '
+                               f'{type(name)}: {str(name)}')
+                continue
 
-        name = policy.get('name')
-        if not isinstance(name, str):
-            logger.warning(f'Malformed policy name. Expected a str, got '
-                           f'{type(name)}: {str(name)}')
-            continue
+            if name == 'AdministratorAccess':
+                user.has_administrator_access = True
 
-        if name == 'AdministratorAccess':
-            user.has_administrator_access = True
+            permissions = list()
+            try:
+                policy_permissions = policy.get('permissions')
+                if isinstance(policy_permissions, list):
+                    for policy_permission in policy_permissions:
+                        if isinstance(policy_permission, dict):
+                            permission = AWSIAMPolicyPermission(
+                                policy_action=policy_permission.get('actions'),
+                                policy_effect=policy_permission.get('effect'),
+                                policy_resource=policy_permission.get('resource'),
+                                policy_sid=policy_permission.get('sid'),
+                            )
+                            permissions.append(permission)
+                        else:
+                            logger.warning(f'Malformed policy permission. '
+                                           f'Expected a dict, got '
+                                           f'{type(policy_permission)}: '
+                                           f'{str(policy_permission)}')
+                            continue
+                else:
+                    logger.warning(f'Malformed policy permissions. Expected a '
+                                   f'dict, got {type(policy_permissions)}:'
+                                   f'{str(policy_permissions)}')
+            except Exception:
+                logger.exception(f'Unable to set policy permissions')
+                # fallthrough
+            try:
+                policy_count = policy.get('attachment_count')
+                if not isinstance(policy_count, int):
+                    logger.warning(f'Malformed policy count. Expected an int, got '
+                                   f'{type(policy_count)}: {str(policy_count)}')
+                    policy_count = None
 
-        permissions = list()
-        try:
-            policy_permissions = policy.get('permissions')
-            if not isinstance(policy_permissions, list):
-                raise ValueError(f'Malformed policy permissions. Expected a '
-                                 f'dict, got {type(policy_permissions)}:'
-                                 f'{str(policy_permissions)}')
+                boundary_count = policy.get('permission_boundary_count')
+                if not isinstance(boundary_count, int):
+                    logger.warning(f'Malformed permission boundary count. Expected '
+                                   f'an int, got {type(boundary_count)}:'
+                                   f'{str(boundary_count)}')
+                    boundary_count = None
 
-            for policy_permission in policy_permissions:
-                if not isinstance(policy_permission, dict):
-                    raise ValueError(f'Malformed policy permission. Expected a'
-                                     f'dict, got {type(policy_permission)}'
-                                     f'{str(policy_permission)}')
+                attachable = policy.get('is_attachable')
+                if not isinstance(attachable, bool):
+                    logger.warning(f'Malformed attachable. Expected a bool, got '
+                                   f'{type(attachable)}: {str(attachable)}')
+                    attachable = None
 
-                permission = AWSIAMPolicyPermission(
-                    policy_action=policy_permission.get('actions'),
-                    policy_effect=policy_permission.get('effect'),
-                    policy_resource=policy_permission.get('resource'),
-                    policy_sid=policy_permission.get('sid'),
+                user.user_attached_policies.append(
+                    AWSIAMPolicy(
+                        policy_arn=policy.get('arn'),
+                        policy_attachment_count=policy_count,
+                        policy_create_date=parse_date(policy.get('create_date')),
+                        policy_description=policy.get('description'),
+                        policy_id=policy.get('id'),
+                        policy_is_attachable=attachable,
+                        policy_name=name,
+                        policy_permissions=permissions,
+                        policy_permission_boundary_count=boundary_count,
+                        policy_type=policy_type,
+                        policy_updated_date=parse_date(policy.get('update_date')),
+                        policy_version=policy.get('version'),
+                        policy_version_id=policy.get('version_id'),
+                    )
                 )
-                permissions.append(permission)
-        except Exception:
-            logger.exception(f'Unable to set policy permissions')
-            # fallthrough
+            except Exception:
+                logger.exception(
+                    f'Problem adding user managed policies: {str(policies)}')
+                continue
+        else:
+            logger.warning(f'Malformed policy. Expected a dict, got'
+                           f'{type(policy)}: {str(policy)}')
 
-        try:
-            policy_count = policy.get('attachment_count')
-            if not isinstance(policy_count, int):
-                logger.warning(f'Malformed policy count. Expected an int, got '
-                               f'{type(policy_count)}: {str(policy_count)}')
-                policy_count = None
-
-            boundary_count = policy.get('permission_boundary_count')
-            if not isinstance(boundary_count, int):
-                logger.warning(f'Malformed permission boundary count. Expected '
-                               f'an int, got {type(boundary_count)}:'
-                               f'{str(boundary_count)}')
-                boundary_count = None
-
-            attachable = policy.get('is_attachable')
-            if not isinstance(attachable, bool):
-                logger.warning(f'Malformed attachable. Expected a bool, got '
-                               f'{type(attachable)}: {str(attachable)}')
-                attachable = None
-
-            user.user_attached_policies.append(
-                AWSIAMPolicy(
-                    policy_arn=policy.get('arn'),
-                    policy_attachment_count=policy_count,
-                    policy_create_date=parse_date(policy.get('create_date')),
-                    policy_description=policy.get('description'),
-                    policy_id=policy.get('id'),
-                    policy_is_attachable=attachable,
-                    policy_name=name,
-                    policy_permissions=permissions,
-                    policy_permission_boundary_count=boundary_count,
-                    policy_type=policy_type,
-                    policy_updated_date=parse_date(policy.get('update_date')),
-                    policy_version=policy.get('version'),
-                    policy_version_id=policy.get('version_id'),
-                )
-            )
-        except Exception:
-            logger.exception(
-                f'Problem adding user managed policies: {str(policies)}')
-            raise
     logger.debug(f'Finished parsing IAM {policy_type} policy')
+
+
+# pylint: disable=inconsistent-return-statements
+def query_roles_by_client_for_all_sources(client_data):
+    iam_client = client_data.get('iam')
+    if not iam_client:
+        return None
+
+    error_logs_triggered = []
+
+    # fetch roles as users
+    try:
+        for roles_page in get_paginated_marker_api(iam_client.list_roles):
+            if isinstance(roles_page, dict):
+                roles = roles_page.get('Roles')
+                if isinstance(roles, list):
+                    for role in roles:
+                        if not isinstance(role, dict):
+                            raise ValueError(f'Malformed role. Expected a dict,'
+                                             f' got {type(role)}: {str(role)}')
+
+                        role_name = role.get('RoleName')
+                        if not isinstance(role_name, str):
+                            raise ValueError(
+                                f'Malformed role name. Expected a str, '
+                                f'got {type(role_name)}: '
+                                f'{str(role_name)}')
+                        new_role = dict()
+                        new_role['assume_role_policy'] = list()
+
+                        # assume role policy
+                        assume_role_policy_document = role.get('AssumeRolePolicyDocument')
+                        if isinstance(assume_role_policy_document, dict):
+                            # compile the assume role policy for the role
+                            assume_role_policy = dict()
+                            assume_role_policy['version'] = assume_role_policy_document.get('Version')
+                            assume_role_policy['statements'] = list()
+
+                            statements = assume_role_policy_document.get('Statement')
+                            if isinstance(statements, list):
+                                for statement in statements:
+                                    if isinstance(statement, dict):
+                                        policy_actions = list()
+
+                                        # can get a str or a list here
+                                        actions = statement.get('Action')
+                                        if isinstance(actions, str):
+                                            policy_actions = [actions]
+                                        if isinstance(actions, list):
+                                            policy_actions = actions
+
+                                        statement_dict = dict()
+                                        statement_dict['actions'] = list()
+                                        statement_dict['actions'].extend(policy_actions)
+                                        statement_dict['effect'] = statement.get('Effect')
+                                        statement_dict['sid'] = statement.get('Sid')
+                                        statement_dict['condition'] = list()
+                                        statement_dict['principal'] = list()
+
+                                        condition = statement.get('Condition') or {}
+                                        if isinstance(condition, dict):
+                                            # only 1 operator is returned in all cases
+                                            condition_operators = list(condition.keys()) or []
+                                            if isinstance(condition_operators, list):
+                                                for condition_operator in condition_operators:
+                                                    if isinstance(condition_operator, str):
+                                                        conditions = condition[condition_operator]
+                                                        if isinstance(conditions, dict):
+                                                            condition_key = None
+                                                            condition_value = None
+                                                            for k, v in conditions.items():
+                                                                condition_key = k or ''
+                                                                condition_value = v or ''
+
+                                                                statement_dict['condition'].append(
+                                                                    (condition_operator,
+                                                                     condition_key,
+                                                                     condition_value))
+                                                        else:
+                                                            logger.warning(f'Malformed conditions. '
+                                                                           f'Expected a dict, got '
+                                                                           f'{type(conditions)}:'
+                                                                           f'{str(conditions)}')
+                                                    else:
+                                                        logger.warning(
+                                                            f'Malformed condition operator. '
+                                                            f'Expected a str, got '
+                                                            f'{type(condition_operator)}: '
+                                                            f'{str(condition_operator)}')
+                                            else:
+                                                logger.warning(
+                                                    f'Malformed condition operators. '
+                                                    f'Expected a list, got '
+                                                    f'{type(condition_operators)}: '
+                                                    f'{str(condition_operators)}')
+                                        else:
+                                            logger.warning(
+                                                f'Malformed condition statement. '
+                                                f'Expected a dict, got '
+                                                f'{type(condition)}: {str(condition)}')
+
+                                        principal = statement.get('Principal')
+                                        if isinstance(principal, dict):
+                                            principal_type = None
+                                            principal_name = None
+                                            for k, v in principal.items():
+                                                principal_type = k or ''
+                                                principal_name = v or ''
+
+                                                statement_dict['principal'].append(
+                                                    (principal_type, principal_name))
+
+                                            assume_role_policy['statements'].append(
+                                                statement_dict)
+                                        else:
+                                            logger.warning(f'Malformed principal. '
+                                                           f'Expected a dict, '
+                                                           f'got {type(principal)}:'
+                                                           f' {str(principal)}')
+                                    else:
+                                        logger.warning(
+                                            f'Malformed statement. Expected a '
+                                            f'dict, got {type(statement)}: '
+                                            f'{str(statement)}')
+                            else:
+                                logger.warning(
+                                    f'Malformed assume role statement. '
+                                    f'Expected a list, got {type(statements)}: '
+                                    f'{str(statements)}')
+
+                            new_role['assume_role_policy'].append(
+                                assume_role_policy)
+                        else:
+                            logger.warning(f'Malformed assume role policy '
+                                           f'document. Expected a dict, got '
+                                           f'{type(assume_role_policy_document)}: '
+                                           f'{str(assume_role_policy_document)}')
+
+                        # enrich the role data
+                        try:
+                            role_data_raw = iam_client.get_role(RoleName=role_name)
+                            if not isinstance(role_data_raw, dict):
+                                raise ValueError(f'Malformed raw role data. Expected a '
+                                                 f'dict, got {type(role_data_raw)}: '
+                                                 f'{str(role_data_raw)}')
+
+                            role_data = role_data_raw.get('Role')
+                            if isinstance(role_data, dict):
+                                new_role['arn'] = role_data.get('Arn')
+                                new_role['create_date'] = role_data.get('CreateDate')
+                                new_role['description'] = role_data.get('Description')
+                                new_role['max_session'] = role_data.get('MaxSessionDuration')
+                                new_role['path'] = role_data.get('Path')
+                                new_role['role_id'] = role_data.get('RoleId')
+                                new_role['role_name'] = role_name
+                            else:
+                                logger.warning(f'Malformed raw role data. '
+                                               f'Expected a dict, got '
+                                               f'{type(role_data)}: '
+                                               f'{str(role_data)}')
+                        except Exception:
+                            logger.warning(f'Unable to enrich the role data.')
+
+                        # get attached policies
+                        try:
+                            new_role['role_attached_policies'] = list()
+                            for roles_attached_policies_page in get_paginated_marker_api(
+                                    functools.partial(
+                                        iam_client.list_attached_role_policies,
+                                        RoleName=role_name)):
+                                if isinstance(roles_attached_policies_page, dict):
+                                    attached_policies = roles_attached_policies_page.get('AttachedPolicies')
+                                    if isinstance(attached_policies, list):
+                                        for attached_policy in attached_policies:
+                                            if isinstance(attached_policy, dict):
+                                                new_role['role_attached_policies'].append(
+                                                    process_attached_iam_policy(iam_client,
+                                                                                attached_policy))
+                                            else:
+                                                logger.warning(
+                                                    f'Malformed attached policy. '
+                                                    f'Expected a dict, got '
+                                                    f'{type(attached_policy)}: '
+                                                    f'{str(attached_policy)}')
+                                    else:
+                                        logger.warning(
+                                            f'Malformed attached policies. '
+                                            f'Expected a list, got '
+                                            f'{type(attached_policies)}:'
+                                            f'{str(attached_policies)}')
+                                else:
+                                    logger.warning(
+                                        f'Malformed role attached policies '
+                                        f'page. Expected a dict, got '
+                                        f'{type(roles_attached_policies_page)}:'
+                                        f'{str(roles_attached_policies_page)}')
+                        except Exception:
+                            if 'list_attached_role_policies' not in error_logs_triggered:
+                                logger.exception(
+                                    f'Problem with list_attached_role_policies')
+                                error_logs_triggered.append('list_attached_role_policies')
+
+                        # get inline policies
+                        try:
+                            new_role['role_inline_policies'] = list()
+                            for roles_inline_policies_page in get_paginated_marker_api(
+                                    functools.partial(
+                                        iam_client.list_role_policies,
+                                        RoleName=role_name)):
+                                if isinstance(roles_inline_policies_page, dict):
+                                    inline_policy_names = roles_inline_policies_page.get('PolicyNames')
+                                    if isinstance(inline_policy_names, list):
+                                        for inline_policy_name in inline_policy_names:
+                                            if isinstance(inline_policy_name, str):
+                                                try:
+                                                    inline_policy_raw = iam_client.get_role_policy(
+                                                        RoleName=role_name,
+                                                        PolicyName=inline_policy_name)
+                                                except Exception:
+                                                    if 'get_role_policy' not in error_logs_triggered:
+                                                        logger.exception(
+                                                            f'Problem with get_role_policy')
+                                                        error_logs_triggered.append(
+                                                            'get_role_policy')
+                                                    continue
+                                                if isinstance(inline_policy_raw, dict):
+                                                    inline_policy = inline_policy_raw.get('PolicyDocument')
+                                                    if isinstance(inline_policy, dict):
+                                                        new_policy = dict()
+                                                        new_policy['name'] = inline_policy_name
+                                                        new_policy['version'] = inline_policy.get('Version')
+
+                                                        policy_statements = inline_policy.get('Statement')
+                                                        if isinstance(policy_statements, list):
+                                                            # get the permission actions
+                                                            policy_actions = list()
+                                                            for statement in policy_statements:
+                                                                if isinstance(statement, dict):
+                                                                    # can get a str or a list here
+                                                                    actions = statement.get('Action')
+                                                                    if isinstance(actions, str):
+                                                                        policy_actions = [actions]
+                                                                    if isinstance(actions, list):
+                                                                        policy_actions = actions
+
+                                                                    actions_dict = dict()
+                                                                    actions_dict['effect'] = statement.get('Effect')
+                                                                    actions_dict['resource'] = statement.get('Resource')
+                                                                    actions_dict['actions'] = policy_actions
+                                                                    actions_dict['sid'] = statement.get('Sid')
+
+                                                                    new_role['role_inline_policies'].append(
+                                                                        actions_dict)
+                                                                else:
+                                                                    logger.warning(f'Malformed statement. '
+                                                                                   f'Expected dict, got '
+                                                                                   f'{type(statement)}: '
+                                                                                   f'{str(statement)}')
+                                                        else:
+                                                            logger.warning(
+                                                                f'Malformed policy statements. '
+                                                                f'Expected list, got '
+                                                                f'{type(policy_statements)}: '
+                                                                f'{str(policy_statements)}')
+
+                                                    else:
+                                                        logger.warning(
+                                                            f'Malformed inline policy. '
+                                                            f'Expected a dict, got'
+                                                            f'{type(inline_policy)}:'
+                                                            f'{str(inline_policy)}')
+                                                else:
+                                                    logger.warning(f'Malformed raw inline policy.'
+                                                                   f'Expected a dict, got '
+                                                                   f'{type(inline_policy_raw)}:'
+                                                                   f'{str(inline_policy_raw)}')
+                                            else:
+                                                logger.warning(
+                                                    f'Malformed inline policy '
+                                                    f'name. Expected a str, '
+                                                    f'got {type(inline_policy_name)}:'
+                                                    f'{str(inline_policy_name)}')
+                                    else:
+                                        logger.warning(f'Malformed inline policies. '
+                                                       f'Expected a list, got '
+                                                       f'{type(inline_policy_names)}:'
+                                                       f'{str(inline_policy_names)}')
+                                else:
+                                    logger.warning(
+                                        f'Malformed role inline policies '
+                                        f'page. Expected a dict, got '
+                                        f'{type(roles_inline_policies_page)}:'
+                                        f'{str(roles_inline_policies_page)}')
+                        except Exception:
+                            if 'list_role_policies' not in error_logs_triggered:
+                                logger.exception(
+                                    f'Problem with list_role_policies')
+                                error_logs_triggered.append('list_role_policies')
+                            continue
+
+                        yield new_role, AwsUserType.Role
+                else:
+                    logger.warning(f'Malformed extracted roles. Expected a '
+                                   f'list, got {type(roles)}: {str(roles)}')
+            else:
+                logger.warning(f'Malformed roles page. Expected a dict, got '
+                               f'{type(roles_page)}: {str(roles_page)}')
+    except Exception:
+        if 'list_roles' not in error_logs_triggered:
+            logger.exception(
+                f'Problem with list_roles')
+            error_logs_triggered.append('list_roles')
+
+
+def parse_user_role(role: AWSUserAdapter, role_raw: dict):
+    logger.debug(f'Started parsing role: {role_raw.get("arn")} as user')
+    try:
+        role.id = role_raw.get('role_id')
+        role.role_id = role_raw.get('role_id')
+        role.username = role_raw.get('role_name')
+        role.role_name = role_raw.get('role_name')
+        role.role_description = role_raw.get('description')
+        role.user_create_date = parse_date(role_raw.get('create_date'))
+        role.role_arn = role_raw.get('arn')
+        role.role_max_session_duration = role_raw.get('max_session')
+        role.role_path = role_raw.get('path')
+
+        # assume role policy
+        assume_role_policies = role_raw.get('assume_role_policy')
+        if isinstance(assume_role_policies, list):
+            for assume_role_policy in assume_role_policies:
+                if isinstance(assume_role_policy, dict):
+                    policies = assume_role_policy.get('statements')
+                    if isinstance(policies, list):
+                        for policy in policies:
+                            if isinstance(policy, dict):
+                                principals = list()
+                                conditions = list()
+                                policy_principal = policy.get('principal')
+                                if isinstance(policy_principal, list):
+                                    for principal in policy_principal:
+                                        if isinstance(principal, tuple):
+                                            principal_type, principal_name = principal
+                                            try:
+                                                principal_instance = AWSIAMPolicyPrincipal(
+                                                    principal_type=principal_type,
+                                                    principal_name=principal_name
+                                                )
+                                                principals.append(principal_instance)
+                                            except Exception:
+                                                logger.exception(f'Malformed policy '
+                                                                 f'principal: '
+                                                                 f'{str(principal)}')
+                                                continue
+                                        else:
+                                            logger.warning(
+                                                f'Malformed principal. Expected '
+                                                f'a tuple, got {type(principal)}: '
+                                                f'{str(principal)}')
+                                            continue
+                                else:
+                                    logger.warning(f'Malformed policy principal. Expected a '
+                                                   f'list, got {type(policy_principal)}: '
+                                                   f'{str(policy_principal)}')
+
+                                policy_condition = policy.get('condition')
+                                if isinstance(policy_condition, list):
+                                    for condition in policy_condition:
+                                        if isinstance(condition, tuple):
+                                            condition_operator, condition_key, condition_value = condition
+                                            try:
+                                                condition_instance = AWSIAMPolicyCondition(
+                                                    condition_operator=condition_operator,
+                                                    condition_key=condition_key,
+                                                    condition_value=condition_value
+                                                )
+                                                conditions.append(condition_instance)
+                                            except Exception:
+                                                logger.exception(f'Malformed policy '
+                                                                 f'condition: '
+                                                                 f'{str(condition)}')
+                                                continue
+                                        else:
+                                            logger.warning(f'Malformed condition. '
+                                                           f'Expected a tuple, '
+                                                           f'got {type(condition)}: '
+                                                           f'{str(condition)}')
+                                            continue
+                                else:
+                                    logger.warning(
+                                        f'Malformed policy condition. '
+                                        f'Expected a list, got '
+                                        f'{type(policy_condition)}: '
+                                        f'{str(policy_condition)}')
+
+                                policy_permission = AWSIAMPolicyPermission(
+                                    policy_action=policy.get('actions'),
+                                    policy_conditions=conditions,
+                                    policy_effect=policy.get('effect'),
+                                    policy_principals=principals,
+                                    policy_sid=policy.get('sid')
+                                )
+
+                                role_assumed_policy = AWSIAMPolicy(
+                                    policy_permissions=[policy_permission],
+                                    policy_version=assume_role_policy.get(
+                                        'version')
+                                )
+                                role.role_assume_role_policy_document.append(
+                                    role_assumed_policy)
+                            else:
+                                logger.warning(f'Malformed policy. Expected a '
+                                               f'dict, got {type(policy)}: '
+                                               f'{str(policy)}')
+                    else:
+                        logger.warning(f'Malformed policies. Expected a '
+                                       f'list, got {type(policies)}: '
+                                       f'{str(policies)}')
+                else:
+                    logger.warning(f'Malformed assume role policy. Expected a '
+                                   f'dict, got {type(assume_role_policy)}: '
+                                   f'{str(assume_role_policy)}')
+        else:
+            logger.warning(f'Malformed assume role policies. Expected a '
+                           f'list, got {type(assume_role_policies)}: '
+                           f'{str(assume_role_policies)}')
+
+        # attached policies
+        attached_policies = role_raw.get('role_attached_policies') or []
+        if isinstance(attached_policies, list):
+            policy_permissions = list()
+
+            for attached_policy in attached_policies:
+                if isinstance(attached_policy, dict):
+                    for permission in (attached_policy.get('permissions') or {}):
+                        if isinstance(permission, dict):
+                            statement = AWSIAMPolicyPermission(
+                                policy_action=permission.get('actions'),
+                                policy_effect=permission.get('effect'),
+                                policy_resource=permission.get('resource'),
+                                policy_sid=permission.get('sid')
+                            )
+                            policy_permissions.append(statement)
+                        else:
+                            logger.warning(
+                                f'Malformed permission. Expected a dict, '
+                                f'got {type(permission)}: '
+                                f'{str(permission)}')
+
+                    attached_role_policy = AWSIAMPolicy(
+                        policy_attachment_count=attached_policy.get(
+                            'attachment_count'),
+                        policy_create_date=parse_date(attached_policy.get('create_date')),
+                        policy_description=attached_policy.get('description'),
+                        policy_id=attached_policy.get('id'),
+                        policy_is_attachable=attached_policy.get('is_attachable'),
+                        policy_name=attached_policy.get('name'),
+                        policy_permission_boundary_count=attached_policy.get(
+                            'permission_boundary_count'),
+                        policy_permissions=policy_permissions,
+                        policy_updated_date=parse_date(attached_policy.get('update_date')),
+                        policy_version_id=attached_policy.get('version_id'),
+                        policy_version=attached_policy.get('version'),
+                    )
+                    role.role_attached_policies.append(attached_role_policy)
+                else:
+                    logger.warning(f'Malformed attached policy. Expected a '
+                                   f'dict, got {type(attached_policy)}: '
+                                   f'{str(attached_policy)}')
+        else:
+            logger.warning(f'Malformed attached policies. Expected a list, '
+                           f'got {type(attached_policies)}'
+                           f'{str(attached_policies)}')
+
+        # inline policies
+        inline_policies = role_raw.get('role_inline_policies') or []
+        if isinstance(inline_policies, list):
+            policy_permissions = list()
+
+            for inline_policy in inline_policies:
+                if isinstance(inline_policy, dict):
+                    statement = AWSIAMPolicyPermission(
+                        policy_action=inline_policy.get('actions') or [],
+                        policy_effect=inline_policy.get('effect'),
+                        policy_resource=inline_policy.get('resource'),
+                        policy_sid=inline_policy.get('sid')
+                    )
+                    policy_permissions.append(statement)
+
+                    role_policy = AWSIAMPolicy(
+                        policy_attachment_count=inline_policy.get('attachment_count'),
+                        policy_create_date=parse_date(inline_policy.get('create_date')),
+                        policy_description=inline_policy.get('description'),
+                        policy_id=inline_policy.get('id'),
+                        policy_is_attachable=inline_policy.get('is_attachable'),
+                        policy_name=inline_policy.get('name'),
+                        policy_permission_boundary_count=inline_policy.get('permission_boundary_count'),
+                        policy_permissions=policy_permissions,
+                        policy_updated_date=parse_date(inline_policy.get('update_date')),
+                        policy_version_id=inline_policy.get('version_id'),
+                        policy_version=inline_policy.get('version'),
+                    )
+                    role.role_inline_policies.append(role_policy)
+
+                    logger.debug(f'Finished parsing role {role_raw.get("arn")}'
+                                 f' as user')
+                else:
+                    logger.warning(f'Malformed inline policy. Expected a dict, '
+                                   f'got {type(inline_policy)}: '
+                                   f'{str(inline_policy)}')
+        else:
+            logger.warning(f'Malformed inline policies. Expected a list, got '
+                           f'{type(inline_policies)}: {str(inline_policies)}')
+    except Exception:
+        logger.exception(f'Unable to parse user role')
+
+    return role

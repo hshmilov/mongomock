@@ -69,9 +69,22 @@ class AwsSSMSchemas(Enum):
     WindowsUpdate = 'AWS:WindowsUpdate'
 
 
+class AWSIAMPolicyPrincipal(SmartJsonClass):
+    principal_type = Field(str, 'Principal Type')
+    principal_name = Field(str, 'Principal Name')
+
+
+class AWSIAMPolicyCondition(SmartJsonClass):
+    condition_operator = Field(str, 'Condition Operator')
+    condition_key = Field(str, 'Condition Key')
+    condition_value = Field(str, 'Condition Value')
+
+
 class AWSIAMPolicyPermission(SmartJsonClass):
     policy_action = ListField(str, 'Policy Action')
+    policy_conditions = ListField(str, 'Policy Conditions')
     policy_effect = Field(str, 'Policy Effect')
+    policy_principals = ListField(AWSIAMPolicyPrincipal, 'Policy Principals')
     policy_resource = Field(str, 'Policy Resource')
     policy_sid = Field(str, 'Policy SID')
 
@@ -428,6 +441,18 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     user_is_password_enabled = Field(bool, 'User Is Password Enabled')
     uses_virtual_mfa = Field(bool, 'Uses Virtual MFA')
     accessed_services = ListField(AWSUserService, 'Services Accessed By User')
+
+    # role data
+    role_arn = Field(str, 'Role ARN')
+    role_assume_role_policy_document = ListField(AWSIAMPolicy, 'Assume Role Policies')
+    role_attached_policies = ListField(AWSIAMPolicy, 'Role Attached Policies')
+    role_inline_policies = ListField(AWSIAMPolicy, 'Role Inline Policies')
+    role_create_date = Field(datetime.datetime, 'Role Creation Date')
+    role_description = Field(str, 'Role Description')
+    role_max_session_duration = Field(int, 'Role Maximum Session Duration')
+    role_path = Field(str, 'Role Path')
+    role_id = Field(str, 'Role ID')
+    role_name = Field(str, 'Role Name')
 
 
 class OnlyAWSDeviceAdapter(AWSAdapter):
