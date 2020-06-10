@@ -913,7 +913,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading core db to version 17. Details: {e}')
             traceback.print_exc()
-            raise e
+            raise
 
     def _update_schema_version_18(self):
         print(f'Upgrading to schema version 18 - Nexpose adapter')

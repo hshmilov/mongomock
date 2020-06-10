@@ -316,6 +316,9 @@ class Page:
     def fill_text_field_by_css_selector(self, css_selector, value, context=None, last_field=False):
         return self.fill_text_field_by(By.CSS_SELECTOR, css_selector, value, context, last_field=last_field)
 
+    def fill_text_field_by_xpath(self, xpath, value, context=None, last_field=False):
+        return self.fill_text_field_by(By.XPATH, xpath, value, context, last_field=last_field)
+
     def fill_text_field_by(self, by, by_value, value, context=None, last_field=False):
         try:
             base = context if context is not None else self.driver

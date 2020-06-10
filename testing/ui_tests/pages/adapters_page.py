@@ -2,6 +2,7 @@ import re
 import time
 from collections import namedtuple
 from copy import copy
+import pytest
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
@@ -25,9 +26,6 @@ Adapter = namedtuple('Adapter', 'name description')
 JSON_NAME = 'JSON File'
 
 # Junk that shouldn't be here
-ADAPTER_THYCOTIC_VAULT_BUTTON = 'cyberark-button'
-ADAPTER_THYCOTIC_VAULT_QUERY_ID = 'cyberark-query'
-ADAPTER_THYCOTIC_VAULT_ICON = '.cyberark-icon .x-icon'
 CONNECTION_LABEL = 'AXON'
 CONNECTION_LABEL_UPDATED = 'AXON2'
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
@@ -355,6 +353,10 @@ class AdaptersPage(EntitiesPage):
     def find_password_vault_button(self):
         return self.driver.find_element_by_css_selector(self.PASSWORD_VAULT_TOGGLE_CSS)
 
+    def verify_password_vault_button_not_present(self):
+        with pytest.raises(NoSuchElementException):
+            self.find_password_vault_button()
+
     def find_password_vault_button_status(self):
         return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS} .status')
 
@@ -411,6 +413,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.wait_for_table_to_load()
         self.click_edit_server()
+        self.wait_for_element_present_by_id(element_id='connectionLabel', retries=3)
         self.fill_creds(connectionLabel=connection_label)
         self.click_save()
 
@@ -435,50 +438,37 @@ class AdaptersPage(EntitiesPage):
         else:
             self.click_edit_server(row_position - 1)
 
-    def click_thycotic_button(self):
-        element = self.driver.find_element_by_css_selector(ADAPTER_THYCOTIC_VAULT_ICON)
-        element.click()
+    def click_vault_button(self):
+        self.find_password_vault_button().click()
+        # wait for vault popup by sync on fetch button
+        self.wait_for_element_present_by_id(element_id='approveId', retries=5)
 
-    def find_thycotic_vault_icon(self):
-        return self.driver.find_element_by_id(ADAPTER_THYCOTIC_VAULT_BUTTON)
-
-    def verify_thycotic_button_is_not_present(self):
-        if len(self.driver.find_elements_by_id(ADAPTER_THYCOTIC_VAULT_BUTTON)):
+    def check_vault_fetch_status(self, should_succeed=True) -> bool:
+        try:
+            password_vault_icon_status = self.find_password_vault_button_status()
+            class_attribute = 'success' if should_succeed else 'error'
+            return class_attribute in password_vault_icon_status.get_attribute('class')
+        except NoSuchElementException:
             return False
-        return True
 
-    def assert_thycotic_vault_icon_appear(self):
-        element = self.find_thycotic_vault_icon()
-        assert element is not None
+    def check_vault_passsword_success_status(self) -> bool:
+        return self.check_vault_fetch_status(should_succeed=True)
 
-    def check_thycotic_fetch_status(self, should_succeed=True):
-        thycotic_icon_element = self.driver.find_element_by_css_selector(ADAPTER_THYCOTIC_VAULT_ICON)
-        class_attribute = 'success' if should_succeed else 'error'
-        return class_attribute in thycotic_icon_element.get_attribute('class')
-
-    def check_thycotic_success_status(self):
-        assert self.check_thycotic_fetch_status(should_succeed=True)
-
-    def check_thycotic_failure_status(self):
-        assert self.check_thycotic_fetch_status(should_succeed=False)
+    def check_vault_passsword_failure_status(self) -> bool:
+        return self.check_vault_fetch_status(should_succeed=False)
 
     def fetch_password_from_thycotic_vault(self, screct_id: str, is_negative_test=False):
-        # Waiting until cyberark icon is present
-        wait_until(self.assert_thycotic_vault_icon_appear,
-                   check_return_value=False,
-                   tolerated_exceptions_list=[AssertionError, NoSuchElementException])
-        self.click_thycotic_button()
-        self.fill_text_field_by_element_id(ADAPTER_THYCOTIC_VAULT_QUERY_ID, screct_id)
+        wait_until(self.find_password_vault_button,
+                   check_return_value=True,
+                   tolerated_exceptions_list=[NoSuchElementException])
+        self.click_vault_button()
+        self.fill_text_field_by_xpath('//label[contains(.,\'Secret ID\')]//following::input[1]', screct_id)
         self.click_button('Fetch')
 
         if is_negative_test:
-            wait_until(self.check_thycotic_failure_status,
-                       check_return_value=False,
-                       tolerated_exceptions_list=[AssertionError, NoSuchElementException])
+            wait_until(self.check_vault_passsword_failure_status, check_return_value=True, total_timeout=30)
         else:
-            wait_until(self.check_thycotic_success_status,
-                       check_return_value=False,
-                       tolerated_exceptions_list=[AssertionError, NoSuchElementException])
+            wait_until(self.check_vault_passsword_success_status, check_return_value=True, total_timeout=30)
 
     def find_server_connection_label_value(self):
         return self.driver.find_element_by_id('connectionLabel').get_attribute('value')

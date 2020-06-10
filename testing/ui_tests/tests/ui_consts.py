@@ -49,6 +49,7 @@ WMI_INFO_ADAPTER = 'WMI Info'
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 CISCO_PRIME_ADAPTER_NAME = 'Cisco Prime'
 
+
 CSV_NAME = 'CSV'
 CSV_PLUGIN_NAME = 'csv_adapter'
 
@@ -109,6 +110,8 @@ DISCOVERY_UPDATED_VALUE = '8'
 
 S3_DEVICES_BACKUP_FILE_NAME = 'devices_file_name'
 S3_USERS_BACKUP_FILE_NAME = 'users_file_name'
+
+CSV_ADAPTER_FILTER = 'adapters == "csv_adapter"'
 
 
 class EmailSettings:

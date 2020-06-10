@@ -8,6 +8,7 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
+from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER
 
 
 class DevicesPage(EntitiesPage):
@@ -302,3 +303,9 @@ class DevicesPage(EntitiesPage):
     def click_query_search_when_auto_query_disabled(self):
         self.click_button(text='Search',
                           button_class='ant-btn ant-btn-primary x-button')
+
+    def check_csv_device_count(self):
+        self.switch_to_page()
+        self.refresh()
+        self.run_filter_query(CSV_ADAPTER_FILTER)
+        return self.count_entities()

@@ -10,10 +10,7 @@ from test_credentials.test_csv_credentials import client_details as csv_client_d
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import CSV_NAME, CSV_PLUGIN_NAME
 
-
 GOOD_QUERY = r'Safe=Test;Folder=root\OS\Windows;Object=windows1'
-
-CSV_ADAPTER_FILTER = 'adapters == "csv_adapter"'
 STOP_GRACE_PERIOD = '2'  # 2 seconds, we don't really care.
 
 
@@ -71,16 +68,6 @@ class TestCyberarkIntegration(TestBase):
         csv = CsvService().contextmanager(take_ownership=True, stop_grace_period=STOP_GRACE_PERIOD)
         return csv
 
-    def _check_device_count(self):
-        self.devices_page.switch_to_page()
-        self.devices_page.refresh()
-        self.devices_page.run_filter_query(CSV_ADAPTER_FILTER)
-        return self.devices_page.count_entities()
-
-    def _did_fetch_succeed(self):
-        password_vault_icon_status = self.adapters_page.find_password_vault_button_status()
-        return 'success' in password_vault_icon_status.get_attribute('class')
-
     def test_successful_get(self):
         with self._cyberark_context_manager(), self._csv_context_manager():
             print('Started the cyberark vault simulator.')
@@ -92,14 +79,14 @@ class TestCyberarkIntegration(TestBase):
             self._input_query_string()
             # Check successful vault fetch
             print('Waiting for vault fetch.')
-            assert self._did_fetch_succeed()
+            assert self.adapters_page.check_vault_passsword_success_status()
             # Check successful device fetch.
             self._wait_until_click_intercepted(self.adapters_page.click_save)
             self.adapters_page.wait_for_table_to_load()
             print('Running discovery.')
             self._wait_until_click_intercepted(self.base_page.run_discovery)
             print('Waiting for devices to appear.')
-            wait_until(lambda: self._check_device_count() > 0, total_timeout=200, interval=5)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=5)
             self.adapters_page.clean_adapter_servers(CSV_NAME)
 
         print('Removing cyberark settings.')
@@ -118,7 +105,7 @@ class TestCyberarkIntegration(TestBase):
 
         print('Fetching cyberark query.')
         self.adapters_page.click_button('Fetch')
-        wait_until(self._did_fetch_succeed, check_return_value=False,
+        wait_until(self.adapters_page.check_vault_passsword_success_status, check_return_value=False,
                    tolerated_exceptions_list=[AssertionError])
 
         self.adapters_page.fill_upload_csv_form_with_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
@@ -144,7 +131,7 @@ class TestCyberarkIntegration(TestBase):
             print('Running discovery.')
 
             self._wait_until_click_intercepted(self.base_page.run_discovery)
-            wait_until(lambda: self._check_device_count() > 0, total_timeout=200, interval=20)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
             self.adapters_page.clean_adapter_servers(CSV_NAME)
 
         print('Removing cyberark settings.')
@@ -159,7 +146,7 @@ class TestCyberarkIntegration(TestBase):
 
             self._input_query_string(query='TestThis')
             # Check failing vault fetch
-            assert not self._did_fetch_succeed()
+            assert self.adapters_page.check_vault_passsword_failure_status()
             self.adapters_page.click_cancel()
             self.adapters_page.clean_adapter_servers(CSV_NAME)
 
@@ -174,7 +161,7 @@ class TestCyberarkIntegration(TestBase):
 
             self._input_query_string()
             # Check failing vault fetch
-            assert not self._did_fetch_succeed()
+            assert self.adapters_page.check_vault_passsword_failure_status()
 
             self.adapters_page.click_cancel()
             self.adapters_page.clean_adapter_servers(CSV_NAME)
@@ -194,14 +181,14 @@ class TestCyberarkIntegration(TestBase):
                 self._input_query_string()
                 # Check successful vault fetch
                 print('waiting for check fetch')
-                assert self._did_fetch_succeed()
+                assert self.adapters_page.check_vault_passsword_success_status()
                 # Check successful device fetch.
                 self.adapters_page.click_save()
                 self.adapters_page.wait_for_table_to_load()
                 print('Running discovery.')
                 self.base_page.run_discovery()
                 print('waiting for check device count')
-                wait_until(lambda: self._check_device_count() > 0, total_timeout=200, interval=20)
+                wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
 
             print('cyberark simulator is killed, done checking waiting for check device count.')
             self.base_page.run_discovery()
@@ -217,7 +204,7 @@ class TestCyberarkIntegration(TestBase):
 
             # check cyberark fetch
             print('check fetch.')
-            assert not self._did_fetch_succeed()
+            assert self.adapters_page.check_vault_passsword_failure_status()
             self.adapters_page.is_query_error()
             assert CYBERARK_TEST_MOCK['domain'] in self.adapters_page.find_server_error()
             print('Canceling.')
