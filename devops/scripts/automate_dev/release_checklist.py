@@ -7,11 +7,14 @@ from pathlib import Path
 from subprocess import STDOUT, run
 
 from CI.exports.version_passwords import VersionPasswords
+from scripts.automate_dev.share_ami import AmiShare
 from builds import Builds
 
+AXONIUS_SAAS_ACCOUNT_ID = '604119231150'
 AWS_KEY_VAR = 'AWS_ACCESS_KEY_ID'
 AWS_SECRET_VAR = 'AWS_SECRET_ACCESS_KEY'
 REGION = 'us-east-2'
+SAAS_REGION = 'us-east-1'
 
 
 def flush():
@@ -106,17 +109,38 @@ def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
     run_on_subprocess(copy_to_protected_link_command, env=env, shell=True, check=True, stderr=STDOUT)
 
 
-def print_epilog(version_name, ami_id, commit_hash, **_):
+def share_with_saas_acount(aws_key, aws_secret, unencrypted_ami_id, **_):
+    ami_share = AmiShare(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+    image_id_new_region = ami_share.copy_to_region(unencrypted_ami_id, SAAS_REGION, is_release=True)
+
+    ami_share.modify_permissions(image_id_new_region, dst_account=AXONIUS_SAAS_ACCOUNT_ID, region=SAAS_REGION)
+    log(f'Shared AMI with saas account, AMI: {image_id_new_region}')
+
+
+def print_epilog(version_name, ami_id, commit_hash, unencrypted_ami_id, **_):
 
     version_password = VersionPasswords()
     password = version_password.get_password_for_version(version_name)
 
+    base_amazon_url = 'https://axonius-releases.s3-accelerate.amazonaws.com'
+    def folder_url(vn): return f'{base_amazon_url}/{vn}/{vn}'
+    unencrypted_version_name = version_name + '-unencrypted'
+
+    def vhd(vn): return f'{folder_url(vn)}/{vn}_export.vhdx'
+    def qcow(vn): return f'{folder_url(vn)}/{vn}_disk.qcow3'
+    def ova(vn): return f'{folder_url(vn)}/{vn}_export.ova'
+
     log(f'commit_hash: {commit_hash}')
     log(f'ami-id: {ami_id}')
-    log(f'version password {password}')
-    log(
-        f'OVA link: https://axonius-releases.s3-accelerate.amazonaws.com/{version_name}/{version_name}/{version_name}_export.ova')
-    log(f'Upgrader link: https://axonius-releases.s3-accelerate.amazonaws.com/{version_name}/axonius_{version_name}.py')
+    log(f'unencrypted-ami-id: {unencrypted_ami_id}')
+    log(f'decrypt password {password}')
+    log(f'OVA link: {ova(version_name)}')
+    log(f'VHD link: {vhd(version_name)}')
+    log(f'QCOW link: {qcow(version_name)}')
+    log(f'Unencrypted OVA link: {ova(unencrypted_version_name)}')
+    log(f'Unencrypted VHD link: {vhd(unencrypted_version_name)}')
+    log(f'Unencrypted QCOW link: {qcow(unencrypted_version_name)}')
+    log(f'Upgrader link: {base_amazon_url}/{version_name}/axonius_{version_name}.py')
     log('Release checklist is finished successfully!')
 
 
@@ -134,8 +158,12 @@ def main():
 
     args = parser.parse_args()
 
+    unencrypted_version_name = args.version_name + '-unencrypted'
+
     builds_instance = Builds()
     export = builds_instance.get_export_by_name(args.version_name)
+    export_unencrypted = builds_instance.get_export_by_name(unencrypted_version_name)
+
     commit_hash = export['git_hash']
     ami_id = export['ami_id']
 
@@ -144,6 +172,7 @@ def main():
                      version_name=args.version_name,
                      commit_hash=commit_hash,
                      ami_id=ami_id,
+                     unencrypted_ami_id=export_unencrypted['ami_id'],
                      gen_new_pass=args.gen_new_pass)
 
     create_tag(**arguments)
@@ -153,6 +182,8 @@ def main():
     upload_to_production(**arguments)
 
     copy_to_protected_link(**arguments)
+
+    share_with_saas_acount(**arguments)
 
     print_epilog(**arguments)
 

@@ -26,6 +26,11 @@ fi
 python copy_release_to_protected_link.py --aws-key ${AWS_ACCESS_KEY_ID} --aws-secret ${AWS_SECRET_ACCESS_KEY} ${should_change_password_arg}
 
 echo "OVA link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/${name_of_version}/${name_of_version}_export.ova"
+echo "VHD link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/${name_of_version}/${name_of_version}_export.vhdx"
+echo "QCOW link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/${name_of_version}/${name_of_version}_disk.qcow3"
+echo "Unencrypted OVA link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}-unencrypted/${name_of_version}-unencrypted/${name_of_version}-unencrypted_export.ova"
+echo "Unencrypted VHD link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}-unencrypted/${name_of_version}-unencrypted/${name_of_version}-unencrypted_export.vhdx"
+echo "Unencrypted QCOW link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}-unencrypted/${name_of_version}-unencrypted/${name_of_version}-unencrypted_disk.qcow3"
 echo "Upgrader link: https://axonius-releases.s3-accelerate.amazonaws.com/${name_of_version}/axonius_${name_of_version}.py"
 
 echo "Release checklist is finished successfully!"

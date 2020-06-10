@@ -6,8 +6,9 @@ from scripts.automate_dev.latest_ami import get_latest_ami
 
 
 class AmiShare:
-    def __init__(self, region='us-east-2'):
+    def __init__(self, region='us-east-2', **credentials):
         self.region = region
+        self._credentials = credentials
 
     def get_images(self, region=None):
         ec2_client = self.get_client_for_region(region)
@@ -22,17 +23,17 @@ class AmiShare:
 
     def get_client_for_region(self, region=None):
         region = region or self.region
-        return boto3.client('ec2', region_name=region)
+        return boto3.client('ec2', region_name=region, **self._credentials)
 
     def get_resource(self, region):
         region = region or self.region
-        return boto3.resource('ec2', region_name=region)
+        return boto3.resource('ec2', region_name=region, **self._credentials)
 
     def get_images_by_name(self, name, region=None):
         ec2_client = self.get_client_for_region(region)
         return ec2_client.describe_images(Owners=['self'], Filters=[{'Name': 'name', 'Values': [name]}])['Images']
 
-    def copy_to_region(self, ami_id, dst_region):
+    def copy_to_region(self, ami_id, dst_region, is_release=False):
         dst_client = self.get_client_for_region(dst_region)
 
         name = self.get_resource(self.region).Image(ami_id).name
@@ -45,9 +46,10 @@ class AmiShare:
             return image_id
         else:
             print(f'{name} is missing in {dst_region}, copying')
+            prefix = 'AX_RELEASE_' if is_release else ''
             res = dst_client.copy_image(
                 Name=name,
-                Description=name,
+                Description=prefix + name,
                 SourceImageId=ami_id,
                 SourceRegion=self.region
             )

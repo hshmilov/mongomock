@@ -37,3 +37,23 @@ curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POS
     </properties>
 
 </build>"
+
+echo "Triggering unencrypted teamcity build."
+curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POST \
+  $TEAMCITY_SERVERURL/httpAuth/app/rest/buildQueue \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/xml' \
+  -d "<build>
+  <triggeringOptions cleanSources=\"true\" rebuildAllDependencies=\"false\" queueAtTop=\"false\"/>
+  <buildType id=\"Exports_Cloud\"/>
+   <properties>
+        <property name=\"env.startedBy\" value=\"build was triggering from $TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID\"/>
+        <property name=\"name\" value=\"${NAME}-unencrypted\"/>
+        <property name=\"s3bucket\" value=\"$S3_BUCKET\"/>
+        <property name=\"teamcity.build.triggeredBy.username\" value=\"$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME\"/>
+        <property name=\"branch\" value=\"$BRANCH\"/>
+        <property name=\"fork\" value=\"$FORK\"/>
+        <property name=\"env.ADDITIONAL_EXPORTS_PARAMS\" value=\"--unencrypted --installer-s3-name $NAME $ADDITIONAL_CLOUD_PARAMS\"/>
+    </properties>
+
+</build>"
