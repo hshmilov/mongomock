@@ -1,0 +1,132 @@
+{
+  "variables": {
+    "disk_size": "5",
+    "output_directory": "output-ubuntu-lvm",
+    "vm_name": "disk.raw",
+    "s3_key_name": "ubuntu-16.04-lvm/ubuntu-image-{{timestamp}}",
+    "s3_bucket_name": "axonius-releases"
+  },
+  "builders": [
+    {
+      "type": "qemu",
+      "iso_url": "http://releases.ubuntu.com/releases/16.04/ubuntu-16.04.6-server-amd64.iso",
+      "iso_checksum_url": "http://releases.ubuntu.com/releases/16.04/SHA256SUMS",
+      "iso_checksum_type": "sha256",
+      "disk_size": "{{user `disk_size`}}G",
+      "cpus": 2,
+      "accelerator": "kvm",
+      "format": "raw",
+      "memory": 4096,
+      "output_directory": "{{user `output_directory`}}",
+      "disk_interface": "virtio-scsi",
+      "disk_discard": "unmap",
+      "disk_detect_zeroes": "on",
+      "ssh_username": "ubuntu",
+      "ssh_password": "bringorder",
+      "vm_name": "{{user `vm_name`}}",
+      "headless": true,
+      "ssh_timeout": "50m",
+      "http_directory": "http",
+      "qemuargs": [
+        ["-netdev", "user,id=user.0,net=10.0.2.0/26,hostfwd=tcp::{{ .SSHHostPort }}-:22"],
+        ["-device", "virtio-net,netdev=user.0"],
+        ["-device", "virtio-scsi-pci,id=scsi0"],
+        ["-device", "scsi-hd,bus=scsi0.0,drive=drive0"]
+      ],
+      "boot_command": [
+        "<enter><f6><esc>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs>",
+        "<bs><bs><bs>",
+        "auto ",
+        "preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
+        "debian-installer=en_US ",
+        "locale=en_US ",
+        "hostname=axonius ",
+        "fb=false ",
+        "debconf/frontend=noninteractive ",
+        "keyboard-configuration/modelcode=SKIP ",
+        "keyboard-configuration/layout=USA ",
+        "keyboard-configuration/variant=USA ",
+        "vga=788 ",
+        "initrd=/install/initrd.gz ",
+        "quiet --- ",
+        "<enter>"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt-get update",
+        "sudo apt-get install cloud-init -yq"
+      ],
+      "execute_command": "echo 'bringorder' | sudo -S bash {{.Path}}"
+    },
+    {
+      "type": "file",
+      "source": "{{ template_dir }}/grow_partition.sh",
+      "destination": "/home/ubuntu/grow_partition.sh"
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "compress",
+        "output": "{{user `output_directory`}}/{{user `vm_name`}}.tar.gz"
+      },
+      {
+        "type": "googlecompute-import",
+        "project_id": "axonius-office",
+        "bucket": "axonius-releases",
+        "image_name": "ubuntu16-server-lvm-{{timestamp}}",
+        "image_description": "Ubuntu 16.04 LVM",
+        "image_family": "ubuntu16-lvm"
+      }
+    ],
+    [
+      {
+        "type": "amazon-import",
+        "region": "us-east-2",
+	"keep_input_artifact": true,
+        "format": "raw",
+        "skip_clean": true,
+        "s3_bucket_name": "{{user `s3_bucket_name`}}",
+        "s3_key_name": "{{user `s3_key_name`}}",
+        "license_type": "BYOL",
+        "ami_name": "Ubuntu 16.04 LVM {{timestamp}}",
+        "tags": {
+          "Description": "packer amazon-import {{timestamp}}",
+          "Name": "Ubuntu 16.04 LVM {{timestamp}}"
+        }
+      },
+      {
+        "type": "shell-local",
+        "inline": ["sha256sum {{user `output_directory`}}/{{user `vm_name`}} | awk '{printf \"%s ubuntu-image.raw\\n\", $1}' > bare_image_checksum_to_upload"]
+      },
+      {
+        "type": "shell-local",
+        "inline": ["aws s3 cp s3://{{user `s3_bucket_name`}}/{{user `s3_key_name`}} s3://{{user `s3_bucket_name`}}/ubuntu-16.04-lvm/ubuntu-image.raw"]
+      },
+      {
+        "type": "shell-local",
+        "inline": ["aws s3 cp bare_image_checksum_to_upload s3://{{user `s3_bucket_name`}}/ubuntu-16.04-lvm/sha256sum"]
+      }
+    ]
+  ]
+}

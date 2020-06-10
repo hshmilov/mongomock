@@ -65,7 +65,6 @@
       "type": "qemu",
       "iso_url": "{{user `iso_url`}}",
       "iso_checksum_url": "{{user `iso_checksum_url`}}",
-      "iso_checksum_type": "sha256",
       "disk_image": true,
       "disk_size": "{{user `disk_size`}}G",
       "cpus": 8,
@@ -93,14 +92,15 @@
     {
       "type": "shell",
       "inline": [
-        "export HISTFILE=/dev/null"
+        "export HISTFILE=/dev/null",
+        "echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"
       ]
     },
     {
       "type": "shell",
-      "inline": [
-        "echo ubuntu:bringorder | sudo /usr/sbin/chpasswd"
-      ]
+      "script": "./grow_partition.sh",
+      "remote_folder": "/tmp",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
       "type": "shell",

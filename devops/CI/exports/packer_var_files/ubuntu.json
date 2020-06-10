@@ -1,9 +1,9 @@
 {
     "init_host_filename": "init_host.sh",
-    "source_image_project_id": "ubuntu-os-cloud",
-    "source_image_family": "ubuntu-1604-lts",
-    "source_ami_filter_name": "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*",
-    "source_ami_owner": "099720109477",
-    "iso_url": "http://cloud-images.ubuntu.com/releases/xenial/release/ubuntu-16.04-server-cloudimg-amd64-disk1.img",
-    "iso_checksum_url": "http://cloud-images.ubuntu.com/releases/xenial/release/SHA256SUMS"
+    "source_image_project_id": "axonius-office",
+    "source_image_family": "ubuntu16-lvm",
+    "source_ami_filter_name": "Ubuntu 16.04 LVM *",
+    "source_ami_owner": "self",
+    "iso_url": "https://axonius-releases.s3.us-east-2.amazonaws.com/ubuntu-16.04-lvm/ubuntu-image.raw",
+    "iso_checksum_url": "https://axonius-releases.s3.us-east-2.amazonaws.com/ubuntu-16.04-lvm/sha256sum"
 }
