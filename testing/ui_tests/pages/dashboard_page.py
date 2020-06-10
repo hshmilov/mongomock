@@ -6,7 +6,7 @@ from decimal import Decimal, getcontext
 import pytest
 
 from retrying import retry
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.color import Color
 
@@ -296,7 +296,8 @@ class DashboardPage(Page):
         the timeout is 60sec, with 0.5sec interval try 120 clicks (defined in wait_until)
         :return:
         """
-        wait_until(func=self.do_open_card_wizard, tolerated_exceptions_list=[NoSuchElementException])
+        wait_until(func=self.do_open_card_wizard,
+                   tolerated_exceptions_list=[NoSuchElementException, ElementClickInterceptedException])
 
     def do_open_card_wizard(self):
         """

@@ -25,5 +25,6 @@ class TestSoftlayerAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         pass
 
+    @pytest.mark.skip('flaky')
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)
