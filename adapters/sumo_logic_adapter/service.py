@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.configurable import Configurable
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.dynamic_device_mixin import DynamicDeviceMixin
 from axonius.utils.files import get_local_config_file
 from sumo_logic_adapter import consts
@@ -17,11 +18,16 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
     # pylint: disable=too-many-instance-attributes
+
     class MyDeviceAdapter(DeviceAdapter):
         # all fields are either dynamic or aggregated ones
         pass
 
-    DYNAMIC_FIELD_COLLISION_TITLE_PREFIX = 'SumoLogic'
+    class MyUserAdapter(UserAdapter):
+        # all fields are either dynamic or aggregated ones
+        pass
+
+    DYNAMIC_FIELD_TITLE_PREFIX = 'SumoLogic'
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -49,7 +55,7 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            return client_config, self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -65,10 +71,31 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
 
         :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            yield from client_data.get_device_list(max_log_history=self.__max_log_history,
-                                                   maximum_records=self.__maximum_records,
-                                                   include_messages=self.__include_messages)
+        client_config, client_conn = client_data
+        if client_config.get('is_users'):
+            return
+        with client_conn:
+            yield from client_conn.iter_search_results(max_log_history=self.__max_log_history,
+                                                       maximum_records=self.__maximum_records,
+                                                       include_messages=self.__include_messages)
+
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(self, client_name, client_data):
+        """
+        Get all users from a specific  domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        client_config, client_conn = client_data
+        if not client_config.get('is_users'):
+            return
+        with client_conn:
+            yield from client_conn.iter_search_results(max_log_history=self.__max_log_history,
+                                                       maximum_records=self.__maximum_records,
+                                                       include_messages=self.__include_messages)
 
     @staticmethod
     def _clients_schema():
@@ -102,6 +129,11 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
                     'type': 'string',
                 },
                 {
+                    'name': 'is_users',
+                    'title': 'Data Contains Users Information',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -117,6 +149,7 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
                 'access_id',
                 'access_key',
                 'search_query',
+                'is_users',
                 'verify_ssl'
             ],
             'type': 'array'
@@ -130,6 +163,19 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
             return device
         except Exception:
             logger.exception(f'Problem with fetching SumoLogic Device for {device_raw}')
+            return None
+
+    def _create_user(self, user_raw):
+        try:
+            if not isinstance(user_raw, dict):
+                logger.warning(f'Invalid user_raw: {user_raw}')
+                return None
+            user = self._new_user_adapter()
+            self.fill_dynamic_user(user, user_raw)
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching SumoLogic User for {user_raw}')
             return None
 
     # pylint: disable=arguments-differ
@@ -148,6 +194,12 @@ class SumoLogicAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
             device = self._create_device(device_raw)
             if device:
                 yield device
+
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user
 
     def _on_config_update(self, config):
         logger.info(f'Loading Sumo Logic config: {config}')

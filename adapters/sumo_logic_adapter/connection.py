@@ -335,8 +335,11 @@ class SumoLogicConnection(RESTConnection):
 
         return errors, warnings
 
-    # pylint: disable=arguments-differ
-    def get_device_list(self, max_log_history: int, maximum_records: int, include_messages: bool = False):
+    def iter_search_results(self, max_log_history: int, maximum_records: int, include_messages: bool = False):
         start_timestamp = datetime.utcnow() - timedelta(days=max_log_history)
         yield from self.iter_search(earliest=start_timestamp, limit=maximum_records,
                                     include_messages=include_messages)
+
+    def get_device_list(self):
+        # We use iter_search_results for get_device_list (and get_user_list)
+        pass

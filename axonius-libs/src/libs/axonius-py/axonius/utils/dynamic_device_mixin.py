@@ -372,10 +372,13 @@ class DynamicDeviceMixin:
     def _parse_username(self, *, gen_values, **_):
         return gen_values.get('username')
 
-    def _fill_username(self, device: DeviceAdapter, **kwargs):
+    def _fill_username(self, device: SmartJsonClass, **kwargs):
         username = self._parse_username(**kwargs)
         if isinstance(username, str):
-            device.last_used_users = [username]
+            if isinstance(device, DeviceAdapter):
+                device.last_used_users = [username]
+            elif isinstance(device, UserAdapter):
+                device.username = username
 
     def _parse_installed_sw_name(self, *, gen_values, **_):
         return gen_values.get('installed_sw_name')
