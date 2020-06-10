@@ -281,6 +281,7 @@ DOCKER_PORTS = {
     'workday-adapter':                  13200,
     'axonius-users-adapter':            13337,
     'esentire-json-adapter':            13339,
+    'firemon-adapter':                  13341,
     'microfocus-sa-adapter':            13368,
     'digicert-pki-platform-adapter':    13369,
     'github-adapter':                   13370,

@@ -8,6 +8,11 @@
     "link": "https://docs.axonius.com/docs/sophos-cloud-optix",
     "description": "Sophos Cloud Optix is a public cloud visibility and threat response solution that detects, responds, and prevents cloud security and compliance gaps."
   },
+  "firemon_adapter": {
+    "title": "FireMon Security Manager",
+    "link": "https://docs.axonius.com/docs/firemon-security-manager",
+    "description": "FireMon Security Manager is a network security solution that provides real-time visibility, control, and management for network security devices across hybrid cloud environments."
+  },
   "esentire_json_adapter": {
     "title": "esNetwork",
     "description": "eSentire's esNetwork provides network monitoring and remediation as a fully managed MDR service."
