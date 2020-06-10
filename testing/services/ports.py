@@ -39,6 +39,7 @@ DOCKER_PORTS = {
     'service-now-adapter':              5117,
     'crowd-strike-adapter':             5118,
     'stresstest-users-adapter':         5119,
+    'service-now-sql-adapter':          5122,
     'claroty-adapter':                  5123,
     'cisco-meraki-adapter':             5130,
     'hashicorp-adapter':                5131,

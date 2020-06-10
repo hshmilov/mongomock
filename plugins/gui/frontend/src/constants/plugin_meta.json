@@ -17,6 +17,10 @@
     "title": "esNetwork",
     "description": "eSentire's esNetwork provides network monitoring and remediation as a fully managed MDR service."
   },
+  "service_now_sql_adapter": {
+      "title": "ServiceNow Analytics Data Warehouse (SQL)",
+      "description": "ServiceNow Analytics Data Warehouse"
+  },
   "nozomi_guardian_adapter": {
     "title": "Nozomi Networks Guardian",
     "link": "https://docs.axonius.com/docs/nozomi-networks-guardian",

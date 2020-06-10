@@ -1,0 +1,8 @@
+USER = 'username'
+PASSWORD = 'password'
+SERVICE_NOW_SQL_HOST = 'server'
+SERVICE_NOW_SQL_PORT = 'port'
+DEFAULT_SERVICE_NOW_SQL_PORT = 1433
+SERVICE_NOW_SQL_DATABASE = 'database'
+DEFAULT_SERVICE_NOW_SQL_DATABASE = 'Mirror'
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'

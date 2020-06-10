@@ -23,6 +23,7 @@
       "amd_db",
       "riskiq_csv",
       "pingaccess",
+      "service_now_sql",
       "failover_cluster",
       "esentire_json"
     ],
