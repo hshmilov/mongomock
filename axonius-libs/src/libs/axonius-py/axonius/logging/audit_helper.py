@@ -5,6 +5,7 @@ class AuditCategory(Enum):
     UserManagement = 'settings.users'
     UserSession = 'session'
     Discovery = 'discovery'
+    CustomDiscovery = 'custom_discovery'
     GettingStarted = 'getting_started'
     Adapters = 'adapters'
     Reports = 'reports'

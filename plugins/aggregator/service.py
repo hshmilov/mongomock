@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from threading import Thread
+from typing import List
 
 from pymongo.errors import CollectionInvalid, PyMongoError
 
@@ -348,13 +349,33 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception:
             logger.critical(f'history transfer func {aggregate_func} failed', exc_info=True)
 
+    def get_adapters_data(self, post_json: dict) -> List[dict]:
+        """
+        Get adapters data from list of plugin unique names or mongo filters
+        :param post_json: trigger post json data
+        :return: adapters data
+        """
+        adapters_list = post_json.pop('adapters', [])
+        if adapters_list:
+            adapters_filter = {
+                PLUGIN_UNIQUE_NAME: {
+                    '$in': adapters_list
+                }
+            }
+            adapters = self.get_available_plugins_from_core_uncached(adapters_filter).values()
+        else:
+            adapters = self.get_available_plugins_from_core_uncached(post_json).values()
+            adapters = list(self.filter_out_custom_discovery_adapters(adapters))
+        return adapters
+
     # pylint: disable=inconsistent-return-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clean_db':
-            self._clean_db_devices_from_adapters(self.get_available_plugins_from_core_uncached().values())
+            adapters = self.get_adapters_data(post_json)
+            self._clean_db_devices_from_adapters(adapters)
             return
         if job_name == 'fetch_filtered_adapters':
-            adapters = self.get_available_plugins_from_core_uncached(post_json).values()
+            adapters = self.get_adapters_data(post_json)
         elif job_name == 'save_history':
             now = datetime.utcnow()
             return {

@@ -13,6 +13,7 @@ import requests
 from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
@@ -25,7 +26,8 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
                                           RESET_PASSWORD_SETTINGS, DEFAULT_ROLE_ID, STATIC_ANALYSIS_SETTINGS,
-                                          DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE)
+                                          DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME,
+                                          DISCOVERY_RESEARCH_DATE_TIME)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -37,6 +39,7 @@ from axonius.utils.ssl import check_associate_cert_with_private_key, validate_ce
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import clear_passwords_fields, refill_passwords_fields
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
+
 # pylint: disable=too-many-statements,too-many-return-statements,fixme,no-member,too-many-locals,too-many-branches
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -247,8 +250,8 @@ class Plugins:
             password_reset_config_from_db = config_from_db['config'].get(RESET_PASSWORD_SETTINGS)
             password_reset_config_to_set = config_to_set.get(RESET_PASSWORD_SETTINGS)
 
-            if password_reset_config_from_db and password_reset_config_to_set\
-                and password_reset_config_from_db.get(RESET_PASSWORD_LINK_EXPIRATION) !=\
+            if password_reset_config_from_db and password_reset_config_to_set \
+                    and password_reset_config_from_db.get(RESET_PASSWORD_LINK_EXPIRATION) != \
                     password_reset_config_to_set.get(RESET_PASSWORD_LINK_EXPIRATION):
                 self._update_user_tokens_index(password_reset_config_to_set.get(RESET_PASSWORD_LINK_EXPIRATION))
 
@@ -257,10 +260,10 @@ class Plugins:
 
         elif plugin_name == 'gui' and config_name == CONFIG_CONFIG:
             user_settings_permission = self.get_user_permissions().get(PermissionCategory.Settings)
-            if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and\
-               not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
+            if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and \
+                    not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
                 for external_service in ['ldap_login_settings', 'okta_login_settings', 'saml_login_settings']:
-                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db['config'].\
+                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db['config']. \
                         get(external_service, {}).get(DEFAULT_ROLE_ID)
 
             mutual_tls_settings = config_to_set.get('mutual_tls_settings')
@@ -404,6 +407,30 @@ class Plugins:
         self._update_plugin_config(plugin_name=plugin_name, config_name=config_name, config_to_set=config_to_set)
         return self._get_central_core_settings()
 
+    def _delete_last_fetch_on_discovery_change(self, plugin_unique_name, current_config, config_to_set):
+        """
+        Check adapter custom discovery time, if fetch time was changed, delete adapter last fetch time,
+        for making the adapter's next custom discovery cycle happen on the same day.
+        :param plugin_unique_name: plugin unique name
+        :param current_config: current adapter discovery config
+        :param config_to_set: new config to set
+        :return: None
+        """
+        if not config_to_set or not current_config:
+            return
+        try:
+            db_connection = self._get_db_connection()
+            if current_config.get(DISCOVERY_RESEARCH_DATE_TIME) == config_to_set.get(DISCOVERY_RESEARCH_DATE_TIME):
+                return
+            adapter_settings = db_connection[plugin_unique_name][ADAPTER_SETTINGS]
+            adapter_settings.delete_one({
+                'last_fetch_time': {
+                    '$exists': True
+                }
+            })
+        except Exception:
+            logger.error(f'Error deleting adapter last fetch time: {plugin_unique_name}', exc_info=True)
+
     def _update_plugin_config(self, plugin_name, config_name, config_to_set):
         """
         Update given configuration settings for given configuration name, under given plugin.
@@ -421,6 +448,16 @@ class Plugins:
             unique_plugins_names = [plugin_name]
         for current_unique_plugin in unique_plugins_names:
             config_collection = db_connection[current_unique_plugin][CONFIGURABLE_CONFIGS_COLLECTION]
+            try:
+                if config_name == DISCOVERY_CONFIG_NAME:
+                    current_config = config_collection.find_one({
+                        'config_name': DISCOVERY_CONFIG_NAME
+                    })
+                    if current_config:
+                        self._delete_last_fetch_on_discovery_change(current_unique_plugin, current_config.get('config'),
+                                                                    config_to_set)
+            except Exception:
+                logger.error('Error checking discovery settings', exc_info=True)
             config_collection.replace_one(filter={'config_name': config_name}, replacement={
                 'config_name': config_name, 'config': config_to_set})
             self.request_remote_plugin('update_config', current_unique_plugin, method='POST')

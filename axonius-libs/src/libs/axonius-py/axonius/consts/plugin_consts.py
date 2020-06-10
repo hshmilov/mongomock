@@ -65,6 +65,13 @@ NODE_IP_LIST = 'ips'
 NODE_ID_ENV_VAR_NAME = 'NODE_ID'
 DB_KEY_ENV_VAR_NAME = 'DB_KEY'
 DEFAULT_ROLE_ID = 'default_role_id'
+DISCOVERY_CONFIG_NAME = 'DiscoverySchema'
+ENABLE_CUSTOM_DISCOVERY = 'enabled'
+DISCOVERY_REPEAT_TYPE = 'conditional'
+DISCOVERY_REPEAT_ON = 'repeat_on'
+DISCOVERY_REPEAT_EVERY = 'repeat_every'
+DISCOVERY_RESEARCH_DATE_TIME = 'system_research_date_time'
+LAST_DISCOVERY_TIME = 'last_discovery_time'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'

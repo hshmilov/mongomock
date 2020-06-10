@@ -78,3 +78,16 @@ def parse_date(datetime_to_parse):
         return d if is_date_real(d) else None
     except Exception:
         return None
+
+
+def time_diff(time1: datetime.time, time2: datetime.time) -> timedelta:
+    """
+    Return time diff between two datetime.time objects
+    :param time1: first time object
+    :param time2: second time object
+    :return:
+    """
+    now = datetime.now()
+    datetime1 = datetime.combine(now, time1)
+    datetime2 = datetime.combine(now, time2)
+    return datetime1 - datetime2

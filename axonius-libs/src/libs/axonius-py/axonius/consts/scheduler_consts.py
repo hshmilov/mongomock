@@ -37,3 +37,5 @@ SchedulerState = namedlist('SchedulerState',
 RESEARCH_THREAD_ID = 'phase_thread'
 CORRELATION_SCHEDULER_THREAD_ID = 'correlation_scheduler_thread'
 CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL = 90
+CUSTOM_DISCOVERY_CHECK_INTERVAL = 90  # seconds
+CUSTOM_DISCOVERY_THRESHOLD = 3 * 60  # seconds

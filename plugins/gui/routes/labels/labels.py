@@ -160,6 +160,13 @@ class Labels:
             'audit.discovery.tag_reimaged': 'Tag Reimaged Devices',
             'audit.discovery.tag_reimaged.template': '{count} reimaged devices were tagged',
 
+            'audit.custom_discovery': 'Custom Discovery',
+            'audit.custom_discovery.fetch': 'Custom Discovery Fetch',
+            'audit.custom_discovery.fetch.template': 'Custom Discovery fetch for \'{adapter}\'',
+            'audit.custom_discovery.clean': 'Custom Discovery Clean',
+            'audit.custom_discovery.clean.template': 'Custom Discovery clean for \'{adapter}\'',
+
+
             'audit.getting_started': 'Getting Started',
             'audit.getting_started.complete_phase': 'Getting Started Phase Completed',
             'audit.getting_started.complete_phase.template': 'Getting Started phase \'{phase}\' completed',
@@ -197,9 +204,12 @@ class Labels:
 
 
             'audit.adapters': 'Adapters',
-            'audit.adapters.fetch': 'Fetch',
-            'audit.adapters.fetch.template': 'Fetched {users_count} users and {devices_count} devices for adapter '
-                                             '\'{adapter}\' with connection ID {client_id}. Duration: {duration}',
+            'audit.adapters.complete': 'Fetch Ended',
+            'audit.adapters.complete.template': 'Fetched {users_count} users and {devices_count} devices for adapter '
+                                                '\'{adapter}\' with connection ID {client_id}. Duration: {duration}',
+            'audit.adapters.start': 'Fetch Started',
+            'audit.adapters.start.template':
+                'Fetch for adapter \'{adapter}\' with connection ID \'{client_id} started.',
             'audit.adapters.clean': 'Cleanup',
             'audit.adapters.clean.template': 'Removed {count} {asset} from adapter \'{adapter}\'',
             'audit.adapters.post': 'Edit Advanced Settings',

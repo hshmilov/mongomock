@@ -42,7 +42,9 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    SYSTEM_SCHEDULER_PLUGIN_NAME, PARALLEL_ADAPTERS, NODE_ID, THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, \
+    SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, \
+    DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, PARALLEL_ADAPTERS,\
+    THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, \
     DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
@@ -60,6 +62,7 @@ from axonius.utils.threading import timeout_iterator
 from axonius.mock.adapter_mock import AdapterMock
 
 logger = logging.getLogger(f'axonius.{__name__}')
+WEEKDAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:
@@ -102,6 +105,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._send_reset_to_ec()
 
         self._update_clients_schema_in_db(self._clients_schema())
+        self._update_discovery_schema()
         self._set_clients_ids()
         # If set, we do not re-evaluate the clients connections
         should_not_refresh_clients = self.__adapter_settings_collection.find_one(
@@ -394,7 +398,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         }
 
     # pylint: disable=R1710
-    def _handle_insert_to_db_async(self, client_name, check_fetch_time):
+    def _handle_insert_to_db_async(self, client_name, check_fetch_time, log_fetch=True):
         """
         Handles all asymmetric fetching of devices data, by creating a threadpool to handle each fetch in a
         different thread, please notice that it only fetches the data asynchronously but parse in synchronously.
@@ -408,11 +412,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if isinstance(client_name, list):
                 for client in client_name:
                     data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
-                                                                             parse_after_fetch=True)]
+                                                                             parse_after_fetch=True,
+                                                                             log_fetch=log_fetch)]
             else:
                 data[client_name] = [x['raw'] for x in self.insert_data_to_db(client_name,
                                                                               check_fetch_time=check_fetch_time,
-                                                                              parse_after_fetch=True)]
+                                                                              parse_after_fetch=True,
+                                                                              log_fetch=log_fetch)]
             time_before_query = datetime.now()
             results = list(concurrent_multiprocess_yield([y for x in data for y in data[x] if y[0]],
                                                          DEFAULT_PARALLEL_COUNT))
@@ -449,7 +455,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # pylint: disable=W0631
             logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
-    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time):
+    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time, log_fetch=True):
         data = {}
         finished = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_ASYNC_FETCH_WORKERS) as executor:
@@ -457,10 +463,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 if isinstance(client_name, list):
                     for client in client_name:
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
-                                             parse_after_fetch=True, thread_safe=True)] = client
+                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
                 else:
                     data[executor.submit(self.insert_data_to_db, client_name, check_fetch_time=check_fetch_time,
-                                         parse_after_fetch=True, thread_safe=True)] = client_name
+                                         parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client_name
 
                 # Wait until all fetches finish
                 for client in concurrent.futures.as_completed(data):
@@ -495,6 +501,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             check_fetch_time = False
             if post_json and post_json.get('check_fetch_time'):
                 check_fetch_time = post_json.get('check_fetch_time')
+            log_fetch = True
+            if post_json:
+                log_fetch = post_json.get('log_fetch', True)
             parallel_fetch = self.feature_flags_config()[ParallelSearch.root_key].get(ParallelSearch.enabled)
             try:
                 try:
@@ -502,7 +511,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         res = {'devices_count': 0,
                                'users_count': 0
                                }
-                        for client, result in self._handle_insert_to_db_async(client_name, check_fetch_time):
+                        for client, result in self._handle_insert_to_db_async(client_name, check_fetch_time,
+                                                                              log_fetch=log_fetch):
                             if result != '':
                                 result = json.loads(result)
                                 res['devices_count'] += result['devices_count']
@@ -510,7 +520,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                             logger.info(f'Received from {client}: {result}')
                         res = to_json(res)
                     else:
-                        res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time)
+                        res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
+                                                     log_fetch=log_fetch)
                 except adapter_exceptions.AdapterException:
                     logger.warning(f'Failed inserting data for client '
                                    f'{client_name if isinstance(client_name, str) else client}', exc_info=True)
@@ -765,7 +776,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False,
-                          parse_after_fetch: bool = False, thread_safe: bool = False):
+                          parse_after_fetch: bool = False, thread_safe: bool = False, log_fetch=True):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
@@ -792,12 +803,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                          'warning')
             return to_json({'devices_count': 0, 'users_count': 0, 'min_time_check': True})
 
-        if check_fetch_time:
-            self.__last_fetch_time = current_time
+        self.__last_fetch_time = current_time
         if client_name:
             devices_count = 0
             users_count = 0
             try:
+                if log_fetch:
+                    self._log_activity_adapter_client_fetch_start(client_name)
                 if parse_after_fetch:
                     return (self._get_data_by_client(client_name, EntityType.Devices,
                                                      parse_after_fetch=parse_after_fetch, thread_safe=thread_safe),
@@ -809,13 +821,17 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 users_count = self._save_data_from_plugin(
                     client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
 
-                self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
+                if log_fetch:
+                    self._log_activity_adapter_client_fetch_summary(
+                        client_name, current_time, users_count, devices_count)
 
             except Exception as e:
                 self._handle_insert_and_parse_exceptions(client_name, e)
 
             self._update_client_status(client_name, 'success')
         else:
+            if log_fetch:
+                self._log_activity_adapter_client_fetch_start(client_name)
             devices_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Devices)
                 for data
@@ -824,7 +840,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 self._save_data_from_plugin(*data, EntityType.Users)
                 for data
                 in self._query_data(EntityType.Users))
-            self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
+            if log_fetch:
+                self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
 
         return to_json({'devices_count': devices_count, 'users_count': users_count})
 
@@ -1899,6 +1916,71 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'realtime_adapter': False
         }
 
+    @classmethod
+    def _discovery_schema(cls) -> dict:
+
+        return {
+            'items': [
+                {
+                    'name': ENABLE_CUSTOM_DISCOVERY,
+                    'title': 'Enable custom discovery schedule',
+                    'type': 'bool'
+                },
+                {
+                    'name': DISCOVERY_RESEARCH_DATE_TIME,
+                    'title': 'Scheduled discovery time',
+                    'type': 'string',
+                    'format': 'time'
+                },
+                {
+                    'name': DISCOVERY_REPEAT_TYPE,
+                    'title': 'Repeat scheduled discovery',
+                    'enum': [
+                        {
+                            'name': DISCOVERY_REPEAT_EVERY,
+                            'title': 'Every x days'
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_ON,
+                            'title': 'Days of week'
+                        }
+                    ],
+                    'type': 'string'
+                },
+                {
+                    'name': DISCOVERY_REPEAT_EVERY,
+                    'title': 'Repeat scheduled discovery every (days)',
+                    'type': 'number'
+                },
+                {
+                    'name': DISCOVERY_REPEAT_ON,
+                    'title': 'Repeat scheduled discovery on',
+                    'type': 'array',
+                    'items': [{'name': day.lower(), 'title': day, 'type': 'bool'} for day in WEEKDAYS],
+                    'required': [day.lower() for day in WEEKDAYS]
+                }
+            ],
+            'pretty_name': 'Discovery Configuration',
+            'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_TYPE,
+                         DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_ON],
+            'type': 'array'
+        }
+
+    @classmethod
+    def _discovery_schema_default(cls) -> dict:
+        return {
+            ENABLE_CUSTOM_DISCOVERY: False,
+            DISCOVERY_RESEARCH_DATE_TIME: '13:00',
+            DISCOVERY_REPEAT_TYPE: DISCOVERY_REPEAT_EVERY,
+            DISCOVERY_REPEAT_EVERY: 1,
+            DISCOVERY_REPEAT_ON: {
+                day.lower(): True for day in WEEKDAYS
+            }
+        }
+
+    def _update_discovery_schema(self):
+        self.update_schema(DISCOVERY_CONFIG_NAME, self._discovery_schema(), self._discovery_schema_default())
+
     def _log_activity_connection_failure(self, client_id: str, connection_exception: Exception):
         """
         audit logger for ConnectionException base events
@@ -1929,15 +2011,27 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 ACTIVITY_PARAMS_COUNT: str(entity_cleaned)
             })
 
+    def _log_activity_adapter_client_fetch_start(self, client_name: str):
+        """
+        log audit for adapter client fetch start
+        """
+        try:
+            self.log_activity(AuditCategory.Adapters, AuditAction.Start, {
+                'adapter': self.plugin_name,
+                'client_id': client_name or ''
+            })
+
+        except Exception:
+            logger.exception(f'Error logging audit for client name {client_name}')
+
     def _log_activity_adapter_client_fetch_summary(self, client_name: str, fetch_start_time: datetime,
                                                    users_count: int = 0, devices_count: int = 0):
         """
         log audit for adapter client fetch ( devices and users ) summary
-
         """
         try:
             duration = str(datetime.utcnow() - fetch_start_time).split('.')[0]
-            self.log_activity(AuditCategory.Adapters, AuditAction.Fetch, {
+            self.log_activity(AuditCategory.Adapters, AuditAction.Complete, {
                 'adapter': self.plugin_name,
                 'client_id': client_name or '',
                 'users_count': str(users_count),

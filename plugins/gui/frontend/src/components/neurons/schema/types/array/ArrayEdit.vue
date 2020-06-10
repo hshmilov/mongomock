@@ -309,12 +309,23 @@
 
 <style lang="scss">
   .x-array-edit {
+    .v-text-field > .v-input__control > .v-input__slot:before {
+      border-style: none;
+      border-width: thin 0 0;
+    }
+    .v-text-field > .v-input__control > .v-input__slot:after {
+      border-style: none;
+      border-width: thin 0 0;
+    }
+    .v-text-field > .v-input__control > .v-input__slot:hover {
+      border-style: none;
+      border-width: thin 0 0;
+    }
     .array-header {
       margin-bottom: 0;
       display: inline-block;
       min-width: 200px;
     }
-
     .item {
       display: flex;
       align-items: flex-end;

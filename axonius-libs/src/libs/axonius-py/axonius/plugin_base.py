@@ -99,7 +99,7 @@ from axonius.consts.plugin_consts import (
     THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
     CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
-    CSV_IP_LOCATION_FILE)
+    CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices import deep_merge_only_dict
@@ -1245,6 +1245,15 @@ class PluginBase(Configurable, Feature, ABC):
             for x
             in self.core_configs_collection.find(filter_)
         }
+
+    def filter_out_custom_discovery_adapters(self, adapters: List[dict]):
+        for adapter in adapters:
+            config = self._get_db_connection()[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                'config_name': DISCOVERY_CONFIG_NAME,
+                f'config.{ENABLE_CUSTOM_DISCOVERY}': True
+            })
+            if not config:
+                yield adapter
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10), lock=threading.Lock())

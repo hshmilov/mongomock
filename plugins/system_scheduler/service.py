@@ -6,7 +6,7 @@ from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Set, Dict
+from typing import Set, Dict, Iterator, List
 from dateutil import tz
 import requests
 
@@ -21,6 +21,7 @@ from flask import jsonify
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
@@ -32,9 +33,12 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           REPORTS_PLUGIN_NAME,
                                           STATIC_ANALYSIS_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION, AGGREGATION_SETTINGS,
-                                          UPDATE_CLIENTS_STATUS)
+                                          UPDATE_CLIENTS_STATUS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
+                                          DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON, DISCOVERY_RESEARCH_DATE_TIME,
+                                          DISCOVERY_REPEAT_EVERY, STATIC_USERS_CORRELATOR_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL
+from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, \
+    CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -43,6 +47,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.backup import backup_to_s3, backup_to_external
+from axonius.utils.datetime import time_diff
 from axonius.utils.files import get_local_config_file
 from axonius.utils.root_master.root_master import root_master_restore_from_s3, root_master_restore_from_smb
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
@@ -77,7 +82,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         # this lock is held while the system performs a rt process or a process that musn't run in parallel
         # to fetching or correlation
-        self.__realtime_lock = threading.Lock()
+        self.__trigger_lock = threading.Lock()
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
 
@@ -96,6 +101,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           max_instances=1)
         self.__realtime_scheduler.start()
 
+        self.__custom_discovery_scheduler = LoggedBackgroundScheduler(executors={
+            'default': ThreadPoolExecutorApscheduler(1)
+        })
+        self.__custom_discovery_scheduler.add_job(func=self.__run_custom_discovery_adapters,
+                                                  trigger=IntervalTrigger(seconds=CUSTOM_DISCOVERY_CHECK_INTERVAL),
+                                                  next_run_time=datetime.now(),
+                                                  max_instances=1)
+        self.__custom_discovery_scheduler.start()
         self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
         })
@@ -114,7 +127,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         )
         self._correlation_scheduler.start()
         self.configure_correlation_scheduler()
-
         self.plugin_settings = self._get_collection('plugin_settings')
 
     def run_correlations(self):
@@ -275,7 +287,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                minute=minute,
                                second='0',
                                day=f'*/{recurrence}')
-        raise Exception(f' {self.__system_research_mode } is invalid research mode ')
+        raise Exception(f' {self.__system_research_mode} is invalid research mode ')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -406,7 +418,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 new_interval = IntervalTrigger(hours=hours)
                 if job:
                     current_trigger = job.trigger
-                    if isinstance(current_trigger, IntervalTrigger)\
+                    if isinstance(current_trigger, IntervalTrigger) \
                             and current_trigger.interval_length == new_interval.interval_length:
                         # Interval not changed, go on with your life
                         logger.debug('Correlation trigger hours stayed the same, not changing')
@@ -522,6 +534,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Manages a research phase and it's sub phases.
         :return:
         """
+
         def _log_activity_research(action: AuditAction, params: Dict[str, str] = None):
             self.log_activity(AuditCategory.Discovery, action, params)
 
@@ -532,7 +545,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 })
 
         def _start_subphase(subphase: scheduler_consts.ResearchPhases):
-            with self.__realtime_lock:
+            with self.__trigger_lock:
                 self.state.SubPhase = subphase
             logger.info(f'Started Subphase {subphase}')
             _log_activity_phase(AuditAction.StartPhase)
@@ -745,6 +758,73 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     if config.get('realtime_adapter'):
                         yield adapter
 
+    # pylint: disable=too-many-return-statements
+    @staticmethod
+    def should_run_custom_discovery(discovery_config: dict, last_discovery: datetime) -> bool:
+        """
+        Check if the given adapter should be triggered by the given discovery config
+        :param discovery_config: adapter custom discovery settings
+        :param last_discovery: last time the adapter was triggered
+        :return: True if we should trigger adapter fetch
+        """
+        # Check custom discovery time
+        try:
+            scheduled_custom_discovery_time = \
+                datetime.strptime(discovery_config.get(DISCOVERY_RESEARCH_DATE_TIME), '%H:%M').time()
+        except ValueError:
+            logger.error(f'Error parsing discovery time: {discovery_config.get(DISCOVERY_RESEARCH_DATE_TIME)}')
+            return False
+
+        current_time = datetime.now().time()
+        # its too early
+        if current_time < scheduled_custom_discovery_time:
+            return False
+
+        # too late
+        if time_diff(current_time, scheduled_custom_discovery_time).seconds > CUSTOM_DISCOVERY_THRESHOLD:
+            return False
+
+        # Check for weekday
+        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_ON:
+            today = datetime.today().strftime('%A').lower()
+            if (discovery_config.get(DISCOVERY_REPEAT_ON, {}) or {}).get(today):
+                if not last_discovery:
+                    return True
+                if (datetime.now() - last_discovery).days > 0:
+                    return True
+
+        # Check for day diff
+        elif discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_EVERY:
+            if not last_discovery:
+                return True
+            if (datetime.now() - last_discovery).days == discovery_config.get(DISCOVERY_REPEAT_EVERY, 1):
+                return True
+        return False
+
+    def get_custom_discovery_adapters(self) -> Iterator[dict]:
+        """
+        Get adapters that has custom discovery settings and should be triggered right now
+        :return:
+        """
+        db_connection = self._get_db_connection()
+        for adapter in self.core_configs_collection.find():
+            try:
+                config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                    'config_name': DISCOVERY_CONFIG_NAME,
+                    f'config.{ENABLE_CUSTOM_DISCOVERY}': True
+                })
+                if config:
+                    config = config.get('config')
+                    last_adapter_fetch_time = db_connection[adapter[PLUGIN_UNIQUE_NAME]][ADAPTER_SETTINGS].find_one({
+                        'last_fetch_time': {
+                            '$exists': True
+                        }
+                    }) or {}
+                    if self.should_run_custom_discovery(config, last_adapter_fetch_time.get('last_fetch_time')):
+                        yield adapter
+            except Exception:
+                logger.exception(f'Error getting adapter {adapter[PLUGIN_UNIQUE_NAME]} custom discovery settings')
+
     def __get_all_adapters(self):
         yield from self.core_configs_collection.find(
             {
@@ -772,60 +852,102 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     job_name='update_clients_status'
                 )
 
-    def __run_realtime_adapters(self):
+    def trigger_adapters_out_of_cycle(self, adapters_to_call: List[dict], log_fetch=False):
         """
         Triggers realtime adapters and correlations as long as a cycle hasn't taken place
         :return:
         """
-        with self.__realtime_lock:
-            try:
-                if check_installer_locks(unlink=False):
-                    # Installer is in progress, do not trigger rt adapters
-                    logger.debug('Installer is in progress')
-                    should_trigger_plugins = False
-                    should_fetch_rt_adapter = False
+        if check_installer_locks(unlink=False):
+            # Installer is in progress, do not trigger rt adapters
+            logger.debug('Installer is in progress')
+            should_trigger_plugins = False
+            should_fetch_adapters = False
 
-                elif self.state.SubPhase is None:
-                    # Not in cycle - can do all
-                    should_trigger_plugins = True
-                    should_fetch_rt_adapter = True
+        elif self.state.SubPhase is None:
+            # Not in cycle - can do all
+            should_trigger_plugins = True
+            should_fetch_adapters = True
 
-                elif self.state.SubPhase in [scheduler_consts.ResearchPhases.Fetch_Devices,
-                                             scheduler_consts.ResearchPhases.Fetch_Scanners]:
-                    # In cycle and fetching entities - no alerts for consistency
-                    should_trigger_plugins = False
-                    should_fetch_rt_adapter = True
+        elif self.state.SubPhase in [scheduler_consts.ResearchPhases.Fetch_Devices,
+                                     scheduler_consts.ResearchPhases.Fetch_Scanners]:
+            # In cycle and fetching entities - no alerts for consistency
+            should_trigger_plugins = False
+            should_fetch_adapters = True
 
-                else:
-                    # In cycle and after fetching entities - can't do anything for consistency
-                    should_trigger_plugins = False
-                    should_fetch_rt_adapter = False
+        else:
+            # In cycle and after fetching entities - can't do anything for consistency
+            should_trigger_plugins = False
+            should_fetch_adapters = False
 
-                logger.debug(f'RT Cycle, plugins - {should_trigger_plugins} and adapters - {should_fetch_rt_adapter} '
-                             f'state - {self.state}')
-                if should_fetch_rt_adapter:
-                    adapters_to_call = list(self.__get_all_realtime_adapters())
-                    if not adapters_to_call:
-                        logger.debug('No adapters to call, not doing anything at all')
-                        return
+        logger.debug(f'plugins - {should_trigger_plugins} and adapters - {should_fetch_adapters} '
+                     f'state - {self.state}')
+        data = {
+            'log_fetch': log_fetch
+        }
+        if should_fetch_adapters:
+            for adapter_to_call in adapters_to_call:
+                logger.debug(f'Fetching from {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
+                self._trigger_remote_plugin(adapter_to_call[PLUGIN_UNIQUE_NAME],
+                                            'insert_to_db',
+                                            blocking=False,
+                                            data=data)
 
-                    for adapter_to_call in adapters_to_call:
-                        logger.debug(f'Fetching from rt adapter {adapter_to_call[PLUGIN_UNIQUE_NAME]}')
-                        self._trigger_remote_plugin(adapter_to_call[PLUGIN_UNIQUE_NAME],
-                                                    'insert_to_db',
-                                                    blocking=False)
+        if should_trigger_plugins:
+            plugins_to_call = [STATIC_CORRELATOR_PLUGIN_NAME]
 
-                if should_trigger_plugins:
-                    plugins_to_call = [STATIC_CORRELATOR_PLUGIN_NAME]
+            if self.__constant_alerts:
+                plugins_to_call.append(REPORTS_PLUGIN_NAME)
 
-                    if self.__constant_alerts:
-                        plugins_to_call.append(REPORTS_PLUGIN_NAME)
+            for plugin_unique_name in plugins_to_call:
+                logger.debug(f'Executing plugin {plugin_unique_name}')
+                self._trigger_remote_plugin(plugin_unique_name, blocking=False)
 
-                    for plugin_unique_name in plugins_to_call:
-                        logger.debug(f'Executing plugin {plugin_unique_name}')
-                        self._trigger_remote_plugin(plugin_unique_name, blocking=False)
-            finally:
-                logger.debug('Finished RT cycle')
+    def __run_realtime_adapters(self):
+        adapters_to_call = list(self.__get_all_realtime_adapters())
+        if not adapters_to_call:
+            logger.debug('No adapters to call, not doing anything at all')
+            return
+        logger.debug('Starting RT cycle')
+        try:
+            with self.__trigger_lock:
+                self.trigger_adapters_out_of_cycle(adapters_to_call, log_fetch=False)
+        except Exception:
+            logger.exception('Error triggering realtime adapters')
+        logger.debug('Finished RT cycle')
+
+    def __run_custom_discovery_adapters(self):
+        adapters_to_call = list(self.get_custom_discovery_adapters())
+        if not adapters_to_call:
+            logger.debug('No adapters to call, not doing anything at all')
+            return
+        logger.info('Starting Custom Discovery cycle')
+
+        def inserted_to_db(*args, **kwargs):
+            logger.debug(f'{adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data')
+            self._request_gui_dashboard_cache_clear()
+            self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Clean, {
+                'adapter': adapter[PLUGIN_NAME]
+            })
+            self._run_cleaning_phase([adapter[PLUGIN_UNIQUE_NAME]])
+            self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
+            self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+            self._request_gui_dashboard_cache_clear()
+
+        def rejected(err):
+            logger.exception(f'Failed fetching from {adapter[PLUGIN_UNIQUE_NAME]}', exc_info=err)
+
+        try:
+            adapter = {}
+            for adapter in adapters_to_call:
+                self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
+                    'adapter': adapter[PLUGIN_NAME]
+                })
+                self._async_trigger_remote_plugin(adapter[PLUGIN_UNIQUE_NAME],
+                                                  'insert_to_db').then(did_fulfill=inserted_to_db,
+                                                                       did_reject=rejected)
+        except Exception:
+            logger.exception('Error triggering custom discovery adapters')
+        logger.info('Finished Custom Discovery cycle')
 
     def _get_plugins(self, plugin_subtype: PluginSubtype) -> list:
         """
@@ -870,12 +992,16 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 except Exception:
                     logger.exception(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
 
-    def _run_cleaning_phase(self):
+    def _run_cleaning_phase(self, adapters: dict = None):
         """
         Trigger cleaning all devices from all adapters
         :return:
         """
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6)
+        data = {
+            'adapters': adapters
+        }
+        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6,
+                                   data=data)
 
     def _run_historical_phase(self, max_days_to_save):
         """

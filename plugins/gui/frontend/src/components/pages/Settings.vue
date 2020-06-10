@@ -481,20 +481,6 @@ export default {
 
     .research-settings-tab .x-form .x-array-edit {
       grid-template-columns: 1fr;
-
-      .v-text-field > .v-input__control > .v-input__slot:before {
-        border-style: none;
-        border-width: thin 0 0;
-      }
-      .v-text-field > .v-input__control > .v-input__slot:after {
-        border-style: none;
-        border-width: thin 0 0;
-      }
-      .v-text-field > .v-input__control > .v-input__slot:hover {
-        border-style: none;
-        border-width: thin 0 0;
-      }
-
       .item .object.expand {
         label {
           display: block;

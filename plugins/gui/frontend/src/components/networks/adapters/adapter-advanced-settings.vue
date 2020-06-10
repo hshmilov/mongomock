@@ -7,24 +7,24 @@
   >
     <XTabs v-if="data">
       <XTab
-        v-for="(settings, configName, i) in data"
-        :id="configName"
+        v-for="(dataObj, i) in sortedData"
+        :id="dataObj.name"
         :key="i"
-        :title="settings.schema.pretty_name || configName"
+        :title="dataObj.settings.schema.pretty_name || dataObj.name"
         :selected="!i"
         class="advanced-settings-tab"
       >
         <div class="configuration">
           <XForm
-            v-model="settings.config"
-            :schema="settings.schema"
+            v-model="dataObj.settings.config"
+            :schema="dataObj.settings.schema"
             @validate="validateConfig"
           />
           <XButton
             type="primary"
             tabindex="1"
             :disabled="!configValid"
-            @click="saveConfig(configName, settings.config)"
+            @click="saveConfig(dataObj.name, dataObj.settings.config)"
           >Save Config</XButton>
         </div>
       </XTab>
@@ -60,6 +60,19 @@ export default {
       data: null,
     };
   },
+  computed: {
+    sortedData() {
+      const discoveryLast = (a, b) => {
+        if (a !== 'DiscoverySchema' && b !== 'DiscoverySchema') {
+          return 0;
+        }
+        return a === 'DiscoverySchema' ? 1 : -1;
+      };
+      return Object.keys(this.data).sort(discoveryLast).map((name) => ({
+        name, settings: this.data[name],
+      }));
+    },
+  },
   async created() {
     const res = await fetchAdapterAdvancedSettings(this.adapterUniqueName);
     this.data = res;
@@ -76,6 +89,9 @@ export default {
 </script>
 
 <style lang="scss">
+  div[role="menu"] {
+    min-width: auto !important;
+  }
   .advanced-settings-tab {
     overflow: hidden;
     width: 60vw;
@@ -85,4 +101,32 @@ export default {
       padding: 24px;
     }
   }
+  .DiscoverySchema {
+    .configuration > .x-form > .x-array-edit {
+      grid-template-columns: 1fr;
+    }
+    .x-array-edit {
+      .time-picker-text, .x-dropdown, input {
+        display: inline-block;
+        width: 200px;
+      }
+      .v-text-field {
+        padding-top: 0;
+      }
+    }
+   .v-text-field__details, .v-messages {
+      min-height: 0;
+    }
+    #repeat_on {
+      display: none;
+    }
+    span.server-time {
+      padding-left: 15px;
+    }
+    label {
+      display: block;
+    }
+  }
+
+
 </style>

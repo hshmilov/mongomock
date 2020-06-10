@@ -681,6 +681,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
             # Insert configurable to DB
             # If this fails, we need to actually raise the adapter
             empty_instance._update_schema()
+            empty_instance._update_discovery_schema()
             logger.info(f'Quick registered to {plugin_unique_name}')
             return ''
         except Exception:

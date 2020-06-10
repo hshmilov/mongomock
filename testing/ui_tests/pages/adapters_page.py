@@ -38,10 +38,14 @@ class AdaptersPage(EntitiesPage):
     TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Test Reachability'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
+    CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=enabled]+div'
+    REPEAT_DAYS = 'repeat_every'
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
     ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.x-tab.active .configuration>.x-button'
     ADVANCED_SETTINGS_BUTTON_TEXT = 'Advanced Settings'
+
+    CUSTOM_DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
@@ -162,6 +166,19 @@ class AdaptersPage(EntitiesPage):
     def click_advanced_configuration(self):
         self.find_element_by_text('Adapter Configuration').click()
         time.sleep(1.5)
+
+    def click_discovery_configuration(self):
+        self.find_element_by_text('Discovery Configuration').click()
+        time.sleep(1.5)
+
+    def fill_schedule_date(self, text):
+        self.fill_text_field_by_css_selector(self.CUSTOM_DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
+
+    def check_custom_discovery_schedule(self):
+        self.driver.find_element_by_css_selector(self.CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
+
+    def change_custom_discovery_interval(self, days):
+        self.fill_text_field_by_element_id(self.REPEAT_DAYS, days)
 
     def save_advanced_settings(self):
         self.driver.find_element_by_css_selector(self.ADVANCED_SETTINGS_SAVE_BUTTON_CSS).click()
