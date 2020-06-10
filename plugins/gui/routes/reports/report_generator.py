@@ -261,6 +261,7 @@ class ReportGenerator:
                 # check if this chart should be hidden
                 if custom_chart.get('hide_empty') and chart_data and (not chart_value or chart_value in [0, 1]):
                     continue
+
                 content = self._render_chart_content(chart_data, custom_chart)
                 if not content:
                     continue
@@ -268,6 +269,8 @@ class ReportGenerator:
                 if not spaces_charts.get(current_space):
                     spaces_charts[current_space] = []
                 current_space_charts = spaces_charts[current_space]
+                if len(title) > 30:
+                    title = f'{title[0:30]}...'
                 current_space_charts.append(self.templates['card'].render({'title': title,
                                                                            'content': content}))
             except Exception:

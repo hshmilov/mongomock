@@ -245,6 +245,10 @@ a {
     vertical-align: top;
 }
 
+.cover .title {
+    word-wrap: break-word;
+}
+
 .cover .break{
     height: 305px;
 }
