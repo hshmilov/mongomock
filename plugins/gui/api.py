@@ -38,6 +38,7 @@ from gui.logic.routing_helper import check_permissions
 logger = logging.getLogger(f'axonius.{__name__}')
 
 API_VERSION = '1'
+API_CLIENT_VERSION = '3.1.4'
 DEVICE_ASSETS_VIEW = PermissionValue.get(PermissionAction.View, PermissionCategory.DevicesAssets)
 DEVICE_ASSETS_UPDATE = PermissionValue.get(PermissionAction.Update, PermissionCategory.DevicesAssets)
 USER_ASSETS_VIEW = PermissionValue.get(PermissionAction.View, PermissionCategory.UsersAssets)
@@ -49,7 +50,7 @@ USER_ASSETS_UPDATE = PermissionValue.get(PermissionAction.Update, PermissionCate
 # Caution! These decorators must come BEFORE @add_rule
 
 
-def basic_authentication(func, required_permission: PermissionValue = None):
+def basic_authentication(func, required_permission: PermissionValue, enforce_permissions: bool = True):
     """
     Decorator stating that the view requires the user to be connected
     """
@@ -65,22 +66,29 @@ def basic_authentication(func, required_permission: PermissionValue = None):
             """
 
             user_from_db = users_collection.find_one({'user_name': username})
+
             if user_from_db is None:
                 logger.info(f'Unknown user {username} tried logging in')
                 return None, None
+
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
+
             if not bcrypt.verify(password, user_from_db['password']):
                 return None, None
-            if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())\
-                    and not role.get(IS_AXONIUS_ROLE):
+
+            is_expired = (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())
+
+            if is_expired and not role.get(IS_AXONIUS_ROLE):
                 return None, None
 
             role_permissions = deserialize_db_permissions(role['permissions'])
+
             if user_from_db.get('name') == 'admin':
                 return user_from_db, role_permissions
 
-            if not check_permissions(role_permissions, required_permission):
+            if enforce_permissions and not check_permissions(role_permissions, required_permission):
                 return None, None
+
             return user_from_db, role_permissions
 
         def check_auth_api_key(api_key, api_secret):
@@ -94,21 +102,29 @@ def basic_authentication(func, required_permission: PermissionValue = None):
 
             if not user_from_db:
                 return None, None
+
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
-            if (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired()) \
-                    and not is_axonius_role(role):
+
+            is_expired = (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())
+
+            if is_expired and not is_axonius_role(role):
                 return None, None
+
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
             role_permissions = deserialize_db_permissions(role['permissions'])
+
             if user_from_db.get('admin'):
                 return user_from_db, role_permissions
-            if not check_permissions(role_permissions, required_permission):
+
+            if enforce_permissions and not check_permissions(role_permissions, required_permission):
                 return None, None
+
             return user_from_db, role_permissions
 
         api_auth = request.headers.get('api-key'), request.headers.get('api-secret')
         auth = request.authorization
         user_from_db, permissions = check_auth_api_key(*api_auth)
+
         if not user_from_db and auth:
             user_from_db, permissions = check_auth_user(auth.username, auth.password)
 
@@ -129,21 +145,42 @@ def basic_authentication(func, required_permission: PermissionValue = None):
     return wrapper
 
 
-def api_add_rule(rule, *args, required_permission: PermissionValue = None, activity_params: List[str] = None, **kwargs):
+def api_add_rule(rule,
+                 *args,
+                 required_permission: PermissionValue,
+                 activity_params: List[str] = None,
+                 enforce_permissions: bool = True,
+                 **kwargs,
+                 ):
     """
     A URL mapping for API endpoints that use the API method to log in (either user and pass or API key)
     """
     def wrapper(func):
         def basic_authentication_permissions(*args, **kwargs):
-            return basic_authentication(*args, **kwargs, required_permission=required_permission)
+            return basic_authentication(
+                *args,
+                **kwargs,
+                required_permission=required_permission,
+                enforce_permissions=enforce_permissions,
+            )
 
-        authenticated_rule = add_rule_custom_authentication(f'V{API_VERSION}/{rule}',
-                                                            basic_authentication_permissions,
-                                                            *args, **kwargs)
+        authenticated_rule = add_rule_custom_authentication(
+            rule=f'V{API_VERSION}/{rule}',
+            auth_method=basic_authentication_permissions,
+            *args,
+            **kwargs,
+        )
+
         activity_category = required_permission.Category.value
+
         if required_permission.Section:
             activity_category = f'{activity_category}.{required_permission.Section.value}'
-        return log_activity_rule(rule, activity_category, activity_params)(authenticated_rule(func))
+
+        return log_activity_rule(
+            rule=rule,
+            activity_category=activity_category,
+            activity_param_names=activity_params,
+        )(authenticated_rule(func))
 
     return wrapper
 
@@ -479,19 +516,23 @@ class APIMixin:
         rule='system/meta/about',
         methods=['GET'],
         required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Settings),
+        enforce_permissions=False,
     )
     def api_get_metadata(self):
         """Get the System Settings > About tab.
 
         GET: Returns dict with keys:
             Build Date: str
-            Commit Date: str
-            Commit Hash: str
-            Version: str
+            Installed Version: str
+            Customer ID: str
+            api_client_version: str
 
         :return: dict
         """
-        return jsonify(self.metadata)
+        obj = {}
+        obj.update(self.metadata)
+        obj['api_client_version'] = API_CLIENT_VERSION
+        return jsonify(obj)
 
     @api_add_rule(
         rule='system/instances',
