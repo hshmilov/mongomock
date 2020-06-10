@@ -190,21 +190,21 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self.devices_page.click_query_wizard()
         assert self.devices_page.is_filtered_adapter_icon_exists()
 
-    def _test_last_seen_query(self, query_comp_days=EntitiesPage.QUERY_COMP_DAYS):
+    def _test_last_seen_query(self, query_comp=EntitiesPage.QUERY_COMP_DAYS, query_value=365):
         self.devices_page.add_query_expression()
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 2
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
-        self.devices_page.select_query_comp_op(query_comp_days, parent=expressions[0])
-        self.devices_page.fill_query_value(365, parent=expressions[0])
+        self.devices_page.select_query_comp_op(query_comp, parent=expressions[0])
+        self.devices_page.fill_query_value(query_value, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = len(self.devices_page.get_all_data())
         self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[1])
-        self.devices_page.select_query_comp_op(query_comp_days, parent=expressions[1])
+        self.devices_page.select_query_comp_op(query_comp, parent=expressions[1])
         self.devices_page.fill_query_value(1, parent=expressions[1])
         self.devices_page.wait_for_table_to_be_responsive()
-        if query_comp_days == EntitiesPage.QUERY_COMP_DAYS:
+        if query_comp in (EntitiesPage.QUERY_COMP_DAYS, EntitiesPage.QUERY_COMP_HOURS):
             assert len(self.devices_page.get_all_data()) < results_count
         else:
             assert len(self.devices_page.get_all_data()) == results_count
@@ -215,6 +215,12 @@ class TestDevicesQueryAdvancedCases(TestBase):
 
     def _test_last_seen_query_with_next_days(self):
         self._test_last_seen_query(EntitiesPage.QUERY_COMP_NEXT_DAYS)
+
+    def _test_last_seen_query_last_hours(self):
+        self._test_last_seen_query(EntitiesPage.QUERY_COMP_HOURS, 365 * 24)
+
+    def _test_last_seen_query_with_next_hours(self):
+        self._test_last_seen_query(EntitiesPage.QUERY_COMP_NEXT_HOURS, 365 * 24)
 
     def _test_last_seen_query_with_filter_adapters(self):
         self.devices_page.add_query_expression()
@@ -693,6 +699,8 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_and_expression()
         self._test_last_seen_query_last_days()
         self._test_last_seen_query_with_next_days()
+        self._test_last_seen_query_last_hours()
+        self._test_last_seen_query_with_next_hours()
         self._test_last_seen_query_with_filter_adapters()
         self._test_asset_name_query_with_filter_adapters()
         self._test_query_brackets()

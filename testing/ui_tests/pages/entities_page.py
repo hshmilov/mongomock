@@ -80,6 +80,8 @@ class EntitiesPage(Page):
     QUERY_COMP_SIZE_BELOW = 'count <'
     QUERY_COMP_DAYS = 'last days'
     QUERY_COMP_NEXT_DAYS = 'next days'
+    QUERY_COMP_HOURS = 'last hours'
+    QUERY_COMP_NEXT_HOURS = 'next hours'
     QUERY_COMP_GREATER_THAN = '>'
     QUERY_COMP_LESS_THAN = '<'
     QUERY_COMP_STARTS = 'starts'

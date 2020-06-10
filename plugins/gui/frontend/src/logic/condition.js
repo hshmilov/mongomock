@@ -114,12 +114,12 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
     }
     let val = processedValue || value;
     let iVal = Array.isArray(val) ? -1 : undefined;
-    if (compOp === 'days') {
+    if (compOp === 'days' || compOp === 'hours') {
       const op = val < 0 ? '+' : '-';
       val = Math.abs(val);
       cond = cond.replace(/{op}/g, op);
     }
-    else if (compOp === 'next_days') {
+    else if (compOp === 'next_days' || compOp === 'next_hours') {
       const op = val < 0 ? '-' : '+';
       val = Math.abs(val);
       cond = cond.replace(/{op}/g, op);
@@ -329,7 +329,7 @@ const isExpectedValueItems = (schema, compOp) => {
 };
 
 const isExpectedValueInteger = (schema, compOp) => {
-  const opsExpectingInteger = ['days', 'next_days'];
+  const opsExpectingInteger = ['days', 'next_days', 'hours', 'next_hours'];
   const isSchemaDate = schema.format && schema.format === 'date-time';
   return isSchemaDate && opsExpectingInteger.includes(compOp);
 };

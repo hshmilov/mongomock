@@ -80,6 +80,8 @@ const date = {
   '>': '{field} > date("{val}")',
   days: '{field} >= date("NOW {op} {val}d")',
   next_days: '{field} <= date("NOW {op} {val}d")',
+  hours: '{field} >= date("NOW {op} {val}h")',
+  next_hours: '{field} <= date("NOW {op} {val}h")',
   exists,
 };
 export const compOps = {
@@ -154,4 +156,6 @@ export const opTitleTranslation = {
   subnet: 'in subnet',
   days: 'last days',
   next_days: 'next days',
+  hours: 'last hours',
+  next_hours: 'next hours',
 };
