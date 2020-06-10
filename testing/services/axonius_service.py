@@ -88,14 +88,6 @@ class AxoniusService:
 
     @classmethod
     def create_network(cls):
-        if not cls.get_is_docker_network_exists():
-            print(f'Creating regular axonius network')
-            docker_subnet_ip_range = get_docker_subnet_ip_range()
-            subprocess.check_call(
-                ['docker', 'network', 'create', f'--subnet={docker_subnet_ip_range}',
-                 '--opt', f'com.docker.network.bridge.name={DOCKER_BRIDGE_INTERFACE_NAME}',
-                 cls._DOCKER_NETWORK_NAME],
-                stdout=subprocess.PIPE)
         if not is_weave_up() and 'linux' in sys.platform.lower():
             weave_subnet_ip_range = get_weave_subnet_ip_range()
             # Getting network encryption key.
@@ -109,6 +101,14 @@ class AxoniusService:
             # now that we know we are using weave, create a "using weave" marker file
             if not is_using_weave():
                 USING_WEAVE_PATH.touch()
+        if not cls.get_is_docker_network_exists():
+            print(f'Creating regular axonius network')
+            docker_subnet_ip_range = get_docker_subnet_ip_range()
+            subprocess.check_call(
+                ['docker', 'network', 'create', f'--subnet={docker_subnet_ip_range}',
+                 '--opt', f'com.docker.network.bridge.name={DOCKER_BRIDGE_INTERFACE_NAME}',
+                 cls._DOCKER_NETWORK_NAME],
+                stdout=subprocess.PIPE)
 
     @classmethod
     def delete_network(cls):
@@ -130,12 +130,11 @@ class AxoniusService:
         print(f'Creating weave network')
         # this command should launch weave network
         # with our dns suffix, ip allocation range and encryption password using weave shell script.
-        env = {'DOCKER_BRIDGE': DOCKER_BRIDGE_INTERFACE_NAME}
         weave_launch_command = [WEAVE_PATH, 'launch',
                                 f'--dns-domain="{AXONIUS_DNS_SUFFIX}"', '--ipalloc-range', subnet_ip_range,
                                 '--password',
                                 encryption_key.strip()]
-        subprocess.check_call(weave_launch_command, env=env)
+        subprocess.check_call(weave_launch_command)
 
     @staticmethod
     def register_service(service: PluginService):
