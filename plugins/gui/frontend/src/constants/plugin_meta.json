@@ -206,6 +206,11 @@
     "description": "Red Hat Ansible Tower is a web console and REST API for operationalizing Ansible across teams, organizations, and the enterprise.",
     "link": "https://docs.axonius.com/docs/red-hat-ansible-tower"
   },
+  "centrify_adapter": {
+        "title": "Centrify Identity Services",
+        "description": "Centrify Identity Services manages application access, endpoints, and network infrastructure.",
+        "link": "https://docs.axonius.com/docs/centrify"
+  },
   "upguard_adapter": {
     "title": "UpGuard CyberRisk",
     "description": "UpGuard CyberRisk provides third-party vendor risk and external cyber risk monitoring. The platform has two main modules: UpGuard BreachSight which monitors company external risk posture and Vendor Risk monitors and helps manages the risk posture of third party vendors.",

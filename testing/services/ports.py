@@ -268,6 +268,7 @@ DOCKER_PORTS = {
     'edfs-csv-adapter':                 10005,
     'cisco-ucsm-adapter':               10010,
     'openvas-adapter':                  10014,
+    'centrify-adapter':                 10015,
     'box-platform-adapter':             10016,
     'hp-nnmi-xml-adapter':              10017,
     'keycloak-adapter':                 10018,
