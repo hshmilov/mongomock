@@ -1,5 +1,7 @@
 import sys
 
+import netifaces
+
 from scripts.instances.network_utils import DOCKER_NETOWRK_DEFAULT_DNS
 from services.weave_service import WeaveService, is_weave_up
 
@@ -26,7 +28,12 @@ class SystemService(WeaveService):
         if is_weave_up():
             # Docker will first try to resolve with the internal docker dns resolver,
             # and then use weave dns as a fallback
-            extra_flags.append(f'--dns={DOCKER_NETOWRK_DEFAULT_DNS}')
+            dns_server_ip = DOCKER_NETOWRK_DEFAULT_DNS
+            try:
+                dns_server_ip = netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
+            except Exception:
+                print(f'Error getting docker0 ip, using {dns_server_ip}')
+            extra_flags.append(f'--dns={dns_server_ip}')
         super().start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
                       expose_port=expose_port, extra_flags=extra_flags,
                       docker_internal_env_vars=docker_internal_env_vars, run_env=run_env)
