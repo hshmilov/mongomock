@@ -928,12 +928,26 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 sub_property = None
             val, last_seen, sub_property_val = '', datetime(1970, 1, 1, 0, 0, 0), None
         try:
-            # First priority is the latest seen Agent adapter
             for adapter in entity_data['adapters_data']:
                 if not adapter.endswith('_adapter'):
                     continue
                 _adapter = entity_data['adapters_data'][adapter][0]
 
+                # IP addresses we take from cloud providers no matter what (AX-7875)
+                if specific_property == 'network_interfaces' and sub_property == 'ips' and \
+                        'adapter_properties' in _adapter and 'Cloud_Provider' in _adapter['adapter_properties']:
+                    try:
+                        sub_property_val = _adapter[specific_property][sub_property] if \
+                            isinstance(_adapter[specific_property], dict) else \
+                            [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                    # Field not in result
+                    except Exception:
+                        sub_property_val = None
+                if sub_property_val:
+                    val = sub_property_val
+                    last_seen = datetime.now()
+
+                # First priority is the latest seen Agent adapter
                 if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
                         in _adapter and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
