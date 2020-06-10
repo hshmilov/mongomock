@@ -23,7 +23,7 @@
           :items="stockFieldsSchema"
         />
       </div>
-      <div class="actions">
+      <div class="x-field-config__actions">
         <XButton
           type="primary"
           :disabled="!isStockSelected"
@@ -336,7 +336,7 @@ export default {
           }
         }
 
-        .actions {
+        .x-field-config__actions {
           display: flex;
           flex-direction: column;
           margin: 0 8px;
@@ -367,4 +367,17 @@ export default {
       }
     }
   }
+  /* This is an ad-hoc solution for ticket AX-7879 and the regression it casused*/
+  @media (max-height: 700px) {
+      .x-field-config > .modal-container {
+        .modal-body {
+          height: unset;
+          align-items: unset;
+        }
+        .x-field-config__actions {
+        justify-content: center;
+        align-items: unset;
+      }
+      }
+    }
 </style>

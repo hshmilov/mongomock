@@ -142,7 +142,7 @@ export default {
                 padding: 24px;
                 padding-bottom: 0;
                 margin-bottom: 24px;
-                max-height: 650px;
+                max-height: 70vh;
                 overflow-y: auto;
 
                 .form-group:last-of-type {
