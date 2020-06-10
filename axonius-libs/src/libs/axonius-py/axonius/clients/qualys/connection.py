@@ -1,10 +1,15 @@
 import logging
+import io
+import csv
 import datetime
+import ipaddress
+from collections import defaultdict
 from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple
 from urllib.parse import urljoin
 
 from axonius.clients.qualys import consts, xmltodict
-from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES
+from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES, INVENTORY_TYPE, \
+    UNSCANNED_IP_TYPE, HOST_ASSET_TYPE, REPORT_URL_PREFIX, HOST_URL_PREFIX, UNSCANNED_IP_URL_PREFIX
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.exception import RESTException
@@ -15,6 +20,7 @@ In this connection we target the VM module (and probably PC later on).
 These modules have a rate limit - by default of 2 connections through api v2.0 or 300 api requests an hour.
 For the sake of the user - if the next api request is allowed within the next 30 seconds we wait and try again.
 '''
+
 
 # pylint: disable=logging-format-interpolation
 
@@ -55,6 +61,9 @@ class QualysScansConnection(RESTConnection):
                  max_retries=None,
                  date_filter=None,
                  fetch_from_inventory=False,
+                 fetch_report=False,
+                 fetch_tickets=False,
+                 fetch_unscanned_ips=False,
                  **kwargs):
         """ Initializes a connection to Illusive using its rest API
 
@@ -71,6 +80,9 @@ class QualysScansConnection(RESTConnection):
         self._retry_sleep_time = retry_sleep_time or consts.RETRY_SLEEP_TIME
         self._max_retries = max_retries or consts.MAX_RETRIES
         self._fetch_from_inventory = fetch_from_inventory
+        self._fetch_report = fetch_report
+        self._fetch_tickets = fetch_tickets
+        self._fetch_unscanned_ips = fetch_unscanned_ips
         self._jwt_token = None
         self._jwt_token_refresh = None
         self._gateway_api = self._get_qualys_gateway(str(self._url))
@@ -154,7 +166,7 @@ class QualysScansConnection(RESTConnection):
             for device in asset_list_data.get('asset'):
                 if isinstance(device, dict) and device.get('assetId'):
                     fetched_devices[device.get('assetId')] = True
-                yield device
+                yield device, INVENTORY_TYPE
                 total_devices += 1
 
             while response.get('hasMore') and total_devices < MAX_DEVICES:
@@ -296,6 +308,15 @@ class QualysScansConnection(RESTConnection):
         offsets = range(1, count + 1, self._devices_per_page)
         requests = [self._prepare_get_hostassets_request_params(offset) for offset in offsets]
 
+        hosts = self._get_hosts()
+
+        report = {}
+        tickets = {}
+        if self._fetch_report:
+            report = self._get_report()
+        if self._fetch_tickets:
+            tickets = self._get_tickets()
+
         # we try to fetch each page max exception threshold.
         # if we got data back we remove it from the next round
         # if we got all responses back we stop
@@ -304,7 +325,19 @@ class QualysScansConnection(RESTConnection):
             logger.info(f'Aync round number {i}, sending {len(requests)} requests')
             success_indices = []
             for index, devices in self._get_hostassets_by_requests(requests):
-                yield from devices
+                for device in devices:
+                    if isinstance(device, dict) and isinstance(device.get('HostAsset'), dict) and \
+                            device.get('HostAsset').get('address'):
+                        ip = device.get('HostAsset').get('address')
+                        if hosts.get(ip):
+                            device['HostAsset']['extra_host'] = hosts.get(ip)
+                        # TBD - Test
+                        if tickets.get(ip):
+                            device['HostAsset']['extra_tickets'] = tickets.get(ip)
+                        if report.get(ip):
+                            device['HostAsset']['extra_report'] = report.get(ip)
+                    yield device
+
                 success_indices.append(index)
 
             requests = [request for i, request in enumerate(requests) if i not in success_indices]
@@ -315,11 +348,17 @@ class QualysScansConnection(RESTConnection):
 
     def get_device_list(self):
         try:
+            if self._fetch_unscanned_ips:
+                yield from self._get_unscanned_ips()
+        except Exception as e:
+            logger.exception(f'Problem getting unscanned ips {str(e)}')
+
+        try:
             if self._fetch_from_inventory:
                 yield from self._paginated_inventory_get()
             else:
                 for device_raw in self._get_hostassets():
-                    yield device_raw
+                    yield device_raw, HOST_ASSET_TYPE
         except Exception:
             logger.exception(f'Problem getting hostassets')
 
@@ -347,6 +386,48 @@ class QualysScansConnection(RESTConnection):
             logger.debug(f'Failed with {e}')
             return False, ''
 
+    def _get_unscanned_ips(self):
+        try:
+            resp = self._get(UNSCANNED_IP_URL_PREFIX,
+                             do_basic_auth=True,
+                             use_json_in_body=False,
+                             use_json_in_response=False,
+                             url_params={'action': 'list'})
+            resp = xmltodict.parse(resp)
+
+            if not (isinstance(resp.get('IP_LIST_OUTPUT'), dict) and
+                    isinstance(resp.get('IP_LIST_OUTPUT').get('RESPONSE'), dict) and
+                    isinstance(resp.get('IP_LIST_OUTPUT').get('RESPONSE').get('IP_SET'), dict) and
+                    isinstance(resp['IP_LIST_OUTPUT']['RESPONSE']['IP_SET'].get('IP'), list)):
+                raise Exception(f'Received invalid response while fetching hosts. {resp}')
+
+            for unscanned_ip in resp['IP_LIST_OUTPUT']['RESPONSE']['IP_SET'].get('IP') or []:
+                yield unscanned_ip, UNSCANNED_IP_TYPE
+
+            if not resp.get('IP_LIST_OUTPUT').get('RESPONSE').get('IP_SET').get('IP_RANGE'):
+                logger.warning(f'No IP ranges in IP List Output')
+                return
+
+            ips_range = resp['IP_LIST_OUTPUT']['RESPONSE']['IP_SET']['IP_RANGE']
+            if isinstance(ips_range, str):
+                ips_range = [ips_range]
+            if not isinstance(ips_range, list):
+                logger.warning(f'Received invalid ips_range {ips_range}')
+                return
+
+            for unscanned_ip_range in ips_range:
+                start_ip, end_ip = unscanned_ip_range.split('-')
+                start_ip = ipaddress.IPv4Address(start_ip)
+                end_ip = ipaddress.IPv4Address(end_ip)
+                ip_address_summarize = ipaddress.summarize_address_range(start_ip, end_ip)
+                for ip_addresses in ip_address_summarize:
+                    for ip_address in ip_addresses:
+                        yield str(ip_address), UNSCANNED_IP_TYPE
+
+        except Exception as e:
+            logger.warning(f'Failed getting unscanned IPs with {e}')
+            return
+
     def get_asset_by_ip(self, ips: List):
         """Permissions - A Manager has permissions to add IP addresses.
            A Unit Manager can add IP addresses when the “Add assets” permission is enabled in their account.
@@ -365,6 +446,191 @@ class QualysScansConnection(RESTConnection):
         except Exception as e:
             logger.debug(f'Failed with {e}')
             return []
+
+    def _get_hosts(self):
+        try:
+            hosts = defaultdict(list)
+            resp = self._get(HOST_URL_PREFIX,
+                             do_basic_auth=True,
+                             use_json_in_body=False,
+                             use_json_in_response=False,
+                             url_params={'action': 'list', 'details': 'All/AGs'})
+            resp = xmltodict.parse(resp)
+
+            if not (isinstance(resp.get('HOST_LIST_OUTPUT'), dict) and
+                    isinstance(resp.get('HOST_LIST_OUTPUT').get('RESPONSE'), dict) and
+                    isinstance(resp.get('HOST_LIST_OUTPUT').get('RESPONSE').get('HOST_LIST'), dict) and
+                    isinstance(resp['HOST_LIST_OUTPUT']['RESPONSE']['HOST_LIST'].get('HOST'), list)):
+                raise Exception(f'Received invalid response while fetching hosts. {resp}')
+
+            for host in resp['HOST_LIST_OUTPUT']['RESPONSE']['HOST_LIST'].get('HOST') or []:
+                ip = host.get('IP')
+                if ip is not None:
+                    hosts[ip].append(host)
+
+            if not (isinstance(resp.get('HOST_LIST_OUTPUT').get('RESPONSE').get('WARNING'), dict) and
+                    resp.get('HOST_LIST_OUTPUT').get('RESPONSE').get('WARNING').get('URL')):
+                logger.debug(f'No more pagination in _get_hosts()')
+                return hosts
+
+            while resp['HOST_LIST_OUTPUT']['RESPONSE']['WARNING']['URL']:
+                url = resp['HOST_LIST_OUTPUT']['RESPONSE']['WARNING']['URL']
+                resp = self._get(url,
+                                 do_basic_auth=True,
+                                 use_json_in_body=False,
+                                 use_json_in_response=False,
+                                 force_full_url=True)
+
+                if not (isinstance(resp.get('HOST_LIST_OUTPUT'), dict) and
+                        isinstance(resp.get('HOST_LIST_OUTPUT').get('RESPONSE'), dict) and
+                        isinstance(resp.get('HOST_LIST_OUTPUT').get('RESPONSE').get('HOST_LIST'), dict) and
+                        isinstance(resp['HOST_LIST_OUTPUT']['RESPONSE']['HOST_LIST'].get('HOST'), list)):
+                    logger.warning(f'Received invalid response while paginated hosts. {resp}')
+                    # Breaking to retrieve all the information from the first pagination
+                    break
+
+                for host in resp['HOST_LIST_OUTPUT']['RESPONSE']['HOST_LIST'].get('HOST') or []:
+                    ip = host.get('IP')
+                    if ip is not None:
+                        hosts[ip].append(host)
+
+            return hosts
+        except Exception as e:
+            logger.warning(f'Failed getting hosts with {e}')
+            return {}
+
+    # pylint: disable=too-many-branches
+    def _get_report(self):
+        try:
+            report = {}
+
+            # List all the reports
+            resp = self._get(REPORT_URL_PREFIX,
+                             do_basic_auth=True,
+                             use_json_in_body=False,
+                             use_json_in_response=False,
+                             url_params={'action': 'list'})
+            resp = xmltodict.parse(resp)
+
+            if not (isinstance(resp.get('REPORT_LIST_OUTPUT'), dict) and
+                    isinstance(resp.get('REPORT_LIST_OUTPUT').get('RESPONSE'), dict) and
+                    isinstance(resp.get('REPORT_LIST_OUTPUT').get('RESPONSE').get('REPORT_LIST'), dict) and
+                    isinstance(resp['REPORT_LIST_OUTPUT']['RESPONSE']['REPORT_LIST'].get('REPORT'), list)):
+                raise Exception(f'Received invalid response while fetching authentication report. {resp}')
+
+            # Getting the most up to date report
+            current_report_id = None
+            current_report_date = None
+            current_daily_report_id = None
+            current_daily_report_date = None
+            for report in resp['REPORT_LIST_OUTPUT']['RESPONSE']['REPORT_LIST'].get('REPORT') or []:
+                if not isinstance(report, dict):
+                    continue
+
+                if not report.get('TYPE') == 'Authentication':
+                    continue
+
+                # We are looking for a Daily Authentication Report (Most up to date)
+                # If doesnt exist we will take a regulr Authentication Report (Most up to date)
+                if 'Daily' in report.get('TITLE'):
+                    if report.get('ID') and report.get('LAUNCH_DATETIME'):
+                        if not current_daily_report_id:
+                            current_daily_report_id = report.get('ID')
+                            current_daily_report_date = report.get('LAUNCH_DATETIME')
+                        elif current_daily_report_date < report.get('LAUNCH_DATETIME'):
+                            current_daily_report_id = report.get('ID')
+                            current_daily_report_date = report.get('LAUNCH_DATETIME')
+                else:
+                    if report.get('ID') and report.get('LAUNCH_DATETIME'):
+                        if not current_report_id:
+                            current_report_id = report.get('ID')
+                            current_report_date = report.get('LAUNCH_DATETIME')
+                        elif current_report_date < report.get('LAUNCH_DATETIME'):
+                            current_report_id = report.get('ID')
+                            current_report_date = report.get('LAUNCH_DATETIME')
+
+            if not (current_daily_report_id and current_report_id):
+                logger.debug('Failed to find Daily and reguler Authentication Report')
+                return report
+            report_id = current_daily_report_id or current_report_id
+
+            # Fetching the report (Downloading) -> CSV Bytes
+            resp = self._get(REPORT_URL_PREFIX,
+                             do_basic_auth=True,
+                             use_json_in_body=False,
+                             use_json_in_response=False,
+                             url_params={'action': 'fetch', 'id': report_id})
+            resp = io.StringIO(resp.decode('utf-8'))  # bytes -> str -> file object
+
+            # Fields are CONSTS (as documented in the API). If they change the result will be incorrect but it will
+            # not affect devices, devices will not have a ticket information.
+            fields_name = ('Asset Groups', 'Technology', 'Instance', 'Host IP', 'DNS Hostname', 'NetBIOS Hostname',
+                           'Tracking Method', 'Status', 'Failure Reason', 'OS', 'Last Auth', 'Last Success')
+            reader = csv.DictReader(resp, fields_name)
+
+            for row in reader:
+                if isinstance(row, dict) and row.get('Host IP'):
+                    report[row.get('Host IP')] = row
+
+            return report
+        except Exception as e:
+            logger.warning(f'Failed getting report with {e}')
+            return {}
+
+    # TBD - Check values (Test)
+    def _get_tickets(self):
+        try:
+            tickets = defaultdict(list)
+            resp = self._get('msp/ticket_list.php',
+                             do_basic_auth=True,
+                             use_json_in_body=False,
+                             use_json_in_response=False,
+                             url_params={'states': 'OPEN'})
+            resp = xmltodict.parse(resp)
+
+            if not (isinstance(resp.get('REMEDIATION_TICKETS'), dict) and
+                    isinstance(resp.get('REMEDIATION_TICKETS').get('TICKET_LIST'), dict) and
+                    isinstance(resp['REMEDIATION_TICKETS']['TICKET_LIST'].get('TICKET'), list)):
+                raise Exception(f'Received invalid response while fetching tickets. {resp}')
+
+            tickets_list = resp.get('REMEDIATION_TICKETS').get('TICKET_LIST').get('TICKET') or []
+            if isinstance(tickets_list, list):
+                for ticket in tickets_list:
+                    if not isinstance(ticket, dict):
+                        continue
+                    if ticket.get('IP'):
+                        tickets[ticket.get('IP')].append(ticket)
+
+            last_ticket = resp.get('REMEDIATION_TICKETS').get('@last')
+            while last_ticket:
+                resp = self._get('msp/ticket_list.php',
+                                 do_basic_auth=True,
+                                 use_json_in_body=False,
+                                 use_json_in_response=False,
+                                 url_params={'states': 'OPEN', 'since_ticket_number': last_ticket})
+                resp = xmltodict.parse(resp)
+
+                if not (isinstance(resp.get('REMEDIATION_TICKETS'), dict) and
+                        isinstance(resp.get('REMEDIATION_TICKETS').get('TICKET_LIST'), dict) and
+                        isinstance(resp['REMEDIATION_TICKETS']['TICKET_LIST'].get('TICKET'), list)):
+                    logger.warning(f'Received invalid response while paginate tickets {resp}')
+                    # Breaking to retrieve all the information from the first pagination
+                    break
+
+                tickets_list = resp.get('REMEDIATION_TICKETS').get('TICKET_LIST').get('TICKET') or []
+                if isinstance(tickets_list, list):
+                    for ticket in tickets_list:
+                        if not isinstance(ticket, dict):
+                            continue
+                        if ticket.get('IP'):
+                            tickets[ticket.get('IP')].append(ticket)
+
+                last_ticket = resp.get('REMEDIATION_TICKETS').get('@last')
+
+            return tickets
+        except Exception as e:
+            logger.warning(f'Failed getting reports list with {e}')
+            return {}
 
     def get_asset_group_id_by_title(self, title):
         try:
@@ -395,7 +661,7 @@ class QualysScansConnection(RESTConnection):
             logger.debug(f'Failed with {e}')
             return False, ''
 
-    def create_group(self, title, ips: List=None, hostnames: List=None):
+    def create_group(self, title, ips: List = None, hostnames: List = None):
         try:
             if not ips:
                 ips = []
@@ -434,8 +700,7 @@ class QualysScansConnection(RESTConnection):
             last_response = (yield self._prepare_service_request(filter_criteria_list=filter_criteria_list,
                                                                  start_offset=record_count))
             record_count += last_response.get('count', 0)
-            has_more = (last_response.get('count')
-                        and last_response.get('hasMoreRecords', '') == 'true')
+            has_more = (last_response.get('count') and last_response.get('hasMoreRecords', '') == 'true')
 
     def _search_tags(self, fields: Optional[List[str]] = None) -> Generator[dict, None, None]:
         """Permissions required - Managers with full scope, other users must have

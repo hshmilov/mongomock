@@ -3,10 +3,12 @@ import logging
 import csv
 import io
 import re
+from ipaddress import ip_address
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.qualys.consts import INVENTORY_TYPE, UNSCANNED_IP_TYPE
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln, DeviceOpenPort
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
@@ -36,8 +38,66 @@ class QualysAgentPort(SmartJsonClass):
     service_name = Field(str, 'Service Name')
 
 
+# pylint: disable=too-many-instance-attributes
+class QualysReport(SmartJsonClass):
+    asset_groups = Field(str, 'Asset Groups')
+    technology = Field(str, 'Technology')
+    instance = Field(str, 'Instance')
+    host_ip = Field(str, 'Host IP')
+    dns_hostname = Field(str, 'DNS Hostname')
+    netbios_hostname = Field(str, 'NETBios Hostname')
+    tracking_method = Field(str, 'Tracking Method')
+    status = Field(str, 'Status')
+    failure_reason = Field(str, 'Failure Reason')
+    os = Field(str, 'OS')
+    last_auth = Field(datetime.datetime, 'Last Authentication')
+    last_success = Field(datetime.datetime, 'Last Success')
+
+
+# pylint: disable=too-many-instance-attributes
+class QualysTicket(SmartJsonClass):
+    number = Field(int, 'Number')
+    creation_datetime = Field(datetime.datetime, 'Creation Date')
+    current_state = Field(str, 'Current State')
+    invalid = Field(int, 'Invalid')
+    assignee = Field(str, 'Assignee')
+    detection = Field(str, 'Detection')
+    stats = Field(str, 'Stats')
+    vuln_info = Field(str, 'Vulnerability Info')
+    details = Field(str, 'Details')
+    ticket = Field(str, 'Ticket')
+    state = Field(str, 'State')
+    due_date = Field(str, 'Due Date')
+    overdue = Field(str, 'Overdue')
+    ip = Field(str, 'IP')
+    port = Field(str, 'Port')
+    dns_hostname = Field(str, 'Dns Hostname')
+    netbios_hostname = Field(str, 'Netbios Hostname')
+    type = Field(str, 'Type')
+    severity = Field(str, 'Severity')
+    qid = Field(str, 'QID')
+    vulnerability_title = Field(str, 'Vulnerability Title')
+    owner = Field(str, 'Owner')
+    owner_email = Field(str, 'Owner Email')
+    modified = Field(str, 'Modified')
+    created = Field(str, 'Created')
+    resolved = Field(str, 'Resolved')
+    last_open_date_time = Field(str, 'Last Open Date Time')
+    last_closed_date_time = Field(str, 'Last Closed Date Time')
+
+
+class QualysHost(SmartJsonClass):
+    last_vm_scan_duration = Field(int, 'Last VM Scan Duration (sec)')
+    last_vm_auth_scanned_date = Field(datetime.datetime, 'Last VM Auth Scanned Date')
+    last_vm_auth_scanned_duration = Field(int, 'Last VM Auth Scanned Duration (sec)')
+    last_vm_scan_date = Field(datetime.datetime, 'Last VM Scan Date')
+    last_vulm_scan_datetime = Field(datetime.datetime, 'Last Vuln Scan Date')
+    last_compliance_scan_date = Field(datetime.datetime, 'Last Compliance Scan Date')
+    last_scap_scan_date = Field(datetime.datetime, 'Last Scap Scan Date')
+    asset_group_ids = ListField(str, 'Asset Group IDs')
+
+
 class QualysScansAdapter(ScannerAdapterBase, Configurable):
-    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         qualys_id = Field(str, 'Qualys ID')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
@@ -47,6 +107,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         qweb_host_id = Field(int, 'Qweb Host ID')
         tracking_method = Field(str, 'Tracking Method')
         inventory_instance = Field(InventoryInstance, 'Inventory Asset')
+        hosts = ListField(QualysHost, 'Hosts')
+        tickets = ListField(QualysTicket, 'Tickets')
+        report = Field(QualysReport, 'Report')
+        unscanned_device = Field(bool, 'Unscanned Device')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -57,6 +121,14 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self._qid_info = self.parse_qid_info()
+
+    @staticmethod
+    def parse_int(value):
+        try:
+            return int(value)
+        except Exception as e:
+            logger.warning(f'Failed to parse {value} as int: {str(e)}')
+        return None
 
     @staticmethod
     def _parse_qid_info_field(field, value):
@@ -113,7 +185,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 retry_sleep_time=self.__retry_sleep_time,
                 devices_per_page=self.__devices_per_page,
                 https_proxy=client_config.get('https_proxy'),
-                fetch_from_inventory=self.__fetch_from_inventory
+                fetch_from_inventory=self.__fetch_from_inventory,
+                fetch_report=self.__fetch_report,
+                fetch_tickets=self.__fetch_tickets,
+                fetch_unscanned_ips=self.__fetch_unscanned_ips
             )
             with connection:
                 pass
@@ -381,9 +456,35 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             logger.exception(f'Problem with fetching Inventory Device for {device_raw}')
             return None
 
+    @staticmethod
+    def _create_unscanned_ips(device_raw: str, device: MyDeviceAdapter):
+        try:
+            if device_raw is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            # Verify its an IP
+            try:
+                ip_address(device_raw)
+            except Exception:
+                logger.warning(f'Incorrect IP format received for unscanned ip {device_raw}')
+                return None
+            device.id = device_raw
+            device.unscanned_device = True
+
+            device.add_ips_and_macs(ips=[device_raw])
+
+            device.set_raw({'ip': device_raw})
+            return device
+
+        except Exception:
+            logger.exception(f'Problem with fetching unscanned ips Device for {device_raw}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            if self.__fetch_from_inventory:
+        for device_raw, device_type in devices_raw_data:
+            if device_type == UNSCANNED_IP_TYPE and self.__fetch_unscanned_ips:
+                device = self._create_unscanned_ips(device_raw, self._new_device_adapter())
+            elif device_type == INVENTORY_TYPE and self.__fetch_from_inventory:
                 # noinspection PyTypeChecker
                 device = self._create_inventory_device(device_raw, self._new_device_adapter())
             else:
@@ -572,6 +673,104 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem with adding software to Qualys agent {device_raw}')
 
+            try:
+                extra_hosts = device_raw.get('extra_host')
+
+                if isinstance(extra_hosts, list):
+                    hosts = []
+                    for extra_host in list(set(extra_hosts)):  # Avoid duplications if exist
+                        if isinstance(extra_host, dict):
+                            host = QualysHost()
+
+                            host.last_vm_scan_duration = self.parse_int(extra_host.get('LAST_VM_SCANNED_DURATION'))
+                            host.last_vm_auth_scanned_date = parse_date(extra_host.get('LAST_VM_AUTH_SCANNED_DATE'))
+                            host.last_vm_auth_scanned_duration = self.parse_int(
+                                extra_host.get('LAST_VM_AUTH_SCANNED_DURATION'))
+                            host.last_vm_scan_date = parse_date(extra_host.get('LAST_VM_SCANNED_DATE'))
+                            host.last_vulm_scan_datetime = parse_date(extra_host.get('LAST_VULN_SCAN_DATETIME'))
+                            host.last_compliance_scan_date = parse_date(extra_host.get('LAST_COMPLIANCE_SCAN_DATETIME'))
+                            host.last_scap_scan_date = parse_date(extra_host.get('LAST_SCAP_SCAN_DATETIME'))
+
+                            asset_group_ids = extra_host.get('ASSET_GROUP_IDS')
+                            if isinstance(asset_group_ids, str):
+                                asset_group_ids = [asset_group_ids]
+                            if isinstance(asset_group_ids, list):
+                                device.asset_group_ids = asset_group_ids
+
+                            hosts.append(host)
+                    device.hosts = hosts
+            except Exception as e:
+                logger.warning(f'Failed parsing device hosts information: {extra_hosts} - {str(e)}')
+
+            extra_report = device_raw.get('extra_report')
+            if isinstance(extra_report, dict) and extra_report:
+                report_ticket = QualysReport()
+
+                report_ticket.asset_groups = extra_report.get('Asset Groups')
+                report_ticket.technology = extra_report.get('Technology')
+                report_ticket.instance = extra_report.get('Instance')
+                report_ticket.host_ip = extra_report.get('Host IP')
+                report_ticket.dns_hostname = extra_report.get('DNS Hostname')
+                report_ticket.netbios_hostname = extra_report.get('NetBIOS Hostnam')
+                report_ticket.tracking_method = extra_report.get('Tracking Method')
+                report_ticket.status = extra_report.get('Status')
+                report_ticket.failure_reason = extra_report.get('Failure Reason')
+                # pylint: disable=invalid-name
+                report_ticket.os = extra_report.get('OS')
+                try:
+                    report_ticket.last_auth = parse_date(extra_report.get('Last Auth'))
+                except Exception:
+                    pass
+                try:
+                    report_ticket.last_success = parse_date(extra_report.get('Last Success'))
+                except Exception:
+                    pass
+
+                device.report = report_ticket
+
+            # TBD - Test
+            try:
+                extra_tickets = device_raw.get('extra_tickets')
+                if isinstance(extra_tickets, list):
+                    tickets = []
+                    for extra_ticket in extra_tickets:
+                        if isinstance(extra_ticket, dict):
+                            ticket = QualysTicket()
+
+                            ticket.number = self.parse_int(extra_ticket.get('NUMBER'))
+                            ticket.creation_datetime = parse_date(extra_ticket.get('CREATION_DATETIME'))
+                            ticket.current_state = extra_ticket.get('CURRENT_STATE')
+                            ticket.invalid = self.parse_int(extra_ticket.get('INVALID'))
+                            ticket.assignee = extra_ticket.get('ASSIGNEE')
+                            ticket.detection = extra_ticket.get('DETECTION')
+                            ticket.stats = extra_ticket.get('STATS')
+                            ticket.vuln_info = extra_ticket.get('VULN_INFO')
+                            ticket.details = extra_ticket.get('DETAILS')
+                            ticket.ticket = extra_ticket.get('TICKET')
+                            ticket.state = extra_ticket.get('STATE')
+                            ticket.due_date = extra_ticket.get('DUE_DATETIME')
+                            ticket.overdue = extra_ticket.get('OVERDUE')
+                            ticket.ip = extra_ticket.get('IP')
+                            ticket.port = extra_ticket.get('PORT')
+                            ticket.dns_hostname = extra_ticket.get('DNS_HOSTNAME')
+                            ticket.netbios_hostname = extra_ticket.get('NETBIOS_HOSTNAME')
+                            ticket.type = extra_ticket.get('TYPE')
+                            ticket.severity = extra_ticket.get('SEVERITY')
+                            ticket.qid = extra_ticket.get('QID')
+                            ticket.vulnerability_title = extra_ticket.get('VULNERABILITY_TITLE')
+                            ticket.owner = extra_ticket.get('OWNER')
+                            ticket.owner_email = extra_ticket.get('OWNER_EMAIL')
+                            ticket.modified = extra_ticket.get('MODIFIED')
+                            ticket.created = extra_ticket.get('CREATED')
+                            ticket.resolved = extra_ticket.get('RESOLVED')
+                            ticket.last_open_date_time = parse_date(extra_ticket.get('LAST_OPEN_DATE_TIME'))
+                            ticket.last_closed_date_time = parse_date(extra_ticket.get('LAST_CLOSED_DATE_TIME'))
+
+                            tickets.append(ticket)
+                    device.tickets = tickets
+            except Exception as e:
+                logger.warning(f'Failed parsing device ticket information: {extra_tickets} - {str(e)}')
+
             device.adapter_properties = [AdapterProperty.Vulnerability_Assessment.name]
             device.qweb_host_id = device_raw.get('qwebHostId') \
                 if isinstance(device_raw.get('qwebHostId'), int) else None
@@ -631,9 +830,24 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'title': 'Use Inventory API'
                 },
                 {
+                    'name': 'fetch_report',
+                    'type': 'bool',
+                    'title': 'Fetch authentication report'
+                },
+                {
+                    'name': 'fetch_tickets',
+                    'type': 'bool',
+                    'title': 'Fetch tickets'
+                },
+                {
                     'name': 'use_dns_host_as_hostname',
                     'type': 'bool',
-                    'title': 'Use DNS name as hostname even if Netbios name exists'
+                    'title': 'Use DNS name as hostname even if NetBIOS name exists'
+                },
+                {
+                    'name': 'fetch_unscanned_ips',
+                    'type': 'bool',
+                    'title': 'Fetch unscanned IP addresses'
                 }
             ],
             'required': [
@@ -643,7 +857,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'max_retries',
                 'retry_sleep_time',
                 'devices_per_page',
-                'fetch_from_inventory', 'use_dns_host_as_hostname'
+                'fetch_from_inventory', 'use_dns_host_as_hostname',
+                'fetch_report',
+                'fetch_tickets',
+                'fetch_unscanned_ips'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -660,7 +877,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'fetch_vulnerabilities_data': True,
             'qualys_tags_white_list': None,
             'fetch_from_inventory': False,
-            'use_dns_host_as_hostname': False
+            'use_dns_host_as_hostname': False,
+            'fetch_unscanned_ips': False,
+            'fetch_report': False,
+            'fetch_tickets': False
         }
 
     def _on_config_update(self, config):
@@ -675,6 +895,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             if config.get('qualys_tags_white_list') else None
         self.__fetch_from_inventory = config.get('fetch_from_inventory', False)
         self.__use_dns_host_as_hostname = config.get('use_dns_host_as_hostname', False)
+        self.__fetch_report = config.get('fetch_report', False)
+        self.__fetch_tickets = config.get('fetch_tickets', False)
+        self.__fetch_unscanned_ips = config.get('fetch_unscanned_ips', False)
 
     @classmethod
     def adapter_properties(cls):

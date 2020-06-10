@@ -5,6 +5,11 @@ DEVICES_PER_PAGE = 1
 MAX_DEVICES = 2000000
 HTTP_RETRIES_ERROR = 409
 
+INVENTORY_TYPE = 'inventory'
+HOST_ASSET_TYPE = 'host_asset'
+UNSCANNED_IP_TYPE = 'unscanned_ip'
+
+
 QUALYS_SCANS_DOMAIN = 'Qualys_Scans_Domain'
 USERNAME = 'username'
 PASSWORD = 'password'
@@ -13,6 +18,9 @@ HTTPS_PROXY = 'https_proxy'
 AGENT_DEVICE = 'agent_device'
 SCAN_DEVICE = 'scan_device'
 
+UNSCANNED_IP_URL_PREFIX = 'api/2.0/fo/asset/ip'
+HOST_URL_PREFIX = 'api/2.0/fo/asset/host'
+REPORT_URL_PREFIX = 'api/2.0/fo/report'
 SCANS_URL_PREFIX = 'api/2.0/fo/'
 ALL_HOSTS_URL = 'asset/host/'
 ALL_HOSTS_PARAMS = f'action=list&details=All&truncation_limit={DEVICES_PER_PAGE}&id_min=0&show_tags=1'
