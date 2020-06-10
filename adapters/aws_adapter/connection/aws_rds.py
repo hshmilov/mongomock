@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from aws_adapter.connection.aws_route_table import populate_route_tables
 from aws_adapter.connection.structures import AWSDeviceAdapter, RDSInfo, RDSDBParameterGroup, RDSDBSecurityGroup, \
     RDSVPCSecurityGroup, RDSSubnet, RDSDomainMembership
 from aws_adapter.connection.utils import get_paginated_marker_api, make_ip_rules_list, add_generic_firewall_rules
@@ -24,11 +25,15 @@ def query_devices_by_client_by_source_rds(client_data: dict):
 def parse_raw_data_inner_rds(
         device: AWSDeviceAdapter,
         rds_instance_raw: dict,
-        generic_resources: dict
+        generic_resources: dict,
+        options: dict
 ) -> Optional[AWSDeviceAdapter]:
+
     # Parse RDS's
     vpcs_by_id = generic_resources.get('vpcs') or {}
     security_group_dict = generic_resources.get('security_groups') or {}
+    route_tables = generic_resources.get('route_tables') or []
+
     try:
         device.id = rds_instance_raw['DBInstanceArn']
         device.name = rds_instance_raw['DBInstanceIdentifier']
@@ -192,6 +197,19 @@ def parse_raw_data_inner_rds(
         except Exception:
             logger.exception(f'Could not parse aws vpc tags')
         device.rds_data = rds_data
+
+        # route tables
+        if options.get('fetch_route_table_for_devices'):
+            try:
+                if not isinstance(route_tables, list):
+                    raise ValueError(f'Malformed route tables, expected list, '
+                                     f'got {type(route_tables)}')
+
+                populate_route_tables(device, route_tables)
+            except Exception:
+                logger.exception(f'Unable to populate route tables: '
+                                 f'{str(route_tables)} for '
+                                 f'{str(device.id)}')
 
         device.set_raw(rds_instance_raw)
         return device

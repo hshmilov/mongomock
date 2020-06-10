@@ -35,6 +35,8 @@ class AwsRawDataTypes(Enum):
     RDS = auto()
     S3 = auto()
     Workspaces = auto()
+    InternetGateway = auto()
+    RouteTable = auto()
 
 
 # translation table between AWS values to parsed values
@@ -425,6 +427,43 @@ class AWSUserService(SmartJsonClass):
     last_authenticated_entity = Field(str, 'Last Authenticated Entity')
 
 
+class AWSRoute(SmartJsonClass):
+    destination_cidr = Field(str, 'Destination IPv4 CIDR Block')
+    destination_ipv6_cidr = Field(str, 'Destination IPv6 CIDR Block')
+    destination_prefix_list_id = Field(str, 'Destination Prefix List ID')
+    egress_only_igw_id = Field(str, 'Egress Only Internet Gateway ID')
+    gateway_id = Field(str, 'Gateway ID')
+    instance_id = Field(str, 'Instance ID')
+    instance_owner_id = Field(str, 'Instance Owner ID')
+    nat_gateway_id = Field(str, 'NAT Gateway ID')
+    transit_gateway_id = Field(str, 'Transit Gateway ID')
+    local_gateway_id = Field(str, 'Local Gateway ID')
+    network_interface_id = Field(str, 'Network Interface ID')
+    origin = Field(str, 'Origin')
+    route_table_id = Field(str, 'Route Table ID')
+    state = Field(str, 'State')
+    vpc_peering_connection_id = Field(str, 'VPC Peering Connection ID')
+
+
+class AWSRouteTableAssociation(SmartJsonClass):
+    main = Field(bool, 'Main Route Table')
+    association_id = Field(str, 'Route Table Association ID')
+    route_table_id = Field(str, 'Route Table ID')
+    subnet_id = Field(str, 'Subnet ID')
+    gateway_id = Field(str, 'Gateway ID')
+    state = Field(str, 'State')
+    status_message = Field(str, 'Status Message')
+
+
+class AWSRouteTable(SmartJsonClass):
+    associations = ListField(AWSRouteTableAssociation, 'Associations')
+    propagating_vgws = ListField(str, 'Propagating VGWs')
+    route_table_id = Field(str, 'Route Table ID')
+    routes = ListField(AWSRoute, 'Routes')
+    vpc_id = Field(str, 'VPC ID')
+    owner_id = Field(str, 'Owner ID')
+
+
 class AWSUserAdapter(UserAdapter, AWSAdapter):
     user_path = Field(str, 'User Path')
     user_arn = Field(str, 'User Arn')
@@ -460,8 +499,10 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     aws_availability_zone = Field(str, 'Availability Zone')
     aws_device_type = Field(
         str,
-        'Device Type (EC2 / ECS / EKS / ELB / Managed / NAT / RDS / S3 / Workspace / Lambda / Route53)',
-        enum=['EC2', 'ECS', 'EKS', 'ELB', 'Managed', 'NAT', 'RDS', 'S3', 'Workspace', 'Lambda', 'Route53']
+        'Device Type (EC2 / ECS / EKS / ELB / Internet Gateway / Lambda / '
+        'Managed / NAT / RDS / Route53 / Route Table / S3 / Workspace)',
+        enum=['EC2', 'ECS', 'EKS', 'ELB', 'InternetGateway', 'Lambda', 'Managed',
+              'NAT', 'RDS', 'Route53', 'RouteTable', 'S3', 'Workspace']
     )
     security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -522,6 +563,22 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     s3_public_access_block_policy = Field(AWSS3PublicAccessBlockConfiguration, 'S3 Public Access Block Configuration')
     s3_bucket_logging_target = Field(str, 'S3 Bucket Logging Target')
     s3_bucket_used_for_cloudtrail = Field(bool, 'S3 Bucket Used for CloudTrail')
+
+    # internet gateway fields
+    igw_id = Field(str, 'Internet Gateway ID')
+    igw_attached = Field(bool, 'Internet Gateway Is Attached')
+    igw_name = Field(str, 'Internet Gateway Name')
+    igw_owner_id = Field(str, 'Internet Gateway Owner ID')
+    igw_state = Field(str, 'Internet Gateway State')
+
+    # route table fields
+    route_table_id = Field(str, 'Route Table ID')
+    route_table_ids = ListField(str, 'Route Table IDs in VPC')
+    routes = ListField(AWSRoute, 'Routes')
+    route_table_associations = ListField(AWSRouteTableAssociation, 'Associations')
+    route_table_name = Field(str, 'Route Table Name')
+    route_table_owner_id = Field(str, 'Route Table Owner ID')
+    route_table_propagating_vgws = ListField(str, 'Propagating VGW IDs')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

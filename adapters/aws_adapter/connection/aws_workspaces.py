@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from aws_adapter.connection.aws_route_table import populate_route_tables
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWSWorkspaceDevice
 from aws_adapter.connection.utils import get_paginated_next_token_api
 from axonius.utils.datetime import parse_date
@@ -8,7 +9,7 @@ from axonius.utils.datetime import parse_date
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-# pylint: disable=too-many-nested-blocks, too-many-branches
+# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
 def query_devices_by_client_by_source_workspaces(client_data: dict):
     if client_data.get('workspaces') is not None:
         try:
@@ -54,12 +55,47 @@ def query_devices_by_client_by_source_workspaces(client_data: dict):
                         except Exception:
                             if 'workspace_tags' not in errors_reported:
                                 errors_reported.append('workspace_tags')
-                                logger.exception(f'Problem while fetching workspace_tags')
+                                logger.exception(f'Problem while fetching '
+                                                 f'workspace_tags')
 
                         if workspace_raw.get('DirectoryId'):
                             workspace_raw['workspace_directory'] = workspace_directories.get(
                                 workspace_raw.get('DirectoryId')
                             )
+
+                        # get the VPC ID from the Subnet ID
+                        subnet_id = workspace_raw.get('SubnetId')
+                        if isinstance(subnet_id, str):
+                            try:
+                                ec2_client = client_data.get('ec2')
+                                try:
+                                    subnets = ec2_client.describe_subnets(
+                                        SubnetIds=[subnet_id])
+                                    if not isinstance(subnets, dict):
+                                        raise ValueError(f'Malformed subnet. '
+                                                         f'Expected a dict, got '
+                                                         f'{type(subnets)}: '
+                                                         f'{str(subnets)}')
+
+                                    for subnet in subnets.get('Subnets') or []:
+                                        if isinstance(subnet, dict):
+                                            if subnet.get('SubnetId') == subnet_id:
+                                                workspace_raw['vpc_id'] = subnet.get('VpcId')
+                                                break
+                                        else:
+                                            logger.warning(
+                                                f'Malformed subnet. '
+                                                f'Expected a dict, got '
+                                                f'{type(subnet)}: '
+                                                f'{str(subnet)}')
+
+                                except Exception:
+                                    logger.exception(f'Unable to extract '
+                                                     f'VPC ID from Subnet ID: '
+                                                     f'{subnet_id}')
+                            except Exception:
+                                logger.exception(f'Could not get a boto3 ec2 '
+                                                 f'client')
 
                         if workspace_connection_status.get(workspace_id):
                             workspace_raw['workspace_connection_status'] = workspace_connection_status.get(
@@ -71,14 +107,19 @@ def query_devices_by_client_by_source_workspaces(client_data: dict):
         except Exception:
             logger.exception(f'Problem fetching information about Workspaces')
 
+# pylint: disable=too-many-statements
+
 
 def parse_raw_data_inner_workspaces(
         device: AWSDeviceAdapter,
         workspace_raw: dict,
-        generic_resources: dict
+        generic_resources: dict,
+        options: dict
 ) -> Optional[AWSDeviceAdapter]:
     # Parse Workspaces
     subnets_by_id = generic_resources.get('subnets') or {}
+    route_tables = generic_resources.get('route_tables') or []
+
     try:
         workspace_id = workspace_raw['WorkspaceId']
 
@@ -156,6 +197,8 @@ def parse_raw_data_inner_workspaces(
 
         device.subnet_id = workspace_raw.get('SubnetId')
         device.subnet_name = (subnets_by_id.get(workspace_raw.get('SubnetId')) or {}).get('name')
+        device.vpc_id = workspace_raw.get('VpcId')
+
         device.hostname = workspace_raw.get('ComputerName')
         if workspace_raw.get('UserName'):
             device.last_used_users = [workspace_raw.get('UserName')]
@@ -167,6 +210,19 @@ def parse_raw_data_inner_workspaces(
                 device.add_key_value_tag(key, value)
         except Exception:
             logger.exception(f'Problem parsing tags')
+
+        # route tables
+        if options.get('fetch_route_table_for_devices'):
+            try:
+                if not isinstance(route_tables, list):
+                    raise ValueError(f'Malformed route tables, expected list, '
+                                     f'got {type(route_tables)}')
+
+                populate_route_tables(device, route_tables)
+            except Exception:
+                logger.exception(f'Unable to populate route tables: '
+                                 f'{str(route_tables)} for '
+                                 f'{str(device.id)}')
 
         device.set_raw(workspace_raw)
         return device

@@ -6,10 +6,12 @@ from aws_adapter.connection.aws_connections import connect_client_by_source
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import query_devices_by_client_for_all_sources, \
     query_devices_by_client_by_source
 from aws_adapter.connection.aws_generic_resources import get_account_metadata, query_aws_generic_region_resources
+from aws_adapter.connection.aws_igw import query_devices_by_client_by_source_igw
 from aws_adapter.connection.aws_lambda import query_devices_by_client_by_source_lambda
 from aws_adapter.connection.aws_nat import query_devices_by_client_by_source_nat
 from aws_adapter.connection.aws_rds import query_devices_by_client_by_source_rds
 from aws_adapter.connection.aws_route53 import query_devices_by_client_by_source_route53
+from aws_adapter.connection.aws_route_table import query_devices_by_client_by_source_route_table
 from aws_adapter.connection.aws_s3 import query_devices_by_client_by_source_s3
 from aws_adapter.connection.aws_ssm import query_devices_by_client_by_source_ssm
 from aws_adapter.connection.aws_workspaces import query_devices_by_client_by_source_workspaces
@@ -157,6 +159,36 @@ def query_devices_for_one_account(
 
             del parsed_data_for_all_regions
             del futures_dict
+
+            if options.get('fetch_igw') is True:
+                logger.info((f'Fetching Internet Gateways for {account}'))
+                for region_name, connected_clients in connected_clients_by_region.items():
+                    source_name = f'{account}_{region_name}'
+                    account_metadata['region'] = region_name
+                    try:
+                        for parse_data_for_source in query_devices_by_client_by_source_igw(connected_clients):
+                            yield source_name, account_metadata, \
+                                parse_data_for_source, \
+                                generic_resources_by_region.get(
+                                    region_name), AwsRawDataTypes.InternetGateway
+                    except Exception:
+                        logger.exception(f'Error while querying Internet '
+                                         f'Gateways in source {source_name}')
+
+            if options.get('fetch_route_table') is True:
+                logger.info((f'Fetching Route Tables for {account}'))
+                for region_name, connected_clients in connected_clients_by_region.items():
+                    source_name = f'{account}_{region_name}'
+                    account_metadata['region'] = region_name
+                    try:
+                        for parse_data_for_source in query_devices_by_client_by_source_route_table(connected_clients):
+                            yield source_name, account_metadata, \
+                                parse_data_for_source, \
+                                generic_resources_by_region.get(
+                                    region_name), AwsRawDataTypes.RouteTable
+                    except Exception:
+                        logger.exception(f'Error while querying Route Tables in source'
+                                         f' {source_name}')
 
             if options.get('fetch_nat') is True:
                 logger.info(f'Fetching NAT for {account}')

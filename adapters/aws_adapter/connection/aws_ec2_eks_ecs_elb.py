@@ -11,6 +11,7 @@ from typing import Optional, Callable
 
 import kubernetes
 
+from aws_adapter.connection.aws_route_table import populate_route_tables
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWS_POWER_STATE_MAP, AWSRole, AWSEBSVolumeAttachment, \
     AWSTagKeyValue, AWSEBSVolume
 from aws_adapter.connection.utils import make_ip_rules_list, add_generic_firewall_rules, \
@@ -22,10 +23,12 @@ from axonius.utils.datetime import parse_date
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements, too-many-locals, too-many-lines
+# pylint: disable=too-many-nested-blocks, too-many-branches
+# pylint: disable=too-many-statements, too-many-locals, too-many-lines
 def query_devices_by_client_for_all_sources(client_data: dict, options: dict):
     raw_data = dict()
     logger.info(f'Starting to query devices for region-less aws services')
+
     # Checks whether client_data contains IAM data
     if client_data.get('iam') is not None and options.get('fetch_instance_roles') is True:
         try:
@@ -121,6 +124,7 @@ def query_devices_by_client_by_source(
     """
     raw_data = dict()
     region = client_data.get('region')
+
     # Checks whether client_data contains EC2 data
     if client_data.get('ec2') is not None:
         try:
@@ -192,6 +196,7 @@ def query_devices_by_client_by_source(
             logger.exception(f'Problem parsing ec2')
             # This is a minimum
             raise
+
     # Checks whether client_data contains ECS data
     if client_data.get('ecs') is not None:
         try:
@@ -271,6 +276,7 @@ def query_devices_by_client_by_source(
             # We do not raise an exception here since this could be a networking exception or a programming
             # exception and we do not want the whole adapter to crash.
             logger.exception('Error while parsing ecs')
+
     # Checks whether client_data contains EKS data
     if client_data.get('eks') is not None:
         try:
@@ -348,6 +354,7 @@ def query_devices_by_client_by_source(
                     logger.exception(f'Could not get cluster info for {cluster}')
         except Exception:
             logger.exception(f'Problem parsing EKS')
+
     # Checks whether client_data contains ELB data
     # we declare two dicts. one that maps between instance id's and a list of load balancers that point to them
     # and one that maps between ip's and a list of load balancers that point to them.
@@ -424,6 +431,7 @@ def query_devices_by_client_by_source(
             # We do not raise an exception here since this could be a networking exception or a programming
             # exception and we do not want the whole adapter to crash.
             logger.exception('Error while parsing ELB v1')
+
     if client_data.get('elbv2') is not None and options.get('fetch_load_balancers') is True:
         try:
             elbv2_client_data = client_data.get('elbv2')
@@ -554,9 +562,11 @@ def parse_raw_data_inner_regular(
         new_device_adapter: Callable,
         options: dict
 ) -> Optional[AWSDeviceAdapter]:
+
     subnets_by_id = generic_resources.get('subnets') or {}
     vpcs_by_id = generic_resources.get('vpcs') or {}
     security_group_dict = generic_resources.get('security_groups') or {}
+    route_tables = generic_resources.get('route_tables') or []
 
     instance_profiles_dict = devices_raw_data.get('instance_profiles') or {}
     elb_by_ip = devices_raw_data.get('elb_by_ip') or {}
@@ -566,6 +576,7 @@ def parse_raw_data_inner_regular(
 
     ec2_id_to_ips = dict()
     private_ips_to_ec2 = dict()
+
     # Checks whether devices_raw_data contains EC2 data
     if devices_raw_data.get('ec2') is not None:
         ec2_devices_raw_data = devices_raw_data.get('ec2')
@@ -861,6 +872,20 @@ def parse_raw_data_inner_regular(
                 except Exception:
                     logger.exception(f'Error parsing instance volumes')
 
+                # route tables
+                if options.get('fetch_route_table_for_devices'):
+                    try:
+                        if not isinstance(route_tables, list):
+                            raise ValueError(
+                                f'Malformed route tables, expected list, '
+                                f'got {type(route_tables)}')
+
+                        populate_route_tables(device, route_tables)
+                    except Exception:
+                        logger.exception(f'Unable to populate route tables: '
+                                         f'{str(route_tables)} for '
+                                         f'{str(device.id)}')
+
                 device.set_raw(device_raw)
                 yield device
 
@@ -947,6 +972,7 @@ def parse_raw_data_inner_regular(
                                     'container_spec': container_spec,
                                     'pod': pod_raw
                                 })
+
                                 yield device
                             except Exception:
                                 logger.exception(f'Error parsing container in pod: {container_raw}. bypassing')
@@ -1264,6 +1290,20 @@ def parse_raw_data_inner_regular(
                             device.add_aws_security_group(name=security_group_raw.get('GroupName'))
             except Exception:
                 logger.exception(f'Problem getting security groups for elb')
+
+            # route tables
+            if options.get('fetch_route_table_for_devices'):
+                try:
+                    if not isinstance(route_tables, list):
+                        raise ValueError(f'Malformed route tables, expected '
+                                         f'list, got {type(route_tables)}')
+
+                    populate_route_tables(device, route_tables)
+                except Exception:
+                    logger.exception(f'Unable to populate route tables: '
+                                     f'{str(route_tables)} for '
+                                     f'{str(device.id)}')
+
             device.set_raw(elb_raw)
             yield device
     except Exception:

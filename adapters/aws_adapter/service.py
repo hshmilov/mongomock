@@ -12,8 +12,10 @@ from aws_adapter.connection.aws_connections import connect_client_by_source
 from aws_adapter.connection.aws_devices import query_devices_for_one_account
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import parse_raw_data_inner_regular
 from aws_adapter.connection.aws_generic_resources import get_account_metadata
+from aws_adapter.connection.aws_igw import parse_raw_data_inner_igw
 from aws_adapter.connection.aws_nat import parse_raw_data_inner_nat
 from aws_adapter.connection.aws_rds import parse_raw_data_inner_rds
+from aws_adapter.connection.aws_route_table import parse_raw_data_inner_route_table
 from aws_adapter.connection.aws_route53 import parse_raw_data_inner_route53
 from aws_adapter.connection.aws_s3 import parse_raw_data_inner_s3
 from aws_adapter.connection.aws_ssm import parse_raw_data_inner_ssm
@@ -572,7 +574,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         device = parse_raw_data_inner_nat(self._new_device_adapter(),
                                                           devices_raw_data_by_source,
-                                                          generic_resources
+                                                          generic_resources,
+                                                          self.__options
                                                           )
                         if device:
                             self.append_metadata_to_entity(device, account_metadata, aws_source)
@@ -605,7 +608,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         device = parse_raw_data_inner_rds(self._new_device_adapter(),
                                                           devices_raw_data_by_source,
-                                                          generic_resources
+                                                          generic_resources,
+                                                          self.__options
                                                           )
                         if device:
                             self.append_metadata_to_entity(device, account_metadata, aws_source)
@@ -616,13 +620,44 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         device = parse_raw_data_inner_workspaces(self._new_device_adapter(),
                                                                  devices_raw_data_by_source,
-                                                                 generic_resources
+                                                                 generic_resources,
+                                                                 self.__options
                                                                  )
                         if device:
                             self.append_metadata_to_entity(device, account_metadata, aws_source)
                             yield device
                     except Exception:
                         logger.exception(f'Problem parsing device from Workspaces')
+                elif raw_data_type == AwsRawDataTypes.InternetGateway:
+                    try:
+                        device = parse_raw_data_inner_igw(self._new_device_adapter(),
+                                                          devices_raw_data_by_source,
+                                                          generic_resources,
+                                                          self.__options
+                                                          )
+                        if device:
+                            self.append_metadata_to_entity(device,
+                                                           account_metadata,
+                                                           aws_source)
+                            yield device
+                    except Exception:
+                        logger.exception(f'Problem parsing device from Internet '
+                                         f'Gateways: {devices_raw_data_by_source}')
+                elif raw_data_type == AwsRawDataTypes.RouteTable:
+                    try:
+                        device = parse_raw_data_inner_route_table(self._new_device_adapter(),
+                                                                  devices_raw_data_by_source,
+                                                                  generic_resources
+                                                                  )
+                        if device:
+                            self.append_metadata_to_entity(device,
+                                                           account_metadata,
+                                                           aws_source)
+                            yield device
+                    except Exception:
+                        logger.exception(
+                            (f'Problem parsing device from Route Tables: '
+                             f'{devices_raw_data_by_source}'))
                 else:
                     logger.critical(f'Can not parse data for aws source {aws_source}, '
                                     f'unknown type {raw_data_type.name}')
@@ -715,6 +750,9 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_ssm = config.get('fetch_ssm') or False
         self.__fetch_nat = config.get('fetch_nat') or False
         self.__fetch_route53 = config.get('fetch_route53') or False
+        self.__fetch_igw = config.get('fetch_igw') or False
+        self.__fetch_route_table = config.get('fetch_route_table') or False
+        self.__fetch_route_table_for_devices = config.get('fetch_route_table_for_devices') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
@@ -756,6 +794,21 @@ class AwsAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_nat',
                     'title': 'Fetch information about NAT Gateways',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_igw',
+                    'title': 'Fetch internet gateways as devices',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_route_table',
+                    'title': 'Fetch route tables as devices',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_route_table_for_devices',
+                    'title': 'Add route tables to devices',
                     'type': 'bool'
                 },
                 {
@@ -856,6 +909,9 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_ssm',
                 'fetch_nat',
                 'fetch_route53',
+                'fetch_igw',
+                'fetch_route_table',
+                'fetch_route_table_for_devices',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
                 'verify_all_roles',
@@ -885,6 +941,9 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_ssm': False,
             'fetch_nat': False,
             'fetch_route53': False,
+            'fetch_igw': False,
+            'fetch_route_table': False,
+            'fetch_route_table_for_devices': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
