@@ -56,7 +56,7 @@
 
             <div
               v-if="adapter.successClients"
-              @mouseover="hoveredItem = { header: 'Number of connections with no errors', body: adapter.successClients }"
+              @mouseover="hoveredItem = { header: 'Number of adapter connections successfully connected', body: adapter.successClients }"
               @mouseout="hoveredItem = null"
             >
               <XIcon
