@@ -13,6 +13,7 @@ from axonius.consts.gui_consts import IS_AXONIUS_ROLE, RootMasterNames
 from axonius.consts.metric_consts import ApiMetric
 from axonius.consts.plugin_consts import (DEVICE_CONTROL_PLUGIN_NAME, NODE_ID,
                                           PLUGIN_NAME)
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, PluginBase, return_error
 from axonius.utils.db_querying_helper import get_entities
@@ -414,8 +415,7 @@ class APIMixin:
         :return: dict
         """
         plugin_name = 'system_scheduler'
-        config_name = 'SystemSchedulerService'
-        return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
+        return self._api_get_settings_json(plugin_name=plugin_name, config_name=SCHEDULER_CONFIG_NAME)
 
     @api_add_rule(
         rule='system/settings/lifecycle',
@@ -428,8 +428,7 @@ class APIMixin:
         :return: dict
         """
         plugin_name = 'system_scheduler'
-        config_name = 'SystemSchedulerService'
-        return self._api_update_settings(plugin_name=plugin_name, config_name=config_name)
+        return self._api_update_settings(plugin_name=plugin_name, config_name=SCHEDULER_CONFIG_NAME)
 
     @api_add_rule(
         rule='system/settings/gui',

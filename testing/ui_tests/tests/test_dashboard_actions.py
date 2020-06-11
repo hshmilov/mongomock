@@ -19,7 +19,6 @@ from ui_tests.tests.ui_test_base import TestBase
 
 class TestDashboardActions(TestBase):
     TEST_EDIT_CARD_TITLE = 'Testonius'
-    TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
     NON_LOCAL_USERS_QUERY_NAME = 'Non-local users'
     AD_ADMINS_QUERY_NAME = 'AD enabled users in \'Administrators\' group'
     AD_BAD_CONFIG_QUERY_NAME = 'AD enabled users with bad configurations'
@@ -59,7 +58,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.assert_summary_text_data(card, ['23'])
         self._test_summary_chart_edit(card)
         self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
-        self.dashboard_page.assert_timeline_svg_exist(card, self.TEST_TIMELINE_SVG_CSS)
+        self.dashboard_page.assert_timeline_svg_exist(card)
         self._test_timeline_chart_edit(card)
 
     def _change_card_to_comparison(self, title):
@@ -170,12 +169,10 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.select_chart_wizard_field(AD_PRIMARY_GROUP_ID_OPTION_NAME)
 
     def _test_timeline_chart_edit(self, card):
-        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
-                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, None, self.dashboard_page.TIMELINE_CHART_TYPE):
             self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
-                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, None, self.dashboard_page.TIMELINE_CHART_TYPE):
             self.dashboard_page.toggle_comparison_intersection_switch()
             self.dashboard_page.select_chart_result_range_date()
             self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now() + datetime.timedelta(-30))
@@ -186,8 +183,7 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])
 
-        with self.dashboard_page.edit_and_assert_chart(card, self.TEST_TIMELINE_SVG_CSS,
-                                                       self.dashboard_page.TIMELINE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(card, None, self.dashboard_page.TIMELINE_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME, views_list[0])
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE, views_list[1])

@@ -2,7 +2,8 @@ import sys
 
 import requests
 from retrying import retry
-from axonius.consts.scheduler_consts import Phases, SchedulerState
+from axonius.consts.scheduler_consts import (Phases, SchedulerState,
+                                             SCHEDULER_SAVE_HISTORY_CONFIG_NAME, SCHEDULER_CONFIG_NAME)
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR
 from services.plugin_service import PluginService, API_KEY_HEADER
 from services.system_service import SystemService
@@ -16,8 +17,6 @@ DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME = 'system_research_date_time'
 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE = '1'
 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME = 'system_research_date_recurrence'
 DEFAULT_SYSTEM_SAVE_HISTORY = True
-DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME = 'save_history'
-DEFAULT_SYSTEM_RESEARCH_MODE = DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME
 DEFAULT_SYSTEM_RESEARCH_MODE_ATTRIB_NAME = 'conditional'
 
 
@@ -117,7 +116,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         try:
             config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
             current_config = config_collection.find_one({
-                'config_name': 'SystemSchedulerService'
+                'config_name': SCHEDULER_CONFIG_NAME
             })
             if not current_config:
                 print('No config present - continue')
@@ -130,19 +129,19 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
 
             system_research_rate = current_config.get(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME,
                                                       DEAFULT_SYSTEM_RESEARCH_RATE)
-            save_history = current_config.get(DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME,
+            save_history = current_config.get(SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
                                               DEFAULT_SYSTEM_SAVE_HISTORY)
 
             config_collection.replace_one(
                 {
-                    'config_name': 'SystemSchedulerService'
+                    'config_name': SCHEDULER_CONFIG_NAME
                 },
                 {
-                    'config_name': 'SystemSchedulerService',
+                    'config_name': SCHEDULER_CONFIG_NAME,
                     'config': {
                         'discovery_settings': {
                             DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME: system_research_rate,
-                            DEFAULT_SYSTEM_SAVE_HISTORY_ATTRIB_NAME: save_history
+                            SCHEDULER_SAVE_HISTORY_CONFIG_NAME: save_history
                         }
                     }
                 }
@@ -159,7 +158,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         try:
             config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
             config_match = {
-                'config_name': 'SystemSchedulerService'
+                'config_name': SCHEDULER_CONFIG_NAME
             }
             current_config = config_collection.find_one(config_match)
             if not current_config:
@@ -205,7 +204,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         try:
             config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
             config_match = {
-                'config_name': 'SystemSchedulerService'
+                'config_name': SCHEDULER_CONFIG_NAME
             }
             current_config = config_collection.find_one(config_match)
             if not current_config:

@@ -81,6 +81,19 @@
             @legend-data-modified="onlegendDataModified"
           />
           <div
+            v-if="isTimelinePartialData"
+            class="chart-warning"
+          >
+            <XIcon
+              family="symbol"
+              type="warning"
+              :style="{fontSize: '20px'}"
+            />
+            <div class="chart-warning__text">
+              Timeline charts may be showing partial data since historical snapshots are disabled.
+            </div>
+          </div>
+          <div
             v-if="chartDataNotFound"
             class="no-data-found"
           >
@@ -90,9 +103,7 @@
             />
             <div>No data found</div>
           </div>
-
         </div>
-
         <div class="footer">
           <div
             v-if="chart.view === 'pie' && !isChartEmpty(chart)"
@@ -128,6 +139,7 @@ import _debounce from 'lodash/debounce';
 import _uniq from 'lodash/uniq';
 import _merge from 'lodash/merge';
 import _isNil from 'lodash/isNil';
+import _get from 'lodash/get';
 import XIcon from '@axons/icons/Icon';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
@@ -200,6 +212,9 @@ export default {
         }
         return state.constants.allowedDates[this.chart.config.entity];
       },
+      historyEnabled(state) {
+        return _get(state, 'configuration.data.global.historyEnabled', false);
+      },
     }),
     chartDataNotFound() {
       return this.isChartEmpty(this.chart) && !this.chart.loading;
@@ -219,6 +234,9 @@ export default {
     },
     legendIcon() {
       return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
+    },
+    isTimelinePartialData() {
+      return this.chart.metric === ChartTypesEnum.timeline && !this.historyEnabled;
     },
     chartView() {
       return ChartComponentByViewEnum[this.chart.view];
@@ -406,6 +424,17 @@ export default {
     .footer {
       display: flex;
       margin: -2px;
+    }
+  }
+
+  .chart-warning {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+
+    &__text {
+      margin-left: 8px;
+      line-height: 18px;
     }
   }
 

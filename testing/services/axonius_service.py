@@ -12,6 +12,7 @@ import pytest
 
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
                                           WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH)
@@ -675,7 +676,7 @@ class AxoniusService:
 
     def set_research_rate(self, rate):
         settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
-        settings.update_one(filter={'config_name': 'SystemSchedulerService'},
+        settings.update_one(filter={'config_name': SCHEDULER_CONFIG_NAME},
                             update={'$set': {'config.system_research_rate': rate}})
 
     def set_system_server_name(self, server_name):

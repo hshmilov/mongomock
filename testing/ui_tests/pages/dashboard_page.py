@@ -147,6 +147,9 @@ class DashboardPage(Page):
     SUMMARY_CHART_TYPE = 'summary'
     TIMELINE_CHART_TYPE = 'timeline'
 
+    TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
+    CHART_WARNING_CSS = '.chart-warning'
+
     @property
     def root_page_css(self):
         return 'li#dashboard.x-nav-item'
@@ -487,6 +490,14 @@ class DashboardPage(Page):
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
 
+    def add_timeline_card(self, module, view, title):
+        self.open_new_card_wizard()
+        self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+        self.select_chart_metric('Query Timeline')
+        self.select_chart_wizard_module(module)
+        self.select_chart_view_name(view)
+        self.click_card_save()
+
     def add_matrix_card(self, module, title, base_queries, intersecting_queries, sort_by='value', sort_order='desc'):
         self.switch_to_page()
         self.open_new_card_wizard()
@@ -739,9 +750,8 @@ class DashboardPage(Page):
         summary_data = [self.get_summary_card_text(title).text]
         assert summary_data == data_list
 
-    @staticmethod
-    def assert_timeline_svg_exist(card, svg_css_selector):
-        assert card.find_element_by_css_selector(svg_css_selector)
+    def assert_timeline_svg_exist(self, card):
+        assert card.find_element_by_css_selector(self.TEST_TIMELINE_SVG_CSS)
 
     def get_uncovered_from_pie(self, pie):
         return int(pie.find_element_by_css_selector(self.UNCOVERED_PIE_SLICE_CSS).text.rstrip('%'))
@@ -1295,4 +1305,11 @@ class DashboardPage(Page):
         if chart_type == self.SUMMARY_CHART_TYPE:
             self.assert_summary_text_data(card, assert_data)
         if chart_type == self.TIMELINE_CHART_TYPE:
-            self.assert_timeline_svg_exist(card, assert_data)
+            self.assert_timeline_svg_exist(card)
+
+    def verify_chart_warning_exists(self, card):
+        assert card.find_element_by_css_selector(self.CHART_WARNING_CSS)
+
+    def verify_chart_warning_missing(self, card):
+        with pytest.raises(NoSuchElementException):
+            card.find_element_by_css_selector(self.CHART_WARNING_CSS)

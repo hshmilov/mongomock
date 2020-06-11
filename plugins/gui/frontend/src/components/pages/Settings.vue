@@ -143,6 +143,7 @@
 import { mapState, mapActions, mapMutations } from 'vuex';
 import _cloneDeep from 'lodash/cloneDeep';
 import _findIndex from 'lodash/findIndex';
+import _get from 'lodash/get';
 
 import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG } from '@store/modules/settings';
 import { UPDATE_SYSTEM_CONFIG, SHOW_TOASTER_MESSAGE } from '@store/mutations';
@@ -362,6 +363,13 @@ export default {
         config: this.schedulerSettings.config,
       }).then((response) => {
         this.createToast(response);
+        this.updateSystemConfig({
+          data: {
+            global: {
+              historyEnabled: _get(this.schedulerSettings, 'config.discovery_settings.save_history', false),
+            },
+          },
+        });
       }).catch((error) => {
         if (error.response.status === 400) {
           this.message = error.response.data.message;

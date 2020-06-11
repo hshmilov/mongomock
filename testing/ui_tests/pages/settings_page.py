@@ -1581,3 +1581,9 @@ class SettingsPage(Page):
         self.click_feature_flags()
         self.enable_and_display_compliance()
         self.save_and_wait_for_toaster()
+
+    def save_daily_historical_snapshot(self, enable=True):
+        self.switch_to_page()
+        toggle = self.driver.find_element_by_id('save_history')
+        self.click_toggle_button(toggle, make_yes=enable)
+        self.save_and_wait_for_toaster()
