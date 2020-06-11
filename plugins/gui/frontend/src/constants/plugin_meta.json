@@ -698,6 +698,11 @@
     "link": "https://docs.axonius.com/docs/secureworks-red-cloak",
     "description": "Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity."
   },
+  "php_ipam_adapter": {
+    "title": "phpIPAM - BETA",
+    "link": "https://docs.axonius.com/docs/phpipam",
+    "description": "phpIPAM is an open-source web IP address management application (IPAM)."
+  },
   "dynatrace_adapter": {
     "title": "Dynatrace",
     "link": "https://docs.axonius.com/docs/dynatrace",
