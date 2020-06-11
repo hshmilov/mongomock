@@ -204,7 +204,7 @@ def test_master_proxy():
 
 
 def test_cluster_reader():
-    data = json.loads(read_cluster_data())
+    data = read_cluster_data()
     print(f'  {data}')
     assert 'instance_type' in data
     assert len(data['my_entity']) > 0

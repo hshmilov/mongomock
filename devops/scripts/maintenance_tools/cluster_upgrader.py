@@ -8,17 +8,42 @@ from pathlib import Path
 import shutil
 
 from axonius.consts.instance_control_consts import InstanceControlConsts
-from axonius.consts.system_consts import NODE_MARKER_PATH
+from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
 
 
 def curl_in_docker_network(docker_dns, endpoint):
     env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
     output = subprocess.check_output(
-        shlex.split(f'docker exec core curl -kfsSL https://{docker_dns}.axonius.local:443/api/{endpoint}'),
+        shlex.split(
+            f'docker run --rm {DOCKERHUB_URL}appropriate/curl -kfsSL https://{docker_dns}.axonius.local:443/api/{endpoint}'),
         env=env, timeout=60 * 30)
     output = output.decode().strip()
     print(output)
+
+
+def run_upgrade_phase_on_node(node, phase):
+    node_id = node['node_id']
+    instance_control_name = node['plugin_unique_name']
+    print(f'Starting phase {phase} on node {node_id} ({instance_control_name})')
+    curl_in_docker_network(instance_control_name, phase)
+
+
+def shutdown_adapters(instances):
+    for node in instances:
+        run_upgrade_phase_on_node(node, InstanceControlConsts.EnterUpgradeModeEndpoint)
+
+
+def download_upgrader_on_nodes(instances, upgrade_file_path):
+    shutil.copy(upgrade_file_path, '/home/ubuntu/cortex/testing/services/plugins/httpd_service/httpd/upgrade.py')
+
+    for node in instances:
+        run_upgrade_phase_on_node(node, InstanceControlConsts.PullUpgrade)
+
+
+def upgrade_nodes(instances):
+    for node in instances:
+        run_upgrade_phase_on_node(node, InstanceControlConsts.TriggerUpgrade)
 
 
 def read_args():
@@ -37,7 +62,7 @@ def upgrader_main():
         print(f'Please run me on cluster\'s master')
         return
 
-    data = json.loads(read_cluster_data())
+    data = read_cluster_data()
     my_entity = data['my_entity']
     my_node_id = my_entity['node_id']
 
@@ -51,11 +76,7 @@ def upgrader_main():
         print(f'    >>> {node}')
 
     print(f'Step 1 - shut down adapters on nodes')
-    for node in node_instances:
-        node_id = node['node_id']
-        instance_control_name = node['plugin_unique_name']
-        print(f'Shutting down adapters on node {node_id} ({instance_control_name})')
-        curl_in_docker_network(instance_control_name, InstanceControlConsts.EnterUpgradeModeEndpoint)
+    shutdown_adapters(node_instances)
 
     print(f'Step 2 - Downloading the upgrade on all of the nodes')
 
@@ -63,23 +84,13 @@ def upgrader_main():
         print(f'Upgrade file is missing {upgrade_file}')
         return
 
-    shutil.copy(upgrade_file, '/home/ubuntu/cortex/testing/services/plugins/httpd_service/httpd/upgrade.py')
-
-    for node in node_instances:
-        node_id = node['node_id']
-        instance_control_name = node['plugin_unique_name']
-        print(f'Pulling upgrade {node_id} ({instance_control_name})')
-        curl_in_docker_network(instance_control_name, InstanceControlConsts.PullUpgrade)
+    download_upgrader_on_nodes(upgrade_file, upgrade_file)
 
     print(f'UPGRADING MASTER!')
     subprocess.check_call(f'python3 {upgrade_file} --no-research'.split())
 
     print(f'Step 3 - Trigger the upgrade on the nodes')
-    for node in node_instances:
-        node_id = node['node_id']
-        instance_control_name = node['plugin_unique_name']
-        print(f'trigger the upgrade {node_id} {instance_control_name}')
-        curl_in_docker_network(instance_control_name, InstanceControlConsts.TriggerUpgrade)
+    upgrade_nodes(node_instances)
 
 
 if __name__ == '__main__':

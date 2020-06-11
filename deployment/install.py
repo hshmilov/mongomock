@@ -90,6 +90,8 @@ def start_install_flow():
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
     parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
     parser.add_argument('--do-not-verify-storage', action='store_true', default=False, help='Skip storage verification')
+    parser.add_argument('--master-only', action='store_true', default=False,
+                        help='Upgrade only this system even if nodes are connected')
     try:
         args = parser.parse_args()
     except AttributeError:
@@ -98,12 +100,13 @@ def start_install_flow():
     start = time.time()
     no_research = args.no_research
     do_not_verify_storage = args.do_not_verify_storage
+    master_only = args.master_only
     if not do_not_verify_storage:
         verify_storage_requirements()
     if os.geteuid() != 0:
         print(f'Please run as root!')
         return False
-    install(args.first_time, no_research)
+    install(args.first_time, no_research, master_only)
     print_state(f'Done, took {int(time.time() - start)} seconds')
     return True
 
@@ -203,7 +206,7 @@ def create_venv():
     subprocess.check_call(['python3', create_pth])
 
 
-def install(first_time, no_research):
+def install(first_time, no_research, master_only):
     if not first_time:
         validate_old_state()
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
@@ -220,7 +223,7 @@ def install(first_time, no_research):
     # from this line on - we can use venv!
 
     from deployment.with_venv_install import after_venv_activation
-    after_venv_activation(first_time, no_research)
+    after_venv_activation(first_time, no_research, master_only, current_file_system_path)
 
 
 if __name__ == '__main__':

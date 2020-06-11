@@ -26,6 +26,8 @@ from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME
 from scripts.instances.network_utils import get_weave_subnet_ip_range
+from scripts.maintenance_tools.cluster_reader import read_cluster_data
+from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from sysctl_editor import set_sysctl_value
@@ -48,8 +50,19 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
     shutil.chown(dest_path, user=user, group=group)
 
 
-def after_venv_activation(first_time, no_research):
+def after_venv_activation(first_time, no_research, master_only, installer_path):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
+    node_instances = None
+
+    # If this is a master and it should upgrade the entire master
+    if not NODE_MARKER_PATH.is_file() and not master_only:
+        print_state('Upgrading entire cluster')
+        cluster_data = read_cluster_data()
+        node_instances = [instance for instance in cluster_data['instances']
+                          if instance['node_id'] != cluster_data['my_entity']['node_id']]
+        print_state('Shutting down adapters on nodes')
+        shutdown_adapters(node_instances)
+
     if not first_time:
         stop_old()
 
@@ -74,6 +87,12 @@ def after_venv_activation(first_time, no_research):
         chown_folder(AXONIUS_DEPLOYMENT_PATH)
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
+
+    if not NODE_MARKER_PATH.is_file() and not master_only:
+        print_state('Downloading upgrader on nodes')
+        download_upgrader_on_nodes(node_instances, installer_path)
+        print_state('Upgrading nodes')
+        upgrade_nodes(node_instances)
 
 
 def reset_weave_network_on_bad_ip_allocation():

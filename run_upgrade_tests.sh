@@ -78,14 +78,14 @@ echo "#### Before upgrade setups done"
 
 
 # Block pypi
-sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 pypi.python.org &> logs/upgrade_to_${version}.log
-sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 files.pythonhosted.org &> logs/upgrade_to_${version}.log
+sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 pypi.python.org &> logs/upgrade_to_version.log
+sudo python3 testing/ui_tests/tests/hosts_file_modifier.py 1.2.3.4 files.pythonhosted.org &> logs/upgrade_to_version.log
 
 echo "#### Upgrading to ${version}"
 pip -V
 cd ${install_dir}
 chmod +x ${installer_name}
-sudo ./${installer_name} &> ../logs/upgrade_to_${version}.log
+sudo ./${installer_name} --master-only &> ../logs/upgrade_to_version.log
 cd ..
 echo "#### Installed ${version}"
 

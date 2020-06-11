@@ -1,11 +1,11 @@
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from services.ports import DOCKER_PORTS
-from services.weave_service import WeaveService
+from services.system_service import SystemService
 
 HTTPD_CONTAINER_NAME = 'httpd-service'
 
 
-class HttpdService(WeaveService):
+class HttpdService(SystemService):
 
     def start(self, *args, **kwargs):  # pylint: disable=arguments-differ
         if NODE_MARKER_PATH.is_file():

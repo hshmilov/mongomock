@@ -18,8 +18,8 @@ def read_cluster_data():
         cluster['instance_type'] = 'master'
     if is_using_weave():
         cluster['network'] = subprocess.check_output('weave status connections'.split(), timeout=60).decode()
-    return json.dumps(cluster)
+    return cluster
 
 
 if __name__ == '__main__':
-    print(read_cluster_data())
+    print(json.dumps(read_cluster_data()))
