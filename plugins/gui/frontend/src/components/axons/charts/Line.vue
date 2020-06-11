@@ -16,6 +16,7 @@ export default {
   props: { data: { required: true } },
   computed: {
     processedData() {
+      if (!this.data[0]) return [];
       const lastValues = Array(this.data[0].length - 1).fill(null);
       return [
         this.data[0],

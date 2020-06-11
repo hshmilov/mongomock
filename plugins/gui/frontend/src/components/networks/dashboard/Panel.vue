@@ -73,8 +73,8 @@
           </div>
           <Component
             :is="chartView"
-            v-if="chart.view && chart.data"
-            v-show="!chart.loading && !isChartEmpty(chart)"
+            v-if="chart.view && !isChartEmpty(chart)"
+            v-show="!chart.loading"
             :data="chart.data"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
             @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
