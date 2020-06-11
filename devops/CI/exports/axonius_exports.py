@@ -157,7 +157,7 @@ def cloud(args, notify):
     cloud_packer_file = _SCRIPT_FOLDER.joinpath('axonius_deploy.json')
     with tempfile.TemporaryDirectory() as temporary_directory:
         manifest_path = pathlib.Path(temporary_directory).joinpath(f'manifest-{args.name}.json').absolute()
-        with local_installer_path(args) as installer_path:
+        with local_installer_path(args, notify) as installer_path:
             except_qemu_args = ['-except', 'qemu']
             qemu_args = ['-var', f'qcow_output={args.qcow_output.absolute()}'] if args.qcow_output else except_qemu_args
             subprocess_arguments = ['packer', 'build', '-timestamp-ui',
@@ -259,7 +259,7 @@ def create_notify(args):
 
 
 @contextlib.contextmanager
-def local_installer_path(args):
+def local_installer_path(args, notify):
     if args.installer is not None:
         yield args.installer
     else:
@@ -268,6 +268,7 @@ def local_installer_path(args):
         path_template = '{0}/axonius_{0}.' + ('py' if args.unencrypted else 'zip')
         axonius_releases_url_for_release = (base_url + path_template).format
         url = args.installer_url or axonius_releases_url_for_release(args.installer_s3_name)
+        notify({'name': args.name, 'subcommand': 'cloud', 's3_installer': url})
         with tempfile.TemporaryDirectory() as temporary_directory:
             installer_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
             temporary_local_installer = pathlib.Path(temporary_directory).joinpath(installer_name)
