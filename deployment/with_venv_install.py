@@ -55,7 +55,7 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
     node_instances = None
 
     # If this is a master and it should upgrade the entire master
-    if not NODE_MARKER_PATH.is_file() and not master_only:
+    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Upgrading entire cluster')
         cluster_data = read_cluster_data()
         node_instances = [instance for instance in cluster_data['instances']
@@ -88,7 +88,7 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
-    if not NODE_MARKER_PATH.is_file() and not master_only:
+    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Downloading upgrader on nodes')
         download_upgrader_on_nodes(node_instances, installer_path)
         print_state('Upgrading nodes')
