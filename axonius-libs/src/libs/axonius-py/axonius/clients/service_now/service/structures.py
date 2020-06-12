@@ -50,6 +50,7 @@ class SnowUserAdapter(UserAdapter):
     u_profession = Field(str, 'Profession')
     u_company = Field(str, 'Company')
     u_department = Field(str, 'Department')
+    u_vip = Field(bool, 'VIP')
 
 
 class SnowDeviceAdapter(DeviceAdapter):

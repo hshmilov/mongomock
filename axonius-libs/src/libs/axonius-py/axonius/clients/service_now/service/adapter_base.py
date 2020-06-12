@@ -973,13 +973,15 @@ class ServiceNowAdapterBase(AdapterBase):
                 user.u_sub_department = user_raw.get('u_sub_department')
                 user.u_profession = user_raw.get('u_profession')
                 user.u_company = (self._parse_optional_reference_value(user_raw, 'u_company',
-                                                                       snow_department_table_dict, 'name') or
+                                                                       companies_table_dict, 'name') or
                                   self._parse_optional_reference_value(user_raw, 'company',
-                                                                       snow_department_table_dict, 'name'))
+                                                                       companies_table_dict, 'name'))
                 user.u_department = (self._parse_optional_reference_value(user_raw, 'u_department',
                                                                           snow_department_table_dict, 'name') or
                                      self._parse_optional_reference_value(user_raw, 'department',
                                                                           snow_department_table_dict, 'name'))
+                if user_raw.get('vip'):
+                    user.u_vip = (user_raw.get('vip') == 'true')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
