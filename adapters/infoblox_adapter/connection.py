@@ -5,7 +5,7 @@ from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE, LEASE_TYPE, A_TYPE
+from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE, LEASE_TYPE, A_TYPE, ADDRESS_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -65,9 +65,9 @@ class InfobloxConnection(RESTConnection):
                 raise RESTException(f'401 Unauthorized - Please check your login credentials')
             raise
 
-    # pylint: disable=too-many-branches, arguments-differ
+    # pylint: disable=too-many-branches,arguments-differ,too-many-locals,too-many-statements,too-many-nested-blocks
     def get_device_list(self, date_filter: Optional[int] = None, cidr_blacklist: Optional[str] = None,
-                        result_per_page=RESULTS_PER_PAGE, sleep_between_requests_in_sec=0):
+                        result_per_page=RESULTS_PER_PAGE, sleep_between_requests_in_sec=0, fetch_lease=False):
         # First, get all networks to get additional data about the leases
         networks = dict()
         if sleep_between_requests_in_sec:
@@ -85,16 +85,9 @@ class InfobloxConnection(RESTConnection):
                 networks[ipaddress.IPv4Network(network_raw.get('network'))] = network_raw
         except Exception:
             logger.exception(f'Problem getting networks')
-        logger.info(f'Finished getting {len(networks)} networks. Getting leases')
-        # Then, get leases
-        fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
-        if self.__api_version >= 2.5:
-            fields_to_return += ',fingerprint'
-        params = dict()
-        if date_filter:
-            params[DATE_FILTER_FIELD] = date_filter
-            fields_to_return += ',discovered_data'
-        params['_return_fields'] = fields_to_return
+        logger.info(f'Finished getting {len(networks)} networks.')
+
+        # prepare blacklist networks
         cidr_blacklist_networks = []
         if cidr_blacklist and isinstance(cidr_blacklist, str):
             for cidr_blacklist_network in cidr_blacklist.split(','):
@@ -102,22 +95,85 @@ class InfobloxConnection(RESTConnection):
                     cidr_blacklist_networks.append(ipaddress.IPv4Network(cidr_blacklist_network.strip()))
                 except Exception:
                     logger.exception(f'Could not add cidr {cidr_blacklist_network} to blacklist')
-        for lease_raw in self.__get_items_from_url('lease', url_params=params):
+
+        if fetch_lease:
+            # If slow lease was asked, get leases
+            logger.info(f'Getting leases')
+            fields_to_return = 'served_by,starts,ends,address,binding_state,hardware,client_hostname,network_view'
+            if self.__api_version >= 2.5:
+                fields_to_return += ',fingerprint'
+            params = dict()
+            if date_filter:
+                params[DATE_FILTER_FIELD] = date_filter
+                fields_to_return += ',discovered_data'
+            params['_return_fields'] = fields_to_return
+            for lease_raw in self.__get_items_from_url('lease', url_params=params):
+                try:
+                    if not isinstance(lease_raw, dict):
+                        logger.warning(f'Invalid lease received: {lease_raw}')
+                        break
+                    lease_address = lease_raw.get('address')
+                    if lease_address:
+                        lease_address = ipaddress.IPv4Address(lease_address)
+                        if cidr_blacklist_networks:
+                            if any(lease_address in bnc for bnc in cidr_blacklist_networks):
+                                # this address is in the cidr blacklist
+                                continue
+                        for network, network_data in networks.items():
+                            if lease_address in network:
+                                lease_raw['network_data'] = network_data
+                                break
+                except Exception:
+                    pass
+                yield lease_raw, LEASE_TYPE
+            logger.info(f'Finished getting leases.')
+        else:
+
+            # Otherwise, get addresses
             try:
-                lease_address = lease_raw.get('address')
-                if lease_address:
-                    lease_address = ipaddress.IPv4Address(lease_address)
-                    if cidr_blacklist_networks:
-                        if any(lease_address in bnc for bnc in cidr_blacklist_networks):
-                            # this address is in the cidr blacklist
+                for network_obj, network_raw in networks.items():
+                    if not isinstance(network_raw, dict):
+                        logger.warning(f'Invalid network_raw received. {network_raw}')
+                        break
+                    network_cidr = network_raw.get('network')
+                    if not network_cidr:
+                        # shouldnt happen
+                        continue
+                    for address_raw in self.__get_items_from_url(
+                            'ipv4address',
+                            url_params={'network': network_cidr,
+                                        # return only used addresses
+                                        'status': 'USED'}
+                    ):
+                        if not isinstance(address_raw, dict):
+                            logger.warning(f'Invalid address retrieved: {address_raw}')
                             continue
-                    for network, network_data in networks.items():
-                        if lease_address in network:
-                            lease_raw['network_data'] = network_data
-                            break
+
+                        ip_address = address_raw.get('ip_address')
+                        if ip_address:
+                            ip_address = ipaddress.IPv4Address(ip_address)
+                            if cidr_blacklist_networks:
+                                if any(ip_address in bnc for bnc in cidr_blacklist_networks):
+                                    # this address is in the cidr blacklist
+                                    continue
+                            for network, network_data in networks.items():
+                                if ip_address in network:
+                                    address_raw['network_data'] = network_data
+                                    break
+
+                        if (isinstance(address_raw.get('types'), list) and
+                                ('BROADCAST' in address_raw.get('types'))):
+                            # Skip broadcast addresses
+                            continue
+
+                        if address_raw.get('lease_state') == 'FREE':
+                            # skip free addresses
+                            continue
+
+                        yield address_raw, ADDRESS_TYPE
+                logger.info(f'Finished getting addresses.')
             except Exception:
-                pass
-            yield lease_raw, LEASE_TYPE
+                logger.exception(f'Problem getting addresses')
         try:
             for record_raw in self.__get_items_from_url(self._url + 'record:a',
                                                         url_params={'_return_fields': 'discovered_data,'

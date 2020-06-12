@@ -7,12 +7,12 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.utils.datetime import parse_date
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name
 from infoblox_adapter.connection import InfobloxConnection
-from infoblox_adapter.consts import A_TYPE, LEASE_TYPE, RESULTS_PER_PAGE
+from infoblox_adapter.consts import A_TYPE, LEASE_TYPE, RESULTS_PER_PAGE, ADDRESS_TYPE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -20,15 +20,21 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class InfobloxAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
-        fetch_type = Field(str, 'Infoblox Fetch Type', enum=[A_TYPE, LEASE_TYPE])
+        fetch_type = Field(str, 'Infoblox Fetch Type', enum=[A_TYPE, LEASE_TYPE, ADDRESS_TYPE])
         infoblox_network_view = Field(str, 'Network View')
+        infoblox_device_type = Field(str, 'Device Type')
+        binding_state = Field(str, 'Lease Binding State')
+
+        # ADDRESS_TYPE specific
+        address_types = ListField(str, 'Address Types')
+        address_usages = ListField(str, 'Address Usages')
+
+        # LEASE_TYPE specific
         served_by = Field(str, 'Served By')
         start_time = Field(datetime.datetime, 'Start Time')
         end_time = Field(datetime.datetime, 'End Time')
         fingerprint = Field(str, 'Fingerprint')
         discoverer = Field(str, 'Discoverer')
-        infoblox_device_type = Field(str, 'Device Type')
-        binding_state = Field(str, 'Binding State')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -81,7 +87,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 date_filter=date_filter,
                 cidr_blacklist=self.__cidr_blacklist,
                 result_per_page=self.__result_per_page,
-                sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec
+                sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec,
+                fetch_lease=self.__fetch_lease
             )
 
     @staticmethod
@@ -134,6 +141,107 @@ class InfobloxAdapter(AdapterBase, Configurable):
             ],
             'type': 'array'
         }
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
+    def _create_address_device(self, device_raw, ids_set):
+        try:
+            device = self._new_device_adapter()
+            device.fetch_type = ADDRESS_TYPE
+
+            hostname_strip = None
+            hostnames = device_raw.get('names')
+            if (isinstance(hostnames, list) and
+                    (len(hostnames) > 0)):
+                # I did not change hostname to not change ID in many already deployed customers
+                hostname_strip = hostnames[0].strip('"')
+            mac_address = device_raw.get('mac_address')
+
+            if not hostname_strip and not mac_address:
+                # These devices might not exist, so this log is pretty much spamming.
+                logger.debug(f'No names or mac at : {device_raw}')
+                return None
+
+            try:
+                device.infoblox_network_view = device_raw.get('network_view')
+            except Exception:
+                logger.exception(f'can not set network view: {device_raw}')
+
+            device.hostname = hostname_strip
+            if mac_address and hostname_strip:
+                device_id = f'mac_{mac_address}_host_{hostname_strip}'
+            elif mac_address:
+                device_id = f'mac_{mac_address}'
+            elif hostname_strip:
+                device_id = f'host_{hostname_strip}'
+            else:
+                logger.error(f'Error - no mac or hostname, can not determine id: {device_raw}, continuing')
+                return None
+            if device_id in ids_set:
+                return None
+            ids_set.add(device_id)
+            device.id = device_id
+
+            ip_address = device_raw.get('ip_address')
+            network = device_raw.get('network')
+            try:
+                device.add_nic(mac_address,
+                               [ip_address] if ip_address else None,
+                               subnets=[network] if network else None)
+            except Exception:
+                logger.exception(f'Can not set nic for device_raw: {device_raw}')
+
+            try:
+                network_data = device_raw.get('network_data') or {}
+                for attr_name, attr_value_raw in (network_data.get('extattrs') or {}).items():
+                    if not isinstance(attr_value_raw, dict):
+                        logger.warning(f'Invalid extrattr received. {attr_value_raw}')
+                        continue
+                    attr_value = attr_value_raw.get('value')
+                    if not attr_value:
+                        continue
+                    normalized_column_name = 'infoblox_' + normalize_var_name(attr_name)
+                    if not device.does_field_exist(normalized_column_name):
+                        # Currently we treat all columns as str
+                        cn_capitalized = ' '.join([word.capitalize() for word in attr_name.split(' ')])
+
+                        if normalized_column_name.lower() == 'infoblox_vlan':
+                            field_type = int
+                            device.declare_new_field(
+                                f'{normalized_column_name}_str', Field(str, f'Infoblox {cn_capitalized} String'))
+                        else:
+                            field_type = str
+
+                        device.declare_new_field(
+                            normalized_column_name, Field(field_type, f'Infoblox {cn_capitalized}'))
+
+                    try:
+                        device[normalized_column_name] = attr_value
+                    except Exception:
+                        pass
+                    try:
+                        if normalized_column_name.lower() == 'infoblox_vlan':
+                            device[f'{normalized_column_name}_str'] = attr_value
+                    except Exception:
+                        pass
+            except Exception:
+                logger.exception(f'Problem setting external attributes')
+            try:
+                device.binding_state = device_raw.get('lease_state')
+                address_types = device_raw.get('types')
+                if (isinstance(address_types, list) and
+                        all(isinstance(addr_type, str) for addr_type in address_types)):
+                    device.address_types = address_types
+                address_usages = device_raw.get('usage')
+                if (isinstance(address_usages, list) and
+                        all(isinstance(addr_usage, str) for addr_usage in address_usages)):
+                    device.address_usages = address_usages
+            except Exception:
+                logger.exception(f'Failed setting address specific fields')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching Infoblox Device: {device_raw}')
+            return None
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _create_lease_device(self, device_raw, ids_set):
@@ -297,6 +405,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
             device = None
             if device_type == LEASE_TYPE:
                 device = self._create_lease_device(device_raw, ids_set)
+            elif device_type == ADDRESS_TYPE:
+                device = self._create_address_device(device_raw, ids_set)
             elif device_type == A_TYPE:
                 device = self._create_a_device(device_raw)
             if device:
@@ -329,11 +439,17 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'name': 'sleep_between_requests_in_sec',
                     'type': 'integer',
                     'title': 'Time in seconds to sleep between each request'
+                },
+                {
+                    'name': 'fetch_lease',
+                    'type': 'bool',
+                    'title': 'Fetch lease information'
                 }
             ],
             'required': [
                 'use_discovered_data',
                 'result_per_page'
+                'fetch_lease',
             ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'
@@ -345,7 +461,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
             'cidr_blacklist': None,
             'use_discovered_data': False,
             'result_per_page': RESULTS_PER_PAGE,
-            'sleep_between_requests_in_sec': None
+            'sleep_between_requests_in_sec': None,
+            'fetch_lease': True,
         }
 
     def _on_config_update(self, config):
@@ -353,3 +470,4 @@ class InfobloxAdapter(AdapterBase, Configurable):
         self.__use_discovered_data = config.get('use_discovered_data') or False
         self.__result_per_page = config.get('result_per_page') or RESULTS_PER_PAGE
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec') or 0
+        self.__fetch_lease = bool(config.get('fetch_lease'))
