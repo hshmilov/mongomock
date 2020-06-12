@@ -270,6 +270,13 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
     all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME][compliance_reports_collection]
                        .aggregate([
                            {
+                               '$match': {
+                                   'report.rules': {
+                                       '$exists': True, '$ne': []
+                                   }
+                               }
+                           },
+                           {
                                '$group': {
                                    '_id': '$account_id',
                                    'last': {'$last': '$$ROOT'}
@@ -283,7 +290,7 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
     all_accounts = set(accounts)
     rules_score_flag_map = get_compliance_rules_include_score_flag(compliance_name)
 
-    def prepare_default_report(default_rules):
+    def prepare_default_report(default_rules, time_now):
         if len(all_accounts) == 0:
             yield from (beautify_compliance(rule, rule['account'], rule['account'], time_now, rules_score_flag_map)
                         for rule in filter_rules(default_rules, rules_score_flag_map))
@@ -298,6 +305,11 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
                 yield from (beautify_compliance(rule, report['account_id'], report['account_name'],
                                                 report['last_updated'], rules_score_flag_map)
                             for rule in filter_rules(report['report'].get('rules'), rules_score_flag_map) or [])
+
+    def return_default_report():
+        time_now = datetime.now()
+        cis_report = prepare_default_report(get_compliance_default_rules(compliance_name).get('rules'), time_now)
+        return cis_report, 100
 
     def calculate_score(reports):
         # Score calculation is done for ALL rules, without filtering.
@@ -327,10 +339,13 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
         return round((total_passed / total_checked) * 100)
 
     if not all_reports:
-        time_now = datetime.now()
-        cis_report = prepare_default_report(get_compliance_default_rules(compliance_name).get('rules'))
-        return cis_report, 100
+        return return_default_report()
 
-    cis_report = prepare_report(all_reports)
+    cis_report = list(prepare_report(all_reports))
+
+    if not cis_report or len(cis_report) == 0:
+        # If the the rules array is empty somehow, return the default rules.
+        return return_default_report()
+
     score = calculate_score(all_reports)
     return cis_report, score

@@ -92,6 +92,12 @@ class AWSCISGenerator:
                     start_time = futures_to_data[future]
                     try:
                         account_id, account_name, report_json = future.result()
+
+                        rules = report_json.get('rules', [])
+                        if not report_json or len(rules) == 0:
+                            logger.error(f'Report finished empty for "{account_name}" ({account_id}')
+                            continue
+
                         PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].insert_one(
                             {
                                 'account_id': account_id,
