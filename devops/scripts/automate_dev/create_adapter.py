@@ -30,7 +30,7 @@ Basically we do the following things
 -> add port to testing/services/ports.py
 """
 # pylint:disable=invalid-string-quote,invalid-name
-
+import json
 import re
 import os
 import shutil
@@ -73,7 +73,7 @@ def get_action_table(adapter_name: str) -> OrderedDict:
     """ returns table for each adapter file -> (validator, action) """
 
     return OrderedDict({
-        f'plugins/gui/frontend/src/constants/plugin_meta.js': (description_validator, description_action),
+        f'plugins/gui/frontend/src/constants/plugin_meta.json': (description_validator, description_action),
         f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/adapters/{adapter_name}_adapter.png':
             (not_exists_validator, image_action),
         f'adapters/{adapter_name}_adapter': (not_exists_validator, adapter_dir_action),
@@ -106,8 +106,8 @@ def description_validator(filename: str, adapter_name: str):
     """ Validate that there is no description for the given adapter_name
         :raise: ValidateError on failure """
 
-    file_data = open(filename, 'r', encoding='utf-8').read()
-    if f'{adapter_name}_adapter' in file_data:
+    description_dict = json.loads(open(filename, 'r', encoding='utf-8').read())
+    if f'{adapter_name}_adapter' in description_dict:
         raise ValidateError(f'Description for "{adapter_name}" already defined in {filename}')
 
 
@@ -125,23 +125,16 @@ def port_validator(filename: str, adapter_name: str):
 def description_action(filename: str, adapter_name: str, *args):
     """ Appends description to the description file """
 
-    new_description = "    %s_adapter: {\n        title: 'AUTOADAPTER',\n        description: 'AUTOADAPTER'\n    },\n" \
-                      % (adapter_name,)
-
-    lines = open(filename, 'r', encoding='utf-8').readlines()
-
-    for i, line in enumerate(lines):
-        # Start of dict should be 'pluginMeta = {dict}'
-        if 'pluginMeta =' in line:
-            # Found dict, now insert AUTOADAPTER placeholder
-            lines.insert(i + 1, new_description)
-            data = ''.join(lines)
-
-            with open(filename, 'w', encoding='utf-8') as file_:
-                file_.write(data)
-            break
-    else:
-        raise ActionError('Unable to find PluginMeta')
+    description_dict = json.loads(open(filename, 'r', encoding='utf-8').read())
+    adapter_key = f'{adapter_name}_adapter'
+    # description_validator assures adapter_key is not present in description_dict beforehand
+    description_dict[adapter_key] = {
+        'title': 'AUTOADAPTER',
+        'link': 'AUTOADAPTER',
+        'description': 'AUTOADAPTER'
+    }
+    with open(filename, 'w', encoding='utf-8') as file_:
+        file_.write(json.dumps(description_dict, indent=2, ensure_ascii=False))
 
 
 def image_action(filename: str, adapter_name: str, *args):
@@ -452,28 +445,13 @@ def delete_port(filename: str, adapter_name: str):
 def delete_description(filename: str, adapter_name: str):
     """ Deletes the description made for the adapter in plugin_meta.js
         Should be used for testing """
+    description_dict = json.loads(open(filename, 'r', encoding='utf-8').read())
+    adapter_key = f'{adapter_name}_adapter'
+    if adapter_key in description_dict:
+        del description_dict[adapter_key]
 
-    lines_deleted = 0
-    lines_to_delete = 4
-    should_delete = False
-
-    data = ''
-    with open(filename, 'r', encoding='utf-8') as f:
-        for line in f:
-            if adapter_name in line:
-                should_delete = True
-
-            if lines_deleted == lines_to_delete:
-                should_delete = False
-
-            if should_delete:
-                lines_deleted += 1
-                continue
-
-            data += line
-
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(data)
+    with open(filename, 'w', encoding='utf-8') as file_:
+        file_.write(json.dumps(description_dict, indent=2, ensure_ascii=False))
 
 
 def delete_files(adapter_name: str, adapter_type: str):
@@ -501,7 +479,7 @@ def delete_files(adapter_name: str, adapter_type: str):
         try:
             os.remove(filename)
             print(f'removing file {filename}')
-        except Exception:
+        except Exception as err:
             print(f'File: {filename}, raised {str(err)}')
             pass
 
