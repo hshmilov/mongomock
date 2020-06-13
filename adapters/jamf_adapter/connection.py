@@ -256,7 +256,11 @@ class JamfConnection(object):
                 device_list.append(device_details)
             except Exception:
                 logger.exception(f'error retrieving details of device id {device_id}')
-        devices = (self.get(url).get(device_list_name) or {})
+        try:
+            devices = (self.get(url).get(device_list_name) or {})
+        except Exception:
+            logger.exception(f'Exception in get devices')
+            return []
         num_of_devices = devices.get('size')
         if num_of_devices:
             num_of_devices = int(num_of_devices)

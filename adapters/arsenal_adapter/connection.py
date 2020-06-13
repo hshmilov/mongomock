@@ -47,7 +47,7 @@ class ArsenalConnection(RESTConnection):
         if not json_data.get('assets'):
             raise RESTException(f'Bad response data: {json_data}')
         yield from json_data['assets']
-        token = json_data['page']['token']
+        token = json_data['page'].get('token')
         while token:
             try:
                 response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE, 'token': token}},

@@ -147,7 +147,7 @@ class SpacewalkAdapter(AdapterBase):
                 device.set_boot_time(boot_time=parse_date(str(device_raw.get('last_boot'))))
             device.creation_time = parse_date(device_raw.get('created'))
             try:
-                nics = device_raw.get('network')
+                nics = device_raw.get('network') or []
                 for nic in nics:
                     ips = []
                     ipv4 = nic.get('ip')

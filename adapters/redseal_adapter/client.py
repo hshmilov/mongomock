@@ -8,10 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin, urlparse
 
 import funcy
-import requests
 
 import aiohttp
-from axonius.adapter_exceptions import ClientConnectionException
+from redseal_adapter.connection import RedsealConnection
+
 from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -30,6 +30,7 @@ class RedSealClient:
         self._url = url
         self._username = username
         self._password = password
+        self._connection = None
 
     async def get(self, session, path, *args, headers=None, **kwargs):
         """
@@ -60,15 +61,12 @@ class RedSealClient:
         """
 
         logger.info(f'Creating session using {self._username}')
-        try:
-
-            response = requests.get(urljoin(self._url + '/', 'data'),
-                                    auth=(self._username, self._password), verify=False, timeout=10)
-            response.raise_for_status()
-        except Exception as exc:
-            exception_data = response.content if 'response' in locals() else ''
-            logger.exception(f'Exception in check connection response: {exception_data}')
-            raise ClientConnectionException(f'Error connecting to server: {str(exc)}')
+        connection = RedsealConnection(domain=self._url,
+                                       verify_ssl=False,
+                                       username=self._username,
+                                       password=self._password)
+        with connection:
+            pass
 
     @staticmethod
     def reassemble_application_json(response):
@@ -157,15 +155,8 @@ class RedSealClient:
     async def _get_devices(self, loop, async_chunks: int):
         pool = ThreadPoolExecutor(10)
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
-            response = await self.get(session, 'data/host/all')
-            if not json.is_valid(response, {'list': ['Host', ]}):
-                raise RedSealException('Invalid response for /data/host/all')
-
-            response = self.reassemble_application_json(response)
-
             results = []
-            urls = self.get_urls(response)
-            for i, chunk_of_urls in enumerate(funcy.chunks(async_chunks, urls)):
+            for i, chunk_of_urls in enumerate(funcy.chunks(async_chunks, self._urls)):
                 tasks = map(lambda url: loop.create_task(self.get(session, url)), chunk_of_urls)
 
                 for future in asyncio.as_completed(tasks):
@@ -184,7 +175,12 @@ class RedSealClient:
         Requires active session.
         :return: json that contains a list of the devices
         """
-
+        connection = RedsealConnection(domain=self._url,
+                                       verify_ssl=False,
+                                       username=self._username,
+                                       password=self._password)
+        connection.connect()
+        self._urls = connection.get_urls()
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:

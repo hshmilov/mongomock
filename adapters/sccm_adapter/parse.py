@@ -221,6 +221,17 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
         except Exception:
             logger.warning(f'Problem getting vm', exc_info=True)
 
+        mem_dict = dict()
+        try:
+            for mem_data in \
+                    client_data.query(_wrap_query_with_resource_id(consts.MEM_QUERY, device_id)):
+                asset_id = mem_data.get('ResourceID')
+                if not asset_id:
+                    continue
+                mem_dict[asset_id] = mem_data
+        except Exception:
+            logger.warning(f'Problem getting mem', exc_info=True)
+
         asset_chasis_dict = dict()
         try:
             for asset_chasis_data in \
@@ -454,6 +465,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             device_raw['patch_data'] = asset_patch_dict.get(device_raw.get('ResourceID'))
             device_raw['malware_data'] = asset_malware_dict.get(device_raw.get('ResourceID'))
             device_raw['chasis_data'] = asset_chasis_dict.get(device_raw.get('ResourceID'))
+            device_raw['mem_data'] = mem_dict.get(device_raw.get('ResourceID'))
             device_raw['client_data'] = clients_dict.get(device_raw.get('ResourceID'))
             device_raw['owner_data'] = owner_dict.get(device_raw.get('ResourceID'))
             device_raw['tpm_data'] = tpm_dict.get(device_raw.get('ResourceID'))

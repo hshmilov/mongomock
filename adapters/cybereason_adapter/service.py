@@ -5,7 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.mixins.configurable import Configurable
@@ -20,13 +20,14 @@ class CybereasonAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         agent_status = Field(str, 'Agent Status')
-        agent_version = Field(str, 'Agent Version')
         site_name = Field(str, 'Site Name')
         ransomware_status = Field(str, 'Ransomware Status')
         isolated = Field(bool, 'Isolated')
         prevention_status = Field(str, 'Prevention Status')
         pylum_id = Field(str, 'Pylum ID')
         custom_tags = ListField(str, 'Custom Tags')
+        remote_shell_status = Field(str, 'Remote Shell Status')
+        quick_scan_status = Field(str, 'Quick Scan Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -136,15 +137,24 @@ class CybereasonAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception('Problem getting MAC address')
             device.pylum_id = device_raw.get('pylumId')
+            device.add_agent_version(agent=AGENT_NAMES.cybereason,
+                                     version=device_raw.get('version'),
+                                     status=device_raw.get('status'))
             device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
-            device.name = device_raw.get('machineName')
-            device.hostname = device_raw.get('fqdn') or device_raw.get('machineName')
+            name = device_raw.get('machineName')
+            device.name = name
+            hostname = device_raw.get('fqdn') or device_raw.get('machineName')
+            if hostname and name and hostname.lower().split('.')[0] != name.lower().split('.')[0]:
+                hostname = name
+            device.hostname = hostname
             if device_raw.get('externalIpAddress'):
                 device.add_public_ip(device_raw.get('externalIpAddress'))
             if device_raw.get('internalIpAddress'):
                 device.add_nic(None, [device_raw.get('internalIpAddress')])
             device.site_name = device_raw.get('siteName')
             device.ransomware_status = device_raw.get('ransomwareStatus')
+            device.remote_shell_status = device_raw.get('remoteShellStatus')
+            device.quick_scan_status = device_raw.get('quickScanStatus')
             device.isolated = device_raw.get('isolated')
             agent_status = device_raw.get('status')
             device.agent_status = agent_status

@@ -350,9 +350,11 @@ class SccmAdapter(AdapterBase, Configurable):
                                 path_name = svc_data.get('PathName0')
                                 service_type = svc_data.get('ServiceType0')
                                 start_mode = svc_data.get('StartMode0')
+                                state = svc_data.get('State0')
                                 device.add_service(display_name=display_name,
                                                    path_name=path_name,
                                                    start_mode=start_mode,
+                                                   status=state,
                                                    service_type=service_type)
                             except Exception:
                                 logger.exception(f'Problem with service data {svc_data}')
@@ -559,6 +561,13 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                 except Exception:
                     logger.exception(f'Problem getting last seen data dor {device_raw}')
+                try:
+                    if isinstance(device_raw['mem_data'], dict):
+                        mem_data = device_raw['mem_data']
+                        if mem_data.get('TotalPhysicalMemory0'):
+                            device.total_physical_memory = float(mem_data.get('TotalPhysicalMemory0')) / (1024.0 ** 2)
+                except Exception:
+                    logger.exception(f'Problem getting mem data dor {device_raw}')
                 try:
                     if isinstance(device_raw['chasis_data'], dict):
                         chasis_data = device_raw['chasis_data']

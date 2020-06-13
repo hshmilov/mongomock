@@ -7,11 +7,10 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.fields import Field, ListField
+from axonius.clients.rest.connection import RESTConnection
 from axonius.smart_json_class import SmartJsonClass
-
 from redseal_adapter.client import RedSealClient
 from redseal_adapter.client_id import get_client_id
-from axonius.clients.rest.connection import RESTConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -207,7 +206,7 @@ class RedsealAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'async_chunks': 50
+            'async_chunks': 5
         }
 
     def _on_config_update(self, config):
