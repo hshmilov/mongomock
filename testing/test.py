@@ -605,6 +605,7 @@ def main():
                 'ui_test_instances_upgrade',
                 'Unit Tests',
                 'ui_test_instances_after_join',
+                'ui_test_global_settings',
                 'ui_test_report_generation',
                 'ui_test_devices_query_advanced_more_cases',
                 'ui_test_enforcement_actions',
@@ -623,6 +624,7 @@ def main():
                 'ui_test_report_generation_more_cases',
                 'ui_test_report_generation_special_cases',
                 'ui_test_settings_permissions',
+                'ui_test_reports_permissions'
             ]
 
             for priority_test in priority_tests:
