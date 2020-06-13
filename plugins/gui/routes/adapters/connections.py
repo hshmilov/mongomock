@@ -145,6 +145,7 @@ class Connections:
             return return_error('Changing connection details requires re-entering credentials', 400)
 
         if prev_instance_id != instance_id:
+            self.request_remote_plugin('clients/' + connection_id, adapter_unique_name, method='delete')
             adapter_unique_name = self._get_adapter_unique_name(adapter_name, instance_id)
 
         self._adapters.clean_cache()
