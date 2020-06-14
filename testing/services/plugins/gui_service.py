@@ -1374,14 +1374,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         try:
             for entity_type in EntityType:
                 self._entity_views_map[entity_type].update_many({
-                    '$and': [
-                        {
-                            PREDEFINED_FIELD: {'$exists': False}
-                        },
-                        {
-                            PRIVATE_FIELD: {'$exists': False}
-                        }
-                    ]
+                    PRIVATE_FIELD: {'$exists': False}
                 },  {
                     '$set': {
                         PRIVATE_FIELD: False

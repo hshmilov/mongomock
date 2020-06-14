@@ -158,17 +158,19 @@ export default {
   computed: {
     ...mapState({
       savedViews(state) {
-        const isQueryMatchingSearch = (query) => query.name.toLocaleLowerCase()
+        const isQueryMatchingSearch = (query) => query && query.name.toLocaleLowerCase()
           .includes(this.searchInputValue.toLocaleLowerCase());
 
-        const isQueryAllowed = (query) => query.private || this.userCanRunSavedQueries;
+        const isQueryAllowed = (query) => query && (query.private || this.userCanRunSavedQueries);
         return _flow([
           (queries) => (this.isSearchSimple ? queries.filter(isQueryMatchingSearch) : queries),
           (queries) => queries.filter(isQueryAllowed),
         ])(_get(state, `${this.module}.views.saved.content.data`, []));
       },
       historyViews(state) {
-        if (!this.isSearchSimple) return state[this.module].views.saved.content.data;
+        if (!this.isSearchSimple) {
+          return state[this.module].views.saved.content.data.filter((query) => query);
+        }
         return state[this.module].views.history.content.data
           .filter((item) => item && item.view.query && item.view.query.filter
                                   && item.view.query.filter.toLowerCase()
