@@ -1,6 +1,5 @@
 from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
-from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -19,8 +18,6 @@ class TestExecutionSettings(TestBase):
         general_info_service = GeneralInfoService()
 
         with general_info_service.contextmanager(take_ownership=True):
-            # Add AD server
-            self.adapters_page.add_server(ad_client1_details)
             self.base_page.run_discovery()
 
             check_execution(False)
