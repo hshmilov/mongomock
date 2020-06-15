@@ -57,7 +57,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
         """
-        Get all devices from a specific  domain
+        Get all devices from a specific domain
 
         :param str client_name: The name of the client
         :param obj client_data: The data that represent a connection
@@ -71,7 +71,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
     # pylint: disable=arguments-differ
     def _query_users_by_client(client_name, client_data):
         """
-        Get all users from a specific  domain
+        Get all users from a specific domain
 
         :param str client_name: The name of the client
         :param obj client_data: The data that represent a connection
