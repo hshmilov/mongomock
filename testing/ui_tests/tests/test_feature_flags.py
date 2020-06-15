@@ -142,6 +142,9 @@ class TestFeatureFlags(TestBase):
         self._change_expiration_date(-1, existing=False)
         assert self.dashboard_page.find_trial_expired_banner()
         self.restart_browser()
+        self.login_page.login(self.username, self.password)
+        assert self.dashboard_page.find_trial_expired_banner()
+        self.restart_browser()
         self.dashboard_page.find_no_trial_banner()
         self._change_expiration_date(3)
 
