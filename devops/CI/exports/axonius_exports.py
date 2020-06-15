@@ -263,12 +263,18 @@ def local_installer_path(args, notify):
     if args.installer is not None:
         yield args.installer
     else:
-        releases_bucket = args.s3_bucket
-        base_url = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/'
-        path_template = '{0}/axonius_{0}.' + ('py' if args.unencrypted else 'zip')
-        axonius_releases_url_for_release = (base_url + path_template).format
-        url = args.installer_url or axonius_releases_url_for_release(args.installer_s3_name)
-        notify({'name': args.name, 'subcommand': 'cloud', 's3_installer': url})
+        if not args.installer_url:
+            releases_bucket = args.s3_bucket
+            base_url = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/'
+            path_template = '{0}/axonius_{0}.{1}'
+            suffix = 'py' if args.unencrypted else 'zip'
+            axonius_releases_url_for_release = (base_url + path_template).format
+            url = axonius_releases_url_for_release(args.installer_s3_name, suffix)
+            unencrypted_url = axonius_releases_url_for_release(args.installer_s3_name, 'py')
+            notify({'name': args.name, 'subcommand': 'cloud', 's3_installer': unencrypted_url})
+        else:
+            url = args.installer_url
+
         with tempfile.TemporaryDirectory() as temporary_directory:
             installer_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
             temporary_local_installer = pathlib.Path(temporary_directory).joinpath(installer_name)
