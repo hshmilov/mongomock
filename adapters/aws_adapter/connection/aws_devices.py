@@ -15,6 +15,8 @@ from aws_adapter.connection.aws_route_table import query_devices_by_client_by_so
 from aws_adapter.connection.aws_s3 import query_devices_by_client_by_source_s3
 from aws_adapter.connection.aws_ssm import query_devices_by_client_by_source_ssm
 from aws_adapter.connection.aws_workspaces import query_devices_by_client_by_source_workspaces
+from aws_adapter.connection.aws_elasticsearch import \
+    query_devices_by_client_by_source_elasticsearch
 from aws_adapter.connection.structures import AwsRawDataTypes
 from axonius.clients.aws.aws_clients import get_boto3_session
 
@@ -266,6 +268,24 @@ def query_devices_for_one_account(
                                 AwsRawDataTypes.SSM
                     except Exception:
                         logger.exception(f'Error while querying SSM in source {source_name}')
+
+            if options.get('fetch_elasticsearch') is True:
+                logger.info(f'Fetching Elasticsearch domains for {account}')
+                for region_name, connected_clients in \
+                        connected_clients_by_region.items():
+                    source_name = f'{account}_{region_name}'
+                    account_metadata['region'] = region_name
+                    try:
+                        for parse_data_for_source in \
+                                query_devices_by_client_by_source_elasticsearch(connected_clients):
+                            yield source_name, \
+                                account_metadata, \
+                                parse_data_for_source, \
+                                generic_resources_by_region.get(region_name), \
+                                AwsRawDataTypes.Elasticsearch
+                    except Exception:
+                        logger.exception(f'Error while querying Elasticsearch'
+                                         f' in source {source_name}')
 
             del connected_clients_by_region
         logger.info(f'query_devices_by_client ({account_i} / {num_of_accounts}): {account}'

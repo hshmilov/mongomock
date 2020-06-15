@@ -37,6 +37,7 @@ class AwsRawDataTypes(Enum):
     Workspaces = auto()
     InternetGateway = auto()
     RouteTable = auto()
+    Elasticsearch = auto()
 
 
 # translation table between AWS values to parsed values
@@ -401,6 +402,82 @@ class AWSCISRule(SmartJsonClass):
     rule_section = Field(str, 'Rule Section')
 
 
+class AWSElasticsearchEndpoint(SmartJsonClass):
+    service = Field(str, 'Service Type')
+    endpoint = Field(str, 'Service Endpoint')
+
+
+class AWSElasticsearchEBSOption(SmartJsonClass):
+    enabled = Field(bool, 'EBS Enabled')
+    volume_type = Field(str, 'EBS Volume Type')
+    volume_size = Field(int, 'EBS Volume Size')
+    iops = Field(int, 'EBS Volume IOPS')
+
+
+class AWSElasticsearchSnapshotOption(SmartJsonClass):
+    option = Field(str, 'Snapshot Option')
+    value = Field(str, 'Snapshot Value')
+
+
+class AWSElasticsearchCognitoOption(SmartJsonClass):
+    enabled = Field(bool, 'Cognito Enabled')
+    user_pool_id = Field(str, 'Cognito User Pool ID')
+    identity_pool_id = Field(str, 'Cognito Identity Pool ID')
+    role_arn = Field(str, 'Cognito Role ARN')
+
+
+class AWSElasticsearchEncryptionOption(SmartJsonClass):
+    enabled = Field(bool, 'Encryption Enabled')
+    kms_key_id = Field(str, 'KMS Key ID')
+
+
+class AWSElasticsearchAdvancedOption(SmartJsonClass):
+    option = Field(str, 'Advanced Option')
+    value = Field(str, 'Advanced Value')
+
+
+class AWSElasticsearchServiceSoftwareOption(SmartJsonClass):
+    current_version = Field(str, 'Current Version')
+    new_version = Field(str, 'New Version')
+    update_available = Field(bool, 'Update Available')
+    cancellable = Field(bool, 'Cancellable')
+    update_status = Field(str, 'Update Status')
+    description = Field(str, 'Description')
+    automated_update_date = Field(datetime.datetime, 'Automated Update Date')
+    optional_deployment = Field(bool, 'Optional Deployment')
+
+
+class AWSElasticsearchEndpointOption(SmartJsonClass):
+    enforce_https = Field(bool, 'Enforce HTTPS')
+    tls_policy = Field(str, 'TLS Security Policy')
+
+
+class AWSElasticsearchSecurityOption(SmartJsonClass):
+    enabled = Field(bool, 'Advanced Security Enabled')
+    internal_user_db_enabled = Field(bool, 'Internal User Database Enabled')
+
+
+class AWSElasticsearchVPCOptions(SmartJsonClass):
+    subnet_ids = ListField(str, 'Subnet IDs')
+    availability_zones = ListField(str, 'Availability Zones')
+    security_group_ids = ListField(str, 'Security Group IDs')
+
+
+class AWSElasticsearchLogOptions(SmartJsonClass):
+    log_type = Field(str, 'Logfile Type')
+    cloudwatch_logs_arn = Field(str, 'Cloudwatch Log ARN')
+    enabled = Field(bool, 'Log Publishing Enabled')
+
+
+class AWSElasticsearchClusterConfig(SmartJsonClass):
+    instance_type = Field(str, 'Instance Type')
+    instance_count = Field(int, 'Instance Count')
+    dedicated_master_enabled = Field(bool, 'Dedicated Master Enabled')
+    zone_awareness_enabled = Field(bool, 'Zone Awareness Enabled')
+    dedicated_master_type = Field(str, 'Dedicated Master Type')
+    dedicated_master_count = Field(int, 'Dedicated Master Count')
+
+
 class AWSAdapter(SmartJsonClass):
     account_tag = Field(str, 'Account Tag')
     aws_account_alias = ListField(str, 'Account Alias')
@@ -499,10 +576,11 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     aws_availability_zone = Field(str, 'Availability Zone')
     aws_device_type = Field(
         str,
-        'Device Type (EC2 / ECS / EKS / ELB / Internet Gateway / Lambda / '
-        'Managed / NAT / RDS / Route53 / Route Table / S3 / Workspace)',
-        enum=['EC2', 'ECS', 'EKS', 'ELB', 'InternetGateway', 'Lambda', 'Managed',
-              'NAT', 'RDS', 'Route53', 'RouteTable', 'S3', 'Workspace']
+        'Device Type (EC2 / ECS / EKS / Elasticsearch / ELB / Internet Gateway / '
+        'Lambda / Managed / NAT / RDS / Route53 / Route Table / S3 / Workspace)',
+        enum=['EC2', 'ECS', 'EKS', 'Elasticsearch', 'ELB', 'InternetGateway',
+              'Lambda', 'Managed', 'NAT', 'RDS', 'Route53', 'RouteTable', 'S3',
+              'Workspace']
     )
     security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -518,6 +596,7 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     aws_attached_role = Field(AWSRole, 'Attached Role')
     aws_load_balancers = ListField(AWSLoadBalancer, 'Load Balancer (ELB)')
     ebs_volumes = ListField(AWSEBSVolume, 'EBS Volumes')
+    is_public = Field(bool, 'Security Groups Allow Public Access')
 
     # VPC Generic Fields
     subnet_id = Field(str, 'Subnet Id')
@@ -579,6 +658,34 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     route_table_name = Field(str, 'Route Table Name')
     route_table_owner_id = Field(str, 'Route Table Owner ID')
     route_table_propagating_vgws = ListField(str, 'Propagating VGW IDs')
+
+    # elasticsearch fields
+    es_id = Field(str, 'Domain ID')
+    es_name = Field(str, 'Domain Name')
+    es_arn = Field(str, 'Domain ARN')
+    es_created = Field(bool, 'Domain Creation Status')
+    es_deleted = Field(bool, 'Domain Deletion Status')
+    es_endpoint = Field(str, 'Domain Endpoint')
+    es_endpoints = ListField(AWSElasticsearchEndpoint, 'Domain Service Endpoints')
+    es_processing = Field(bool, 'Domain Configuration Status')
+    es_upgrade_processing = Field(bool, 'Domain Upgrade Status')
+    es_version = Field(str, 'Elasticsearch Version')
+    es_cluster_config = Field(AWSElasticsearchClusterConfig, 'Domain Cluster Configuration')
+    es_ebs_options = Field(AWSElasticsearchEBSOption, 'Domain EBS Options')
+    es_access_policies = ListField(AWSIAMPolicy, 'Domain Access Policy')
+    es_snapshot_options = ListField(AWSElasticsearchSnapshotOption, 'Domain Snapshot Options')
+    es_vpc_options = Field(AWSElasticsearchVPCOptions, 'Domain VPC Options')
+    es_cognito_options = Field(AWSElasticsearchCognitoOption, 'Domain Cognito Options')
+    es_encryption_options = Field(AWSElasticsearchEncryptionOption, 'Domain Encryption Options')
+    es_node_to_node_encryption_option = Field(bool, 'Domain Node to Node Encryption Options')
+    es_advanced_options = ListField(AWSElasticsearchAdvancedOption, 'Domain Advanced Options')
+    es_log_publishing_options = Field(AWSElasticsearchLogOptions, 'Domain Log Publishing Options')
+    es_service_software_options = Field(AWSElasticsearchServiceSoftwareOption,
+                                        'Domain Service Software Options')
+    es_domain_endpoint_options = Field(AWSElasticsearchEndpointOption, 'Domain Endpoint Options')
+    es_advanced_security_options = Field(AWSElasticsearchSecurityOption,
+                                         'Domain Advanced Security Options')
+    es_configured_as_public = Field(bool, 'Configured as Public')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

@@ -11,6 +11,7 @@ from aws_adapter.connection.aws_cis import append_aws_cis_data_to_device, \
 from aws_adapter.connection.aws_connections import connect_client_by_source
 from aws_adapter.connection.aws_devices import query_devices_for_one_account
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import parse_raw_data_inner_regular
+from aws_adapter.connection.aws_elasticsearch import parse_raw_data_inner_elasticsearch
 from aws_adapter.connection.aws_generic_resources import get_account_metadata
 from aws_adapter.connection.aws_igw import parse_raw_data_inner_igw
 from aws_adapter.connection.aws_nat import parse_raw_data_inner_nat
@@ -658,9 +659,26 @@ class AwsAdapter(AdapterBase, Configurable):
                         logger.exception(
                             (f'Problem parsing device from Route Tables: '
                              f'{devices_raw_data_by_source}'))
+
+                elif raw_data_type == AwsRawDataTypes.Elasticsearch:
+                    try:
+                        device = parse_raw_data_inner_elasticsearch(
+                            self._new_device_adapter(),
+                            devices_raw_data_by_source,
+                        )
+                        if device:
+                            self.append_metadata_to_entity(device,
+                                                           account_metadata,
+                                                           aws_source)
+                            yield device
+                    except Exception:
+                        logger.exception(f'Problem parsing device from '
+                                         f'Elasticsearch')
+
                 else:
                     logger.critical(f'Can not parse data for aws source {aws_source}, '
                                     f'unknown type {raw_data_type.name}')
+
             except Exception:
                 logger.exception(f'Problem parsing data from source {aws_source}')
 
@@ -753,6 +771,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_igw = config.get('fetch_igw') or False
         self.__fetch_route_table = config.get('fetch_route_table') or False
         self.__fetch_route_table_for_devices = config.get('fetch_route_table_for_devices') or False
+        self.__fetch_elasticsearch = config.get('fetch_elasticsearch') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
@@ -809,6 +828,11 @@ class AwsAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_route_table_for_devices',
                     'title': 'Add route tables to devices',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_elasticsearch',
+                    'title': 'Fetch information about Elasticsearch',
                     'type': 'bool'
                 },
                 {
@@ -912,6 +936,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_igw',
                 'fetch_route_table',
                 'fetch_route_table_for_devices',
+                'fetch_elasticsearch',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
                 'verify_all_roles',
@@ -944,6 +969,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_igw': False,
             'fetch_route_table': False,
             'fetch_route_table_for_devices': False,
+            'fetch_elasticsearch': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,

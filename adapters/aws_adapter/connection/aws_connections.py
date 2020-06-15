@@ -128,6 +128,13 @@ def connect_client_by_source(
         except Exception as e:
             errors['route53'] = str(e)
 
+        try:
+            c = session.client('es', **params)
+            c.list_domain_names()
+            clients['es'] = c
+        except Exception as e:
+            errors['es'] = str(e)
+
     clients['account_tag'] = client_config.get(ACCOUNT_TAG)
     clients['credentials'] = client_config
     clients['region'] = params[REGION_NAME]
