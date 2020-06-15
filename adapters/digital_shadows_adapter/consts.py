@@ -1,0 +1,6 @@
+DEVICE_PER_PAGE = 100
+MAX_NUMBER_OF_DEVICES = 10000000
+IP_PORT = 'ip-ports'
+VULNS = 'vulnerability'
+SOCKET = 'secure-socket'
+OBJECT_NAMES = [IP_PORT, VULNS, SOCKET]
