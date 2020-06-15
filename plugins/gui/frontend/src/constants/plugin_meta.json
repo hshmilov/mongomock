@@ -878,6 +878,11 @@
     "link": "",
     "description": "Nimbul is a custom cloud infrastructure management solution developed by the New York Times."
   },
+  "rapid7_nexpose_warehouse_adapter": {
+    "title": "Rapid7 Nexpose Warehouse",
+    "link": "https://docs.axonius.com/docs/rapid7-nexpose-warehouse",
+    "description": "Rapid7 Nexpose Warehouse fetches device information directly from an external data warehouse."
+  },
   "tripwire_enterprise_adapter": {
     "title": "Tripwire Enterprise",
     "link": "https://docs.axonius.com/docs/tripwrie-enterprise",

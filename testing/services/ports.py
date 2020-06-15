@@ -163,6 +163,7 @@ DOCKER_PORTS = {
     'cherwell-adapter':                 6056,
     'hp-nnmi-adapter':                  6057,
     'wsus-adapter':                     6058,
+    'rapid7-nexpose-warehouse-adapter': 6059,
     'netskope-adapter':                 6065,
     'guardium-adapter':                 6070,
     'landesk-adapter':                  6076,
