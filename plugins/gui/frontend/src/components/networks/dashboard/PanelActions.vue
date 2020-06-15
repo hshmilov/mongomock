@@ -250,6 +250,12 @@ export default {
       selectedSortOrder: null,
     };
   },
+  mounted() {
+    if (this.chart.selectedSort) {
+      this.selectedSortType = this.chart.selectedSort.type;
+      this.selectedSortOrder = this.chart.selectedSort.order;
+    }
+  },
   computed: {
     sortType() {
       return this.selectedSortType || _get(this.chart, 'config.sort.sort_by');
