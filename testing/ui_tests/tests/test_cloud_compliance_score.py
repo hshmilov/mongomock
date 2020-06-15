@@ -1,5 +1,3 @@
-import pytest
-
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from ui_tests.tests.ui_test_base import TestBase
@@ -10,7 +8,6 @@ from services.plugins.compliance_service import ComplianceService
 
 class TestCloudComplianceScore(TestBase):
 
-    @pytest.mark.skip('AX-7569')
     def test_compliance_score(self):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
@@ -23,6 +20,7 @@ class TestCloudComplianceScore(TestBase):
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
             self.compliance_page.switch_to_page()
+            self.compliance_page.wait_for_table_to_be_responsive()
 
             failed_rules = self.compliance_page.get_total_failed_rules()
             passed_rules = self.compliance_page.get_total_passed_rules()
@@ -49,6 +47,7 @@ class TestCloudComplianceScore(TestBase):
             self.base_page.run_discovery()
 
             self.compliance_page.switch_to_page()
+            self.compliance_page.wait_for_table_to_be_responsive()
             rules = self.compliance_page.get_all_rules()
             rules_initial_len = len(rules)
 
@@ -56,7 +55,7 @@ class TestCloudComplianceScore(TestBase):
             assert self.compliance_page.is_score_rules_modal_visible()
             self.compliance_page.toggle_exclude_rule([1, 5])  # exclude the first and fifth rules
             self.compliance_page.save_score_rules()
-            self.compliance_page.wait_for_table_to_load()
+            self.compliance_page.wait_for_table_to_be_responsive()
             rules = self.compliance_page.get_all_rules()
             assert rules_initial_len == len(rules) + 2
 
@@ -64,7 +63,7 @@ class TestCloudComplianceScore(TestBase):
             assert self.compliance_page.is_score_rules_modal_visible()
             self.compliance_page.toggle_exclude_rule([1, 5])  # include the first and fifth rules
             self.compliance_page.save_score_rules()
-            self.compliance_page.wait_for_table_to_load()
+            self.compliance_page.wait_for_table_to_be_responsive()
             rules = self.compliance_page.get_all_rules()
             assert rules_initial_len == len(rules)
 
