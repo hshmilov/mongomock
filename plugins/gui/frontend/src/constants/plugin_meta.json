@@ -18,8 +18,8 @@
     "description": "eSentire's esNetwork provides network monitoring and remediation as a fully managed MDR service."
   },
   "service_now_sql_adapter": {
-      "title": "ServiceNow Analytics Data Warehouse (SQL)",
-      "description": "ServiceNow Analytics Data Warehouse"
+    "title": "ServiceNow Analytics Data Warehouse (SQL)",
+    "description": "ServiceNow Analytics Data Warehouse"
   },
   "nozomi_guardian_adapter": {
     "title": "Nozomi Networks Guardian",
@@ -216,9 +216,9 @@
     "link": "https://docs.axonius.com/docs/red-hat-ansible-tower"
   },
   "centrify_adapter": {
-        "title": "Centrify Identity Services",
-        "description": "Centrify Identity Services manages application access, endpoints, and network infrastructure.",
-        "link": "https://docs.axonius.com/docs/centrify"
+    "title": "Centrify Identity Services",
+    "description": "Centrify Identity Services manages application access, endpoints, and network infrastructure.",
+    "link": "https://docs.axonius.com/docs/centrify"
   },
   "upguard_adapter": {
     "title": "UpGuard CyberRisk",
@@ -1312,6 +1312,11 @@
     "title": "Test adapters",
     "link": "",
     "description": "Stresstest can be configured with any amount of devices and it creates that number of random devices."
+  },
+  "digital_shadows_adapter": {
+    "title": "Digital Shadows SearchLight",
+    "link": "https://docs.axonius.com/docs/digital-shadows-searchlight",
+    "description": "Digital Shadows SearchLight is a Digital Risk Protection solution that protects organizations against external risk exposure."
   },
   "hyper_v_adapter": {
     "title": "Microsoft Hyper-V",

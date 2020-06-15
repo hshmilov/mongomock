@@ -178,6 +178,7 @@ def compare_one_public_ip(adapter_device1, adapter_device2):
 def is_public_ip_correlation_adapter(adapter_device):
     return adapter_device.get('plugin_name') in ['edfs_csv_adapter',
                                                  'nmap_adapter',
+                                                 'digital_shadows_adapter',
                                                  'masscan_adapter',
                                                  'shodan_adapter',
                                                  'bitsight_adapter',

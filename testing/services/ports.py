@@ -219,6 +219,7 @@ DOCKER_PORTS = {
     'amd-db-adapter':                   9944,
     'alcide-adapter':                   9945,
     'upguard-adapter':                  9946,
+    'digital-shadows-adapter':          9947,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,
