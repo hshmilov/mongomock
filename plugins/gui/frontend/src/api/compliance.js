@@ -62,13 +62,13 @@ export const sendComplianceEmail = async (name, accounts, mailProperties, schema
   }
 };
 
-export const updateComplianceRules = async (name, rules) => {
+export const updateComplianceRules = async (name, rules, cisTitle) => {
   const uri = `/compliance/${name}/rules`;
   const request = createRequest(uri);
 
   const requestOptions = {
     method: 'POST',
-    data: rules,
+    data: { rules, cis_title: cisTitle },
   };
   const res = await request(requestOptions);
   return res.data;

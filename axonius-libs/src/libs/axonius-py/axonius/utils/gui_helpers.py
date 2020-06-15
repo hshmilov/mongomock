@@ -444,10 +444,8 @@ def rules_for_score():
         @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
             if request.method == 'POST':
-                rules_dict = self.get_request_data_as_object()
-                if rules_dict is None:
-                    rules_dict = {}
-                logger.info(f'rules: {rules_dict}')
+                content = self.get_request_data_as_object()
+                rules_dict = content.get('rules', {})
             return func(self, rules=rules_dict, *args, **kwargs)
         return actual_wrapper
     return wrap

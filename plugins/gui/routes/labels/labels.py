@@ -332,4 +332,6 @@ class Labels:
             'audit.compliance.csv.template': 'Exported to CSV compliance \'{name}\'',
             'audit.compliance.send_email': 'Send Email',
             'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
+            'audit.compliance.rules': 'Updated Scoring Rules',
+            'audit.compliance.rules.template': 'Updated scoring rules for compliance {cis_title}',
         }

@@ -342,7 +342,7 @@ export default {
       return includeScoreMap;
     },
     async updateActiveRules() {
-      await updateComplianceRules(this.cisName, this.prepareActiveRulesMap());
+      await updateComplianceRules(this.cisName, this.prepareActiveRulesMap(), this.cisTitle);
       await this.fetchComplianceFilters();
       await this.updateCurrentView();
     },

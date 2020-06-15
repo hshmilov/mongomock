@@ -49,7 +49,7 @@ class Compliance:
             return return_error(str(e), http_status=500)
 
     @include_rules_in_score()
-    @gui_route_logged_in('<name>/rules', methods=['POST'], skip_activity=True)
+    @gui_route_logged_in('<name>/rules', methods=['POST'], activity_params=['cis_title'])
     def update_compliance_rules(self, name, rules):
         try:
             return jsonify(update_rules_score_flag(name, rules))
