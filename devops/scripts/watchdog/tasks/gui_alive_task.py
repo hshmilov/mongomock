@@ -130,6 +130,8 @@ class GuiAliveTask(WatchdogTask):
                     time.sleep(30)
                     os.system('reboot --force')
                     self.report_error(f'Reboot command sent')
+                    time.sleep(120)
+                    os.system('/sbin/shutdown -r now')
                 finally:
                     if GUIALIVE_WATCHDOG_IN_PROGRESS.is_file():
                         GUIALIVE_WATCHDOG_IN_PROGRESS.unlink()
