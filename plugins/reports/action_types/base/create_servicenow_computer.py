@@ -61,6 +61,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'extra_fields',
                     'title': 'Additional fields',
                     'type': 'string'
+                },
+                {
+                    'name': 'ax_snow_fields_map',
+                    'type': 'string',
+                    'title': 'Axonius to ServiceNow Fields Map'
                 }
             ],
             'required': [
@@ -79,6 +84,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'username': None,
             'password': None,
             'https_proxy': None,
+            'ax_snow_fields_map': None,
             'cmdb_ci_table': 'cmdb_ci_computer',
             'extra_fields': None,
             'verify_ssl': True
@@ -88,7 +94,7 @@ class ServiceNowComputerAction(ActionTypeBase):
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,
                                      to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
-                                     cmdb_ci_table=None, extra_fields=None):
+                                     cmdb_ci_table=None, extra_fields=None, ax_snow_values_map_dict=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
@@ -113,6 +119,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                     connection_dict.update(extra_fields_dict)
         except Exception:
             logger.exception(f'Problem parsing extra fields')
+        if ax_snow_values_map_dict:
+            connection_dict.update(ax_snow_values_map_dict)
         request_json = {'snow': connection_dict,
                         'to_ccorrelate': {'to_correlate_plugin_unique_name': to_correlate_plugin_unique_name,
                                           'device_id': to_correlate_device_id}}
@@ -154,7 +162,15 @@ class ServiceNowComputerAction(ActionTypeBase):
         }
         current_result = self._get_entities_from_view(service_now_projection)
         results = []
-
+        ax_snow_fields_map_dict = dict()
+        try:
+            ax_snow_fields_map = self._config.get('ax_snow_fields_map')
+            if ax_snow_fields_map:
+                ax_snow_fields_map_dict = json.loads(ax_snow_fields_map)
+                if not isinstance(ax_snow_fields_map_dict, dict):
+                    ax_snow_fields_map_dict = {}
+        except Exception:
+            logger.exception(f'Problem parsing ax_snow_fields_map')
         for entry in current_result:
             try:
                 name_raw = None
@@ -167,6 +183,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                 corre_plugin_id = None
                 to_correlate_device_id = None
                 found_snow = False
+                ax_snow_values_map_dict = dict()
                 for from_adapter in entry['adapters']:
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
                         found_snow = True
@@ -195,6 +212,16 @@ class ServiceNowComputerAction(ActionTypeBase):
                             'device_serial') or data_from_adapter.get('bios_serial')
                     if manufacturer_raw is None:
                         manufacturer_raw = data_from_adapter.get('device_manufacturer')
+                    try:
+                        for ax_field in ax_snow_fields_map_dict:
+                            snow_field = ax_snow_fields_map_dict[ax_field]
+                            if not ax_snow_values_map_dict.get(snow_field) and data_from_adapter.get(ax_field):
+                                snow_value = data_from_adapter[ax_field]
+                                if snow_value and not isinstance(snow_value, str):
+                                    snow_value = str(snow_value)
+                                ax_snow_values_map_dict[snow_field] = snow_value
+                    except Exception:
+                        logger.exception(f'Problem with translating dict')
                 # Make sure that we have name
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
@@ -216,7 +243,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                             to_correlate_plugin_unique_name=corre_plugin_id,
                                                             to_correlate_device_id=to_correlate_device_id,
                                                             cmdb_ci_table=self._config.get('cmdb_ci_table'),
-                                                            extra_fields=self._config.get('extra_fields'))
+                                                            extra_fields=self._config.get('extra_fields'),
+                                                            ax_snow_values_map_dict=ax_snow_values_map_dict)
 
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

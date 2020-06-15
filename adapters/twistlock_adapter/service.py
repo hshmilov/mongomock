@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
 from twistlock_adapter.connection import TwistlockConnection
@@ -26,6 +26,29 @@ class VulnerabilitiesCount(SmartJsonClass):
     total = Field(int, 'Total')
 
 
+class TwistlockVuln(SmartJsonClass):
+    applicable_rules = ListField(str, 'Applicable Rules')
+    cause = Field(str, 'Cause')
+    cve = Field(str, 'CVE')
+    cvss = Field(float, 'CVSS')
+    description = Field(str, 'Description')
+    discovered = Field(datetime.datetime, 'Discovered')
+    exploit = Field(str, 'Exploit')
+    link = Field(str, 'Link')
+    layer_time = Field(datetime.datetime, 'Layer Time')
+    package_time = Field(str, 'Package Time')
+    package_verson = Field(str, 'Package Version')
+    published = Field(datetime.datetime, 'Published')
+    severity = Field(str, 'Severity')
+    status = Field(str, 'Status')
+    text = Field(str, 'Text')
+    type = Field(str, 'Type')
+    vec_str = Field(str, 'Vec Str')
+    title = Field(str, 'Title')
+    templates = Field(str, 'Templates')
+    twistlock = Field(bool, 'Twistlock')
+
+
 class TwistlockAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
@@ -42,6 +65,7 @@ class TwistlockAdapter(AdapterBase):
         profile_id = Field(str, 'Profile ID')
         last_modified = Field(datetime.datetime, 'Last Modified')
         compliance_risk_score = Field(str, 'Compliance Risk Score')
+        twistlock_vulns = ListField(TwistlockVuln, 'Twistlock Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -201,6 +225,7 @@ class TwistlockAdapter(AdapterBase):
             return None
 
     # pylint: disable=R0912,R1702
+    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def _create_host_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -259,7 +284,49 @@ class TwistlockAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f'Problem with key {key} and value {value}')
                 device.cve_vulnerability_distribution = cve_vulnerability_distribution
-
+            vulnerabilities_raw = device_raw.get('vulnerabilities')
+            if not isinstance(vulnerabilities_raw, list):
+                vulnerabilities_raw = []
+            for vulnerability_raw in vulnerabilities_raw:
+                try:
+                    if not isinstance(vulnerability_raw, dict):
+                        continue
+                    device.add_vulnerable_software(cve_id=vulnerability_raw.get('cve'))
+                    applicable_rules = vulnerability_raw.get('applicableRules')
+                    if not isinstance(applicable_rules, list):
+                        applicable_rules = None
+                    cvss = None
+                    try:
+                        cvss = float(vulnerability_raw.get('cvss'))
+                    except Exception:
+                        pass
+                    twistlock = vulnerability_raw.get('twistlock')
+                    if not isinstance(twistlock, bool):
+                        twistlock = None
+                    layer_time = parse_date(vulnerability_raw.get('layerTime'))
+                    twist_vuln_obj = TwistlockVuln(applicable_rules=applicable_rules,
+                                                   cause=vulnerability_raw.get('cause'),
+                                                   cve=vulnerability_raw.get('cve'),
+                                                   description=vulnerability_raw.get('description'),
+                                                   discovered=parse_date(vulnerability_raw.get('discovered')),
+                                                   cvss=cvss,
+                                                   exploit=vulnerability_raw.get('exploit'),
+                                                   link=vulnerability_raw.get('link'),
+                                                   layer_time=layer_time,
+                                                   package_time=vulnerability_raw.get('packageName'),
+                                                   package_verson=vulnerability_raw.get('packageVersion'),
+                                                   published=parse_date(vulnerability_raw.get('published')),
+                                                   severity=vulnerability_raw.get('severity'),
+                                                   status=vulnerability_raw.get('status'),
+                                                   twistlock=twistlock,
+                                                   text=vulnerability_raw.get('text'),
+                                                   type=vulnerability_raw.get('type'),
+                                                   title=vulnerability_raw.get('title'),
+                                                   templates=vulnerability_raw.get('templates'),
+                                                   vec_str=vulnerability_raw.get('vecStr'))
+                    device.twistlock_vulns.append(twist_vuln_obj)
+                except Exception:
+                    logger.exception(f'Problem with vulnerability raw {vulnerability_raw}')
             device.set_raw(device_raw)
             return device
         except Exception:
