@@ -46,7 +46,7 @@ class Adapters(Connections):
             return {}
         return {'schema': clients_value.get('schema')}
 
-    @gui_route_logged_in()
+    @gui_route_logged_in(enforce_trial=False)
     def adapters(self):
         return jsonify(self._adapters_v2())
 
