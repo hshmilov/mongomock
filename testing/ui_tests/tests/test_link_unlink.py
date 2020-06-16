@@ -1,3 +1,5 @@
+import pytest
+
 from axonius.utils.wait import wait_until
 
 from ui_tests.tests.ui_test_base import TestBase
@@ -7,6 +9,7 @@ class TestLinkUnlink(TestBase):
     FIND_TWO_DEVICES_QUERY = 'adapters_data.active_directory_adapter.hostname == "windows8.TestDomain.test" or ' \
                              'adapters_data.json_file_adapter.id == exists(true)'
 
+    @pytest.mark.skip('ad change')
     def test_link_unlink(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

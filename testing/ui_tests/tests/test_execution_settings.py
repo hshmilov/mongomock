@@ -1,9 +1,12 @@
+import pytest
+
 from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestExecutionSettings(TestBase):
+    @pytest.mark.skip('ad change')
     def test_execution_settings(self):
         def check_execution(should_execute):
             # Wait for WMI info

@@ -1,6 +1,7 @@
 import copy
 import time
 
+import pytest
 from selenium.common.exceptions import (ElementNotVisibleException,
                                         ElementNotInteractableException,
                                         NoSuchElementException)
@@ -160,6 +161,7 @@ class TestEntityCustomData(TestBase):
         entities_page.wait_for_table_to_load()
         assert len(entities_page.get_all_data()) == 3
 
+    @pytest.mark.skip('ad change')
     def test_custom_data(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

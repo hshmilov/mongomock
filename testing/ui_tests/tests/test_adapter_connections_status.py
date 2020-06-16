@@ -1,3 +1,5 @@
+import pytest
+
 from services.adapters.aws_service import AwsService
 from services.adapters.csv_service import CsvService
 from ui_tests.tests.adapters_test_base import AdapterTestBase
@@ -8,6 +10,7 @@ from test_credentials.test_csv_credentials import client_details as csv_client_d
 
 class TestAdapterConnectionStatus(AdapterTestBase):
 
+    @pytest.mark.skip('ad change')
     def test_adapter_connection_status_panel(self):
 
         adapter_input = {

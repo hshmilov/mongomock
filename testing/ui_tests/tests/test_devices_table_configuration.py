@@ -1,5 +1,7 @@
 import time
 
+import pytest
+
 from axonius.entities import EntityType
 from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
@@ -46,6 +48,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         assert len(all_ips) == 1
         assert all_ips[0] == f'{DEVICE_FIRST_IP}\n{DEVICE_SECOND_IP}\n+1'
 
+    @pytest.mark.skip('ad change')
     def test_devices_config(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
@@ -126,6 +129,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             self.settings_page.set_table_multi_line_checkbox(make_yes=False)
             self.settings_page.click_save_gui_settings()
 
+    @pytest.mark.skip('ad change')
     def test_devices_advanced_basic(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

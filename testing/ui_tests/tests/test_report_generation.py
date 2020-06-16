@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from axonius.utils.wait import wait_until
 from services.adapters import stresstest_scanner_service, stresstest_service
 from ui_tests.pages.reports_page import ReportConfig
@@ -29,6 +31,7 @@ class TestReportGeneration(TestReportGenerationBase):
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
+    @pytest.mark.skip('ad change')
     def test_report_cover_and_toc_chart_legend(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()

@@ -1,3 +1,5 @@
+import pytest
+
 from axonius.consts.metric_consts import Adapters
 from services.adapters.ad_service import AdService
 from services.adapters.cisco_service import CiscoService
@@ -68,6 +70,7 @@ class TestAdaptersConnectivity(AdapterTestBase):
             self.wait_for_adapter_down(GOTOASSIST_PLUGIN_NAME)
             self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
 
+    @pytest.mark.skip('ad change')
     def test_icon_color(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()

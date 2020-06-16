@@ -20,6 +20,7 @@ class TestDevicesSpecificSearch(TestBase):
     IP_ADDRESS_SEARCH_TYPE = 'IP Address'
     INSTALLED_SOFTWARE_NAME_SEARCH_TYPE = 'Installed Software Name'
 
+    @pytest.mark.skip('ad change')
     def test_specific_search_query(self):
         self.base_page.wait_for_run_research()
         self.base_page.run_discovery()
@@ -122,6 +123,7 @@ class TestDevicesSpecificSearch(TestBase):
                                       self.devices_page.QUERY_COMP_CONTAINS)
         self._check_no_search_template_apply()
 
+    @pytest.mark.skip('ad change')
     def test_specific_search_input_value_behaviour(self):
         self.base_page.wait_for_run_research()
         self.base_page.run_discovery()

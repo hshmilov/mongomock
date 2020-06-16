@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 
+import pytest
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
 from axonius.utils.parsing import normalize_timezone_date
@@ -169,6 +170,7 @@ class TestTasks(TestBase):
         self.enforcements_page.select_task_action(action_name)
         self._check_action_results(success_count, failure_count, action_name)
 
+    @pytest.mark.skip('ad change')
     def test_task_results(self):
         with DeviceControlService().contextmanager(take_ownership=True), CarbonblackResponseService().contextmanager(
                 take_ownership=True):

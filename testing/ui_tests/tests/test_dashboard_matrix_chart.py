@@ -1,3 +1,5 @@
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME, DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME,
                                       DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
@@ -41,6 +43,7 @@ class TestDashboardMatrixChart(TestBase):
         group_data_sorted.sort(reverse=is_descending)
         assert group_data == group_data_sorted
 
+    @pytest.mark.skip('ad change')
     def test_matrix_chart_groups(self):
         base_queries = [MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME,
                         DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, None]
@@ -69,6 +72,7 @@ class TestDashboardMatrixChart(TestBase):
 
         assert self.dashboard_page.get_matrix_chart_total_value(card) == f'Total {total_value}'
 
+    @pytest.mark.skip('ad change')
     def test_matrix_chart_pagination(self):
         base_queries = [None, MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME,
                         MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY_NAME]
@@ -83,6 +87,7 @@ class TestDashboardMatrixChart(TestBase):
         groups_names = self.dashboard_page.get_matrix_chart_group_names(card)
         assert len(groups_names) == 1
 
+    @pytest.mark.skip('ad change')
     def test_matrix_chart_click(self):
         base_queries = [None]
         intersecting_queries = [DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME]
