@@ -144,7 +144,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
         assert len(self.devices_page.get_all_data()) <= results_count
         self.devices_page.clear_query_wizard()
 
-    @pytest.mark.skip('ad change')
     def test_host_name_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -687,7 +686,6 @@ class TestDevicesQueryAdvancedCases(TestBase):
             assert value >= previous_value
             previous_value = value
 
-    @pytest.mark.skip('ad change')
     def test_query_wizard_combos(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

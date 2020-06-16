@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-import pytest
-
 from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
@@ -67,7 +65,6 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.fill_schedule_rate(DISCOVERY_UPDATED_VALUE)
         self.settings_page.save_and_wait_for_toaster()
 
-    @pytest.mark.skip('ad change')
     def test_gui_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()

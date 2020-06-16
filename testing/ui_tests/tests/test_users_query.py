@@ -1,14 +1,11 @@
 import random
 import math
 
-import pytest
-
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, AD_ADAPTER_NAME
 
 
 class TestUsersQuery(TestBase):
-    @pytest.mark.skip('ad change')
     def test_two_property_query(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -25,7 +22,6 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_spinner_to_end()
         assert self.users_page.count_entities() == 2
 
-    @pytest.mark.skip('ad change')
     def test_users_query_wizard_default_operators(self):
         self.users_page.switch_to_page()
         self.users_page.wait_for_table_to_load()
@@ -48,7 +44,6 @@ class TestUsersQuery(TestBase):
         self.users_page.select_page_size(50)
         assert len(self.users_page.find_rows_with_data()) == real_count
 
-    @pytest.mark.skip('ad change')
     def test_username_and_adapter_filters_query(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -86,7 +81,6 @@ class TestUsersQuery(TestBase):
         self.users_page.wait_for_table_to_load()
         assert self.users_page.count_entities() == 1
 
-    @pytest.mark.skip('ad change')
     def test_in_integer_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -117,7 +111,6 @@ class TestUsersQuery(TestBase):
 
         assert set(logon_counts) == new_logon_counts
 
-    @pytest.mark.skip('ad change')
     def test_active_directory_exists_filtering(self):
         """
         Test that when filtering users who have AD Organizational Unit, we dont get empty result in the field

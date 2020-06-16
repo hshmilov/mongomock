@@ -60,7 +60,6 @@ class TestGettingStarted(TestBase):
             self.log_tester.is_pattern_in_log(GettingStartedMetric.FEATURE_ENABLED_SETTING)
         self.settings_page.enable_getting_started_feature()
 
-    @pytest.mark.skip('ad change')
     def test_milestones_completion(self):
         # make sure the feature is enabled
         self.settings_page.enable_getting_started_feature()
@@ -146,7 +145,6 @@ class TestGettingStarted(TestBase):
         with pytest.raises(TimeoutException):
             self.base_page.get_getting_started_fab()
 
-    @pytest.mark.skip('ad change')
     def test_getting_started_tabbing(self):
         self.settings_page.enable_getting_started_feature()
         self.settings_page.open_getting_started_panel()

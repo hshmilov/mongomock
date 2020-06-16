@@ -70,11 +70,9 @@ class TestUsersTable(TestEntitiesTable):
         # Test sort in the other direction
         self._test_user_sort_result(col_name, desc=False)
 
-    @pytest.mark.skip('ad change')
     def test_user_sort_by_name(self):
         self._test_user_sort(self.USER_NAME_COLUMN)
 
-    @pytest.mark.skip('ad change')
     def test_user_sort_by_domain(self):
         self._test_user_sort(self.DOMAIN_COLUMN)
 
@@ -85,7 +83,6 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.wait_for_spinner_to_end()
         assert self.users_page.is_text_in_coloumn(self.USER_NAME_COLUMN, USER_NAME_UNICODE)
 
-    @pytest.mark.skip('ad change')
     def test_user_edit_columns(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -120,7 +117,6 @@ class TestUsersTable(TestEntitiesTable):
         # Check loaded data is equal to original one whose view was saved
         assert self.users_page.get_all_data_proper() == view_data
 
-    @pytest.mark.skip('ad change')
     def test_users_advanced_basic(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -155,7 +151,6 @@ class TestUsersTable(TestEntitiesTable):
         expanded_data = self.users_page.get_column_data_expand_row(col_name)[0].split('\n')
         assert set(merged_data) == set(expanded_data)
 
-    @pytest.mark.skip('ad change')
     def test_user_expand_row(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -216,7 +211,6 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.query_user_name_contains('ofri')
         self._test_last_seen_expanded_cell()
 
-    @pytest.mark.skip('ad change')
     def test_user_bool_consistency(self):
         self.settings_page.switch_to_page()
         with StaticAnalysisService().contextmanager(take_ownership=True):

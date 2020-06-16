@@ -1,5 +1,3 @@
-import pytest
-
 from ui_tests.tests.adapters_test_base import AdapterTestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
@@ -33,7 +31,6 @@ class TestAdaptersConnectivityStatus(AdapterTestBase):
         self.adapters_page.wait_for_element_present_by_text(dc_name)
         self.adapters_page.wait_for_problem_connecting_try_again()
 
-    @pytest.mark.skip('ad change')
     def test_clients_indicators(self):
 
         try:

@@ -2,8 +2,6 @@ import copy
 import time
 import datetime
 
-import pytest
-
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.adapters_test_base import AdapterTestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
@@ -22,7 +20,6 @@ class TestCleanDB(AdapterTestBase):
         self.devices_page.click_search()
         return self.devices_page.get_table_count()
 
-    @pytest.mark.skip('ad change')
     def test_clean_db(self):
         """
         Actions:

@@ -38,7 +38,6 @@ class TestAdAdapter(AdapterTestBase):
     def some_user_id(self):
         return USER_ID_FOR_CLIENT_1
 
-    @pytest.mark.skip('ad change')
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
@@ -107,7 +106,6 @@ class TestAdAdapter(AdapterTestBase):
 
         assert len(exchange_servers_list) == 1, f"device {CLIENT1_DC4_ID} is not an exchange server, but it should be!"
 
-    @pytest.mark.skip('ad change')
     def test_fetch_users(self):
         # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data
         # and check that there.
@@ -125,7 +123,6 @@ class TestAdAdapter(AdapterTestBase):
                 }
             )) == 1, f'Did not find user {user_id} with sid {user_sid}'
 
-    @pytest.mark.skip('ad change')
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
         self.axonius_system.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
@@ -138,7 +135,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
-    @pytest.mark.skip('ad change')
     def test_check_reachability(self):
         assert self.adapter_service.is_client_reachable(self.some_client_details)
 
@@ -183,7 +179,6 @@ class TestAdAdapter(AdapterTestBase):
 
         has_ip_conflict_tag()
 
-    @pytest.mark.skip('ad change')
     def test_ad_execute_wmi_smb(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
@@ -218,7 +213,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(30, 10, check_execute_wmi_results)
 
-    @pytest.mark.skip('ad change')
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
@@ -251,7 +245,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(60, 10, check_execute_shell_results)
 
-    @pytest.mark.skip('ad change')
     def test_ad_execute_binary(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
@@ -276,7 +269,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(60, 10, check_execute_binary_results)
 
-    @pytest.mark.skip('ad change')
     @flaky(max_runs=2)
     def test_ad_execute_shell_by_device_control(self, device_control_fixture):
         # TODO: We should have a parallel test for device control but this is complicated now.
@@ -318,7 +310,6 @@ class TestAdAdapter(AdapterTestBase):
 
         has_run_shell_success_tags()
 
-    @pytest.mark.skip('ad change')
     def test_ad_file_operations(self):
         # We must remember this runs in parallel. So the filename is going to be random.
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
