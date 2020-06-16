@@ -182,7 +182,7 @@ class DockerService(AxonService):
             docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
         else:
             docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
-                         '--network-alias', self.fqdn, '--detach']
+                         '--network-alias', self.fqdn, '--detach', '--hostname', self.container_name]
 
         return docker_up
 
