@@ -1096,8 +1096,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param client_config: the client connection data set, include connection label
         '''
         if CLIENT_ID in client_config:
-            resp = self.adapter_client_labels_db.delete_one({CLIENT_ID: client_config.get(CLIENT_ID),
-                                                             NODE_ID: self.node_id})
+            resp = self.adapter_client_labels_db.delete_one({
+                CLIENT_ID: client_config.get(CLIENT_ID),
+                PLUGIN_UNIQUE_NAME: client_config.get(PLUGIN_UNIQUE_NAME),
+                NODE_ID: self.node_id
+            })
 
             if resp.deleted_count == 0 and not resp.acknowledged:
                 logger.warning(f'Connection Label deletion failure for client {client_config.get(CLIENT_ID)} '
