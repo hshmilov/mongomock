@@ -242,7 +242,7 @@ class SendEmailsAction(ActionTypeAlert):
             {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
 
         email.send(html_data)
-        self.log_activity(AuditCategory.Reports, AuditAction.Trigger, {
+        self._plugin_base.log_activity(AuditCategory.Reports, AuditAction.Trigger, {
             'name': self._report_data['name']
         }, AuditType.Info)
         return AlertActionResult(True, 'Sent email')

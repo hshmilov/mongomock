@@ -330,7 +330,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         })
         self._trigger('clear_dashboard_cache', blocking=False)
 
-        return jsonify({'count': deleted_result.deleted_count})
+        return jsonify({'count': str(deleted_result.deleted_count)})
 
     def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
         """

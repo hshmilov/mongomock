@@ -555,7 +555,7 @@ class ReportsService(Triggerable, PluginBase):
         """
         def is_saved_actions_data_edit_tags(data: SavedActionData):
             tag_event = {'tag', 'untag'}
-            if (data and data.action_name in tag_event and
+            if (data and hasattr(data, 'action_name') and data.action_name in tag_event and
                     data.results and data.results.successful_entities):
                 return True
             return False
