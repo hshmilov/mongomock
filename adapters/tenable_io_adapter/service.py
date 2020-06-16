@@ -293,8 +293,14 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 severity = vuln_raw.get('severity', '')
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
+                has_patch = vuln_raw.get('plugin', {}).get('has_patch')
+                if not isinstance(has_patch, bool):
+                    has_patch = None
                 plugin_output = vuln_raw.get('output')
                 scan_raw = vuln_raw.get('scan')
+                vuln_state = vuln_raw.get('state')
+                if vuln_state and vuln_state.upper() not in ['OPEN', 'REOPENED']:
+                    continue
                 if not isinstance(scan_raw, dict):
                     scan_raw = {}
                 try:
@@ -340,9 +346,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 if f'{plugin_name}__{severity}' not in plugin_and_severity:
                     plugin_and_severity.append(f'{plugin_name}__{severity}')
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
-                                            output=plugin_output, plugin_id=plugin_id,
+                                            output=plugin_output, plugin_id=plugin_id, has_patch=has_patch,
                                             cvss_base_score=cvss_base_score, exploit_available=exploit_available,
-                                            synopsis=synopsis, see_also=see_also)
+                                            synopsis=synopsis, see_also=see_also, vuln_state=vuln_state)
                     device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')

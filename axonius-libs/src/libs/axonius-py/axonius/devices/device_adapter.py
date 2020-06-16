@@ -539,6 +539,8 @@ class TenableVulnerability(SmartJsonClass):
     see_also = Field(str, 'See Also')
     nessus_instance = Field(NessusInstance, 'Nessus Scan')
     plugin_text = Field(str, 'Vulnerability Text')
+    state = Field(str, 'Vulnerability State')
+    has_patch = Field(bool, 'Has Patch')
 
 
 class TenableSource(SmartJsonClass):
