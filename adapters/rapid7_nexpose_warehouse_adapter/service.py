@@ -292,7 +292,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
             logger.debug(f'Start querying dim_asset')
             for device in client_data.query(consts.ASSET_QUERY):
                 if isinstance(device, dict) and client_config['drop_only_ip_devices']:
-                    if not (device.get('mac_address') and device.get('host_name')):
+                    if not device.get('mac_address') and not device.get('host_name'):
                         continue
                 if isinstance(device, dict) and device.get('asset_id'):
                     self._build_device_info(devices_info, device, device.get('asset_id'))
@@ -345,7 +345,9 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                 'server',
                 'username',
                 'password',
-                'database'
+                'database',
+                'port',
+                'drop_only_ip_devices'
             ],
             'type': 'array'
         }
