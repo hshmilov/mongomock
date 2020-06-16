@@ -100,13 +100,14 @@ def tp_execute(list_of_execs: List[Tuple[Callable, Tuple, Dict, object]], tp_ins
 
 
 class InstanceManager:
-    def __init__(self, cloud, instance_type, number_of_instances):
+    def __init__(self, cloud, instance_type, number_of_instances, build_tag=None):
         self.cloud = cloud
         self.instance_type = instance_type
         self.number_of_instances = number_of_instances
         self.__instances: List[BuildsInstance] = []
         self.__builds = Builds()
         self.__group_name = None
+        self.__build_tag = build_tag
 
         execute(f'rm -rf {ARTIFACTS_DIR_ABSOLUTE}')
         if not os.path.exists(ARTIFACTS_DIR_ABSOLUTE):
@@ -247,10 +248,14 @@ class InstanceManager:
         for instance in self.__instances:
             instance.wait_for_ssh()
 
+        prepare_ci_cmd = 'cd /home/ubuntu/cortex/; ./prepare_ci_env.sh --cache-images'
+        if self.__build_tag:
+            prepare_ci_cmd = f'{prepare_ci_cmd} --build-tag {self.__build_tag}'
+
         # Build everything.
         for instance_name, ret, overall_time in self.__execute_ssh_on_all(
                 'Prepare ci env with caching of images',
-                'cd /home/ubuntu/cortex/; ./prepare_ci_env.sh --cache-images'
+                prepare_ci_cmd
         ):
             with TC.block(f'Finished building axonius on {instance_name}, took {overall_time} seconds'):
                 print(ret)
@@ -472,6 +477,7 @@ def main():
     parser.add_argument('action', choices=['run', 'delete'])
     parser.add_argument('target', choices=['all', 'ut', 'integ', 'parallel', 'ui'], help='Which scenario to run')
     parser.add_argument('-p', '--path', help='In case of running a specific test, this would be the path')
+    parser.add_argument('--build-tag', type=str, default='', help='Build Tag, will be used as base-image tag')
     parser.add_argument('--cloud', choices=['aws', 'gcp'], default=DEFAULT_CLOUD_INSTANCE_CLOUD, help='type of cloud')
     parser.add_argument('--number-of-instances', type=int, default=DEFAULT_CLOUD_NUMBER_OF_INSTANCES,
                         help='Number of instances in the cloud for parallelized work')
@@ -501,12 +507,14 @@ def main():
     print(f'Max Parallel Builder Tasks: {args.max_parallel_builder_tasks}')
     print(f'Extra pytest arguments: {extra_pytest_args}')
     print(f'Extra pytest single arguments: {extra_pytest_single_args}')
+    if args.build_tag:
+        print(f'Build Tag: {args.build_tag}')
 
     group_name = os.environ['BUILD_NUMBER'] if 'BUILD_NUMBER' in os.environ else f'Local test ({socket.gethostname()})'
     # test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
 
     if args.action == 'run':
-        instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances)
+        instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances, args.build_tag)
         try:
             instance_manager.prepare_all(group_name)
             print(f'Is running under teamcity: {TC.is_in_teamcity()}')

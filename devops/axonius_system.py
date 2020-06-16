@@ -7,6 +7,7 @@ from datetime import datetime
 
 from pymongo.errors import PyMongoError
 
+from axonius.utils.build_modes import BuildModes
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
 from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
@@ -88,6 +89,7 @@ def system_entry_point(args):
     parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'weave_recover'])
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
+    parser.add_argument('--build-tag', type=str, default='', help='Build Tag, will be used as base-image tag')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
     parser.add_argument('--hard', action='store_true', default=False,
@@ -150,9 +152,13 @@ def system_entry_point(args):
     if args.pull_base_image or args.rebuild_libs:
         assert args.mode in ('up', 'build')
 
+    if args.build_tag:
+        assert BuildModes.has_value(args.build_tag), f'unknown build tag: {args.build_tag}'
+        args.build_tag = args.build_tag.lower()
+
     if args.mode in ('up', 'build'):
-        axonius_system.pull_base_image(args.pull_base_image)
-        axonius_system.build_libs(args.rebuild_libs)
+        axonius_system.pull_base_image(args.pull_base_image, tag=args.build_tag)
+        axonius_system.build_libs(rebuild=args.rebuild_libs or args.build_tag != '', base_image_tag=args.build_tag)
 
     standalone_services = []
     if is_demo_instance():
