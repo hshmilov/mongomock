@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.clients.xml.connection import parse_xml_from_string
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
@@ -168,7 +169,7 @@ class BigfixAdapter(AdapterBase):
                 devices_raw_data:
             try:
                 device_raw = dict()
-                for xml_property in ET.fromstring(device_raw_xml)[0]:
+                for xml_property in parse_xml_from_string(device_raw_xml.encode('utf-8'))[0]:
                     try:
                         if xml_property.tag == 'Property':
                             if xml_property.attrib['Name'] in device_raw:

@@ -524,7 +524,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                      log_fetch=log_fetch)
                 except adapter_exceptions.AdapterException:
                     logger.warning(f'Failed inserting data for client '
-                                   f'{client_name if isinstance(client_name, str) else client}', exc_info=True)
+                                   f'{str(client_name)}', exc_info=True)
                     return ''
                 for entity_type in EntityType:
                     if json.loads(res)[f'{entity_type.value.lower()}_count']:
