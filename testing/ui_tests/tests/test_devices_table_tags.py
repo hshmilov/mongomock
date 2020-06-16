@@ -1,5 +1,3 @@
-import pytest
-
 from axonius.utils.wait import wait_until
 from services.plugins.general_info_service import GeneralInfoService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
@@ -24,7 +22,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.remove_first_tag()
         assert not self.devices_page.get_first_row_tags()
 
-    @pytest.mark.skip('ad change')
     def test_devices_action_remove_plugin_tag(self):
         with GeneralInfoService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
@@ -51,7 +48,6 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.remove_tag(tag_to_remove)
             assert tag_to_remove not in self.devices_page.get_first_row_tags()
 
-    @pytest.mark.skip('ad change')
     def test_devices_action_add_tag_all_with_filter(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -97,7 +93,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.open_tag_dialog()
         assert self.devices_page.get_tag_modal_info().is_displayed()
 
-    @pytest.mark.skip('ad change')
     def test_devices_action_tag_list_order(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -126,7 +121,6 @@ class TestDevicesTable(TestEntitiesTable):
         list_tags = self.devices_page.get_checkbox_list()
         assert all(self.devices_page.is_tag_has_status(tag, statuses[index]) for index, tag in enumerate(list_tags))
 
-    @pytest.mark.skip('ad change')
     def test_partial_tags(self):
         self._add_partial_tags()
         self._test_partial_tag_circularity()

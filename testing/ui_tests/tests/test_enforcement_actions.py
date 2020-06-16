@@ -170,7 +170,6 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
-    @pytest.mark.skip('ad change')
     @flaky(max_runs=3)
     def test_syslog_operation_multiple_actions(self):
         with SyslogService().contextmanager(take_ownership=True) as syslog_server:
@@ -272,7 +271,6 @@ class TestEnforcementActions(TestBase):
                 self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
                 self.wait_for_adapter_down(ESX_PLUGIN_NAME)
 
-    @pytest.mark.skip('ad change')
     @flaky(max_runs=3)
     def test_tag_entities(self):
         self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
@@ -331,7 +329,6 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         assert self.devices_page.get_first_row_tags() == TAG_NEW_COMMENT
 
-    @pytest.mark.skip('ad change')
     def test_enforcement_customized_email(self):
         with MaildiranasaurusService().contextmanager(take_ownership=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
@@ -409,7 +406,6 @@ class TestEnforcementActions(TestBase):
                                                                delete_after_verification=True)
 
     # pylint: disable=too-many-statements
-    @pytest.mark.skip('ad change')
     def test_tag_entities_dropdown(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, Enforcements.enforcement_query_1)
         self.enforcements_page.switch_to_page()

@@ -30,7 +30,6 @@ def ldap_gc_connection():
                           bytes([]), True, True, connect_with_gc_mode=True)
 
 
-@pytest.mark.skip('ad change')
 def test_users_and_full_memberof(ldap_connection: LdapConnection):
     users = list(ldap_connection.get_users_list())
 
@@ -59,14 +58,12 @@ def test_users_and_full_memberof(ldap_connection: LdapConnection):
     assert not any('VA Team' in group for group in groups)
 
 
-@pytest.mark.skip('ad change')
 def test_get_password_settings_object(ldap_connection: LdapConnection):
     pso_dict = ldap_connection.get_password_settings_objects_by_dn()
     assert EXAMPLE_PSO in pso_dict
     assert ad_integer8_to_timedelta(pso_dict[EXAMPLE_PSO]['msDS-MaximumPasswordAge']) == timedelta(days=24)
 
 
-@pytest.mark.skip('ad change')
 def test_devices(ldap_connection: LdapConnection):
     devices = ldap_connection.get_device_list()
     devices_dict = {}
@@ -87,7 +84,6 @@ def test_devices(ldap_connection: LdapConnection):
     assert has_disabled_device is True
 
 
-@pytest.mark.skip('ad change')
 def test_printers(ldap_connection: LdapConnection):
     printers = ldap_connection.get_printers_list()
     printers_dict = {}
@@ -101,7 +97,6 @@ def test_printers(ldap_connection: LdapConnection):
     assert test_printer['serverName'] == 'DESKTOP-MPP10U1.TestDomain.test'
 
 
-@pytest.mark.skip('ad change')
 def test_get_fsmo_roles(ldap_connection: LdapConnection):
     fsmo_dict = ldap_connection.get_fsmo_roles()
     assert fsmo_dict['pdc_emulator'] == 'gcp-dc-test.TestDomain.test'
@@ -111,20 +106,17 @@ def test_get_fsmo_roles(ldap_connection: LdapConnection):
     assert fsmo_dict['schema_master'] == 'gcp-dc-test.TestDomain.test'
 
 
-@pytest.mark.skip('ad change')
 def test_get_global_catalogs(ldap_connection: LdapConnection):
     global_catalogs = ldap_connection.get_global_catalogs()
     assert 'dc1.TestDomain.test' in global_catalogs
     assert 'raindc1.raindomain.test' in global_catalogs
 
 
-@pytest.mark.skip('ad change')
 def test_get_dhcp_servers(ldap_connection: LdapConnection):
     dhcp_servers = ldap_connection.get_dhcp_servers()
     assert 'dc2.testdomain.test' in dhcp_servers
 
 
-@pytest.mark.skip('ad change')
 def test_get_domain_properties(ldap_connection: LdapConnection):
     domain_properties = ldap_connection.get_domain_properties()
     assert 'maxPwdAge' in domain_properties
@@ -132,14 +124,12 @@ def test_get_domain_properties(ldap_connection: LdapConnection):
     assert ad_integer8_to_timedelta(domain_properties['maxPwdAge']) == timedelta(days=999)
 
 
-@pytest.mark.skip('ad change')
 def test_get_dc_properties(ldap_connection: LdapConnection):
     dc_properties = ldap_connection.get_dc_properties()
     assert dc_properties['defaultNamingContext'] == ['DC=TestDomain,DC=test']
     assert dc_properties['configurationNamingContext'] == ['CN=Configuration,DC=TestDomain,DC=test']
 
 
-@pytest.mark.skip('ad change')
 def test_get_dns_records(ldap_connection: LdapConnection):
     dns_records = list(ldap_connection.get_dns_records())
     assert ('dc', '192.168.20.25') in dns_records
@@ -150,7 +140,6 @@ def test_get_dns_records(ldap_connection: LdapConnection):
     assert ('dc1', '192.168.20.25') in only_one_dns_record
 
 
-@pytest.mark.skip('ad change')
 def test_get_sites(ldap_connection: LdapConnection):
     sites = ldap_connection.get_sites()
     sites_dict = {}
@@ -162,7 +151,6 @@ def test_get_sites(ldap_connection: LdapConnection):
         'TestDomain-TelAviv']['siteObjectBL']
 
 
-@pytest.mark.skip('ad change')
 def test_get_subnets(ldap_connection: LdapConnection):
     subnets = ldap_connection.get_subnets()
     subnets_dict = {}
@@ -174,7 +162,6 @@ def test_get_subnets(ldap_connection: LdapConnection):
     assert subnets_dict['10.0.2.0/24']['location'] == 'New York'
 
 
-@pytest.mark.skip('ad change')
 def test_get_dfsr_shares(ldap_connection: LdapConnection):
     dfsr_shares_dict = {}
     for dfsr_replication_group_name, dfsr_replication_group_inner in ldap_connection.get_dfsr_shares():
@@ -185,7 +172,6 @@ def test_get_dfsr_shares(ldap_connection: LdapConnection):
     assert 'CN=WESTDC1,OU=Domain Controllers,DC=west,DC=TestDomain,DC=test' in dfsr_shares_dict['Tools']['servers']
 
 
-@pytest.mark.skip('ad change')
 def test_get_extended_devices(ldap_connection: LdapConnection):
     keys = ['devices', 'printers', 'dns_records', 'dfsr_shares',
             'sites', 'dhcp_servers', 'fsmo_roles', 'global_catalogs', 'exchange_servers']
@@ -195,7 +181,6 @@ def test_get_extended_devices(ldap_connection: LdapConnection):
     assert all([key in extended_keys for key in keys])
 
 
-@pytest.mark.skip('ad change')
 def test_get_exchange_servers(ldap_connection: LdapConnection):
     exchange_servers = ldap_connection.get_exchange_servers()
     exchange_servers = {es['distinguishedName']: es for es in exchange_servers}
@@ -205,7 +190,6 @@ def test_get_exchange_servers(ldap_connection: LdapConnection):
            'CN=Configuration,DC=TestDomain,DC=test' in exchange_servers
 
 
-@pytest.mark.skip('ad change')
 def test_get_domains_in_forest(ldap_connection: LdapConnection):
     domains_in_forest = {d['nETBIOSName']: d for d in ldap_connection.get_domains_in_forest()}
     assert domains_in_forest['WEST']['name'] == 'WEST'
@@ -275,7 +259,6 @@ def test_get_report_statistics(ldap_connection: LdapConnection):
     assert 'Domain GPOs' in fs
 
 
-@pytest.mark.skip('ad change')
 def test_get_all_domains_from_gc(ldap_gc_connection: LdapConnection, ldap_connection: LdapConnection):
     # Check assertion path
     with pytest.raises(AssertionError):
@@ -286,7 +269,6 @@ def test_get_all_domains_from_gc(ldap_gc_connection: LdapConnection, ldap_connec
     assert all([dn.lower() in ['west.testdomain.test', 'raindomain.test', 'testdomain.test'] for dn in result])
 
 
-@pytest.mark.skip('ad change')
 def test_get_domain_prefix_to_dns_dict(ldap_connection: LdapConnection):
     result = ldap_connection.get_domain_prefix_to_dns_dict()
     assert result == {
@@ -296,7 +278,6 @@ def test_get_domain_prefix_to_dns_dict(ldap_connection: LdapConnection):
     }
 
 
-@pytest.mark.skip('ad change')
 def test_reconnect_after_disconnection(ldap_connection: LdapConnection):
     ldap_connection.disconnect()
     # Notice! An exception message (logger.exception) is expected to be printed to the screen here.

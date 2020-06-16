@@ -1,7 +1,5 @@
 import re
 
-import pytest
-
 from axonius.consts.metric_consts import Adapters
 from axonius.utils.wait import wait_until
 from services.adapters.ad_service import AdService
@@ -42,7 +40,6 @@ class TestAdaptersFast(TestBase):
             # Cisco should not be in the adapters list because its dose not have a client
             assert CISCO_NAME not in adapters
 
-    @pytest.mark.skip('ad change')
     def test_add_server(self):
         self.adapters_page.add_server(ad_client1_details)
         ad_log_tester = AdService().log_tester

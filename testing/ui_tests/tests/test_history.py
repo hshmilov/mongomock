@@ -47,7 +47,6 @@ class TestHistory(TestBase):
             self.devices_page.clear_existing_date()
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
 
-    @pytest.mark.skip('ad change')
     def test_devices_history_search_w_exact(self):
         """
         test using search whilst going on device history
@@ -68,7 +67,6 @@ class TestHistory(TestBase):
                 all_data = self.devices_page.get_all_data()
                 assert len(all_data)
 
-    @pytest.mark.skip('ad change')
     def test_devices_history_search_wo_exact(self):
         """
         test using search whilst going on device history (without exact search on)

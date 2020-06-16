@@ -1,4 +1,3 @@
-import pytest
 from selenium.common.exceptions import StaleElementReferenceException
 
 from axonius.utils.wait import wait_until
@@ -156,7 +155,6 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
 
-    @pytest.mark.skip('ad change')
     def test_report_histogram_total(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()

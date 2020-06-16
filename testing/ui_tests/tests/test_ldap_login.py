@@ -1,11 +1,8 @@
-import pytest
-
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_ad_credentials import ad_client1_details, GROUPS_USERS
 
 
 class TestLDAPLogin(TestBase):
-    @pytest.mark.skip('ad change')
     def test_ldap_login(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
@@ -39,7 +36,6 @@ class TestLDAPLogin(TestBase):
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()
 
-    @pytest.mark.skip('ad change')
     def test_ldap_login_with_groups(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()

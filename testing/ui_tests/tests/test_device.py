@@ -1,8 +1,5 @@
 import time
 from datetime import datetime, timedelta
-
-import pytest
-
 from axonius.utils.wait import wait_until
 from services.adapters.csv_service import CsvService
 from test_helpers.file_mock_credentials import FileForCredentialsMock
@@ -62,7 +59,6 @@ class TestDevice(TestBase):
         assert self.devices_page.find_element_by_text(self.devices_page.FIELD_ASSET_NAME) is not None
         assert self.devices_page.find_element_by_text('DeanSysman2') is not None
 
-    @pytest.mark.skip('ad change')
     def test_device_enforcement_tasks(self):
         print('starting test_device_enforcement_tasks', flush=True)
 
@@ -120,7 +116,6 @@ class TestDevice(TestBase):
 
         self.logger.info('finished test_device_enforcement_tasks')
 
-    @pytest.mark.skip('ad change')
     def test_device_enforcement_task_sort(self):
         """
         Test for checking the sort order in the enforcement tasks of a device

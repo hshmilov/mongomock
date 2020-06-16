@@ -39,7 +39,6 @@ class TestDevicesTable(TestEntitiesTable):
                                                 max_rows=1)
         self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
-    @pytest.mark.skip('ad change')
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()
         with GeneralInfoService().contextmanager(take_ownership=True):
@@ -100,7 +99,6 @@ class TestDevicesTable(TestEntitiesTable):
                 desc=True
             ))
 
-    @pytest.mark.skip('ad change')
     def test_device_table_field(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -255,7 +253,6 @@ class TestDevicesTable(TestEntitiesTable):
 
         assert self.devices_page.find_search_value() == ''
 
-    @pytest.mark.skip('ad change')
     def test_device_expand_row(self):
         self.adapters_page.add_json_server(crowd_strike_json_file_mock_devices)
         self.base_page.run_discovery(wait=True)

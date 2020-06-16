@@ -143,7 +143,6 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         json_query_filter_last_seen_next_days(10000)
         assert chabchab_in_result()
 
-    @pytest.mark.skip('ad change')
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
