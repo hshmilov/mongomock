@@ -1,3 +1,5 @@
+import pytest
+
 from ui_tests.tests.ui_consts import USERS_MODULE, IS_ADMIN_OPTION_NAME, JSON_ADAPTER_NAME, AD_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -8,6 +10,7 @@ from ui_tests.tests.ui_test_base import TestBase
 class TestDashboardChartsData(TestBase):
     CARD_TITLE = 'segmentation filter test'
 
+    @pytest.mark.skip('ad change')
     def test_segmentation_chart_data_from_adapter(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()

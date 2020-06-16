@@ -1,3 +1,5 @@
+import pytest
+
 from axonius.utils.wait import wait_until
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.ui_test_base import TestBase
@@ -49,11 +51,13 @@ class TestAdaptersDelete(TestBase):
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
 
+    @pytest.mark.skip('ad change')
     def test_delete_adapter_without_associated_entities(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self._check_ad_adapter_client_deletion(with_entities_deletion=False)
 
+    @pytest.mark.skip('ad change')
     def test_delete_adapter_with_associated_entities(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

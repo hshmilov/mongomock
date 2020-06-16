@@ -1,3 +1,5 @@
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME,
@@ -31,6 +33,7 @@ class TestDashboardCardTooltip(TestBase):
 
         assert total_percentage == 100.0
 
+    @pytest.mark.skip('ad change')
     def test_comparison_histogram_tooltip(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -39,6 +42,7 @@ class TestDashboardCardTooltip(TestBase):
             module_query_list, title=self.TEST_COMPARISON_TITLE, chart_type='histogram')
         self._test_histogram_tooltip(self.TEST_COMPARISON_TITLE)
 
+    @pytest.mark.skip('ad change')
     def test_segmentation_histogram_tooltip(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -65,6 +69,7 @@ class TestDashboardCardTooltip(TestBase):
 
         assert total_percentage == 100.0
 
+    @pytest.mark.skip('ad change')
     def test_comparison_pie_chart_tooltip(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -73,6 +78,7 @@ class TestDashboardCardTooltip(TestBase):
             module_query_list, title=self.TEST_COMPARISON_TITLE, chart_type='pie')
         self._test_pie_chart_tooltip(self.TEST_COMPARISON_TITLE)
 
+    @pytest.mark.skip('ad change')
     def test_segmentation_pie_chart_tooltip(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -81,6 +87,7 @@ class TestDashboardCardTooltip(TestBase):
             DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
         self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE)
 
+    @pytest.mark.skip('ad change')
     def test_intersection_pie_chart_tooltip(self):
         def _verify_excluding_or_intersection_tooltip():
             assert len(self.dashboard_page.get_tooltip_body_component_names(card)) > 0

@@ -1,3 +1,5 @@
+import pytest
+
 from axonius.entities import EntityType
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME, DEVICES_MODULE
 from ui_tests.tests.ui_test_base import TestBase
@@ -7,6 +9,7 @@ class TestDashboardTimeline(TestBase):
 
     TIMELINE_CARD_TITLE = 'Timeline'
 
+    @pytest.mark.skip('ad change')
     def test_disabled_history_warning(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

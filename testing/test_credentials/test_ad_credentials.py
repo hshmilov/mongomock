@@ -3,9 +3,9 @@ from test_helpers.machines import FAKE_DNS_IP
 fakednsaddr = FAKE_DNS_IP
 
 ad_client1_details = {
-    "password": "Password2",
-    "user": "TestDomain\\Administrator",
-    "dc_name": "TestDomain.test",
+    "password": "Passwasdasdsord2",
+    "user": "TestDomain\\Adminiasdstrator",
+    "dc_name": "TestDomain.asdasdtest",
     "dns_server_address": fakednsaddr,
     "use_ssl": "Unencrypted"
 }
