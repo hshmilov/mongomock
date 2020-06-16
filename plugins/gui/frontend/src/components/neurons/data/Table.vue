@@ -391,7 +391,10 @@ export default {
             },
           },
         });
-      }
+        if (this.staticData) {
+          this.resetScrollPosition();
+        }
+      },
     },
     searchValueLower() {
       return this.searchValue.toLowerCase();

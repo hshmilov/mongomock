@@ -98,7 +98,7 @@ def setup_instances(logger, instance_name, export_name=None):
     def create_instances_helper():
         ret, _ = builds_instance.create_instances(
             f'test_latest_export_{instance_name} ' + (os.environ.get('TEST_GROUP_NAME') or ''),
-            't2.2xlarge',
+            't3a.xlarge',
             1,
             instance_cloud=Builds.CloudType.AWS,
             instance_image=latest_export['ami_id'],

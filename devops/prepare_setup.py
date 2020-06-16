@@ -27,6 +27,7 @@ def setup_args():
         Any adapter will be built when explicitly raised if it was not built before.
         ''')
     parser.add_argument('--dev', action='store_true', default=False, help='Dev Mode')
+    parser.add_argument('--build-tag', type=str, default='', help='Build Tag, will be used as base-image tag')
 
     try:
         args, _ = parser.parse_known_args()
@@ -50,9 +51,12 @@ def main():
     all_flag = '' if args.dev else '--all'
 
     # build
+    build_cmd = ['./axonius.sh', 'system', 'build', all_flag, '--prod', '--hard', '--yes-hard', '--rebuild-libs']
+    if args.build_tag:
+        build_cmd.extend(['--build-tag', args.build_tag])
     runner.append_single(
         'system',
-        safe_run_bash(['./axonius.sh', 'system', 'build', all_flag, '--prod', '--hard', '--yes-hard', '--rebuild-libs'])
+        safe_run_bash(build_cmd)
     )
     assert runner.wait_for_all() == 0
 

@@ -703,7 +703,7 @@ class PluginBase(Configurable, Feature, ABC):
 
         self.build_mode = get_build_mode()
         if self.build_mode:
-            logger.info('Running on {self.build_mode} mode')
+            logger.info(f'Running on {self.build_mode} mode')
 
         run_and_forget(self.__call_delayed_initialization)
 
