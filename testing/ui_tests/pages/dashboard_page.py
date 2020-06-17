@@ -89,6 +89,13 @@ class DashboardPage(Page):
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
     SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
+    RENAME_SPACE_INPUT_ID = 'rename_space'
+    EDIT_SPACE_MENU_ITEM_ID = 'edit_space'
+    REMOVE_SPACE_MENU_ITEM_ID = 'remove_space'
+    SPACE_ACCESS_RADIO_BUTTON_ID = 'roles_space_access'
+    SPACE_ROLES_SELECT_ID = '#select_space'
+    SPACE_ROLES_DROPDOWN_CSS = '.x-multiple-select-dropdown'
+    SPACE_ACTION_MENU_CSS = '.space_action_bar .action_trigger'
     PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-card\') ' \
                           'and .//text()=\'{panel_name}\']'
     NO_DATA_FOUND_TEXT = 'No data found'
@@ -777,6 +784,7 @@ class DashboardPage(Page):
     def click_pie_slice(self, slice_css, card_title):
         card = self.get_card(card_title)
         time.sleep(1.2)
+        self.scroll_into_view_js(card)
         self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
 
     @staticmethod
@@ -1048,16 +1056,25 @@ class DashboardPage(Page):
     def find_active_space_header_title(self):
         return self.driver.find_element_by_xpath(self.ACTIVE_SPACE_HEADERS_XPATH).text
 
+    def open_space_action_menu(self):
+        self.driver.find_element_by_css_selector(self.SPACE_ACTION_MENU_CSS).click()
+
     def find_space_header(self, index=1):
         return self.find_elements_by_xpath(self.SPACE_HEADERS_XPATH)[index - 1]
 
     def find_space_header_title(self, index=1):
         return self.find_space_header(index).find_element_by_tag_name('div').text
 
-    def save_space_name(self, space_name):
-        name_input = self.wait_for_element_present_by_id(self.RENAME_TAB_INPUT_ID)
+    def save_space_name(self, space_name, space_roles=None):
+        name_input = self.wait_for_element_present_by_id(self.RENAME_SPACE_INPUT_ID)
         self.fill_text_by_element(name_input, space_name)
-        self.click_button(self.OK_BUTTON)
+        if space_roles:
+            radio_button = self.wait_for_element_present_by_css(f'#{self.SPACE_ACCESS_RADIO_BUTTON_ID}')
+            radio_button.click()
+            self.select_multiple_option_without_search(self.SPACE_ROLES_SELECT_ID,
+                                                       self.ANT_SELECT_MENU_ITEM_CSS, space_roles)
+
+        self.click_ant_button(self.SAVE_BUTTON)
         self.wait_for_modal_close()
 
     def find_add_space(self):
@@ -1066,9 +1083,9 @@ class DashboardPage(Page):
     def wait_add_space(self):
         return self.wait_for_element_present_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
 
-    def add_new_space(self, space_name):
+    def add_new_space(self, space_name, space_roles=None):
         self.wait_add_space().click()
-        self.save_space_name(space_name)
+        self.save_space_name(space_name, space_roles)
 
     def is_missing_add_space(self):
         try:
@@ -1078,29 +1095,39 @@ class DashboardPage(Page):
             return True
         return False
 
-    def rename_space(self, space_name, index=2):
-        # Default 2 since 1 is not renamable
-        ActionChains(self.driver).double_click(self.find_space_header(index)).perform()
-        self.save_space_name(space_name)
+    def select_space(self, index=0):
+        space_header = self.find_space_header(index)
+        space_header.click()
+        # make sure space loaded
+        self.wait_for_element_absent_by_css('.x-card .chart-new')
+        return space_header
 
-    def assert_disabled_rename_space(self, index=3):
+    def edit_space(self, space_name, space_roles=None, index=2, ):
+        # Default 2 since 1 is not renamable
+        self.select_space(index)
+        self.open_space_action_menu()
+        self.driver.find_element_by_id(self.EDIT_SPACE_MENU_ITEM_ID).click()
+        self.save_space_name(space_name, space_roles)
+
+    def assert_disabled_space_menu(self, index=3):
         # Default 4 since 1 and 2 are not renamable
-        ActionChains(self.driver).double_click(self.find_space_header(index)).perform()
+        self.select_space(index)
         with pytest.raises(TimeoutException):
-            self.wait_for_element_present_by_id(self.RENAME_TAB_INPUT_ID)
+            self.wait_for_element_present_by_css(self.SPACE_ACTION_MENU_CSS)
 
     def is_missing_remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable
-        space_header = self.find_space_header(index)
-        return len(space_header.find_elements_by_css_selector('.x-button.ant-btn-link')) == 0
+        self.select_space(index)
+        self.open_space_action_menu()
+        return len(self.driver.find_elements_by_id(self.REMOVE_SPACE_MENU_ITEM_ID)) == 0
 
     def remove_space(self, index=3):
         # Default 3 since 1 and 2 are note removable
-        space_header = self.find_space_header(index)
+        space_header = self.select_space(index)
         space_header_text = space_header.text
-        ActionChains(self.driver).move_to_element(space_header).perform()
-        space_header.find_element_by_css_selector('.x-button.ant-btn-link').click()
-        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.open_space_action_menu()
+        self.driver.find_element_by_id(self.REMOVE_SPACE_MENU_ITEM_ID).click()
+        self.wait_for_element_present_by_css(self.DIALOG_OVERLAY_CSS)
         self.click_button(self.SPACE_DELETE_BTN_TEXT)
         self.wait_for_element_absent_by_text(space_header_text)
 

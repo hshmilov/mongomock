@@ -32,7 +32,7 @@ class Labels:
             'permissions.dashboard.charts.delete': 'Delete chart',
             'permissions.dashboard.charts.put': 'Add chart',
             'permissions.dashboard.charts.post': 'Edit charts',
-            'permissions.dashboard.spaces.put': 'Add space',
+            'permissions.dashboard.spaces.put': 'Add and Edit Spaces',
             'permissions.dashboard.spaces.delete': 'Delete space',
 
             'permissions.devices_assets': 'Device Assets',
@@ -274,8 +274,11 @@ class Labels:
             'audit.dashboard.delete.template': 'Deleted dashboard space \'{space_name}\'',
             'audit.dashboard.post': 'Add Space',
             'audit.dashboard.post.template': 'Added dashboard space \'{name}\'',
-            'audit.dashboard.put': 'Edit Space',
-            'audit.dashboard.put.template': 'Edited dashboard space \'{before_space_name}\' to \'{space_name}\'',
+            'audit.dashboard.changed_name': 'Edit Space',
+            'audit.dashboard.changed_name.template':
+                'Renamed dashboard space \'{before_space_name}\' to \'{space_name}\'',
+            'audit.dashboard.changed_permissions': 'Edit Space',
+            'audit.dashboard.changed_permissions.template': 'Modified the permissions of space \'{space_name}\'',
             'audit.dashboard.reorder': 'Reorder Space',
             'audit.dashboard.reorder.template': 'Reordered charts on space {\'{space_name}\'',
             'audit.dashboard.charts': 'Dashboard',

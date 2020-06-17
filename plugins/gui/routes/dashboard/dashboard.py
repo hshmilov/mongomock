@@ -13,6 +13,7 @@ from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
 from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.mixins.triggerable import TriggerStates
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (entity_fields, get_connected_user_id)
@@ -93,12 +94,20 @@ class Dashboard(Charts, Notifications):
 
         :return:
         """
+        spaces_filter = filter_archived({
+            '$or': [
+                {'public': {'$in': [None, True]}},
+                {'roles': str(self.get_user_role_id())}
+            ]
+        } if not self.is_admin_user() else {})
         spaces = [{
             'uuid': str(space['_id']),
             'name': space['name'],
+            'roles': space.get('roles', []),
+            'public': space.get('public', True),
             'panels_order': space.get('panels_order', []),
             'type': space['type']
-        } for space in self._dashboard_spaces_collection.find(filter_archived())]
+        } for space in self._dashboard_spaces_collection.find(spaces_filter)]
 
         panels = self._get_dashboard(generate_data=False)
         return jsonify({
@@ -111,7 +120,7 @@ class Dashboard(Charts, Notifications):
                          required_permission=PermissionValue.get(PermissionAction.Add,
                                                                  PermissionCategory.Dashboard,
                                                                  PermissionCategory.Spaces),
-                         activity_params=[SPACE_NAME, 'before_space_name'])
+                         skip_activity=True)
     def update_dashboard_space(self, space_id):
         """
         PUT an updated name for an existing Dashboard Space
@@ -126,10 +135,30 @@ class Dashboard(Charts, Notifications):
         }, {
             '$set': space_data
         })
+        self._log_activity_spaces(before_space_data, space_data)
         return jsonify({
             'before_space_name': before_space_data.get('name', ''),
-            SPACE_NAME: space_data.get('name', '')
+            'name': space_data.get('name', ''),
+            'roles': space_data.get('roles', []),
+            'public': space_data.get('access', True)
         })
+
+    def _log_activity_spaces(self, old_space, new_space):
+        old_name = old_space.get('name', '')
+        new_name = new_space.get('name', '')
+        if new_name != old_name:
+            self.log_activity_user(AuditCategory.Dashboard, AuditAction.ChangedName, {
+                'before_space_name': old_name,
+                'space_name': new_name
+            })
+        new_access = new_space.get('public', True)
+        old_access = old_space.get('public', True)
+        new_roles = new_space.get('roles', [])
+        old_roles = old_space.get('roles', [])
+        if new_access != old_access or new_roles != old_roles:
+            self.log_activity_user(AuditCategory.Dashboard, AuditAction.ChangedPermissions, {
+                'space_name': new_name
+            })
 
     @gui_route_logged_in('<space_id>', methods=['DELETE'], enforce_trial=False,
                          required_permission=PermissionValue.get(PermissionAction.Delete,

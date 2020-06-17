@@ -216,7 +216,12 @@ export const dashboard = {
       state.spaces.data = state.spaces.data.map((space) => {
         if (space.uuid !== payload.id) return space;
 
-        return { ...space, name: payload.name };
+        return {
+          ...space,
+          name: payload.name,
+          roles: payload.roles,
+          public: payload.public,
+        };
       });
     },
     [UPDATE_REMOVED_SPACE](state, spaceId) {
@@ -373,6 +378,7 @@ export const dashboard = {
             type: 'custom',
             panels: [],
             panels_order: [],
+            public: true,
           });
         }
         return response.data;
@@ -384,6 +390,8 @@ export const dashboard = {
         method: 'PUT',
         data: {
           name: payload.name,
+          roles: payload.roles,
+          public: payload.public,
         },
       }).then((response) => {
         if (response.status === 200) {

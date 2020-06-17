@@ -203,108 +203,107 @@ export default {
 
 <style lang="scss">
   .flip-list-move {
-  transition: transform .5s;
-}
+    transition: transform .5s;
+  }
+  .x-panels {
+      padding: 8px 8px 20px 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 344px);
+      grid-gap: 12px;
+      width: 100%;
 
-    .x-panels {
-        padding: 8px 8px 20px 8px;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, 344px);
-        grid-gap: 12px;
-        width: 100%;
+      > span {
+        display: contents;
+      }
 
-        > span {
-          display: contents;
-        }
+      .card-container-outer {
+        border-width: 2px;
+        border-style: solid;
+        border-color: transparent;
 
-        .card-container-outer {
-          border-width: 2px;
-          border-style: solid;
-          border-color: transparent;
-
-          &:not(.dragging):hover {
-            border-color: $grey-2;
-          }
-        }
-        .ghost {
-            border: 3px dashed rgba($theme-blue, 0.4);
-        }
-        .x-card {
-          min-height: 300px;
-          &.chart-lifecycle {
-            .header {
-              padding-bottom: 0;
-            }
-            .body {
-              padding-top: 0;
-            }
-          }
-
-          .no-data-found{
-            text-transform: uppercase;
-            text-align: center;
-            font-size: 18px;
-            margin-top: 30px;
-
-            svg {
-              margin-bottom: 10px;
-            }
-          }
-
-            > .body {
-              flex: 1 0 auto;
-              display: flex;
-              flex-direction: column;
-            }
-
-            .card-history {
-                height: 36px;
-                font-size: 12px;
-                color: $grey-4;
-                text-align: right;
-                margin-bottom: 8px;
-
-                .cov-vue-date {
-                    width: auto;
-                    margin-left: 4px;
-
-                    .cov-datepicker {
-                        line-height: 16px;
-                    }
-
-                    .cov-date-body {
-                        max-width: 240px;
-                    }
-                }
-            }
-        }
-        .chart-new {
-            .x-button.ant-btn-link {
-                font-size: 144px;
-                text-align: center;
-                width: 100%;
-                height: 100%;
-                min-height: 200px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
-      .chart-spinner {
-        margin: 10px auto auto auto;
-        width: 70%;
-        padding: 10px;
-        span {
-          padding-left: 5px;
-          text-transform: uppercase;
-          font-size: 20px;
-          vertical-align: super;
-        }
-
-        .md-progress-spinner-circle{
-          stroke: $theme-orange;
+        &:not(.dragging):hover {
+          border-color: $grey-2;
         }
       }
+      .ghost {
+          border: 3px dashed rgba($theme-blue, 0.4);
+      }
+      .x-card {
+        min-height: 300px;
+        &.chart-lifecycle {
+          .header {
+            padding-bottom: 0;
+          }
+          .body {
+            padding-top: 0;
+          }
+        }
+
+        .no-data-found{
+          text-transform: uppercase;
+          text-align: center;
+          font-size: 18px;
+          margin-top: 30px;
+
+          svg {
+            margin-bottom: 10px;
+          }
+        }
+
+          > .body {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .card-history {
+              height: 36px;
+              font-size: 12px;
+              color: $grey-4;
+              text-align: right;
+              margin-bottom: 8px;
+
+              .cov-vue-date {
+                  width: auto;
+                  margin-left: 4px;
+
+                  .cov-datepicker {
+                      line-height: 16px;
+                  }
+
+                  .cov-date-body {
+                      max-width: 240px;
+                  }
+              }
+          }
+      }
+      .chart-new {
+          .x-button.ant-btn-link {
+              font-size: 144px;
+              text-align: center;
+              width: 100%;
+              height: 100%;
+              min-height: 200px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+          }
+      }
+    .chart-spinner {
+      margin: 10px auto auto auto;
+      width: 70%;
+      padding: 10px;
+      span {
+        padding-left: 5px;
+        text-transform: uppercase;
+        font-size: 20px;
+        vertical-align: super;
+      }
+
+      .md-progress-spinner-circle{
+        stroke: $theme-orange;
+      }
     }
+  }
 
 </style>

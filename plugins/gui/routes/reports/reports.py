@@ -14,7 +14,7 @@ from bson import ObjectId
 from dateutil import tz
 from dateutil.relativedelta import relativedelta
 from flask import (jsonify,
-                   request)
+                   request, make_response)
 from urllib3.util.url import parse_url
 from werkzeug.wrappers import Response
 
@@ -137,6 +137,21 @@ class Reports:
         reports_collection = self.reports_config_collection
         return jsonify(reports_collection.count_documents(mongo_filter))
 
+    def _is_restricted_by_role(self, report_to_check):
+        spaces = report_to_check.get('spaces', [])
+        for space_id in spaces:
+            space = self._dashboard_spaces_collection.find_one({
+                '_id': ObjectId(space_id)
+            })
+            # in case the space was deleted we allow the view because no data available
+            if space:
+                user_role = str(self.get_user_role_id())
+                space_roles = space.get('roles', [])
+                space_access = space.get('public', True)
+                if not space_access and user_role not in space_roles:
+                    return True
+        return False
+
     @gui_route_logged_in('<report_id>', methods=['GET'])
     def get_report_by_id(self, report_id):
         """
@@ -153,6 +168,9 @@ class Reports:
         })
         if not report:
             return return_error(f'Report with id {report_id} was not found', 400)
+
+        if not self.is_admin_user() and self._is_restricted_by_role(report):
+            return make_response('Report restricted')
 
         return jsonify(beautify_db_entry(report))
 

@@ -10,11 +10,9 @@
         :class="actionButtonClass"
         type="link"
       >
-        <VIcon
-          size="18"
-          class="entityAction-expression-handle"
-        >$vuetify.icons.entityAction</VIcon>
-        Actions</XButton>
+        <XIcon
+          type="thunderbolt"
+        />Actions</XButton>
       <AMenu
         v-if="selectionCount"
         slot="overlay"
@@ -91,6 +89,7 @@
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
 import { Icon, Tooltip, Dropdown, Menu } from 'ant-design-vue';
+import XIcon from '@axons/icons/Icon';
 import XActionMenuItem from './ActionMenuItem.vue';
 import XCustomFields from '../../networks/entities/view/CustomFields.vue';
 import XTagModal from '../popover/TagModal.vue';
@@ -113,6 +112,7 @@ export default {
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,
+    XIcon,
   },
   props: {
     module: {

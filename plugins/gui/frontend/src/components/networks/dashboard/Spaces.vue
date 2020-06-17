@@ -4,15 +4,13 @@
       :permission-category="$permissionConsts.categories.Dashboard"
       :permission-section="$permissionConsts.categories.Spaces"
     >
-      <template slot-scope="{ canView, canAdd, canDelete }">
+      <template slot-scope="{ canAdd, canDelete }">
         <XTabs
           v-if="spaces.length"
           ref="tabs"
           :extendable="canAdd"
-          remove-text="Delete Space"
+          :active-tab-url="true"
           @add="addNewSpace"
-          @rename="renameSpace"
-          @remove="removeSpace"
           @click="selectSpace"
         >
           <XTab
@@ -21,14 +19,24 @@
             :selected="currentSpace === defaultSpace.uuid"
             :editable="canAdd"
           >
-            <XDefaultSpace
-              v-if="active"
-              slot-scope="{ active }"
-              :panels="defaultSpace.panels"
-              :panels-order="defaultSpace.panels_order"
-              @add="() => addNewPanel(defaultSpace.uuid)"
-              @edit="editPanel"
-            />
+            <span slot-scope="{ active }">
+              <div class="space_action_bar">
+                <XSpaceOptionsMenu
+                  v-if="canAdd"
+                  :editable="canAdd"
+                  parent-selector=".space_action_bar"
+                  @edit="openEditSpace(defaultSpace)"
+                  @remove="confirmRemoveSpace(defaultSpace.uuid)"
+                />
+              </div>
+              <XDefaultSpace
+                v-if="active"
+                :panels="defaultSpace.panels"
+                :panels-order="defaultSpace.panels_order"
+                @add="() => addNewPanel(defaultSpace.uuid)"
+                @edit="editPanel"
+              />
+            </span>
           </XTab>
           <XTab
             v-if="$can($permissionConsts.categories.Dashboard,
@@ -38,14 +46,16 @@
             :title="personalSpace.name"
             :selected="currentSpace === personalSpace.uuid"
           >
-            <XPanels
-              v-if="active"
-              slot-scope="{ active }"
-              :panels="personalSpace.panels"
-              :panels-order="personalSpace.panels_order"
-              @add="() => addNewPanel(personalSpace.uuid)"
-              @edit="editPanel"
-            />
+            <span slot-scope="{ active }">
+              <div class="space_action_bar" />
+              <XPanels
+                v-if="active"
+                :panels="personalSpace.panels"
+                :panels-order="personalSpace.panels_order"
+                @add="() => addNewPanel(personalSpace.uuid)"
+                @edit="editPanel"
+              />
+            </span>
           </XTab>
           <XTab
             v-for="space in customSpaces"
@@ -56,20 +66,26 @@
             :editable="canAdd"
             :removable="canDelete"
           >
-            <XPanels
-              v-if="active"
-              slot-scope="{ active }"
-              :panels="space.panels"
-              :panels-order="space.panels_order"
-              @add="() => addNewPanel(space.uuid, true)"
-              @edit="editPanel"
-            />
+            <span slot-scope="{ active }">
+              <div class="space_action_bar">
+                <XSpaceOptionsMenu
+                  v-if="canAdd || canDelete"
+                  :editable="canAdd"
+                  :removable="canDelete"
+                  parent-selector=".space_action_bar"
+                  @edit="openEditSpace(space)"
+                  @remove="confirmRemoveSpace(space.uuid)"
+                />
+              </div>
+              <XPanels
+                v-if="active"
+                :panels="space.panels"
+                :panels-order="space.panels_order"
+                @add="() => addNewPanel(space.uuid, true)"
+                @edit="editPanel"
+              />
+            </span>
           </XTab>
-          <div slot="remove_confirm">
-            <div>This space will be completely deleted from the system and</div>
-            <div>no other user will be able to use it.</div>
-            <div>Deleting the space is an irreversible action.</div>
-          </div>
         </XTabs>
       </template>
     </XRoleGateway>
@@ -83,12 +99,24 @@
     <MoveOrCopy
       v-if="moveOrCopyActive"
     />
+    <XEditSpaceModal
+      v-if="spaceEditModalActive"
+      :space="selectedSpace"
+      @confirm="onUpdateSpace"
+      @cancel="closeAndResetEditSpace"
+    />
   </div>
 </template>
 
 <script>
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _get from 'lodash/get';
+import {
+  SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
+  SET_CURRENT_SPACE, RESET_DASHBOARD_SORT,
+} from '@store/modules/dashboard';
+import XEditSpaceModal from '@networks/dashboard/EditSpaceModal.vue';
+import XSpaceOptionsMenu from '@networks/dashboard/SpaceOptionsMenu.vue';
 import XTabs from '../../axons/tabs/Tabs.vue';
 import XTab from '../../axons/tabs/Tab.vue';
 import XDefaultSpace from './DefaultSpace.vue';
@@ -96,17 +124,19 @@ import XPanels from './Panels.vue';
 import XWizard from './Wizard.vue';
 import MoveOrCopy from './MoveOrCopy.vue';
 
-import {
-  SAVE_DASHBOARD_SPACE, CHANGE_DASHBOARD_SPACE, REMOVE_DASHBOARD_SPACE,
-  SET_CURRENT_SPACE, RESET_DASHBOARD_SORT,
-} from '../../../store/modules/dashboard';
 import { SpaceTypesEnum } from '../../../constants/dashboard';
-
 
 export default {
   name: 'XSpaces',
   components: {
-    XTabs, XTab, XDefaultSpace, XPanels, XWizard, MoveOrCopy,
+    XEditSpaceModal,
+    XSpaceOptionsMenu,
+    XTabs,
+    XTab,
+    XDefaultSpace,
+    XPanels,
+    XWizard,
+    MoveOrCopy,
   },
   props: {
     spaces: {
@@ -125,7 +155,7 @@ export default {
       moveOrCopy: {
         space: '',
       },
-
+      spaceEditModalActive: false,
     };
   },
   computed: {
@@ -146,6 +176,9 @@ export default {
     customSpaces() {
       return this.spaces.filter((space) => space.type === SpaceTypesEnum.custom);
     },
+    selectedSpace() {
+      return this.spaces.find((space) => space.uuid === this.currentSpace);
+    },
     newSpaceName() {
       for (let i = this.customSpaces.length - 1; i >= 0; i--) {
         const matches = this.customSpaces[i].name.match('Space (\\d+)');
@@ -163,7 +196,7 @@ export default {
     }),
     ...mapActions({
       saveSpace: SAVE_DASHBOARD_SPACE,
-      renameSpace: CHANGE_DASHBOARD_SPACE,
+      updateSpace: CHANGE_DASHBOARD_SPACE,
       removeSpace: REMOVE_DASHBOARD_SPACE,
     }),
     addNewPanel(spaceId, isCustomSpace) {
@@ -187,14 +220,39 @@ export default {
       this.processing = true;
       this.saveSpace(this.newSpaceName).then((spaceId) => {
         this.$nextTick(() => {
-          this.$refs.tabs.renameTabById(spaceId);
+          this.openEditSpace();
           this.$refs.tabs.selectTab(spaceId);
           this.processing = false;
         });
       });
     },
+    async onUpdateSpace(spaceData) {
+      await this.updateSpace(spaceData);
+      this.closeAndResetEditSpace();
+    },
     updateDashboard(uuid) {
       this.resetDashboardSort({ uuid });
+    },
+    openEditSpace() {
+      this.spaceEditModalActive = true;
+    },
+    closeAndResetEditSpace() {
+      this.spaceEditModalActive = false;
+    },
+    confirmRemoveSpace(spaceId) {
+      this.$safeguard.show({
+        text: `
+            <div>This space will be completely deleted from the system and</div>
+            <div>no other user will be able to use it.</div>
+            <div>Deleting the space is an irreversible action.</div>
+            <div>Do you want to continue?</div>
+          `,
+        confirmText: 'Delete Space',
+        onConfirm: () => {
+          this.removeSpace(spaceId);
+          this.$refs.tabs.selectTab(this.defaultSpace.uuid);
+        },
+      });
     },
   },
 };
@@ -202,6 +260,15 @@ export default {
 
 <style lang="scss">
     .x-spaces {
-        height: calc(100% - 54px);
+      height: calc(100% - 54px);
+      .space_action_bar {
+        display: flex;
+        flex-direction: row-reverse;
+        min-height: 30px;
+        padding: 0 15px;
+        .ant-dropdown-menu {
+          min-width: 150px;
+        }
+      }
     }
 </style>

@@ -206,6 +206,7 @@ import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import {
   mapState, mapMutations, mapActions, mapGetters,
 } from 'vuex';
+import { Modal } from 'ant-design-vue';
 import XPage from '../axons/layout/Page.vue';
 import XBox from '../axons/layout/Box.vue';
 import XButton from '../axons/inputs/Button.vue';
@@ -443,7 +444,18 @@ export default {
       this.loading = true;
       await this.fetchReport(this.id);
     }
-    this.initData();
+    if (this.reportData.error) {
+      Modal.confirm({
+        title: 'This report cannot be viewed.',
+        content: 'You are missing permissions for at least one dashboard space included in this report.',
+        cancelButtonProps: { style: { display: 'none' } },
+        icon: 'exclamation-circle',
+        centered: true,
+        onOk: () => this.exit(),
+      });
+    } else {
+      this.initData();
+    }
     this.loading = false;
   },
   mounted() {

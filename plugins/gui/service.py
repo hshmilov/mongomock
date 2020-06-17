@@ -1146,6 +1146,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             permissions = g.api_user_permissions
         return permissions
 
+    def get_user_role_id(self) -> ObjectId:
+        return self.get_session.get('user', {}).get('role_id', '')
+
     @property
     def saml_settings_file_path(self):
         return SAML_SETTINGS_FILE_PATH

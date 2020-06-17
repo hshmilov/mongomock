@@ -58,7 +58,7 @@ class TestDashboardCharts(TestBase):
         wait_until(lambda: self.dashboard_page.find_space_header_title(3) == self.COVERAGE_SPACE_NAME)
 
         # Rename an existing space
-        self.dashboard_page.rename_space(self.VULNERABILITY_SPACE_NAME, 3)
+        self.dashboard_page.edit_space(self.VULNERABILITY_SPACE_NAME, index=3)
         wait_until(lambda: self.dashboard_page.find_space_header_title(3) == self.VULNERABILITY_SPACE_NAME)
         assert self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
         self.dashboard_page.add_new_space(self.COVERAGE_SPACE_NAME)
@@ -96,7 +96,7 @@ class TestDashboardCharts(TestBase):
         self.dashboard_page.remove_card(self.CUSTOM_SPACE_PANEL_NAME)
         assert not self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)
         self.dashboard_page.remove_space(3)
-        self.dashboard_page.rename_space(self.VULNERABILITY_SPACE_NAME, 3)
+        self.dashboard_page.edit_space(self.VULNERABILITY_SPACE_NAME, index=3)
 
         # Remove a space
         assert self.dashboard_page.is_missing_space(self.COVERAGE_SPACE_NAME)

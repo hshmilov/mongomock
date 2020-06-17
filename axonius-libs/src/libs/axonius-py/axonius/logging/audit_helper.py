@@ -10,6 +10,7 @@ class AuditCategory(Enum):
     Adapters = 'adapters'
     Reports = 'reports'
     Enforcements = 'enforcements'
+    Dashboard = 'dashboard'
     Instances = 'instances'
 
 
@@ -26,6 +27,8 @@ class AuditAction(Enum):
     Trigger = 'trigger'
     Download = 'download'
     ChangedPassword = 'changed_password'
+    ChangedName = 'changed_name'
+    ChangedPermissions = 'changed_permissions'
     AssignedRole = 'assigned_role'
     TagReimaged = 'tag_reimaged'
 

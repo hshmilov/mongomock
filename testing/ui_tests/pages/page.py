@@ -70,6 +70,7 @@ return (function(el, container){
 
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-button'
+ANT_BUTTON_DEFAULT_CLASS = 'ant-btn'
 BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
@@ -117,6 +118,7 @@ class Page:
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
+    DIALOG_OVERLAY_CSS = '.v-dialog'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
     CANCEL_BUTTON = 'Cancel'
@@ -176,7 +178,8 @@ class Page:
     RENAME_TAB_INPUT_ID = 'rename_tab'
 
     SEARCH_INPUT_CSS = '.x-search-input .input-value'
-
+    ANT_CONFIRM_MODAL_TITLE_CSS = '.ant-modal-confirm-title'
+    ANT_SELECT_MENU_ITEM_CSS = '.ant-select-dropdown-menu-item'
     CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
     TABLE_PAGE_SIZE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']' \
                                    '/div[@class=\'x-link active\']'
@@ -398,6 +401,9 @@ class Page:
 
         return self.handle_button(button, **kwargs)
 
+    def click_ant_button(self, text, **kwargs):
+        return self.click_button(text, button_class=ANT_BUTTON_DEFAULT_CLASS, **kwargs)
+
     def get_enabled_button(self, text):
         return self.driver.find_element_by_xpath(self.ENABLED_BUTTON_XPATH.format(button_text=text))
 
@@ -424,6 +430,11 @@ class Page:
         self.driver.execute_script(SCROLL_TO_TOP, window)
         result = self.driver.execute_script(SCROLL_INTO_VIEW_JS, element, window)
         assert result, 'Failed to scroll'
+
+    def scroll_into_view_js(self, element):
+        if not element:
+            return
+        self.driver.execute_script('arguments[0].scrollIntoView(true);', element)
 
     def wait_for_element_present_by_css(self,
                                         css,
@@ -725,6 +736,21 @@ class Page:
                 option.click()
                 return option
         return None
+
+    def select_multiple_option_without_search(self,
+                                              dropdown_css_selector,
+                                              selected_options_css_selector,
+                                              values,
+                                              parent=None):
+        if not parent:
+            parent = self.driver
+        parent.find_element_by_css_selector(dropdown_css_selector).click()
+        for option in parent.find_elements_by_css_selector(selected_options_css_selector):
+            ActionChains(parent).move_to_element(option).perform()
+            if option.text in values:
+                option.click()
+        parent.find_element_by_css_selector(dropdown_css_selector).send_keys(Keys.ENTER)
+        time.sleep(0.5)
 
     def select_option_without_search_from_multiple(self,
                                                    index,

@@ -75,6 +75,7 @@ class ReportsPage(EntitiesPage):
     SELECT_DAY_CLEAR_CSS = '.send-day .x-select .trigger'
     BUTTON_CONTAINER_CSS = '.x-btn-container'
     SELECT_DAY_CSS = '.send-day .x-select'
+    RESTRICTED_REPORT_CONFIRM_TITLE = 'This report cannot be viewed.'
 
     @property
     def url(self):
@@ -433,3 +434,10 @@ class ReportsPage(EntitiesPage):
         self.wait_for_spinner_to_end()
         self.click_report(report_name)
         self.wait_for_spinner_to_end()
+
+    def is_restricted_report_modal_exist(self):
+        confirm_title = self.driver.find_element_by_css_selector(self.ANT_CONFIRM_MODAL_TITLE_CSS).text
+        return confirm_title == self.RESTRICTED_REPORT_CONFIRM_TITLE
+
+    def click_restricted_report_modal_confirm(self):
+        self.click_ant_button('OK')

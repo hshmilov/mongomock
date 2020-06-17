@@ -144,7 +144,7 @@ input, textarea {
   border-style: inset;
   border-width: 2px;
   background: white;
-  
+
   &[type='text'] {
     width: 100%;
   }
@@ -652,17 +652,23 @@ input[type='text'], input[type='password'], input[type='number'] {
           font-size: 18px;
         }
     }
-    .ant-modal-body {
+    &:not(.ant-modal-confirm) {
+      .ant-modal-body {
         padding: 0 24px;
-    }
-    .ant-modal-footer {
+      }
+      .ant-modal-footer {
         border-top: unset;
+        padding: 10px 24px;
+      }
     }
 }
 
 .ant-dropdown .ant-dropdown-menu-item,
 .ant-dropdown .ant-dropdown-menu-submenu-title {
   font-weight: 300;
+}
+.ant-btn > .anticon + span {
+  margin-left: 3px;
 }
 
 /* override ant-design-vue reset css [end]*/

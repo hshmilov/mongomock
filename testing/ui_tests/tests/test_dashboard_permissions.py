@@ -3,6 +3,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import DASHBOARD_SPACE_PERSONAL
 from axonius.utils.wait import wait_until
+from ui_tests.pages.reports_page import ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
@@ -11,7 +12,6 @@ from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 class TestDashboardPermissions(PermissionsTestBase):
-
     TEST_EMPTY_TITLE = 'test empty'
     TEST_MOVE_TITLE = 'test move'
     OSX_OPERATING_SYSTEM_NAME = 'OS X Operating System'
@@ -20,6 +20,7 @@ class TestDashboardPermissions(PermissionsTestBase):
     TEST_SPACE_NAME = 'test space'
     TEST_SPACE_NAME_RENAME = 'test rename'
     TEST_RENAME_SPACE_NAME = 'rename space'
+    TEST_REPORT_NAME = 'testonius'
     NOTE_TEXT = 'note text'
 
     def test_dashboard_permissions(self):
@@ -145,10 +146,10 @@ class TestDashboardPermissions(PermissionsTestBase):
 
     def _test_spaces_permissions(self, settings_permissions, user_role):
         assert self.dashboard_page.is_missing_add_space()
-        self.dashboard_page.assert_disabled_rename_space(3)
+        self.dashboard_page.assert_disabled_space_menu(3)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
-                                                     'Add space',
+                                                     'Add and Edit Spaces',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
                                                      ui_consts.NEW_PASSWORD,
@@ -158,7 +159,7 @@ class TestDashboardPermissions(PermissionsTestBase):
         self.dashboard_page.add_new_space(self.TEST_SPACE_NAME)
         wait_until(lambda: self.dashboard_page.find_space_header_title(4) == self.TEST_SPACE_NAME)
         assert self.dashboard_page.is_missing_remove_space(4)
-        self.dashboard_page.rename_space(self.TEST_SPACE_NAME_RENAME, 4)
+        self.dashboard_page.edit_space(self.TEST_SPACE_NAME_RENAME, index=4)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
                                                      'Delete space',
@@ -171,3 +172,67 @@ class TestDashboardPermissions(PermissionsTestBase):
         assert not self.dashboard_page.is_missing_remove_space()
         self.dashboard_page.remove_space()
         self.dashboard_page.remove_space()
+
+    def _assert_space_for_user(self, user_name, user_password, missing_space_name, exist_space_name):
+        self.login_page.switch_user(user_name, user_password)
+        # wait for the first spaces fetch to complete
+        self.dashboard_page.wait_for_spinner_to_end()
+        assert self.dashboard_page.is_missing_space(missing_space_name)
+        assert not self.dashboard_page.is_missing_space(exist_space_name)
+
+    def test_dashboard_space_roles(self):
+        self.base_page.run_discovery()
+        users = []
+        user_roles = []
+        for i in range(2):
+            index_string = str(i)
+            users.append(ui_consts.VIEWER_USERNAME + index_string)
+            user_roles.append(self.settings_page.add_user_with_duplicated_role(users[i],
+                                                                               ui_consts.NEW_PASSWORD,
+                                                                               ui_consts.FIRST_NAME,
+                                                                               ui_consts.LAST_NAME,
+                                                                               self.settings_page.VIEWER_ROLE))
+            self.dashboard_page.switch_to_page()
+            self.dashboard_page.add_new_space(self.TEST_SPACE_NAME + index_string,
+                                              [self.settings_page.VIEWER_ROLE, user_roles[i]])
+
+        for i in range(2):
+            missing_space_name = self.TEST_SPACE_NAME + str(abs(i - 1))
+            exist_space_name = self.TEST_SPACE_NAME + str(i)
+            self._assert_space_for_user(users[i],
+                                        ui_consts.NEW_PASSWORD,
+                                        missing_space_name,
+                                        exist_space_name)
+
+        self.login_page.logout_and_login_with_admin()
+        # wait for the first spaces fetch to complete
+        self.dashboard_page.wait_for_spinner_to_end()
+        for i in range(2):
+            assert not self.dashboard_page.is_missing_space(self.TEST_SPACE_NAME + str(i))
+
+    def test_edit_report_with_restricted_space(self):
+        self.base_page.run_discovery()
+        self.settings_page.add_user_with_duplicated_role(ui_consts.VIEWER_USERNAME,
+                                                         ui_consts.NEW_PASSWORD,
+                                                         ui_consts.FIRST_NAME,
+                                                         ui_consts.LAST_NAME,
+                                                         self.settings_page.VIEWER_ROLE)
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.add_new_space(self.TEST_SPACE_NAME, [self.settings_page.VIEWER_ROLE])
+        self.reports_page.switch_to_page()
+        self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_NAME, add_dashboard=True,
+                                                     spaces=[self.TEST_SPACE_NAME]))
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.click_report(self.TEST_REPORT_NAME)
+        self.reports_page.wait_for_spinner_to_end()
+        assert not self.reports_page.is_dashboard_checkbox_disabled()
+        self.login_page.switch_user(ui_consts.VIEWER_USERNAME, ui_consts.NEW_PASSWORD)
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.reports_page.switch_to_page()
+        self.reports_page.wait_for_table_to_load()
+        self.reports_page.click_report(self.TEST_REPORT_NAME)
+        self.reports_page.wait_for_spinner_to_end()
+        assert self.reports_page.is_restricted_report_modal_exist()
+        self.reports_page.click_restricted_report_modal_confirm()
+        self.reports_page.wait_for_table_to_be_responsive()
+        self.login_page.logout_and_login_with_admin()

@@ -11,7 +11,6 @@
         class="header-tab"
         :class="{active: tab.isActive, disabled: tab.disabled}"
         @click="selectTab(tab.id)"
-        @dblclick="renameTab(tab)"
       >
         <XTitle
           v-if="tab.logo"
@@ -22,11 +21,6 @@
           class="text"
           :title="tab.title"
         >{{ tab.title }}</div>
-        <XButton
-          v-if="tab.removable"
-          type="link"
-          @click.stop="removeTab(tab)"
-        >x</XButton>
       </li>
       <li
         v-if="extendable"
@@ -37,49 +31,16 @@
     <div class="body">
       <slot />
     </div>
-    <XModal
-      v-if="tabToRename.id"
-      size="md"
-      :disabled="disableConfirmRename"
-      @confirm="confirmRenameTab"
-      @close="cancelRenameTab"
-    >
-      <div slot="body">
-        <label for="rename_tab">Rename:</label>
-        <input
-          id="rename_tab"
-          v-model="tabToRename.name"
-          type="text"
-          @keydown.enter="confirmRenameTab"
-        >
-      </div>
-    </XModal>
-    <XModal
-      v-if="tabToRemove"
-      size="lg"
-      :approve-text="removeText"
-      @confirm="confirmRemoveTab"
-      @close="cancelRemoveTab"
-    >
-      <div slot="body">
-        <slot name="remove_confirm" />
-        <div>Do you want to continue?</div>
-      </div>
-    </XModal>
   </div>
 </template>
 
 <script>
 import XTitle from '../layout/Title.vue';
-import XButton from '../inputs/Button.vue';
-import XModal from '../popover/Modal/index.vue';
 
 export default {
   name: 'XTabs',
   components: {
     XTitle,
-    XButton,
-    XModal,
   },
   props: {
     vertical: {
@@ -90,24 +51,23 @@ export default {
       type: Boolean,
       default: false,
     },
-    removeText: {
+    activeTabUrl: {
+      type: Boolean,
+      default: false,
+    },
+    pageBaseUrl: {
       type: String,
-      default: 'Remove',
+      default: '',
     },
   },
   data() {
     return {
       tabs: [],
-      tabToRename: { id: '', name: '' },
-      tabToRemove: null,
     };
   },
   computed: {
     validTabs() {
       return this.tabs.filter((tab) => tab.id !== undefined);
-    },
-    disableConfirmRename() {
-      return Boolean(!this.tabToRename.name);
     },
   },
   created() {
@@ -116,6 +76,11 @@ export default {
   mounted() {
     if (this.$route.hash) {
       this.selectTab(this.$route.hash.slice(1));
+    } else if (this.activeTabUrl) {
+      const activeTab = this.tabs.findIndex((tab) => tab.isActive);
+      if (activeTab > 0) {
+        this.$router.replace(`${this.pageBaseUrl}/#${this.tabs[activeTab].id}`);
+      }
     }
   },
   methods: {
@@ -128,41 +93,14 @@ export default {
       if (!found) {
         this.tabs[0].isActive = true;
       }
-      this.$emit('click', selectedId);
-    },
-    renameTab(tab) {
-      if (!tab.editable) return;
-      this.tabToRename = {
-        id: tab.id,
-        name: tab.title,
-      };
-    },
-    renameTabById(tabId) {
-      this.renameTab(this.validTabs.find((tab) => tab.id === tabId));
-    },
-    confirmRenameTab() {
-      if (!this.tabToRename.name) return;
-      this.$emit('rename', {
-        id: this.tabToRename.id,
-        name: this.tabToRename.name,
-      });
-      this.cancelRenameTab();
-    },
-    cancelRenameTab() {
-      this.tabToRename = { id: '', name: '' };
-    },
-    removeTab(tab) {
-      this.tabToRemove = tab;
-    },
-    confirmRemoveTab() {
-      this.$emit('remove', this.tabToRemove.id);
-      if (this.tabToRemove.isActive && this.tabs.length) {
-        this.selectTab(this.tabs[0].id);
+      if (this.activeTabUrl) {
+        if (this.tabs[0].isActive) {
+          this.$router.replace(`${this.pageBaseUrl}/`);
+        } else {
+          this.$router.replace(`${this.pageBaseUrl}/#${selectedId}`);
+        }
       }
-      this.cancelRemoveTab();
-    },
-    cancelRemoveTab() {
-      this.tabToRemove = null;
+      this.$emit('click', selectedId);
     },
   },
 };
@@ -194,21 +132,6 @@ export default {
 
       img {
         margin-right: 4px;
-      }
-
-      .x-button {
-        display: none;
-        padding: 0;
-        position: absolute;
-        right: 0;
-        z-index: 1000;
-        cursor: pointer;
-        height: auto;
-      }
-      &:hover {
-        .x-button {
-          display: block;
-        }
       }
 
       &.active {
@@ -292,11 +215,6 @@ export default {
       flex: 1 0 auto;
       height: 100%;
       width: calc(100% - 200px);
-    }
-  }
-  &::v-deep .x-modal {
-    #rename_tab {
-      margin-left: 12px;
     }
   }
 }
