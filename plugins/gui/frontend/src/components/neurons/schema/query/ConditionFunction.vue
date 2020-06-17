@@ -27,6 +27,8 @@
 <script>
 import _isEmpty from 'lodash/isEmpty';
 import _isEqual from 'lodash/isEqual';
+import _get from 'lodash/get';
+import _isPlainObject from 'lodash/isPlainObject';
 import xSelect from '../../../axons/inputs/select/Select.vue';
 import string from '../types/string/StringEdit.vue';
 import number from '../types/numerical/NumberEdit.vue';
@@ -78,7 +80,12 @@ export default {
       return this.argument;
     },
     valueSchema() {
-      return getValueSchema(this.schema, this.operator);
+      const schema = getValueSchema(this.schema, this.operator);
+      const firstOption = _get(schema, 'enum[0]');
+      if (_isPlainObject(firstOption) && 'name' in firstOption) {
+        schema.enum = schema.enum.filter((item) => item.name);
+      }
+      return schema;
     },
     valueType() {
       return this.valueSchema.type;
