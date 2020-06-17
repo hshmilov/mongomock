@@ -12,7 +12,7 @@ class TestAirwatchAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain']
+        return OLD_CLIENT_DETAILS['domain']
 
     @property
     def some_client_details(self):
@@ -24,4 +24,8 @@ class TestAirwatchAdapter(AdapterTestBase):
 
     @pytest.mark.skip("Broken for some reason, to be fixed in AX-2085")
     def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('No creds')
+    def test_check_reachability(self):
         pass

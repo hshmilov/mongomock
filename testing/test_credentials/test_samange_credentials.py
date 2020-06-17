@@ -1,4 +1,5 @@
-CLIENT_DETAILS = {
+CLIENT_DETAILS = None
+OLD_CLIENT_DETAILS = {
     'domain': 'api.samanage.com',
     'apikey': 'b2ZyaUBheG9uaXVzLmNvbQ==:eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJ1c2VyX2l'
               'kIjo0NTUyMDczLCJnZW5lcmF0ZWRfYXQiOiIyMDE5LTAxLTIzIDAwOjUwOjA3In0.T1XhWGgA'

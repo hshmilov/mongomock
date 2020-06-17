@@ -12,7 +12,8 @@ class TestNessusAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['host']
+        # return client_details['host']
+        return None
 
     @property
     def some_client_details(self):

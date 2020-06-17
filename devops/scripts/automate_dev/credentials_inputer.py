@@ -48,7 +48,7 @@ def main():
                 if hasattr(value, 'some_client_details'):
                     test_adapter_service = value()
 
-            if test_adapter_service:
+            if test_adapter_service and test_adapter_service.some_client_details is not None:
                 # If we actually have creds to put we wait for it to be up.
                 adapter.wait_for_service()
 

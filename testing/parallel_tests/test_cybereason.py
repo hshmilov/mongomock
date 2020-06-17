@@ -18,7 +18,8 @@ class TestCybereasonAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return get_client_id(CLIENT_DETAILS)
+        # return get_client_id(CLIENT_DETAILS)
+        return None
 
     @property
     def some_client_detials(self):

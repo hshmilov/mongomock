@@ -15,7 +15,8 @@ class TestJuniperAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return '@'.join([client_details['username'], client_details['host']])
+        # return '@'.join([client_details['username'], client_details['host']])
+        return None
 
     @property
     def some_client_details(self):

@@ -15,9 +15,10 @@ class TestDropboxAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        token = CLIENT_DETAILS['access_token']
-        unique_id = token[:8]
-        return f'dropbox_{unique_id}'
+        # token = CLIENT_DETAILS['access_token']
+        # unique_id = token[:8]
+        # return f'dropbox_{unique_id}'
+        return None
 
     @property
     def some_client_details(self):

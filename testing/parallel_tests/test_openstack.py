@@ -13,7 +13,8 @@ class TestOpenStackAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return '{}/{}'.format(parse_url(client_details['auth_url']).hostname, client_details['project'])
+        # return '{}/{}'.format(parse_url(client_details['auth_url']).hostname, client_details['project'])
+        return None
 
     @property
     def some_client_details(self):

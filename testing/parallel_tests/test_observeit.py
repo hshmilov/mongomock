@@ -11,7 +11,8 @@ class TestObserveitAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['server']
+        # return client_details['server']
+        return None
 
     @property
     def some_client_details(self):

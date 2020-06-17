@@ -12,7 +12,8 @@ class TestBomgarAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain'] + ':' + client_details['client_id']
+        # return client_details['domain'] + ':' + client_details['client_id']
+        return None
 
     @property
     def some_client_details(self):

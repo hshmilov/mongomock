@@ -1,4 +1,5 @@
-CLIENT_DETAILS = {
+CLIENT_DETAILS = None
+OLD_CLIENT_DETAILS = {
     'domain': 'admin.zscaler.com',
     'username': 'zscale',
     'apikey': 'zscalezscale',

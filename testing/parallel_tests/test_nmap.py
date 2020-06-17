@@ -13,7 +13,8 @@ class TestNmapAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return CLIENT_DETAILS['user_id']
+        # return CLIENT_DETAILS['user_id']
+        return None
 
     @property
     def some_client_details(self):

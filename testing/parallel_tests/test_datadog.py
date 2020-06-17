@@ -3,7 +3,8 @@
 import pytest
 from services.adapters.datadog_service import (DatadogService, datadog_fixture)
 from test_credentials.test_datadog_credentials import (SOME_DEVICE_ID,
-                                                       client_details)
+                                                       client_details,
+                                                       OLD_CLIENT_DETAILS)
 from test_helpers.adapter_test_base import AdapterTestBase
 
 
@@ -14,7 +15,7 @@ class TestDatadogAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain']
+        return OLD_CLIENT_DETAILS['domain']
 
     @property
     def some_client_details(self):
@@ -30,4 +31,8 @@ class TestDatadogAdapter(AdapterTestBase):
 
     @pytest.mark.skip('No test environment.')
     def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('No creds')
+    def test_check_reachability(self):
         pass

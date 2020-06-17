@@ -12,7 +12,8 @@ class TestOracleVmAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['domain']
+        # return client_details['domain']
+        return None
 
     @property
     def some_client_details(self):

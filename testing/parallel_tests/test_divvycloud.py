@@ -12,7 +12,8 @@ class TestDivvycloudAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return DivvycloudAdapter._get_client_id(None, client_details)
+        # return DivvycloudAdapter._get_client_id(None, client_details)
+        return None
 
     @property
     def some_client_details(self):

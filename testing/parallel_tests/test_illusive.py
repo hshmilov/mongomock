@@ -16,7 +16,8 @@ class TestIllusiveAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return CLIENT_DETAILS['domain']
+        # return CLIENT_DETAILS['domain']
+        return None
 
     @property
     def some_client_details(self):

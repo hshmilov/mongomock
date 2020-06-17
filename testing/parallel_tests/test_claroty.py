@@ -16,7 +16,7 @@ class TestClarotyAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return CLIENTS_DETAILS['domain']
+        return None
 
     @property
     def some_client_details(self):

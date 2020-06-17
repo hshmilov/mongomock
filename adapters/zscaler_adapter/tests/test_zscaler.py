@@ -1,6 +1,6 @@
 from zscaler_adapter.mock import ZscalerMockConnection
 from zscaler_adapter.service import ZscalerAdapter
-from test_credentials.test_zscaler_credentials import CLIENT_DETAILS
+from test_credentials.test_zscaler_credentials import OLD_CLIENT_DETAILS
 
 EXPECTED_RESULT = {
     'company_name': 'test company',
@@ -41,7 +41,7 @@ EXPECTED_RESULT = {
 
 
 def test_zscaler_data():
-    connection = ZscalerMockConnection(**CLIENT_DETAILS)
+    connection = ZscalerMockConnection(**OLD_CLIENT_DETAILS)
     devices = list(connection.get_device_list())
     assert len(devices) == 1
     device = ZscalerAdapter.MyDeviceAdapter(set(), set())

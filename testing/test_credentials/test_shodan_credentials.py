@@ -1,4 +1,5 @@
-CLIENT_DETAILS = {
+CLIENT_DETAILS = None
+OLD_CLIENT_DETAILS = {
     'apikey': 'S4iGFsugcpDy1xOspxJ3G16qf2bXrrzN'
 }
 

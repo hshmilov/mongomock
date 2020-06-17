@@ -12,7 +12,7 @@ class TestEpoAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['host']
+        return OLD_CLIENT_DETAILS['host']
 
     @property
     def some_client_details(self):
@@ -57,3 +57,7 @@ class TestEpoAdapter(AdapterTestBase):
     @pytest.mark.skip('AX-2459')
     def test_fetch_devices(self):
         super().test_fetch_devices()
+
+    @pytest.mark.skip('No creds')
+    def test_check_reachability(self):
+        pass

@@ -13,7 +13,8 @@ class TestFortigateAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return ':'.join([client_details['host'], str(client_details['port'])])
+        # return ':'.join([client_details['host'], str(client_details['port'])])
+        return None
 
     @property
     def some_client_details(self):

@@ -11,7 +11,8 @@ class TestPuppetAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['puppet_server_name']
+        # return client_details['puppet_server_name']
+        return None
 
     @property
     def some_client_details(self):

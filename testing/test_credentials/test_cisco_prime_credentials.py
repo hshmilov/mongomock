@@ -1,4 +1,5 @@
-client_details = {
+client_details = None
+OLD_CLIENT_DETAILS = {
     'url': 'https://192.168.20.34',
     'username': 'rouser',
     'password': 'Aa654321',

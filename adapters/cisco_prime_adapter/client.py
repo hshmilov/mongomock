@@ -313,10 +313,10 @@ if __name__ == '__main__':
     def main():
         from axonius.clients.cisco import snmp
         from pprint import pprint
-        from test_credentials.test_cisco_prime_credentials import client_details
+        from test_credentials.test_cisco_prime_credentials import OLD_CLIENT_DETAILS
 
         logging.basicConfig(level=logging.DEBUG)
-        client = CiscoPrimeClient(**client_details)
+        client = CiscoPrimeClient(**OLD_CLIENT_DETAILS)
         client.connect()
 
         devices = list(client.get_devices())

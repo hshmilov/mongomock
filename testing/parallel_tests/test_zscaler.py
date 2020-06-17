@@ -2,7 +2,7 @@ import pytest
 # pylint: disable=unused-import
 from services.adapters.zscaler_service import ZscalerService, zscaler_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_zscaler_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
+from test_credentials.test_zscaler_credentials import CLIENT_DETAILS, SOME_DEVICE_ID, OLD_CLIENT_DETAILS
 from zscaler_adapter.client_id import get_client_id
 
 
@@ -17,7 +17,7 @@ class TestZscalerAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return get_client_id(CLIENT_DETAILS)
+        return get_client_id(OLD_CLIENT_DETAILS)
 
     @property
     def some_client_details(self):

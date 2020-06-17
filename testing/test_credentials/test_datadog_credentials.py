@@ -1,5 +1,5 @@
-
-client_details = {
+client_details = None
+OLD_CLIENT_DETAILS = {
     'domain': 'app.datadoghq.com',
     'appkey': '6e4891698164518ec0b34ef1670a7d83059da56b',
     'apikey': '65fd0d21ec115abf397d7ccef7afee5e',

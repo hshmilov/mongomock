@@ -12,7 +12,8 @@ class TestRedsealAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return get_client_id(client_details)
+        # return get_client_id(client_details)
+        return None
 
     @property
     def some_client_details(self):

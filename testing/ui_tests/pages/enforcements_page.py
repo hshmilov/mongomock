@@ -5,7 +5,7 @@ from typing import List, Tuple, Iterable
 from collections import namedtuple
 
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
-from testing.test_credentials.test_shodan_credentials import CLIENT_DETAILS as shodan_client_details
+from testing.test_credentials.test_shodan_credentials import OLD_CLIENT_DETAILS as shodan_client_details
 from ui_tests.pages.entities_page import EntitiesPage
 
 Task = namedtuple('Task', 'status stats name main_action trigger_query_name started_at completed_at')

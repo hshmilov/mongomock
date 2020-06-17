@@ -1,5 +1,5 @@
-
-client_details = {
+client_details = None
+OLD_CLIENT_DETAILS = {
     'domain': 'https://api5.central.sophos.com/gateway',
     'authorization': 'Basic ODFiZmI3MjctY2I0ZS00MWFiLWEyNDQtMTE0NzlmY2Q2OTY0OkQ0STNXUUxPRVYzSlk0QlBaV0dXSVpWS1FNUk5'
                      'CWUJZKzdVWUlWMU9XelM3MGdUNTlUcVhuNzJDWno0bmJDZFdtQThrV1ZhTWo=',

@@ -11,7 +11,8 @@ class TestCiscoPrimeAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['url']
+        # return client_details['url']
+        return None
 
     @property
     def some_client_details(self):
