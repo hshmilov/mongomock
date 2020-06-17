@@ -485,6 +485,22 @@ def failed_rules():
     return wrap
 
 
+def aggregated_view():
+    """
+        Relevant only if the request.method is POST
+        Decorator stating that the failed_rules is True/False
+    """
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                aggregated = content.get('aggregatedView', True)
+            return func(self, aggregated=aggregated, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
     Decorator stating that the view supports '?limit=X&start=Y' for pagination
@@ -1706,6 +1722,27 @@ def email_properties():
                     return return_error(f'Missing email properties.', 400)
 
             return func(self, email_props=email_props, *args, **kwargs)
+        return actual_wrapper
+    return wrap
+
+
+def jira_properties():
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            if request.method == 'POST':
+                content = self.get_request_data_as_object()
+                jira_props = content.get('jira_properties', {})
+
+                project_key = jira_props.get('project_key')
+                incident_title = jira_props.get('incident_title')
+                issue_type = jira_props.get('issue_type')
+                description = jira_props.get('incident_description')
+
+                if None in (project_key, incident_title, issue_type, description):
+                    return return_error(f'Missing jira properties.', 400)
+
+            return func(self, jira_props=jira_props, *args, **kwargs)
         return actual_wrapper
     return wrap
 

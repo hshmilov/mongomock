@@ -1,7 +1,8 @@
 import _get from 'lodash/get';
 import createRequest from './create-request';
 
-export const fetchCompliance = async (name, accounts, rules, categories, failedOnly) => {
+export const fetchCompliance = async (name, accounts, rules, categories,
+  failedOnly, aggregatedView) => {
   const uri = `/compliance/${name}/report`;
   const request = createRequest(uri);
 
@@ -12,6 +13,7 @@ export const fetchCompliance = async (name, accounts, rules, categories, failedO
     rules,
     categories,
     failedOnly,
+    aggregatedView,
   };
   const res = await request(requestOptions);
   return res.data;
@@ -36,7 +38,7 @@ export const fetchComplianceReportFilters = async (name) => {
 };
 
 export const sendComplianceEmail = async (name, accounts, mailProperties, schemaFields, cisTitle,
-  rules, categories, failedOnly) => {
+  rules, categories, failedOnly, aggregatedView) => {
   const uri = `/compliance/${name}/send_email`;
   const request = createRequest(uri);
 
@@ -51,6 +53,7 @@ export const sendComplianceEmail = async (name, accounts, mailProperties, schema
     rules,
     categories,
     failedOnly,
+    aggregatedView,
   };
 
   try {
@@ -73,3 +76,33 @@ export const updateComplianceRules = async (name, rules, cisTitle) => {
   const res = await request(requestOptions);
   return res.data;
 };
+
+export const createJiraIssue = async (name, accounts, jiraProperties, schemaFields, cisTitle,
+  rules, categories, failedOnly, aggregatedView) => {
+  const uri = `/compliance/${name}/create_jira`;
+  const request = createRequest(uri);
+
+  const requestOptions = {
+    method: 'POST',
+    data: {
+      name,
+      accounts,
+      jira_properties: jiraProperties,
+      schema_fields: schemaFields,
+      cis_title: cisTitle,
+      rules,
+      categories,
+      failedOnly,
+      aggregatedView,
+    },
+  };
+
+  try {
+    const res = await request(requestOptions);
+    return res.data;
+  } catch (error) {
+    const errorMessage = _get(error, 'response.data.message', error.message);
+    return Promise.reject(new Error(errorMessage));
+  }
+};
+

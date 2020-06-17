@@ -5,13 +5,13 @@
       placement="bottomRight"
       :disabled="enforcementRestricted"
       :visible="dropDownVisible"
+      overlay-class-name="x-enforcement-menu"
       @visibleChange="openCloseMenu"
-      overlayClassName="x-enforcement-menu"
     >
       <XButton
-        @trigger="openCloseMenu"
         type="link"
         class="compliance-action-button"
+        @trigger="openCloseMenu"
       >
         <VIcon
           :disabled="enforcementRestricted"
@@ -25,15 +25,25 @@
         <AMenuItem
           id="cis_send_mail"
           key="cis_send_mail"
-          @click="openEmailDialog()"
+          @click="openEmailDialog"
         >
-          <div class="email-enforce-item">
+          <div class="enforce-item">
             Send Email
+          </div>
+        </AMenuItem>
+        <AMenuItem
+          id="cis_jira_action"
+          key="cis_jira_action"
+          @click="openJiraDialog"
+        >
+          <div class="enforce-item">
+            Create JIRA Issue
           </div>
         </AMenuItem>
       </AMenu>
     </ADropdown>
     <XComplianceEmailDialog
+      v-if="!enforcementRestricted"
       ref="emailDialog"
       :cis-name="cisName"
       :cis-title="cisTitle"
@@ -42,6 +52,23 @@
       :rules="rules"
       :categories="categories"
       :failed-only="failedOnly"
+      :is-active="emailActive"
+      :aggregated-view="aggregatedView"
+      @close="closeEmailDialog"
+    />
+    <XComplianceJiraDialog
+      v-if="!enforcementRestricted"
+      ref="jiraDialog"
+      :cis-name="cisName"
+      :cis-title="cisTitle"
+      :accounts="accounts"
+      :module="module"
+      :rules="rules"
+      :categories="categories"
+      :failed-only="failedOnly"
+      :is-active="jiraActive"
+      :aggregated-view="aggregatedView"
+      @close="closeJiraDialog"
     />
     <XEnforcementsFeatureLockTip
       :enabled="displayFeatureLockTip"
@@ -59,6 +86,7 @@ import _get from 'lodash/get';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import XComplianceEmailDialog from './ComplianceEmailDialog.vue';
+import XComplianceJiraDialog from './ComplianceJiraDialog.vue';
 import configMixin from '../../../mixins/config';
 
 export default {
@@ -70,6 +98,7 @@ export default {
     AMenuItem: Menu.Item,
     XComplianceEmailDialog,
     XEnforcementsFeatureLockTip,
+    XComplianceJiraDialog,
   },
   mixins: [configMixin],
   props: {
@@ -101,6 +130,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    aggregatedView: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -108,6 +141,8 @@ export default {
       showEmailDialog: false,
       actionToTip: null,
       displayFeatureLockTip: false,
+      jiraActive: false,
+      emailActive: false,
     };
   },
   computed: {
@@ -118,6 +153,9 @@ export default {
     }),
     mailActionName() {
       return this.settingToActions.mail[0];
+    },
+    jiraActionName() {
+      return this.settingToActions.jira[0];
     },
     enforcementRestricted() {
       return this.$cannot(this.$permissionConsts.categories.Enforcements,
@@ -138,10 +176,24 @@ export default {
       if (this.anyEmptySettings) {
         return;
       }
-      this.$refs.emailDialog.activate();
+      this.emailActive = true;
+    },
+    openJiraDialog() {
+      this.dropDownVisible = false;
+      this.checkEmptySettings(this.jiraActionName);
+      if (this.anyEmptySettings) {
+        return;
+      }
+      this.jiraActive = true;
     },
     closeFeatureLockTip() {
       this.displayFeatureLockTip = false;
+    },
+    closeJiraDialog() {
+      this.jiraActive = false;
+    },
+    closeEmailDialog() {
+      this.emailActive = false;
     },
   },
 };
@@ -151,7 +203,7 @@ export default {
     .enforce-title {
         margin-left: 3px;
     }
-    .email-enforce-item {
+    .enforce-item {
         display: flex;
         align-items: center;
         .md-image {

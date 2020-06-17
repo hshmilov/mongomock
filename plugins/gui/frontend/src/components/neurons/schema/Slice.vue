@@ -59,7 +59,8 @@
         if (isObjectListField(this.schema)) {
           return 1
         }
-        return this.defaultColumnLimit
+        if (this.schema.limit) return this.schema.limit;
+        return this.defaultColumnLimit;
       },
       slicedData () {
         if (!this.limit) {

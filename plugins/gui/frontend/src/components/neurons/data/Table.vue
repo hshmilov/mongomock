@@ -6,7 +6,7 @@
     <XTableWrapper
       :title="tableTitle"
       :count="count.data_to_show"
-      :loading="loading || fetching"
+      :loading="loading || fetching || showTableSpinner"
       :error="content.error"
     >
       <div
@@ -215,6 +215,10 @@ export default {
       required: false,
       default: false,
     },
+    showTableSpinner: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -229,20 +233,20 @@ export default {
       },
       refresh(state) {
         if (!state.configuration
-            || !state.configuration.data
-            || !state.configuration.data.system) return 0;
+                  || !state.configuration.data
+                  || !state.configuration.data.system) return 0;
         return state.configuration.data.system.refreshRate;
       },
       multiline(state) {
         if (!state.configuration
-            || !state.configuration.data
-            || !state.configuration.data.system) return 0;
+                  || !state.configuration.data
+                  || !state.configuration.data.system) return 0;
         return state.configuration.data.system.multiLine;
       },
       defaultNumOfEntitiesPerPage(state) {
         if (!state.configuration
-          || !state.configuration.data
-          || !state.configuration.data.system) return 20;
+                  || !state.configuration.data
+                  || !state.configuration.data.system) return 20;
         return state.configuration.data.system.defaultNumOfEntitiesPerPage;
       },
     }),
@@ -580,95 +584,95 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-data-table {
-        height: calc(100% - 66px);
+  .x-data-table {
+    height: calc(100% - 66px);
 
-        .header {
-          .x-search-input {
-            display: block;
-          }
-        }
+    .header {
+      .x-search-input {
+        display: block;
+      }
+    }
 
-      &.searchable .x-table{
-        height: calc(100% - 75px);
+    &.searchable .x-table{
+      height: calc(100% - 75px);
+    }
+
+    .selection {
+      display: flex;
+      align-items: center;
+      margin-left: 12px;
+    }
+
+    &.multiline .x-table-row .array {
+      display: block;
+      height: auto;
+
+      .item {
+        margin-right: 0;
+      }
+    }
+
+    .x-cross .first, .x-cross .second {
+      top: 0px;
+    }
+
+    .x-pagination {
+      justify-content: space-between;
+      display: flex;
+      line-height: 28px;
+
+      .number-of-results-title {
+        text-transform: uppercase;
       }
 
-        .selection {
-            display: flex;
-            align-items: center;
-            margin-left: 12px;
+      .x-sizes {
+        display: flex;
+        width: 320px;
+        justify-content: space-between;
+
+        .active, .x-link:hover {
+          cursor: pointer;
+          color: $theme-orange;
+          transition: color 0.4s;
         }
 
-        &.multiline .x-table-row .array {
-            display: block;
-            height: auto;
+        .active:hover {
+          cursor: default;
+        }
+      }
 
-            .item {
-                margin-right: 0;
-            }
+      .x-pages {
+        display: flex;
+        width: 360px;
+        min-height: 28px;
+        justify-content: space-evenly;
+        flex: 0 1 auto;
+        position: relative;
+        background: $theme-white;
+        border-bottom: 2px solid $theme-white;
+        border-radius: 2px;
+
+        .active, .x-link:hover {
+          cursor: pointer;
+          font-weight: 500;
+          transition: font-weight 0.4s;
         }
 
-        .x-cross .first, .x-cross .second {
-            top: 0px;
+        .active:hover {
+          cursor: default;
         }
 
-        .x-pagination {
-            justify-content: space-between;
-            display: flex;
-            line-height: 28px;
-
-            .number-of-results-title {
-                text-transform: uppercase;
-            }
-
-            .x-sizes {
-                display: flex;
-                width: 320px;
-                justify-content: space-between;
-
-                .active, .x-link:hover {
-                    cursor: pointer;
-                    color: $theme-orange;
-                    transition: color 0.4s;
-                }
-
-                .active:hover {
-                    cursor: default;
-                }
-            }
-
-            .x-pages {
-                display: flex;
-                width: 360px;
-                min-height: 28px;
-                justify-content: space-evenly;
-                flex: 0 1 auto;
-                position: relative;
-                background: $theme-white;
-                border-bottom: 2px solid $theme-white;
-                border-radius: 2px;
-
-                .active, .x-link:hover {
-                    cursor: pointer;
-                    font-weight: 500;
-                    transition: font-weight 0.4s;
-                }
-
-                .active:hover {
-                    cursor: default;
-                }
-
-                &:after {
-                    content: '';
-                    position: absolute;
-                    transform: rotate(-45deg);
-                    border: 20px solid transparent;
-                    border-left: 20px solid $theme-white;
-                    border-radius: 2px;
-                    left: -20px;
-                    top: -20px;
-                }
-            }
+        &:after {
+          content: '';
+          position: absolute;
+          transform: rotate(-45deg);
+          border: 20px solid transparent;
+          border-left: 20px solid $theme-white;
+          border-radius: 2px;
+          left: -20px;
+          top: -20px;
         }
+      }
     }
+  }
 </style>

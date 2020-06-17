@@ -21,7 +21,7 @@
         </div>
 
         <div class="cis-row cis-filter">
-          <div class="filter-item table-filter">
+          <div class="filter-item accounts-filter table-filter">
             <XCombobox
               v-if="accounts"
               v-model="filteredAccounts"
@@ -32,7 +32,7 @@
               multiple
               :allow-create-new="false"
               :hide-quick-selections="false"
-              :menu-props="{maxWidth: 300}"
+              :menu-props="{maxWidth: 230}"
               @change="fetchAllData"
             />
           </div>
@@ -47,7 +47,7 @@
               multiple
               :allow-create-new="false"
               :hide-quick-selections="false"
-              :menu-props="{maxWidth: 265}"
+              :menu-props="{maxWidth: 230}"
               :custom-sort="rulesSort"
               @change="fetchAllData"
             />
@@ -63,15 +63,21 @@
               multiple
               :allow-create-new="false"
               :hide-quick-selections="false"
-              :menu-props="{maxWidth: 265}"
+              :menu-props="{maxWidth: 230}"
               @change="fetchAllData"
             />
           </div>
           <XSwitch
             :checked="failedOnly"
             class="failed-only"
-            label="Failed rules only"
+            label="Failed Only"
             @change="toggleFailedSwitch"
+          />
+          <XSwitch
+              :checked="aggregatedView"
+              class="cross-account"
+              label="Aggregated View"
+              @change="toggleCrossAccountsSwitch"
           />
           <XButton
             class="search__reset"
@@ -101,6 +107,7 @@
         :rules="filteredRules"
         :categories="filteredCategories"
         :failed-only="failedOnly"
+        :aggregated-view="aggregatedView"
       />
     </div>
     <XComplianceTip
@@ -110,8 +117,6 @@
 </template>
 <script>
 import _get from 'lodash/get';
-import _cloneDeep from 'lodash/cloneDeep';
-import _has from 'lodash/has';
 import _isEmpty from 'lodash/isEmpty';
 import { mapState, mapGetters, mapMutations } from 'vuex';
 
@@ -150,7 +155,8 @@ export default {
       accounts: [],
       rules: [],
       failedOnly: false,
-      loading: false,
+      aggregatedView: true,
+      loading: true,
       error: null,
       complianceOptions: [
         { name: 'aws', title: 'CIS Amazon Web Services Foundations Benchmark V1.2' },
@@ -229,14 +235,6 @@ export default {
         this.activeRules = value;
       },
     },
-    activeRulesSet() {
-      const rulesSet = new Set();
-      this.activeRules.forEach((ruleTitle) => {
-        const ruleName = ruleTitle.substr(ruleTitle.indexOf(' ') + 1); // get only rule name, without section.
-        rulesSet.add(ruleName);
-      });
-      return rulesSet;
-    },
     rulesLabels() {
       return this.rules.map((rule) => this.prepareRuleOptionName(rule));
     },
@@ -276,6 +274,7 @@ export default {
           this.filteredRules,
           this.filteredCategories,
           this.failedOnly,
+          this.aggregatedView,
         );
         this.allCloudComplianceRules = data.rules;
         this.score = data.score;
@@ -317,6 +316,10 @@ export default {
     },
     toggleFailedSwitch() {
       this.failedOnly = !this.failedOnly;
+      this.fetchAllData();
+    },
+    toggleCrossAccountsSwitch() {
+      this.aggregatedView = !this.aggregatedView;
       this.fetchAllData();
     },
     async updateComplianceFilters(value, filterName) {
@@ -362,6 +365,7 @@ export default {
 
     .cis-header {
       display: grid;
+      grid-template-columns: 1fr 200px;
 
       .cis-score {
         grid-column: 2 ;
@@ -399,14 +403,17 @@ export default {
           grid-row: 2;
 
           .filter-item {
-            max-width: 265px;
-            flex: 1 1 250px;
+            max-width: 230px;
+            flex: 1 1 230px;
 
             .x-combobox {
               font-size: 14px;
 
               .v-input__control {
                 border: 1px solid #DEDEDE !important;
+              }
+              .v-chip {
+                max-width: 54%;
               }
             }
           }
@@ -420,6 +427,9 @@ export default {
             width: 85px;
           }
           .failed-only {
+            margin-left: 20px;
+          }
+          .cross-account {
             margin-left: 20px;
           }
         }

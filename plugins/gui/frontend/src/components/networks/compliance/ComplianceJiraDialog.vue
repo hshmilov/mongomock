@@ -1,33 +1,33 @@
 <template>
   <XFeedbackModal
-    class="compliance_email_dialog"
     v-model="isActive"
-    :handle-save="sendEmail"
+    class="x-compliance-jira-dialog"
+    :handle-save="createJira"
     :message="message"
     :approve-text="title"
     :disabled="!formValid"
     @change="$emit('close')"
   >
-    <div class="email-header">
-      <div class="email-title">
+    <div class="header">
+      <div class="header__title">
         <XTitle
-          logo="actions/send_emails"
+          logo="actions/create_jira_incident"
           :height="48"
         >{{ title }} </XTitle>
       </div>
-      <div class="email-subtitle">
-        CSV with results will be attached to the Email.
+      <div class="header__subtitle">
+        CSV with results will be attached to the Jira Issue.
       </div>
     </div>
 
     <div class="body">
-      <div class="body-title">
+      <div class="body__title">
         Configuration
       </div>
       <XForm
-        ref="mail_form"
-        v-model="mail_properties"
-        :schema="mailSchema"
+        v-if="actionSchema"
+        v-model="jiraProperties"
+        :schema="actionSchema"
         @validate="validateForm"
       />
     </div>
@@ -36,21 +36,23 @@
 
 <script>
 import { mapState } from 'vuex';
-import { sendComplianceEmail } from '@api/compliance';
-import { emailFormFields } from '@constants/compliance';
+import { createJiraIssue } from '@api/compliance';
+import { jiraFormFields } from '@constants/compliance';
 import XFeedbackModal from '@neurons/popover/FeedbackModal.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XForm from '@neurons/schema/Form.vue';
+import actionsMixin from '../../../mixins/actions';
 
 export default {
-  name: 'XComplianceEmailDialog',
+  name: 'XComplianceJiraDialog',
   components: {
     XFeedbackModal, XTitle, XForm,
   },
+  mixins: [actionsMixin],
   props: {
     message: {
       type: String,
-      default: 'Email sent successfully',
+      default: 'Jira issue created successfully',
     },
     cisName: {
       type: String,
@@ -91,50 +93,53 @@ export default {
   },
   data() {
     return {
-      title: 'Send Email',
-      mail_properties: {
-        mailSubject: null,
-        mailMessage: '',
-        emailList: [],
-        emailListCC: [],
-        accountAdmins: false,
+      title: 'Create Jira Issue',
+      jiraProperties: {
+        project_key: null,
+        issue_type: null,
+        incident_title: null,
+        incident_description: null,
+        assignee: null,
+        labels: null,
+        components: null,
       },
       validity: {
         fields: [], error: '',
       },
       formValid: false,
+      actionName: 'create_jira_incident',
     };
   },
   computed: {
     ...mapState({
-      schema_fields(state) {
+      schemaFields(state) {
         return state[this.module].view.schema_fields;
       },
     }),
-    mailSchema() {
-      return {
-        name: 'mail_config',
-        title: '',
-        items: emailFormFields[this.cisName],
-        required: [
-          'accountAdmins', 'mailSubject', 'emailList',
-        ],
-        type: 'array',
-      };
+    actionConfig() {
+      if (!this.actionsDef || !this.actionName) return {};
+
+      return this.actionsDef[this.actionName];
+    },
+    actionSchema() {
+      if (!this.actionConfig) return {};
+      const items = this.actionConfig.schema.items.filter((item) => jiraFormFields.items.includes(item.name));
+      const required = this.actionConfig.schema.required.filter((item) => jiraFormFields.required.includes(item));
+      return { ...this.actionConfig.schema, items, required };
     },
   },
   methods: {
     validateForm(valid) {
       this.formValid = valid;
     },
-    async sendEmail() {
+    async createJira() {
       if (!this.formValid) return;
       try {
-        await sendComplianceEmail(
+        await createJiraIssue(
           this.cisName,
           this.accounts,
-          this.mail_properties,
-          this.schema_fields,
+          this.jiraProperties,
+          this.schemaFields,
           this.cisTitle,
           this.rules,
           this.categories,
@@ -153,22 +158,22 @@ export default {
 
 
 <style lang="scss">
-  .compliance_email_dialog {
-    .email-header {
+  .x-compliance-jira-dialog {
+    .modal-body .header {
       font-size: 20px;
       padding: 12px;
       display: block;
-      .email-title {
+      &__title {
         display: flex;
       }
-      .email-subtitle {
+      &__subtitle {
         padding-top: 5px;
         font-size: 14px;
       }
     }
     .body {
       padding: 12px;
-      .body-title {
+      &__title {
         font-size: 16px;
         font-weight: 400;
         margin-bottom: 10px;
@@ -179,6 +184,9 @@ export default {
         grid-gap: 24px 0;
         display: grid;
       }
+    }
+    .modal-footer .ant-btn-primary {
+      width: 135px;
     }
   }
 </style>

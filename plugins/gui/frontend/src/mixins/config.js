@@ -19,7 +19,8 @@ export default {
 
         settingToActions() {
             return {
-                mail: ['send_emails', 'send_email_to_entities']
+                mail: ['send_emails', 'send_email_to_entities'],
+                jira: ['create_jira_incident'],
             }
         },
         anyEmptySettings() {
@@ -63,7 +64,8 @@ export default {
         },
         checkEmptySettings(action) {
             this.updateEmptySettings(this.settingNames
-                .find(setting => this.settingToActions[setting].includes(action)))
+                .find((setting) => this.settingToActions[setting]
+                  && this.settingToActions[setting].includes(action)))
         }
     },
     created() {

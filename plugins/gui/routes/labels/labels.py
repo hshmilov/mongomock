@@ -337,4 +337,6 @@ class Labels:
             'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
             'audit.compliance.rules': 'Updated Scoring Rules',
             'audit.compliance.rules.template': 'Updated scoring rules for compliance {cis_title}',
+            'audit.compliance.create_jira': 'Create Jira Issue',
+            'audit.compliance.create_jira.template': 'Jira issue created for compliance {cis_title}',
         }

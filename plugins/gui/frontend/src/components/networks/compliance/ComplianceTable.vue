@@ -1,16 +1,9 @@
 <template>
   <div class="x-compliance-table">
-    <div
-      v-if="loading"
-      class="v-spinner-bg"
-    />
-    <PulseLoader
-      :loading="loading"
-      color="#FF7D46"
-    />
     <XTable
       slot="table"
       v-model="selectedRules"
+      :show-table-spinner="loading"
       title="Rules"
       :module="modulePath"
       :static-data="data"
@@ -25,20 +18,21 @@
     >
       <template slot="actions">
         <XEnforcementMenu
-            :cis-name="cisName"
-            :cis-title="cisTitle"
-            :accounts="accounts"
-            :module="module"
-            :disabled="false"
-            :rules="rules"
-            :categories="categories"
-            :failed-only="failedOnly"
+          :cis-name="cisName"
+          :cis-title="cisTitle"
+          :accounts="accounts"
+          :module="module"
+          :disabled="false"
+          :rules="rules"
+          :categories="categories"
+          :failed-only="failedOnly"
+          :aggregated-view="aggregatedView"
         />
         <XButton
           type="link"
-          class="compliance-action-button"
-          @click.stop.prevent="exportCSV"
+          class="compliance-action-button export-csv"
           :loading="exporting"
+          @click.stop.prevent="exportCSV"
         >
           <VIcon
             size="18"
@@ -76,7 +70,7 @@ const tableFields = [{
 }, {
   name: 'category', title: 'Category', type: 'string',
 }, {
-  name: 'account', title: 'Account', type: 'string',
+  name: 'account', title: 'Account', type: 'array', items: { type: 'string' }, limit: 1,
 }, {
   name: 'results', title: 'Results (Failed/Checked)', type: 'string',
 }, {
@@ -132,6 +126,10 @@ export default {
       default: () => [],
     },
     failedOnly: {
+      type: Boolean,
+      default: false,
+    },
+    aggregatedView: {
       type: Boolean,
       default: false,
     },
@@ -210,6 +208,7 @@ export default {
         rules: this.rules,
         categories: this.categories,
         failedOnly: this.failedOnly,
+        aggregatedView: this.aggregatedView,
       }).then(() => {
         this.exporting = false;
       });
@@ -309,6 +308,9 @@ export default {
   }
 
   .ant-btn.x-button {
+    &.compliance-action-button.export-csv {
+      padding-right: 0px;
+    }
     &.compliance-action-button:not([disabled]) {
       width: auto;
       color: $theme-black;

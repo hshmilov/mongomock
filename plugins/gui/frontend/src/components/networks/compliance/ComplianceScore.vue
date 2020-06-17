@@ -1,16 +1,37 @@
 <template>
   <div class="score-card">
     <div class="score-header">
-      <XButton
+      <ADropdown
         v-if="canEditComplianceRules"
-        type="link"
-        @click="toggleRulesDialog"
+        :trigger="!canEditComplianceRules?['']:['click']"
+        placement="bottomRight"
+        :disabled="!canEditComplianceRules"
+        :visible="dropDownVisible"
+        overlay-class-name="score-card-settings-menu"
+        @visibleChange="openCloseMenu"
       >
-        <VIcon
-          size="15"
-          class="verticaldots-expression-handle"
-        >$vuetify.icons.verticaldots</VIcon>
-      </XButton>
+        <XButton
+          type="link"
+          @trigger="openCloseMenu"
+        >
+          <XIcon
+            family="symbol"
+            type="verticalDots"
+          />
+        </XButton>
+        <AMenu
+          slot="overlay"
+        >
+          <AMenuItem
+            id="edit_score_settings"
+            key="edit_score_settings"
+            @click="toggleRulesDialog"
+          >
+            Configure Benchmark Rules
+          </AMenuItem>
+        </AMenu>
+      </ADropdown>
+
     </div>
     <div class="score-body">
       <div class="score-content">
@@ -35,30 +56,37 @@
     </div>
     <XComplianceActiveRules
       v-if="canEditComplianceRules"
+      v-model="activeRules"
       :visible="showRuleDialog"
       :all-cis-rules="allCisRules"
-      v-model="activeRules"
-      @close="toggleRulesDialog"
-      @save-rules="$emit('save-rules', $event)"
       :custom-sort="customSort"
       :cis-title="cisTitle"
+      @close="toggleRulesDialog"
+      @save-rules="$emit('save-rules', $event)"
     />
   </div>
 </template>
 
 <script>
 
-import { Icon, Tooltip } from 'ant-design-vue';
+import {
+  Icon, Tooltip, Dropdown, Menu,
+} from 'ant-design-vue';
 import XButton from '@axons/inputs/Button.vue';
 import XComplianceActiveRules from './ComplianceActiveRules.vue';
+import XIcon from '../../axons/icons/Icon';
 
 export default {
   name: 'XComplianceScore',
   components: {
+    XIcon,
     ATooltip: Tooltip,
     AIcon: Icon,
     XButton,
     XComplianceActiveRules,
+    ADropdown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
   },
   props: {
     value: {
@@ -88,6 +116,7 @@ export default {
         + '\nThe score is calculated and aggregated on all accounts currently filtered.'
         + '\nOther filters will not affect the CIS benchmark score.',
       showRuleDialog: false,
+      dropDownVisible: false,
     };
   },
   computed: {
@@ -114,6 +143,10 @@ export default {
   methods: {
     toggleRulesDialog() {
       this.showRuleDialog = !this.showRuleDialog;
+      this.dropDownVisible = false;
+    },
+    openCloseMenu() {
+      this.dropDownVisible = !this.dropDownVisible;
     },
   },
 };
@@ -122,7 +155,7 @@ export default {
 <style scoped lang="scss">
 
     .score-card {
-        width: 230px;
+        width: 215px;
         height: 120px;
         background-color: white;
         border-radius: 4px;
@@ -132,7 +165,7 @@ export default {
         .score-header {
           display: flex;
           height: 25px;
-          width: 230px;
+          width: 215px;
           flex-flow: row-reverse;
 
           > button {

@@ -14,7 +14,7 @@ const nonExpandablePanelFields = [{
 }, {
   name: 'category', title: 'Category', type: 'string',
 }, {
-  name: 'account', title: 'Account', type: 'string',
+  name: 'account', title: 'Account', type: 'array', items: { type: 'string' },
 }];
 
 const expandablePanelFields = [{
@@ -80,10 +80,16 @@ export default {
             {field.title}
           </h5>
           <p>
-            {this.data[field.name]}
+            {this.getFieldValue(field.type, this.data[field.name])}
           </p>
         </div>
       ));
+    },
+    getFieldValue(type, value) {
+      if (type === 'array') {
+        return value.join(', ');
+      }
+      return value;
     },
     renderExpandableFields() {
       return expandablePanelFields.map((field) => {

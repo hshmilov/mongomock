@@ -44,7 +44,7 @@ export const compliance = {
       }, {
         name: 'category', title: 'Category', type: 'string', order: 4,
       }, {
-        name: 'account', title: 'Account', type: 'string', order: 5,
+        name: 'account', title: 'Account', type: 'array', order: 5, items: { type: 'string' },
       }, {
         name: 'description', title: 'Description', type: 'text', expanded: true, order: 6,
       }, {

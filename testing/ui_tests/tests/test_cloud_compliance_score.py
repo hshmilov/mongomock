@@ -22,11 +22,11 @@ class TestCloudComplianceScore(TestBase):
             self.compliance_page.switch_to_page()
             self.compliance_page.wait_for_table_to_be_responsive()
 
-            failed_rules = self.compliance_page.get_total_failed_rules()
+            rules_total_count = self.compliance_page.get_total_rules_count()
             passed_rules = self.compliance_page.get_total_passed_rules()
             current_score = self.compliance_page.get_current_score_value()
 
-            assert round((passed_rules / (passed_rules + failed_rules)) * 100) == current_score
+            assert round((passed_rules / rules_total_count) * 100) == current_score
 
             self.adapters_page.switch_to_page()
             self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
@@ -48,32 +48,31 @@ class TestCloudComplianceScore(TestBase):
 
             self.compliance_page.switch_to_page()
             self.compliance_page.wait_for_table_to_be_responsive()
-            rules = self.compliance_page.get_all_rules()
-            rules_initial_len = len(rules)
+            rules_initial_count = self.compliance_page.get_total_rules_count()
 
             self.compliance_page.open_rules_dialog()
             assert self.compliance_page.is_score_rules_modal_visible()
             self.compliance_page.toggle_exclude_rule([1, 5])  # exclude the first and fifth rules
             self.compliance_page.save_score_rules()
             self.compliance_page.wait_for_table_to_be_responsive()
-            rules = self.compliance_page.get_all_rules()
-            assert rules_initial_len == len(rules) + 2
+            rules_count = self.compliance_page.get_total_rules_count()
+            assert rules_initial_count == rules_count + 2
 
             self.compliance_page.open_rules_dialog()
             assert self.compliance_page.is_score_rules_modal_visible()
             self.compliance_page.toggle_exclude_rule([1, 5])  # include the first and fifth rules
             self.compliance_page.save_score_rules()
             self.compliance_page.wait_for_table_to_be_responsive()
-            rules = self.compliance_page.get_all_rules()
-            assert rules_initial_len == len(rules)
+            rules_count = self.compliance_page.get_total_rules_count()
+            assert rules_initial_count == rules_count
 
             self.compliance_page.open_rules_dialog()
             assert self.compliance_page.is_score_rules_modal_visible()
             self.compliance_page.toggle_exclude_rule([1])  # exclude first rule, without saving.
             self.compliance_page.close_without_save_rules_dialog()
             assert not self.compliance_page.is_score_rules_modal_visible()
-            rules = self.compliance_page.get_all_rules()
-            assert rules_initial_len == len(rules)
+            rules_count = self.compliance_page.get_total_rules_count()
+            assert rules_initial_count == rules_count
 
             self.adapters_page.switch_to_page()
             self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)

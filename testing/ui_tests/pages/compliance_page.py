@@ -20,13 +20,19 @@ class CompliancePage(Page):
 
     RULES_FILTER_DROPDOWN_CSS = '.rules-filter .x-combobox'
     CATEGORIES_FILTER_DROPDOWN_CSS = '.categories-filter .x-combobox'
+    ACCOUNTS_FILTER_DROPDOWN_CSS = '.accounts-filter .x-combobox'
+    ACCOUNTS_FILTER_OPTIONS_CSS = '.v-select-list .v-list-item'
 
     FILTER_ROW_XPATH = '//div[contains(@class, \'v-select-list\')]//div[contains(@class, \'v-list\')]//' \
                        'div[contains(@class, \'v-list-item\')]//' \
                        'div[contains(@title,\'{filter_text}\')]'
-    SCORE_RULES_DIALOG_CSS = '.score-card .score-header .ant-btn'
+    SCORE_RULES_EDIT_MENU_CSS = '.score-card .score-header .ant-btn'
+    SCORE_RULES_EDIT_BUTTON_CSS = '#edit_score_settings'
     SCORE_RULES_ROWS_CSS = '.rules-selection .v-list-item'
     SCORE_RULES_SAVE_BUTTON_CSS = '.ant-modal-footer .ant-btn-primary'
+
+    COMPLIANCE_TABLE_TOTAL_RULE_COUNT_CSS = '.table-title .count'
+    ACCOUNT_FIELD = 'Results (Failed/Checked)'
 
     @property
     def url(self):
@@ -83,6 +89,15 @@ class CompliancePage(Page):
     def open_category_filter_dropdown(self):
         self.driver.find_element_by_css_selector(self.CATEGORIES_FILTER_DROPDOWN_CSS).click()
 
+    def open_accounts_filter_dropdown(self):
+        self.driver.find_element_by_css_selector(self.ACCOUNTS_FILTER_DROPDOWN_CSS).click()
+
+    def get_number_of_account_filter_options(self):
+        return len(self.driver.find_elements_by_css_selector(self.ACCOUNTS_FILTER_OPTIONS_CSS)) - 1
+
+    def get_all_accounts_options(self):
+        return [item.text for item in self.driver.find_elements_by_css_selector(self.ACCOUNTS_FILTER_OPTIONS_CSS)]
+
     def toggle_filter(self, filter_text):
         self.driver.find_element_by_xpath(self.FILTER_ROW_XPATH.format(filter_text=filter_text)).click()
         self.wait_for_table_to_load()
@@ -90,8 +105,16 @@ class CompliancePage(Page):
     def get_all_rules(self):
         return self.get_all_table_rows_elements()
 
+    def get_all_rules_results(self):
+        return self.get_column_data_inline(self.ACCOUNT_FIELD)
+
+    def get_total_rules_count(self):
+        return self.get_table_count()
+
     def open_rules_dialog(self):
-        self.driver.find_element_by_css_selector(self.SCORE_RULES_DIALOG_CSS).click()
+        self.driver.find_element_by_css_selector(self.SCORE_RULES_EDIT_MENU_CSS).click()
+        time.sleep(0.2)
+        self.driver.find_element_by_css_selector(self.SCORE_RULES_EDIT_BUTTON_CSS).click()
         time.sleep(0.5)  # wait for dialog to open
 
     def get_rules_dialog_modal(self):

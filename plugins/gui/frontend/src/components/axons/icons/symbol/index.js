@@ -13,6 +13,7 @@ import troffy from './troffy';
 import user from './user';
 import warning from './warning';
 import stacked from './stacked';
+import verticalDots from './verticaldots';
 
 export default {
   error,
@@ -30,4 +31,5 @@ export default {
   user,
   warning,
   stacked,
+  verticalDots,
 };

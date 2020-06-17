@@ -79,3 +79,15 @@ export const emailFormFields = {
     },
   ],
 };
+
+export const jiraFormFields = {
+  items: ['project_key', 'issue_type', 'incident_title', 'incident_description', 'assignee',
+    'labels', 'components',
+  ],
+  required: [
+    'incident_description',
+    'project_key',
+    'incident_title',
+    'issue_type',
+  ],
+};

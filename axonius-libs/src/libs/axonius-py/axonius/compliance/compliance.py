@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines,duplicate-code
 # pylint: disable=protected-access
+import logging
+import re
 import urllib
 import urllib.parse
 from datetime import datetime
@@ -14,8 +16,12 @@ from axonius.plugin_base import PluginBase
 from axonius.consts.compliance_consts import COMPLIANCE_AWS_RULES_COLLECTION, COMPLIANCE_AZURE_RULES_COLLECTION
 
 
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
 def _get_compliance_reports_collection(compliance_name):
-    return 'reports' if compliance_name == 'aws' else f'{compliance_name}_reports'
+    reports_collection_name = 'reports' if compliance_name == 'aws' else f'{compliance_name}_reports'
+    return PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME][reports_collection_name]
 
 
 def get_compliance_rules_collection(compliance_name):
@@ -34,10 +40,8 @@ def get_compliance_default_rules(compliance_name):
 def get_compliance_accounts(compliance_name):
     # Get all latest account names. Since account_id does not change we can group by it, and this will work
     # even if the account name changed.
-    compliance_reports_collection = _get_compliance_reports_collection(
+    reports_db = _get_compliance_reports_collection(
         compliance_name)
-    reports_db = PluginBase.Instance._get_db_connection(
-    )[COMPLIANCE_PLUGIN_NAME][compliance_reports_collection]
     all_account_names = [
         report.get('account_name') for report in
         reports_db.aggregate(
@@ -136,7 +140,8 @@ def update_rules_score_flag(compliance_name: str, rules_map: dict):
     rules_collection.bulk_write(rules_bulk_update)
 
 
-def get_compliance(compliance_name: str, method: str, accounts: list, rules: list, categories: list, failed_only):
+def get_compliance(compliance_name: str, method: str, accounts: list, rules: list, categories: list, failed_only: bool,
+                   aggregated: bool):
     """
     Get compliance report info.
     :param compliance_name: aws or azure
@@ -145,11 +150,13 @@ def get_compliance(compliance_name: str, method: str, accounts: list, rules: lis
     :param rules: rules to filter
     :param categories: categories to filter
     :param failed_only: filter failed only rules or not.
+    :param aggregated: show aggregated data for accounts or not.
     :return: report info - array of rules.
     """
     if compliance_name in ['aws', 'azure']:
         if method == 'report':
-            cis_rules, score = get_compliance_rules(compliance_name, accounts, rules, categories, failed_only)
+            cis_rules, score = get_compliance_rules(compliance_name, accounts, rules, categories, failed_only,
+                                                    aggregated)
             return {
                 'rules': list(cis_rules),
                 'score': score,
@@ -215,128 +222,219 @@ def get_compliance_rules_include_score_flag(compliance_name: str):
     return result
 
 
-def get_compliance_rules(compliance_name, accounts, rules, categories, failed_only) -> List[dict]:
-    def beautify_compliance(
-            compliance: dict,
-            account_id: str,
-            account_name: str,
-            last_updated: datetime,
-            rules_score_flag_map: dict):
-        compliance_results = compliance.get('results') or {}
-        beautify_object = {
-            'id': urllib.parse.quote(
-                f'{account_id}__{compliance["section"]}',
-                safe=''),
-            'status': compliance.get('status'),
-            'section': compliance.get('section'),
-            'category': compliance.get('category'),
-            'account': account_name,
-            'results': f'{compliance_results.get("failed", 0)}/{compliance_results.get("checked", 0)}',
-            'entities_results': compliance.get('entities_results'),
-            'error': compliance.get('error'),
-            'affected': compliance.get('affected_entities'),
-            'cis': compliance.get('cis'),
-            'description': compliance.get('description'),
-            'remediation': compliance.get('remediation'),
-            'rule': compliance.get('rule_name'),
-            'entities_results_query': compliance.get('entities_results_query'),
-            'last_updated': last_updated or datetime.now(),
-            'include_in_score': rules_score_flag_map.get(compliance.get('rule_name'), True)}
-        return beautify_object
+def aggregate_reports(accounts_reports):
+    rules_dict = {}  # using rules dictionary for fast search.
+    accounts_names = set()
+    accounts_ids = set()
+    last_updated = []
+    for report_doc in accounts_reports:
+        report = report_doc['last']
+        accounts_ids.add(_get_account_id(report['account_name']))
+        accounts_names.add(report['account_name'])
+        last_updated.append(report['last_updated'])
 
-    def matching_rule(rule):
-        return len(rules) == 0 or f'{rule.get("section")} {rule.get("rule_name")}' in rules
+        report_rules = report['report'].get('rules')
+        for rule in report_rules:
+            rule_name = rule.get('rule_name')
+            existing_rule_object = rules_dict.get(rule_name)
+            if not existing_rule_object:
+                rules_dict[rule_name] = rule
+                continue
+            _concat_rules_results(existing_rule_object, rule)
 
-    def matching_category(rule):
-        return len(categories) == 0 or rule.get('category') in categories
+    aggregated_rules = rules_dict.values()
+    _replace_entities_results_query(aggregated_rules, accounts_ids)
+    last_updated.sort()
+    return aggregated_rules, list(accounts_ids), list(accounts_names), last_updated.pop()
 
-    def matching_failed_filter(rule):
-        return not failed_only or rule.get('status') == 'Failed'
 
-    def filter_rules(compliance_checked_rules, rules_score_flag_map):
-        return [checked_rule for checked_rule in compliance_checked_rules if
-                matching_rule(checked_rule)
-                and matching_category(checked_rule)
-                and matching_failed_filter(checked_rule)
-                and rules_score_flag_map.get(checked_rule.get('rule_name'), True)]
+def _concat_rules_results(target_rule, secondary_rule):
+    if target_rule.get('status') != 'Failed' and secondary_rule.get('status') != 'Passed':
+        target_rule['status'] = 'Failed'
 
+    target_rule_results = target_rule.get('results')
+    if not target_rule_results:
+        return
+    secondary_rule_results = secondary_rule.get('results')
+    target_rule_results['failed'] = target_rule_results.get('failed') + secondary_rule_results.get('failed')
+    target_rule_results['checked'] = target_rule_results.get('checked') + secondary_rule_results.get('checked')
+
+    target_rule['affected_entities'] = target_rule.get('affected_entities') + secondary_rule.get('affected_entities')
+    target_rule['entities_results'] = f'{target_rule["entities_results"]} \n{secondary_rule["entities_results"]}'
+
+
+def _replace_entities_results_query(aggregated_rules, accounts_ids):
+    """
+    This function aggregate the affected assets query for each rule.
+    :param aggregated_rules: [{rule1}, {rule2} ... ]
+    :param accounts_ids: {accounts_id1, account_id2 ...} This is a set of unique ids.
+    :return:
+    """
+    for rule in aggregated_rules:
+        entities_results_query = rule.get('entities_results_query', {}).get('query')
+        if not entities_results_query:
+            continue
+
+        new_entities_results_query = f'(data.aws_account_id in {list(accounts_ids)})'
+        replaced_query = re.sub(r'\((data.aws_account_id == \"[\s\d]+\")\)',
+                                new_entities_results_query, entities_results_query)
+        rule['entities_results_query']['query'] = replaced_query
+
+
+def _build_aggregation_query(accounts):
+    aggregation_query = [
+        {
+            '$match': {
+                'report.rules': {
+                    '$exists': True, '$ne': []
+                }
+            }
+        },
+        {
+            '$group': {
+                '_id': '$account_id',
+                'last': {'$last': '$$ROOT'}
+            }
+        },
+        {
+            '$sort': {'last.account_name': 1},
+        }
+    ]
+
+    if len(accounts) > 0:
+        return [{'$match': {'account_name': {'$in': accounts}}}, *aggregation_query]
+    return aggregation_query
+
+
+def _beautify_compliance(
+        compliance: dict,
+        account_id: str,
+        account_name: list,
+        last_updated: datetime,
+        rules_score_flag_map: dict):
+    compliance_results = compliance.get('results') or {}
+    beautify_object = {
+        'id': urllib.parse.quote(
+            f'{account_id}__{compliance["section"]}',
+            safe=''),
+        'status': compliance.get('status'),
+        'section': compliance.get('section'),
+        'category': compliance.get('category'),
+        'account': account_name,
+        'results': f'{compliance_results.get("failed", 0)}/{compliance_results.get("checked", 0)}',
+        'entities_results': compliance.get('entities_results'),
+        'error': compliance.get('error'),
+        'affected': compliance.get('affected_entities'),
+        'cis': compliance.get('cis'),
+        'description': compliance.get('description'),
+        'remediation': compliance.get('remediation'),
+        'rule': compliance.get('rule_name'),
+        'entities_results_query': compliance.get('entities_results_query'),
+        'last_updated': last_updated or datetime.now(),
+        'include_in_score': rules_score_flag_map.get(compliance.get('rule_name'), True)}
+    return beautify_object
+
+
+def _matching_rule(rule, rules):
+    return len(rules) == 0 or f'{rule.get("section")} {rule.get("rule_name")}' in rules
+
+
+def _matching_category(rule, categories):
+    return len(categories) == 0 or rule.get('category') in categories
+
+
+def _matching_failed_filter(rule, failed_only):
+    return not failed_only or rule.get('status') == 'Failed'
+
+
+def _filter_rules(compliance_checked_rules, rules_score_flag_map, rules, categories, failed_only):
+    return [checked_rule for checked_rule in compliance_checked_rules if
+            _matching_rule(checked_rule, rules)
+            and _matching_category(checked_rule, categories)
+            and _matching_failed_filter(checked_rule, failed_only)
+            and rules_score_flag_map.get(checked_rule.get('rule_name'), True)]
+
+
+def _get_account_id(account_name):
+    match = re.search(r'\((.+)\)', account_name)
+    if match:
+        # If account includes <name> (<id>).
+        return match.group(1)
+    match = re.match(r'^([\s\d]+)$', account_name)
+    if match:
+        # If account includes only the account id.
+        return match.group(1)
+    return account_name
+
+
+def _calculate_score(reports, rules_score_flag_map):
+    # Score calculation is done for ALL rules, without filtering.
+    # The only filter that affect score, is the accounts filter. (If we choose specific accounts to get the reports
+    # for.
+
+    def is_failed_rule(status):
+        return status in ['Failed', 'No Data']
+
+    total_failed = 0
+    total_checked = 0
+    for report_doc in reports:
+        report = report_doc['last']
+        cis_rules = report['report'].get('rules', [])
+        for rule in cis_rules:
+            include_rule = rules_score_flag_map.get(rule.get('rule_name'), True)
+            if not include_rule:
+                continue
+            if is_failed_rule(rule.get('status')):
+                total_failed += 1
+            total_checked += 1
+        total_passed = total_checked - total_failed
+    if total_checked == 0:
+        return 0
+    return round((total_passed / total_checked) * 100)
+
+
+def get_compliance_rules(compliance_name, accounts, rules, categories, failed_only, aggregated) -> List[dict]:
     if rules is None:
         rules = []
     if categories is None:
         categories = []
 
+    all_accounts = set(accounts)
     compliance_reports_collection = _get_compliance_reports_collection(
         compliance_name)
-    all_reports = list(PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME][compliance_reports_collection]
-                       .aggregate([
-                           {
-                               '$match': {
-                                   'report.rules': {
-                                       '$exists': True, '$ne': []
-                                   }
-                               }
-                           },
-                           {
-                               '$group': {
-                                   '_id': '$account_id',
-                                   'last': {'$last': '$$ROOT'}
-                               }
-                           },
-                           {
-                               '$sort': {'last.account_name': 1},
-                           }
-                       ]))
+    all_reports = list(compliance_reports_collection
+                       .aggregate(_build_aggregation_query(accounts)))
 
-    all_accounts = set(accounts)
     rules_score_flag_map = get_compliance_rules_include_score_flag(compliance_name)
 
     def prepare_default_report(default_rules, time_now):
+        time_now = datetime.now()
         if len(all_accounts) == 0:
-            yield from (beautify_compliance(rule, rule['account'], rule['account'], time_now, rules_score_flag_map)
-                        for rule in filter_rules(default_rules, rules_score_flag_map))
+            yield from (_beautify_compliance(rule, rule['account'], [rule['account']], time_now, rules_score_flag_map)
+                        for rule in _filter_rules(default_rules, rules_score_flag_map, rules, categories, failed_only))
         for account in all_accounts:
-            yield from (beautify_compliance(rule, account, account, time_now, rules_score_flag_map)
-                        for rule in filter_rules(default_rules, rules_score_flag_map) if rule['account'] == account)
+            yield from (_beautify_compliance(rule, account, [account], time_now, rules_score_flag_map)
+                        for rule in _filter_rules(default_rules, rules_score_flag_map, rules, categories, failed_only)
+                        if rule['account'] == account)
 
     def prepare_report(reports):
         for report_doc in reports:
             report = report_doc['last']
-            if len(all_accounts) == 0 or report['account_name'] in all_accounts:
-                yield from (beautify_compliance(rule, report['account_id'], report['account_name'],
-                                                report['last_updated'], rules_score_flag_map)
-                            for rule in filter_rules(report['report'].get('rules'), rules_score_flag_map) or [])
+            yield from (_beautify_compliance(rule, report['account_id'], [report['account_name']],
+                                             report['last_updated'], rules_score_flag_map)
+                        for rule in _filter_rules(report['report'].get('rules'), rules_score_flag_map, rules,
+                                                  categories, failed_only) or [])
+
+    def prepare_aggregated_report(aggregated_rules, accounts_ids, accounts_names, last_updated_report):
+        yield from (_beautify_compliance(rule, ','.join(accounts_ids), accounts_names,
+                                         last_updated_report, rules_score_flag_map)
+                    for rule in _filter_rules(aggregated_rules, rules_score_flag_map, rules,
+                                              categories, failed_only) or [])
 
     def return_default_report():
         time_now = datetime.now()
         cis_report = prepare_default_report(get_compliance_default_rules(compliance_name).get('rules'), time_now)
         return cis_report, 100
-
-    def calculate_score(reports):
-        # Score calculation is done for ALL rules, without filtering.
-        # The only filter that affect score, is the accounts filter. (If we choose specific accounts to get the reports
-        # for.
-
-        def is_failed_rule(status):
-            return status in ['Failed', 'No Data']
-
-        total_failed = 0
-        total_checked = 0
-        for report_doc in reports:
-            report = report_doc['last']
-            if len(all_accounts) != 0 and report['account_name'] not in all_accounts:
-                continue
-            cis_rules = report['report'].get('rules', [])
-            for rule in cis_rules:
-                include_rule = rules_score_flag_map.get(rule.get('rule_name'), True)
-                if not include_rule:
-                    continue
-                if is_failed_rule(rule.get('status')):
-                    total_failed += 1
-                total_checked += 1
-            total_passed = total_checked - total_failed
-        if total_checked == 0:
-            return 0
-        return round((total_passed / total_checked) * 100)
 
     if not all_reports:
         return return_default_report()
@@ -347,5 +445,11 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
         # If the the rules array is empty somehow, return the default rules.
         return return_default_report()
 
-    score = calculate_score(all_reports)
+    if aggregated:
+        aggregated_rules, account_ids, account_names, last_updated = aggregate_reports(all_reports)
+        cis_report = prepare_aggregated_report(aggregated_rules, account_ids, account_names, last_updated)
+    else:
+        cis_report = prepare_report(all_reports)
+
+    score = _calculate_score(all_reports, rules_score_flag_map)
     return cis_report, score
