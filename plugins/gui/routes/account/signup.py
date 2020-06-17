@@ -27,7 +27,8 @@ class Signup:
         """
         return self._process_signup(return_api_keys=False)
 
-    def _process_signup(self, return_api_keys: Optional[bool] = False):
+    # pylint: disable=dangerous-default-value
+    def _process_signup(self, return_api_keys: Optional[bool] = False, manual_signup: dict = {}):
         """Process initial signup.
 
         Args:
@@ -38,14 +39,19 @@ class Signup:
         signup_collection = self._get_collection(gui_consts.Signup.SignupCollection)
         signup = signup_collection.find_one({})
 
-        if request.method == 'GET':
+        if not manual_signup and request.method == 'GET':
             return jsonify({gui_consts.Signup.SignupField: bool(signup) or has_customer_login_happened()})
 
         # POST from here
         if signup or has_customer_login_happened():
+            if manual_signup:
+                return False
             return return_error('Signup already completed', 400)
 
-        signup_data = self.get_request_data_as_object() or {}
+        if manual_signup:
+            signup_data = manual_signup
+        else:
+            signup_data = self.get_request_data_as_object() or {}
 
         new_password = signup_data[gui_consts.Signup.NewPassword] if \
             signup_data[gui_consts.Signup.ConfirmNewPassword] == signup_data[gui_consts.Signup.NewPassword] \
@@ -88,6 +94,9 @@ class Signup:
             }
         })
         self._getting_started_settings['enabled'] = True
+
+        if manual_signup:
+            return True
 
         result = {}
         if return_api_keys:

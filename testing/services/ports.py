@@ -1,6 +1,7 @@
 DOCKER_PORTS = {
     'smtp':                             25,
     'maildiranasaurus':                 26,
+    'openvpn-service':                  2212,
     'gui':                              4433,
     'mockingbird':                      1444,
     'cyberark_vault_simulator':         1337,

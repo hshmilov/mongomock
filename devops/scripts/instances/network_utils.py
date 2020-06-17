@@ -10,14 +10,16 @@ from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
                                                 AXONIUS_SETTINGS_HOST_PATH,
                                                 WEAVE_NETWORK_SUBNET_KEY,
-                                                DOCKER_NETWORK_SUBNET_KEY)
+                                                DOCKER_NETWORK_SUBNET_KEY, DOCKER_TUNNEL_SUBNET_KEY)
 from services.standalone_services.core_proxy_service import CoreProxyService
 from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
 DEFAULT_DOCKER_SUBNET_IP_RANGE = '174.17.0.0/16'
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
+DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE = '171.18.0.0/16'
 DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
+DOCKER_TUNNEL_INTERFACE_NAME = 'br-ax-vpnnet'
 DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
 
 
@@ -32,6 +34,18 @@ def get_docker_subnet_ip_range():
         print(f'Using default docker ip range {docker_subnet}')
 
     return docker_subnet
+
+
+def get_tunnel_subnet_ip_rage():
+    conf = get_customer_conf_json()
+    vpnnet_subnet = conf.get(DOCKER_TUNNEL_SUBNET_KEY, DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE)
+
+    if DOCKER_TUNNEL_SUBNET_KEY in conf:
+        print(f'Found custom VPN network ip range: {vpnnet_subnet}')
+    else:
+        print(f'Using default VPN ip range {vpnnet_subnet}')
+
+    return vpnnet_subnet
 
 
 def get_weave_subnet_ip_range():

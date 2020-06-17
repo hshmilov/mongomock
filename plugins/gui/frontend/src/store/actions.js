@@ -701,3 +701,45 @@ export const getEnvironmentName = ({ dispatch }) => dispatch(REQUEST_API, {
   rule: 'get_environment_name',
   method: 'GET',
 });
+
+export const GET_TUNNEL_STATUS = 'GET_TUNNEL_STATUS';
+export const getTunnelStatus = ({ dispatch }) => {
+    return dispatch(REQUEST_API, {
+    rule: 'tunnel/get_status',
+    method: 'GET',
+  });
+}
+
+export const GET_TUNNEL_EMAILS_LIST = 'GET_TUNNEL_EMAILS_LIST';
+export const getTunnelEmailsList = ({ dispatch }) => {
+    return dispatch(REQUEST_API, {
+    rule: 'tunnel/emails_list',
+    method: 'GET',
+  });
+}
+
+export const SAVE_TUNNEL_EMAILS_LIST = 'SAVE_TUNNEL_EMAILS_LIST';
+export const saveTunnelEmailsList = ({ state, dispatch }, payload) => {
+  return dispatch(REQUEST_API, {
+    rule: `tunnel/emails_list`,
+    method: 'POST',
+    data: payload,
+  });
+};
+
+export const GET_TUNNEL_PROXY_SETTINGS = 'GET_TUNNEL_PROXY_SETTINGS';
+export const getTunnelProxySettings = ({ dispatch }) => {
+    return dispatch(REQUEST_API, {
+    rule: 'tunnel/proxy_settings',
+    method: 'GET',
+  });
+}
+
+export const SAVE_TUNNEL_PROXY_SETTINGS = 'SAVE_TUNNEL_PROXY_SETTINGS';
+export const saveTunnelProxySettings = ({ state, dispatch }, payload) => {
+  return dispatch(REQUEST_API, {
+    rule: `tunnel/proxy_settings`,
+    method: 'POST',
+    data: payload,
+  });
+};

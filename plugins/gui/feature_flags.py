@@ -89,6 +89,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.EnableSaaS,
+                    'title': 'Enable Tunnel',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -217,6 +222,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
             FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
+            FeatureFlagsNames.EnableSaaS: False,
             FeatureFlagsNames.QueryTimelineRange: False,
             FeatureFlagsNames.EnforcementCenter: True
         }

@@ -54,6 +54,6 @@ class TeamcityHelper(TeamcityServiceMessages):
         if flowId is None:
             flowId = threading.get_ident()
         if self.is_in_teamcity():
-            self.customMessage(message, status, flowId=str(flowId))
+            self.customMessage(message.replace(' ', '_'), status, flowId=str(flowId))
         else:
             print(message)

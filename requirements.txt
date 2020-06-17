@@ -112,4 +112,5 @@ pip==19.3.1
 pymongocrypt==0.1b1
 pem==19.3.0
 uptime==3.0.1
+matplotlib==3.2.1
 segfault==0.0.1

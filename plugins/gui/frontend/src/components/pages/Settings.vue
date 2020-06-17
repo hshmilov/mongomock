@@ -114,6 +114,13 @@
         <XRolesTable />
       </XTab>
       <XTab
+        v-if="tunnelTabEnabled || $isAxoniusUser()"
+        id="tunnel-tab"
+        title="Tunnel Settings"
+      >
+        <XTunnel />
+      </XTab>
+      <XTab
         id="about-settings-tab"
         title="About"
       >
@@ -161,6 +168,7 @@ import XForm from '../neurons/schema/Form.vue';
 import XCustom from '../neurons/schema/Custom.vue';
 import XMaintenance from '../networks/config/Maintenance.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
+import XTunnel from '../networks/config/Tunnel.vue';
 
 export default {
   name: 'XSettings',
@@ -174,6 +182,7 @@ export default {
     XCustom,
     XMaintenance,
     XFeatureFlags,
+    XTunnel,
     XUsersManagement,
     XRolesTable,
   },
@@ -213,6 +222,12 @@ export default {
         return state.auth.allUsers.data;
       },
     }),
+    tunnelTabEnabled() {
+      if (this.featureFlagsFromState.config !== undefined) {
+        return this.featureFlagsFromState.config.enable_saas;
+      }
+      return true;
+    },
     canUpdateSettings() {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.Update);

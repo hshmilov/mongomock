@@ -1,4 +1,6 @@
+import os
 import random
+import subprocess
 import time
 import json
 
@@ -186,8 +188,11 @@ def test_exclude_config_quick():
 
         }
         '''
-
-        CUSTOMER_CONF_PATH.write_text(customer_conf)
+        try:
+            CUSTOMER_CONF_PATH.write_text(customer_conf)
+        except PermissionError:
+            os.system(f'/usr/bin/sudo /bin/chown ubuntu:ubuntu {CUSTOMER_CONF_PATH}')
+            CUSTOMER_CONF_PATH.write_text(customer_conf)
         result = process_exclude_from_config([])
         assert 'nimbul' not in result
 

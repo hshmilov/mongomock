@@ -15,6 +15,7 @@ import selenium.common.exceptions
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
+from axonius.saas.input_params import read_saas_input_params
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames,\
     DASHBOARD_SPACE_TYPE_CUSTOM, CONFIG_CONFIG
 from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
@@ -25,7 +26,7 @@ from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
-from test_credentials.test_gui_credentials import DEFAULT_USER
+from test_credentials.test_gui_credentials import DEFAULT_USER, AXONIUS_AWS_TESTS_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.pages.administration_page import AdministrationPage
@@ -322,8 +323,9 @@ class TestBase:
         self.logger = logger
         self.setup_browser()
 
-        self.username = DEFAULT_USER['user_name']
-        self.password = DEFAULT_USER['password']
+        self.username = DEFAULT_USER['user_name'] if not read_saas_input_params() else \
+            AXONIUS_AWS_TESTS_USER['user_name']
+        self.password = DEFAULT_USER['password'] if not read_saas_input_params() else AXONIUS_AWS_TESTS_USER['password']
         self.axonius_system = get_service()
 
         self.login()

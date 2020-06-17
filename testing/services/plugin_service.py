@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Type, Any
 
 import cachetools
+import docker
 import gridfs
 import requests
 from axonius.adapter_base import AdapterBase
@@ -22,8 +23,9 @@ from retrying import retry
 
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION
+    PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION, GUI_PLUGIN_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -31,6 +33,8 @@ from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
 from axonius.utils.threading import singlethreaded
+from conf_tools import get_tunneled_dockers
+from scripts.instances.instances_consts import VPNNET_NETWORK
 from services.debug_template import (py_charm_debug_port_template,
                                      py_charm_debug_template,
                                      py_charm_debug_volumes_template,
@@ -97,6 +101,15 @@ class PluginService(WeaveService):
             # Only adapters can be down like this
             return
         self.core.trigger(job_name=f'start:{plugin_unique_name}', blocking=True, reschedulable=False)
+
+    def feature_flags_config(self) -> dict:
+        try:
+            return self.db.client[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
+                'config_name': FEATURE_FLAGS_CONFIG
+            })['config']
+        except Exception:
+            # Gui probably didnt initialize yet
+            return None
 
     def _verify_plugin_is_up(self, plugin_unique_name: str):
         if plugin_unique_name == CORE_UNIQUE_NAME:
@@ -244,6 +257,18 @@ class PluginService(WeaveService):
         self.register_unique_dns()
         self.api_key  # put API key in cache
         self.unique_name  # put unique name in cache
+
+    def handle_tunneled_container(self):
+        if self.feature_flags_config() and self.feature_flags_config().get(FeatureFlagsNames.EnableSaaS, False) and \
+                self.container_name.replace('-', '_') in get_tunneled_dockers():
+            client = docker.from_env()
+            container = client.containers.get(self.container_name)
+            print(f'Adding to tunnel network - {VPNNET_NETWORK}')
+            vpnnet = client.networks.get(VPNNET_NETWORK)
+            vpnnet.connect(container)
+            print(f'Setting routing rules')
+            assert container.exec_run(privileged=True, cmd='route del default').exit_code == 0
+            assert container.exec_run(privileged=True, cmd='route add default gw openvpn-service.vpnnet').exit_code == 0
 
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def register_unique_dns(self):

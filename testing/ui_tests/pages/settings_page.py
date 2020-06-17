@@ -25,6 +25,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDILE_DATE = '13:00'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
+    TUNNEL_SETTINGS_CSS = 'li#tunnel-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
     MANAGE_USERS_CSS = 'li#user-settings-tab'
     MANAGE_ROLES_CSS = 'li#roles-settings-tab'
@@ -125,7 +126,7 @@ class SettingsPage(Page):
                                         ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
                                         ' > div:nth-child(5) > div > div > div.file-name '
     CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab > .tab-settings > .x-form > .x-array-edit > ' \
-                                  'div:nth-child(16) > div > div > div:nth-child(3) > div > div > div:nth-child(2) > ' \
+                                  'div:nth-child(17) > div > div > div:nth-child(3) > div > div > div:nth-child(2) > ' \
                                   'div > div > input[type="file"]'
 
     LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'v-select\')]' \
@@ -651,6 +652,9 @@ class SettingsPage(Page):
 
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
+
+    def click_tunnel_settings(self):
+        self.driver.find_element_by_css_selector(self.TUNNEL_SETTINGS_CSS).click()
 
     def click_feature_flags(self):
         self.driver.find_element_by_css_selector(self.FEATURE_FLAGS_CSS).click()

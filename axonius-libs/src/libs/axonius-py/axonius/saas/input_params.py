@@ -1,3 +1,6 @@
+# Should be imported from inside the docker and outside the docker
+import json
+
 import requests
 
 
@@ -13,7 +16,9 @@ def read_saas_input_params():
             if '=' in param:
                 splitted = param.split('=')
                 result[splitted[0].strip()] = splitted[1].strip()
-
+        # To make regular build in AWS boot properly
+        if 'AXONIUS_SAAS_NODE' not in result:
+            return False
         return result
 
     except Exception as e:
@@ -39,3 +44,8 @@ def get_stack_name():
 
 def get_params_key_id():
     return read_saas_input_params().get('PARAMS_KEY_ARN').split('/')[1]
+
+
+if __name__ == '__main__':
+    if is_axonius_saas_instance():
+        print(json.dumps(read_saas_input_params()))

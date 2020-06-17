@@ -27,11 +27,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 from retrying import retry
 
-
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, \
-    CONNECTION_LABEL, CLIENT_ID, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS, \
-    VAULT_PROVIDER
-from axonius.consts.gui_consts import ParallelSearch, ACTIVITY_PARAMS_COUNT
+from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL,\
+    CLIENT_ID, VAULT_PROVIDER, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS
+from axonius.consts.gui_consts import FeatureFlagsNames, ParallelSearch, ACTIVITY_PARAMS_COUNT
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.metric_helper import log_metric
@@ -43,9 +41,9 @@ from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, \
-    DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, PARALLEL_ADAPTERS,\
-    THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, \
-    DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE
+    DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, INSTANCE_CONTROL_PLUGIN_NAME, \
+    GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, DEVICE_LOCATION_MAPPING, \
+    CSV_IP_LOCATION_FILE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -92,6 +90,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     DEFAULT_FETCHING_TIMEOUT = 43200
     DEFAULT_LAST_SEEN_PRIORITIZED = False
     DEFAULT_CLIENT_CONFIG_PARAMS = ['connection_label']
+    PING_TUNNEL_CLIENT_CMD = 'docker exec -i openvpn-service ping -c 2 {ip}'
+    DEFAULT_TUNNEL_CLIENT_IP = '192.167.255.2'
+    PING_CMD_EXPECTED_RESULT = '2 packets transmitted, 2 packets received'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -179,6 +180,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._is_last_seen_prioritized = config.get('last_seen_prioritized', False)
 
         self.__is_realtime = config.get('realtime_adapter', False)
+        self._connect_via_tunnel = config.get('connect_via_tunnel', False)
+
+        if self._connect_via_tunnel:
+            self.request_remote_plugin(f'tunnel/{self.plugin_name}', method='PUT')
+        else:
+            self.request_remote_plugin(f'tunnel/{self.plugin_name}', method='DELETE')
 
         # pylint: disable=R0201
 
@@ -492,12 +499,32 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 # pylint: disable=W0631
                 logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-return-statements,too-many-branches
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         self.__has_a_reason_to_live = True
         # pylint: disable=too-many-nested-blocks
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
+            if self._connect_via_tunnel:
+                res = self._trigger_remote_plugin(
+                    INSTANCE_CONTROL_PLUGIN_NAME,
+                    job_name='execute_shell',
+                    data={'cmd': self.PING_TUNNEL_CLIENT_CMD.format(ip=self.DEFAULT_TUNNEL_CLIENT_IP)},
+                    timeout=30,
+                    stop_on_timeout=True,
+                    priority=True
+                )
+                res.raise_for_status()
+                if self.PING_CMD_EXPECTED_RESULT not in res.text:
+                    self.log_activity(AuditCategory.Adapters, AuditAction.Skip, {
+                        'adapter': self.plugin_name,
+                        'client_id': client_name
+                    })
+                    self._update_client_status(client_name, 'error')
+                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_down', blocking=False)
+                    return to_json({'devices_count': 0, 'users_count': 0})
+                self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
+
             check_fetch_time = False
             if post_json and post_json.get('check_fetch_time'):
                 check_fetch_time = post_json.get('check_fetch_time')
@@ -616,6 +643,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             try:
                 self._clients[client_config['client_id']] = self.__connect_client_facade(client_config)
                 self._update_client_status(client_config['client_id'], 'success')
+                if self._connect_via_tunnel:
+                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
                 logger.info(f'Client: {client_config["client_id"]} status was changed to success!')
             except Exception as e:
                 logger.error(f'Couldn\'t initiate connection to client: '
@@ -1035,6 +1064,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             self._clients[client_id] = self.__connect_client_facade(client_config)
             # Got here only if connection succeeded
             status = 'success'
+            if self._connect_via_tunnel:
+                self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
 
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             self._clients[client_id] = None
@@ -1592,6 +1623,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             try:
                 self._clients[client_id] = self.__connect_client_facade(self._get_client_config_by_client_id(client_id))
                 self._update_client_status(client_id, 'success')
+                if self._connect_via_tunnel:
+                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
             except Exception as e:
                 self._clients[client_id] = None
                 self._update_client_status(client_id, 'error', str(e))
@@ -1847,7 +1880,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     @classmethod
     def _db_config_schema(cls) -> dict:
-        return {
+        schema = {
             'items': [
                 {
                     'name': 'last_seen_threshold_hours',
@@ -1904,20 +1937,32 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             'pretty_name': 'Adapter Configuration',
             'type': 'array'
         }
+        if cls.feature_flags_config(cls.Instance).get(FeatureFlagsNames.EnableSaaS, False):
+            schema['items'].append({
+                'name': 'connect_via_tunnel',
+                'title': 'Use Tunnel to connect to source',
+                'type': 'bool',
+            })
+            schema['required'].append('connect_via_tunnel')
+        return schema
 
     @classmethod
     def _db_config_default(cls):
-        return {
-            'last_seen_threshold_hours': cls.DEFAULT_LAST_SEEN_THRESHOLD_HOURS,
-            'last_fetched_threshold_hours': cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
-            'user_last_seen_threshold_hours': cls.DEFAULT_USER_LAST_SEEN,
-            'user_last_fetched_threshold_hours': cls.DEFAULT_USER_LAST_FETCHED,
-            'minimum_time_until_next_fetch': cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH,
-            'connect_client_timeout': cls.DEFAULT_CONNECT_CLIENT_TIMEOUT,
-            'fetching_timeout': cls.DEFAULT_FETCHING_TIMEOUT,
-            'last_seen_prioritized': cls.DEFAULT_LAST_SEEN_PRIORITIZED,
-            'realtime_adapter': False
-        }
+        default_schema = \
+            {
+                'last_seen_threshold_hours': cls.DEFAULT_LAST_SEEN_THRESHOLD_HOURS,
+                'last_fetched_threshold_hours': cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
+                'user_last_seen_threshold_hours': cls.DEFAULT_USER_LAST_SEEN,
+                'user_last_fetched_threshold_hours': cls.DEFAULT_USER_LAST_FETCHED,
+                'minimum_time_until_next_fetch': cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH,
+                'connect_client_timeout': cls.DEFAULT_CONNECT_CLIENT_TIMEOUT,
+                'fetching_timeout': cls.DEFAULT_FETCHING_TIMEOUT,
+                'last_seen_prioritized': cls.DEFAULT_LAST_SEEN_PRIORITIZED,
+                'realtime_adapter': False
+            }
+        if cls.feature_flags_config(cls.Instance).get(FeatureFlagsNames.EnableSaaS, False):
+            default_schema['connect_via_tunnel'] = False
+        return default_schema
 
     @classmethod
     def _discovery_schema(cls) -> dict:

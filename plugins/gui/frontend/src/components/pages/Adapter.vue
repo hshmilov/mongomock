@@ -527,6 +527,7 @@ export default {
     },
 
     saveConfig({ configName, config }) {
+      this.message = 'Adapter configuration saving in progress...';
       this.updatePluginConfig({
         prefix: 'adapters',
         pluginId: this.adapterId,
@@ -534,6 +535,9 @@ export default {
         config,
       }).then(() => {
         this.message = 'Adapter configuration saved.';
+        setTimeout(() => {
+          this.message = '';
+        }, 5000);
         return true;
       });
     },

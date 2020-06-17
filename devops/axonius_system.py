@@ -2,30 +2,30 @@
 import argparse
 import sys
 import traceback
+import subprocess
+import platform
+import os
 
 from datetime import datetime
 
 from pymongo.errors import PyMongoError
 
+from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from axonius.utils.build_modes import BuildModes
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
-from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from services.axonius_service import get_service
-import subprocess
-import platform
-import os
-
 from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
+from axonius.saas.input_params import read_saas_input_params
 from axonius.consts.system_consts import (METADATA_PATH,
                                           AXONIUS_MOCK_DEMO_ENV_VAR,
                                           SYSTEM_CONF_PATH,
                                           CUSTOMER_CONF_PATH,
                                           NODE_MARKER_PATH,
                                           NODE_CONF_PATH,
-                                          CORTEX_PATH)
-
+                                          CORTEX_PATH, AXONIUS_VPN_DATA_PATH)
 from devops.scripts.watchdog import watchdog_main
+from tunnel_setup import setup_openvpn
 
 
 def main(command):
@@ -122,6 +122,11 @@ def system_entry_point(args):
     if not os.path.isfile(metadata_path):
         with open(metadata_path, 'wb') as f:
             f.write(get_metadata('none').encode())
+
+    if not os.path.exists(os.path.join(AXONIUS_VPN_DATA_PATH, 'openvpn.conf')) \
+            and read_saas_input_params() or \
+            not args.prod and os.name == 'posix':
+        setup_openvpn()
 
     axonius_system = get_service()
     internal_services = [service.service_name for service in axonius_system.axonius_services]

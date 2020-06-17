@@ -33,12 +33,13 @@ from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           REPORTS_PLUGIN_NAME,
                                           STATIC_ANALYSIS_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION, AGGREGATION_SETTINGS,
-                                          UPDATE_CLIENTS_STATUS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
-                                          DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON, DISCOVERY_RESEARCH_DATE_TIME,
-                                          DISCOVERY_REPEAT_EVERY, STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+                                          UPDATE_CLIENTS_STATUS, GUI_PLUGIN_NAME, DISCOVERY_CONFIG_NAME,
+                                          ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON,
+                                          DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, \
-    CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD
+    TUNNEL_STATUS_CHECK_INTERVAL, CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -101,6 +102,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           max_instances=1)
         self.__realtime_scheduler.start()
 
+        self.__tunnel_status_scheduler = LoggedBackgroundScheduler(
+            executors={'default': ThreadPoolExecutorApscheduler(1)})
+        self.__tunnel_status_scheduler.add_job(func=self.__run_tunnel_check,
+                                               trigger=IntervalTrigger(minutes=TUNNEL_STATUS_CHECK_INTERVAL),
+                                               next_run_time=datetime.now(),
+                                               max_instances=1)
+        self.__tunnel_status_scheduler.start()
+
         self.__custom_discovery_scheduler = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
         })
@@ -109,6 +118,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                                   next_run_time=datetime.now(),
                                                   max_instances=1)
         self.__custom_discovery_scheduler.start()
+
         self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
         })
@@ -851,6 +861,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     plugin_name=adapter[PLUGIN_UNIQUE_NAME],
                     job_name='update_clients_status'
                 )
+
+    def __run_tunnel_check(self):
+        logger.debug('Triggered gui with check_tunnel_status job')
+        self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'check_tunnel_status', blocking=False)
 
     def trigger_adapters_out_of_cycle(self, adapters_to_call: List[dict], log_fetch=False):
         """

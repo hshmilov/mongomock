@@ -99,7 +99,8 @@ from axonius.consts.plugin_consts import (
     THYCOTIC_SS_USERNAME, PASSWORD_MANGER_CYBERARK_VAULT, CYBERARK_APP_ID,
     CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
-    CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY)
+    CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
+    TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices import deep_merge_only_dict
@@ -3388,6 +3389,45 @@ class PluginBase(Configurable, Feature, ABC):
                     ]
                 },
                 {
+                    'name': TUNNEL_SETTINGS,
+                    'type': 'array',
+                    'required': [TUNNEL_EMAILS_RECIPIENTS],
+                    'format': 'hidden',
+                    'items': [
+                        {
+                            'name': TUNNEL_EMAILS_RECIPIENTS,
+                            'type': 'array',
+                            'items': []
+                        },
+                        {
+                            'name': TUNNEL_PROXY_SETTINGS,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': 'enabled',
+                                    'type': 'bool'
+                                },
+                                {
+                                    'name': TUNNEL_PROXY_ADDR,
+                                    'type': 'string'
+                                },
+                                {
+                                    'name': TUNNEL_PROXY_PORT,
+                                    'type': 'number'
+                                },
+                                {
+                                    'name': TUNNEL_PROXY_USER,
+                                    'type': 'string'
+                                },
+                                {
+                                    'name': TUNNEL_PROXY_PASSW,
+                                    'type': 'string'
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
                     'name': PASSWORD_SETTINGS,
                     'title': 'Password Policy Settings',
                     'type': 'array',
@@ -4113,6 +4153,16 @@ class PluginBase(Configurable, Feature, ABC):
                 PASSWORD_MIN_UPPERCASE: 1,
                 PASSWORD_MIN_NUMBERS: 1,
                 PASSWORD_MIN_SPECIAL_CHARS: 0
+            },
+            TUNNEL_SETTINGS: {
+                TUNNEL_EMAILS_RECIPIENTS: [],
+                TUNNEL_PROXY_SETTINGS: {
+                    'enabled': False,
+                    TUNNEL_PROXY_ADDR: '',
+                    TUNNEL_PROXY_PORT: 8080,
+                    TUNNEL_PROXY_USER: '',
+                    TUNNEL_PROXY_PASSW: ''
+                }
             },
             RESET_PASSWORD_SETTINGS: {
                 RESET_PASSWORD_LINK_EXPIRATION: 48,

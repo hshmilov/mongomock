@@ -1462,7 +1462,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         # for it to not be mounted.
 
         published_ports = [
-            '--publish', '443:1443',  # external customer-facing web server. host:443 -> gui:1443
+            '--publish', f'443:1443'  # external customer-facing web server. host:443 -> gui:1443
         ]
         if not self._system_config.get('https-only'):
             published_ports.extend(['--publish', '80:80'])
@@ -1510,6 +1510,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     @property
     def is_unique_image(self):
         return True
+
+    @property
+    def run_timeout(self):
+        return 60 * 6
 
     # I don't want to change all dockerfiles
     # pylint: disable=W0221

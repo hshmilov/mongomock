@@ -32,15 +32,17 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class UserToken:
 
     @gui_route_logged_in('generate', methods=['PUT', 'POST'], activity_params=[USER_NAME])
-    def generate_user_reset_password_link(self):
+    def generate_user_reset_password_link(self, manual_user_id: str = ''):
         """
         Gets user ID and generate reset password token
         user id expected to be plain text, not ObjectId
         :return: link to current machine reset password page, with the token as url param
         """
-        post_data = self.get_request_data_as_object()
-        user_id = post_data.get('user_id')
-
+        if not manual_user_id:
+            post_data = self.get_request_data_as_object()
+            user_id = post_data.get('user_id')
+        else:
+            user_id = manual_user_id
         if not user_id:
             return return_error('please provide valid user id', 400)
 
@@ -51,8 +53,8 @@ class UserToken:
             return return_error('please provide valid user id', 400)
 
         # Only admin users can create a reset link for the 'admin' user
-        if not self.is_admin_user() and user.get('user_name') == ADMIN_USER_NAME:
-            return return_error(f'Not allowed to reset {user[USER_NAME]} user', 401)
+        if not manual_user_id and not self.is_admin_user() and user.get('user_name') != ADMIN_USER_NAME:
+            return return_error(f'Not allowed to reset {user["user_name"]} user', 401)
 
         token = secrets.token_urlsafe()
         result = self._users_tokens_collection.update_one({

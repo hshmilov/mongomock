@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import json
 import logging
 import os
@@ -5,11 +6,12 @@ import secrets
 import subprocess
 import time
 import configparser
-from datetime import datetime
+
+from datetime import datetime, timedelta
 from distutils.version import StrictVersion
 from typing import (List, Dict)
 from pathlib import Path
-
+from passlib.hash import bcrypt
 from bson import ObjectId
 from bson.json_util import dumps
 
@@ -23,6 +25,8 @@ from flask import session, g
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
+from axonius.saas.input_params import read_saas_input_params
+from axonius.saas.saas_secrets_manager import SaasSecretsManager
 from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
@@ -42,7 +46,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_OWNER_RO,
                                        IS_AXONIUS_ROLE,
                                        USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
-                                       LATEST_VERSION_URL, INSTALLED_VERISON_KEY)
+                                       LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -50,14 +54,19 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
                                           CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME,
-                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_COLLECTION)
+                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_COLLECTION,
+                                          PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE,
+                                          PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
+                                          PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
+                                          PASSWORD_PROTECTION_LOCKOUT_MIN, PASSWORD_PROTECTION_BY_IP,
+                                          RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import (RunIdentifier,
                                         Triggerable)
-from axonius.plugin_base import EntityType, PluginBase
+from axonius.plugin_base import EntityType, PluginBase, random_string
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
                                      COMMON_SSL_CONFIG_SCHEMA_DEFAULTS)
@@ -74,6 +83,7 @@ from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.logic.dashboard_data import (adapter_data)
+from gui.logic.login_helper import has_customer_login_happened
 from gui.logic.filter_utils import filter_archived
 from gui.routes.app_routes import AppRoutes
 
@@ -82,6 +92,8 @@ from gui.routes.app_routes import AppRoutes
 logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
+DEFAULT_AWS_TEST_USER = 'admin2'
+DEFAULT_AWS_TEST_PASSWORD = 'kjhsjdhbfnlkih43598sdfnsdfjkh'
 
 
 class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, AppRoutes):
@@ -222,6 +234,9 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self.upload_files_dir = Path(self.cortex_root_dir, 'uploaded_files')
         self.upload_files_list = {}
         self.latest_version = None
+        if read_saas_input_params():
+            self.ssm_client = SaasSecretsManager()
+            self.tunnel_status = False
 
         try:
             self._users_collection.create_index([('user_name', pymongo.ASCENDING),
@@ -257,6 +272,11 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         self.encryption_key = self.load_encryption_key()
         self._set_first_time_use()
         self._trigger('clear_dashboard_cache', blocking=False)
+        try:
+            self.check_and_initialize_self_serve_instance()
+        except Exception:
+            logger.error('An exception happened while initializing self-server settings', exc_info=True)
+
         self._job_scheduler.add_job(func=self.get_latest_version,
                                     trigger=IntervalTrigger(minutes=30),
                                     next_run_time=datetime.now(),
@@ -306,6 +326,108 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     def _delayed_initialization(self):
         self._init_all_dashboards()
+
+    def check_and_initialize_self_serve_instance(self):
+        if has_customer_login_happened():
+            return
+        # Two if statements so we wont make the request for nothing on every boot of non self-serve machine
+        saas_params = read_saas_input_params()
+        if not saas_params or 'AXONIUS_SAAS_NODE' not in saas_params or \
+                ('AXONIUS_SAAS_NODE' in saas_params and saas_params['AXONIUS_SAAS_NODE'] == 'False'):
+            return
+
+        logger.info('Initializing self-serve settings')
+        # Set trial to 30 days from now
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            'config_name': FeatureFlags.__name__
+        }, {
+            '$set': {
+                f'config.{FeatureFlagsNames.TrialEnd}':
+                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+            }
+        })
+
+        # Enable Tunnel feature flag automatically
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            'config_name': FeatureFlags.__name__
+        }, {
+            '$set': {
+                f'config.{FeatureFlagsNames.EnableSaaS}': True
+            }
+        })
+
+        # Set password policy
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
+            'config_name': 'CoreService'
+        }, {
+            '$set': {
+                f'config.{PASSWORD_SETTINGS}.enabled': True,
+                f'config.{PASSWORD_SETTINGS}.{PASSWORD_LENGTH_SETTING}': 10,
+                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_LOWERCASE}': 0,
+                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_UPPERCASE}': 0,
+                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_NUMBERS}': 0,
+                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_SPECIAL_CHARS}': 0
+            }
+        })
+
+        # Set password brute force protection
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
+            'config_name': 'CoreService'
+        }, {
+            '$set': {
+                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.enabled': True,
+                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_ALLOWED_RETRIES}': 20,
+                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_LOCKOUT_MIN}': 5,
+                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.conditional': PASSWORD_PROTECTION_BY_IP
+            }
+        })
+
+        # Set password reset link expiration to 1 week
+        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
+            'config_name': 'CoreService'
+        }, {
+            '$set': {
+                f'config.{RESET_PASSWORD_SETTINGS}.{RESET_PASSWORD_LINK_EXPIRATION}': 168
+            }
+        })
+
+        # Automatic signup
+        random_password = random_string(32)
+        signup_data = {
+            'companyName': saas_params.get('COMPANY_FOR_SIGNUP', 'Unknown company'),
+            'newPassword': random_password,
+            'confirmNewPassword': random_password,
+            'contactEmail': saas_params.get('EMAIL_FOR_SIGNUP', 'unknown@email.com'),
+            'userName': 'admin'
+        }
+        self._process_signup(return_api_keys=False, manual_signup=signup_data)
+
+        # Generate reset password link and send it to AWS
+        admin_user_id = self._users_collection.find_one({'user_name': 'admin'}, projection=['_id'])['_id']
+        reset_link = self.generate_user_reset_password_link(manual_user_id=str(admin_user_id))
+        self.ssm_client.store_admin_password_reset_link(reset_link.replace('localhost', saas_params.get('WEB_URL')))
+
+        # Add admin user for testing
+        if saas_params.get('MACHINE_ENVIRONMENT', 'prod') == 'Test':
+            self._create_user_if_doesnt_exist(
+                username=DEFAULT_AWS_TEST_USER,
+                first_name='Test',
+                last_name='Test',
+                email='test_axonius@axonius.com',
+                picname=None,
+                source='internal',
+                password=bcrypt.hash(DEFAULT_AWS_TEST_PASSWORD),
+                role_id=self._roles_collection.find_one({'name': 'Admin'}, projection=['_id'])['_id']
+            )
+        logger.info('Done configuring self-serve settings')
+
+    @staticmethod
+    def get_stack_name(params):
+        return params.get('STACK_NAME')
+
+    @staticmethod
+    def get_params_key_id(params):
+        return params.get('PARAMS_KEY_ARN').split('/')[1]
 
     def add_default_dashboard_charts(self, default_dashboard_charts_ini_path):
         try:
@@ -1090,6 +1212,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             # Don't clean too often!
             time.sleep(5)
             return ''
+
+        elif job_name == 'check_tunnel_status':
+            self.check_tunnel_status(internal_use=True)
+
+        elif job_name == 'tunnel_is_down':
+            self._tunnel_is_down()
+
+        elif job_name == 'tunnel_is_up':
+            self._tunnel_is_up()
 
         elif job_name == 'execute':
             # GUI is a post correlation plugin, thus this is called near the end of the cycle

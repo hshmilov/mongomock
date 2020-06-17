@@ -37,6 +37,7 @@ SchedulerState = namedlist('SchedulerState',
 RESEARCH_THREAD_ID = 'phase_thread'
 CORRELATION_SCHEDULER_THREAD_ID = 'correlation_scheduler_thread'
 CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL = 90
+TUNNEL_STATUS_CHECK_INTERVAL = 15
 
 # Configurable
 SCHEDULER_CONFIG_NAME = 'SystemSchedulerService'

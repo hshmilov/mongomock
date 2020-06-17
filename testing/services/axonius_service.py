@@ -10,17 +10,20 @@ from multiprocessing.pool import ThreadPool
 
 import pytest
 
+from axonius.utils.json import from_json
+from conf_tools import TUNNELED_ADAPTERS
+from scripts.instances.network_utils import (get_encryption_key,
+                                             restore_master_connection, get_weave_subnet_ip_range,
+                                             get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
 from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
                                           PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
-                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH)
+                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH,
+                                          CUSTOMER_CONF_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
-from scripts.instances.network_utils import (get_encryption_key,
-                                             restore_master_connection, get_weave_subnet_ip_range,
-                                             get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugin_service import AdapterService, PluginService
@@ -32,6 +35,7 @@ from services.plugins.heavy_lifting_service import HeavyLiftingService
 from services.plugins.mongo_service import MongoService
 from services.plugins.instance_control_service import InstanceControlService
 from services.plugins.reports_service import ReportsService
+from services.plugins.openvpn_service import OpenvpnService
 from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
@@ -65,6 +69,8 @@ class AxoniusService:
         self.heavy_lifting = HeavyLiftingService()
         self.instance_control = InstanceControlService()
         self.master_proxy = MasterProxyService()
+        self.openvpn = OpenvpnService()
+
         self.axonius_services = [self.db,
                                  self.core,
                                  self.aggregator,
@@ -76,7 +82,7 @@ class AxoniusService:
                                  self.heavy_lifting,
                                  self.reports,
                                  self.master_proxy,
-                                 ]
+                                 self.openvpn]
 
         # No instance control on windows
         if 'linux' in sys.platform.lower():
@@ -492,11 +498,33 @@ class AxoniusService:
                 if service.get_is_container_up():
                     if skip:
                         return None
-                service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
-                              hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
+                if hasattr(service, 'plugin_name') and self._is_adapter_via_tunnel(service.plugin_name):
+                    """
+                    When adding --dns it means that if the dns request couldn't be resolved
+                    from inside the docker network then the "docker dns server" will pass it to the entered dns servers
+                    in the order of insert (in this instance it will first query 8.8.8.8 and only then if no
+                    result it will query 192.167.255.2)
+
+                    With that logic we make sure the order of resolving the DNS requests from inside
+                    the tunneled adapters is as follows:
+                    1) Inside the docker network (all the axonius.local suffixes"
+                    2) The DNS server of the customer (192.167.255.2 is the IP of the customer's tunnel instance)
+                    3) Global DNS server for general queries (Google Public DNS in this case)
+                    """
+                    service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
+                                  hard=hard, show_print=show_print, docker_internal_env_vars=env_vars,
+                                  extra_flags=['--dns=192.167.255.2', '--dns=8.8.8.8'])
+                else:
+                    service.start(mode, allow_restart=allow_restart, rebuild=rebuild,
+                                  hard=hard, show_print=show_print, docker_internal_env_vars=env_vars)
+
                 service.wait_for_service(120)
                 if service.should_register_unique_dns:
                     service.register_unique_dns()
+
+                # Not all plugins have this function (such as mongo)
+                if hasattr(service, 'handle_tunneled_container'):
+                    service.handle_tunneled_container()
                 return None
             except Exception as e:
                 print(e)
@@ -607,6 +635,15 @@ class AxoniusService:
         # tunneler is a tunnel to host:22 for ssh and scp from master to nodes.
         tunneler_image = f'{DOCKERHUB_URL}alpine/socat'
         return self._pull_image(tunneler_image, repull, show_print)
+
+    @staticmethod
+    def _is_adapter_via_tunnel(adapter_name):
+        if not CUSTOMER_CONF_PATH.is_file():
+            return False
+        data = from_json(CUSTOMER_CONF_PATH.read_bytes())
+        if TUNNELED_ADAPTERS not in data:
+            return False
+        return adapter_name in data[TUNNELED_ADAPTERS]
 
     def pull_base_image(self, repull=False, tag=None, show_print=True):
         base_image = f'{DOCKERHUB_URL}axonius/axonius-base-image'

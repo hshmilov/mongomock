@@ -10,6 +10,7 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from multiprocessing.pool import ThreadPool
+from pathlib import Path
 from typing import Tuple, Any, Optional
 
 from dateutil.parser import parser
@@ -22,9 +23,12 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.consts.core_consts import DEACTIVATED_NODE_STATUS
+from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import InstancesMetrics, SystemMetric
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
+from axonius.utils.json import from_json, to_json
 
 from axonius.utils.threading import LazyMultiLocker
 from docker.models.containers import Container
@@ -49,7 +53,8 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           AXONIUS_DNS_SUFFIX,
                                           NODE_HOSTNAME,
                                           NODE_USE_AS_ENV_NAME,
-                                          NODE_IP_LIST, CONFIGURABLE_CONFIGS_COLLECTION)
+                                          NODE_IP_LIST, CONFIGURABLE_CONFIGS_COLLECTION, AXONIUS_SETTINGS_DIR_NAME,
+                                          CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -63,6 +68,7 @@ CHUNK_SIZE = 1024
 MAX_INSTANCES_OF_SAME_PLUGIN = 100
 BROKEN_NODES_DIFF_IN_SECONDS = (60 * 60 * 3)  # If a node is not communicating for 3 hours, it is broken
 MASTER_NODE_NAME = 'Master'
+TUNNELED_ADAPTERS = 'tunneled_adapters'
 
 
 class CoreService(Triggerable, PluginBase, Configurable):
@@ -119,6 +125,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
         # Get the needed docker socket
         self.__docker_client = docker.from_env()
+        self.customer_conf_path = Path(os.getcwd()) / '..' / AXONIUS_SETTINGS_DIR_NAME / CUSTOMER_CONF_NAME
+        if not self.customer_conf_path.exists():
+            self.customer_conf_path.touch(mode=0o666)
+            self.customer_conf_path.write_text(to_json({TUNNELED_ADAPTERS: {}}))
 
         weave_container = self.__docker_client.containers.list(all=True,
                                                                filters={
@@ -304,6 +314,38 @@ class CoreService(Triggerable, PluginBase, Configurable):
         except Exception as e:
             logger.critical("Cleaning plugins had an error. message: {0}", str(e), exc_info=True)
 
+    def _is_adapter_via_tunnel(self, adapter_name):
+        data = from_json(self.customer_conf_path.read_text())
+        if TUNNELED_ADAPTERS not in data:
+            return None
+        return adapter_name in data[TUNNELED_ADAPTERS]
+
+    def _set_adapter_via_tunnel(self, adapter_name, tunnel_id=1):
+        data = from_json(self.customer_conf_path.read_text())
+        if TUNNELED_ADAPTERS not in data:
+            return None
+        data[TUNNELED_ADAPTERS][adapter_name] = tunnel_id
+        try:
+            self.customer_conf_path.write_text(to_json(data))
+        except Exception as err:
+            logger.error(f'Couldn\'t update customer conf file: {str(err)}')
+            return False
+        return True
+
+    def _delete_adapter_from_tunnel(self, adapter_name):
+        data = from_json(self.customer_conf_path.read_text())
+        if TUNNELED_ADAPTERS not in data:
+            return None
+        if adapter_name not in data[TUNNELED_ADAPTERS]:
+            return None
+        del data[TUNNELED_ADAPTERS][adapter_name]
+        try:
+            self.customer_conf_path.write_text(to_json(data))
+        except Exception as err:
+            logger.error(f'Couldn\'t update customer conf file: {str(err)}')
+            return False
+        return True
+
     @add_rule('nodes/tags/<node_id>', methods=['GET', 'DELETE', 'POST'], should_authenticate=False)
     def node_tags(self, node_id):
         if request.method == 'GET':
@@ -320,6 +362,24 @@ class CoreService(Triggerable, PluginBase, Configurable):
             self._get_collection('nodes_metadata').find_one_and_update({NODE_ID: node_id}, {
                 '$unset': {f'tags.{data["tags"]}': data["tags"]}})
             return ''
+
+    @add_rule('tunnel/<adapter_name>', methods=['PUT', 'DELETE', 'GET'], should_authenticate=False)
+    def add_adapter_to_tunnel(self, adapter_name):
+        if not self.feature_flags_config().get(FeatureFlagsNames.EnableSaaS, False):
+            return return_error('Tunnel not enabled on system', 403)
+        if request.method == 'GET':
+            return jsonify(self._is_adapter_via_tunnel(adapter_name))
+        if request.method == 'PUT' and not self._is_adapter_via_tunnel(adapter_name):
+            if self._set_adapter_via_tunnel(adapter_name):
+                self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:{adapter_name}', reschedulable=False,
+                                            blocking=True, error_as_warning=True, priority=True)
+                self.log_activity(AuditCategory.Adapters, AuditAction.Connected, {'adapter': adapter_name})
+        if request.method == 'DELETE' and self._is_adapter_via_tunnel(adapter_name):
+            if self._delete_adapter_from_tunnel(adapter_name):
+                self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:{adapter_name}', reschedulable=False,
+                                            blocking=True, error_as_warning=True, priority=True)
+                self.log_activity(AuditCategory.Adapters, AuditAction.Disconnected, {'adapter': adapter_name})
+        return ''
 
     @add_rule('nodes/last_seen/<node_id>', methods=['GET'], should_authenticate=False)
     def get_node_status(self, node_id):

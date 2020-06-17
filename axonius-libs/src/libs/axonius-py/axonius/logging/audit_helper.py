@@ -3,6 +3,7 @@ from enum import Enum
 
 class AuditCategory(Enum):
     UserManagement = 'settings.users'
+    PluginSettings = 'settings.plugins'
     UserSession = 'session'
     Discovery = 'discovery'
     CustomDiscovery = 'custom_discovery'
@@ -10,6 +11,7 @@ class AuditCategory(Enum):
     Adapters = 'adapters'
     Reports = 'reports'
     Enforcements = 'enforcements'
+    Tunnel = 'tunnel'
     Dashboard = 'dashboard'
     Instances = 'instances'
 
@@ -18,6 +20,7 @@ class AuditAction(Enum):
     Login = 'login'
     Logout = 'logout'
     Start = 'start'
+    Post = 'post'
     Complete = 'complete'
     StartPhase = 'start_phase'
     CompletePhase = 'complete_phase'
@@ -27,6 +30,9 @@ class AuditAction(Enum):
     Trigger = 'trigger'
     Download = 'download'
     ChangedPassword = 'changed_password'
+    Connected = 'connected'
+    Disconnected = 'disconnected'
+    Skip = 'skip'
     ChangedName = 'changed_name'
     ChangedPermissions = 'changed_permissions'
     AssignedRole = 'assigned_role'

@@ -14,6 +14,7 @@ METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
 LIBS_PATH = Path('/home/axonius/libs')
 DB_KEY_FILENAME = '.db_key'
 DB_KEY_PATH = AXONIUS_SETTINGS_PATH / DB_KEY_FILENAME
+CUSTOMER_CONF_NAME = 'customer_conf.json'
 
 # SERVICES #
 MONGO_UNIQUE_NAME = 'mongo'
@@ -82,6 +83,11 @@ PROXY_USER = 'proxy_user'
 PROXY_PASSW = 'proxy_password'
 PROXY_VERIFY = 'proxy_verify'
 PROXY_FOR_ADAPTERS = 'proxy_for_adapters'
+TUNNEL_PROXY_SETTINGS = 'tunnel_proxy_settings'
+TUNNEL_PROXY_ADDR = 'tunnel_proxy_addr'
+TUNNEL_PROXY_PORT = 'tunnel_proxy_port'
+TUNNEL_PROXY_USER = 'tunnel_proxy_user'
+TUNNEL_PROXY_PASSW = 'tunnel_proxy_password'
 
 NOTIFICATIONS_SETTINGS = 'notifications_settings'
 NOTIFICATIONS_COLLECTION = 'notifications'
@@ -129,6 +135,10 @@ PASSWORD_PROTECTION_BY_USERNAME = 'password_protection_by_username'
 RESET_PASSWORD_SETTINGS = 'password_reset_password'
 RESET_PASSWORD_LINK_EXPIRATION = 'reset_password_link_expiration'
 
+# TUNNEL #
+TUNNEL_SETTINGS = 'tunnel_settings'
+TUNNEL_EMAILS_RECIPIENTS = 'tunnel_email_recipients'
+
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_COLLECTION = 'configurable_configs'
 CLIENTS_COLLECTION = 'clients'
@@ -145,7 +155,8 @@ USER_VIEWS = 'user_views'
 ADMIN_USER_NAME = 'admin'
 AXONIUS_USER_NAME = '_axonius'
 AXONIUS_RO_USER_NAME = '_axonius_ro'
-AXONIUS_USERS_LIST = [AXONIUS_USER_NAME, AXONIUS_RO_USER_NAME]
+AXONIUS_AWS_USER_NAME = 'admin2'
+AXONIUS_USERS_LIST = [AXONIUS_USER_NAME, AXONIUS_RO_USER_NAME, AXONIUS_AWS_USER_NAME]
 PREDEFINED_USER_NAMES = [ADMIN_USER_NAME, AXONIUS_USER_NAME, AXONIUS_RO_USER_NAME]
 
 X_UI_USER = 'x-ui-user'

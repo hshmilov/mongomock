@@ -10,6 +10,7 @@ from typing import Iterable, Optional
 
 from retrying import retry
 
+from scripts.instances.instances_consts import GENERATED_RESOLV_CONF_PATH
 from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           NODE_ID_FILENAME,
@@ -17,6 +18,7 @@ from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_NETWORK, LOGS_PATH_HOST, DB_KEY_PATH)
 from axonius.utils.debug import COLOR
+from conf_tools import get_tunneled_dockers
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
@@ -114,13 +116,18 @@ class DockerService(AxonService):
 
     @property
     def volumes(self):
-        return [
+        volumes_list = [
             f'{self.container_name}_data:/home/axonius',
             f'{self.libs_dir}/hacks:/home/axonius/hacks',
             f'{self.log_dir}:/home/axonius/logs',
             f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
             f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
         ]
+
+        if self.container_name in get_tunneled_dockers() and GENERATED_RESOLV_CONF_PATH.is_file():
+            print(f'container {self.container_name} will be tunneled')
+            volumes_list += [f'{GENERATED_RESOLV_CONF_PATH}:/etc/resolv.conf']
+        return volumes_list
 
     @property
     def volumes_override(self):

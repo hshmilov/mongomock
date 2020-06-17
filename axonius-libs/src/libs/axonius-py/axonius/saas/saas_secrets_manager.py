@@ -1,6 +1,7 @@
+# Should be imported from inside the docker and outside the docker
 import boto3
 
-from scripts.saas.input_params import get_stack_name, get_params_key_id
+from axonius.saas.input_params import get_stack_name, get_params_key_id
 
 
 class SaasSecretsManager:

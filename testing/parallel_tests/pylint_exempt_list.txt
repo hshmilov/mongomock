@@ -378,8 +378,10 @@ plugins/gui/okta_login.py
 plugins/gui/report_generator.py
 plugins/gui/frontend/tests/mocks/main.py
 plugins/gui/frontend/tests/mocks/database/CreateFakeData.py
+plugins/gui/logic/tunnel_config_builder.py
 testing/run_parallel_tests.py
 testing/run_tests.py
+testing/run_test_tunnel.py
 testing/parallel_tests/test_ad.py
 testing/parallel_tests/test_airwatch.py
 testing/parallel_tests/test_aruba.py

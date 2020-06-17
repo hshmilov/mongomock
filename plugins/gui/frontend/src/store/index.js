@@ -33,6 +33,11 @@ import {
   FETCH_SYSTEM_EXPIRED, fetchSystemExpired,
   SAVE_CUSTOM_DATA, saveCustomData,
   GET_ENVIRONMENT_NAME, getEnvironmentName,
+  GET_TUNNEL_STATUS, getTunnelStatus,
+  SAVE_TUNNEL_EMAILS_LIST, saveTunnelEmailsList,
+  GET_TUNNEL_EMAILS_LIST, getTunnelEmailsList,
+  GET_TUNNEL_PROXY_SETTINGS, getTunnelProxySettings,
+  SAVE_TUNNEL_PROXY_SETTINGS, saveTunnelProxySettings,
 } from './actions';
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
@@ -195,6 +200,11 @@ export default new Vuex.Store({
     [FETCH_SYSTEM_EXPIRED]: fetchSystemExpired,
     [SAVE_CUSTOM_DATA]: saveCustomData,
     [GET_ENVIRONMENT_NAME]: getEnvironmentName,
+    [GET_TUNNEL_STATUS]: getTunnelStatus,
+    [SAVE_TUNNEL_EMAILS_LIST]: saveTunnelEmailsList,
+    [GET_TUNNEL_EMAILS_LIST]: getTunnelEmailsList,
+    [GET_TUNNEL_PROXY_SETTINGS]: getTunnelProxySettings,
+    [SAVE_TUNNEL_PROXY_SETTINGS]: saveTunnelProxySettings,
   },
   modules: {
     /*

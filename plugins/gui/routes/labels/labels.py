@@ -229,6 +229,15 @@ class Labels:
             'audit.adapters.failure.template':
                 'Connection failure for adapter \'{adapter}\' with connection ID {client_id}. Error: {error}',
 
+            'audit.adapters.skip': 'Fetch Skipped',
+            'audit.adapters.skip.template': 'Fetch skipped for adapter \'{adapter}\' with connection ID {client_id}'
+                                            ' - Tunnel is disconnected',
+
+            'audit.adapters.connected': 'Adapter Connected',
+            'audit.adapters.connected.template': 'Adapter \'{adapter}\' connected via tunnel',
+            'audit.adapters.disconnected': 'Adapter Disconnected',
+            'audit.adapters.disconnected.template': 'Adapter \'{adapter}\' disconnected from tunnel',
+
             'audit.enforcements': 'Enforcements',
             'audit.enforcements.put': 'Add Enforcement',
             'audit.enforcements.put.template': 'Added enforcement \'{name}\'',
@@ -335,8 +344,15 @@ class Labels:
             'audit.compliance.csv.template': 'Exported to CSV compliance \'{name}\'',
             'audit.compliance.send_email': 'Send Email',
             'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
+
+            'audit.tunnel': 'Tunnel',
+            'audit.tunnel.connected': 'Tunnel Connected',
+            'audit.tunnel.connected.template': 'Tunnel is connected',
+            'audit.tunnel.disconnected': 'Tunnel Disconnected',
+            'audit.tunnel.disconnected.template': 'Tunnel is disconnected',
+
             'audit.compliance.rules': 'Updated Scoring Rules',
             'audit.compliance.rules.template': 'Updated scoring rules for compliance {cis_title}',
             'audit.compliance.create_jira': 'Create Jira Issue',
-            'audit.compliance.create_jira.template': 'Jira issue created for compliance {cis_title}',
+            'audit.compliance.create_jira.template': 'Jira issue created for compliance {cis_title}'
         }
