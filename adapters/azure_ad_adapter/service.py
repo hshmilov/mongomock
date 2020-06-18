@@ -434,7 +434,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                         logger.warning(f'Failed to parse groups for {user_id} from {user_groups}')
                 if not user_groups:
                     # warn, but continue running (fallthrough!)
-                    logger.warning(f'Group information not available for {user_id}')
+                    logger.debug(f'Group information not available for {user_id}')
 
                 # last logon
                 login_dict = raw_user_data.get('signInActivity')

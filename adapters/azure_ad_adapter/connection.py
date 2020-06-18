@@ -333,7 +333,7 @@ class AzureAdClient(RESTConnection):
             # now run through the responses, match each response to a user
             for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
                 if not self._is_async_response_good(response):
-                    logger.warning(f'Bad async response for {request_dict}, got: {response} ')
+                    logger.debug(f'Bad async response for {request_dict}, got: {response} ')
                     continue
                 try:
                     user_pn, endpoint = self._extract_user_pn_and_endpoint(request_dict)
