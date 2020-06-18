@@ -64,6 +64,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         subprocess.check_call('weave stop'.split())
         self.axonius_system.start_and_wait()
+        self.login_page.refresh()
         self.login_page.wait_for_login_page_to_load()
         self.login()
 
