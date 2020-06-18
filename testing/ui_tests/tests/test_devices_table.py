@@ -39,6 +39,7 @@ class TestDevicesTable(TestEntitiesTable):
                                                 max_rows=1)
         self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
+    @pytest.mark.skip('AX-8062')
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()
         with GeneralInfoService().contextmanager(take_ownership=True):
