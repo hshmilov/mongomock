@@ -7,7 +7,7 @@ from boxsdk.config import Proxy
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
@@ -65,9 +65,9 @@ class BoxPlatformAdapter(AdapterBase):
         try:
             config = self._get_box_config(client_config)
             client = Client(config)
-            client.users(limit=1)
+            next(client.users(limit=1), None)
             return client
-        except RESTException as e:
+        except Exception as e:
             message = 'Error connecting to client with enterprise ID {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
             logger.exception(message)
@@ -87,8 +87,7 @@ class BoxPlatformAdapter(AdapterBase):
 
         :return: Iterable(boxsdk.user.User) with all the attributes returned from the Server.
         """
-        with client_data:
-            yield from client_data.users(user_type='all', limit=DEVICE_PER_PAGE)
+        yield from client_data.users(user_type='all', limit=DEVICE_PER_PAGE)
 
     @staticmethod
     def _clients_schema():
