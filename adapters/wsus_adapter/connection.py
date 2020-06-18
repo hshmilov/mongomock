@@ -15,6 +15,8 @@ WMI_NAMESPACE = '//./root/cimv2'
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
 MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
+DEVICE_PER_PAGE = 200
+MAX_DEVICES = 2000000
 
 
 class WsusWmiConnection:
@@ -138,10 +140,47 @@ class WsusWmiConnection:
 
     @staticmethod
     def _filter_results_list(results_list, device_id):
+        if not isinstance(results_list, list):
+            return None
         for result in results_list:
             result.pop('UpdateServer', None)  # Remove unnecessary data
             if result.get('ComputerTargetId') == device_id:
-                yield result
+                return result
+        return None
+
+    @staticmethod
+    def _prepare_pscommand_paged(command: str, start: int = 0, limit: int = DEVICE_PER_PAGE):
+        return f'powershell.exe -c {command} | ' \
+               f'Select-Object -Skip {start} -First {limit} | ' \
+               f'ConvertTo-Json'.replace('|', '^|')
+
+    def _get_device_count(self):
+        command = ['powershell.exe -c (Get-WsusServer).GetComputerTargetCount()']
+        try:
+            return int(next(self._get_wmi_output(command)))
+        except Exception as e:
+            logger.warning(f'Failed to get device count, defaulting to max {MAX_DEVICES}: {str(e)}', exc_info=True)
+            return MAX_DEVICES
+
+    def _paginated_get_devices(self):
+        """
+        Get devices paginated, using Select-Object powershell cmdlet
+        """
+
+        count_devices = self._get_device_count()
+        get_computer_targets_cmd = '(Get-WsusServer).GetComputerTargets()'
+        get_updates_summary_cmd = f'{get_computer_targets_cmd}.GetUpdateInstallationSummary()'
+        max_devices = min(count_devices, MAX_DEVICES)
+        for start in range(0, max_devices, DEVICE_PER_PAGE):
+            get_targets_cmd = self._prepare_pscommand_paged(get_computer_targets_cmd, start)
+            get_summary_cmd = self._prepare_pscommand_paged(get_updates_summary_cmd, start)
+            logger.info(f'Getting next {DEVICE_PER_PAGE} devices, progress: {start}/{max_devices}')
+            try:
+                yield self._get_wmi_output([get_targets_cmd, get_summary_cmd])
+            except Exception as e:
+                logger.exception(f'Failed to get devices after {start}: {str(e)}')
+                raise
+        logger.info(f'Successfully fetched {max_devices} devices and their summaries.')
 
     def get_devices(self):
         # get_updates_list_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).' \
@@ -151,20 +190,22 @@ class WsusWmiConnection:
         # )
         # if updates_list and isinstance(updates_list, dict):
         #     updates_list = [updates_list]
-        get_computer_targets_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).GetComputerTargets())'
-        get_updates_summary_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).' \
-                                  'GetComputerTargets().GetUpdateInstallationSummary())'
-        devices_json, summaries_list = self._get_wmi_output(
-            [get_computer_targets_cmd, get_updates_summary_cmd]
-        )
-        if not devices_json:
-            return
-        if summaries_list and isinstance(summaries_list, dict):
-            summaries_list = [summaries_list]
-        if isinstance(devices_json, dict):
-            devices_json = [devices_json]
-        for device_raw in devices_json:
-            device_id = device_raw.get('Id')
-            device_raw['x_summary'] = list(self._filter_results_list(summaries_list, device_id))[0]
-            # device_raw['x_updates_details'] = list(self._filter_results_list(updates_list, device_id))
-            yield device_raw
+        # get_computer_targets_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).GetComputerTargets())'
+        # get_updates_summary_cmd = 'powershell.exe -c ConvertTo-Json((Get-WsusServer).' \
+        #                           'GetComputerTargets().GetUpdateInstallationSummary())'
+        # devices_json, summaries_list = self._get_wmi_output(
+        #     [get_computer_targets_cmd, get_updates_summary_cmd]
+        # )
+        wmi_output_pairs = self._paginated_get_devices()
+        for devices_json, summaries_list in wmi_output_pairs:
+            if not devices_json:
+                return
+            if summaries_list and isinstance(summaries_list, dict):
+                summaries_list = [summaries_list]
+            if isinstance(devices_json, dict):
+                devices_json = [devices_json]
+            for device_raw in devices_json:
+                device_id = device_raw.get('Id')
+                device_raw['x_summary'] = self._filter_results_list(summaries_list, device_id)
+                # device_raw['x_updates_details'] = list(self._filter_results_list(updates_list, device_id))
+                yield device_raw
