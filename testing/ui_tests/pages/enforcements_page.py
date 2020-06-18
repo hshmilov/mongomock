@@ -582,7 +582,7 @@ class EnforcementsPage(EntitiesPage):
         return self.get_button(self.SAVE_AND_RUN_BUTTON_TEXT, context=context)
 
     def wait_for_task_in_progress_toaster(self):
-        self.wait_for_toaster(self.TASK_IN_PROGRESS)
+        self.wait_for_toaster(self.TASK_IN_PROGRESS, interval=1)
         self.wait_for_toaster_to_end(self.TASK_IN_PROGRESS)
 
     def click_tasks_button(self):

@@ -1,6 +1,5 @@
 from copy import copy
 
-import pytest
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
@@ -24,7 +23,6 @@ class TestNotifications(TestBase):
         assert notification_times == notifications_sorted
         self.settings_page.set_notify_on_adapters_fetch(enable=False)
 
-    @pytest.mark.skip('AX-7841')
     def test_notifications_new_unseen_indicator(self):
         """
         Tests notification new unseen indicator (near the bell icon).
