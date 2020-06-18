@@ -299,12 +299,12 @@ class Enforcements(Tasks):
             'name': 1,
             TRIGGERS_FIELD: 1
         })
-        response = self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data={
+        self._trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data={
             'report_name': enforcement['name'],
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
-        }, priority=True)
-        return response.text, response.status_code
+        }, priority=True, blocking=False)
+        return ''
 
     @gui_route_logged_in('<entity_type>/custom', methods=['POST'], enforce_permissions=False, enforce_api_key=True)
     def enforce_entity_custom_data(self, entity_type):
