@@ -1,3 +1,5 @@
 PASSWORD = 'password'
 USER = 'username'
 JUNIPER_HOST = 'host'
+DEVICE_PER_PAGE = 100
+MAX_NUMBER_OF_DEVICES = 2000000

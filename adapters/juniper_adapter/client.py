@@ -7,6 +7,8 @@ import lxml
 
 from jnpr.space import rest, async
 
+from juniper_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -162,14 +164,32 @@ class JuniperClient:
                         f'Got exception with device {current_device.name}')
             yield from map(lambda x: ('Juniper Device', x), juniper_devices.items())
 
+    def _paginated_get_all_devices(self):
+        dict_params = {
+            'start': 0,
+            'limit': DEVICE_PER_PAGE,
+        }
+        max_results = MAX_NUMBER_OF_DEVICES
+        logger.info(f'Fetching first {DEVICE_PER_PAGE} devices.')
+        devices = self.space_rest_client.device_management.devices.get(paging=dict_params)
+        while devices and (dict_params['start'] + DEVICE_PER_PAGE) <= max_results:
+            if devices:
+                yield from devices
+            else:
+                return
+            dict_params['start'] += DEVICE_PER_PAGE
+            logger.info(f'Fetching next {DEVICE_PER_PAGE} devices after {dict_params["start"]}')
+            devices = self.space_rest_client.device_management.devices.get(paging=dict_params)
+
     def get_all_devices(self, fetch_space_only, do_async, fetch_only_client_info=False):
-        devices = self.space_rest_client.device_management.devices.get()
-        for current_device in devices:
+        space_devices = self._paginated_get_all_devices()
+        for current_device in space_devices:
             yield ('Juniper Space Device', current_device)
         if fetch_space_only:
             return
-        up_devices = [device for device in devices if device.connectionStatus == 'up']
-        logger.info(f'Number of up devices is {len(up_devices)} out of {len(devices)}')
+        all_devices = list(self._paginated_get_all_devices())
+        up_devices = [device for device in all_devices if device.connectionStatus == 'up']
+        logger.info(f'Number of up devices is {len(up_devices)} out of {len(all_devices)}')
         if fetch_only_client_info:
             extra_actions = []
         else:
