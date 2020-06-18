@@ -300,7 +300,8 @@ class Dashboard(Charts, Notifications):
                 projection={
                     '_id': True,
                     'space': True,
-                    'name': True
+                    'name': True,
+                    'hide_empty': True
                 }):
             # Let's fetch and execute them query filters
             try:
@@ -324,6 +325,7 @@ class Dashboard(Charts, Notifications):
                         'name': dashboard['name'],
                         'data': [],
                         'loading': True,
+                        'hide_empty': dashboard.get('hide_empty', False)
                     }
             except Exception:
                 # Since there is no data, not adding this chart to the list
