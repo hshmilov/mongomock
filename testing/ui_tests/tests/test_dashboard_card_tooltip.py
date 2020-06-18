@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME,
@@ -53,7 +55,7 @@ class TestDashboardCardTooltip(TestBase):
         assert body_percentage != ''
         return body_percentage
 
-    def _test_pie_chart_tooltip(self, card_title):
+    def _test_pie_chart_tooltip(self, card_title, result=100):
         card = self.dashboard_page.get_card(card_title)
         pie_chart = self.dashboard_page.get_pie_chart_from_card(card)
         pie_chart_slices = self.dashboard_page.get_pie_chart_slices(pie_chart)
@@ -63,7 +65,7 @@ class TestDashboardCardTooltip(TestBase):
             self.dashboard_page.hover_over_element(current_slice)
             total_percentage += self._verify_pie_chart_tooltip_and_get_percentage(card)
 
-        assert total_percentage == 100.0
+        assert total_percentage == result
 
     def test_comparison_pie_chart_tooltip(self):
         self.dashboard_page.switch_to_page()
@@ -79,7 +81,7 @@ class TestDashboardCardTooltip(TestBase):
         self.dashboard_page.add_segmentation_card(
             DEVICES_MODULE, 'Last Seen', self.TEST_SEGMENTATION_TITLE, 'pie',
             DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
-        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE)
+        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE, Decimal('99.9'))
 
     def test_intersection_pie_chart_tooltip(self):
         def _verify_excluding_or_intersection_tooltip():
