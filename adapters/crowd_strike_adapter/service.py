@@ -343,9 +343,10 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     device.groups = self.parse_groups(device_raw.get('groups_data'))
                     if self.__group_name_whitelist:
                         found_group = False
-                        for group_raw in device_raw.get('groups_data'):
-                            if group_raw.get('name') in self.__group_name_whitelist:
-                                found_group = True
+                        if device_raw.get('groups_data'):
+                            for group_raw in device_raw.get('groups_data'):
+                                if group_raw.get('name') in self.__group_name_whitelist:
+                                    found_group = True
                         if not found_group:
                             continue
                 except Exception:

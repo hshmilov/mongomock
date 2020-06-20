@@ -151,13 +151,22 @@ class BitdefenderAdapter(AdapterBase):
                     extra_data_raw = device_raw.get('extra_data')
                     if not isinstance(extra_data_raw, dict):
                         extra_data_raw = {}
-                    device.last_seen = parse_date(extra_data_raw.get('lastSeen'))
+                    extra_data_raw = extra_data_raw.get('result')
+                    if not isinstance(extra_data_raw, dict):
+                        extra_data_raw = {}
+                    last_seen = parse_date(extra_data_raw.get('lastSeen'))
+                    device.last_seen = last_seen
                     agent_raw = extra_data_raw.get('agent')
                     if not isinstance(agent_raw, dict):
                         agent_raw = {}
                     device.add_agent_version(agent=AGENT_NAMES.bitdefender,
                                              version=agent_raw.get('productVersion'))
-                    device.last_update = parse_date(agent_raw.get('lastUpdate'))
+                    last_update = parse_date(agent_raw.get('lastUpdate'))
+                    device.last_update = last_update
+                    if not last_seen:
+                        device.last_seen = last_update
+                    elif last_update and last_seen < last_update:
+                        device.last_seen = last_update
                     device.engine_version = agent_raw.get('engineVersion')
                     policy_raw = extra_data_raw.get('policy')
                     if not isinstance(policy_raw, dict):

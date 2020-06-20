@@ -59,7 +59,7 @@ class ArsenalConnection(RESTConnection):
                 if not json_data.get('assets'):
                     raise RESTException(f'Bad response data: {json_data}')
                 yield from json_data['assets']
-                token = json_data['page']['token']
+                token = json_data['page'].get('token')
             except Exception:
                 logger.exception(f'Problem with fetch')
                 break

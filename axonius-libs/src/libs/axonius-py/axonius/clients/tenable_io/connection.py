@@ -1,14 +1,12 @@
 import logging
 import time
 # pylint: disable=import-error
-from tenable.io import TenableIO
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.utils.parsing import make_dict_from_csv
-from axonius.clients.tenable_io.consts import AGENTS_PER_PAGE, DEVICES_PER_PAGE,\
-    NUMBER_OF_SLEEPS, SECONDS_IN_DAY, TIME_TO_SLEEP,\
-    DAYS_UNTIL_FETCH_AGAIN, DAYS_FOR_VULNS_IN_CSV, MAX_AGENTS
+from axonius.clients.tenable_io.consts import AGENTS_PER_PAGE, MAX_AGENTS
+from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
+from axonius.clients.tenable_io.parse import get_export_asset_plus_vulns
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,7 +22,6 @@ class TenableIoConnection(RESTConnection):
         self.plugins_dict = dict()
         self._secret_key = secret_key
         self._epoch_last_run_time = 0
-        self._assets_list_dict = None
         self._vulns_list = None
         if self._username is not None and self._username != '' and self._password is not None and self._password != '':
             # We should use the user and password
@@ -34,8 +31,6 @@ class TenableIoConnection(RESTConnection):
             # We should just use the given api keys
             self._should_use_token = False
             self._set_api_headers()
-            self._tio = TenableIO(self._access_key, self._secret_key, proxies=self._proxies,
-                                  vendor='Axonius', product='Axonius', build='1.0.0')
         else:
             raise RESTException('Missing user/password or api keys')
 
@@ -159,118 +154,22 @@ class TenableIoConnection(RESTConnection):
             raise RESTException(f'Insufficient permissions found.'
                                 f' Did you grant the user an Administrator Role?')
 
-    def _get_export_data(self, export_type, action=None, epoch=None):
-        if epoch is None:
-            epoch = self._epoch_last_run_time
-        export_body_params = {'chunk_size': DEVICES_PER_PAGE[export_type]}
-        if action is not None:
-            export_body_params[action] = epoch
-        export_uuid = self._post(f'{export_type}/export',
-                                 body_params=export_body_params)['export_uuid']
-        available_chunks = set()
-        response = self._get(f'{export_type}/export/{export_uuid}/status')
-        available_chunks.update(response.get('chunks_available', []))
-        number_of_sleeps = 0
-        while response.get('status') != 'FINISHED' and number_of_sleeps < NUMBER_OF_SLEEPS:
-            try:
-                response = self._get(f'{export_type}/export/{export_uuid}/status')
-                available_chunks.update(response.get('chunks_available'))
-            except Exception:
-                logger.exception(f'Problem with getting chunks for {export_uuid}')
-            time.sleep(TIME_TO_SLEEP)
-            number_of_sleeps += 1
-        for chunk_id in available_chunks:
-            try:
-                yield from self._get(f'{export_type}/export/{export_uuid}/chunks/{chunk_id}')
-            except Exception:
-                logger.exception(f'Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}')
-
-    def _get_assets(self, use_cache):
-        if use_cache and \
-                self._epoch_last_run_time + SECONDS_IN_DAY * DAYS_UNTIL_FETCH_AGAIN > int(time.time()):
-            return
-        if self._assets_list_dict is None:
-            # new_assets = self._get_export_data('assets')
-            new_assets = self._tio.exports.assets()
-            updated_assets = []
-            deleted_assets = []
-            self._assets_list_dict = dict()
-        else:
-            new_assets = self._get_export_data('assets', action='created_at')
-            updated_assets = self._get_export_data('assets', action='updated_at')
-            deleted_assets = self._get_export_data('assets', action='deleted_at')
-
-        # Creating dict out of assets_list
-        for asset in new_assets:
-            try:
-                asset_id = asset.get('id', '')
-                if asset_id is None or asset_id == '':
-                    logger.warning(f'Got asset with no id. Asset raw data: {asset}')
-                    continue
-                self._assets_list_dict[asset_id] = asset
-                self._assets_list_dict[asset_id]['vulns_info'] = []
-            except Exception:
-                logger.exception(f'Problem with asset {asset}')
-        for deleted_asset in deleted_assets:
-            try:
-                del self._assets_list_dict[deleted_asset.get('id')]
-            except Exception:
-                logger.exception(f'Problem deleting asset: {deleted_asset}')
-        for updated_asset in updated_assets:
-            try:
-                updated_id = updated_asset.get('id')
-                if updated_id is not None and updated_id != '':
-                    self._assets_list_dict[updated_id] = updated_asset
-            except Exception:
-                logger.exception(f'Problem updating asset {updated_asset}')
-
-    def _get_vulns(self):
-        return self._tio.exports.vulns()
-
     # pylint: disable=W0221
-    def get_device_list(self, use_cache):
-        try:
-            self._get_assets(use_cache)
-        except Exception:
-            logger.exception('Couldnt get export trying to do benchmark')
-            return self._get_device_list_csv(), 'csv'
-        try:
-            vulns_list = self._get_vulns()
-        except Exception:
-            vulns_list = []
-            logger.exception('General error while getting vulnerabilities')
-        try:
-            for vuln_raw in vulns_list:
-                try:
-                    # Trying to find the correct asset for all vulnerability line in the array
-                    asset_id_for_vuln = (vuln_raw.get('asset') or {}).get('uuid')
-                    if not asset_id_for_vuln:
-                        logger.warning(f'No id for vuln {vuln_raw}')
-                        continue
-                    self._assets_list_dict[asset_id_for_vuln]['vulns_info'].append(vuln_raw)
-                except Exception:
-                    logger.debug(f'Problem with vuln raw {vuln_raw}')
-        except Exception:
-            logger.exception('General error while getting vulnerabilities fetch')
-        self._epoch_last_run_time = int(time.time())
-        assets_list_dict = self._assets_list_dict
-        if not use_cache:
-            self._assets_list_dict = None
-        return assets_list_dict.items(), 'export'
-
-    def _get_device_list_csv(self):
-        file_id = self._get('workbenches/export', url_params={'format': 'csv',
-                                                              'report': 'vulnerabilities',
-                                                              'chapter': 'vuln_by_asset',
-                                                              'date_range': DAYS_FOR_VULNS_IN_CSV})['file']
-        status = self._get(f'workbenches/export/{file_id}/status')['status']
-        sleep_times = 0
-        while status != 'ready' and sleep_times < NUMBER_OF_SLEEPS:
-            time.sleep(TIME_TO_SLEEP)
-            status = self._get(f'workbenches/export/{file_id}/status')['status']
-            sleep_times += 1
-        return make_dict_from_csv(self._get(f'workbenches/export/{file_id}/download',
-                                            use_json_in_response=False).decode('utf-8'))
+    def get_device_list(self):
+        _ = (yield from concurrent_multiprocess_yield(
+            [
+                (
+                    get_export_asset_plus_vulns,
+                    (
+                        self._access_key,
+                        self._secret_key,
+                        self._proxies
+                    ),
+                    {}
+                )
+            ],
+            1
+        ))
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_plugin_info(self, plugin_id):

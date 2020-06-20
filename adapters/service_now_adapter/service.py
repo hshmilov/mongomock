@@ -119,7 +119,7 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
                     success = success or result_status
                     if success is True:
                         device = self.create_snow_device(device_raw=device_raw,
-                                                         fetch_ips=self.__fetch_ips)
+                                                         fetch_ips=True)
                         if device:
                             device_dict = device.to_dict()
                             self._save_data_from_plugin(
@@ -164,7 +164,7 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
                     success = success or result_status
                     if success is True:
                         device = self.create_snow_device(device_raw=device_raw,
-                                                         fetch_ips=self.__fetch_ips)
+                                                         fetch_ips=True)
                         if device:
                             device_id = device.id
                             device_dict = device.to_dict()

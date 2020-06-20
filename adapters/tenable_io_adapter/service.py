@@ -160,7 +160,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         """
         with client_data:
             logger.info('Getting all assets')
-            devices_list = client_data.get_device_list(use_cache=False)
+            devices_list = client_data.get_device_list()
             yield devices_list, ASSET_TYPE, client_data
             logger.info('Getting all agent')
             for device_raw in client_data.get_agents():
@@ -294,6 +294,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
                 has_patch = vuln_raw.get('plugin', {}).get('has_patch')
+                last_fixed = parse_date(vuln_raw.get('last_fixed'))
+                first_found = parse_date(vuln_raw.get('first_found'))
+                last_found = parse_date(vuln_raw.get('last_found'))
                 if not isinstance(has_patch, bool):
                     has_patch = None
                 plugin_output = vuln_raw.get('output')
@@ -348,7 +351,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
                                             output=plugin_output, plugin_id=plugin_id, has_patch=has_patch,
                                             cvss_base_score=cvss_base_score, exploit_available=exploit_available,
-                                            synopsis=synopsis, see_also=see_also, vuln_state=vuln_state)
+                                            synopsis=synopsis, see_also=see_also, vuln_state=vuln_state,
+                                            last_fixed=last_fixed, first_found=first_found, last_found=last_found)
                     device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
@@ -385,18 +389,13 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     if device:
                         yield device
                 elif ASSET_TYPE == device_type:
-                    devices_raw_data_and_type = device_raw
-                    devices_raw_data, connection_type = devices_raw_data_and_type
-                    if connection_type == 'export':
-                        for device_id, device_asset_raw in devices_raw_data:
-                            try:
-                                device = self._parse_export_device(device_id, device_asset_raw, client_data)
-                                if device:
-                                    yield device
-                            except Exception:
-                                logger.exception(f'Problem with parsing device {device_asset_raw}')
-                    elif connection_type == 'csv':
-                        yield from self._parse_raw_data_csv(devices_raw_data)
+                    for device_id, device_asset_raw in device_raw:
+                        try:
+                            device = self._parse_export_device(device_id, device_asset_raw, client_data)
+                            if device:
+                                yield device
+                        except Exception:
+                            logger.exception(f'Problem with parsing device {device_asset_raw}')
             except Exception:
                 logger.exception(f'Problem with device raw {device_raw}')
 
@@ -430,85 +429,6 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         except Exception:
             logger.exception(f'Problem parsing {agent_raw}')
             return None
-
-    def _parse_raw_data_csv(self, devices_raw_data):
-        assets_dict = defaultdict(list)
-
-        def get_csv_value_filtered(d, n):
-            try:
-                value = d.get(n)
-                if value is not None:
-                    if str(value).strip().lower() not in ['', 'none', '0']:
-                        return str(value).strip()
-            except Exception:
-                pass
-
-            return None
-
-        for device_raw in devices_raw_data:
-            try:
-                uuid = get_csv_value_filtered(device_raw, 'Asset UUID')
-                host = get_csv_value_filtered(device_raw, 'Host')
-
-                # This chars are false, we get bad csv sometimes
-                false_uuid = ['=', '|', ':']
-                if uuid is None or host is None or any(elem in uuid for elem in false_uuid):
-                    logger.debug(f'Bad asset {device_raw}, continuing')
-                    continue
-                assets_dict[uuid].append(device_raw)
-            except Exception:
-                logger.exception(f'Problem with fetching TenableIO Device {device_raw}')
-        for asset_id, asset_id_values in assets_dict.items():
-            try:
-                device = self._new_device_adapter()
-                device.id = asset_id
-
-                first_asset = asset_id_values[0]
-                try:
-                    device.last_seen = parse_date(get_csv_value_filtered(first_asset, 'Host End'))
-                except Exception:
-                    logger.exception(f'Problem getting last seen for {str(first_asset)}')
-                ip_addresses = get_csv_value_filtered(first_asset, 'IP Address')
-                mac_addresses = get_csv_value_filtered(first_asset, 'MAC Address')
-
-                # Turn to lists.
-                ip_addresses = ip_addresses.split(',') if ip_addresses is not None else []
-                mac_addresses = mac_addresses.split(',') if mac_addresses is not None else []
-
-                mac_address_to_use = []
-                for mac_address in mac_addresses:
-                    while len(mac_address) > 17:
-                        mac_address_to_use.append(mac_address[:17])
-                        mac_address = mac_address[17:]
-                    if len(mac_address) == 17:
-                        mac_address_to_use.append(mac_address)
-                device.add_ips_and_macs(mac_address_to_use, ip_addresses)
-
-                fqdn = get_csv_value_filtered(first_asset, 'FQDN')
-                netbios = get_csv_value_filtered(first_asset, 'NetBios')
-
-                if fqdn is not None:
-                    device.hostname = netbios
-                else:
-                    device.hostname = fqdn
-
-                os = get_csv_value_filtered(first_asset, 'OS')
-                device.figure_os(os)
-
-                risk_and_name_list = []
-                for vuln_i in asset_id_values:
-                    vrisk = get_csv_value_filtered(vuln_i, 'Risk')
-                    vname = get_csv_value_filtered(vuln_i, 'Name')
-                    if vrisk and vname:
-                        risk_and_name_list.append(f'{vrisk} - {vname}')
-
-                if len(risk_and_name_list) > 0:
-                    device.risk_and_name_list = risk_and_name_list
-                first_asset['risk_and_name_list'] = risk_and_name_list
-                device.set_raw(first_asset)
-                yield device
-            except Exception:
-                logger.exception(f'Problem with asset id {asset_id} and values {asset_id_values}')
 
     @classmethod
     def adapter_properties(cls):

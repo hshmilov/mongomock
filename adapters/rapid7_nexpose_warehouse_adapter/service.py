@@ -7,6 +7,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.adapter_base import AdapterProperty
 from axonius.clients.rest.connection import RESTConnection
+from axonius.fields import Field
 from axonius.clients.postgres.connection import PostgresConnection
 from axonius.adapter_exceptions import ClientConnectionException
 from rapid7_nexpose_warehouse_adapter import consts
@@ -32,7 +33,7 @@ def _parse_float(value=None):
 class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(Rapid7NexposeWarehouseDeviceInstance):
-        pass
+        device_type = Field(str, 'Device Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__))
@@ -69,7 +70,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                       f'database: ' \
                       f'{client_config.get("database")}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     @staticmethod
     def _get_vulnerabilities_by_asset_id(connection):
@@ -290,7 +291,9 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
             client_data.set_devices_paging(consts.DEVICE_PAGINATION)
             devices_info = self._get_devices_info(client_data)
             logger.debug(f'Start querying dim_asset')
-            for device in client_data.query(consts.ASSET_QUERY):
+            all_assets = list(client_data.query(consts.ASSET_QUERY))
+            logger.info(f'Finished fetching from db')
+            for device in all_assets:
                 if isinstance(device, dict) and client_config['drop_only_ip_devices']:
                     if not device.get('mac_address') and not device.get('host_name'):
                         continue
@@ -660,8 +663,10 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
             device.figure_os(os_string=os_string)
 
             self._fill_rapid7_nexpose_warehouse_device_fields(device_raw, device)
-
-            device.set_raw(device_raw)
+            dict_raw = dict()
+            for key in device_raw:
+                dict_raw[str(key)] = str(device_raw[key])
+            device.set_raw(dict_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching Rapid7 Nexpose Warehouse Device for {device_raw}')

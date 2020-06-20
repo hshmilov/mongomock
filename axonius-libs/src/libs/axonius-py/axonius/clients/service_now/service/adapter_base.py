@@ -245,6 +245,7 @@ class ServiceNowAdapterBase(AdapterBase):
             device.table_type = table_type
             device.category = device_raw.get('u_category') or device_raw.get('category')
             device.u_subcategory = device_raw.get('u_subcategory')
+            device.asset_tag = device_raw.get('asset_tag')
             name = device_raw.get('name')
             device.name = name
             class_name = device_raw.get('sys_class_name')

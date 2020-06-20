@@ -139,6 +139,15 @@ class UpdateServicenowComputerAction(ActionTypeBase):
 
     # pylint: disable=R0912,R0914,R0915,R1702
     def _run(self) -> EntitiesResult:
+        ax_snow_fields_map_dict = dict()
+        try:
+            ax_snow_fields_map = self._config.get('ax_snow_fields_map')
+            if ax_snow_fields_map:
+                ax_snow_fields_map_dict = json.loads(ax_snow_fields_map)
+                if not isinstance(ax_snow_fields_map_dict, dict):
+                    ax_snow_fields_map_dict = {}
+        except Exception:
+            logger.exception(f'Problem parsing ax_snow_fields_map')
         service_now_projection = {
             'internal_axon_id': 1,
             'adapters.plugin_unique_name': 1,
@@ -153,17 +162,10 @@ class UpdateServicenowComputerAction(ActionTypeBase):
             'adapters.data.network_interfaces.mac': 1,
             'adapters.data.network_interfaces.ips': 1
         }
+        for ax_field in ax_snow_fields_map_dict.keys():
+            service_now_projection[f'adapters.data.{ax_field}'] = 1
         current_result = self._get_entities_from_view(service_now_projection)
         results = []
-        ax_snow_fields_map_dict = dict()
-        try:
-            ax_snow_fields_map = self._config.get('ax_snow_fields_map')
-            if ax_snow_fields_map:
-                ax_snow_fields_map_dict = json.loads(ax_snow_fields_map)
-                if not isinstance(ax_snow_fields_map_dict, dict):
-                    ax_snow_fields_map_dict = {}
-        except Exception:
-            logger.exception(f'Problem parsing ax_snow_fields_map')
         for entry in current_result:
             try:
                 name_raw = None

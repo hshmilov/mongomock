@@ -138,6 +138,8 @@ def parse_raw_data_inner_ssm(
         device.id = 'ssm-' + basic_data['InstanceId']
         device.cloud_provider = 'AWS'
         device.cloud_id = basic_data['InstanceId']
+        if basic_data.get('IPAddress'):
+            device.add_nic(ips=[basic_data['IPAddress']])
 
         # Parse ssm data
         ssm_data = SSMInfo()

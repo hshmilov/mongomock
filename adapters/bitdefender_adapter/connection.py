@@ -37,7 +37,9 @@ class BitdefenderConnection(RESTConnection):
                                                       'id': RANDOM_REQUEST_ID,
                                                       'method': 'getEndpointsList',
                                                       'params': {'page': page_num,
-                                                                 'perPage': DEVICE_PER_PAGE}},
+                                                                 'perPage': DEVICE_PER_PAGE,
+                                                                 'filters': {'depth': {'allItemsRecursively': True}}
+                                                                 }},
                               do_basic_auth=True)
         if not isinstance(response, dict) or not response.get('result') \
                 or not isinstance(response['result'].get('items'), list):
@@ -69,6 +71,7 @@ class BitdefenderConnection(RESTConnection):
                 total_pages = yield_data
             elif yield_type == YIELD_TYPE_DEVICE:
                 yield yield_data
+        logger.info(f'Total pages are - {total_pages}')
         while page_num < min(total_pages, MAX_PAGES_COUNT):
             page_num += 1
             try:

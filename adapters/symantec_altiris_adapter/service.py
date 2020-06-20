@@ -28,7 +28,7 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config[consts.ALTIRIS_HOST]
+        return client_config[consts.ALTIRIS_HOST] + '_' + client_config[consts.ALTIRIS_DATABASE]
 
     def _test_reachability(self, client_config):
         return test_reachability_tcp(

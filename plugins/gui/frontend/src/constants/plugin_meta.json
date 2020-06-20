@@ -1328,6 +1328,11 @@
     "link": "https://docs.axonius.com/docs/symantec-endpoint-management-suite-altiris",
     "description": "Symantec Endpoint Management Suite (formerly Altiris) manages, patches, and remediates application and OS configurations on desktops, laptops and servers to strengthen endpoint security and maximize user productivity."
   },
+  "knowbe4_adapter": {
+    "title": "KnowBe4",
+    "link": "https://docs.axonius.com/docs/knowbe4",
+    "description": "KnowBe4 provides Security Awareness Training for anti-phising behavior, social engineering and ransomware attacks, and general security awareness."
+  },
   "azure_adapter": {
     "title": "Microsoft Azure",
     "link": "https://docs.axonius.com/docs/microsoft-azure-and-azure-active-directory-ad",

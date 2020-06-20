@@ -304,7 +304,7 @@ class CherwellAdapter(AdapterBase, Configurable):
                         device.asset_id = field_value
                     elif field_name == 'ContactGroupEmail':
                         device.contact_group_email = field_value
-                    elif field_name == 'Sox':
+                    elif field_name == 'SOX':
                         if field_value == 'True':
                             device.sox = True
                         elif field_value == 'False':

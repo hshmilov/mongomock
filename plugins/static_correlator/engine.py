@@ -56,7 +56,7 @@ USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapte
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter',
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
@@ -105,6 +105,7 @@ def is_only_host_adapter(adapter_device):
                                               'bigid_adapter',
                                               'json_adapter',
                                               'epo_adapter',
+                                              'crowd_strike_adapter',
                                               'amd_db_adapter',
                                               'druva_adapter']):
         return True
@@ -115,6 +116,9 @@ def is_only_host_adapter(adapter_device):
             return True
     except Exception:
         pass
+    if (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
+            adapter_device['data'].get('fetch_proto') == 'CDP'):
+        return True
     return False
 
 

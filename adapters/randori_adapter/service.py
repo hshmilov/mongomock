@@ -20,6 +20,7 @@ class RandoriAdapter(AdapterBase):
         confidence = Field(int, 'Confidence')
         max_confidence = Field(int, 'Max Confidence')
         ip_count = Field(int, 'IP Count')
+        target_temptation = Field(int, 'Target Temptation')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -144,6 +145,8 @@ class RandoriAdapter(AdapterBase):
                         logger.exception(f'Problem with ip_id {ip_id}')
             except Exception:
                 logger.exception(f'Problem getting ip info for {device_raw}')
+            device.target_temptation = device_raw.get('target_temptation') \
+                if isinstance(device_raw.get('target_temptation'), int) else None
             device.set_raw(device_raw)
             return device
         except Exception:

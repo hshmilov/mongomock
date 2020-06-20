@@ -68,6 +68,7 @@ class PostgresConnection(AbstractSQLConnection):
         :param pagination: pagination
         :return: Array of dictionaries
         """
+        logger.info(f'Starting to query: {sql}')
         self.reconnect()    # Reconnect on every query to ensure a valid-state cursor.
         try:
             cursor = self.db.cursor()
@@ -79,7 +80,7 @@ class PostgresConnection(AbstractSQLConnection):
             while batch:
                 batch = cursor.fetchmany(self.devices_paging)
                 total_devices += len(batch)
-                if sql_pages % 10 == 1:
+                if (sql_pages < 1000 and sql_pages % 10 == 1) or sql_pages % 1000 == 1:
                     logger.info(f'Got {total_devices} devices so far')
                 sql_pages += 1
                 for row in batch:

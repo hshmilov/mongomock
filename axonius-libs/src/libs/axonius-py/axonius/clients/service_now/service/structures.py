@@ -57,6 +57,7 @@ class SnowDeviceAdapter(DeviceAdapter):
     table_type = Field(str, 'Table Type')
     category = Field(str, 'Category')
     u_subcategory = Field(str, 'Subcategory')
+    asset_tag = Field(str, 'Asset Tag')
     class_name = Field(str, 'Class Name')
     discovery_source = Field(str, 'Discovery Source')
     last_discovered = Field(datetime.datetime, 'Last Discovered')

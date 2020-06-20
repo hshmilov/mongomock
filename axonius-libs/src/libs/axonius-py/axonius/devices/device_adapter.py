@@ -541,6 +541,10 @@ class TenableVulnerability(SmartJsonClass):
     plugin_text = Field(str, 'Vulnerability Text')
     state = Field(str, 'Vulnerability State')
     has_patch = Field(bool, 'Has Patch')
+    vuln_state = Field(str, 'State')
+    last_fixed = Field(datetime.datetime, 'Last Fixed')
+    first_found = Field(datetime.datetime, 'First Found')
+    last_found = Field(datetime.datetime, 'Last Found')
 
 
 class TenableSource(SmartJsonClass):

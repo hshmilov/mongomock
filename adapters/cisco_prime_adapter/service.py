@@ -242,7 +242,7 @@ class CiscoPrimeAdapter(AdapterBase):
             device.wireless_vlan = raw_device.get('vlanName') or raw_device.get('vlan')
         except Exception:
             logger.exception(f'Problem getting NIC for {raw_device}')
-        device.hostname = raw_device.get('hostname')
+        device.hostname = raw_device.get('hostname') or raw_device.get('deviceName')
         try:
             device.ad_domainName = raw_device.get('adDomainName')
             ap_ip_address = raw_device.get('apIpAddress')
