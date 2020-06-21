@@ -22,7 +22,7 @@
           :cis-title="cisTitle"
           :accounts="accounts"
           :module="module"
-          :disabled="false"
+          :disabled="lockComplianceActions"
           :rules="rules"
           :categories="categories"
           :failed-only="failedOnly"
@@ -32,6 +32,7 @@
           type="link"
           class="compliance-action-button export-csv"
           :loading="exporting"
+          :disabled="lockComplianceActions"
           @click.stop.prevent="exportCSV"
         >
           <VIcon
@@ -126,6 +127,10 @@ export default {
       default: () => [],
     },
     failedOnly: {
+      type: Boolean,
+      default: false,
+    },
+    lockComplianceActions: {
       type: Boolean,
       default: false,
     },

@@ -81,7 +81,7 @@ export default {
         }
         .modal-footer {
           text-align: center;
-          line-height: 60px;
+          line-height: 40px;
           border-bottom-left-radius: 10px;
           border-bottom-right-radius: 10px;
           .ant-btn-link {

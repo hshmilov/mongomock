@@ -197,6 +197,7 @@ class FeatureFlagsNames:
 class CloudComplianceNames:
     Enabled = 'cis_enabled'
     Visible = 'enabled'
+    ExpiryDate = 'expiry_date'
 
 
 class RootMasterNames:

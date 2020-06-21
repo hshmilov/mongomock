@@ -2,7 +2,7 @@
   <div class="score-card">
     <div class="score-header">
       <ADropdown
-        v-if="canEditComplianceRules"
+        v-if="canEditComplianceRules && !lockComplianceActions"
         :trigger="!canEditComplianceRules?['']:['click']"
         placement="bottomRight"
         :disabled="!canEditComplianceRules"
@@ -108,6 +108,10 @@ export default {
     cisTitle: {
       type: String,
       default: '',
+    },
+    lockComplianceActions: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

@@ -1,9 +1,11 @@
 /* eslint-disable no-param-reassign */
 import _get from 'lodash/get';
+import dayjs from 'dayjs';
 import { REQUEST_API } from '../actions';
 
 export const IN_TRIAL = 'IN_TRIAL';
 export const SHOULD_SHOW_CLOUD_COMPLIANCE = 'SHOULD_SHOW_CLOUD_COMPLIANCE';
+export const IS_CLOUD_COMPLIANCE_EXPIRED = 'IS_CLOUD_COMPLIANCE_EXPIRED';
 
 export const SAVE_PLUGIN_CONFIG = 'SAVE_PLUGIN_CONFIG';
 export const LOAD_PLUGIN_CONFIG = 'LOAD_PLUGIN_CONFIG';
@@ -53,6 +55,18 @@ export const settings = {
       const isCloudComplianceEnabled = cloudComplianceSettings.cis_enabled;
       const isCloudComplianceVisible = cloudComplianceSettings.enabled;
       return isCloudComplianceVisible && (getters.IN_TRIAL || isCloudComplianceEnabled);
+    },
+    [IS_CLOUD_COMPLIANCE_EXPIRED]: (state) => {
+      if (!state.configurable.gui || !state.configurable.gui.FeatureFlags) {
+        return true;
+      }
+      const featureFlags = state.configurable.gui.FeatureFlags.config;
+      const date = _get(featureFlags, 'cloud_compliance.expiry_date');
+      if (!date) return false;
+
+      const expirationDate = dayjs(date);
+      const trialDaysRemaining = Math.ceil(expirationDate.diff(dayjs(), 'day', true));
+      return trialDaysRemaining <= 0;
     },
   },
   mutations: {

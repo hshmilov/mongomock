@@ -93,6 +93,7 @@
             :custom-sort="rulesSort"
             :cis-title="cisTitle"
             @save-rules="updateActiveRules"
+            :lock-compliance-actions="complianceDisabled || complianceExpired"
           />
         </div>
       </div>
@@ -108,10 +109,14 @@
         :categories="filteredCategories"
         :failed-only="failedOnly"
         :aggregated-view="aggregatedView"
+        :lock-compliance-actions="complianceDisabled || complianceExpired"
       />
     </div>
     <XComplianceTip
-      v-if="featureFlags && !enabled"
+      v-if="complianceDisabled"
+    />
+    <XComplianceExpireModal
+      v-if="complianceExpired"
     />
   </XPage>
 </template>
@@ -128,11 +133,12 @@ import XCombobox from '@axons/inputs/combobox/index.vue';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XComplianceTable from '@components/networks/compliance/ComplianceTable.vue';
 import XComplianceTip from '@components/networks/compliance/ComplianceTip.vue';
+import XComplianceExpireModal from '@components/networks/compliance/ComplianceExpireModal.vue';
 import XComplianceScore from '@components/networks/compliance/ComplianceScore.vue';
 import {
   fetchCompliance, fetchComplianceInitialCis, fetchComplianceReportFilters, updateComplianceRules,
 } from '@api/compliance';
-import { IN_TRIAL } from '@store/modules/settings';
+import { IN_TRIAL, IS_CLOUD_COMPLIANCE_EXPIRED } from '@store/modules/settings';
 import XComplianceSelect from '../networks/compliance/ComplianceSelect.vue';
 
 export default {
@@ -146,6 +152,7 @@ export default {
     XComplianceScore,
     XComplianceSelect,
     XSwitch,
+    XComplianceExpireModal,
   },
   data() {
     return {
@@ -169,6 +176,7 @@ export default {
   computed: {
     ...mapGetters({
       inTrial: IN_TRIAL,
+      isExpired: IS_CLOUD_COMPLIANCE_EXPIRED,
     }),
     ...mapState({
       featureFlags(state) {
@@ -246,6 +254,12 @@ export default {
         }
       });
       return Array.from(uniqueCategories);
+    },
+    complianceDisabled() {
+      return this.featureFlags && !this.enabled;
+    },
+    complianceExpired() {
+      return this.featureFlags && this.enabled && this.isExpired;
     },
   },
   mounted() {

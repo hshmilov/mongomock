@@ -3,7 +3,7 @@
     <ADropdown
       :trigger="enforcementRestricted?['']:['click']"
       placement="bottomRight"
-      :disabled="enforcementRestricted"
+      :disabled="enforcementRestricted || disabled"
       :visible="dropDownVisible"
       overlay-class-name="x-enforcement-menu"
       @visibleChange="openCloseMenu"
@@ -14,7 +14,7 @@
         @trigger="openCloseMenu"
       >
         <VIcon
-          :disabled="enforcementRestricted"
+          :disabled="enforcementRestricted || disabled"
           size="18"
         >$vuetify.icons.enforcementsDark</VIcon>
         <span class="enforce-title">Enforce</span>
@@ -127,6 +127,10 @@ export default {
       default: () => [],
     },
     failedOnly: {
+      type: Boolean,
+      default: false,
+    },
+    disabled: {
       type: Boolean,
       default: false,
     },

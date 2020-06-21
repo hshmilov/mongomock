@@ -9,6 +9,7 @@ from ui_tests.pages.page import Page
 class CompliancePage(Page):
     ROOT_PAGE_CSS = 'li#compliance.x-nav-item'
     COMPLIANCE_TIP_CSS = '.x-compliance-tip'
+    COMPLIANCE_EXPIRY_MODAL_CSS = '#x-compliance-expire-modal'
     COMPLIANCE_PANEL_OPEN_CSS = '.v-navigation-drawer--open'
     TITLE_FAILED_CSS = 'div[title="Failed"]'
     TITLE_PASSED_CSS = 'div[title="Passed"]'
@@ -51,6 +52,13 @@ class CompliancePage(Page):
     def assert_no_compliance_tip(self):
         with pytest.raises(NoSuchElementException):
             self.driver.find_element_by_css_selector(self.COMPLIANCE_TIP_CSS)
+
+    def assert_compliance_expiry_modal(self):
+        assert self.driver.find_element_by_css_selector(self.COMPLIANCE_EXPIRY_MODAL_CSS)
+
+    def assert_no_compliance_expiry_modal(self):
+        with pytest.raises(NoSuchElementException):
+            self.driver.find_element_by_css_selector(self.COMPLIANCE_EXPIRY_MODAL_CSS)
 
     def assert_compliance_panel_is_open(self):
         assert self.driver.find_element_by_css_selector(self.COMPLIANCE_PANEL_OPEN_CSS)

@@ -143,6 +143,12 @@ class FeatureFlags(Configurable):
                             'title': 'Cloud Enabled',
                             'type': 'bool',
                         },
+                        {
+                            'name': CloudComplianceNames.ExpiryDate,
+                            'title': 'Cloud Trial Expiration Date',
+                            'type': 'string',
+                            'format': 'date-time',
+                        },
                     ],
                     'required': [
                         CloudComplianceNames.Visible, CloudComplianceNames.Enabled
@@ -210,6 +216,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.CloudCompliance: {
                 CloudComplianceNames.Visible: False,
                 CloudComplianceNames.Enabled: False,
+                CloudComplianceNames.ExpiryDate: '',
             },
             RootMasterNames.root_key: {
                 RootMasterNames.enabled: False,

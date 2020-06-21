@@ -3251,6 +3251,15 @@ class PluginBase(Configurable, Feature, ABC):
             'config_name': FEATURE_FLAGS_CONFIG
         })['config']
 
+    @staticmethod
+    def _compliance_expired(expiry_date):
+        """
+        Check whether system has a trial expiration that has passed
+        """
+        if not expiry_date:
+            return False
+        return parse_date(expiry_date) < parse_date(datetime.now())
+
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
     def should_cloud_compliance_run(self) -> bool:
@@ -3260,7 +3269,10 @@ class PluginBase(Configurable, Feature, ABC):
         # If we are in trial, or if the cloud compliance feature has been enabled, run this.
         is_cloud_compliance_enabled = cloud_compliance_settings.get(CloudComplianceNames.Enabled)
         is_cloud_compliance_visible = cloud_compliance_settings.get(CloudComplianceNames.Visible)
-        return is_cloud_compliance_visible and (self.is_in_trial() or is_cloud_compliance_enabled)
+        is_cloud_compliance_expired = self._compliance_expired(cloud_compliance_settings.get(
+            CloudComplianceNames.ExpiryDate))
+        compliance_enabled = self.is_in_trial() or is_cloud_compliance_enabled
+        return is_cloud_compliance_visible and compliance_enabled and not is_cloud_compliance_expired
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=5), lock=threading.Lock())
