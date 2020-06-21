@@ -1,5 +1,7 @@
 import os
 import subprocess
+import sys
+
 import docker
 
 from scripts.instances.instances_consts import VPN_DATA_DIR
@@ -26,7 +28,7 @@ OPENVPN_SETUP_COMMANDS = [
 class OpenvpnService(DockerService):
     # pylint: disable=line-too-long
     def start(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        if os.name != 'posix':
+        if 'linux' not in sys.platform.lower():
             return
         try:
             TUNNEL_RESOLV_FILE_HOST_PATH.touch()
