@@ -32,7 +32,7 @@ class ApplicationData(SmartJsonClass):
     webfacing = Field(str, 'WebFacing')
     level_used = Field(str, 'Level Used')
     owning_division_code = Field(str, 'Owning Division Code')
-    application_owner = Field(str, 'Appilcation Owner')
+    application_owner = Field(str, 'Application Owner')
     application_url = Field(str, 'Application URL')
     description = Field(str, 'Application Description')
 
@@ -201,27 +201,30 @@ class IgarAdapter(AdapterBase):
                 application_owner = application_raw.get('Application_Owner') or application_raw.get('ApplicationOwner')
                 if not application_owner:
                     continue
+                application_id = application_raw.get('InstallationID')
+                if isinstance(application_id, dict):
+                    application_id = application_id.get('string')
                 application_data = ApplicationData(
                     application_name=application_raw.get('Application_Name'),
-                    application_id=application_raw.get('InstallationID'),
+                    application_id=application_id,
                     is_manager=application_raw.get('IS_Manager'),
                     owning_country_code=application_raw.get('Owning_Country_Code'),
                     owning_company_code=application_raw.get('Owning_Company_Code'),
                     owning_function=application_raw.get('Owning_function') or application_raw.get('OwningFunction'),
                     application_support_status=application_raw.get(
-                        'ApplicationSupportStatus') or application_raw.get('support'),
+                        'ApplicationSupportStatus') or str(application_raw.get('support')),
                     internal_control_relevance=application_raw.get('Internal_Control_Relevance'),
                     abbsoxtesting=application_raw.get('ABBSOXTesting'),
                     eysoxtesting=application_raw.get('EYSOXTesting'),
                     installation_type=application_raw.get(
                         'InstallationType') or application_raw.get('Installation_Type'),
-                    internet_facing=application_raw.get('InternetFacing'),
+                    internet_facing=str(application_raw.get('InternetFacing')),
                     webfacing=application_raw.get('webfacing'),
                     level_used=application_raw.get('Level_Used'),
                     owning_division_code=application_raw.get('Owning_Division_Code'),
                     application_owner=application_owner,
                     application_url=application_raw.get('ApplicationUrl'),
-                    descritpion=application_raw.get('Application_description'))
+                    description=application_raw.get('Application_description'))
                 application_owner = application_owner.lower()
                 if application_owner not in users_data_dict:
                     users_data_dict[application_owner] = []
@@ -272,30 +275,32 @@ class IgarAdapter(AdapterBase):
         for application_raw in applications_data:
             try:
                 application_id = application_raw.get('InstallationID')
+                if isinstance(application_id, dict):
+                    application_id = application_id['string']
                 if not application_id:
                     continue
                 application_data = ApplicationData(
                     application_name=application_raw.get('Application_Name'),
-                    application_id=application_raw.get('InstallationID'),
+                    application_id=application_id,
                     is_manager=application_raw.get('IS_Manager'),
                     owning_country_code=application_raw.get('Owning_Country_Code'),
                     owning_company_code=application_raw.get('Owning_Company_Code'),
                     owning_function=application_raw.get('Owning_function') or application_raw.get('OwningFunction'),
                     application_support_status=application_raw.get(
-                        'ApplicationSupportStatus') or application_raw.get('support'),
+                        'ApplicationSupportStatus') or str(application_raw.get('support')),
                     internal_control_relevance=application_raw.get('Internal_Control_Relevance'),
                     abbsoxtesting=application_raw.get('ABBSOXTesting'),
                     eysoxtesting=application_raw.get('EYSOXTesting'),
                     installation_type=application_raw.get(
                         'InstallationType') or application_raw.get('Installation_Type'),
-                    internet_facing=application_raw.get('InternetFacing'),
+                    internet_facing=str(application_raw.get('InternetFacing')),
                     webfacing=application_raw.get('webfacing'),
                     level_used=application_raw.get('Level_Used'),
                     owning_division_code=application_raw.get('Owning_Division_Code'),
                     application_owner=application_raw.get(
                         'Application_Owner') or application_raw.get('ApplicationOwner'),
                     application_url=application_raw.get('ApplicationUrl'),
-                    descritpion=application_raw.get('Application_description'))
+                    description=application_raw.get('Application_description'))
                 application_data_dict[application_id] = application_data
             except Exception:
                 logger.exception(f'Problem with application raw {application_raw}')
@@ -304,6 +309,8 @@ class IgarAdapter(AdapterBase):
                 server_id = server_application_raw.get('ServerID') or server_application_raw.get('ServerId')
                 application_id = server_application_raw.get('ApplicationID') or \
                     server_application_raw.get('InstallationId')
+                if isinstance(application_id, dict):
+                    application_id = application_id['string']
                 if not (server_id and application_id):
                     continue
                 if server_id not in server_applications_dict:
@@ -319,8 +326,17 @@ class IgarAdapter(AdapterBase):
         ips_dups = set()
         for device_raw in servers_data:
             try:
-                ip = device_raw.get('ServerIP') or device_raw.get('IP')
-                if ip:
+                ip_raw = device_raw.get('ServerIP') or device_raw.get('IP')
+                if not (isinstance(ip_raw, str) and ip_raw):
+                    continue
+                if ',' in ip_raw:
+                    ip_list = ip_raw.split(',')
+                else:
+                    ip_list = [ip_raw]
+                for ip in ip_list:
+                    ip = ip.strip()
+                    if not ip:
+                        continue
                     if ip in ips_seen:
                         ips_dups.add(ip)
                     ips_seen.add(ip)
@@ -335,20 +351,35 @@ class IgarAdapter(AdapterBase):
                 if not server_id:
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
-                device.id = server_id + '_' + (device_raw.get('ServerName') or '')
-                device.igar_server_id = server_id
+                device.id = str(server_id) + '_' + (device_raw.get('ServerName') or '')
+                device.igar_server_id = str(server_id)
                 device.has_ip_duplication = False
                 device.name = device_raw.get('ServerName')
                 device.hostname = device_raw.get('ServerFQDN')
-                server_ip = device_raw.get('ServerIP') or device_raw.get('IP')
-                if server_ip:
+                server_ip_raw = device_raw.get('ServerIP') or device_raw.get('IP')
+                ips = list()
+                if isinstance(server_ip_raw, str) and server_ip_raw:
+                    if ',' in server_ip_raw:
+                        server_ips = server_ip_raw.split(',')
+                    else:
+                        server_ips = [server_ip_raw.strip()]
+                else:
+                    server_ips = []
+                for server_ip in server_ips:
+                    server_ip = server_ip.strip()
+                    if not server_ip:
+                        continue
                     if server_ip in ips_dups:
                         device.has_ip_duplication = True
-                    ips = [ip.strip() for ip in server_ip.split('^')]
+                    ips.extend([ip.strip() for ip in server_ip.split('^')])
+                if ips:
                     device.add_nic(ips=ips)
                 manual_host_ip = device_raw.get('ManualHostIPAddress') or device_raw.get('ManualHostIpAddress')
-                if manual_host_ip:
-                    ips = [ip.strip() for ip in manual_host_ip.split('^')]
+                if isinstance(manual_host_ip, str) and manual_host_ip:
+                    if ',' in manual_host_ip:
+                        ips = [ip.strip() for ip in manual_host_ip.split(',')]
+                    else:
+                        ips = [ip.strip() for ip in manual_host_ip.split('^')]
                     device.add_nic(ips=ips)
                 device.manua_host_ip_address = manual_host_ip
                 apps_ids = server_applications_dict.get(server_id)
@@ -363,7 +394,7 @@ class IgarAdapter(AdapterBase):
                 device.network_zone = device_raw.get('Network Zone') or device_raw.get('NetworkZone')
                 device.owner = device_raw.get('System Owner') or device_raw.get('AssetOwnedBy')
                 device.owner_email = device_raw.get('Owner Email') or device_raw.get('OwnerEmail')
-                device.owner_geid = device_raw.get('Owner GEID') or device_raw.get('OwnerGEID')
+                device.owner_geid = device_raw.get('Owner GEID') or str(device_raw.get('OwnerGEID'))
                 device.support_status = device_raw.get('Support Status') or device_raw.get('SupportStatus')
                 device.asset_support = device_raw.get('Asset Support') or device_raw.get('AssetSupportStatus')
                 device.device_status = device_raw.get('Status')
@@ -388,7 +419,7 @@ class IgarAdapter(AdapterBase):
                 device.type_of_vm_scan = device_raw.get('TypeOfVMScan')
                 device.authentication_record = device_raw.get('AuthenticationRecord')
                 device.scan_group_field = device_raw.get('ScanGroupField')
-                device.data_center_id = device_raw.get('DataCenterID')
+                device.data_center_id = device_raw.get('DataCenterID') or str(device_raw.get('DataCenterId'))
                 device.comments = device_raw.get('Comments')
                 device.panned_availability_period = device_raw.get('PannedAvailabilityPeriod')
                 device.ci_number = device_raw.get('CINumber')

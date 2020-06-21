@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.mixins.configurable import Configurable
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from firemon_adapter import consts
 from firemon_adapter.connection import FiremonConnection
@@ -113,11 +114,12 @@ class FiremonAdapter(AdapterBase, Configurable):
     def _fill_firemon_device_fields(device_raw: dict, device: MyDeviceAdapter):
         try:
             device.management_ip = device_raw.get('managementIp')
-
             device_pack = device_raw.get('devicePack')
-            if isinstance(device_pack, dict):
-                device.device_type = device_raw.get('deviceType')
-
+            if not isinstance(device_pack, dict):
+                device_pack = {}
+            device.device_type = device_raw.get('deviceType') or device_pack.get('deviceType')
+            device.last_updated = parse_date(device_raw.get('lastUpdated'))
+            device.last_revision = parse_date(device_raw.get('lastRevision'))
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -152,6 +154,8 @@ class FiremonAdapter(AdapterBase, Configurable):
             if management_ip:
                 device.add_ips_and_macs(ips=[management_ip])
 
+            device.last_seen = parse_date(device_raw.get('lastUpdated'))
+
             ios_control_output = device_raw.get(consts.CONTROL_NAME_ENRICH_IOS)
             if ios_control_output:
                 ios_os = self._parse_ios_control_output(ios_control_output, device_id)
@@ -159,9 +163,11 @@ class FiremonAdapter(AdapterBase, Configurable):
                     device.figure_os(ios_os)
 
             device_pack = device_raw.get('devicePack')
-            if isinstance(device_pack, dict):
-                device.device_model = device_pack.get('deviceName')
-                device.device_manufacturer = device_pack.get('vendor')
+            if not isinstance(device_pack, dict):
+                device_pack = {}
+
+            device.device_model = device_raw.get('product') or device_pack.get('deviceName')
+            device.device_manufacturer = device_raw.get('vendor') or device_pack.get('vendor')
 
             self._fill_firemon_device_fields(device_raw, device)
 

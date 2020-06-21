@@ -226,5 +226,6 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
+        # inject parallel_requests
+        config['parallel_requests'] = config.get('async_chunks') or consts.DEFAULT_ASYNC_CHUNK_SIZE
         super()._on_config_update(config)
-        self.__parallel_requests = config.get('async_chunks') or consts.DEFAULT_ASYNC_CHUNK_SIZE

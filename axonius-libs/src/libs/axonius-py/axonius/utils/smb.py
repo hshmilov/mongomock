@@ -1,12 +1,19 @@
 import logging
 from socket import gethostname
-
-# pylint: disable=import-error
+from tempfile import NamedTemporaryFile
+from typing import Optional
+# pylint: disable=import-error,no-name-in-module
+from smb.base import NotConnectedError as SMBNotConnectedError
 from smb.SMBConnection import SMBConnection
-# pylint: disable=import-error
 from smb import smb_structs
+# pylint: disable=import-error,no-name-in-module
+
+from axonius.utils.parsing import is_valid_ip
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+DEFAULT_PORT_NBT = 139
+DEFAULT_PORT_DIRECT_SMB = 445
 
 
 class SMBClient:
@@ -18,43 +25,57 @@ class SMBClient:
     _process_share function will split it up and format it.
     """
 
+    # pylint: disable=too-many-branches
     def __init__(self, ip: str,
-                 smb_host: str,
                  share_name: str,
                  username: str = None,
                  password: str = None,
-                 port: int = 445,
-                 use_nbns: bool = True):
+                 port: int = None,
+                 use_nbns: bool = True,
+                 smb_host: Optional[str] = None):
 
-        if not isinstance(ip, str):
-            raise ValueError(f'IP is not a string, but {type(ip)}')
+        if not (isinstance(ip, str) and is_valid_ip(ip)):
+            raise ValueError(f'IP is not a valid ip string')
         self._ip = ip
 
-        if not isinstance(smb_host, str):
-            raise ValueError(f'SMB host is not a string, but {type(smb_host)}')
-        self._smb_host = smb_host
-
-        if not isinstance(share_name, str):
-            raise ValueError(f'SMB share name is not a string, but {type(share_name)}')
+        if not (isinstance(share_name, str) and share_name):
+            raise ValueError(f'SMB share name is invalid')
         self._process_share(share_name=share_name)
 
         if not self._directory_path:
             self._directory_path = '/'
 
         if not isinstance(username, str):
-            raise ValueError(f'Username is not a string, but {type(username)}')
+            raise ValueError(f'Username is invalid')
         self._username = username.replace('\\', '/')
 
         if not isinstance(password, str):
-            raise ValueError(f'Password is not a string, but {type(password)}')
+            raise ValueError(f'Password is invalid')
         self._password = password
-
-        if not isinstance(port, int):
-            raise ValueError(f'Port is not an integer, but {type(port)}')
-        self._port = port
 
         if not isinstance(use_nbns, bool):
             raise ValueError(f'Use NBNS is not a boolean, but {type(use_nbns)}')
+
+        if port:
+            try:
+                port = int(port)
+                if port > 0xffff or port < 0:
+                    raise ValueError(f'port not in valid range: 0 < port < 65535')
+            except Exception as e:
+                raise ValueError(f'Invalid port given: {str(e)}')
+        else:
+            if use_nbns:
+                port = DEFAULT_PORT_NBT
+            else:
+                port = DEFAULT_PORT_DIRECT_SMB
+        self._port = port
+
+        if not (isinstance(smb_host, str) and smb_host):
+            if use_nbns:
+                raise ValueError('Exact NetBIOS hostname must be filled when using NetBIOS over TCP/IP.')
+            # when not using nbns this field has no meaning but must not be empty
+            smb_host = ' '
+        self._smb_host = smb_host
 
         if use_nbns:
             self._is_direct_tcp = False
@@ -75,11 +96,24 @@ class SMBClient:
                                      use_ntlm_v2=True,
                                      is_direct_tcp=self._is_direct_tcp)
         try:
-            self._server.connect(self._ip, port=self._port)
-        except Exception:
-            logger.exception(f'Could not connect to the SMB Share: '
-                             f'{self._host} @ {self._ip}')
-            raise
+            auth_result = self._server.connect(self._ip, port=self._port)
+            if not auth_result:
+                raise ConnectionError(f'Authentication failed, please check credentials and connectivity')
+
+        except SMBNotConnectedError as e:
+            # this can be caused due to wrong port, wrong netbios name, anything that will cause sending a
+            #   connection packet to remote pc to return invalid data to smb handler.
+            message = f'Smb connection failed. please check IP, Port validity and' \
+                      f' NetBIOS hostname matches the Computer Name in exact if NBT is used.'
+            logger.exception(f'{message} {str(e)}')
+            raise ConnectionError(message)
+
+        except Exception as e:
+            message = f'Could not connect to the SMB Share: '\
+                      f'{self._smb_host} @ {self._ip}.' \
+                      f' Error: {str(e)}'
+            logger.exception(message)
+            raise ConnectionError(message)
 
     def delete_files_from_smb(self, files: list, directory_path: str = None):
         """
@@ -102,9 +136,10 @@ class SMBClient:
             try:
                 self._server.deleteFiles(self._share_name, path_with_file)
                 logger.info(f'Deleted {path_with_file} from {self._share_name}')
-            except smb_structs.OperationFailure:
+            except smb_structs.OperationFailure as e:
                 logger.warning(f'Delete failed. File '
-                               f'{self._share_name}{path_with_file} not found.')
+                               f'{self._share_name}{path_with_file} not found. {str(e)}',
+                               exc_info=True)
             except Exception:
                 logger.exception(f'Unable to delete {directory_path}{file} from'
                                  f' {self._share_name}')
@@ -204,6 +239,46 @@ class SMBClient:
             self._host = 'local-machine'
             logger.warning(f'Hostname not parsable for {host}')
 
+    def check_read_write_permissions_unsafe(self):
+        # fetch existing files to make sure smb settings are valid
+        try:
+            _ = self.list_files_on_smb()
+        except smb_structs.OperationFailure as e:
+            logger.exception(e.message)
+            raise ConnectionError(e.message)
+        except Exception as e:
+            message = f'Failed listing remote SMB path, please make sure that the ' \
+                      f'parameters are correct and sufficient permissions were given.'
+            logger.exception(f'{message} {str(e)}')
+            raise ConnectionError(message)
+
+        with NamedTemporaryFile() as temp_file:
+            # remote_directory/.axonius_test
+            remote_relative_path = f'{self._directory_path}.axonius_test'
+            try:
+                self._upload_file_unsafe(temp_file.name, remote_relative_path)
+                try:
+                    self._delete_file_unsafe(remote_relative_path)
+                except Exception as e:
+                    logger.warning(f'Failed deleting .axonius_test file. {str(e)}', exc_info=True)
+            except Exception as e:
+                message = f'Failed test file creation, please make sure Axonius has' \
+                          f' sufficient Read-Write permissions.'
+                logger.exception(f'{message} {str(e)}')
+                raise ConnectionError(message)
+
+    def _upload_file_unsafe(self, local_file_path: str, remote_relative_path: str):
+        with open(local_file_path, 'rb') as file_obj:
+            self._server.storeFile(service_name=self._share_name,
+                                   path=remote_relative_path,
+                                   file_obj=file_obj)
+        logger.info(f'Uploaded {local_file_path} to {self._share_name} in {remote_relative_path}')
+
+    def _delete_file_unsafe(self, path_file_pattern: str):
+        self._server.deleteFiles(service_name=self._share_name,
+                                 path_file_pattern=path_file_pattern)
+        logger.info(f'Deleted {path_file_pattern} from {self._share_name}')
+
     def upload_files_to_smb(self, files: list, directory_path: str = None):
         """
         Upload files to the SMB share. The caller can send a
@@ -222,12 +297,8 @@ class SMBClient:
 
         for file in files:
             try:
-                with open(file, 'rb') as file_obj:
-                    path_with_file = f'{directory_path}{file}'
-                    self._server.storeFile(service_name=self._share_name,
-                                           path=path_with_file,
-                                           file_obj=file_obj)
-                logger.info(f'Uploaded {file} to {self._share_name}')
+                path_with_file = f'{directory_path}{file}'
+                self._upload_file_unsafe(file, path_with_file)
             except FileNotFoundError:
                 logger.error(f'Upload failed. File '
                              f'{self._share_name}{directory_path}{file} not '
