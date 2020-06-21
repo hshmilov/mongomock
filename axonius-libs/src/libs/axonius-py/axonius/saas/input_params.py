@@ -11,7 +11,7 @@ def read_saas_input_params():
     #  'STACK_NAME': 'stack-cust1-f0a4'}
     result = {}
     try:
-        params = requests.get('http://169.254.169.254/2009-04-04/user-data').content.decode()
+        params = requests.get('http://169.254.169.254/2009-04-04/user-data', timeout=5).content.decode()
         for param in params.split():
             if '=' in param:
                 splitted = param.split('=')
@@ -20,7 +20,8 @@ def read_saas_input_params():
         if 'AXONIUS_SAAS_NODE' not in result:
             return False
         return result
-
+    except requests.exceptions.Timeout:
+        return False
     except Exception as e:
         print(f'Failed to read saas params')
         return result
