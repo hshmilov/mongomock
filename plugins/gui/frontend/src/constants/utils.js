@@ -1,13 +1,22 @@
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import utc from 'dayjs/plugin/utc';
+import _padStart from 'lodash/padStart';
 import { DEFAULT_DATE_FORMAT } from '../store/modules/constants';
 import { ChartTypesEnum } from './dashboard'
 
 dayjs.extend(isoWeek);
 dayjs.extend(utc);
 
-export const formatDate = (dateString, schema, dateFormat) => {
+const getTimeZoneDiff = () => {
+  const diff = -(new Date().getTimezoneOffset() / 60);
+  const isFullHour = diff % 1 === 0;
+  const hoursDiffParsed = _padStart(Math.abs(Math.floor(diff)), 2, '0');
+  const minutesDiffParsed = isFullHour ? '00' : ((diff % 1) * 60).toString();
+  return `UTC${diff >= 0 ? '+' : '-'}${hoursDiffParsed}:${minutesDiffParsed}`;
+};
+
+export const formatDate = (dateString, schema, dateFormat, timeZone) => {
   if (!dayjs(dateString).isValid()) {
     return dateString;
   }
@@ -21,7 +30,11 @@ export const formatDate = (dateString, schema, dateFormat) => {
   if (schema && schema.format === 'time') {
     return dateTime.format('HH:mm:ss');
   }
-  return dateTime.format(`${dateFormat} HH:mm:ss`);
+  let formatting = `${dateFormat} HH:mm:ss`;
+  if (timeZone) {
+    formatting += ` ${getTimeZoneDiff()}`;
+  }
+  return dateTime.format(formatting);
 };
 
 export const includesIgnoreCase = (str, substring) => (

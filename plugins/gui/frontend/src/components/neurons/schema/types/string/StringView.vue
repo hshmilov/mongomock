@@ -79,6 +79,9 @@ export default {
       if (title != null) {
         return title;
       }
+      if (schema.format === 'date-time') {
+        return formatDate(value, schema, dateFormat, true);
+      }
       if (schema.format !== 'user') {
         return this.format(value, schema, dateFormat);
       }
