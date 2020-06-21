@@ -636,6 +636,11 @@ class AxoniusService:
         tunneler_image = f'{DOCKERHUB_URL}alpine/socat'
         return self._pull_image(tunneler_image, repull, show_print)
 
+    def pull_container_alpine(self, repull=False, show_print=True):
+        # Used for regular alpine containers (such as socat, openvpn, sshl)
+        alpine_image = f'{DOCKERHUB_URL}alpine:3.11.6'
+        return self._pull_image(alpine_image, repull, show_print)
+
     @staticmethod
     def _is_adapter_via_tunnel(adapter_name):
         if not CUSTOMER_CONF_PATH.is_file():
