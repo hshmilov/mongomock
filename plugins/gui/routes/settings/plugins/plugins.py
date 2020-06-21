@@ -35,6 +35,7 @@ from axonius.types.ssl_state import (SSLState)
 from axonius.utils.backup import verify_preshared_key
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction
 from axonius.utils.proxy_utils import to_proxy_string
+from axonius.utils.smb import SMBClient
 from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import clear_passwords_fields, refill_passwords_fields
@@ -244,6 +245,32 @@ class Plugins:
                 except Exception as e:
                     logger.exception(f'Error listing AWS s3 objects')
                     return return_error(f'Error listing AWS S3 Objects: {str(e)}', 400)
+
+            smb_settings = config_to_set.get('smb_settings')
+            if smb_settings and smb_settings.get('enabled') is True:
+                enable_backups = smb_settings.get('enable_backups')
+                preshared_key = smb_settings.get('preshared_key') or ''
+                if enable_backups is True:
+                    try:
+                        verify_preshared_key(preshared_key)
+                    except Exception as e:
+                        return return_error(str(e), http_status=400)
+
+                try:
+                    # Note: configuration validity and connect are performed within SMBClient.__init__
+                    smb_client = SMBClient(ip=smb_settings.get('ip'),
+                                           smb_host=smb_settings.get('hostname'),
+                                           share_name=smb_settings.get('share_path'),
+                                           username=smb_settings.get('username') or '',
+                                           password=smb_settings.get('password') or '',
+                                           port=smb_settings.get('port'),
+                                           use_nbns=smb_settings.get('use_nbns'))
+
+                    smb_client.check_read_write_permissions_unsafe()
+                except Exception as e:
+                    logger.exception(f'Error connecting to SMB: {str(e)}')
+                    return return_error(f'Error connecting to SMB: {str(e)}', 400)
+
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')
 

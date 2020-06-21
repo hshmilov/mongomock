@@ -3974,11 +3974,6 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'bool',
                         },
                         {
-                            'name': 'hostname',
-                            'title': 'SMB host name',
-                            'type': 'string',
-                        },
-                        {
                             'name': 'ip',
                             'title': 'SMB host IP',
                             'type': 'string',
@@ -4012,8 +4007,25 @@ class PluginBase(Configurable, Feature, ABC):
                         },
                         {
                             'name': 'use_nbns',
-                            'title': 'Use NetBIOS name server',
+                            'title': 'Use "NetBIOS over TCP" (NBT)',
                             'type': 'bool',
+                            'description': ('When checked, a backwards-compatible'
+                                            ' "NetBIOS over TCP/IP" (default port: 139) approach is used,'
+                                            ' but requires exact NetBIOS host name field.'
+                                            ' Otherwise, the newer Direct hosted "NetBIOS-less" SMB'
+                                            ' (default port: 445) is used.')
+                        },
+                        {
+                            'name': 'hostname',
+                            'title': 'NetBIOS host name',
+                            'type': 'string',
+                            # Note: description taken from smb.SMBConnection.SMBConnection
+                            'description': ('Required when "NetBIOS over TCP" is used.'
+                                            ' The NetBIOS machine name of the remote server.'
+                                            ' On windows, you can find out the machine name by right-clicking on'
+                                            ' the "My Computer" and selecting "Properties".'
+                                            ' This parameter must be the same as what has been configured'
+                                            ' on the remote server, or else the connection will be rejected.')
                         },
                     ],
                     'name': 'smb_settings',
@@ -4021,7 +4033,6 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': ['enabled',
                                  'enable_backups',
-                                 'hostname',
                                  'ip',
                                  'share_path',
                                  'preshared_key',
@@ -4191,12 +4202,12 @@ class PluginBase(Configurable, Feature, ABC):
                 'enable_backups': False,
                 'hostname': None,
                 'ip': None,
-                'port': 445,
+                'port': None,
                 'share_path': None,
                 'username': None,
                 'password': None,
                 'preshared_key': None,
-                'use_nbns': True,
+                'use_nbns': False,
             },
             'api_settings': {
                 'enabled': False,

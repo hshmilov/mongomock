@@ -35,12 +35,12 @@ class IgarConnection(RESTConnection):
 
     def _connect(self):
         self._create_client()
-        self._client.service.GetServerListFullCountAll()
+        logger.info(f'Expecting {self._client.service.GetServerListFullCountAll()} results')
 
     def _get_server_count(self):
         response = self._client.service.GetServerListFullCountAll()
         try:
-            return int(response.GetServerListFullCountAllResult)
+            return int(response)
         except Exception:
             logger.exception(f'Failed to get server list count. Assuming max ({MAX_NUMBER_OF_DEVICES})')
         return MAX_NUMBER_OF_DEVICES
@@ -51,17 +51,20 @@ class IgarConnection(RESTConnection):
             'itemsCount': DEVICE_PER_PAGE
         }
         max_results = min(self._get_server_count(), MAX_NUMBER_OF_DEVICES)
-        response = self._client.service.GetServerListFull(**dict_params)
-        result = response.GetServerListFullResult.ServerFullInfo
+        # response = self._client.service.GetServerListFull(**dict_params)
+        # result = response.GetServerListFullResult.ServerFullInfo
+        result = self._client.service.GetServerListFull(**dict_params)
         while result and dict_params['startIndex'] < max_results:
+            logger.info(f'Yielding servers from {dict_params["startIndex"]}')
             if isinstance(result, list):
                 yield from zeep.helpers.serialize_object(result, dict)
             else:
                 logger.error(f'Result is not a list: {result}')
                 raise TypeError(result)
             dict_params['startIndex'] += DEVICE_PER_PAGE
-            response = self._client.service.GetServerListFull(**dict_params)
-            result = response.GetServerListFullResult.ServerFullInfo
+            # response = self._client.service.GetServerListFull(**dict_params)
+            # result = response.GetServerListFullResult.ServerFullInfo
+            result = self._client.service.GetServerListFull(**dict_params)
 
     def _paginated_get_apps(self):
         dict_params = {
@@ -69,21 +72,25 @@ class IgarConnection(RESTConnection):
             'itemsCount': DEVICE_PER_PAGE
         }
         max_results = MAX_NUMBER_OF_DEVICES
-        response = self._client.service.GetApplicationListFull(**dict_params)
-        result = response.GetApplicationListFullResult.ApplicationFullInfo
+        # response = self._client.service.GetApplicationListFull(**dict_params)
+        # result = response.GetApplicationListFullResult.ApplicationFullInfo
+        result = self._client.service.GetApplicationListFull(**dict_params)
         while result and dict_params['startIndex'] < max_results:
+            logger.info(f'Yielding apps from {dict_params["startIndex"]}')
             if isinstance(result, list):
                 yield from zeep.helpers.serialize_object(result, dict)
             else:
                 logger.error(f'Result is not a list: {result}')
                 raise TypeError(result)
             dict_params['startIndex'] += DEVICE_PER_PAGE
-            response = self._client.service.GetApplicationListFull(**dict_params)
-            result = response.GetApplicationListFullResult.ApplicationFullInfo
+            # response = self._client.service.GetApplicationListFull(**dict_params)
+            # result = response.GetApplicationListFullResult.ApplicationFullInfo
+            result = self._client.service.GetApplicationListFull(**dict_params)
 
     def _get_servers_to_apps_mapping(self):
-        response = self._client.service.GetApplicationOnServerFull
-        mapping_list = response.GetApplicationOnServerFullResult.ServerApplications
+        # response = self._client.service.GetApplicationOnServerFull
+        mapping_list = self._client.service.GetApplicationOnServerFull()
+        # mapping_list = response.GetApplicationOnServerFullResult.ServerApplications
         if isinstance(mapping_list, list):
             yield from zeep.helpers.serialize_object(mapping_list[:MAX_NUMBER_OF_DEVICES], dict)
 

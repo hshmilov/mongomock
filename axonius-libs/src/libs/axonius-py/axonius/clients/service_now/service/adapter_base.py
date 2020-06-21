@@ -1137,4 +1137,4 @@ class ServiceNowAdapterBase(AdapterBase):
         self.__fetch_ci_relations = config['fetch_ci_relations']
 
         # This must be set in method override
-        self.__parallel_requests = consts.DEFAULT_ASYNC_CHUNK_SIZE
+        self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

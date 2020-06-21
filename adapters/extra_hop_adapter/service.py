@@ -142,6 +142,7 @@ class ExtraHopAdapter(AdapterBase):
             device.last_seen = parse_date(device_raw.get('discover_time'))
 
             netbios_name = device_raw.get('netbios_name')
+            hostname = None
             if netbios_name:
                 if '\\' in netbios_name:
                     hostname = netbios_name.split('\\')[1]

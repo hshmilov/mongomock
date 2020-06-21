@@ -119,7 +119,7 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
                     success = success or result_status
                     if success is True:
                         device = self.create_snow_device(device_raw=device_raw,
-                                                         fetch_ips=self.__fetch_ips)
+                                                         fetch_ips=True)
                         if device:
                             device_dict = device.to_dict()
                             self._save_data_from_plugin(
@@ -164,7 +164,7 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
                     success = success or result_status
                     if success is True:
                         device = self.create_snow_device(device_raw=device_raw,
-                                                         fetch_ips=self.__fetch_ips)
+                                                         fetch_ips=True)
                         if device:
                             device_id = device.id
                             device_dict = device.to_dict()
@@ -226,5 +226,6 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
+        # inject parallel_requests
+        config['parallel_requests'] = config.get('async_chunks') or consts.DEFAULT_ASYNC_CHUNK_SIZE
         super()._on_config_update(config)
-        self.__parallel_requests = config.get('async_chunks') or consts.DEFAULT_ASYNC_CHUNK_SIZE

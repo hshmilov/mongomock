@@ -211,24 +211,11 @@ def backup_to_smb() -> int:
     if not smb_settings.get('enable_backups'):
         raise ValueError(f'SMB Backups are not enabled.')
 
-    if not smb_settings.get('hostname'):
-        raise ValueError(f'SMB hostname address is not set.')
+    # smb params validity is checked in SMBClient
     hostname = smb_settings.get('hostname')
-
-    if not smb_settings.get('ip'):
-        raise ValueError(f'SMB IP address is not set.')
     ip = smb_settings.get('ip')
-
     share_name = smb_settings.get('share_path')
-    if not share_name:
-        raise ValueError(f'SMB share path not found.')
-    share_name = share_name.replace('\\', '/')
-
-    nbns = smb_settings.get('use_nbns')
-    if isinstance(nbns, bool):
-        use_nbns = nbns
-    else:
-        use_nbns = False
+    use_nbns = smb_settings.get('use_nbns')
 
     # Check the PSK to make sure it conforms to known standard/strength
     preshared_key = smb_settings.get('preshared_key')
@@ -252,6 +239,7 @@ def backup_to_smb() -> int:
             logger.exception(f'Unable to unlink {AXONIUS_BACKUP_FILENAME}')
 
     try:
+        # Note: SMBClient should not be held too much time idle otherwise remote servers might timeout our connection.
         smb_client = SMBClient(ip=ip,
                                smb_host=hostname,
                                username=smb_settings.get('username') or '',

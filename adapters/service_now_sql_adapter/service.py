@@ -45,7 +45,7 @@ class ServiceNowSqlAdapter(ServiceNowAdapterBase, Configurable):
                                                    server=client_config[consts.SERVICE_NOW_SQL_HOST],
                                                    port=client_config.get(consts.SERVICE_NOW_SQL_PORT,
                                                                           consts.DEFAULT_SERVICE_NOW_SQL_PORT),
-                                                   devices_paging=self.__parallel_requests)
+                                                   devices_paging=self._devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
@@ -173,5 +173,8 @@ class ServiceNowSqlAdapter(ServiceNowAdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
+        devices_fetched_at_a_time = config.get('devices_fetched_at_a_time') or 1000
+        # inject parallel_requests
+        config['parallel_requests'] = devices_fetched_at_a_time
         super()._on_config_update(config)
-        self.__parallel_requests = config['devices_fetched_at_a_time'] or 1000
+        self._devices_fetched_at_a_time = devices_fetched_at_a_time
