@@ -1214,13 +1214,15 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             return ''
 
         elif job_name == 'check_tunnel_status':
-            self.check_tunnel_status(internal_use=True)
+            return self.check_tunnel_status(internal_use=True)
 
         elif job_name == 'tunnel_is_down':
             self._tunnel_is_down()
+            return ''
 
         elif job_name == 'tunnel_is_up':
             self._tunnel_is_up()
+            return ''
 
         elif job_name == 'execute':
             # GUI is a post correlation plugin, thus this is called near the end of the cycle
