@@ -34,7 +34,8 @@ class TestDevicesTableSort(TestBase):
 
             self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
             self.devices_page.switch_to_page()
-            wait_until(lambda: self.devices_page.count_entities() == 2)
+            wait_until(lambda: self.devices_page.count_entities() == 2,
+                       total_timeout=60 * 5)
             self.devices_page.click_sort_column(self.devices_page.FIELD_LAST_SEEN)
             self.devices_page.wait_for_spinner_to_end()
 

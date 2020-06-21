@@ -3,6 +3,7 @@ from copy import copy
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
+from axonius.utils.wait import wait_until
 
 
 class TestNotifications(TestBase):
@@ -45,6 +46,9 @@ class TestNotifications(TestBase):
             self.enforcements_page.wait_for_task_in_progress_toaster()
         # Wait for all tasks to complete..
         self.notification_page.wait_for_count(150)
+        wait_until(lambda: self.notification_page.wait_for_count(150),
+                   check_return_value=False,
+                   tolerated_exceptions_list=[AssertionError])
         # Bug is reproduced when notifications-table is fully loaded over 100.
         self.notification_page.switch_to_page()
         self.notification_page.wait_for_table_to_be_responsive()
