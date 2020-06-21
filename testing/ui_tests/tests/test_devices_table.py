@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
@@ -114,8 +116,10 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
         assert int(self.devices_page.get_raw_count_entities()[1:-1]) == 2
         field_data = self.devices_page.get_field_table_data()
-        assert ['06:3A:9B:D7:D7:A8', '10.0.2.1\n10.0.2.2', '10.0.2.0/24', 'vlan0\nvlan1', '1\n2'] == field_data[0]
-        assert ['06:3A:9B:D7:D7:A8', '10.0.2.3', '', 'vlan0\nvlan1', '1\n2'] == field_data[1]
+        assert re.findall(
+            '06:3A:9B:D7:D7:A8 10\\.0\\.2\\.[1-2]\n10\\.0\\.2\\.[1-2] 10\\.0\\.2\\.0/24 vlan[0-1]\nvlan[0-1] 1\n2',
+            ' '.join(field_data[0]))
+        assert re.findall('06:3A:9B:D7:D7:A8 10\\.0\\.2\\.3  vlan[0-1]\nvlan[0-1] 1\n2', ' '.join(field_data[1]))
 
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_spinner_to_end()

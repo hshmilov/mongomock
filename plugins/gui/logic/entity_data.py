@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from typing import Generator
 from uuid import uuid4
+
 from pymongo import DESCENDING
 from flask import request, session, jsonify
 
@@ -85,6 +86,13 @@ def _get_entity_actual_data(advance_data: list, items: list) -> Generator[dict, 
     """
     for row in advance_data:
         item = parse_entity_fields(row, [field['name'] for field in items])
+        for field_name, field_data in item.items():
+            if isinstance(field_data, list):
+                try:
+                    item[field_name] = list(set(field_data))
+                except TypeError:
+                    # data type probably not hashable
+                    continue
         if item:
             yield item
 
