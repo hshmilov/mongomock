@@ -59,7 +59,6 @@ class WeaveService(DockerService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__(container_name, service_dir)
         self._number_of_tries = 0
-        self.tried_signal_uwsgi = False
 
     @property
     def docker_network(self):
@@ -180,7 +179,6 @@ class WeaveService(DockerService):
         if timeout > 3:
             try:
                 super().wait_for_service(timeout=5)
-                self.tried_signal_uwsgi = False
             except TimeoutException:
                 try:
                     if subprocess.check_output(['docker', 'exec', '-it',
@@ -189,20 +187,22 @@ class WeaveService(DockerService):
                 except Exception:
                     pass
             timeout -= 3
+            self.signal_uwsgi_to_wakeup()
         try:
             super().wait_for_service(timeout=timeout)
-            self.tried_signal_uwsgi = False
         except TimeoutException:
-            # Sometimes uwsgi hangs at system startup, signaling it solves the problem
-            # https://github.com/enowars/enochecker/pull/22
-            if not self.tried_signal_uwsgi:
-                print('Signaling uwsgi to wakeup!!!')
-                super().run_command_in_container(f'python3 {UWSGI_RECOVER_SCRIPT_PATH}')
-                self.tried_signal_uwsgi = True
-            else:
-                print('Restarting container due to wait TimeoutException on wait.')
-                self.restart()
+            self.signal_uwsgi_to_wakeup()
+            print('Restarting container due to wait TimeoutException on wait.')
+            self.restart()
             raise
+
+    def signal_uwsgi_to_wakeup(self):
+        # Sometimes uwsgi hangs at system startup, signaling it solves the problem
+        # https://github.com/enowars/enochecker/pull/22
+        if self.image != 'axonius/axonius-libs':
+            return
+        print('Signaling uwsgi to wakeup!!!')
+        super().run_command_in_container(f'python3 {UWSGI_RECOVER_SCRIPT_PATH}')
 
     def add_weave_dns_entry(self):
         """
