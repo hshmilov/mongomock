@@ -66,6 +66,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'ax_snow_fields_map',
                     'type': 'string',
                     'title': 'Axonius to ServiceNow Fields Map'
+                },
+                {
+                    'name': 'identifyreconcile_endpoint',
+                    'type': 'string',
+                    'title': 'Identifyreconcile Endpoint (Changes the flow to use identifyreconcile feature only)'
                 }
             ],
             'required': [
@@ -87,14 +92,16 @@ class ServiceNowComputerAction(ActionTypeBase):
             'ax_snow_fields_map': None,
             'cmdb_ci_table': 'cmdb_ci_computer',
             'extra_fields': None,
-            'verify_ssl': True
+            'verify_ssl': True,
+            'identifyreconcile_endpoint': None
         })
 
     # pylint: disable=too-many-arguments,too-many-branches
     def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
                                      manufacturer=None, os_type=None, serial_number=None,
                                      to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
-                                     cmdb_ci_table=None, extra_fields=None, ax_snow_values_map_dict=None):
+                                     cmdb_ci_table=None, extra_fields=None, ax_snow_values_map_dict=None,
+                                     identifyreconcile_endpoint=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
         if not name:
@@ -112,6 +119,8 @@ class ServiceNowComputerAction(ActionTypeBase):
             connection_dict['serial_number'] = serial_number
         if os_type:
             connection_dict['os'] = os_type
+        if identifyreconcile_endpoint:
+            connection_dict['identifyreconcile_endpoint'] = identifyreconcile_endpoint
         try:
             if extra_fields:
                 extra_fields_dict = json.loads(extra_fields)
@@ -235,7 +244,7 @@ class ServiceNowComputerAction(ActionTypeBase):
 
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
-
+                identifyreconcile_endpoint = self._config.get('identifyreconcile_endpoint')
                 message = self._create_service_now_computer(name=name_raw,
                                                             mac_address=mac_address_raw,
                                                             ip_address=ip_address_raw,
@@ -246,7 +255,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                             to_correlate_device_id=to_correlate_device_id,
                                                             cmdb_ci_table=self._config.get('cmdb_ci_table'),
                                                             extra_fields=self._config.get('extra_fields'),
-                                                            ax_snow_values_map_dict=ax_snow_values_map_dict)
+                                                            ax_snow_values_map_dict=ax_snow_values_map_dict,
+                                                            identifyreconcile_endpoint=identifyreconcile_endpoint)
 
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:

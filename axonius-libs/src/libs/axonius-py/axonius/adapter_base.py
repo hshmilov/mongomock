@@ -793,8 +793,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                              headers={'Content-Type': 'application/json',
                                                       'Accept': 'application/json'},
                                              verify=False)
+                    resposne.raise_for_status()
                 except Exception:
-                    pass
+                    logger.exception(f'Problem sending webhook')
+            try:
+                opsgenie_connection = self.get_opsgenie_connection()
+                if opsgenie_connection:
+                    with opsgenie_connection:
+                        opsgenie_connection.create_alert(message=error_msg)
+            except Exception:
+                logger.exception(f'Proble with Opsgenie message')
 
             logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
             log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,

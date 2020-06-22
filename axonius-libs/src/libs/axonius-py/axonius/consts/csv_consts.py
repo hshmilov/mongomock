@@ -31,8 +31,9 @@ IDENTIFIERS = {
     'networkinterfaces': ['networkinterfaces'],
     'etcissue': ['etcissue'],
     'cve_id': ['cve', 'cveid', 'cvelist'],
-    'email': ['email', 'mail']
-
+    'email': ['email', 'mail'],
+    'cloud_id': ['cloudid'],
+    'cloud_provider': ['cloudprovider', 'cloudprovidor']
 }
 
 # Note that fields have to be lowercase, with no spaces or - or _. we normalize this when we get data from the csv

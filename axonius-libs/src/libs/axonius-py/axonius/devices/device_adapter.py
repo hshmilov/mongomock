@@ -22,7 +22,9 @@ from axonius.utils.parsing import (
     get_manufacturer_from_mac,
     normalize_mac,
     replace_large_ints,
-    parse_versions_raw
+    parse_versions_raw,
+    is_valid_ipv6,
+    is_valid_ipv4
 )
 
 MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
@@ -178,6 +180,8 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mac = Field(str, 'MAC', converter=format_mac)
     manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    ips_v4 = ListField(str, 'IPv4s', converter=format_ip, json_format=JsonStringFormat.ip)
+    ips_v6 = ListField(str, 'IPv6s', converter=format_ip, json_format=JsonStringFormat.ip)
     locations = ListField(str, 'Locations', description='Recognized Geo locations of the IPs')
     subnets = ListField(
         str,
@@ -187,6 +191,16 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
         description='A list of subnets in ip format, that correspond the IPs',
     )
     ips_raw = ListField(
+        str, description='Number representation of the IP, useful for filtering by range',
+        converter=format_ip_raw,
+        hidden=True
+    )
+    ips_v4_raw = ListField(
+        str, description='Number representation of the IP, useful for filtering by range',
+        converter=format_ip_raw,
+        hidden=True
+    )
+    ips_v6_raw = ListField(
         str, description='Number representation of the IP, useful for filtering by range',
         converter=format_ip_raw,
         hidden=True
@@ -957,6 +971,12 @@ class DeviceAdapter(SmartJsonClass):
                     try:
                         if ip and isinstance(ip, str) and ip != '0.0.0.0':
                             obj.ips.append(ip)
+                            if is_valid_ipv4(ip):
+                                obj.ips_v4.append(ip)
+                                obj.ips_v4_raw.append(ip)
+                            if is_valid_ipv6(ip):
+                                obj.ips_v6.append(ip)
+                                obj.ips_v6_raw.append(ip)
                             obj.ips_raw.append(ip)
                     except (ValueError, TypeError):
                         if logger is None:

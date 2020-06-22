@@ -241,8 +241,19 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             return False
 
     def create_service_now_computer(self, connection_dict):
+        identifyreconcile_endpoint = None
+        try:
+            identifyreconcile_endpoint = connection_dict.pop('identifyreconcile_endpoint', None)
+        except Exception:
+            pass
         cmdb_ci_table = connection_dict.get('cmdb_ci_table') or 'cmdb_ci_computer'
         logger.info(f'Creating service now computer ')
+        if identifyreconcile_endpoint:
+            body_params = {'relations': [], 'items': [connection_dict]}
+            self._post(f'identifyreconcile',
+                       url_params={'sysparm_data_source': identifyreconcile_endpoint},
+                       body_params=body_params)
+            return True, None
         try:
             device_raw = self.__add_dict_to_table(cmdb_ci_table, connection_dict)['result']
             return True, device_raw

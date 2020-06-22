@@ -12,7 +12,7 @@ from axonius.fields import Field
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import make_dict_from_csv, normalize_var_name
+from axonius.utils.parsing import make_dict_from_csv, normalize_var_name, figure_out_cloud
 from axonius.utils.remote_file_utils import load_remote_data, test_file_reachability
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -250,6 +250,8 @@ class CsvAdapter(AdapterBase):
                 device.id = file_name + '_' + device_id
                 device.device_serial = vals.get('serial')
                 device.name = vals.get('name')
+                device.cloud_id = vals.get('cloud_id')
+                device.cloud_provider = figure_out_cloud(vals.get('cloud_provider'))
                 hostname = vals.get('hostname')
                 if hostname == 'unknown':
                     hostname = None

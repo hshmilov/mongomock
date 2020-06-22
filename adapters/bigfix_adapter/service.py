@@ -11,7 +11,7 @@ from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import normalize_var_name
+from axonius.utils.parsing import normalize_var_name, is_valid_ipv6
 from bigfix_adapter import consts
 from bigfix_adapter.connection import BigfixConnection
 
@@ -228,6 +228,8 @@ class BigfixAdapter(AdapterBase):
                     ips = (device_raw.get('IP Address') or '').split(',') + \
                           (device_raw.get('IPv6 Address') or '').split(',')
                     ips = [ip.strip() for ip in ips]
+                    if self.__exclude_ipv6:
+                        ips = [ip for ip in ips if not is_valid_ipv6(ip)]
                     device.add_ips_and_macs(mac_addresses, ips)
                 except Exception:
                     logger.exception('Problem adding nic to Bigfix')
@@ -334,3 +336,27 @@ class BigfixAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    'name': 'exclude_ipv6',
+                    'title': 'Exclude IPv6 addresses',
+                    'type': 'bool'
+                }
+            ],
+            "required": ['exclude_ipv6'],
+            "pretty_name": "Bigfix Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_ipv6': False
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_ipv6 = config['exclude_ipv6']

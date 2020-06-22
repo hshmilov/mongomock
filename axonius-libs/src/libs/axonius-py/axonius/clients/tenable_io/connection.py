@@ -63,6 +63,33 @@ class TenableIoConnection(RESTConnection):
                    body_params={'assets': [tenable_io_dict],
                                 'source': 'Axonius'})
 
+    def add_ips_to_scans(self, tenable_io_dict):
+        scan_name = tenable_io_dict.get('scan_name')
+        ips = tenable_io_dict.get('ips')
+        if not ips or not scan_name:
+            raise RESTException('Missing IPS or Scan Name')
+        scans_list = self._get('scans').get('scans')
+        if not scans_list or not isinstance(scans_list, list):
+            raise RESTException('Bad list of scans')
+        scan_id = None
+        for scan_raw in scans_list:
+            if scan_raw.get('name') == scan_name:
+                scan_id = scan_raw.get('id')
+                break
+        if not scan_id:
+            raise RESTException('Couldn\'n find scan name')
+        scan_raw = self._get(f'scans/{scan_id}')
+        if not scan_raw or not isinstance(scan_raw, dict) or not scan_raw.get('info'):
+            raise RESTException('Couldn\'n get scan id info')
+        ips_final = [ip.strip() for ip in ips if ip.strip()]
+        ips_str = ','.join(ips_final)
+        uuid = scan_raw['info'].get('uuid')
+        body_params = {'uuid': uuid,
+                       'settings': {'name': scan_name,
+                                    'text_targets': ips_str}}
+        self._put(f'scans/{scan_id}', body_params=body_params)
+        return True
+
     def add_ips_to_target_group(self, tenable_io_dict):
         target_group_name = tenable_io_dict.get('target_group_name')
         ips = tenable_io_dict.get('ips')

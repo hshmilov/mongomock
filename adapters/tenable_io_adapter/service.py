@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-from collections import defaultdict
 from axonius.adapter_base import AdapterProperty
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
@@ -66,6 +65,28 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     conn = self.get_connection(self._get_client_config_by_client_id(client_id))
                     with conn:
                         result_status = conn.create_asset(tenable_io_dict)
+                        success = success or result_status
+                        if success is True:
+                            return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
+        except Exception as e:
+            logger.exception('Got exception while adding to taget group')
+            return str(e), 400
+        return 'Failure', 400
+
+    @add_rule('add_ips_to_scans', methods=['POST'])
+    def add_ips_to_scans(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_io_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                try:
+                    conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                    with conn:
+                        result_status = conn.add_ips_to_scans(tenable_io_dict)
                         success = success or result_status
                         if success is True:
                             return '', 200

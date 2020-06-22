@@ -83,6 +83,9 @@ export const actionsMeta = {
     tenable_io_create_asset: {
         title: 'Create Tenable.io Asset'
     },
+    tenable_io_ips_scans: {
+        title: 'Add IPs to Tenable.io Scan'
+    },
     create_fresh_service_incident: {
         title: 'Create Freshservice Ticket'
     },
@@ -216,7 +219,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Update VA Coverage',
-        items: ['qualys_create_asset', 'qualys_add_tag', 'qualys_remove_tag', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset']
+        items: ['qualys_create_asset', 'qualys_add_tag', 'qualys_remove_tag', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset', 'tenable_io_ips_scans']
     },
     patch_device: {
         title: 'Patch Device',

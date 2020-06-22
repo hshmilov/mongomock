@@ -237,6 +237,7 @@ class AmdDbAdapter(AdapterBase, Configurable):
                     device.hostname = device_raw.get('DeviceName')
                     device.figure_os((device_raw.get('OSPlatform') or '') + ' ' + (device_raw.get('Comment') or ''))
                     device.vlan_id = device_raw.get('VlanID')
+                    device.owner = device_raw.get('AddedByFN')
                     device.set_raw(device_raw)
                     yield device
                 except Exception:

@@ -108,7 +108,9 @@ def test_cdp_data(mocks):
         'fetch_proto': 'CDP',
         'hostname': 'MAG.mag-stack.praxis.local',
         'id': 'cdp_MAG.mag-stack.praxis.local',
-        'network_interfaces': [{'ips': ['192.168.2.3'], 'ips_raw': [3_232_236_035], 'name': 'GigabitEthernet2/0/42'}],
+        'network_interfaces': [{'ips': ['192.168.2.3'], 'ips_raw': [3_232_236_035],
+                                'ips_v4': ['192.168.2.3'], 'ips_v4_raw': [3_232_236_035],
+                                'name': 'GigabitEthernet2/0/42'}],
         'os': {
             'build': 'Cisco IOS Software, C2960S Software (C2960S-UNIVERSALK9-M), '
                      + 'Version 15.2(2a)E1, RELEASE SOFTWARE (fc1)\n'
@@ -169,6 +171,8 @@ def test_arp_data(mocks):
                 'manufacturer': 'Fortinet (Fortinet, Inc.)',
                 'ips': ['192.168.10.1'],
                 'ips_raw': [3_232_238_081],
+                'ips_v4': ['192.168.10.1'],
+                'ips_v4_raw': [3_232_238_081],
             }
         ],
         'connected_devices': [{'remote_name': 'cisco-switch', 'connection_type': 'Indirect'}],
@@ -1663,6 +1667,12 @@ def test_basic_info_parsed_data(mocks):
                     'ips_raw': [
                         3232238086
                     ],
+                    'ips_v4': [
+                        '192.168.10.6'
+                    ],
+                    'ips_v4_raw': [
+                        3232238086
+                    ],
                     'mac': '00:1B:8F:DF:DF:40',
                     'manufacturer': 'Cisco (Cisco Systems, Inc)',
                     'mtu': '1500',
@@ -2489,6 +2499,12 @@ def test_basic_info_devices(mocks):
                     '192.168.10.6'
                 ],
                 'ips_raw': [
+                    3232238086
+                ],
+                'ips_v4': [
+                    '192.168.10.6'
+                ],
+                'ips_v4_raw': [
                     3232238086
                 ],
                 'mac': '00:1B:8F:DF:DF:40',

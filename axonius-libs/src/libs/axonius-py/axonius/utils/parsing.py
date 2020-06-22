@@ -435,8 +435,7 @@ def not_wifi_adapter(adapter_device):
     if adapter_device.get('plugin_name').lower() == 'aruba_adapter' or \
             (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
              adapter_device['data'].get('fetch_proto') == 'PRIME_WIFI_CLIENT') or\
-            (adapter_device.get('plugin_name').lower() == 'tanium_discover_adapter') \
-            or is_counter_act_adapter(adapter_device):
+            (adapter_device.get('plugin_name').lower() == 'tanium_discover_adapter'):
         if adapter_device.get(NORMALIZED_MACS):
             return False
     return True

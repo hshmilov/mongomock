@@ -112,7 +112,9 @@ def test_arp(client):
             ],
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:01',
-            'network_interfaces': [{'ips': ['10.0.0.2'], 'ips_raw': [167_772_162], 'mac': 'C0:00:07:A8:00:01'}],
+            'network_interfaces': [{'ips': ['10.0.0.2'], 'ips_raw': [167_772_162],
+                                    'ips_v4': ['10.0.0.2'], 'ips_v4_raw': [167_772_162],
+                                    'mac': 'C0:00:07:A8:00:01'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
@@ -128,7 +130,9 @@ def test_arp(client):
             ],
             'fetch_proto': 'ARP',
             'id': 'arp_11:33:33:77:DE:AD',
-            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
+            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161],
+                                    'ips_v4': ['10.0.0.1'], 'ips_v4_raw': [167_772_161],
+                                    'mac': '11:33:33:77:DE:AD'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
@@ -144,7 +148,9 @@ def test_arp(client):
             ],
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:00',
-            'network_interfaces': [{'ips': ['192.168.20.30'], 'ips_raw': [3_232_240_670], 'mac': 'C0:00:07:A8:00:00'}],
+            'network_interfaces': [{'ips': ['192.168.20.30'], 'ips_raw': [3_232_240_670],
+                                    'ips_v4': ['192.168.20.30'], 'ips_v4_raw': [3_232_240_670],
+                                    'mac': 'C0:00:07:A8:00:00'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/0', 'name': 'mock', 'type': 'Indirect'}],
@@ -164,6 +170,8 @@ def test_arp(client):
                 {
                     'ips': ['192.168.20.18'],
                     'ips_raw': [3_232_240_658],
+                    'ips_v4': ['192.168.20.18'],
+                    'ips_v4_raw': [3_232_240_658],
                     'mac': '00:50:56:91:A6:6B',
                     'manufacturer': 'VMware (VMware, Inc.)',
                 }
@@ -187,6 +195,8 @@ def test_arp(client):
                 {
                     'ips': ['192.168.20.1'],
                     'ips_raw': [3_232_240_641],
+                    'ips_v4': ['192.168.20.1'],
+                    'ips_v4_raw': [3_232_240_641],
                     'mac': '90:6C:AC:FE:5B:CB',
                     'manufacturer': 'Fortinet (Fortinet, Inc.)',
                 }
@@ -206,7 +216,9 @@ def test_arp(client):
             ],
             'fetch_proto': 'ARP',
             'id': 'arp_C0:00:07:A8:00:01',
-            'network_interfaces': [{'ips': ['10.0.0.201'], 'ips_raw': [167_772_361], 'mac': 'C0:00:07:A8:00:01'}],
+            'network_interfaces': [{'ips': ['10.0.0.201'], 'ips_raw': [167_772_361],
+                                    'ips_v4': ['10.0.0.201'], 'ips_v4_raw': [167_772_361],
+                                    'mac': 'C0:00:07:A8:00:01'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'fastethernet0/1', 'name': 'mock', 'type': 'Indirect'}],
@@ -227,7 +239,9 @@ def test_cdp(client):
     expected_devices = [
         {
             'id': 'cdp_dhcp-slave',
-            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'name': 'FastEthernet0/0'}],
+            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161],
+                                    'ips_v4': ['10.0.0.1'], 'ips_v4_raw': [167_772_161],
+                                    'name': 'FastEthernet0/0'}],
             'connected_devices': [
                 {'remote_name': 'mock', 'connection_type': 'Direct', 'remote_ifaces': [{'name': 'FastEthernet0/1'}]}
             ],
@@ -295,7 +309,9 @@ def test_dhcp(client):
             ],
             'fetch_proto': 'DHCP',
             'id': 'dhcp_11:33:33:77:DE:AD',
-            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
+            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161],
+                                    'ips_v4': ['10.0.0.1'], 'ips_v4_raw': [167_772_161],
+                                    'mac': '11:33:33:77:DE:AD'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'Fa0/0', 'name': 'mock', 'type': 'Indirect'}],
@@ -324,7 +340,9 @@ def test_instance_parser(client):
             ],
             'fetch_proto': 'DHCP',
             'id': 'dhcp_11:33:33:77:DE:AD',
-            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161], 'mac': '11:33:33:77:DE:AD'}],
+            'network_interfaces': [{'ips': ['10.0.0.1'], 'ips_raw': [167_772_161],
+                                    'ips_v4': ['10.0.0.1'], 'ips_v4_raw': [167_772_161],
+                                    'mac': '11:33:33:77:DE:AD'}],
             'os': {'os_str': 'none'},
             'raw': {
                 'connected_devices': [{'iface': 'Fa0/0', 'name': 'mock', 'type': 'Indirect'}],
@@ -391,7 +409,8 @@ def test_instance_parser(client):
                 'mac': 'C0:00:07:A8:00:01',
                 'related_ips': ['10.0.0.2', '10.0.0.201'],
             },
-            'related_ips': {'ips': ['10.0.0.2', '10.0.0.201'], 'ips_raw': [167_772_162, 167_772_361]},
+            'related_ips': {'ips': ['10.0.0.2', '10.0.0.201'], 'ips_raw': [167_772_162, 167_772_361],
+                            'ips_v4': ['10.0.0.2', '10.0.0.201'], 'ips_v4_raw': [167_772_162, 167_772_361]},
         },
         {
             'adapter_properties': ['Network'],
@@ -407,7 +426,8 @@ def test_instance_parser(client):
                 'mac': '11:33:33:77:DE:AD',
                 'related_ips': ['10.0.0.1'],
             },
-            'related_ips': {'ips': ['10.0.0.1'], 'ips_raw': [167_772_161]},
+            'related_ips': {'ips': ['10.0.0.1'], 'ips_raw': [167_772_161],
+                            'ips_v4': ['10.0.0.1'], 'ips_v4_raw': [167_772_161]},
         },
         {
             'adapter_properties': ['Network'],
@@ -423,7 +443,8 @@ def test_instance_parser(client):
                 'mac': 'C0:00:07:A8:00:00',
                 'related_ips': ['192.168.20.30'],
             },
-            'related_ips': {'ips': ['192.168.20.30'], 'ips_raw': [3_232_240_670]},
+            'related_ips': {'ips': ['192.168.20.30'], 'ips_raw': [3_232_240_670],
+                            'ips_v4': ['192.168.20.30'], 'ips_v4_raw': [3_232_240_670]},
         },
         {
             'adapter_properties': ['Network'],
@@ -444,7 +465,8 @@ def test_instance_parser(client):
                 'mac': '00:50:56:91:A6:6B',
                 'related_ips': ['192.168.20.18'],
             },
-            'related_ips': {'ips': ['192.168.20.18'], 'ips_raw': [3_232_240_658]},
+            'related_ips': {'ips': ['192.168.20.18'], 'ips_raw': [3_232_240_658],
+                            'ips_v4': ['192.168.20.18'], 'ips_v4_raw': [3_232_240_658]},
         },
         {
             'adapter_properties': ['Network'],
@@ -465,7 +487,8 @@ def test_instance_parser(client):
                 'mac': '90:6C:AC:FE:5B:CB',
                 'related_ips': ['192.168.20.1'],
             },
-            'related_ips': {'ips': ['192.168.20.1'], 'ips_raw': [3_232_240_641]},
+            'related_ips': {'ips': ['192.168.20.1'], 'ips_raw': [3_232_240_641],
+                            'ips_v4': ['192.168.20.1'], 'ips_v4_raw': [3_232_240_641]},
         },
     ]))
 

@@ -265,7 +265,6 @@ class AzureAdapter(AdapterBase):
                 if device_id and '/resourceGroups/' in device_id:
                     device.resources_group = device_id[device_id.find('/resourceGroups/') +
                                                        len('/resourceGroups/'):].split('/')[0]
-                device.cloud_id = device_raw['id']
                 device.cloud_provider = 'Azure'
                 device.name = device_raw['name']
                 device.location = device_raw.get('location')
@@ -301,6 +300,7 @@ class AzureAdapter(AdapterBase):
                 device.hostname = device_raw.get('os_profile', {}).get('computer_name')
                 device.admin_username = device_raw.get('os_profile', {}).get('admin_username')
                 device.vm_id = device_raw.get('vm_id')
+                device.cloud_id = device_raw.get('vm_id')
                 for iface in device_raw.get('network_profile', {}).get('network_interfaces', []):
                     ips = []
                     subnets = []

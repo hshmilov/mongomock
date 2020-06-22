@@ -57,6 +57,7 @@ from reports.action_types.base.carbonblack_defense_quarantine import Carbonblack
 from reports.action_types.base.carbonblack_defense_unquarantine import CarbonblackDefenseUnquarantineAction
 from reports.action_types.base.qualys_create_asset import QualysCreateAsset
 from reports.action_types.base.aws_ec2_start_instance import AwsEc2StartInstanceAction
+from reports.action_types.base.tenable_io_ips_scans import TenableIoAddIPsToScan
 from reports.action_types.base.aws_ec2_stop_instance import AwsEc2StopInstanceAction
 from reports.action_types.base.qualys_add_tag import QualysAddTag
 from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
@@ -68,6 +69,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_cherwell_computer': CherwellCreateComputerAction,
     'create_service_now_computer': ServiceNowComputerAction,
     'tag': TagAllEntitiesAction,
+    'tenable_io_ips_scans': TenableIoAddIPsToScan,
     'create_cherwell_incident': CherwellIncidentAction,
     'add_custom_data': AddCustomDataAction,
     'carbonblack_isolate': CarbonblackIsolateAction,

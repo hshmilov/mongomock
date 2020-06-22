@@ -160,6 +160,8 @@ class CounterActAdapter(AdapterBase):
                                                              version=field_raw_data.get('value'))
                                 elif field_raw_name == 'hostname':
                                     device.hostname = field_raw_data.get('value')
+                                    if field_raw_data.get('value'):
+                                        device.id += '_' + field_raw_data.get('value')
                                 elif field_raw_name == 'dhcp_hostname':
                                     device.name = field_raw_data.get('value')
                                 elif field_raw_name == 'os_classification':
