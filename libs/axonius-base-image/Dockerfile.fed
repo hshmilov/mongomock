@@ -30,8 +30,10 @@ RUN export CFLAGS="-I/usr/local/share/ssl/include -DOPENSSL_FIPS=1" \
     && pip install -I cryptography*.whl \
     && unset CFLAGS LDFLAGS
 
-RUN rm -rf temp_openssl
+RUN echo "/usr/local/ssl/lib" > /etc/ld.so.conf.d/openssl.conf && \
+    ldconfig && \
+    mv /usr/bin/openssl /usr/bin/openssl.old && \
+    ln -s /usr/local/ssl/bin/openssl /usr/bin/openssl && \
+    ln -s /etc/ssl/certs/*.* /usr/local/ssl/certs/
 
-# Update system openssl
-RUN cp /usr/local/ssl/lib/libcrypto.so.* /lib/x86_64-linux-gnu/ && \
-    cp /usr/local/ssl/lib/libssl.so.* /lib/x86_64-linux-gnu/
+RUN rm -rf temp_openssl
