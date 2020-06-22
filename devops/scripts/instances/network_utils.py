@@ -15,7 +15,7 @@ from services.standalone_services.core_proxy_service import CoreProxyService
 from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
-DEFAULT_DOCKER_SUBNET_IP_RANGE = '172.18.0.0/16'
+DEFAULT_DOCKER_SUBNET_IP_RANGE = '174.17.0.0/16'
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
 DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE = '171.18.0.0/16'
 DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
