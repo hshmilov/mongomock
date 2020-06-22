@@ -24,7 +24,7 @@ from install import (TEMPORAL_PATH,
                      set_special_permissions)
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
-from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME
+from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME, NOLOGINER_USER_NAME
 from scripts.instances.network_utils import get_weave_subnet_ip_range
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
 from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes
@@ -212,9 +212,20 @@ def create_system_cronjobs():
                    cronjob_timing='*/1 * * * *', keep_script_location=True)
 
 
+def setup_nologin_user():
+    try:
+        pwd.getpwnam(NOLOGINER_USER_NAME)
+        print_state(f'{NOLOGINER_USER_NAME} user exists')
+    except KeyError:
+        subprocess.check_call(['/usr/sbin/useradd', '-s', '/bin/false', '-d', '/tmp/', NOLOGINER_USER_NAME])
+        # create the user
+
+
 def setup_instances():
     # Setup user
     setup_instances_user()
+
+    setup_nologin_user()
 
     # Setup cron-job
     setup_instances_cronjobs()
