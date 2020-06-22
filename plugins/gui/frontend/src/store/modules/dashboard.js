@@ -1,6 +1,5 @@
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 import { REQUEST_API, downloadFile } from '../actions';
-import { pluginMeta } from '../../constants/plugin_meta';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE';

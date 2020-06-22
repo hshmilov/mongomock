@@ -187,8 +187,14 @@ def fetch_chart_intersect(
     else:
         total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
     if not total:
-        return [{'name': base_name, 'value': 0, 'remainder': True,
-                 'view': {**base_view, 'query': {'filter': base_view['query']['filter']}}, 'module': entity.value}]
+        return [{
+            'name': base_name,
+            'value': 0,
+            'portion': 0,
+            'remainder': True,
+            'view': {**base_view, 'query': {'filter': base_view['query']['filter']}},
+            'module': entity.value
+        }]
 
     child1_from_db = find_view_by_id(entity, intersecting[0])
     if not child1_from_db or not child1_from_db.get('view', {}).get('query'):
