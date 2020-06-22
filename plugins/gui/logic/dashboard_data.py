@@ -976,9 +976,9 @@ def _intersect_timeline_lines(views, date_ranges):
 
     # second query handling
     intersecting_from_db = find_view_by_id(second_entity_type, views[1]['id'])
-    intersecting_view = intersecting_from_db['view']
-    if not intersecting_view or not intersecting_view.get('query'):
+    if not intersecting_from_db or not intersecting_from_db.get('view', {}).get('query'):
         yield {}
+    intersecting_view = intersecting_from_db['view']
     intersecting_filter = intersecting_view.get('query', {}).get('filter', '')
     if base_filter:
         intersecting_filter = f'({base_filter}) and {intersecting_filter}'

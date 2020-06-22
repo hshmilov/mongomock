@@ -286,7 +286,13 @@ class ReportsService(Triggerable, PluginBase):
                         }
                     })
                     if trigger_result.matched_count == 0:
-                        logger.info(f'Failed to process trigger {trigger["name"]}')
+                        session.update_one({
+                            '_id': ObjectId(report_id)
+                        }, {
+                            '$push': {
+                                TRIGGERS_FIELD: trigger
+                            }
+                        })
 
                 return jsonify({'modified': report_result.modified_count})
 

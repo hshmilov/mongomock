@@ -1123,6 +1123,8 @@ class APIMixin:
 
         """
         entity_data = get_entity_data(entity_type, entity_id)
+        if not isinstance(entity_data, dict):
+            return entity_data
         return jsonify({
             'specific': entity_data['adapters'],
             'generic': {
