@@ -78,6 +78,7 @@ def usage():
     {name} compliance run (aws/azure) - Run Compliance Report
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
+    {name} ru [container-name] - Recover uwsgi
     '''
 
 
@@ -525,6 +526,19 @@ def main():
         else:
             print(usage())
             return -1
+
+    elif component == 'ru':
+        try:
+
+            container_name = sys.argv[2]
+
+        except Exception:
+            print(usage())
+            return -1
+
+        subprocess.check_call(
+            f'docker exec {container_name} python3 -u ../hacks/recover_uwsgi.py', shell=True, cwd=ROOT_DIR
+        )
 
     else:
         print(usage())

@@ -7,7 +7,7 @@ bcrypt==3.1.4
 cairocffi==0.5.2
 pql==0.4.3
 chardet==3.0.4
-click==6.7
+click==7.1.2
 cryptography==2.2.2
 Werkzeug==0.16.0
 Flask==0.12.2
@@ -114,3 +114,4 @@ pem==19.3.0
 uptime==3.0.1
 matplotlib==3.2.1
 segfault==0.0.1
+tabulate==0.8.7

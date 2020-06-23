@@ -19,6 +19,7 @@ from aws_adapter.connection.utils import make_ip_rules_list, add_generic_firewal
 from axonius.clients.shodan.connection import ShodanConnection
 from axonius.devices.device_adapter import DeviceRunningState, ShodanVuln
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -618,6 +619,15 @@ def parse_raw_data_inner_regular(
                     )
                 except Exception:
                     logger.exception(f'Problem parsing OS type')
+                try:
+                    described_image = (device_raw.get('DescribedImage') or {})
+                    device.image_name = described_image.get('Name')
+                    device.image_description = described_image.get('Description')
+                    device.image_owner = described_image.get('OwnerId')
+                    device.image_alias = described_image.get('ImageOwnerAlias')
+                    device.image_is_public = parse_bool_from_raw(described_image.get('Public'))
+                except Exception:
+                    logger.exception(f'Could not parse image details')
                 device_id = device_raw['InstanceId']
                 device.id = device_id
                 device.private_dns_name = device_raw.get('PrivateDnsName')

@@ -58,10 +58,11 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
     if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Upgrading entire cluster')
         cluster_data = read_cluster_data()
-        node_instances = [instance for instance in cluster_data['instances']
-                          if instance['node_id'] != cluster_data['my_entity']['node_id']]
-        print_state('Shutting down adapters on nodes')
-        shutdown_adapters(node_instances)
+        if cluster_data:
+            node_instances = [instance for instance in cluster_data['instances']
+                              if instance['node_id'] != cluster_data['my_entity']['node_id']]
+            print_state('Shutting down adapters on nodes')
+            shutdown_adapters(node_instances)
 
     if not first_time:
         stop_old()
@@ -88,7 +89,7 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
-    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
+    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances:
         print_state('Downloading upgrader on nodes')
         download_upgrader_on_nodes(node_instances, installer_path)
         print_state('Upgrading nodes')
@@ -247,7 +248,26 @@ def setup_host():
     set_sysctl_value('net.ipv4.conf.default.accept_redirects', '0')
     set_sysctl_value('net.ipv4.conf.all.secure_redirects', '0')
     set_sysctl_value('net.ipv4.conf.default.secure_redirects', '0')
+    set_sysctl_value('net.ipv4.conf.all.forwarding', '1')
     os.system('sysctl --load')
+
+    for user in ['ubuntu', 'customer']:
+        try:
+            with open(f'/home/{user}/.bash_aliases', 'rt') as f:
+                content = f.read().splitlines()
+            alias_line = 'alias axenv="source /home/ubuntu/cortex/ax_env.sh"'
+
+            for i, line in enumerate(content):
+                if line.startswith('alias ax_env'):
+                    content[i] = alias_line
+                    break
+            else:
+                content.append(alias_line)
+
+            with open(f'/home/{user}/.bash_aliases', 'wt') as f:
+                f.write('\n'.join(content))
+        except Exception:
+            print(f'Could not install bash_aliases for user {user}')
 
 
 def set_booted_for_production():

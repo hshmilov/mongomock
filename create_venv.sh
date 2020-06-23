@@ -16,6 +16,9 @@ pip install -r requirements.txt
 # install axoniussdk
 pip install -e api/axoniussdk/
 
+# install ax_cli
+pip3 install -e ./devops/ax_cli
+
 # Most of our python2 code is in unit tests. so just use the actual file
 echo "Installing python2 requirements"
 pip2 install --user -r ./libs/axonius-base-image/requirements2.txt

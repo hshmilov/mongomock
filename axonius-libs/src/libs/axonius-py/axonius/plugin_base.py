@@ -866,7 +866,6 @@ class PluginBase(Configurable, Feature, ABC):
                 raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
                 # Upsert new fields
-                logger.debug(len(str(raw_fields)))
                 fields_collection = self._all_fields_db_map[entity_type]
                 fields_collection.update({
                     'name': 'raw',

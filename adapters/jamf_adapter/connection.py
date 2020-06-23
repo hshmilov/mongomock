@@ -102,7 +102,7 @@ class JamfConnection(object):
         response = None
         try:
             response = requests.post(self.get_url_request(name), headers=headers,
-                                     data=data, proxies=self.proxies, timeout=(10, 30))
+                                     data=data, proxies=self.proxies, timeout=(30, 60))
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -121,7 +121,7 @@ class JamfConnection(object):
         headers = headers or self.headers
         response = None
         try:
-            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(10, 30),
+            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(30, 60),
                                     verify=False)
             response.raise_for_status()
             return Xml2Json(response.text).result

@@ -115,7 +115,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         ms_mcs_adm_pwd = Field(str, 'Mc Mcs Admin Pwd')
         ms_mcs_adm_pwd_expiration_time = Field(datetime, 'Mc Mcs Admin Pwd Expiration Time')
         is_laps_installed = Field(bool, 'Is LAPS Installed')
-        resolvable_hostname = Field(str, 'Resolvable Hostname')
+        resolvable_hostname = ListField(str, 'Resolvable Hostnames')
 
     class MyUserAdapter(UserAdapter, ADEntity):
         user_managed_objects = ListField(str, "AD User Managed Objects")
@@ -881,8 +881,21 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         i = 0
         resolve_hosts = []
         for host in hosts:
-            host['hostname'] = host.get('resolvable_hostname') or host.get('hostname')
-            host['nameservers'] = [host.get('AXON_DNS_ADDR'), host.get('AXON_DC_ADDR'), None]
+            resolvable_hostname = host.get('resolvable_hostname')
+            if resolvable_hostname:
+                if isinstance(resolvable_hostname, list):
+                    host['hostname'] = resolvable_hostname
+                else:
+                    host['hostname'] = [str(resolvable_hostname)]
+            else:
+                host['hostname'] = [str(host.get('hostname'))]
+
+            if host.get('AXON_DNS_ADDR'):
+                nameservers = [x.strip() for x in host.get('AXON_DNS_ADDR').split(',')]
+            else:
+                nameservers = []
+            nameservers.extend([host.get('AXON_DC_ADDR'), None])
+            host['nameservers'] = nameservers
             resolve_hosts.append(host)
             i += 1
             if i % self.__dns_query_chunk_size == 0:
@@ -1218,12 +1231,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 else:
                     device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
                 alternative_dns_suffix = device_raw.get('alternative_dns_suffix')
+                resolvable_hostnames = []
                 if alternative_dns_suffix:
-                    resolvable_hostname = device.hostname.rstrip(device_domain)
-                    resolvable_hostname += '.' + alternative_dns_suffix.lstrip('.')
+                    resolvable_hostname_prefix = device.hostname.rstrip(device_domain)
+                    for dns_suffix in alternative_dns_suffix.split(','):
+                        resolvable_hostnames.append(resolvable_hostname_prefix + '.' + dns_suffix.strip().lstrip('.'))
                 else:
-                    resolvable_hostname = device.hostname
-                device.resolvable_hostname = resolvable_hostname
+                    resolvable_hostnames.append(device.hostname)
+                device.resolvable_hostname = resolvable_hostnames
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
                 service_principal_name = device_raw.get("servicePrincipalName")  # only for devices
@@ -1426,29 +1441,35 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         :raises exception.IpResolveError: In case of an error in the query process
         """
         # We are assuming that the dc is the DNS server
-        full_device_name = device_name
+        if isinstance(device_name, list):
+            full_device_name = device_name
+        else:
+            full_device_name = [str(device_name)]
 
-        err = f"Resolving {full_device_name} of {client_config['dc_name']} "
+        err = f"Resolving {str(full_device_name)} of {client_config['dc_name']} "
 
         ips = []
 
-        try:
-            dns_server = None
-            ips.append((query_dns(full_device_name, timeout, dns_server), 'default'))
-        except Exception as e:
-            err += f"failed to resolve from {dns_server} <{e}>; "
+        for full_dn in full_device_name:
+            try:
+                dns_server = None
+                ips.append((query_dns(full_dn, timeout, dns_server), 'default'))
+            except Exception as e:
+                err += f"failed to resolve host {full_dn} from {dns_server} <{e}>; "
 
-        try:
-            dns_server = client_config["dns_server_address"]
-            ips.append((query_dns(full_device_name, timeout, dns_server), dns_server))
-        except Exception as e:
-            err += f"failed to resolve from {dns_server} <{e}>; "
+            try:
+                dns_server = client_config["dns_server_address"]
+                for dns_server in (client_config.get("dns_server_address") or '').split(','):
+                    ips.append((query_dns(full_dn, timeout, dns_server.strip()), dns_server.strip()))
+            except Exception as e:
+                err += f"failed to resolve host {full_dn}  from {dns_server} <{e}>; "
 
-        try:
-            dns_server = client_config["dc_name"]
-            ips.append((query_dns(full_device_name, timeout, dns_server), dns_server))
-        except Exception as e:
-            err += f"failed to resolve from {dns_server} <{e}>; "
+            try:
+                dns_server = client_config["dc_name"]
+                ips.append((query_dns(full_dn, timeout, dns_server), dns_server))
+            except Exception as e:
+                err += f"failed to resolve host {full_dn} from {dns_server} <{e}>; "
+
         if ips:
             return ips
 

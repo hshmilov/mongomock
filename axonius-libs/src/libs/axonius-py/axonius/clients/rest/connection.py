@@ -82,9 +82,11 @@ class RESTConnection(ABC):
         self._port = port
         self._proxies = {}
         if http_proxy is not None:
-            self._proxies['http'] = http_proxy
+            self._proxies['http'] = http_proxy.strip()
+            self._http_proxy = http_proxy.strip()
         if https_proxy is not None:
-            self._proxies['https'] = https_proxy
+            self._proxies['https'] = https_proxy.strip()
+            self._https_proxy = https_proxy.strip()
         logger.debug(f'Proxies: {self._proxies}')
         self.__client_id = client_id
 

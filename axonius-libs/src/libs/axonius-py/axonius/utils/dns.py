@@ -26,7 +26,7 @@ async def async_query_dns(loop: asyncio.AbstractEventLoop, hostname: str,
     return response
 
 
-async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname: str, nameservers: List[str],
+async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname, nameservers: List[str],
                             timeout: float, greedy: bool, callback=None) -> List[Tuple[str, List]]:
     """
     :param loop: asyncio event loop
@@ -39,18 +39,26 @@ async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname: str, name
             callback signature: callback(loop: asyncio.AbstractEventLoop, hostname: str, results: list)
     :return: list of dns results tuple -> (resolved_ip, resolving_nameserver)
     """
+
+    if isinstance(hostname, list):
+        hostnames = hostname
+    else:
+        hostnames = [str(hostname)]
+
     results = []
     if greedy:
-        for server in nameservers:
-            try:
-                response = await async_query_dns(loop, hostname, [server, ], timeout)
-                results.append((response[0].host, [server, ]))
-            except Exception:
-                continue
+        for host in hostnames:
+            for server in nameservers:
+                try:
+                    response = await async_query_dns(loop, host, [server, ], timeout)
+                    results.append((response[0].host, [server, ]))
+                except Exception:
+                    continue
     else:
         try:
-            response = await async_query_dns(loop, hostname, nameservers, timeout)
-            results.append((response[0].host, nameservers))
+            for host in hostnames:
+                response = await async_query_dns(loop, host, nameservers, timeout)
+                results.append((response[0].host, nameservers))
         except Exception:
             pass
 

@@ -1,9 +1,10 @@
 import logging
-import re
 import threading
+from collections import defaultdict
 from datetime import datetime
 from typing import Iterable, Tuple, Dict, List
 
+import cachetools
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -533,7 +534,52 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     return value
         return None
 
-    def __get_users_by_identifier(self, username, is_domain_required=False) -> List[AxoniusUser]:
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=60 * 60 * 6), lock=threading.Lock())
+    def get_all_users(self):
+        logger.info('Pulling all users')
+        projection_fields = ['id', 'username', 'domain', 'mail', 'first_name',  'last_name']
+        entities = ['adapters', 'tags']
+
+        users_by_internal_axon_id = {x['internal_axon_id']: x for x in self.users_db.find({}, projection={
+            'internal_axon_id': 1,
+            **{f'{entity_type}.data.{field}': 1 for entity_type in entities for field in projection_fields}
+        })}
+        logger.info(f'Pulled users information')
+
+        users_by_id = defaultdict(set)
+        users_by_username = defaultdict(set)
+        users_by_username_and_domain = defaultdict(set)
+        users_by_mail = defaultdict(set)
+        users_by_full_name = defaultdict(set)
+
+        for entity_type in entities:
+            for user_internal_axon_id, user in users_by_internal_axon_id.items():
+                if not isinstance(user.get(entity_type), list):
+                    continue
+
+                for entity_data in user[entity_type]:
+                    if 'data' not in entity_data:
+                        continue
+
+                    data = entity_data['data']
+
+                    if data.get('id'):
+                        users_by_id[str(data['id']).lower()].add(user_internal_axon_id)
+                    if data.get('username'):
+                        users_by_username[str(data['username']).lower()].add(user_internal_axon_id)
+                        if data.get('domain'):
+                            username_and_domain = f'{data["username"]}_{data["domain"]}'.lower()
+                            users_by_username_and_domain[username_and_domain].add(user_internal_axon_id)
+                    if data.get('mail'):
+                        users_by_mail[str(data['mail']).lower()].add(user_internal_axon_id)
+                    if data.get('first_name') or data.get('last_name'):
+                        full_name = f'{data.get("first_name") or ""}_{data.get("last_name") or ""}'.lower()
+                        users_by_full_name[full_name].add(user_internal_axon_id)
+
+        logger.info(f'Built Indexes')
+        return users_by_id, users_by_username, users_by_username_and_domain, users_by_mail, users_by_full_name
+
+    def __get_users_by_identifier(self, username, is_domain_required=False) -> List[str]:
         """
         Gets a username. tries to find it by id, then by username/domain if possible, then only by username.
         :param username:
@@ -542,7 +588,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         :return:
         """
 
-        username = username.replace('"', '')
+        username = username.replace('"', '').lower()
 
         llu_username = username
         llu_domain = None
@@ -553,33 +599,25 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 llu_username, llu_domain = username.split('@')
         except Exception:
             pass
-        if llu_username:
-            llu_username = re.escape(llu_username)
-        if llu_domain:
-            llu_domain = re.escape(llu_domain)
 
-        users = list(self.users.get(
-            axonius_query_language=f'specific_data.data.id == regex("^{re.escape(username)}$", "i")', lazy=True))
+        users_by_id, users_by_username, users_by_username_and_domain, users_by_mail, users_by_full_name = \
+            self.get_all_users()
+
+        users = users_by_id.get(username)
 
         if not users and llu_domain:
-            # If we couldn't find by id, search by username and domain
-            users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i") '
-                f'and specific_data.data.domain == regex("^{llu_domain}$", "i")', lazy=True
-            ))
+            users = users_by_username_and_domain.get(f'{llu_username}_{llu_domain}')
 
         if not users:
-            users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.mail == regex("^{username}$", "i")', lazy=True
-            ))
+            users = users_by_mail.get(username)
 
-        if not users and not is_domain_required:
-            # On last resort, search only by username
-            users = list(self.users.get(
-                axonius_query_language=f'specific_data.data.username == regex("^{llu_username}$", "i")', lazy=True
-            ))
+        if not users and is_domain_required:
+            users = users_by_username.get(username)
 
-        return users
+        if not users:
+            users = users_by_full_name.get(username)
+
+        return list(users or [])
 
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
     def __associate_users_with_devices(self):
@@ -594,13 +632,18 @@ class StaticAnalysisService(Triggerable, PluginBase):
         devices_with_users_association = self.devices_db.find(
             parse_filter(
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
+                'specific_data.data.assigned_to == exists(true) or '
                 'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}) or '
                 'specific_data.data.email == ({"$exists":true,"$ne":""})'),
             batch_size=10
         )
 
+        logger.info(f'Approximate devices with users association: {devices_with_users_association.count()}')
+
         users = {}
-        for device_raw in devices_with_users_association:
+        for device_i, device_raw in enumerate(devices_with_users_association):
+            if device_i % 10000 == 0:
+                logger.info(f'Users Devices association - Step 1 - pulled {device_i}')
             # Get a list of all users associated for this device.
             device = convert_db_entity_to_view_entity(device_raw, ignore_errors=True)
             all_device_data = device.get('specific_data', [])
@@ -657,6 +700,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
             for d in all_device_data:
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('user_principal_name'), str):
                     sd_last_used_users_list.append([d['data']['user_principal_name']])
+                if isinstance(d['data'], dict) and isinstance(d['data'].get('assigned_to'), str):
+                    sd_last_used_users_list.append([d['data']['assigned_to']])
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('email'), str):
                     sd_last_used_users_list.append([d['data']['email']])
 
@@ -675,29 +720,40 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         self.get_first_data(device, 'id')
                     users[sd_last_used_user]['associated_devices'].append((sd_last_used_user, device_caption))
 
+        logger.info(f'Finished step 1')
         # 2. Go over all users. whatever we don't have, and should be created, we must create first.
+        user_id = 0
         for username, username_data in users.copy().items():
+            user_id += 1
+            if user_id % 10000 == 0:
+                logger.info(f'Users Devices association - Step 2 - finished {user_id}')
             user = self.__get_users_by_identifier(username)
-            if len(user) == 0 and username_data['should_create_if_not_exists']:
-                # user does not exists, create it.
-                user_dict = self._new_user_adapter()
-                user_dict.id = username  # Should be the unique identifier of that user.
-                try:
-                    user_dict.username, user_dict.domain = username.split('@')  # expecting username to be user@domain.
-                except ValueError:
-                    logger.exception(f'Bad user format! expected \'username@domain\' format, got {username}. bypassing')
-                    continue
-                self._save_data_from_plugin(
-                    self.plugin_unique_name,
-                    data_of_client={'raw': [], 'parsed': [user_dict.to_dict()]},
-                    entity_type=EntityType.Users,
-                    should_log_info=False,
-                    plugin_identity=username_data['creation_identity_tuple'])
+            if len(user) == 0:
+                if username_data['should_create_if_not_exists']:
+                    # user does not exists, create it.
+                    user_dict = self._new_user_adapter()
+                    user_dict.id = username  # Should be the unique identifier of that user.
+                    try:
+                        user_dict.username, user_dict.domain = username.split('@')  # expecting to be user@domain.
+                    except ValueError:
+                        logger.exception(f'Bad user format! expected \'username@domain\' format, '
+                                         f'got {username}. bypassing')
+                        continue
+                    try:
+                        self._save_data_from_plugin(
+                            self.plugin_unique_name,
+                            data_of_client={'raw': [], 'parsed': [user_dict.to_dict()]},
+                            entity_type=EntityType.Users,
+                            should_log_info=False,
+                            plugin_identity=username_data['creation_identity_tuple'])
+                    except Exception:
+                        logger.exception(f'Could not create new user!')
 
-            if len(user) == 0 and not username_data['should_create_if_not_exists']:
-                # This user doesn't exist, and we should not create it. lets pop it out of our users dict.
+                # If the user has been created it will be populated in the next cycle.
+                # Otherwise it should not be in the list anyway.
                 users.pop(username)
 
+        logger.info(f'Finished step 2. Final users to associate: {len(users)}')
         # 4. Now go over all users again. for each user, associate all known devices.
         users_dict: Dict[str, Tuple[AxoniusUser, UserAdapter]] = dict()
         for username, username_data in users.items():
@@ -719,14 +775,14 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 continue
 
             # at this point the user exists, go over all associated devices and add them.
-            user = user[0]
+            user_internal_axon_id = user[0]
 
-            if user.internal_axon_id in users_dict:
-                adapterdata_user = users_dict[user.internal_axon_id][1]
+            if user_internal_axon_id in users_dict:
+                adapterdata_user = users_dict[user_internal_axon_id][1]
             else:
                 adapterdata_user = self._new_user_adapter()
                 adapterdata_user.id = username
-                users_dict[user.internal_axon_id] = (user, adapterdata_user)
+                users_dict[user_internal_axon_id] = (user_internal_axon_id, adapterdata_user)
 
             for linked_user, device_caption in linked_devices_and_users_list:
                 if isinstance(linked_user, str):
@@ -778,7 +834,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if num_of_users % 1000 == 0:
                 logger.info(f'Already saved {num_of_users} users.')
             try:
-                user, adapterdata_user = internal_axon_id_data
+                user_internal_axon_id, adapterdata_user = internal_axon_id_data
+                user = list(self.users.get(internal_axon_id=user_internal_axon_id))[0]
                 user.add_adapterdata(
                     adapterdata_user.to_dict(),
                     additional_data={
@@ -866,7 +923,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
                             continue
                         for associcated_field in ASSOCIATED_FIELD:
                             field_candidate = None
-                            for one_user in user:
+                            for one_user_id in user:
+                                one_user = list(self.users.get(internal_axon_id=one_user_id))[0]
                                 field_candidate = one_user.get_first_data(associcated_field)
                                 if field_candidate:
                                     field_candidate = str(field_candidate)
