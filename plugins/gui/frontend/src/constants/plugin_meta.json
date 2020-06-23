@@ -189,7 +189,7 @@
   "iboss_cloud_adapter": {
     "title": "iboss cloud",
     "link": "https://docs.axonius.com/docs/iboss-cloud",
-    "description": "iboss cloud is cloud-based platform that secures user Internet access in the cloud."
+    "description": "iboss cloud is a cloud-based platform that secures user internet access in the cloud."
   },
   "riskiq_csv_adapter": {
     "title": "RiskIQ Digital Footprint - CSV",
@@ -1180,7 +1180,7 @@
   },
   "bitdefender_adapter": {
     "title": "Bitdefender GravityZone Business Security",
-    "link": "",
+    "link": "https://docs.axonius.com/docs/bitdefender-gravityzone-business-security",
     "description": "Bitdefender GravityZone Business Security uses machine learning and heuristics to protect against malware, phishing, ransomware, exploits and zero-days."
   },
   "bomgar_adapter": {

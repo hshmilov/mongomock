@@ -107,7 +107,7 @@ export default {
       if (!this.invalidForm) {
         try {
           await resetUserPasswordByToken(this.token, confirmPasswordValue);
-          this.showToastMessage({ message: 'Password reset successful' });
+          this.showToastMessage({ message: 'Password reset successfully' });
           this.setUserError({ error: NOT_LOGGED_IN });
           this.$router.push('/');
         } catch (e) {

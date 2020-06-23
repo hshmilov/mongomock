@@ -152,7 +152,7 @@ class TestSettingsPermissions(PermissionsTestBase):
 
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'settings',
-                                                     'Delete roles',
+                                                     'Delete role',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
                                                      ui_consts.NEW_PASSWORD)

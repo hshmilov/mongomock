@@ -55,8 +55,8 @@ class TestTunnel(TestBase):
         self.adapters_page.save_advanced_settings()
         self.adapters_page.wait_for_toaster('Adapter configuration saving in progress...')
         try:
-            self.adapters_page.wait_for_toaster('Adapter configuration saved.')
-            self.adapters_page.wait_for_toaster_to_end('Adapter configuration saved.')
+            self.adapters_page.wait_for_toaster('Adapter configuration saved')
+            self.adapters_page.wait_for_toaster_to_end('Adapter configuration saved')
         except Exception:
             # Adapter uwsgi probably taking time to load
             nics = ''

@@ -81,11 +81,11 @@ class SettingsPage(Page):
     READ_ONLY_PERMISSION = 'Read only'
     READ_WRITE_PERMISSION = 'Read and edit'
     RESTRICTED_PERMISSION = 'Restricted'
-    SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully.'
-    ROLE_SUCCESSFULLY_CREATED_TOASTER = 'Role created.'
-    ROLE_SUCCESSFULLY_SAVED_TOASTER = 'Role saved.'
-    DELETED_ROLE_SUCCESSFULLY_TOASTER = 'Role deleted.'
-    SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER = 'User permissions saved.'
+    SAVED_SUCCESSFULLY_TOASTER = 'Saved Successfully'
+    ROLE_SUCCESSFULLY_CREATED_TOASTER = 'Role created'
+    ROLE_SUCCESSFULLY_SAVED_TOASTER = 'Role saved'
+    DELETED_ROLE_SUCCESSFULLY_TOASTER = 'Role deleted'
+    SAVED_SUCCESSFULLY_PERMISSIONS_TOASTER = 'User permissions saved'
     BAD_PROXY_TOASTER = PROXY_ERROR_MESSAGE
     SELECT_ROLE_DIV_CSS = 'div.item.form__role'
     SELECT_ROLE_CSS = 'div.item.form__role .ant-select'
@@ -897,7 +897,7 @@ class SettingsPage(Page):
         self.wait_for_toaster_to_end('User updated successfully')
 
     def wait_for_user_permissions_saved_toaster(self):
-        self.wait_for_toaster('User permissions saved.')
+        self.wait_for_toaster('User permissions saved')
 
     def find_allow_ldap_logins_toggle(self):
         return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
@@ -1089,7 +1089,7 @@ class SettingsPage(Page):
         self.click_button('Done')
 
     def wait_for_role_saved_toaster(self):
-        self.wait_for_toaster('Role saved.')
+        self.wait_for_toaster('Role saved')
 
     def set_allow_saml_based_login(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)

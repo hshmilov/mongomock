@@ -436,7 +436,7 @@ export default {
     },
     createToast(response) {
       if (response.status === 200) {
-        this.message = 'Saved Successfully.';
+        this.message = 'Saved Successfully';
       } else {
         this.message = `Error: ${response.data.message}`;
       }

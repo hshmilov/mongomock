@@ -65,12 +65,12 @@ class ServiceNowComputerAction(ActionTypeBase):
                 {
                     'name': 'ax_snow_fields_map',
                     'type': 'string',
-                    'title': 'Axonius to ServiceNow Fields Map'
+                    'title': 'Axonius to ServiceNow field mapping'
                 },
                 {
                     'name': 'identifyreconcile_endpoint',
                     'type': 'string',
-                    'title': 'Identifyreconcile Endpoint (Changes the flow to use identifyreconcile feature only)'
+                    'title': 'Use IdentifyReconcile API endpoint to create computer'
                 }
             ],
             'required': [

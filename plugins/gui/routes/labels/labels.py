@@ -21,7 +21,7 @@ class Labels:
             'permissions.settings.roles.put': 'Add role',
             'permissions.settings.users.delete': 'Delete user',
             'permissions.settings.roles.post': 'Edit roles',
-            'permissions.settings.roles.delete': 'Delete roles',
+            'permissions.settings.roles.delete': 'Delete role',
             'permissions.settings.reset_api_key': 'Reset API Key',
             'permissions.settings.post': 'Update system settings',
             'permissions.settings.run_manual_discovery': 'Run manual discovery cycle',
@@ -32,7 +32,7 @@ class Labels:
             'permissions.dashboard.charts.delete': 'Delete chart',
             'permissions.dashboard.charts.put': 'Add chart',
             'permissions.dashboard.charts.post': 'Edit charts',
-            'permissions.dashboard.spaces.put': 'Add and Edit Spaces',
+            'permissions.dashboard.spaces.put': 'Add and edit spaces',
             'permissions.dashboard.spaces.delete': 'Delete space',
 
             'permissions.devices_assets': 'Device Assets',

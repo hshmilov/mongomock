@@ -534,7 +534,7 @@ export default {
         configName,
         config,
       }).then(() => {
-        this.message = 'Adapter configuration saved.';
+        this.message = 'Adapter configuration saved';
         setTimeout(() => {
           this.message = '';
         }, 5000);

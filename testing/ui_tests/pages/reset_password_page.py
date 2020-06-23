@@ -5,7 +5,7 @@ class ResetPasswordPage(Page):
     NEW_PASSWORD_ID = 'newPassword'
     CONFIRM_NEW_PASSWORD_ID = 'confirmNewPassword'
     SET_PASSWORD_BUTTON = 'Set Password'
-    RESET_PASSWORD_TOASTER_TEXT = 'Password reset successful'
+    RESET_PASSWORD_TOASTER_TEXT = 'Password reset successfully'
 
     @property
     def root_page_css(self):

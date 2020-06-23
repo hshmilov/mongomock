@@ -60,7 +60,7 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                 {
                     'name': 'ax_snow_fields_map',
                     'type': 'string',
-                    'title': 'Axonius to ServiceNow Fields Map'
+                    'title': 'Axonius to ServiceNow field mapping'
                 }
             ],
             'required': [

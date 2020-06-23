@@ -255,7 +255,7 @@ export default {
             }
           } else {
             await this.createRole(this.currentRole);
-            this.showToasterMessage({ message: 'Role created.' });
+            this.showToasterMessage({ message: 'Role created' });
             this.updateAssignableRolesList();
             this.closePanel();
           }
@@ -270,11 +270,11 @@ export default {
     async updateRole() {
       try {
         await this.changeRole(this.currentRole);
-        this.showToasterMessage({ message: 'Role saved.' });
+        this.showToasterMessage({ message: 'Role saved' });
         this.updateAssignableRolesList();
         this.closePanel();
       } catch (e) {
-        this.showToasterMessage({ message: 'Failed to save role.' });
+        this.showToasterMessage({ message: 'Failed to save role' });
       }
     },
     async updateAssignableRolesList() {
@@ -285,7 +285,7 @@ export default {
         this.inSaveMode = true;
         await this.removeRole(this.role);
         this.inSaveMode = false;
-        this.showToasterMessage({ message: 'Role deleted.' });
+        this.showToasterMessage({ message: 'Role deleted' });
         this.updateAssignableRolesList();
         this.closePanel();
       } catch (e) {

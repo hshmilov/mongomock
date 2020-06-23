@@ -18,7 +18,7 @@ class TestDataEnrichment(TestBase):
         self._upload_and_check_msg(upload_data='Subnet,Location\r\n10.0.a.0/8,Iceland\r\n192.168.0.0/16, Greenland',
                                    msg='Uploaded CSV file is not in the desired format')
         self._upload_and_check_msg(upload_data='Subnet,Location\r\n10.0.0.0/8,Iceland\r\n192.168.0.0/16, Greenland',
-                                   msg='Saved Successfully.')
+                                   msg='Saved Successfully')
 
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()

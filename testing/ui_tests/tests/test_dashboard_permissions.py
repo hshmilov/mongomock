@@ -149,7 +149,7 @@ class TestDashboardPermissions(PermissionsTestBase):
         self.dashboard_page.assert_disabled_space_menu(3)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
-                                                     'Add and Edit Spaces',
+                                                     'Add and edit spaces',
                                                      user_role,
                                                      ui_consts.RESTRICTED_USERNAME,
                                                      ui_consts.NEW_PASSWORD,
