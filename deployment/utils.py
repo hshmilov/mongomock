@@ -60,8 +60,16 @@ def run_cmd(args):
     subprocess.call(args)
 
 
-def chown_folder(path):
-    cmd = f'chown -R ubuntu:ubuntu {path}'
+def chown_folder(path: str, sudo: bool = False):
+    """
+    Changing ownership of a dir and sub dirs recursively.
+    :param path: The path to change ownership to.
+    :param sudo: Should use sudo or not.
+    """
+    cmd = ''
+    if sudo:
+        cmd = 'sudo '
+    cmd += f'chown -R ubuntu:ubuntu {path}'
     run_cmd(cmd.split())
 
 
