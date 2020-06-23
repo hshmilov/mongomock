@@ -1,9 +1,13 @@
 import time
+
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestCloudComplianceFeatureFlags(TestBase):
 
+    @pytest.mark.skip('AX-8127')
     def test_cloud_compliance_expiry_date(self):
         self.login_page.logout_and_login_with_admin()
         self.settings_page.switch_to_page()
