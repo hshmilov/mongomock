@@ -8,6 +8,7 @@ import logging
 import time
 
 import boto3
+from botocore.exceptions import ClientError
 
 from axonius.clients.aws.aws_clients import get_boto3_client_by_session
 from axonius.utils.datetime import parse_date
@@ -17,14 +18,23 @@ from compliance.utils.cis_utils import bad_api_response, good_api_response, get_
 
 logger = logging.getLogger(f'axonius.{__name__}')
 CREDS_REPORT_DELAY_TIME_IN_SECONDS = 2
-MAX_SECONDS_TO_WAIT_FOR_CREDS_REPORT = 60 * 5   # 5 minutes\
+MAX_SECONDS_TO_WAIT_FOR_CREDS_REPORT = 60 * 5   # 5 minutes
 
 
 # Helper functions
 def get_credential_report(iam_client):
     time_slept = 0
     try:
-        while iam_client.generate_credential_report()['State'] != 'COMPLETE':
+        while True:
+            try:
+                if iam_client.generate_credential_report()['State'] == 'COMPLETE':
+                    break
+            except ClientError as err:
+                # pylint: disable=no-member
+                if 'Rate exceeded' in err.error.get('Message', 'Unknown'):
+                    time.sleep(CREDS_REPORT_DELAY_TIME_IN_SECONDS)
+                    continue
+                raise
             time.sleep(CREDS_REPORT_DELAY_TIME_IN_SECONDS)
             time_slept += CREDS_REPORT_DELAY_TIME_IN_SECONDS
             if time_slept > MAX_SECONDS_TO_WAIT_FOR_CREDS_REPORT:
