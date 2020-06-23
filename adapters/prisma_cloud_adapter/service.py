@@ -189,6 +189,7 @@ class PrismaCloudAdapter(AdapterBase):
             azure_instance = AzureInstance()
 
             azure_instance.vm_id = device_raw.get('vmId')
+            device.cloud_id = device_raw.get('vmId')
             azure_instance.location = device_raw.get('location')
             azure_instance.power_state = device_raw.get('powerState')
 

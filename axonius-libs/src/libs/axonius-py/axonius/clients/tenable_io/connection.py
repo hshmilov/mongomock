@@ -90,6 +90,17 @@ class TenableIoConnection(RESTConnection):
         self._put(f'scans/{scan_id}', body_params=body_params)
         return True
 
+    def get_uuid_to_id_scans_dict(self):
+        uuid_to_id_dict = dict()
+        scans_list = self._get('scans').get('scans')
+        if not scans_list or not isinstance(scans_list, list):
+            raise RESTException('Bad list of scans')
+        for scan_raw in scans_list:
+            if not isinstance(scan_raw, dict) or not scan_raw.get('id') or not scan_raw.get('uuid'):
+                continue
+            uuid_to_id_dict[scan_raw['uuid']] = str(scan_raw['id'])
+        return uuid_to_id_dict
+
     def add_ips_to_target_group(self, tenable_io_dict):
         target_group_name = tenable_io_dict.get('target_group_name')
         ips = tenable_io_dict.get('ips')

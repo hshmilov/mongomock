@@ -27,6 +27,7 @@ class ScanData(SmartJsonClass):
     schedule_uuid = Field(str, 'Schedule UUID')
     started_at = Field(datetime.datetime, 'Started At')
     uuid = Field(str, 'UUID')
+    scan_id = Field(str, 'Scan ID')
 
 
 class TenableIoAdapter(ScannerAdapterBase, Configurable):
@@ -180,12 +181,14 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
+            logger.info(f'Getting scans id to uuid')
+            uuid_to_id_scans_dict = client_data.get_uuid_to_id_scans_dict()
             logger.info('Getting all assets')
             devices_list = client_data.get_device_list()
-            yield devices_list, ASSET_TYPE, client_data
+            yield devices_list, ASSET_TYPE, client_data, uuid_to_id_scans_dict
             logger.info('Getting all agent')
             for device_raw in client_data.get_agents():
-                yield device_raw, AGENT_TYPE, client_data
+                yield device_raw, AGENT_TYPE, client_data, uuid_to_id_scans_dict
 
     def _clients_schema(self):
         """
@@ -233,7 +236,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             'type': 'array'
         }
 
-    def _parse_export_device(self, device_id, device_raw, client_data):
+    def _parse_export_device(self, device_id, device_raw, client_data, uuid_to_id_scans_dict):
         device = self._new_device_adapter()
         device.id = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
@@ -298,9 +301,9 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         plugin_and_severity = []
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []
-        found_uuid = True
-        if self.__scan_uuid_white_list:
-            found_uuid = False
+        found_scan_id = True
+        if self.__scan_id_white_list:
+            found_scan_id = False
         for vuln_raw in vulns_info:
             try:
                 try:
@@ -329,9 +332,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     scan_raw = {}
                 try:
                     uuid = scan_raw.get('uuid')
-                    if uuid and self.__scan_uuid_white_list and uuid in self.__scan_uuid_white_list:
-                        found_uuid = True
-                    device.scans_data.append(ScanData(uuid=scan_raw.get('uuid'),
+                    scan_id = uuid_to_id_scans_dict.get(uuid)
+                    if scan_id and self.__scan_id_white_list and scan_id in self.__scan_id_white_list:
+                        found_scan_id = True
+                    device.scans_data.append(ScanData(uuid=uuid,
+                                                      scan_id=scan_id,
                                                       schedule_uuid=scan_raw.get('schedule_uuid'),
                                                       started_at=parse_date(scan_raw.get('started_at')),
                                                       completed_at=parse_date(scan_raw.get('completed_at'))))
@@ -377,7 +382,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     device.add_vulnerable_software(cve_id=cve)
             except Exception:
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
-        if not found_uuid:
+        if not found_scan_id:
             return None
         tenble_sources = device_raw.get('sources')
         if not isinstance(tenble_sources, list):
@@ -400,7 +405,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
     def _parse_raw_data(self, devices_raw_data_all):
         agent_ids = set()
-        for device_raw, device_type, client_data in devices_raw_data_all:
+        for device_raw, device_type, client_data, uuid_to_id_scans_dict in devices_raw_data_all:
             try:
                 if AGENT_TYPE == device_type:
                     if device_raw.get('id') in agent_ids:
@@ -412,7 +417,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 elif ASSET_TYPE == device_type:
                     for device_id, device_asset_raw in device_raw:
                         try:
-                            device = self._parse_export_device(device_id, device_asset_raw, client_data)
+                            device = self._parse_export_device(device_id, device_asset_raw, client_data,
+                                                               uuid_to_id_scans_dict)
                             if device:
                                 yield device
                         except Exception:
@@ -465,8 +471,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
-                    'name': 'scan_uuid_white_list',
-                    'title': 'Scan UUIDs whitelist',
+                    'name': 'scan_id_white_list',
+                    'title': 'Scan IDs whitelist',
                     'type': 'string'
                 },
             ],
@@ -481,12 +487,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_no_last_scan': False,
-            'scan_uuid_white_list': None
+            'scan_id_white_list': None
         }
 
     def _on_config_update(self, config):
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
-        self.__scan_uuid_white_list = config['scan_uuid_white_list'].split(',') \
+        self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
             if config.get('scan_uuid_white_list') else None
 
     def outside_reason_to_live(self) -> bool:

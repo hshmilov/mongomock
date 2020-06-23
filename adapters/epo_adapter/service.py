@@ -274,8 +274,13 @@ class EpoAdapter(AdapterBase, Configurable):
         except Exception as e:
             try:
                 logger.exception(f"Failed to query all linked tables - {e}")
-                raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
-                             joinTables="EPOComputerProperties, EPOProductPropertyProducts")
+                try:
+                    raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
+                                 joinTables="EPOComputerProperties, EPOProductPropertyProducts, EPOBranchNode")
+                except Exception:
+                    logger.exception(f'Problem with branch node')
+                    raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
+                                 joinTables="EPOComputerProperties, EPOProductPropertyProducts")
             except Exception as e:
                 logger.exception(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
                                         Will fetch only basic info from EPOComputerProperties")
