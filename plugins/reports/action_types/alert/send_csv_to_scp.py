@@ -50,6 +50,7 @@ class SSHConnection:
         self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._client.connect(hostname=self._hostname,
                              port=self._port,
+                             username=self._username,
                              password=self._password,
                              key_filename=self._key_file,
                              pkey=self._key,
