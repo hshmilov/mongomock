@@ -99,7 +99,8 @@ def non_historic_indexes(db: Collection):
     create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
                            ('adapters.data.last_used_users', pymongo.TEXT),
                            ('adapters.data.username', pymongo.TEXT),
-                           ('adapters.data.mail', pymongo.TEXT)],
+                           ('adapters.data.mail', pymongo.TEXT),
+                           ('adapters.data.network_interfaces.mac', pymongo.TEXT)],
                       background=True)
 
 
