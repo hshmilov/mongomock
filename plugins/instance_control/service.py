@@ -312,7 +312,7 @@ class InstanceControlService(Triggerable, PluginBase):
         # parsing the private ips.
         for ip_line in ip_lines.splitlines():
             specific_ip = ip_line.split()[1].split('/')[0]
-            if specific_ip.startswith('127.0') or 'docker' in ip_line:
+            if specific_ip.startswith('127.0') or 'docker' in ip_line or 'vpnnet' in ip_line:
                 continue
 
             ips.append(specific_ip)
