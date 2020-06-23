@@ -92,6 +92,6 @@ class TestDashboardCardLegend(TestBase):
         self.dashboard_page.click_legend_toggle(card)
         legend_grid_rows = self.dashboard_page.get_pie_chart_legend_rows_data(card)
         self._test_legend_grid_rows(legend_grid_rows,
-                                    ['Excluding', 'IPs Subnet 192.168.0.0',
+                                    ['Remainder of all devices', 'IPs Subnet 192.168.0.0',
                                      'IPs Subnet 192.168.0.0 + DC Devices', 'DC Devices'])
         self._test_pie_chart_legend_click(legend_grid_rows, self.INTERSECTION_QUERY_SEARCH_TEXT)

@@ -34,8 +34,10 @@
                   @mouseout="hoveredItem = null"
                 />
               </div>
-              <div class="quantity">
-                {{ item.title || item.value }}
+              <div v-if="!item.htmlContent" class="quantity">
+                {{ item.value }}
+              </div>
+              <div v-else class="quantity" v-html="item.htmlContent">
               </div>
             </div>
           </div>

@@ -106,17 +106,19 @@ class TestDashboardCardTooltip(TestBase):
         intersection_slice_exists = False
         total_percentage = 0
 
-        for index, pie_chart_slice in enumerate(pie_chart_slices, 0):
-            self.dashboard_page.hover_over_element(pie_chart_slices[index])
+        for pie_chart_slice in pie_chart_slices:
+            self.dashboard_page.hover_over_element(pie_chart_slice)
             tooltip_title = self.dashboard_page.get_tooltip_header_name(card)
-            if tooltip_title == 'Excluding':
-                excluding_slice_exists = True
-                total_percentage += _verify_excluding_or_intersection_tooltip()
-            elif tooltip_title == 'Intersection':
+
+            if tooltip_title == 'Intersection':
                 intersection_slice_exists = True
                 total_percentage += _verify_excluding_or_intersection_tooltip()
-            else:
-                total_percentage += self._verify_pie_chart_tooltip_and_get_percentage(card)
+                continue
+
+            elif tooltip_title == 'Remainder of all devices':
+                excluding_slice_exists = True
+
+            total_percentage += self._verify_pie_chart_tooltip_and_get_percentage(card)
 
         assert excluding_slice_exists
         assert intersection_slice_exists

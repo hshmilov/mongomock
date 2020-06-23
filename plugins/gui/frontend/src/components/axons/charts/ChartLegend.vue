@@ -62,7 +62,7 @@ export default {
     },
     numberColumnWidth() {
       return this.pageData.reduce(
-        (maxWidth, legendItem) => Math.max(maxWidth, legendItem.numericValue), 10,
+        (maxWidth, legendItem) => Math.max(maxWidth, legendItem.value), 10,
       );
     },
     columnValues() {

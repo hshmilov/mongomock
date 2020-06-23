@@ -26,8 +26,14 @@
             <div class="summary-title">
               Total {{ name }}s seen
             </div>
-            <div class="quantity">
-              {{ dataSeen }}
+            <div
+              class="quantity"
+            >
+              <span :title="summaryLevelUniqueAssetsLabel">{{ totalSeen }}</span>
+              <span
+                v-if="totalGrossSeen !== totalSeen"
+                :title="summaryLevelDuplicatedAssetsLabel"
+              >({{ totalGrossSeen }})</span>
             </div>
           </div>
           <div class="summary-row">
@@ -72,6 +78,16 @@ export default {
       required: true,
     },
   },
+  data() {
+    return {
+      adapterLevelDuplicatedAssetsLabel: 'The number of assets fetched from all adapter connections for this adapter, including '
+              + 'assets fetched from different components/modules of this adapter, outdated or duplicated assets.',
+      adapterLevelAssetsLabel: 'The number of assets fetched from all adapter connections for this adapter.',
+      summaryLevelUniqueAssetsLabel: 'The number of adapter-unique assets fetched from all adapter connections.',
+      summaryLevelDuplicatedAssetsLabel: 'The number of assets fetched from all adapter connections of all adapters, including'
+              + ' assets fetched from different components/modules of all adapters, outdated or duplicated assets.',
+    };
+  },
   computed: {
     title() {
       return `${this.name} Discovery`;
@@ -80,10 +96,7 @@ export default {
       if (!this.data || !this.data.counters) return [];
       return [...this.data.counters]
         .sort((first, second) => second.value - first.value)
-        .map((item) => ({
-          ...item,
-          title: (item.value !== item.meta) ? `${item.value} (${item.meta})` : item.value,
-        }));
+        .map(this.buildDiscoveryItem);
     },
     dataSizeClass() {
       if (!this.dataCounters || !this.dataCounters.length) return '';
@@ -91,13 +104,11 @@ export default {
       if (this.dataCounters.length > 4) return 'double';
       return '';
     },
-    dataSeen() {
-      const seen = this.data.seen || 0;
-      const seenGross = this.data.seen_gross || 0;
-      if (seen !== seenGross) {
-        return `${seen} (${seenGross})`;
-      }
-      return seen;
+    totalSeen() {
+      return this.data.seen || 0;
+    },
+    totalGrossSeen() {
+      return this.data.seen_gross || 0;
     },
     dataUnique() {
       return Math.min(this.data.unique || 0, this.data.seen || 0);
@@ -107,6 +118,23 @@ export default {
     runAdaptersFilter(index) {
       if (!this.dataCounters || !this.dataCounters[index]) return;
       this.$emit('filter', `adapters == '${this.dataCounters[index].name}'`);
+    },
+    buildDiscoveryItem(item) {
+      if (item.value !== item.meta) {
+        return {
+          ...item,
+          htmlContent: `<span title="${this.adapterLevelAssetsLabel}">${item.value}</span>`
+                  + `<span title="${this.adapterLevelDuplicatedAssetsLabel}"> (${item.meta})</span>`,
+          value: item.value,
+        };
+      }
+      return {
+        ...item,
+        title: item.value,
+        adapterLevelAssetsLabel: this.adapterLevelAssetsLabel,
+        htmlContent: `<span title="${this.adapterLevelAssetsLabel}">${item.value}</span>`,
+        value: item.value,
+      };
     },
   },
 };

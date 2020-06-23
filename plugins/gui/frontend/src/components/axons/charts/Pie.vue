@@ -63,12 +63,16 @@
         </g>
       </svg>
     </XChartTooltip>
+    <div
+      v-if="!tooManyValues"
+      class="pie-total"
+    >Total {{ totalValue }}</div>
   </div>
 </template>
 
 <script>
 import XChartTooltip from './ChartTooltip.vue';
-import { formatPercentage } from '../../../constants/utils'
+import { formatPercentage } from '../../../constants/utils';
 
 export default {
   name: 'XPie',
@@ -104,7 +108,7 @@ export default {
         const modifiedItem = item;
         modifiedItem.index = index;
         modifiedItem.percentage = formatPercentage(portion);
-        modifiedItem.name = remainder ? 'Excluding' : modifiedItem.name;
+        modifiedItem.name = remainder ? this.getRemainderLabel(modifiedItem) : modifiedItem.name;
         modifiedItem.class = this.getItemClass(item, index);
         return modifiedItem;
       });
@@ -149,6 +153,13 @@ export default {
       }
       return tooltip;
     },
+    totalValue() {
+      if (!this.data.length) {
+        return 0;
+      }
+      const [{ value, portion }] = this.data;
+      return portion === 1 ? value : Math.round(1 / (portion / value));
+    },
   },
   methods: {
     getItemClass(item) {
@@ -178,10 +189,11 @@ export default {
         header: {
           class: colorClass,
           name,
+        },
+        body: {
           value,
           percentage,
         },
-        additionalData: this.processedData.filter((data) => !data.intersection && !data.remainder),
       };
     },
     getIntersectionTooltip(name, value, percentage, colorClass) {
@@ -208,6 +220,13 @@ export default {
     onClick(index) {
       if (this.readOnly) return;
       this.$emit('click-one', index);
+    },
+    getRemainderLabel(item) {
+      if (item.name === 'ALL') {
+        // No base query
+        return `Remainder of all ${item.module}`;
+      }
+      return `Remainder of: ${item.name}`;
     },
   },
 };
@@ -260,6 +279,13 @@ export default {
       &.top {
         bottom: auto;
       }
+    }
+
+    .pie-total {
+      text-align: center;
+      line-height: 24px;
+      width: 100%;
+      margin-top: 5px;
     }
   }
 

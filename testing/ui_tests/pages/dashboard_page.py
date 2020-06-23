@@ -1,18 +1,19 @@
-import time
 import datetime
 import re
+import time
 from contextlib import contextmanager
 from decimal import Decimal, getcontext
-import pytest
 
+import pytest
 from retrying import retry
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import (ElementClickInterceptedException,
+                                        NoSuchElementException)
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.color import Color
 
-from ui_tests.pages.page import Page
-from services.axon_service import TimeoutException
 from axonius.utils.wait import wait_until
+from services.axon_service import TimeoutException
+from ui_tests.pages.page import Page
 
 # pylint: disable=too-many-lines
 
@@ -156,6 +157,8 @@ class DashboardPage(Page):
 
     TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
     CHART_WARNING_CSS = '.chart-warning'
+
+    PIE_TOTAL_ITEMS_CSS = '.pie-total'
 
     @property
     def root_page_css(self):
@@ -1340,3 +1343,13 @@ class DashboardPage(Page):
     def verify_chart_warning_missing(self, card):
         with pytest.raises(NoSuchElementException):
             card.find_element_by_css_selector(self.CHART_WARNING_CSS)
+
+    def get_pie_chart_slices_total_value(self, pie):
+        pie_slices = pie.find_elements_by_css_selector(self.PIE_SLICE_CSS)
+        self.hover_over_element(pie_slices[0])
+        slice_percentage = self.get_tooltip_body_percentage(pie)
+        slice_value = int(self.get_tooltip_body_value(pie))
+        return round(100 / (slice_percentage / slice_value))
+
+    def get_pie_chart_footer_total_value(self, pie):
+        return int(pie.find_element_by_css_selector(self.PIE_TOTAL_ITEMS_CSS).text.lstrip('Total '))
