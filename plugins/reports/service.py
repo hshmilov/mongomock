@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from axonius.consts import plugin_consts
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
-from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_id
@@ -30,8 +30,7 @@ from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACT
                                           ACTION_CONFIG_FIELD, ACTION_FIELD)
 from axonius.types.enforcement_classes import (ActionInRecipe, Recipe, TriggerPeriod, Trigger, TriggerView,
                                                TriggerConditions, RunOnEntities, TriggeredReason, RecipeRunMetadata,
-                                               ActionRunResults, DBActionRunResults, EntityResult, SavedActionType,
-                                               SavedActionData)
+                                               ActionRunResults, DBActionRunResults, EntityResult, SavedActionType)
 from axonius.utils.mongo_chunked import insert_chunked, read_chunked, create_indexes_on_collection
 
 from reports.action_types.action_type_alert import ActionTypeAlert
@@ -551,39 +550,6 @@ class ReportsService(Triggerable, PluginBase):
 
         return recipe
 
-    @staticmethod
-    def _is_recipe_action_update_tags(recipe: Recipe) -> bool:
-        """
-        check enforcement for Main,Post,Success,Failures condition(s) action(s)
-        if Action is Tag/UnTag type then check for save data have result
-        :param recipe:
-        :return: True if any SavedActionData for Tags include result
-        """
-        def is_saved_actions_data_edit_tags(data: SavedActionData):
-            tag_event = {'tag', 'untag'}
-            if (data and hasattr(data, 'action_name') and data.action_name in tag_event and
-                    data.results and data.results.successful_entities):
-                return True
-            return False
-
-        def is_action_edit_tags(actions_in_recipe):
-            if isinstance(actions_in_recipe, List):
-                return any(is_saved_actions_data_edit_tags(action_in_recipe) for action_in_recipe in actions_in_recipe)
-
-            if actions_in_recipe.action:
-                return is_saved_actions_data_edit_tags(actions_in_recipe.action)
-            return False
-
-        try:
-            return is_action_edit_tags(recipe.main) or \
-                is_action_edit_tags(recipe.success) or \
-                is_action_edit_tags(recipe.failure) or \
-                is_action_edit_tags(recipe.post)
-
-        except Exception:
-            logger.exception('unbale to process recipe for actions !')
-            return False
-
     def __update_run_configuration(self, report_id: ObjectId, run_configuration_name: str,
                                    update_query) -> UpdateResult:
         """
@@ -666,12 +632,6 @@ class ReportsService(Triggerable, PluginBase):
                     'enforcement': report.get('name', ''),
                     'task': str(recipe.metadata.pretty_id)
                 })
-
-            def _log_activity_tags():
-                self.log_activity_default(AuditCategory.Enforcements.value, 'update_tags', {
-                    'enforcement': report.get('name', '')
-                }, AuditType.Info)
-
             _log_activity_trigger(AuditAction.Start)
 
             result = self._call_actions(report, recipe, triggered_reason, trigger,
@@ -691,8 +651,6 @@ class ReportsService(Triggerable, PluginBase):
                     f'{TRIGGERS_FIELD}.$[i].{TIMES_TRIGGERED_FIELD}': 1
                 }
             })
-            if self._is_recipe_action_update_tags(recipe):
-                _log_activity_tags()
             _log_activity_trigger(AuditAction.Complete)
         return result
 

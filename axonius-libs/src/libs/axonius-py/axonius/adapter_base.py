@@ -772,6 +772,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             self._decrypt_client_config(current_client.get('client_config'))
             self._clean_unneeded_client_config_fields(current_client.get('client_config'))
             if current_client.get('status') != 'success':
+                self._log_activity_connection_failure(client_name, execption)
                 raise Exception
         try:
             with self._clients_lock:
@@ -782,6 +783,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         f' to server with the ID {client_name}. Error is {str(e2)}'
             self.create_notification(error_msg)
             self.send_external_info_log(error_msg)
+            self._log_activity_connection_failure(client_name, execption)
             if self.mail_sender and self._adapter_errors_mail_address:
                 email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
                                                    self._adapter_errors_mail_address.split(','))
@@ -2044,11 +2046,17 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param client_id: adapter client connection id
         :param connection_exception: <T extend ConnectionException >
         """
+        try:
+            if isinstance(connection_exception.__context__, (adapter_exceptions.ClientConnectionException,
+                                                             request.ConnectTimeout)):
+                error_msg = str(connection_exception.__context__).strip()
+                error = error_msg[len('Error:'):] if error_msg.startswith('Error:') else error_msg
+            elif isinstance(connection_exception.__context__, requests.exceptions.SSLError):
+                error = str(connection_exception).split('SSLError')[-1]
+            else:
+                error = 'fatal error during client connection'
 
-        if isinstance(connection_exception.__context__, adapter_exceptions.ClientConnectionException):
-            error_msg = str(connection_exception.__context__).strip()
-            error = error_msg[6:] if error_msg.startswith('Error:') else error_msg
-        else:
+        except Exception:
             error = 'fatal error during client connection'
 
         self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {

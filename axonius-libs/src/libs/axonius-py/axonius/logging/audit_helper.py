@@ -37,6 +37,7 @@ class AuditAction(Enum):
     ChangedPermissions = 'changed_permissions'
     AssignedRole = 'assigned_role'
     TagReimaged = 'tag_reimaged'
+    TagUpdate = 'update_tags'
 
 
 class AuditType(Enum):

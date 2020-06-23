@@ -46,4 +46,6 @@ class UntagAllEntitiesAction(ActionTypeBase):
     def _run(self) -> EntitiesResult:
         namespace = self._plugin_base._namespaces[self._entity_type]
         add_labels_to_entities(namespace, self._internal_axon_ids, [self._config['tag_name']], True)
+        if self._internal_axon_ids:
+            self._log_activity_tag_actions()
         return generic_success(self._internal_axon_ids)

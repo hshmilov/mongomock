@@ -7,6 +7,7 @@ from typing import Set, List, Iterable
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_NAME, NODE_ID
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditCategory, AuditType, AuditAction
 from axonius.plugin_base import PluginBase
 from axonius.types.enforcement_classes import Trigger, ActionRunResults, EntitiesResult, EntityResult, TriggeredReason
 from axonius.utils.db_querying_helper import iterate_axonius_entities
@@ -242,3 +243,8 @@ class ActionTypeBase(ABC):
         """
         See self.run
         """
+
+    def _log_activity_tag_actions(self):
+        self._plugin_base.log_activity(AuditCategory.Enforcements, AuditAction.TagUpdate, {
+            'enforcement': self._report_data.get('name', '')
+        }, AuditType.Info)

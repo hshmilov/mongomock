@@ -62,6 +62,7 @@ class TagAllEntitiesAction(ActionTypeBase):
 
         # Add the tag to queried entities
         add_labels_to_entities(namespace, self._internal_axon_ids, [self._config['tag_name']], False, is_huge=True)
+        self._log_activity_tag_actions()
 
         return generic_success(self._internal_axon_ids)
 
