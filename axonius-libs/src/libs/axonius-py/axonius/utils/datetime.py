@@ -71,6 +71,11 @@ def parse_date(datetime_to_parse):
         if isinstance(datetime_to_parse, datetime):
             # sometimes that happens too
             return datetime_to_parse.astimezone(timezone.utc)
+        if isinstance(datetime_to_parse, str) and datetime_to_parse.isnumeric():
+            int_datetime = int(datetime_to_parse)
+            datetime_from_str = _parse_unix_timestamp(int_datetime)
+            if datetime_from_str and is_date_real(datetime_from_str):
+                return datetime_from_str
         datetime_to_parse = str(datetime_to_parse)
         d = dateutil.parser.parse(datetime_to_parse).astimezone(timezone.utc)
 

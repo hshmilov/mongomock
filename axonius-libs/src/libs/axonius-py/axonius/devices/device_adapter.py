@@ -559,6 +559,8 @@ class TenableVulnerability(SmartJsonClass):
     last_fixed = Field(datetime.datetime, 'Last Fixed')
     first_found = Field(datetime.datetime, 'First Found')
     last_found = Field(datetime.datetime, 'Last Found')
+    first_seen = Field(datetime.datetime, 'First Seen')
+    last_seen = Field(datetime.datetime, 'Last Seen')
 
 
 class TenableSource(SmartJsonClass):
