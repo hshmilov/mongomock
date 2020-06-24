@@ -41,16 +41,28 @@ def run_on_subprocess(command, *args, **kwargs):
     return run(command, *args, **kwargs)
 
 
-def upload_to_tests_folder(aws_key, aws_secret, version_name, **_):
+def upload_to_cf_protected_bucket(aws_key, aws_secret, version_name, **_):
     env = get_env(aws_key, aws_secret)
+    cloudflare_protected_bucket = 'upgrader-links.axonius.com'
 
+    # this location is used by se-ci to fetch the 'latest-release' version
     command = f'aws s3 cp s3://axonius-releases/{version_name}/axonius_{version_name}.py' \
-              ' s3://axonius-releases/latest/axonius_latest.py' \
-              ' --acl public-read' \
+              f' s3://{cloudflare_protected_bucket}/latest/axonius_latest.py' \
               f' --region {REGION}'
 
-    log('Copying upgrader to automatic tests folder')
+    log('Copying upgrader to cloudflare protected version location')
     run_on_subprocess(command, env=env, shell=True, check=True, stderr=STDOUT)
+
+    # chef will use this location to pull upgrades from
+    command = f'aws s3 cp s3://axonius-releases/{version_name}/axonius_{version_name}.py' \
+              f' s3://{cloudflare_protected_bucket}/{version_name}/axonius_{version_name}.py' \
+              f' --region {REGION}'
+
+    log('Copying upgrader to cloudflare protected bucket')
+    run_on_subprocess(command, env=env, shell=True, check=True, stderr=STDOUT)
+
+    cloudflare_protected_url = f'https://{cloudflare_protected_bucket}/{version_name}/axonius_{version_name}.py'
+    log(f'Upgrade link to place in chef: {cloudflare_protected_url}')
 
 
 def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
@@ -177,7 +189,7 @@ def main():
 
     create_tag(**arguments)
 
-    upload_to_tests_folder(**arguments)
+    upload_to_cf_protected_bucket(**arguments)
 
     upload_to_production(**arguments)
 

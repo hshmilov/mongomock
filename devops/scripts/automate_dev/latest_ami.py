@@ -6,6 +6,11 @@ def get_latest_ami():
         'https://axonius-releases.s3.us-east-2.amazonaws.com/latest_release/ami_id.txt').read().decode().strip()
 
 
+def get_latest_version():
+    return urllib.request.urlopen(
+        'https://axonius-releases.s3.us-east-2.amazonaws.com/latest_release/version_name.txt').read().decode().strip()
+
+
 def main():
     print(get_latest_ami())
 
