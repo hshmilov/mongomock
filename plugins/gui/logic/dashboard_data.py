@@ -110,6 +110,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
             continue
 
         data_item = {
+            'view_id': view['id'],
             'name': view_dict['name'],
             'view': view_dict['view'],
             'module': entity_name,

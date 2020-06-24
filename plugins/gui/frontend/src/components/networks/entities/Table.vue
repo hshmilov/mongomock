@@ -164,8 +164,8 @@ export default {
           fields: this.filterViewFields(this.userFieldsGroups.default),
         },
       });
-      this.$refs.table.fetchContentPages(true);
     }
+    this.$refs.table.fetchContentPages();
   },
   methods: {
     ...mapMutations({

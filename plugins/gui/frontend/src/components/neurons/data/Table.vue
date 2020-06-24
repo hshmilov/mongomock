@@ -505,7 +505,9 @@ export default {
         if (!this.content.fetching) {
           this.loading = false;
         }
-      }).catch(() => this.loading = false);
+      }).catch(() => {
+        this.loading = false
+      });
     },
     onClickSize(size) {
       if (size === this.pageSize) return;

@@ -129,13 +129,10 @@ export const updateDataView = (state, payload) => {
   }
   if (payload.selectedView !== undefined) {
     state[payload.module] = { ...module, selectedView: payload.selectedView };
-  }
-  if (payload.name !== undefined) {
-    const matchingView = module.views.saved.content.data.find((view) => view.name === payload.name);
-    state[payload.module] = {
-      ...module,
-      selectedView: matchingView ? matchingView.uuid : null,
-    };
+  } else if (payload.name !== undefined) {
+    const selectedView = module.views.saved.content.data.find((view) => view.name === payload.name)
+      || null;
+    state[payload.module] = { ...module, selectedView };
   }
 };
 

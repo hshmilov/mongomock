@@ -272,9 +272,8 @@ export default {
         view: historical ? {
           ...query.view,
           historical: this.allowedDates[historical],
-        } : query.view,
-        name: this.chart.metric === ChartTypesEnum.compare ? query.name : undefined,
-        selectedView: null,
+        } : { ...query.view },
+        selectedView: { uuid: query.view_id },
       });
       this.$router.push({ path: query.module });
     },

@@ -118,7 +118,7 @@ import { SAVE_DATA_VIEW } from '../../../../store/actions';
 export default {
   name: 'XQueryState',
   components: {
-    XButton,  
+    XButton,
     XHistoricalDate,
     XSaveModal,
     ADropDown: Dropdown,
