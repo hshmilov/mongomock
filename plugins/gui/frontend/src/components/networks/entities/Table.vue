@@ -72,7 +72,7 @@ import XTableOptionMenu from './TableOptionMenu.vue';
 import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
-  LAZY_FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
+  FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
 } from '../../../store/actions'
 import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '../../../store/modules/adapters';
 
@@ -172,7 +172,7 @@ export default {
       updateView: UPDATE_DATA_VIEW,
     }),
     ...mapActions({
-      fetchDataFields: LAZY_FETCH_DATA_FIELDS,
+      fetchDataFields: FETCH_DATA_FIELDS,
       fetchDataHyperlinks: FETCH_DATA_HYPERLINKS,
       fetchConnectionLabels: LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
       fetchDataCurrent: FETCH_DATA_CURRENT,
