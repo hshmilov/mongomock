@@ -130,7 +130,6 @@ class AggregatorService(Triggerable, PluginBase):
             self.create_notification(
                 f'Starting to fetch device for {"".join(adapters)}')
         check_fetch_time = True
-        # TODO: RESET_BEFORE_CLIENT_FETCH_ADAPTERS for cisco shit
         for adapter_clients in adapters:
             data = self._trigger_remote_plugin(adapter_clients, 'insert_to_db', data={
                 'client_name': clients[adapter_clients],

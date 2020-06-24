@@ -404,7 +404,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             EntityType.Users.value: users_cleaned
         }
 
-    # pylint: disable=R1710
+    # pylint: disable=R1710,too-many-branches
     def _handle_insert_to_db_async(self, client_name, check_fetch_time, log_fetch=True):
         """
         Handles all asymmetric fetching of devices data, by creating a threadpool to handle each fetch in a
@@ -415,9 +415,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         data = {}
         try:
             if self.plugin_name in THREAD_SAFE_ADAPTERS:
-                return (yield from self._handle_insert_to_db_async_thread_safe(client_name, check_fetch_time))
+                return (yield from self._handle_insert_to_db_async_thread_safe(client_name, check_fetch_time,
+                                                                               log_fetch=log_fetch))
             if isinstance(client_name, list):
                 for client in client_name:
+                    data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
+                                                                             parse_after_fetch=True,
+                                                                             log_fetch=log_fetch)]
+            elif client_name is None:
+                # Probably realtime adapter with system_scheduler trigger
+                for client in self._clients:
                     data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
                                                                              parse_after_fetch=True,
                                                                              log_fetch=log_fetch)]
@@ -471,6 +478,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     for client in client_name:
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
                                              parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
+                elif client_name is None:
+                    # Probably realtime adapter with system_scheduler trigger
+                    for client in self._clients:
+                        data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
+                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
                 else:
                     data[executor.submit(self.insert_data_to_db, client_name, check_fetch_time=check_fetch_time,
                                          parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client_name
@@ -489,7 +501,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
             try:
                 for k, v in finished.items():
-                    yield k, self._parse_and_save_data_from_client(k, raw_devices=v.result()[0]['raw'],
+                    yield k, self._parse_and_save_data_from_client(k,
+                                                                   raw_devices=v.result()[0]['raw'],
                                                                    raw_users=v.result()[1]['raw'])
             except adapter_exceptions.AdapterException:
                 # pylint: disable=W0631
