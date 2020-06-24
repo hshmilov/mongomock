@@ -298,6 +298,8 @@ class Labels:
             'audit.dashboard.charts.post.template': 'Edited chart \'{chart_name}\' on space \'{space_name}\'',
             'audit.dashboard.charts.delete': 'Delete Chart',
             'audit.dashboard.charts.delete.template': 'Deleted chart \'{chart_name}\' from space \'{space_name}\'',
+            'audit.dashboard.charts.export_csv': 'Export CSV',
+            'audit.dashboard.charts.export_csv.template': 'Exported chart \'{chart_name}\' to CSV',
 
             'audit.dashboard.charts.move': 'Move Chart',
             'audit.dashboard.charts.move.template':

@@ -14,6 +14,7 @@ class AuditCategory(Enum):
     Tunnel = 'tunnel'
     Dashboard = 'dashboard'
     Instances = 'instances'
+    Charts = 'dashboard.charts'
 
 
 class AuditAction(Enum):
@@ -37,6 +38,7 @@ class AuditAction(Enum):
     ChangedPermissions = 'changed_permissions'
     AssignedRole = 'assigned_role'
     TagReimaged = 'tag_reimaged'
+    ExportCsv = 'export_csv'
     TagUpdate = 'update_tags'
 
 

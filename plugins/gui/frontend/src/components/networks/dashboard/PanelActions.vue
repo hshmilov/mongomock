@@ -48,7 +48,7 @@
               Delete
             </AMenuItem>
             <AMenuItem
-              v-if="chart.metric==='segment' || chart.metric==='adapter_segment'"
+              v-if="isCsvExportable"
               id="export_chart"
               key="2"
               @click="() => exportCSV(chart.uuid, chart.name, chart.historical)"
@@ -209,6 +209,8 @@ import { mapMutations, mapActions } from 'vuex';
 import { Menu, Dropdown } from 'ant-design-vue';
 import _get from 'lodash/get';
 import _capitalize from 'lodash/capitalize';
+import _includes from 'lodash/includes';
+
 import {
   MOVE_OR_COPY_TOGGLE,
   FETCH_DASHBOARD_PANEL,
@@ -262,6 +264,9 @@ export default {
     },
     sortOrder() {
       return this.selectedSortOrder || _get(this.chart, 'config.sort.sort_order');
+    },
+    isCsvExportable() {
+      return _includes(['segment', 'adapter_segment', 'timeline'], this.chart.metric);
     },
   },
   watch: {

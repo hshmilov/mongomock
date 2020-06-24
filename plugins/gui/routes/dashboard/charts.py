@@ -12,6 +12,7 @@ from axonius.consts.gui_consts import (FILE_NAME_TIMESTAMP_FORMAT,
                                        LAST_UPDATED_FIELD, ChartViews,
                                        DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.entities import EntityType
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, historical_range,
                                        paginated, search_filter, sorted_by_method_endpoint)
@@ -23,7 +24,8 @@ from gui.logic.dashboard_data import (fetch_chart_segment,
                                       fetch_chart_segment_historical,
                                       fetch_chart_adapter_segment,
                                       fetch_chart_adapter_segment_historical,
-                                      generate_dashboard_historical)
+                                      generate_dashboard_historical,
+                                      fetch_chart_timeline)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
 
@@ -327,15 +329,33 @@ class Charts:
         })
 
         handler_by_metric = {
-            'segment': self.generate_segment_csv,
-            'adapter_segment': self.generate_adapter_segment_csv
+            'segment': {
+                'handler': self.generate_segment_csv,
+                'required_config': ['entity'],
+            },
+            'adapter_segment': {
+                'handler': self.generate_adapter_segment_csv,
+                'required_config': ['entity'],
+            },
+            'timeline': {
+                'handler': self.generate_timeline_csv,
+                'required_config': [],
+            },
         }
 
-        if not card.get('view') or not card.get('config') or not card['config'].get('entity'):
+        if not card.get('view') or not card.get('config'):
             return return_error('Error: no such data available ', 400)
 
-        card['config']['entity'] = EntityType(card['config']['entity'])
-        column_headers, rows = handler_by_metric[card['metric']](card, from_date, to_date)
+        for required_field in handler_by_metric[card['metric']]['required_config']:
+            if not card['config'].get(required_field):
+                return return_error(f'Error: no such required data available: {required_field}', 400)
+
+        if card['config'].get('entity'):
+            card['config']['entity'] = EntityType(card['config']['entity'])
+
+        column_headers, rows = handler_by_metric[card['metric']]['handler'](card) if card['metric'] == 'timeline' else \
+            handler_by_metric[card['metric']]['handler'](card, from_date, to_date)
+
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, column_headers)
         dw.writeheader()
@@ -345,6 +365,10 @@ class Charts:
         output_file.headers['Content-Disposition'] = \
             f'attachment; filename=axonius-chart-{card["name"]}_{timestamp}.csv'
         output_file.headers['Content-type'] = 'text/csv'
+        chart_name = card['name']
+        self.log_activity_user(AuditCategory.Charts, AuditAction.ExportCsv, {
+            'chart_name': chart_name
+        })
         return output_file
 
     @staticmethod
@@ -358,6 +382,50 @@ class Charts:
             data = fetch_chart_segment(ChartViews[card['view']], **card['config'])
         name = card['config']['field']['title']
         return [name, 'count'], [{name: x['name'], 'count': x['value']} for x in data]
+
+    @staticmethod
+    def generate_timeline_csv(card):
+        data = fetch_chart_timeline(ChartViews[card['view']], **card['config'])
+
+        def get_row_data_as_dict(row_data, headers_names):
+            """
+            extract data from list of timeline points ( values )
+            :param row_data: list of values from timeline data
+            :param headers_names: list of columns names as strings
+            :return: dict with column header names as keys and the corresponding values as value
+            """
+            row = {}
+            for index, header in enumerate(headers_names):
+                row[header] = row_data[index]
+            return row
+
+        def normalize_rows(data_to_normalize, data_headers):
+            """
+            fill empty holes in the data.
+            go through all the rows of data from the earliest date
+            and keep track on the last known value for each header, if a value is missing
+            ( e.g. this day the lifecycle didnt complete ) the value is set from the last known value per header
+            :param data_to_normalize: timeline data
+            :param data_headers: list of headers as string
+            """
+            last_values = [None for _ in range(len(data_headers))]
+            for row in data_to_normalize:
+                # first row cell is the date, we skip it in this logic
+                for i in range(1, len(data_headers)):
+                    if row[i]:
+                        last_values[i] = row[i]
+                    elif last_values[i]:
+                        row[i] = last_values[i]
+
+        # pop the first item from the list, this is the headers data
+        header_data = data.pop(0)
+        # the first item is 'Day', no need to keep him
+        header_data.pop(0)
+        headers = ['Date'] + [x['label'] for x in header_data]
+        normalize_rows(data, headers)
+        # sort the data in desc order
+        sorted_data = sorted([get_row_data_as_dict(x, headers) for x in data], key=lambda i: i['Date'], reverse=True)
+        return headers, sorted_data
 
     @staticmethod
     def generate_adapter_segment_csv(card, from_date, to_date):

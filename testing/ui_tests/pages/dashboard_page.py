@@ -3,7 +3,6 @@ import re
 import time
 from contextlib import contextmanager
 from decimal import Decimal, getcontext
-
 import pytest
 from retrying import retry
 from selenium.common.exceptions import (ElementClickInterceptedException,
@@ -157,6 +156,7 @@ class DashboardPage(Page):
 
     TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
     CHART_WARNING_CSS = '.chart-warning'
+    TIMELINE_CARD_DATA_TABLE_CSS = '.x-line svg + div table tbody'
 
     PIE_TOTAL_ITEMS_CSS = '.pie-total'
 
@@ -1343,6 +1343,17 @@ class DashboardPage(Page):
     def verify_chart_warning_missing(self, card):
         with pytest.raises(NoSuchElementException):
             card.find_element_by_css_selector(self.CHART_WARNING_CSS)
+
+    def get_data_from_timeline_card(self, card):
+        self.wait_for_element_present_by_css(self.TIMELINE_CARD_DATA_TABLE_CSS, card)
+        table = card.find_element_by_css_selector(self.TIMELINE_CARD_DATA_TABLE_CSS)
+        table_rows = table.find_elements_by_tag_name('tr')
+        data = {}
+        for row in table_rows:
+            values = [x.get_attribute('innerText') for x in row.find_elements_by_tag_name('td')]
+            date = datetime.datetime.strptime(values[0], '%b %d, %Y, %I:%M:%S %p')
+            data[date.strftime('%Y-%m-%d 00:00:00')] = values[1:]
+        return data
 
     def get_pie_chart_slices_total_value(self, pie):
         pie_slices = pie.find_elements_by_css_selector(self.PIE_SLICE_CSS)
