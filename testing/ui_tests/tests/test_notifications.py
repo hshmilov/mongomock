@@ -45,7 +45,6 @@ class TestNotifications(TestBase):
             self.enforcements_page.click_run_button()
             self.enforcements_page.wait_for_task_in_progress_toaster()
         # Wait for all tasks to complete..
-        self.notification_page.wait_for_count(150)
         wait_until(lambda: self.notification_page.wait_for_count(150),
                    check_return_value=False,
                    tolerated_exceptions_list=[AssertionError])
