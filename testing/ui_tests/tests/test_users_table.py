@@ -2,6 +2,7 @@ from datetime import datetime
 import pytz
 import pytest
 from selenium.common.exceptions import NoSuchElementException
+from dateutil.parser import parse as parse_date
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
@@ -180,11 +181,24 @@ class TestUsersTable(TestEntitiesTable):
         days = self._days_since_date(last_seen_date)
         assert int(last_seen_days) in (days, days + 1, days + 2)
 
+    @staticmethod
+    def _get_max_date(date_list):
+        if len(date_list) == 1:
+            return date_list[0]
+        max_date_string = date_list[0]
+        max_date = parse_date(max_date_string)
+        for curr_date_string in date_list:
+            curr_date = parse_date(curr_date_string)
+            if curr_date != '' and curr_date > max_date:
+                max_date_string = curr_date_string
+                max_date = curr_date
+        return max_date_string
+
     def _test_last_seen_expanded_cell(self):
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
-        last_seen_merged = self.users_page.get_column_data_slicer(self.LAST_SEEN_COLUMN)[0].split('\n')
+        last_seen_merged = self.users_page.get_column_data_slicer(self.LAST_SEEN_COLUMN)[0]
         last_seen_expanded = self.users_page.get_expand_cell_column_data(self.LAST_SEEN_COLUMN, self.LAST_SEEN_COLUMN)
-        assert set(last_seen_merged) == set(last_seen_expanded)
+        assert last_seen_merged == self._get_max_date(last_seen_expanded)
         last_seen_expanded_days = self.users_page.get_expand_cell_column_data(self.LAST_SEEN_COLUMN, 'Days')
         self._test_days_for_last_seen(last_seen_expanded[0], last_seen_expanded_days[0])
         if len(last_seen_expanded_days) > 1:
@@ -193,7 +207,6 @@ class TestUsersTable(TestEntitiesTable):
         self.users_page.click_expand_cell(cell_index=self.users_page.count_sort_column(self.LAST_SEEN_COLUMN))
         self.users_page.wait_close_column_details_popup()
 
-    @pytest.mark.skip('AX-6101')
     def test_user_expand_cell(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
