@@ -246,10 +246,14 @@ class Dashboard(Charts, Notifications):
         for dashboard in self._dashboard_collection.find(
                 filter=filter_archived(),
                 projection={
-                    '_id': True
+                    '_id': True,
+                    'config.sort': True
                 }):
             try:
-                generate_dashboard(dashboard['_id'])
+                dashboard_sort_config = dashboard['config'].get('sort', {}) or {}
+                generate_dashboard(dashboard['_id'],
+                                   sort_by=dashboard_sort_config.get('sort_by', None),
+                                   sort_order=dashboard_sort_config.get('sort_order', None))
             except NoCacheException:
                 logger.debug(f'dashboard {dashboard["_id"]} is not ready')
             except Exception:
@@ -301,8 +305,10 @@ class Dashboard(Charts, Notifications):
                     '_id': True,
                     'space': True,
                     'name': True,
+                    'config.sort': True,
                     'hide_empty': True
                 }):
+            dashboard_sort_config = dashboard['config'].get('sort', {}) or {}
             # Let's fetch and execute them query filters
             try:
                 generated_dashboard = {}
@@ -311,7 +317,10 @@ class Dashboard(Charts, Notifications):
                         generated_dashboard = generate_dashboard_uncached(dashboard['_id'])
                     else:
                         try:
-                            generated_dashboard = generate_dashboard(dashboard['_id'])
+                            generated_dashboard = generate_dashboard(
+                                dashboard['_id'],
+                                sort_by=dashboard_sort_config.get('sort_by', None),
+                                sort_order=dashboard_sort_config.get('sort_order', None))
                         except NoCacheException:
                             logger.debug(f'dashboard {dashboard["_id"]} is not ready')
                     if generated_dashboard:

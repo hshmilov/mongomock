@@ -60,7 +60,7 @@
             </div>
           </div>
           <div
-            v-if="chart.loading"
+            v-if="showLoading"
             class="chart-spinner"
           >
             <MdProgressSpinner
@@ -139,6 +139,7 @@ import _debounce from 'lodash/debounce';
 import _uniq from 'lodash/uniq';
 import _merge from 'lodash/merge';
 import _isNil from 'lodash/isNil';
+import _findIndex from 'lodash/findIndex';
 import _get from 'lodash/get';
 import XIcon from '@axons/icons/Icon';
 import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
@@ -195,6 +196,8 @@ export default {
       showSearch: false,
       showHistory: false,
       toggleIconHover: false,
+      chartDataFull: false,
+      chartDataFullFetching: false,
     };
   },
   computed: {
@@ -234,6 +237,9 @@ export default {
     },
     legendIcon() {
       return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
+    },
+    showLoading() {
+      return this.chart.loading;
     },
     isTimelinePartialData() {
       return this.chart.metric === ChartTypesEnum.timeline && !this.historyEnabled;
@@ -278,10 +284,23 @@ export default {
       this.$router.push({ path: query.module });
     },
     isChartEmpty() {
-      return (!this.chart.data
+      const isChartEmptyBase = (!this.chart.data
               || (this.chart.data.length === 0)
-              || (this.chart.data.length === 1 && this.chart.data[0].value === 0)
-      );
+              || (this.chart.data.length === 1 && this.chart.data[0].value === 0));
+      // in case the chart metric is timeline,
+      // all data must be obtained before rendering the component
+      // while we keeping the loader on by return true
+      if (this.chart.metric === ChartTypesEnum.timeline) {
+        if (!this.allDataExist()) {
+          // fetch all the data only once
+          if (!this.chartDataFullFetching) {
+            const nextIndex = _findIndex(this.chart.data, (row) => !row);
+            this.fetchAllChartData(this.chart.uuid, nextIndex);
+          }
+          return !this.chartDataFull;
+        }
+      }
+      return isChartEmptyBase;
     },
     fetchChartData(uuid, skip, historical, refresh, search) {
       return this.fetchDashboardPanel({
@@ -293,6 +312,37 @@ export default {
         search: search || this.filter,
         refresh,
       });
+    },
+    async fetchAllChartData(uuid, skip) {
+      this.chartDataFullFetching = true;
+      const promises = [];
+      // create list of all the request needed to get all the data
+      // considering the starting skip and a limit of 100
+      const totalRequests = Math.ceil(this.chart.data.length / 100);
+      for (let i = 0; i < totalRequests; i += 1) {
+        const currentSkip = skip + (i * 100);
+        promises.push(this.fetchDashboardPanel({
+          uuid,
+          spaceId: this.currentSpace,
+          skip: currentSkip,
+          limit: 100,
+          historical: this.chart.historical,
+        }));
+      }
+      // wait for all the requests to return
+      await Promise.all(promises);
+      this.setAllChartDataFull();
+    },
+    setAllChartDataFull() {
+      if (this.allDataExist()) {
+        this.chartDataFull = true;
+      } else {
+        // if one of the request failed, no data will appear
+        this.chart.data = [];
+      }
+    },
+    allDataExist() {
+      return !this.chart.data.includes(undefined);
     },
     // eslint-disable-next-line func-names
     fetchFilteredPanel: _debounce(function () {

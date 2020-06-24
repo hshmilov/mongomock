@@ -6,6 +6,7 @@ from enum import Enum
 
 from bson import ObjectId
 from flask import jsonify, make_response, request
+from pymongo import ReturnDocument
 
 from axonius.consts.gui_consts import (FILE_NAME_TIMESTAMP_FORMAT,
                                        LAST_UPDATED_FIELD, ChartViews,
@@ -184,20 +185,25 @@ class Charts:
             'user_id': get_connected_user_id(),
             'last_updated': datetime.now()
         }
-        chart = self._dashboard_collection.find_one_and_update(
-            {'_id': panel_id}, {'$set': update_data}, {'name': 1, 'space': 1})
+        new_chart = self._dashboard_collection.find_one_and_update(
+            filter={'_id': panel_id},
+            update={'$set': update_data},
+            projection={'name': 1, 'space': 1, 'config.sort': 1},
+            return_document=ReturnDocument.AFTER)
 
-        if not chart:
+        if not new_chart:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
-
-        generate_dashboard.clean_cache([panel_id])
+        # we clean the cache of the updated config, in the next request the chart data will be refreshed
+        chart_sort_config = new_chart['config'].get('sort', {}) or {}
+        generate_dashboard.clean_cache(
+            [panel_id, chart_sort_config.get('sort_by', None), chart_sort_config.get('sort_order', None)])
         generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
 
-        space = self._dashboard_spaces_collection.find_one({'_id': chart.get('space')}, {'name': 1})
+        space = self._dashboard_spaces_collection.find_one({'_id': new_chart.get('space')}, {'name': 1})
 
         return jsonify({
             SPACE_NAME: space.get('name', ''),
-            CHART_NAME: chart.get('name', '')
+            CHART_NAME: new_chart.get('name', '')
         })
 
     @gui_route_logged_in('<panel_id>', methods=['DELETE'],

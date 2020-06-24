@@ -1,5 +1,5 @@
 <template>
-  <g-chart
+  <GChart
     type="LineChart"
     :data="processedData"
     :options="chartOptions"

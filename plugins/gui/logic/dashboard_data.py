@@ -1061,6 +1061,14 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
     if not lines:
         return None
 
+    # find the first date with value
+    # before this date data is not relevant
+    first_date_with_value = datetime.strptime(min([min(line_group['points'].keys()) for line_group in lines]),
+                                              '%m/%d/%Y')
+    # fix the from_date for not having undefined values before the first day we have values
+    if date_from < first_date_with_value:
+        date_from = first_date_with_value
+
     scale = [(date_from + timedelta(i)) for i in range((date_to - date_from).days + 1)]
     return [
         ['Day'] + [{
