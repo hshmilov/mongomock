@@ -26,7 +26,7 @@ from axonius.config_reader import (AdapterConfig, PluginConfig,
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION, GUI_PLUGIN_NAME
-from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH
+from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH, NODE_MARKER_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
@@ -259,6 +259,9 @@ class PluginService(WeaveService):
         self.unique_name  # put unique name in cache
 
     def handle_tunneled_container(self):
+        if NODE_MARKER_PATH.is_file():
+            # No tunneled adapters on node
+            return
         if self.feature_flags_config() and self.feature_flags_config().get(FeatureFlagsNames.EnableSaaS, False) and \
                 self.container_name.replace('-', '_') in get_tunneled_dockers():
             client = docker.from_env()
