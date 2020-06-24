@@ -100,7 +100,7 @@ class TestChangePasswordSettings(TestBase):
 
         self.settings_page.click_edit_user(ui_consts.RESTRICTED_USERNAME)
         self.settings_page.fill_password_field('kjfsk8978')
-        self.settings_page.click_update_user(wait_for_toaster=False)
+        self.settings_page.click_save_button()
         self.settings_page.assert_server_error(PASSWORD_POLICY_ERROR_MSG)
 
         self.settings_page.safe_refresh()

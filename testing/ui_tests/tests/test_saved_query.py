@@ -342,7 +342,7 @@ class TestSavedQuery(TestBase):
         self.settings_page.click_manage_users_settings()
         self.settings_page.click_edit_user(UPDATE_USERNAME)
         self.settings_page.fill_first_name('')
-        self.settings_page.click_update_user()
+        self.settings_page.save_user_wait_done()
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, UPDATE_USERNAME, '', UPDATE_LAST_NAME)
         self.devices_queries_page.find_query_row_by_name(self.CUSTOM_QUERY_SAVE_NAME_2).click()
         self.devices_queries_page.run_query()

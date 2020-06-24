@@ -81,11 +81,11 @@ class TestSettingsPermissions(PermissionsTestBase):
         self.settings_page.wait_for_user_updated_toaster()
 
         update_user = 'update user'
-        self.settings_page.update_new_user(new_user,
-                                           ui_consts.UPDATE_PASSWORD,
-                                           update_user,
-                                           update_user,
-                                           self.settings_page.VIEWER_ROLE)
+        self.settings_page.edit_user_wait_done(new_user,
+                                               ui_consts.UPDATE_PASSWORD,
+                                               update_user,
+                                               update_user,
+                                               self.settings_page.VIEWER_ROLE)
         self.settings_page.wait_for_table_to_load()
 
         self._add_action_to_role_and_login_with_user(settings_permissions,

@@ -14,12 +14,10 @@ class TestUserUpdate(TestBase):
                                            ui_consts.LAST_NAME,
                                            self.settings_page.VIEWER_ROLE)
 
-        self.settings_page.update_new_user(username=ui_consts.UPDATE_USERNAME,
-                                           password=ui_consts.UPDATE_PASSWORD,
-                                           first_name=ui_consts.UPDATE_FIRST_NAME,
-                                           last_name=ui_consts.UPDATE_LAST_NAME)
-
-        self.settings_page.wait_for_user_updated_toaster()
+        self.settings_page.edit_user_wait_done(username=ui_consts.UPDATE_USERNAME,
+                                               password=ui_consts.UPDATE_PASSWORD,
+                                               first_name=ui_consts.UPDATE_FIRST_NAME,
+                                               last_name=ui_consts.UPDATE_LAST_NAME)
 
         all_users = self.settings_page.get_all_users_data()
         update_user_list = list(filter(lambda user:
@@ -44,11 +42,9 @@ class TestUserUpdate(TestBase):
                                            ui_consts.LAST_NAME,
                                            self.settings_page.VIEWER_ROLE)
 
-        self.settings_page.update_new_user(username=ui_consts.UPDATE_USERNAME,
-                                           first_name=ui_consts.UPDATE_FIRST_NAME,
-                                           last_name=ui_consts.UPDATE_LAST_NAME)
-        self.settings_page.wait_for_user_updated_toaster()
-        self.settings_page.wait_for_user_updated_toaster_to_end()
+        self.settings_page.edit_user_wait_done(username=ui_consts.UPDATE_USERNAME,
+                                               first_name=ui_consts.UPDATE_FIRST_NAME,
+                                               last_name=ui_consts.UPDATE_LAST_NAME)
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()

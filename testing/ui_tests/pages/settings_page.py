@@ -181,7 +181,7 @@ class SettingsPage(Page):
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
-    USERS_PANEL_CONTENT = '.user-panel .v-navigation-drawer__content'
+    USER_PANEL_CLOSED = '.user-panel.v-navigation-drawer--close'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
     CSS_SELECTOR_ROLE_PANEL_ACTION_BY_NAME = '.role-panel .actions .action-{action_name}'
     CSS_SELECTOR_USER_PANEL_ACTION_BY_NAME = '.user-panel .actions .action-{action_name}'
@@ -350,7 +350,7 @@ class SettingsPage(Page):
     def click_edit_user(self, user_name):
         self.find_username_row_by_username(user_name).click()
         # wait for the panel animation
-        time.sleep(2)
+        time.sleep(0.5)
 
     def fill_first_name(self, first_name):
         self.fill_text_field_by_css_selector('.first-name__input', first_name)
@@ -387,10 +387,10 @@ class SettingsPage(Page):
         self.scroll_into_view(self.get_enabled_button(self.SAVE_ROLE_BUTTON), self.ROLE_PANEL_CONTENT)
         self.get_enabled_button(self.SAVE_ROLE_BUTTON).click()
 
-    def click_update_user(self, wait_for_toaster=True):
+    def save_user_wait_done(self):
         self.get_enabled_button(self.SAVE_BUTTON).click()
-        if wait_for_toaster:
-            self.wait_for_user_updated_toaster()
+        self.wait_for_user_updated_toaster()
+        self.wait_for_user_panel_closed()
 
     def assert_create_user_disabled(self):
         self.wait_for_element_present_by_xpath(
@@ -522,6 +522,9 @@ class SettingsPage(Page):
     def wait_for_role_panel_absent(self):
         self.wait_for_element_absent_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
+    def wait_for_user_panel_closed(self):
+        self.wait_for_element_present_by_css(self.USER_PANEL_CLOSED)
+
     def match_role_permissions(self, name, permissions):
         self.click_role_by_name(name)
         self.wait_for_role_panel_present()
@@ -562,7 +565,7 @@ class SettingsPage(Page):
     def click_role_by_name(self, name):
         self.find_role_row_by_name(name).click()
         # wait for the panel animation
-        time.sleep(2)
+        time.sleep(0.5)
         self.wait_for_role_panel_present()
 
     def remove_role(self, name):
@@ -570,13 +573,12 @@ class SettingsPage(Page):
         self.get_role_remove_panel_action().click()
         self.wait_for_role_removed_successfully_toaster()
 
-    def update_new_user(self, username, password=None, first_name=None, last_name=None, role_name=None):
+    def edit_user_wait_done(self, username, password=None, first_name=None, last_name=None, role_name=None):
         self.click_edit_user(username)
         self.fill_edit_user_details(password=password, first_name=first_name, last_name=last_name)
         if role_name:
             self.select_role(role_name)
-        self.click_update_user()
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.save_user_wait_done()
 
     def get_user_reset_password_link(self, username):
         self.click_edit_user(username)

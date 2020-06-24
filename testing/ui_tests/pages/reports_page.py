@@ -246,6 +246,7 @@ class ReportsPage(EntitiesPage):
 
     def get_report_generated_date(self, report_name):
         self.refresh()
+        self.wait_for_table_to_be_responsive()
         return self.driver.find_element_by_xpath(self.REPORT_GENERATED_XPATH.format(report_name=report_name)).text
 
     def click_save(self):
