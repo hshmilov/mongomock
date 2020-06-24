@@ -38,6 +38,8 @@ SIGUSR1 = 10
 
 
 def recover():
+    if not os.path.exists(UWSGI_PID_FILE_NAME):
+        return True
     with open(UWSGI_PID_FILE_NAME, 'r') as fh:
         uwsgi_master_pid = int(fh.read().strip())
         parent = psutil.Process(uwsgi_master_pid)
