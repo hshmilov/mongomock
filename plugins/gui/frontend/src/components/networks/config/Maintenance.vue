@@ -78,7 +78,10 @@
               </div>
               <div class="config">
                 <template v-if="accessEndTime">
-                  <div class="warning mr-12">
+                  <div
+                    class="config__warning mr-12"
+                    :title="`Temporary Remote Support will end at: ${ accessEndTimeTitle }`"
+                  >
                     Temporary Remote Support will end at: {{ accessEndTime }}
                   </div>
                   <XButton
@@ -141,7 +144,7 @@
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex';
-import { formatDate } from '@constants/utils';
+import { formatDate, getTimeZoneDiff } from '@constants/utils';
 import { DATE_FORMAT } from '../../../store/getters';
 import XCheckbox from '../../axons/inputs/Checkbox.vue';
 import XButton from '../../axons/inputs/Button.vue';
@@ -197,6 +200,9 @@ export default {
     accessEndTime() {
       if (!this.maintenance.timeout) return null;
       return formatDate(this.maintenance.timeout, undefined, this.dateFormat);
+    },
+    accessEndTimeTitle() {
+      return `${this.accessEndTime} ${getTimeZoneDiff()}`;
     },
     disableWarnings() {
       return {
@@ -277,10 +283,9 @@ export default {
         .config {
             display: flex;
             align-items: center;
-        }
-
-        .warning {
-            font-style: italic;
+            &__warning {
+              font-style: italic;
+            }
         }
     }
 

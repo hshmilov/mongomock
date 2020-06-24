@@ -3,7 +3,6 @@
     :launch="true"
     :handle-save="saveNewDashboard"
     :disabled="isDisabled"
-    :note="note"
     approve-id="chart_save"
     @change="finishNewDashboard"
   >
@@ -75,6 +74,14 @@
         {{ message }}
       </div>
     </div>
+    <template
+      v-if="note"
+      #note
+    >
+      <div :title="noteTitle">
+        {{ note }}
+      </div>
+    </template>
   </XFeedbackModal>
 </template>
 
@@ -82,6 +89,7 @@
 import { mapActions, mapGetters, mapState } from 'vuex';
 import XIcon from '@axons/icons/Icon';
 import { formatDate } from '@constants/utils';
+import { getTimeZoneDiff } from '@constants/utils';
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
 
@@ -101,7 +109,6 @@ import { DASHBOARD_CREATED } from '../../../constants/getting-started';
 import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
 import { ChartViewEnum, ChartTypesEnum, SpaceTypesEnum, ChartWizardComponentByMetricEnum, ChartIconByViewEnum } from '../../../constants/dashboard';
-
 
 const dashboard = {
   metric: '', view: '', name: '', config: null,
@@ -205,6 +212,9 @@ export default {
     note() {
       if (!this.dashboard.updated) return '';
       return `Last edited on ${formatDate(this.dashboard.updated, undefined, this.dateFormat)}`;
+    },
+    noteTitle() {
+      return `${this.note} ${getTimeZoneDiff()}`;
     },
     chartComponent() {
       return ChartWizardComponentByMetricEnum[this.dashboard.metric];

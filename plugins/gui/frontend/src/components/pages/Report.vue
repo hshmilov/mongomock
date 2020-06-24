@@ -17,7 +17,10 @@
       <div class="page-content main">
         <div class="report-title">
           The report will be generated as a PDF file, every Discovery Cycle
-          <span v-if="isLatestReport">, {{ lastGenerated }}</span>
+          <span
+            v-if="isLatestReport"
+            :title="lastGeneratedTitle"
+          >, {{ lastGenerated }}</span>
         </div>
         <div class="item">
           <label class="report-name-label">Report name</label>
@@ -214,7 +217,9 @@ import XCheckbox from '../axons/inputs/Checkbox.vue';
 import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
 import XSelect from '../axons/inputs/select/Select.vue';
 import XRecurrence from '../axons/inputs/Recurrence.vue';
-import { formatDate, weekDays, monthDays } from '../../constants/utils';
+import {
+  formatDate, weekDays, monthDays, getTimeZoneDiff,
+} from '../../constants/utils';
 import { SpaceTypesEnum } from '../../constants/dashboard';
 import viewsMixin from '../../mixins/views';
 import XArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue';
@@ -267,6 +272,7 @@ export default {
         fields: [], error: '',
       },
       lastGenerated: null,
+      lastGeneratedTitle: null,
       canSendEmail: false,
       isLatestReport: false,
       loading: false,
@@ -517,6 +523,7 @@ export default {
           const formattedDate = formatDate(this.report.last_generated, undefined, this.dateFormat);
           if (formattedDate !== this.report.last_generated) {
             this.lastGenerated = `Last generated: ${formattedDate}`;
+            this.lastGeneratedTitle = `${this.lastGenerated} ${getTimeZoneDiff()}`;
             this.isLatestReport = true;
           } else {
             this.isLatestReport = false;

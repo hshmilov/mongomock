@@ -1353,7 +1353,7 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_LINK_DEVICES).click()
 
     def confirm_link(self):
-        self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
+        self.click_button('Save')
 
     def open_unlink_dialog(self):
         self.open_actions_menu()
@@ -1597,7 +1597,7 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_FILTER_OUT).click()
 
     def confirm_filter_out(self):
-        self.driver.find_element_by_css_selector('.modal-container.w-xl>.modal-footer>div>button:nth-child(2)').click()
+        self.click_button('Yes')
 
     def click_filter_out_clear(self):
         self.driver.find_element_by_css_selector('.remove-filter-out').click()

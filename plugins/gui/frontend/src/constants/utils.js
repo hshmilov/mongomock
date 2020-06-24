@@ -8,7 +8,7 @@ import { ChartTypesEnum } from './dashboard'
 dayjs.extend(isoWeek);
 dayjs.extend(utc);
 
-const getTimeZoneDiff = () => {
+export const getTimeZoneDiff = () => {
   const diff = -(new Date().getTimezoneOffset() / 60);
   const isFullHour = diff % 1 === 0;
   const hoursDiffParsed = _padStart(Math.abs(Math.floor(diff)), 2, '0');

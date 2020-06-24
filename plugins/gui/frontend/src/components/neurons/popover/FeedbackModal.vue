@@ -44,10 +44,9 @@
     </div>
     <div slot="footer">
       <template v-if="!status.success && !status.processing && !status.error">
-        <div
-          v-if="note"
-          class="text"
-        >{{ note }}</div>
+        <div class="text">
+          <slot name="note" />
+        </div>
         <XButton
           id="feedback_modal_cancel"
           type="link"
@@ -61,10 +60,9 @@
         >{{ approveText }}</XButton>
       </template>
       <template v-else-if="!status.success && !status.processing && status.error">
-        <div
-          v-if="note"
-          class="text"
-        >{{ note }}</div>
+        <div class="text">
+          <slot name="note" />
+        </div>
         <XButton
           type="primary"
           @click="handleClose"
@@ -94,7 +92,6 @@ export default {
     disabled: { default: false },
     approveId: {},
     approveText: { default: 'Save' },
-    note: { type: String, default: '' },
   },
   data() {
     return {

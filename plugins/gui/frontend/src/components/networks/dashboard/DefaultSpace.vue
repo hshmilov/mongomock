@@ -50,10 +50,18 @@
         <XCycle :data="lifecycle.subPhases" />
         <div class="cycle-info">
           <div class="cycle-history">
-            <div>Last cycle started at:</div><div class="cycle-date">
+            <div>Last cycle started at:</div>
+            <div
+              class="cycle-date"
+              :title="lastStartTimeTitle"
+            >
               {{ lastStartTime }}
             </div>
-            <div>Last cycle completed at:</div><div class="cycle-date">
+            <div>Last cycle completed at:</div>
+            <div
+              class="cycle-date"
+              :title="lastFinishedTimeTitle"
+            >
               {{ lastFinishedTime }}
             </div>
           </div>
@@ -83,6 +91,7 @@ import XCycle from '../../axons/charts/Cycle.vue';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import { DATE_FORMAT } from '../../../store/getters';
 import { formatDate } from '../../../constants/utils';
+import { getTimeZoneDiff } from '@constants/utils';
 
 export default {
   name: 'XDefaultSpace',
@@ -131,11 +140,17 @@ export default {
       }
       return ' ';
     },
+    lastStartTimeTitle() {
+      return `${this.lastStartTime} ${getTimeZoneDiff()}`;
+    },
     lastFinishedTime() {
       if (this.lifecycle.lastFinishedTime) {
         return formatDate(this.lifecycle.lastFinishedTime, undefined, this.dateFormat);
       }
       return ' ';
+    },
+    lastFinishedTimeTitle() {
+      return `${this.lastFinishedTime} ${getTimeZoneDiff()}`;
     },
     canRunDiscovery() {
       return this.$can(this.$permissionConsts.categories.Settings,
