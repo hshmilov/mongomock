@@ -1083,7 +1083,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         response = self._trigger_remote_plugin_no_blocking(plugin_name, job_name, data=data)
 
         # 403 is a disabled plugin.
-        if response.status_code not in (200, 403):
+        if not response or response.status_code not in (200, 403):
             logger.exception(
                 f'Executing {plugin_name} failed as part of '
                 f'{self.state.SubPhase} subphase failed.')
