@@ -55,7 +55,7 @@ class EntitiesPage(Page):
     QUERY_ADAPTER_DROPDOWN_SECONDARY_OPTIONS_CSS = 'div.x-select-options > .x-secondary-select-content >' \
                                                    '.x-select-options'
 
-    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//span[contains(text(),\'{query_name_text}\')]'
+    QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
     QUERY_ADD_EXPRESSION_CSS = '.x-filter .footer .x-button'
     QUERY_NEST_EXPRESSION_CSS = '.x-expression .expression-nest'

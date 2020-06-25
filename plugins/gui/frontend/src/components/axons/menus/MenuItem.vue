@@ -11,15 +11,18 @@
     <div
       class="item-content"
     >
-      <ATooltip>
-        <template slot="title">
-          {{ disabledDescription }}
-        </template>{{ title }}</ATooltip>
-      <XIcon
+      {{ title }}
+      <ATooltip
         v-if="disabled"
-        family="symbol"
-        type="info"
-      />
+        :title="disabledDescription"
+      >
+        <span>
+          <XIcon
+            family="symbol"
+            type="info"
+          />
+        </span>
+      </ATooltip>
     </div>
     <div v-show="isActive && !disabled">
       <slot />
