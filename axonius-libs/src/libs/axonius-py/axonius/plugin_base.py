@@ -302,6 +302,12 @@ def retry_if_connection_error(exception):
     return isinstance(exception, requests.exceptions.ConnectionError)
 
 
+def retry_if_remote_disconnected(exception):
+    """Return True if we should retry (in this case when it's an connection), False otherwise"""
+    return isinstance(exception, requests.exceptions.ConnectionError) and\
+        exception.args and isinstance(exception.args[0], urllib3.exceptions.ProtocolError)
+
+
 def return_error(error_message, http_status=500, additional_data=None, non_prod_error=False):
     """ Helper function for returning errors in our format.
 
@@ -1170,6 +1176,8 @@ class PluginBase(Configurable, Feature, ABC):
 
         return True
 
+    @retry(stop_max_attempt_number=3, wait_fixed=5000,
+           retry_on_exception=retry_if_remote_disconnected)
     def request_remote_plugin(self, resource, plugin_unique_name=CORE_UNIQUE_NAME, method='get',
                               raise_on_network_error: bool = False,
                               fail_on_plugin_down: bool = False,
@@ -1683,7 +1691,7 @@ class PluginBase(Configurable, Feature, ABC):
         :param stored_locally: True to look for the file on the current plugin's db False for core's
         :return: stream like object
         """
-        if field_data:
+        if field_data and field_data.get('uuid'):
             if alternative_db_name:
                 db_name = alternative_db_name
             else:
@@ -2050,9 +2058,14 @@ class PluginBase(Configurable, Feature, ABC):
     def _get_nodes_table(self):
         def get_single_node_data(node_id, is_master=False):
             node_metadata = db_connection['core']['nodes_metadata'].find_one({NODE_ID: node_id})
+            last_seen = ''
+            try:
+                last_seen = self.request_remote_plugin(f'nodes/last_seen/{node_id}').json().get('last_seen')
+            except Exception as e:
+                logger.warning(f'Error getting node {node_id} last seen: {e}')
             node = {NODE_ID: node_id,
-                    'last_seen': self.request_remote_plugin(f'nodes/last_seen/{node_id}').json()[
-                        'last_seen']}
+                    'last_seen': last_seen
+                    }
 
             if node_metadata:
                 node['node_name'] = node_metadata.get('node_name', '')

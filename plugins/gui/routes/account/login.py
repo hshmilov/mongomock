@@ -413,7 +413,11 @@ class Login:
                 saml_settings['idp'] = idp_settings['idp']
             else:
                 try:
-                    certificate = self._grab_file_contents(settings['certificate']).decode('utf-8').strip().splitlines()
+                    certificate = self._grab_file_contents(settings['certificate'])
+                    if not certificate:
+                        logger.exception(f'Empty SAML Certificate')
+                        raise ValueError(f'Empty SAML Certificate, please check it!')
+                    certificate = certificate.decode('utf-8').strip().splitlines()
                     if 'BEGIN CERTIFICATE' in certificate[0].upper():
                         # we must remove the header and footer
                         certificate = certificate[1:-1]

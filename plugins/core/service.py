@@ -385,6 +385,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
     def get_node_status(self, node_id):
         x = self.core_configs_collection.find_one(filter={NODE_ID: node_id},
                                                   sort=[('last_seen', pymongo.DESCENDING)])
+        if not x:
+            logger.warning(f'node id {node_id} not exists')
+            return ''
         return jsonify({
             'last_seen': x['last_seen']
         })

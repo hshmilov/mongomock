@@ -53,7 +53,9 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
     except Exception as e:
         logger.exception(f'Exception while generating report for {account_name} - could not get initial session')
         generate_failed_report(report, f'Could not generate aws connection: {str(e)}')
-        return account_id.strip(), account_name.strip(), report.get_json()
+        return account_id.strip() if account_id else None, \
+            account_name.strip() if account_name else None, \
+            report.get_json()
 
     try:
         sts_client = get_boto3_client_by_session(
@@ -94,4 +96,6 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
         generate_rules(report, session, account_dict)
     except Exception:
         logger.exception(f'Exception while generating rules for account {account_name}')
-    return account_id.strip(), account_name.strip(), report.get_json()
+    return account_id.strip() if account_id else None, \
+        account_name.strip() if account_name else None, \
+        report.get_json()

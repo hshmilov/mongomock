@@ -160,6 +160,7 @@ class AggregatorService(Triggerable, PluginBase):
 
         :param str adapter: The address of the adapter (url)
         """
+        data = None
         clients = [x['client_id']
                    for x
                    in self._get_db_connection()[adapter]['clients'].find(projection={
@@ -202,7 +203,7 @@ class AggregatorService(Triggerable, PluginBase):
             except Exception as e:
                 # request failed
                 logger.exception(f'Exception while querying adapter {adapter} with client {client_name}: {repr(e)}')
-            if data.status_code != 200 or not data.content:
+            if data and data.status_code != 200 or not data.content:
                 logger.warning(f'{client_name} client for adapter {adapter} is returned HTTP {data.status_code}.'
                                f' Reason: {str(data.content)}')
                 continue

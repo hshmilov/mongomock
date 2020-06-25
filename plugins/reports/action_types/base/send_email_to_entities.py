@@ -83,7 +83,7 @@ class SendEmailToEntities(ActionTypeBase):
                     if adapter_data.get('email'):
                         mail_list.add(adapter_data.get('email'))
                     if adapter_data.get('last_used_users_mail_association'):
-                        mail_list.add(adapter_data.get('last_used_users_mail_association'))
+                        mail_list.update(adapter_data.get('last_used_users_mail_association'))
                     if adapter_data.get('first_name') and not first_name:
                         first_name = adapter_data.get('first_name')
                     if adapter_data.get('username') and not username:
