@@ -103,8 +103,10 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_35()
         if self.db_schema_version < 36:
             self._update_schema_version_36()
+        if self.db_schema_version < 37:
+            self._update_schema_version_37()
 
-        if self.db_schema_version != 36:
+        if self.db_schema_version != 37:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1719,6 +1721,32 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             raise
         except Exception as e:
             print(f'Exception while upgrading core db to version 36. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_37(self):
+        print(f'Upgrading to schema version 37 - migrate labels from tags')
+        try:
+            # Migrate devices first
+            for entities_db in self._entity_db_map.values():
+                for device in entities_db.find({'tags': {'$elemMatch': {'type': 'label'}}}):
+                    internal_axon_id = device['internal_axon_id']
+                    labels = []
+                    new_tags = []
+                    for tag in device['tags']:
+                        if tag['type'] == 'label' and tag['label_value'] and tag['data']:
+                            labels.append(tag['label_value'])
+                        elif tag['type'] != 'label':
+                            new_tags.append(tag)
+                    entities_db.update_one(
+                        {'internal_axon_id': internal_axon_id},
+                        {
+                            '$set': {'tags': new_tags, 'labels': labels}
+                        }
+                    )
+            self.db_schema_version = 37
+        except Exception as e:
+            print(f'Exception while upgrading aggregator db to version 37. Details: {e}')
             traceback.print_exc()
             raise
 

@@ -52,7 +52,7 @@ PAGINATION_LIMIT_MAX = 2000
 FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{PLUGIN_NAME}',
                      'tags.type', 'tags.name', f'tags.{PLUGIN_NAME}',
                      'accurate_for_datetime', ADAPTERS_LIST_LENGTH,
-                     'tags.data', 'adapters.client_used']
+                     'labels', 'adapters.client_used']
 
 FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
@@ -285,18 +285,15 @@ def sorted_endpoint():
                     logger.info(f'Parsing sort: {sort_param}')
                     direction = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
 
-                    if sort_param == 'labels':
-                        sort_obj['tags.label_value'] = direction
-                    else:
-                        splitted = sort_param.split('.')
-                        if splitted[0] == SPECIFIC_DATA or splitted[0] == ADAPTERS_DATA:
-                            if splitted[0] == ADAPTERS_DATA:
-                                splitted[1] = 'data'
+                    splitted = sort_param.split('.')
+                    if splitted[0] == SPECIFIC_DATA or splitted[0] == ADAPTERS_DATA:
+                        if splitted[0] == ADAPTERS_DATA:
+                            splitted[1] = 'data'
 
-                            splitted[0] = 'adapters'
-                            sort_obj['.'.join(splitted)] = direction
-                        else:
-                            sort_obj[sort_param] = direction
+                        splitted[0] = 'adapters'
+                        sort_obj['.'.join(splitted)] = direction
+                    else:
+                        sort_obj[sort_param] = direction
             except Exception as e:
                 return return_error('Could not create mongo sort. Details: {0}'.format(e), 400)
             return func(self, mongo_sort=sort_obj, *args, **kwargs)
@@ -1583,7 +1580,8 @@ def get_entity_labels(db) -> List[str]:
     :param db: the entities view db
     :return: all label strings
     """
-    return [x for x in db.distinct('tags.label_value') if x]
+    labels = db.distinct('labels')
+    return [x for x in labels if x is not None]
 
 
 def add_labels_to_entities(namespace: EntitiesNamespace, entities: Iterable[str], labels: Iterable[str],

@@ -288,9 +288,6 @@ def convert_to_main_db(find):
                     ]
                 }
                 del find['adapters']
-        elif k == 'labels':
-            find['tags.label_value'] = v
-            del find[k]
 
 
 INCLUDE_OUTDATED = 'INCLUDE OUTDATED: '
@@ -816,16 +813,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
                              for adapter in entity['adapters']
                              if adapter.get('pending_delete') is not True]
 
-        try:
-            labels = [tag['name']
-                      for tag in entity['tags']
-                      if tag['type'] == 'label' and tag['data'] is True]
-        except Exception:
-            if ignore_errors:
-                labels = []
-            else:
-                raise
-
+        labels = entity['labels'] if 'labels' in entity else []
         specific_data = list(filtered_adapters)
         specific_data.extend(tag
                              for tag in entity['tags']
@@ -855,7 +843,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
         try:
             generic_data = [tag
                             for tag in entity['tags']
-                            if tag['type'] == 'data' and tag['data'] is not False]
+                            if tag['type'] == 'data' and 'data' in tag and tag['data'] is not False]
         except Exception:
             if ignore_errors:
                 generic_data = []
@@ -899,7 +887,7 @@ def convert_db_projection_to_view(projection):
     for field, v in projection.items():
         splitted = field.split('.')
 
-        if field in ['adapters', 'labels']:
+        if field in ['adapters']:
             continue
 
         if splitted[0] == SPECIFIC_DATA:

@@ -463,12 +463,7 @@ def main():
                 '$and': [
                     query,
                     {
-                        'tags': {
-                            '$elemMatch': {
-                                'type': 'label',
-                                'label_value': value
-                            }
-                        }
+                        'labels': value
                     }
                 ]
             }
@@ -476,33 +471,27 @@ def main():
             tag_removal_count = 0
             affected_entities_count = 0
             to_fix = []
-            for entity in entity_db.find(query, projection={'tags': 1, '_id': 1}):
-                original_tags = entity.get('tags') or []
+            for entity in entity_db.find(query, projection={'labels': 1, '_id': 1}):
+                original_tags = entity.get('labels') or []
                 if op == 'eq':
-                    new_tags = [
-                        tag for tag in original_tags
-                        if not (tag.get('type') == 'label' and tag.get('label_value') == string)
-                    ]
+                    new_labels = [label for label in original_tags if not label == string]
 
                 elif op == 'startswith':
-                    new_tags = [
-                        tag for tag in original_tags
-                        if not (tag.get('type') == 'label' and (tag.get('label_value') or '').startswith(string))
-                    ]
+                    new_labels = [label for label in original_tags if not label.startwidth(string)]
                 else:
                     raise ValueError(f'Unknown op {op}')
 
                 affected_entities_count += 1
-                tag_removal_count += len(original_tags) - len(new_tags)
+                tag_removal_count += len(original_tags) - len(new_labels)
 
                 to_fix.append(
                     pymongo.operations.UpdateOne(
                         {'_id': entity['_id']},
-                        {'$set': {'tags': new_tags}}
+                        {'$set': {'labels': new_labels}}
                     )
                 )
 
-            redprint(f'You are going to remove {tag_removal_count} tags '
+            redprint(f'You are going to remove {tag_removal_count} labels '
                      f'from {affected_entities_count} entities. This is unrecoverable!')
             redprint(f'Are you sure? [yes/no]')
 

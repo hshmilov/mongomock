@@ -73,7 +73,7 @@ class TagAllEntitiesAction(ActionTypeBase):
         """
         # Find entities to remove tag from
         db_cursor = self.entity_db.find({
-            'tags.label_value': self._config['tag_name']
+            'labels': self._config['tag_name']
 
         }, projection={
             '_id': 0,

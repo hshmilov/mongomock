@@ -2267,11 +2267,29 @@ class PluginBase(Configurable, Feature, ABC):
                 assert relevant_adapter, 'Couldn\'t find adapter in axon device'
                 additional_data['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
 
-            if any(x['name'] == name and
-                   x[PLUGIN_UNIQUE_NAME] == virtual_plugin_unique_name and
-                   x['type'] == tag_type
-                   for x
-                   in entities_candidate['tags']):
+            if tag_type == 'label':
+                lables = db_session.find_one({'internal_axon_id': entities_candidate['internal_axon_id']},
+                                             projection=['labels'])
+                lables = lables['labels'] if 'labels' in lables else []
+                if name in lables and data is False:
+                    lables.remove(name)
+                elif name not in lables and data is True:
+                    lables.append(name)
+                lables = list(set(lables))
+                db_session.update_one(
+                    {'internal_axon_id': entities_candidate['internal_axon_id']},
+                    {
+                        '$set': {
+                            'labels': lables
+                        }
+                    }
+                )
+
+            elif any(x['name'] == name and
+                     x[PLUGIN_UNIQUE_NAME] == virtual_plugin_unique_name and
+                     x['type'] == tag_type
+                     for x
+                     in entities_candidate['tags']):
 
                 # We found the tag. If action_if_exists is replace just replace it. but if its update, lets
                 # make a deep merge here.
@@ -2331,31 +2349,6 @@ class PluginBase(Configurable, Feature, ABC):
                           f'expected matched_count == 1 but got {result.matched_count}'
                     logger.error(msg)
                     raise TagDeviceError(msg)
-            elif virtual_plugin_name == 'gui' and tag_type == 'label' and tag_type is False:
-                # Gui is a special plugin. It can delete any label it wants (even if it has come from
-                # another service)
-
-                result = db_session.update_one({
-                    'internal_axon_id': entities_candidate['internal_axon_id'],
-                    'tags': {
-                        '$elemMatch':
-                            {
-                                'name': name,
-                                'type': 'label'
-                            }
-                    }
-                }, {
-                    '$set': {
-                        'tags.$.data': False,
-                        **update_accurate_for_datetime
-                    }
-                })
-
-                if result.matched_count != 1:
-                    msg = f'tried to update label {name}. expected matched_count == 1 but got {result.matched_count}'
-                    logger.error(msg)
-                    raise TagDeviceError(msg)
-
             else:
                 tag_data = {
                     'association_type': 'Tag',
@@ -2479,6 +2472,9 @@ class PluginBase(Configurable, Feature, ABC):
                             tags_for_new_device[tag_key]['data'] = [item for tag in duplicated_tags for item in
                                                                     tag['data']]
 
+                    labels_for_new_device = [label for entity in entities_candidates
+                                             if 'labels' in entity for label in entity['labels']]
+
                     # Get other correlation reasons
                     correlation_reasons = [reason for candidate in entities_candidates if CORRELATION_REASONS
                                            in candidate for reason in candidate[CORRELATION_REASONS]]
@@ -2522,6 +2518,7 @@ class PluginBase(Configurable, Feature, ABC):
                         'adapters': all_unique_adapter_entities_data,
                         ADAPTERS_LIST_LENGTH: len({x[PLUGIN_NAME] for x in all_unique_adapter_entities_data}),
                         CORRELATION_REASONS: correlation_reasons,
+                        'labels': list(set(labels_for_new_device)),
                         'tags': list(tags_for_new_device.values())  # Turn it to a list
                     })
             except CorrelateException:

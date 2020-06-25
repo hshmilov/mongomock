@@ -408,16 +408,16 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
                         'input': '$tags',
                         'as': 'i',
                         'cond': {
-                            '$and': [{
-                                '$eq': ['$$i.type', 'label']
-                            }, {
-                                '$eq': ['$$i.data', True]
-                            }]
-                        } if LABELS_FIELD in filters_keys else {
                             '$eq': ['$$i.type', 'adapterdata']
                         }
                     }
-                },
+                } if LABELS_FIELD not in filters_keys else {'$map': {
+                    'input': '$labels',
+                    'as': 'l',
+                    'in': {
+                        'name': '$$l'
+                    }
+                }},
                 'adapters': {
                     '$filter': {
                         'input': '$adapters',
@@ -573,7 +573,8 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
         if result_name == 'No Value':
             if not include_empty or ''.join(reduced_filters[field_name]):
                 continue
-            query_filter = f'not ({field_parent}.{field_name} == exists(true))'
+            query_filter = f'not ({field_parent}.{field_name} == exists(true))' if not field_name == LABELS_FIELD else \
+                f'not ({field_name} == exists(true))'
         else:
             query_filter = _generate_segmented_query_filter(result_name,
                                                             reduced_filters,

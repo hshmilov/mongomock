@@ -78,8 +78,7 @@ def common_db_indexes(db: Collection):
     create_index_safe(db, [(f'tags.data.installed_software.name', pymongo.ASCENDING)], background=True)
 
     # For labels
-    create_index_safe(db, [(f'tags.name', pymongo.ASCENDING)], background=True)
-    create_index_safe(db, [(f'tags.label_value', pymongo.ASCENDING)], background=True)
+    create_index_safe(db, [(f'labels', pymongo.ASCENDING)], background=True)
 
     # this is commonly sorted by
     create_index_safe(db, [('adapter_list_length', pymongo.DESCENDING)], background=True)
