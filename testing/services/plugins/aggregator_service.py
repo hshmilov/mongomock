@@ -105,8 +105,12 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_36()
         if self.db_schema_version < 37:
             self._update_schema_version_37()
+        if self.db_schema_version < 38:
+            self._update_schema_version_38()
+        if self.db_schema_version < 39:
+            self._update_schema_version_39()
 
-        if self.db_schema_version != 37:
+        if self.db_schema_version != 39:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1747,6 +1751,49 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 37
         except Exception as e:
             print(f'Exception while upgrading aggregator db to version 37. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_38(self):
+        print('Update to schema 38 - Convert Counter Act device.id to a new format')
+        try:
+            def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+                data = entity.get('data')
+                if not data:
+                    return False
+
+                counter_act_hostname = data.get('hostname') or ''
+
+                # Check if not migrated already
+                if current_id.endswith(f'_{counter_act_hostname}'):
+                    return False
+
+                # return new id
+                return f'{current_id}_{counter_act_hostname}'
+
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'counter_act_adapter',
+                {
+                    'adapters.data.hostname': 1,
+                },
+                new_id_func)
+            self.db_schema_version = 38
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 38. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_39(self):
+        print('Update to schema 39 - Convert Symantec Altiris adapter client id to a new format')
+        try:
+            def symantec_altiris_new_client_id(client_config):
+                return client_config['server'] + '_' + client_config.get('database')
+
+            self._upgrade_adapter_client_id('symantec_altiris', symantec_altiris_new_client_id)
+            self.db_schema_version = 39
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 39. Details: {e}')
             traceback.print_exc()
             raise
 
