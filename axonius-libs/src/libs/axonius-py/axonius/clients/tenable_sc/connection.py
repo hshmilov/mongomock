@@ -1,14 +1,16 @@
 import logging
 
 from collections import defaultdict
-
+from datetime import datetime
 from typing import List
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.tenable_sc import consts
+from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # pylint: disable=logging-format-interpolation
 
@@ -122,7 +124,7 @@ class TenableSecurityScannerConnection(RESTConnection):
     # pylint: disable=arguments-differ, too-many-nested-blocks, too-many-branches
     def get_device_list(self, drop_only_ip_devices, top_n_software=0,
                         per_device_software=False, fetch_vulnerabilities=False,
-                        info_vulns_plugin_ids: List[str]=None):
+                        info_vulns_plugin_ids: List[str] = None):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
         for repository_id in repositories_ids:
@@ -172,6 +174,7 @@ class TenableSecurityScannerConnection(RESTConnection):
 
             except Exception:
                 logger.exception(f'Failed to get device list for repository {repository_id}')
+
     # pylint: enable=arguments-differ, too-many-nested-blocks, too-many-branches
 
     def _get_vuln_list(self, repository_id, vulns_plugin_ids=None):
@@ -201,13 +204,42 @@ class TenableSecurityScannerConnection(RESTConnection):
                    'operator': '=',
                    'type': 'vuln',
                    'value': ','.join(consts.VULN_SEVERITY_ID_ALL_BUT_INFO)}
+
+        mitigated = defaultdict(list)
         try:
-            yield from self.do_analysis(repository_id=repository_id,
-                                        analysis_type='vuln',
-                                        source_type='cumulative',
-                                        query_tool='vulndetails',
-                                        query_type='vuln',
-                                        extra_filter=filter_)
+            # Only fetching lastMitigated field and enriching the vuln data - key is unique (pluginid, ip, port)
+            # https://docs.tenable.com/tenablesc/Content/CumulativeMitigatedVulnerabilities.htm#Mitigate
+            for vuln in self.do_analysis(repository_id=repository_id,
+                                         analysis_type='vuln',
+                                         source_type='patched',
+                                         query_tool='vulndetails',
+                                         query_type='vuln',
+                                         extra_filter=filter_):
+                if isinstance(vuln, dict) and vuln.get('lastMitigated') and vuln.get('pluginID') and vuln.get(
+                        'ip') and vuln.get('port'):
+                    key = (vuln.get('pluginID'), vuln.get('ip'), vuln.get('port'))
+                    last_mitigated = parse_date(vuln.get('lastMitigated'))
+                    if isinstance(last_mitigated, datetime):
+                        mitigated[key].append(last_mitigated)
+
+        except Exception as e:
+            logger.exception(f'Problem with fetching from patched repository {repository_id}, {str(e)}')
+
+        try:
+            for vuln in self.do_analysis(repository_id=repository_id,
+                                         analysis_type='vuln',
+                                         source_type='cumulative',
+                                         query_tool='vulndetails',
+                                         query_type='vuln',
+                                         extra_filter=filter_):
+                if isinstance(vuln, dict):
+                    try:
+                        key = (vuln.get('pluginID'), vuln.get('ip'), vuln.get('port'))
+                        vuln['lastMitigated'] = max(mitigated.get(key)) if mitigated.get(key) else None
+                    except Exception:
+                        logger.warning(f'Failed parsing last mitigated for key: {key} in dict: {mitigated}')
+                yield vuln
+
         except Exception:
             logger.exception(f'Problem with repository {repository_id}')
 
