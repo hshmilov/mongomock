@@ -1053,6 +1053,11 @@
     "link": "https://docs.axonius.com/docs/kaseya-vsa",
     "description": "Kaseya VSA is a remote monitoring and management solution for remote control, discovery, patch management, and monitoring."
   },
+  "beyond_trust_privileged_identity_adapter": {
+    "title": "BeyondTrust Privileged Identity (Lieberman RED Identity Management)",
+    "link": "https://docs.axonius.com/docs/beyondtrust-privileged-identity-lieberman-red-identity-management",
+    "description": "BeyondTrust Privileged Identity (formely Lieberman RED Identity Management) is a password management solution that helps companies secure, manage, and administer credentials for privileged users and IT vendors."
+  },
   "puppet_adapter": {
     "title": "Puppet",
     "link": "https://docs.axonius.com/docs/puppet",

@@ -61,6 +61,7 @@ DOCKER_PORTS = {
     'nessus-adapter':                   5555,
     'general-info':                     5556,
     'pm-status':                        5557,
+    'beyond-trust-privileged-identity-adapter': 5558,
     'hyper-sql-adapter':                5674,
     'symantec-adapter':                 5675,
     'symantec-altiris-adapter':         5676,
