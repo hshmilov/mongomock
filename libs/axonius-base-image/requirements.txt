@@ -129,3 +129,4 @@ msrestazure==0.4.34
 google-cloud-storage==1.27.0
 infoblox-netmri==0.1.5
 tabulate==0.8.7
+pyotp==2.3.0
