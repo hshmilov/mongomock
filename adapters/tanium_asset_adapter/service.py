@@ -207,12 +207,13 @@ class TaniumAssetAdapter(AdapterBase):
 
         for value in values:
             src = {'value': value, 'key': key, 'attr': attr}
-            subnets = value.get('subnet_mask')
-            subnets = tanium.tools.parse_ip_network(value=subnets, src=src)
-            subnets = tanium.tools.listify(value=subnets, clean=True)
 
             ipv4 = value.get('ipv4_address')
             ipv4 = tanium.tools.parse_ip(value=ipv4, src=src)
+
+            mask = value.get('subnet_mask')
+            subnet = tanium.tools.parse_ip_network(ip=ipv4, mask=mask, src=src)
+            subnets = tanium.tools.listify(value=subnet, clean=True)
 
             ipv6 = value.get('ipv6_address')
             ipv6 = tanium.tools.parse_ip(value=ipv6, src=src)

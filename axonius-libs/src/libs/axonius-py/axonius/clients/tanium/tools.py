@@ -280,21 +280,20 @@ def parse_dt(value, src=None):
     return None
 
 
-def parse_ip_network(value, src=None):
-    if isinstance(value, (list, tuple)):
-        return parse_empty(value=[parse_ip(value=v, src=src) for v in value])
+def parse_ip_network(ip, mask, src=None):
+    ip = parse_ip(value=ip, src=src)
+    mask = parse_ip(value=mask, src=src)
 
-    value = parse_skip(value=value, src=src)
-
-    if value is None:
+    if not all([ip, mask]):
         return None
 
-    value = str(value).strip()
+    network = f'{ip}/{mask}'
 
     try:
-        return str(ipaddress.ip_network(value))
+        value = str(ipaddress.ip_network(network, strict=False))
+        return value
     except Exception:
-        msg = f'unable to convert {value!r} to ip network src={src!r}'
+        msg = f'unable to convert {network!r} to ip network src={src!r}'
         logger.exception(msg)
     return None
 
@@ -434,3 +433,16 @@ def calc_gb(value, src=None):
         except Exception:
             logger.exception(f'unable to convert bytes {value!r} to gb src={src!r}')
     return None
+
+
+def calc_percent(part, whole, do_round=True, round_val=2):
+    """Pass."""
+    if not all([part, whole]):
+        value = 0.00
+    elif part > whole:
+        value = 100.00
+    else:
+        value = 100 * (part / whole)
+    if do_round:
+        value = round(value, round_val)
+    return value

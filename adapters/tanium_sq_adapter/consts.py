@@ -3,9 +3,16 @@ MAX_DEVICES_COUNT = 2000000
 REQUIRED_SENSORS = [
     'Computer ID',
     'Computer Name',
-    'Network Adapters',
+    # 'Network Adapters',
     'Computer Serial Number',
 ]
+
+NET_SENSOR_DISCOVER = 'Network Adapters'
+
+IPV4_SENSOR = 'IPv4 Address'
+MAC_SENSOR = 'MAC Address'
+NET_SENSORS = [IPV4_SENSOR, MAC_SENSOR]
+
 PAGE_SIZE = 1000
 SLEEP_POLL_ANSWERS = 15
 SLEEP_GET_ANSWERS = 2

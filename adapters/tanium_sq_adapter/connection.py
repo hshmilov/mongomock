@@ -15,6 +15,8 @@ from tanium_sq_adapter.consts import (
     RETRIES_REASK,
     CACHE_EXPIRATION,
     HEADERS,
+    NET_SENSOR_DISCOVER,
+    NET_SENSORS,
 )
 
 # pylint: disable=too-many-locals
@@ -67,6 +69,7 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
     @staticmethod
     def missing_sensors(name, sensor_names):
         missing_requireds = [x for x in REQUIRED_SENSORS if x not in sensor_names]
+
         if missing_requireds:
             found = ', '.join(sensor_names)
             req = ', '.join(REQUIRED_SENSORS)
@@ -80,6 +83,24 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
                 ]
             )
             return msg
+
+        has_network_discover = NET_SENSOR_DISCOVER in sensor_names
+        has_network_base = all([x in sensor_names for x in NET_SENSORS])
+        has_network = any([has_network_discover, has_network_base])
+
+        if not has_network:
+            found = ', '.join(sensor_names)
+
+            network_base = ' AND '.join(NET_SENSORS)
+            msg = '\n -- '.join(
+                [
+                    f'Saved Question {name!r}',
+                    f'MISSING REQUIRED NETWORK SENSORS: {NET_SENSOR_DISCOVER} or {network_base}',
+                    f'ALL SENSORS FOUND: {found}',
+                ]
+            )
+            return msg
+
         return None
 
     def _get_sq(self, name):

@@ -12,6 +12,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import normalize_var_name
 from axonius.clients import tanium
 from tanium_sq_adapter.connection import TaniumSqConnection
+from tanium_sq_adapter.consts import NET_SENSOR_DISCOVER, NET_SENSORS, IPV4_SENSOR, MAC_SENSOR
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,6 +25,57 @@ def new_complex():
     return ComplexSensor
 
 
+class ComplianceAggregates(SmartJsonClass):
+    engine = Field(field_type=str, title='Engine')
+    hash_value = Field(field_type=str, title='Hash')
+    error_code = Field(field_type=str, title='Error Code')
+    version = Field(field_type=str, title='Version')
+
+    count_all = Field(field_type=int, title='All Count')
+
+    count_pass = Field(field_type=int, title='Pass Count')
+    count_fail = Field(field_type=int, title='Fail Count')
+    count_error = Field(field_type=int, title='Error Count')
+    count_unknown = Field(field_type=int, title='Unknown Count')
+    count_not_applicable = Field(field_type=int, title='Not Applicable Count')
+    count_not_checked = Field(field_type=int, title='Not Checked Count')
+    count_not_selected = Field(field_type=int, title='Not Selected Count')
+    count_informational = Field(field_type=int, title='Informational Count')
+    count_fixed = Field(field_type=int, title='Fixed Count')
+
+    percent_pass = Field(field_type=float, title='Pass Percent')
+    percent_fail = Field(field_type=float, title='Fail Percent')
+    percent_error = Field(field_type=float, title='Error Percent')
+    percent_unknown = Field(field_type=float, title='Unknown Percent')
+    percent_not_applicable = Field(field_type=float, title='Not Applicable Percent')
+    percent_not_checked = Field(field_type=float, title='Not Checked Percent')
+    percent_not_selected = Field(field_type=float, title='Not Selected Percent')
+    percent_informational = Field(field_type=float, title='Informational Percent')
+    percent_fixed = Field(field_type=float, title='Fixed Percent')
+
+
+class VulnerabilityAggregates(SmartJsonClass):
+    engine = Field(field_type=str, title='Engine')
+    hash_value = Field(field_type=str, title='Hash')
+    error_code = Field(field_type=str, title='Error Code')
+
+    count_all = Field(field_type=int, title='All Count')
+
+    count_vulnerable = Field(field_type=int, title='Vulnerable Count')
+    count_non_vulnerable = Field(field_type=int, title='Non Vulnerable Count')
+    count_error = Field(field_type=int, title='Error Count')
+    count_high_severity = Field(field_type=int, title='High Severity Count')
+    count_medium_severity = Field(field_type=int, title='Medium Severity Count')
+    count_low_severity = Field(field_type=int, title='Low Severity Count')
+
+    percent_vulnerable = Field(field_type=float, title='Vulnerable Percent')
+    percent_non_vulnerable = Field(field_type=float, title='Non Vulnerable Percent')
+    percent_error = Field(field_type=float, title='Error Percent')
+    percent_high_severity = Field(field_type=float, title='High Severity Percent')
+    percent_medium_severity = Field(field_type=float, title='Medium Severity Percent')
+    percent_low_severity = Field(field_type=float, title='Low Severity Percent')
+
+
 class TaniumSqAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(field_type=str, title='Tanium Server')
@@ -33,6 +85,10 @@ class TaniumSqAdapter(AdapterBase):
         sq_query_text = Field(field_type=str, title='Question Query Text')
         sq_expiration = Field(field_type=datetime.datetime, title='Question Last Asked')
         sq_selects = ListField(field_type=str, title='Question Selects')
+        compliance = ListField(field_type=ComplianceAggregates, title='Compliance')
+        vulnerabilities = ListField(
+            field_type=VulnerabilityAggregates, title='Vulnerabilities'
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -189,6 +245,20 @@ class TaniumSqAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'ERROR in name {name!r} value_map {value_map!r} value {value!r}')
 
+    @staticmethod
+    def _get_enum_regex_match(adapter_cls, field, value):
+        """Find a value that regex matches a fields enum value."""
+        try:
+            obj = adapter_cls()
+            field_obj = obj.get_field_type(field)
+
+            for enum_value in field_obj.enum:
+                if re.search(str(enum_value), str(value), re.I):
+                    return enum_value
+        except Exception:
+            return None
+        return None
+
     def _sens_cpudetails(self, device, name, value_map):
         """Sensor: CPU Details."""
         src = {'name': name, 'value_map': value_map}
@@ -196,22 +266,26 @@ class TaniumSqAdapter(AdapterBase):
         values = tanium.tools.listify(value=values, clean=True)
 
         for value in values:
-            arch = self._get_valuedata(name=name, key='System Type', value=value)
+            arch_value = self._get_valuedata(name=name, key='System Type', value=value)
 
-            if '64' in str(arch):
-                bitness = 64
-                arch = 'x64'
-            elif 'x86' in str(arch):
-                bitness = 32
-                arch = 'x86'
-            else:
-                try:
-                    valids = DeviceAdapterCPU.bitness.enum
-                    matches = [x for x in [re.search(v, arch) for v in valids] if x]
-                except Exception:
-                    matches = []
-                arch = matches[0] if matches else None
-                bitness = None
+            arch = self._get_enum_regex_match(adapter_cls=DeviceAdapterCPU, field='architecture', value=arch_value)
+            bitness = self._get_enum_regex_match(adapter_cls=DeviceAdapterCPU, field='bitness', value=arch_value)
+
+            # AX-7316
+            # if '64' in str(arch):
+            #     bitness = 64
+            #     arch = 'x64'
+            # elif 'x86' in str(arch):
+            #     bitness = 32
+            #     arch = 'x86'
+            # else:
+            #     try:
+            #         valids = DeviceAdapterCPU.bitness.enum
+            #         matches = [x for x in [re.search(v, arch) for v in valids] if x]
+            #     except Exception:
+            #         matches = []
+            #     arch = matches[0] if matches else None
+            #     bitness = None
 
             cpu = self._get_valuedata(name=name, key='CPU', value=value)
 
@@ -251,6 +325,38 @@ class TaniumSqAdapter(AdapterBase):
                     device.add_nic(**kwargs)
                 except Exception:
                     logger.exception(f'ERROR in name {name!r} value {value!r} kwargs {kwargs!r}')
+
+    @staticmethod
+    def _sens_ipmac(device, device_raw):
+        """Network sensors: IPv4 Address and MAC Address."""
+        ips = device_raw[IPV4_SENSOR]['value']
+        ips = tanium.tools.listify(value=ips, clean=True)
+        macs = device_raw[MAC_SENSOR]['value']
+        macs = tanium.tools.listify(value=macs, clean=True)
+        only_one_each = all([len(x) == 1 for x in [ips, macs]])
+
+        # there is only one IP and one MAC, so we can safely assume they are related
+        if only_one_each:
+            kwargs = dict(ips=ips, mac=macs[0])
+            try:
+                device.add_nic(**kwargs)
+            except Exception:
+                logger.exception(f'ERROR in single IP/MAC with kwargs {kwargs!r}')
+        # there is more than IP or MAC, so we have no idea how they are related
+        # we will just add each IP and MAC individually as their own NIC
+        else:
+            for ip in ips:
+                kwargs = dict(ips=[ip])
+                try:
+                    device.add_nic(**kwargs)
+                except Exception:
+                    logger.exception(f'ERROR in multi IP/MAC with kwargs {kwargs!r}')
+            for mac in macs:
+                kwargs = dict(mac=mac)
+                try:
+                    device.add_nic(**kwargs)
+                except Exception:
+                    logger.exception(f'ERROR in multi IP/MAC with kwargs {kwargs!r}')
 
     def _sens_opsys(self, device, name, value_map):
         """Sensor: Operating System."""
@@ -512,6 +618,109 @@ class TaniumSqAdapter(AdapterBase):
         if not tanium.tools.is_empty(value=value):
             device.add_agent_version(agent=AGENT_NAMES.tanium, version=value)
 
+    def _sens_vulnagg(self, device, name, value_map):
+        """Sensor: Comply - Vulnerability Aggregates."""
+        str_fields = {
+            'Engine': 'engine',
+            'Hash': 'hash_value',
+            'Error Code': 'error_code',
+        }
+
+        all_column = 'All'
+        all_field = 'count_all'
+
+        count_fields = {
+            'Vulnerable': 'count_vulnerable',
+            'Nonvulnerable': 'count_non_vulnerable',
+            'Error': 'count_error',
+            'High Severity': 'count_high_severity',
+            'Medium Severity': 'count_medium_severity',
+            'Low Severity': 'count_low_severity',
+        }
+
+        self.calc_percent_sensor(
+            device=device,
+            name=name,
+            value_map=value_map,
+            all_column=all_column,
+            all_field=all_field,
+            str_fields=str_fields,
+            count_fields=count_fields,
+            calc_class=VulnerabilityAggregates,
+            calc_field='vulnerabilities',
+        )
+
+    def _sens_complyagg(self, device, name, value_map):
+        """Sensor: Comply - Compliance Aggregates."""
+        str_fields = {
+            'Engine': 'engine',
+            'Hash': 'hash_value',
+            'Error Code': 'error_code',
+            'Version': 'version',
+        }
+
+        all_column = 'All'
+        all_field = 'count_all'
+
+        count_fields = {
+            'Pass': 'count_pass',
+            'Fail': 'count_fail',
+            'Error': 'count_error',
+            'Unknown': 'count_unknown',
+            'Not Applicable': 'count_not_applicable',
+            'Not Checked': 'count_not_checked',
+            'Not Selected': 'count_not_selected',
+            'Informational': 'count_informational',
+            'Fixed': 'count_fixed',
+        }
+
+        self.calc_percent_sensor(
+            device=device,
+            name=name,
+            value_map=value_map,
+            all_column=all_column,
+            all_field=all_field,
+            str_fields=str_fields,
+            count_fields=count_fields,
+            calc_class=ComplianceAggregates,
+            calc_field='compliance',
+        )
+
+    def calc_percent_sensor(self,
+                            device,
+                            name,
+                            value_map,
+                            all_column,
+                            all_field,
+                            str_fields,
+                            count_fields,
+                            calc_class,
+                            calc_field):
+        values = self._get_value(name=name, value_map=value_map)
+
+        for value in values:
+            try:
+                calc_obj = calc_class()
+                for column, field in str_fields.items():
+                    field_value = tanium.tools.parse_str(value=value[column]['value'], src=value[all_column])
+                    setattr(calc_obj, field, field_value)
+
+                all_value = tanium.tools.parse_int(value=value[all_column]['value'], src=value[all_column])
+                setattr(calc_obj, all_field, all_value)
+
+                for column, field in count_fields.items():
+                    field_value = tanium.tools.parse_int(value=value[column]['value'], src=value[column])
+                    setattr(calc_obj, field, field_value)
+
+                    if field_value is not None:
+                        perc_field = field.replace('count_', 'percent_')
+                        perc_value = tanium.tools.calc_percent(part=field_value, whole=all_value)
+                        setattr(calc_obj, perc_field, perc_value)
+
+                getattr(device, calc_field).append(calc_obj)
+            except Exception:
+                logger.exception(f'ERROR in name {name!r} value {value!r}')
+
     def _get_valuedata(self, name, key, value):
         try:
             if not isinstance(value, dict):
@@ -557,6 +766,8 @@ class TaniumSqAdapter(AdapterBase):
             'BIOS Version': self._sens_biosver,
             'Chassis Type': self._sens_chassis,
             'Computer Name': self._sens_hostname,
+            'Comply - Compliance Aggregates': self._sens_complyagg,
+            'Comply - Vulnerability Aggregates': self._sens_vulnagg,
             'Computer Serial Number': self._sens_serial,
             'CPU Details': self._sens_cpudetails,
             'Custom Tags': self._sens_tags,
@@ -571,7 +782,6 @@ class TaniumSqAdapter(AdapterBase):
             'Model': self._sens_model,
             'Motherboard Manufacturer': self._sens_mobomanu,
             'Motherboard Version': self._sens_mobover,
-            'Network Adapters': self._sens_netadapters,
             'Open Ports': self._sens_openports,
             'Open Share Details': self._sens_openshares,
             'Operating System Build Number': self._sens_osbuildnum,
@@ -642,6 +852,31 @@ class TaniumSqAdapter(AdapterBase):
         device.sq_selects = tanium.tools.parse_selects(question=question)
         tanium.tools.set_metadata(device=device, metadata=metadata)
         tanium.tools.set_module_ver(device=device, metadata=metadata, module='interact')
+
+        # handle network sensors, special case logic
+        has_network_discover = NET_SENSOR_DISCOVER in device_raw
+        has_network_base = all([x in device_raw for x in NET_SENSORS])
+
+        # they have the network sensor from discover, which we prefer to use
+        # since it has IP and MAC index correlated
+        try:
+            if has_network_discover:
+                self._sens_netadapters(
+                    device=device,
+                    name=NET_SENSOR_DISCOVER,
+                    value_map=device_raw[NET_SENSOR_DISCOVER],
+                )
+            # they only have the network sensors from the base content, which is horrible
+            # since we do not know which IP maps to which MAC
+            elif has_network_base:
+                self._sens_ipmac(device=device, device_raw=device_raw)
+            # they don't have either, we won't process it
+            else:
+                logger.error(f'device_raw did not contain {NET_SENSOR_DISCOVER} or {NET_SENSORS}')
+                return None
+        except Exception:
+            logger.exception('Failure while parsing network information')
+            return None
 
         # parse out the things we know to parse into aggregated data
         sensor_maps = self._get_sensor_maps(device_raw=device_raw)
