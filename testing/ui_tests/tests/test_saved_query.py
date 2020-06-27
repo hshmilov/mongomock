@@ -32,6 +32,8 @@ class TestSavedQuery(TestBase):
 
     JSON_ASSET_ENTITY_QUERY_NAME = 'JSON Asset Entity Query'
 
+    RANDOM_QUERY_FILTER = 'gg'
+
     def test_query_state(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
@@ -448,6 +450,10 @@ class TestSavedQuery(TestBase):
            Reset the query and then choose it from the list and check that it recompiles.
            That's because this query is NOT predefined and it SHOULD be recompiled due to the
            difference between the filter and the expression.
+        4 - Choose the 'Devices seen in last 7 days' from the dropdown
+            and then enter a 'simple search' value.
+            Check that the query gets recompiled and that the search input was updated
+            and there is no edit indication.
         """
 
         # Check 1
@@ -491,3 +497,14 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
+
+        # Check 4
+        self.devices_page.click_search()
+        self.devices_page.execute_saved_query(DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME)
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.fill_filter(self.RANDOM_QUERY_FILTER)
+        self.devices_page.enter_search()
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_query_wizard()
+        assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
+        assert self.devices_page.find_query_search_input().get_attribute('value') != self.RANDOM_QUERY_FILTER

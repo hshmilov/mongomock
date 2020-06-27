@@ -13,6 +13,7 @@
         v-model="queryFilter"
         :module="module"
         :query-search.sync="query.search"
+        :updated-by-wizard.sync="updatedByWizard"
         :user-fields-groups="userFieldsGroups"
         @validate="onValid"
         @done="$emit('done')"
@@ -71,6 +72,7 @@ export default {
     return {
       filterValid: true,
       error: '',
+      updatedByWizard: false,
     };
   },
   computed: {
@@ -225,6 +227,9 @@ export default {
         selectIds = queryMeta.filterOutExpression.value.split(',');
         queryMeta.filterOutExpression = null;
       }
+
+      // Set indication that the query was updated by the query wizard
+      this.updatedByWizard = true;
 
       // Update the view in any case, even if the filter has not changed
       this.updateView({

@@ -147,6 +147,10 @@ export default {
       type: Object,
       default: () => ({ default: [] }),
     },
+    updatedByWizard: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -274,9 +278,9 @@ export default {
         this.searchValue = newValue;
       }
       // this case handle the updates from the query wizard
-      const updatedFromExpressionChanges = !this.isSearchSimple;
-      if (updatedFromExpressionChanges) {
+      if (this.updatedByWizard) {
         this.searchValue = newValue;
+        this.$emit('update:updated-by-wizard', false);
       }
       // all other updates as:
       // * specific search searching
