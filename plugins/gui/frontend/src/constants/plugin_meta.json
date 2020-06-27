@@ -1293,6 +1293,11 @@
     "link": "",
     "description": ""
   },
+  "infinipoint_adapter": {
+    "title": "Infinipoint",
+    "link": "https://docs.axonius.com/docs/infinipoint",
+    "description": "Infinipoint is a cloud-based automated cyber hygiene platform that enables continuous detection and remediation of risks across the organization’s IT assets."
+  },
   "pm_status": {
     "title": "PM Status",
     "link": "",

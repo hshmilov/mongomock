@@ -447,7 +447,7 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.warning(f'Problem getting model at {device_raw}', exc_info=True)
             try:
-                device_serial = device_raw.get('serial_number')
+                device_serial = device_raw.get('serial_number') or ''
                 if (device_serial or '').startswith('VMware'):
                     device_serial += device_model or ''
                 if not any(bad_serial in device_serial for bad_serial in

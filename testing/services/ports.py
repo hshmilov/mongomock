@@ -223,6 +223,7 @@ DOCKER_PORTS = {
     'upguard-adapter':                  9946,
     'digital-shadows-adapter':          9947,
     'knowbe4-adapter':                  9948,
+    'infinipoint-adapter':              9949,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,

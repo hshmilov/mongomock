@@ -1277,7 +1277,7 @@ BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air',
 
 
 def get_asset_snow_or_host(adapter_device):
-    if adapter_device.get('plugin_name') == 'service_now_adapter':
+    if adapter_device.get('plugin_name') in ['service_now_adapter', 'gce_adapter']:
         asset = get_asset_name(adapter_device)
     else:
         asset = get_hostname(adapter_device)

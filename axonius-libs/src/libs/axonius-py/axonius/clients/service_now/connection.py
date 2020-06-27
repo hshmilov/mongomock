@@ -249,7 +249,9 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         cmdb_ci_table = connection_dict.get('cmdb_ci_table') or 'cmdb_ci_computer'
         logger.info(f'Creating service now computer ')
         if identifyreconcile_endpoint:
-            body_params = {'relations': [], 'items': [connection_dict]}
+            body_params = {'relations': [], 'items': [{'className': cmdb_ci_table,
+                                                       'lookup': [],
+                                                       'values': connection_dict}]}
             self._post(f'identifyreconcile',
                        url_params={'sysparm_data_source': identifyreconcile_endpoint},
                        body_params=body_params)

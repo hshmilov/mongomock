@@ -272,7 +272,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on mail prefix')
         mails_indexed = {}
         for adapter in entities:
-            email = adapter.get(NORMALIZED_MAIL)
+            email = get_ad_upn_mail(adapter)
             if email and len(email.split('@')) > 1:
                 email_prefix = email.split('@')[0]
                 mails_indexed.setdefault(email_prefix, []).append(adapter)

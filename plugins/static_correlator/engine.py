@@ -107,6 +107,7 @@ def is_only_host_adapter(adapter_device):
                                               'epo_adapter',
                                               'crowd_strike_adapter',
                                               'amd_db_adapter',
+                                              'hp_nnmi_adapter',
                                               'druva_adapter']):
         return True
     try:
@@ -478,7 +479,7 @@ def is_a_record_device(adapter_device):
 
 
 def is_full_hostname_adapter(adapter_device):
-    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter'] \
+    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter', 'tanium_adapter'] \
         or is_a_record_device(adapter_device)
 
 

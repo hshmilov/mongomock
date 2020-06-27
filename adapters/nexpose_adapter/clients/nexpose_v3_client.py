@@ -54,11 +54,12 @@ class PciStatus(SmartJsonClass):
 
 
 class NexposeVuln(SmartJsonClass):
+    vuln_since = Field(datetime.datetime, 'Since')
+    vuln_status = Field(str, 'Status')
     added = Field(datetime.datetime, 'Added')
     categories = ListField(str, 'Categories')
     cves = ListField(str, 'CVEs')
     denial_of_service = Field(bool, 'Denial Of Service')
-    description = Field(str, 'Description')
     exploits = Field(int, 'Exploits')
     malware_kits = Field(int, 'Malware Kits')
     modified = Field(datetime.datetime, 'Modified')
@@ -287,6 +288,7 @@ class NexposeV3Client(NexposeClient):
                                 try:
                                     vuln_id = vuln.get('id')
                                     vuln_details = self.get_vuln_details(vuln_id=vuln_id) or {}
+                                    vuln_details['vuln_basic'] = vuln
                                     item['vulnerability_details_full'].append(vuln_details)
                                 except Exception:
                                     logger.exception(f'Problem getting details for vulnerability {vuln}')
@@ -479,6 +481,7 @@ class NexposeV3Client(NexposeClient):
                         device.add_vulnerable_software(cve_id=cve)
                     try:
                         added = parse_date(vuln.get('added'))
+                        vuln_basic = vuln.get('vuln_basic')
                         cves = vuln.get('cves') if isinstance(vuln.get('cves'), list) else None
                         categories = vuln.get('categories') if isinstance(vuln.get('categories'), list) else None
 
@@ -513,11 +516,12 @@ class NexposeV3Client(NexposeClient):
                                         adjusted_cvss_score=adjusted_cvss_score,
                                         adjusted_severity_score=adjusted_severity_score
                                         )
-                        nexpose_vuln = NexposeVuln(added=added,
+                        nexpose_vuln = NexposeVuln(vuln_status=vuln_basic.get('status'),
+                                                   vuln_since=parse_date(vuln_basic.get('since')),
+                                                   added=added,
                                                    categories=categories,
                                                    cves=cves,
                                                    denial_of_service=denial_of_service,
-                                                   description=description,
                                                    exploits=exploits,
                                                    malware_kits=malware_kits,
                                                    modified=modified,

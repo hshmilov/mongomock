@@ -186,9 +186,10 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             logger.info('Getting all assets')
             devices_list = client_data.get_device_list()
             yield devices_list, ASSET_TYPE, client_data, uuid_to_id_scans_dict
-            logger.info('Getting all agent')
-            for device_raw in client_data.get_agents():
-                yield device_raw, AGENT_TYPE, client_data, uuid_to_id_scans_dict
+            if self.__fetch_agent_data:
+                logger.info('Getting all agent')
+                for device_raw in client_data.get_agents():
+                    yield device_raw, AGENT_TYPE, client_data, uuid_to_id_scans_dict
 
     def _clients_schema(self):
         """
@@ -475,9 +476,15 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'title': 'Scan IDs whitelist',
                     'type': 'string'
                 },
+                {
+                    'name': 'fetch_agent_data',
+                    'title': 'Fetch Agent Data',
+                    'type': 'bool'
+                }
             ],
             'required': [
-                'exclude_no_last_scan'
+                'exclude_no_last_scan',
+                'fetch_agent_data'
             ],
             'pretty_name': 'Tenable.io Configuration',
             'type': 'array'
@@ -487,13 +494,15 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_no_last_scan': False,
-            'scan_id_white_list': None
+            'scan_id_white_list': None,
+            'fetch_agent_data': True
         }
 
     def _on_config_update(self, config):
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
         self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
-            if config.get('scan_uuid_white_list') else None
+            if config.get('scan_id_white_list') else None
+        self.__fetch_agent_data = config['fetch_agent_data'] if 'fetch_agent_data' in config else True
 
     def outside_reason_to_live(self) -> bool:
         """

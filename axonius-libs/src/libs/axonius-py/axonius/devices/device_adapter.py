@@ -35,7 +35,7 @@ AGENTS = namedtuple('Agents', (
     'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
-    'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium', 'malwarebytes_cloud',
+    'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium', 'malwarebytes_cloud', 'infinipoint',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
     'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason',
     'twistlock', 'webroot', 'aqua', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus', 'microfocus_sa', 'contrast',
@@ -45,7 +45,7 @@ AGENT_NAMES = AGENTS(
     alertlogic='Alert Logic Agent', bigfix='IBM BigFix Agent', carbonblack_defense='CarbonBlack Defense Sensor',
     carbonblack_protection='CarbonBlack Protection Sensor', carbonblack_response='CarbonBlack Response Sensor',
     cisco_amp='Cisco AMP Connector', cisco_firepower_management_center='Cisco FMC Agent',
-    bitlocker='Bitlocker Agent', traps='Traps Agent', avamar='Avamar Client',
+    bitlocker='Bitlocker Agent', traps='Traps Agent', avamar='Avamar Client', infinipoint='Infinipoint Client',
     malwarebytes_cloud='Malwarebytes Agent', cybereason='Cybereason Sensor',
     cisco_umbrella='Cisco Umbrella Agent', cloudpassage='CloudPassage Daemon', code42='Code42 Agent',
     counter_act='CounterACT Agent', crowd_strike='CrowdStrike Agent', cylance='Cylance Agent', datadog='Datadog Agent',
@@ -736,6 +736,14 @@ class DeviceAdapter(SmartJsonClass):
     last_used_users_mail_association = ListField(str, 'Last Used Users Email')
     last_used_users_division_association = ListField(str, 'Last Used Users Division')
     last_used_users_company_association = ListField(str, 'Last Used Users Company')
+    last_used_users_se_sub_functional_area_association = ListField(str, 'Last Used Users Sub Functional Area')
+    last_used_users_se_department_role_title_association = ListField(str, 'Last Used Users Department Role Title')
+    last_used_users_se_guid_manager_association = ListField(str, 'Last Used Users Guid Manager')
+    last_used_users_se_job_code_association = ListField(str, 'Last Used Users Job Code')
+    last_used_users_sw_hw_segment_association = ListField(str, 'Last Used Users HW Segment')
+    last_used_users_se_business_unit_name_association = ListField(str, 'Last Used Users Business Unit Name')
+    last_used_users_se_business_role_association = ListField(str, 'Last Used Users Business Role')
+
     last_used_users_organizational_unit_association = ListField(str, 'Last Used Users Organizational Unit')
     last_used_users_description_association = ListField(str, 'Last Used Users Description')
     installed_software = ListField(

@@ -59,13 +59,13 @@ class CherwellConnection(RESTConnection):
         self._last_refresh = None
         self._expires_in = None
 
-    def _get_assets_raw(self):
+    def _get_bus_ob_id_raw(self, bus_ob_id):
         page = 0
         while page < MAX_PAGE:
             try:
                 self._refresh_token()
                 response = self._post('api/V1/getsearchresults',
-                                      body_params={'busObId': IT_ASSET_BUS_OB_ID,
+                                      body_params={'busObId': bus_ob_id,
                                                    'searchText': '',
                                                    'pageSize': PAGE_SIZE,
                                                    'pageNumber': page})
@@ -82,22 +82,30 @@ class CherwellConnection(RESTConnection):
                 logger.exception(f'Problem with page {page}')
                 break
 
-    def get_device_list(self):
-        for asset_raw in self._get_assets_raw():
+    def _get_data_from_ob_rec_id(self, bus_ob_id, bus_ob_rec_id):
+        return self._post('api/V1/getbusinessobjectbatch',
+                          body_params={'readRequests': [{'busObId': bus_ob_id,
+                                                         'busObPublicId': '',
+                                                         'busObRecId': bus_ob_rec_id}],
+                                       'stopOnError': True})
+
+    def _get_full_data_from_ob_id(self, bus_ob_id):
+        for asset_raw in self._get_bus_ob_id_raw(bus_ob_id):
             try:
                 bus_ob_id = asset_raw.get('busObId')
                 bus_ob_rec_id = asset_raw.get('busObRecId')
                 if not bus_ob_id or not bus_ob_rec_id:
                     continue
                 self._refresh_token()
-                asset_response = self._post('api/V1/getbusinessobjectbatch',
-                                            body_params={'readRequests': [{'busObId': bus_ob_id,
-                                                                           'busObPublicId': '',
-                                                                           'busObRecId': bus_ob_rec_id}],
-                                                         'stopOnError': True})
-                yield asset_response
+                yield self._get_data_from_ob_rec_id(bus_ob_id, bus_ob_rec_id)
             except Exception:
                 logger.exception(f'Problem with asset: {asset_raw}')
+
+    def get_device_list(self):
+        yield from self._get_full_data_from_ob_id(IT_ASSET_BUS_OB_ID)
+
+    def get_user_list(self):
+        yield from self._get_full_data_from_ob_id(self._get_bus_ob_id('Customer'))
 
     def create_incident(self, cherwell_connection):
         self.__number_of_new_incidents += 1

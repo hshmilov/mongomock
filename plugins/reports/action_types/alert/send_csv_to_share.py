@@ -1,3 +1,4 @@
+import datetime
 import io
 import urllib
 import logging
@@ -41,11 +42,23 @@ class SendCsvToShare(ActionTypeAlert):
                     'name': 'use_nbns',
                     'type': 'bool',
                     'title': 'Use NBNS'
+                },
+                {
+                    'name': 'append_datetime',
+                    'title': 'Append date and time to file name',
+                    'type': 'bool',
+                },
+                {
+                    'name': 'append_csv_ending',
+                    'title': 'Append extension .csv to file name',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'csv_share',
-                'use_nbns'
+                'use_nbns',
+                'append_datetime',
+                'append_csv_ending'
             ],
             'type': 'array'
         }
@@ -54,8 +67,10 @@ class SendCsvToShare(ActionTypeAlert):
     def default_config() -> dict:
         return {
             'csv_share': None,
+            'append_csv_ending': False,
             'csv_share_username': None,
             'csv_share_password': None,
+            'append_datetime': False,
             'use_nbns': True
         }
 
@@ -79,6 +94,10 @@ class SendCsvToShare(ActionTypeAlert):
             share_username = self._config.get('csv_share_username')
             share_password = self._config.get('csv_share_password')
             share_path = self._config.get('csv_share')[2:]
+            if self._config.get('append_datetime'):
+                share_path += '_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-')
+            if self._config.get('append_csv_ending'):
+                share_path += '.csv'
             share_path = share_path.replace('\\', '/')
             if share_username is not None:
                 share_username = share_username.replace('\\', ';')

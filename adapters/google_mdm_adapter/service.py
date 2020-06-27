@@ -266,6 +266,9 @@ class GoogleMdmAdapter(AdapterBase):
         user.is_delegated_admin = raw_user_data.get('isDelegatedAdmin')
         user.is_mfa_enrolled = raw_user_data.get('isEnrolledIn2Sv')
         user.is_mfa_enforced = raw_user_data.get('isEnforcedIn2Sv')
+        grups = raw_user_data.get('groups_raw')
+        if isinstance(grups, list) and grups:
+            user.groups = grups
         organizations = raw_user_data.get('organizations')
         if isinstance(organizations, list) and organizations and isinstance(organizations[0], dict):
             user.user_department = organizations[0].get('department')

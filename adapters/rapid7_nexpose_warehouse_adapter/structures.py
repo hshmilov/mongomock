@@ -19,7 +19,6 @@ class RapidVulnerability(SmartJsonClass):
     vulnerability_id = Field(int, 'ID')
     nexpose_id = Field(str, 'Nexpose ID')
     title = Field(str, 'Title')
-    description = Field(str, 'Description')
     date_published = Field(datetime.datetime, 'Date Published')
     date_added = Field(datetime.datetime, 'Date Added')
     date_modified = Field(datetime.datetime, 'Date Modified')
@@ -116,7 +115,6 @@ class RapidAsset(SmartJsonClass):
 class Rapid7NexposeWarehouseDeviceInstance(DeviceAdapter):
     rapid_asset = Field(RapidAsset, 'Asset')
     rapid_policies = ListField(RapidPolicy, 'Policies')
-    rapid_installed_softwares = ListField(RapidInstalledSoftware, 'Installed Softwares')
     rapid_services = ListField(RapidService, 'Rapid Services')
     rapid_tags = ListField(RapidTag, 'Tags')
     rapid_vulnerabilities = ListField(RapidVulnerability, 'Vulnerabilities')

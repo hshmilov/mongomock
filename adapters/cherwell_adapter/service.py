@@ -7,6 +7,7 @@ from axonius.fields import Field
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.types.correlation import CorrelationResult, CorrelationReason
 from axonius.mixins.configurable import Configurable
@@ -48,6 +49,14 @@ class CherwellAdapter(AdapterBase, Configurable):
         physical_inventory_date = Field(datetime.datetime, 'Physical Inventory Date')
         primary_user_email = Field(str, 'Primary User Email')
         primary_user_vip = Field(str, 'Primary User VIP')
+
+    class MyUserAdapter(UserAdapter):
+        bus_ob_id = Field(str, 'Bus Ob ID')
+        bus_ob_rec_id = Field(str, 'BusObRecId')
+        bus_ob_public_id = Field(str, 'BusObPublicId')
+        created_by = Field(str, 'Created By')
+        customer_type_name = Field(str, 'Customer Type Name')
+        company_name = Field(str, 'Company Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -180,6 +189,20 @@ class CherwellAdapter(AdapterBase, Configurable):
             yield from client_data.get_device_list()
 
     @staticmethod
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(client_name, client_data):
+        """
+        Get all users from a specific domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        with client_data:
+            yield from client_data.get_user_list()
+
+    @staticmethod
     def _clients_schema():
         """
         The schema CherwellAdapter expects from configs
@@ -229,6 +252,62 @@ class CherwellAdapter(AdapterBase, Configurable):
             ],
             'type': 'array'
         }
+
+    # pylint: disable=too-many-branches
+    def _create_user(self, user_raw):
+        try:
+            user = self._new_user_adapter()
+            user_response = user_raw.get('responses')[0]
+            user.id = (user_response.get('busObId') or '') + '_' + (user_response.get('busObRecId') or '')
+            user.bus_ob_id = user_response.get('busObId')
+            user.bus_ob_rec_id = user_response.get('busObRecId')
+            user.bus_ob_public_id = user_response.get('busObPublicId')
+            for field_raw in user_response.get('fields'):
+                try:
+                    field_name = field_raw.get('name')
+                    field_value = field_raw.get('value')
+                    if not field_name or not field_value:
+                        continue
+                    if field_name == 'CustomerTypeName':
+                        user.customer_type_name = field_value
+                    elif field_name == 'CreatedDateTime':
+                        user.user_created = parse_date(field_value)
+                    elif field_name == 'CreatedBy':
+                        user.created_by = field_value
+                    elif field_name == 'NetworkID':
+                        user.username = field_value
+                    elif field_name == 'FirstName':
+                        user.first_name = field_value
+                    elif field_name == 'LastName':
+                        user.last_name = field_value
+                    elif field_name == 'Phone':
+                        user.user_telephone_number = field_value
+                    elif field_name == 'Email':
+                        user.mail = field_value
+                    elif field_name == 'Department':
+                        user.user_department = field_value
+                    elif field_name == 'City':
+                        user.user_city = field_value
+                    elif field_name == 'Manager':
+                        user.user_manager = field_value
+                    elif field_name == 'Country':
+                        user.user_country = field_value
+                    elif field_name == 'CompanyName':
+                        user.company_name = field_value
+                except Exception:
+                    logger.exception(f'Problem with field {field_raw}')
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching BambooHR user for {user_raw}')
+            return None
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user
 
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements

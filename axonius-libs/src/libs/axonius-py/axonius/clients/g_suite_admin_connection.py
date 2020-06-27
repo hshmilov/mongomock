@@ -78,10 +78,70 @@ class GSuiteAdminConnection:
             logger.exception('Problem with Chrome devices')
             return
 
+    def get_groups(self):
+        try:
+            groups = self._connection.groups().list(maxResults=DEVICES_PER_PAGE).execute()
+            yield from groups.get('groups', [])
+            next_page_token = groups.get('nextPageToken') or ''
+            number_of_pages = 1
+            while next_page_token and (number_of_pages * DEVICES_PER_PAGE < MAX_NUMBER_OF_DEVICES):
+                try:
+                    number_of_pages += 1
+                    groups = self._connection.groups().list(pageToken=next_page_token,
+                                                            maxResults=DEVICES_PER_PAGE).execute()
+                    yield from groups.get('groups', [])
+                    next_page_token = groups.get('nextPageToken') or ''
+                except Exception:
+                    # Breaking here to Avoid infinite loop
+                    logger.exception(f'Problem getting page number {number_of_pages}')
+                    break
+        except Exception:
+            logger.exception('Problem with groups')
+            return
+
+    def _get_user_ids_for_group_id(self, group_id):
+        try:
+            members = self._connection.members().list(groupKey=group_id,
+                                                      maxResults=DEVICES_PER_PAGE).execute()
+            for member_raw in members.get('members', []):
+                if member_raw.get('id'):
+                    yield member_raw['id']
+            next_page_token = members.get('nextPageToken') or ''
+            number_of_pages = 1
+            while next_page_token and (number_of_pages * DEVICES_PER_PAGE < MAX_NUMBER_OF_DEVICES):
+                try:
+                    number_of_pages += 1
+                    members = self._connection.members().list(groupKey=group_id,
+                                                              pageToken=next_page_token,
+                                                              maxResults=DEVICES_PER_PAGE).execute()
+                    for member_raw in members.get('members', []):
+                        if member_raw.get('id'):
+                            yield member_raw['id']
+                    next_page_token = members.get('nextPageToken') or ''
+                except Exception:
+                    # Breaking here to Avoid infinite loop
+                    logger.exception(f'Problem getting page number {number_of_pages}')
+                    break
+        except Exception:
+            logger.exception(f'Problem with members for {group_id}')
+            return
+
+    # pylint: disable=too-many-branches, too-many-statements
     def get_users(self) -> List[dict]:
         """
         Get users
         """
+        users_groups_dict = dict()
+        for group_raw in self.get_groups():
+            try:
+                group_id = group_raw.get('id')
+                group_name = group_raw.get('name')
+                for user_id in self._get_user_ids_for_group_id(group_id):
+                    if user_id not in users_groups_dict:
+                        users_groups_dict[user_id] = []
+                    users_groups_dict[user_id].append(group_name)
+            except Exception:
+                logger.exception(f'Problem with group {group_raw}')
         users = self._connection.users().list(customer='my_customer', maxResults=DEVICES_PER_PAGE).execute()
 
         did_token_exception_happen = False
@@ -90,6 +150,7 @@ class GSuiteAdminConnection:
             user_id = user.get('id')
             if not user_id:
                 continue
+            user['groups_raw'] = users_groups_dict.get(user_id)
             try:
                 token_raw = self._connection.tokens().list(userKey=user_id).execute()
                 user['tokens'] = token_raw
@@ -110,6 +171,7 @@ class GSuiteAdminConnection:
                     user_id = user.get('id')
                     if not user_id:
                         continue
+                    user['groups_raw'] = users_groups_dict.get(user_id)
                     try:
                         token_raw = self._connection.tokens().list(userKey=user_id).execute()
                         user['tokens'] = token_raw

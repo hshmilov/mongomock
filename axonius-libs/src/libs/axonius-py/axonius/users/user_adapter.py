@@ -141,4 +141,6 @@ assert UserAdapter.last_seen.name == LAST_SEEN_FIELD
 
 
 ASSOCIATED_FIELD = ['mail', 'user_department', 'ad_display_name', 'division',
-                    'company', 'description', 'organizational_unit']
+                    'company', 'description', 'organizational_unit', 'se_department_role_title',
+                    'se_sub_functional_area', 'se_guid_manager', 'se_job_code', 'sw_hw_segment',
+                    'se_business_unit_name', 'se_business_role']
