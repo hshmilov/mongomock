@@ -1,26 +1,19 @@
-"""
-Extends the trial by a month.
-This is done for operational reasons where we have to send this file to an offline customer.
-Do not send the py file, instead, send the pyc file in this folder.
-To compile it, run in bash `python3 -m compileall .`
-"""
+#!/home/ubuntu/cortex/pyrun.sh
 import sys
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from testing.services.plugins.core_service import CoreService
 
 
 def main():
-    CoreService().db.gui_config_collection().update_one({
-        'config_name': FEATURE_FLAGS_CONFIG
-    }, {
-        '$set': {
-            f'config.{FeatureFlagsNames.TrialEnd}':
-                (datetime(year=2020, month=1, day=31)).isoformat()[:10].replace('-', '/')
+    CoreService().db.plugins.gui.configurable_configs.update_config(
+        FEATURE_FLAGS_CONFIG,
+        {
+            FeatureFlagsNames.TrialEnd: (datetime(year=2020, month=1, day=31)).isoformat()[:10].replace('-', '/')
         }
-    })
+    )
     print(f'Done')
 
 

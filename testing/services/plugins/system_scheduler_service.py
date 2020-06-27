@@ -2,6 +2,8 @@ import sys
 
 import requests
 from retrying import retry
+
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION
 from axonius.consts.scheduler_consts import (Phases, SchedulerState,
                                              SCHEDULER_SAVE_HISTORY_CONFIG_NAME, SCHEDULER_CONFIG_NAME)
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR
@@ -114,7 +116,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
     def _update_schema_version_2(self):
         print('upgrade to schema 2')
         try:
-            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             current_config = config_collection.find_one({
                 'config_name': SCHEDULER_CONFIG_NAME
             })
@@ -156,7 +158,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
     def _update_schema_version_3(self):
         print('upgrade to schema 3')
         try:
-            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             config_match = {
                 'config_name': SCHEDULER_CONFIG_NAME
             }
@@ -202,7 +204,7 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
     def _update_schema_version_4(self):
         print(f'Upgrade to schema 4 - Save history')
         try:
-            config_collection = self.db.get_collection(self.plugin_name, 'configurable_configs')
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             config_match = {
                 'config_name': SCHEDULER_CONFIG_NAME
             }

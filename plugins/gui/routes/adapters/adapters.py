@@ -1,4 +1,5 @@
 import logging
+import re
 from collections import defaultdict
 import json
 import gridfs
@@ -11,8 +12,7 @@ from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_S
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
-                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION)
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME)
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
@@ -31,20 +31,18 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_category_add_rules('adapters')
 class Adapters(Connections):
 
-    @staticmethod
-    def _get_plugin_schemas(db_connection, plugin_unique_name):
+    def _get_plugin_schemas(self, plugin_name):
         """
         Get all schemas for a given plugin
-        :param db: a db connection
-        :param plugin_unique_name: the unique name of the plugin
+        :param plugin_name: the unique name of the plugin
         :return: dict
         """
 
-        clients_value = db_connection[plugin_unique_name]['adapter_schema'].find_one(sort=[('adapter_version',
-                                                                                            pymongo.DESCENDING)])
+        clients_value = self.plugins.get_plugin_settings(plugin_name).adapter_client_schema
+
         if clients_value is None:
             return {}
-        return {'schema': clients_value.get('schema')}
+        return {'schema': clients_value}
 
     @gui_route_logged_in(enforce_trial=False)
     def adapters(self):
@@ -188,7 +186,7 @@ class Adapters(Connections):
             if instance_metadata and instance_metadata.get('status', ACTIVATED_NODE_STATUS) == DEACTIVATED_NODE_STATUS:
                 continue
 
-            client_configuration_schema = self._get_plugin_schemas(db_connection, adapter_unique_name).get('schema')
+            client_configuration_schema = self._get_plugin_schemas(adapter[PLUGIN_NAME]).get('schema')
 
             # skip clients not properly configured or missing schema.
             if not client_configuration_schema:
@@ -230,7 +228,7 @@ class Adapters(Connections):
         for adapter in adapters_from_db:
             adapter_name = adapter[PLUGIN_UNIQUE_NAME]
 
-            schema = self._get_plugin_schemas(db_connection, adapter_name).get('schema')
+            schema = self._get_plugin_schemas(adapter[PLUGIN_NAME]).get('schema')
             nodes_metadata_collection = db_connection['core']['nodes_metadata']
 
             node_name = nodes_metadata_collection.find_one({
@@ -356,24 +354,32 @@ class Adapters(Connections):
         written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @staticmethod
-    def __extract_configs_and_schemas(db_connection, plugin_unique_name):
+    def __extract_configs_and_schemas(self, db_connection, plugin_unique_name):
         """
         Gets the configs and configs schemas in a nice way for a specific plugin
         """
+
+        if re.search(r'_(\d+)$', plugin_unique_name):
+            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+        else:
+            plugin_name = plugin_unique_name
+
         plugin_data = {}
-        schemas = list(db_connection[plugin_unique_name]['config_schemas'].find())
-        configs = list(db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find())
-        for schema in schemas:
-            associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
+        schemas = self.plugins.get_plugin_settings(plugin_name).config_schemas.get_all()
+        configs = self.plugins.get_plugin_settings(plugin_name).configurable_configs.get_all()
+
+        for schema_config_name, schema in schemas.items():
+            associated_config = [(name, config) for name, config in configs.items() if name == schema_config_name]
             if not associated_config:
                 logger.error(f'Found schema without associated config for {plugin_unique_name}' +
-                             f' - {schema["config_name"]}')
+                             f' - {schema_config_name}')
                 continue
             associated_config = associated_config[0]
-            plugin_data[associated_config['config_name']] = {
-                'schema': schema['schema'],
-                'config': associated_config['config']
+
+            associated_config_name, associated_config_config = associated_config
+            plugin_data[associated_config_name] = {
+                'schema': schema,
+                'config': associated_config_config
             }
         return plugin_data
 
@@ -384,14 +390,8 @@ class Adapters(Connections):
         self._adapter_advanced_config_schema.clean_cache()
         if response != '':
             return response
-        unique_names = self.request_remote_plugin(f'find_plugin_unique_name/nodes/None/plugins/{adapter_name}').json()
-        if not unique_names:
-            return response
-        config_schema = self._get_collection('config_schemas', unique_names[0]).find_one({
-            'config_name': config_name
-        }, {
-            'schema.pretty_name': 1
-        })
+
+        config_schema = self.plugins.get_plugin_settings(adapter_name).config_schemas[config_name]
         return json.dumps({
-            'config_name': config_schema['schema'].get('pretty_name', '')
+            'config_name': config_schema.get('pretty_name', '')
         }) if config_schema else ''

@@ -13,8 +13,6 @@ from axonius.consts.gui_consts import (USERS_TOKENS_EMAIL_INVITE_SUBJECT,
                                        USERS_TOKENS_RESET_EMAIL_CONTENT,
                                        USERS_TOKENS_RESET_LINK, USER_NAME)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME,
                                           PASSWORD_NO_MEET_REQUIREMENTS_MSG,
                                           RESET_PASSWORD_LINK_EXPIRATION,
                                           RESET_PASSWORD_SETTINGS)
@@ -167,8 +165,7 @@ class UserToken:
         return jsonify({USER_NAME: user.get(USER_NAME, '')})
 
     def _send_reset_password_email(self, link, email_address, invite: bool = False, user_name: str = None):
-        core_config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-            {'config_name': CORE_CONFIG_NAME})['config']
+        core_config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME]
         expire_hours = core_config.get(RESET_PASSWORD_SETTINGS).get(RESET_PASSWORD_LINK_EXPIRATION)
         if self.mail_sender:
             try:

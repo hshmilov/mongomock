@@ -19,7 +19,8 @@ from axonius.utils.mongo_administration import get_collection_storage_size, crea
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 from services.plugin_service import API_KEY_HEADER, PluginService
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH, \
+    CONFIGURABLE_CONFIGS_LEGACY_COLLECTION
 from axonius.consts.gui_consts import USERS_COLLECTION
 import requests
 
@@ -1040,7 +1041,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             cisco_ise_names = [doc[PLUGIN_UNIQUE_NAME] for doc in cisco_ise_adapters]
             for plugin_unique_name in cisco_ise_names:
                 if self.db.client[plugin_unique_name]['clients'].find_one():
-                    self.db.client[plugin_unique_name]['configurable_configs'].update_one(
+                    self.db.client[plugin_unique_name][CONFIGURABLE_CONFIGS_LEGACY_COLLECTION].update_one(
                         {"config_name": "CiscoIseAdapter"},
                         {'$set': {'config': {'fetch_endpoints': True}}}
                     )

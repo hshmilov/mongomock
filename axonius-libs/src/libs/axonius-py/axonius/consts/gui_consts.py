@@ -73,6 +73,7 @@ class ResearchStatus(Enum):
 
 
 CONFIG_CONFIG = 'GuiService'
+GUI_CONFIG_NAME = 'GuiService'  # duplicate of the above because i'd like to have a normal name
 FEATURE_FLAGS_CONFIG = 'FeatureFlags'
 
 LATEST_VERSION_URL = 'https://releases.pub.axonius.com/v1/latest-version-name'

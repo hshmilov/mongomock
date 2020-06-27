@@ -1,6 +1,5 @@
 import time
 import pytest
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
 from axonius.entities import EntityType
 from axonius.utils import datetime
@@ -29,9 +28,11 @@ class TestDashboardActions(TestBase):
     def test_dashboard_chart_edit(self):
 
         # enable unlimited timeline range feature flag
-        gui_configs_collection = self.axonius_system.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
-        gui_configs_collection.update_one(filter={'config_name': FEATURE_FLAGS_CONFIG},
-                                          update={'$set': {'config.query_timeline_range': True}}, upsert=True)
+        self.axonius_system.db.plugins.gui.configurable_configs.update_config(
+            FEATURE_FLAGS_CONFIG,
+            {'query_timeline_range': True},
+            upsert=True
+        )
 
         self.base_page.refresh()
 

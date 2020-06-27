@@ -53,9 +53,8 @@ class TestFeatureFlags(TestBase):
 
     def test_locked_actions(self):
         with CybereasonService().contextmanager(take_ownership=True):
-            db_locked_actions = self.axonius_system.db.gui_config_collection().find_one({
-                'config_name': FEATURE_FLAGS_CONFIG
-            })['config']['locked_actions']
+            db_locked_actions = self.axonius_system.db.plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG][
+                'locked_actions']
             assert not len(db_locked_actions)
 
             self.login_page.logout()

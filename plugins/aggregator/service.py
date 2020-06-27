@@ -13,7 +13,7 @@ from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
 from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS
+from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.gui_consts import ParallelSearch
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PARALLEL_ADAPTERS)
@@ -172,21 +172,19 @@ class AggregatorService(Triggerable, PluginBase):
         check_fetch_time = True
         for client_name in clients:
             try:
-                if any(x in adapter for x in RESET_BEFORE_CLIENT_FETCH_ADAPTERS):
-                    logger.info(f'Requesting adapter reload before fetch: {adapter}')
-                    # Make this adapter not re-evaluate the clients on the next run.
-                    self._get_collection(ADAPTER_SETTINGS, adapter).update_one(
-                        {
-                            SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
-                        },
-                        {
-                            '$set': {
-                                SHOULD_NOT_REFRESH_CLIENTS: True
-                            }
-                        },
-                        upsert=True
-                    )
-                    self._request_reload_uwsgi(adapter)
+                try:
+                    if any(x in adapter for x in RESET_BEFORE_CLIENT_FETCH_ADAPTERS):
+                        logger.info(f'Requesting adapter reload before fetch: {adapter}')
+                        # Make this adapter not re-evaluate the clients on the next run.
+                        adapter_plugin_name = '_'.join(adapter.split('_')[:-1])  # strip the number
+
+                        if adapter_plugin_name:
+                            adapter_plugin_settings = self.plugins.get_plugin_settings(adapter_plugin_name)
+                            adapter_plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS] = True
+
+                            self._request_reload_uwsgi(adapter)
+                except Exception:
+                    logger.exception(f'Could not request uwsgi reload for {adapter!r}')
 
                 data = self._trigger_remote_plugin(adapter, 'insert_to_db', data={
                     'client_name': client_name,

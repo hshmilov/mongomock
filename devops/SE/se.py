@@ -10,7 +10,7 @@ import subprocess
 
 import pymongo
 
-from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, ADAPTER_SETTINGS
+from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint
 from axonius.entities import EntityType
@@ -70,7 +70,7 @@ def usage():
                                                        will remove '_old' from all aws devices.
     {name} fields remove_dynamic [plugin_unique_name] - remove all dynamic fields of a certain plugin. requires a
                                                         restart and a refetch of the adapter for it to apply in gui! 
-    {name} disable_client_evaluation [adapter_unique_name] - disables client evaluation for the next run only
+    {name} disable_client_evaluation [adapter_name] - 'e.g. aws_adapter'. disable client evaluation for the next run
     {name} s3_backup - Trigger s3 backup
     {name} smb_backup - Trigger SMB backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
@@ -115,21 +115,21 @@ def main():
         return result
 
     if component == 'al':
-        for pun, pst in get_all_running_adapters_and_scanners().items():
-            print(f'{pun} - {pst}')
+        for plugin_name, pst in get_all_running_adapters_and_scanners().items():
+            print(f'{plugin_name} - {pst}')
 
     elif component == 'af':
-        pun = action
-        assert pun, usage()
-        assert pun in get_all_running_adapters_and_scanners().keys(), \
-            f'{pun} not running!'
+        plugin_name = action
+        assert plugin_name, usage()
+        assert plugin_name in get_all_running_adapters_and_scanners().keys(), \
+            f'{plugin_name} not running!'
 
-        print(f'Fetching & Rebuilding db (Blocking) for {pun}...')
+        print(f'Fetching & Rebuilding db (Blocking) for {plugin_name}...')
         try:
             blocking = sys.argv[3] != '--nonblock'
         except Exception:
             blocking = True
-        ag.query_devices(pun, blocking=blocking)
+        ag.query_devices(plugin_name, blocking=blocking)
 
     elif component == 'afc':
         if not action:
@@ -267,23 +267,11 @@ def main():
         print(f'Done!')
 
     elif component == 'disable_client_evaluation':
-        pun = action
-        assert pun, usage()
-        assert pun in get_all_running_adapters_and_scanners().keys(), \
-            f'{pun} not running!'
+        plugin_name = action
+        assert plugin_name, usage()
 
-        print(f'Disabling client evaluation for {pun}...')
-        ag.db.client[pun][ADAPTER_SETTINGS].update_one(
-            {
-                SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
-            },
-            {
-                '$set': {
-                    SHOULD_NOT_REFRESH_CLIENTS: True
-                }
-            },
-            upsert=True
-        )
+        print(f'Disabling client evaluation for {plugin_name}...')
+        ag.db.plugins.get_plugin_settings(plugin_name).plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS] = True
 
     elif component == 's3_backup':
         ss.trigger_s3_backup()

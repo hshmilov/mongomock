@@ -10,8 +10,8 @@ from flask import Response, request
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FeatureFlagsNames
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, CORE_UNIQUE_NAME, \
-    CONFIGURABLE_CONFIGS_COLLECTION, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_SETTINGS, \
+from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, \
+    TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_SETTINGS, \
     TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT, TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW
 from axonius.consts.system_consts import VPN_DATA_DIR_FROM_GUI
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
@@ -111,13 +111,12 @@ class Tunnel:
             return Response(json.dumps(self._get_tunnel_email_recipients()))
         new_emails = request.get_json()
         if isinstance(new_emails, list):
-            self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-                'config_name': 'CoreService'
-            }, {
-                '$set': {
-                    f'config.{TUNNEL_SETTINGS}.{TUNNEL_EMAILS_RECIPIENTS}': new_emails
+            self.plugins.core.configurable_configs.update_config(
+                CORE_CONFIG_NAME,
+                {
+                    f'{TUNNEL_SETTINGS}.{TUNNEL_EMAILS_RECIPIENTS}': new_emails
                 }
-            })
+            )
             return Response(True)
         return return_error('Emails received not in list format')
 
@@ -129,21 +128,20 @@ class Tunnel:
         try:
             post_data = request.get_json()
             if isinstance(post_data, dict):
-                self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-                    'config_name': 'CoreService'
-                }, {
-                    '$set': {
-                        f'config.{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.enabled': post_data['enabled'],
-                        f'config.{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_ADDR}': post_data[
+                self.plugins.core.configurable_configs.update_config(
+                    CORE_CONFIG_NAME,
+                    {
+                        f'{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.enabled': post_data['enabled'],
+                        f'{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_ADDR}': post_data[
                             TUNNEL_PROXY_ADDR],
-                        f'config.{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_PORT}': post_data[
+                        f'{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_PORT}': post_data[
                             TUNNEL_PROXY_PORT],
-                        f'config.{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_USER}': post_data[
+                        f'{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_USER}': post_data[
                             TUNNEL_PROXY_USER],
-                        f'config.{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_PASSW}': post_data[
+                        f'{TUNNEL_SETTINGS}.{TUNNEL_PROXY_SETTINGS}.{TUNNEL_PROXY_PASSW}': post_data[
                             TUNNEL_PROXY_PASSW]
                     }
-                })
+                )
                 self.log_activity_user(AuditCategory.PluginSettings, AuditAction.Post, {'config_name': 'Tunnel'})
                 return Response(True)
             return return_error('Tunnel settings schema not as requested', 400)
@@ -152,13 +150,12 @@ class Tunnel:
             return return_error('Problem in saving tunnel proxy settings', 400)
 
     def _get_tunnel_proxy_settings(self):
-        core_config = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).find_one(
-            {'config_name': 'CoreService'})['config']
+        core_config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME] or {}
         return core_config.get(TUNNEL_SETTINGS, {}).get(TUNNEL_PROXY_SETTINGS, None)
 
     def _get_tunnel_email_recipients(self):
-        email_recipients = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-            {'config_name': CORE_CONFIG_NAME})['config'].get(TUNNEL_SETTINGS, None)
+        core_config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME] or {}
+        email_recipients = core_config.get(TUNNEL_SETTINGS, None)
         if not email_recipients:
             return []
         return email_recipients.get(TUNNEL_EMAILS_RECIPIENTS, [])

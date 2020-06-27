@@ -7,9 +7,7 @@ from passlib.hash import bcrypt
 
 from axonius.consts import gui_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME,
-                                          GUI_PLUGIN_NAME)
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME
 from axonius.plugin_base import return_error
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.feature_flags import FeatureFlags
@@ -69,23 +67,20 @@ class Signup:
         signup_data[gui_consts.Signup.ConfirmNewPassword] = ''
 
         signup_collection.insert_one(signup_data)
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
-            'config_name': FeatureFlags.__name__
-        }, {
-            '$set': {
-                f'config.{gui_consts.FeatureFlagsNames.TrialEnd}':
+
+        self.plugins.gui.configurable_configs.update_config(
+            FeatureFlags.__name__,
+            {
+                gui_consts.FeatureFlagsNames.TrialEnd:
                     (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
             }
-        })
+        )
 
         # Reset this setting for new (version > 2.11) customers upon signup (Getting Started With Axonius Checklist)
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-            'config_name': CORE_CONFIG_NAME
-        }, {
-            '$set': {
-                f'config.{gui_consts.GETTING_STARTED_CHECKLIST_SETTING}.enabled': True
-            }
-        })
+        self.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {f'{gui_consts.GETTING_STARTED_CHECKLIST_SETTING}.enabled': True}
+        )
 
         # Update Getting Started Checklist to interactive mode (version > 2.10)
         self._get_collection('getting_started', GUI_PLUGIN_NAME).update_one({}, {

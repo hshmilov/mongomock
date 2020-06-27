@@ -24,6 +24,7 @@ from flask import session, g
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.saas.input_params import read_saas_input_params
 from axonius.saas.saas_secrets_manager import SaasSecretsManager
@@ -54,7 +55,7 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
                                           CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME,
-                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_COLLECTION,
+                                          DEFAULT_ROLE_ID,
                                           PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE,
                                           PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
                                           PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
@@ -171,9 +172,7 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 external_service[DEFAULT_ROLE_ID] = restricted_role_id
                 update_external_login_config = True
         if update_external_login_config:
-            config_collection = self._get_db_connection()[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
-            config_collection.replace_one(filter={'config_name': self.__class__.__name__}, replacement={
-                'config_name': self.__class__.__name__, 'config': config})
+            self.plugins.gui.configurable_configs[self.__class__.__name__] = config
 
         current_user = self._users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
@@ -338,58 +337,53 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
         logger.info('Initializing self-serve settings')
         # Set trial to 30 days from now
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
-            'config_name': FeatureFlags.__name__
-        }, {
-            '$set': {
-                f'config.{FeatureFlagsNames.TrialEnd}':
-                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+        self.plugins.gui.configurable_configs.update_config(
+            FeatureFlags.__name__,
+            {
+                FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
             }
-        })
+        )
 
         # Enable Tunnel feature flag automatically
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION).update_one({
-            'config_name': FeatureFlags.__name__
-        }, {
-            '$set': {
-                f'config.{FeatureFlagsNames.EnableSaaS}': True
+        self.plugins.gui.configurable_configs.update_config(
+            FeatureFlags.__name__,
+            {
+                FeatureFlagsNames.EnableSaaS: True
             }
-        })
+        )
 
         # Set password policy
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-            'config_name': 'CoreService'
-        }, {
-            '$set': {
-                f'config.{PASSWORD_SETTINGS}.enabled': True,
-                f'config.{PASSWORD_SETTINGS}.{PASSWORD_LENGTH_SETTING}': 10,
-                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_LOWERCASE}': 0,
-                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_UPPERCASE}': 0,
-                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_NUMBERS}': 0,
-                f'config.{PASSWORD_SETTINGS}.{PASSWORD_MIN_SPECIAL_CHARS}': 0
+
+        self.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {
+                f'{PASSWORD_SETTINGS}.enabled': True,
+                f'{PASSWORD_SETTINGS}.{PASSWORD_LENGTH_SETTING}': 10,
+                f'{PASSWORD_SETTINGS}.{PASSWORD_MIN_LOWERCASE}': 0,
+                f'{PASSWORD_SETTINGS}.{PASSWORD_MIN_UPPERCASE}': 0,
+                f'{PASSWORD_SETTINGS}.{PASSWORD_MIN_NUMBERS}': 0,
+                f'{PASSWORD_SETTINGS}.{PASSWORD_MIN_SPECIAL_CHARS}': 0
             }
-        })
+        )
 
         # Set password brute force protection
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-            'config_name': 'CoreService'
-        }, {
-            '$set': {
-                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.enabled': True,
-                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_ALLOWED_RETRIES}': 20,
-                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_LOCKOUT_MIN}': 5,
-                f'config.{PASSWORD_BRUTE_FORCE_PROTECTION}.conditional': PASSWORD_PROTECTION_BY_IP
+        self.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {
+                f'{PASSWORD_BRUTE_FORCE_PROTECTION}.enabled': True,
+                f'{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_ALLOWED_RETRIES}': 20,
+                f'{PASSWORD_BRUTE_FORCE_PROTECTION}.{PASSWORD_PROTECTION_LOCKOUT_MIN}': 5,
+                f'{PASSWORD_BRUTE_FORCE_PROTECTION}.conditional': PASSWORD_PROTECTION_BY_IP
             }
-        })
+        )
 
         # Set password reset link expiration to 1 week
-        self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME).update_one({
-            'config_name': 'CoreService'
-        }, {
-            '$set': {
-                f'config.{RESET_PASSWORD_SETTINGS}.{RESET_PASSWORD_LINK_EXPIRATION}': 168
+        self.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {
+                f'{RESET_PASSWORD_SETTINGS}.{RESET_PASSWORD_LINK_EXPIRATION}': 168
             }
-        })
+        )
 
         # Automatic signup
         random_password = random_string(32)

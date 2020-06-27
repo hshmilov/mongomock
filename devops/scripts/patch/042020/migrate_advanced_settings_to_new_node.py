@@ -1,5 +1,7 @@
 from testing.services.plugins import core_service
 
+CONFIGURABLE_CONFIGS_LEGACY = 'configurable_configs'
+
 
 def main():
     db = core_service.CoreService().db.client
@@ -8,7 +10,7 @@ def main():
     all_adapters_names = list(db['core']['configs'].find({'plugin_type': 'Adapter'}).distinct('plugin_name'))
 
     for plugin_name in all_adapters_names:
-        original_configurable_configs = list(db[f'{plugin_name}_0']['configurable_configs'].find({}))
+        original_configurable_configs = list(db[f'{plugin_name}_0'][CONFIGURABLE_CONFIGS_LEGACY].find({}))
         if not original_configurable_configs:
             # No settings for master adapter
             continue
@@ -18,12 +20,12 @@ def main():
         i = 1
         while True:
             new_db = db[f'{plugin_name}_{i}']
-            if not list(new_db['configurable_configs'].find({})):
+            if not list(new_db[CONFIGURABLE_CONFIGS_LEGACY].find({})):
                 # no such db
                 break
 
-            new_db['configurable_configs'].drop()
-            new_db['configurable_configs'].insert_many(original_configurable_configs)
+            new_db[CONFIGURABLE_CONFIGS_LEGACY].drop()
+            new_db[CONFIGURABLE_CONFIGS_LEGACY].insert_many(original_configurable_configs)
 
             if original_adapter_settings:
                 try:

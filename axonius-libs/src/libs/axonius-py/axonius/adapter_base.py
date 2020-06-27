@@ -27,8 +27,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from pymongo import ReturnDocument
 from retrying import retry
 
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS, SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL,\
-    CLIENT_ID, VAULT_PROVIDER, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS
+from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, CONNECTION_LABEL, \
+    CLIENT_ID, VAULT_PROVIDER, DEFAULT_PARALLEL_COUNT, MAX_ASYNC_FETCH_WORKERS, LAST_FETCH_TIME
 from axonius.consts.gui_consts import FeatureFlagsNames, ParallelSearch, ACTIVITY_PARAMS_COUNT
 from axonius.consts.metric_consts import Adapters
 from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
@@ -42,7 +42,7 @@ from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, \
     DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, INSTANCE_CONTROL_PLUGIN_NAME, \
-    GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, STATIC_ANALYSIS_SETTINGS, DEVICE_LOCATION_MAPPING, \
+    GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
     CSV_IP_LOCATION_FILE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
@@ -100,7 +100,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._clients_lock = RLock()
         self._clients = {}
         self._clients_collection = self._get_collection('clients')
-        self.__adapter_settings_collection = self._get_collection(ADAPTER_SETTINGS)
         self.__adapter_mock = AdapterMock(self)
 
         self._send_reset_to_ec()
@@ -109,15 +108,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._update_discovery_schema()
         self._set_clients_ids()
         # If set, we do not re-evaluate the clients connections
-        should_not_refresh_clients = self.__adapter_settings_collection.find_one(
-            {SHOULD_NOT_REFRESH_CLIENTS: True}) or dict()
-        if should_not_refresh_clients.get(SHOULD_NOT_REFRESH_CLIENTS) is True:
+        should_not_refresh_clients = self.plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS]
+        if should_not_refresh_clients is True:
+            del self.plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS]
             logger.info(f'Clients reevaluation: not evaluating')
-            self.__adapter_settings_collection.delete_one(
-                {
-                    SHOULD_NOT_REFRESH_CLIENTS: {'$exists': True}
-                }
-            )
         else:
             self._prepare_parsed_clients_config(False)
 
@@ -138,16 +132,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     @property
     def __last_fetch_time(self) -> Optional[datetime]:
-        last_fetch_time = self.__adapter_settings_collection.find_one({'last_fetch_time': {'$exists': True}}) or {}
-        return last_fetch_time.get('last_fetch_time')
+        return self.plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
 
     @__last_fetch_time.setter
     def __last_fetch_time(self, val: datetime):
-        self.__adapter_settings_collection.update_one(
-            {'last_fetch_time': {'$exists': True}},
-            {'$set': {'last_fetch_time': val}},
-            upsert=True
-        )
+        self.plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME] = val
 
     def _on_config_update(self, config):
         logger.info(f'Loading AdapterBase config: {config}')
@@ -1569,8 +1558,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param device: a Device dict
         :return: Device with location in its network interfaces
         """
-        static_analysis_settings = self.core_configurable_configs.find_one({})['config'].get(
-            STATIC_ANALYSIS_SETTINGS, None)
+        static_analysis_settings = self._static_analysis_settings
         if static_analysis_settings and static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get('enabled') and \
                 static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get(CSV_IP_LOCATION_FILE):
 
@@ -1825,16 +1813,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         This logic is ran when the adapter starts
         :return:
         """
-        db_connection = self._get_db_connection()
-        collection = db_connection[self.plugin_unique_name]['adapter_schema']
-        collection.replace_one(filter={
-            'adapter_name': self.plugin_unique_name,
-            'adapter_version': self.version
-        }, replacement={
-            'adapter_name': self.plugin_unique_name,
-            'adapter_version': self.version,
-            'schema': schema
-        }, upsert=True)
+        self.plugin_settings.adapter_client_schema = schema
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType,
                                plugin_identity: Tuple[str, str, str]):

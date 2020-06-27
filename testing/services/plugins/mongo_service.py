@@ -6,10 +6,11 @@ import psutil
 import pymongo
 from retrying import retry
 
+from axonius.modules.axonius_plugins import AxoniusPlugins
 from axonius.plugin_base import EntityType
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION, CORE_UNIQUE_NAME, REPORTS_PLUGIN_NAME,
+                                          CORE_UNIQUE_NAME, REPORTS_PLUGIN_NAME,
                                           REPORTS_CONFIG_COLLECTION)
 from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
@@ -42,6 +43,7 @@ class MongoService(SystemService, WeaveService):
 
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
+        self.plugins = AxoniusPlugins(self.client)
 
     @property
     def exposed_ports(self):
@@ -261,9 +263,6 @@ class MongoService(SystemService, WeaveService):
     def gui_users_preferences_collection(self):
         return self.client[GUI_PLUGIN_NAME][USERS_PREFERENCES_COLLECTION]
 
-    def gui_config_collection(self):
-        return self.client[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
-
     def remove_gui_dynamic_fields(self, entity_type: EntityType):
         fields_collection_name = 'users_fields' if (entity_type == EntityType.Users) else 'devices_fields'
         fields_collection = self.client[AGGREGATOR_PLUGIN_NAME][fields_collection_name]
@@ -315,12 +314,8 @@ class MongoService(SystemService, WeaveService):
             return False
         return getting_started_doc.get('settings', {}).get('autoOpen', False)
 
-    def core_configurable_config_collection(self):
-        return self.client[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
-
-    def core_settings_getting_started(self):
-        config = self.core_configurable_config_collection().find_one(
-            {'config_name': CORE_CONFIG_NAME}).get('config', {})
+    def core_settings_getting_started(self) -> bool:
+        config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME] or {}
         return config.get(GETTING_STARTED_CHECKLIST_SETTING, {}).get('enabled', False)
 
     def enforcements_collection(self):

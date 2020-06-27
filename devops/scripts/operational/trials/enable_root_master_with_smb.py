@@ -1,7 +1,6 @@
-#!/home/ubuntu/cortex/pyrun.sh
 import sys
 
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, RootMasterNames
 from testing.services.plugins.core_service import CoreService
 
 
@@ -9,7 +8,8 @@ def main():
     CoreService().db.plugins.gui.configurable_configs.update_config(
         FEATURE_FLAGS_CONFIG,
         {
-            FeatureFlagsNames.TrialEnd: ''
+            f'{RootMasterNames.root_key}.{RootMasterNames.enabled}': True,
+            f'{RootMasterNames.root_key}.{RootMasterNames.SMB_enabled}': True
         }
     )
     print(f'Done')

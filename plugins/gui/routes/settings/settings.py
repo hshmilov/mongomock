@@ -6,7 +6,7 @@ from flask import (jsonify,
                    request)
 
 from axonius.consts.gui_consts import (TEMP_MAINTENANCE_THREAD_ID)
-from axonius.consts.plugin_consts import (SYSTEM_SCHEDULER_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
+from axonius.consts.plugin_consts import (SYSTEM_SCHEDULER_PLUGIN_NAME)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.datetime import time_from_now
@@ -41,11 +41,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
 
         :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
         """
-        history_setting = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, SYSTEM_SCHEDULER_PLUGIN_NAME).find_one({
-            'config_name': SCHEDULER_CONFIG_NAME
-        }, {
-            f'config.discovery_settings.{SCHEDULER_SAVE_HISTORY_CONFIG_NAME}': 1
-        })
+        history_setting = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
         return jsonify({
             'system': self._system_settings,
             'global': {
@@ -57,7 +53,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
                 'passwordManagerEnabled': self._vault_settings['enabled'],
                 'customerId': self.node_id,
-                'historyEnabled': (history_setting['config']['discovery_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME]
+                'historyEnabled': (history_setting['discovery_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME]
                                    if history_setting else False)
             }
         })

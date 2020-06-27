@@ -16,8 +16,9 @@ from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
 
 from axonius.saas.input_params import read_saas_input_params
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames,\
-    DASHBOARD_SPACE_TYPE_CUSTOM, CONFIG_CONFIG
+from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, \
+    DASHBOARD_SPACE_TYPE_CUSTOM, GUI_CONFIG_NAME
 from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
                                           PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME,
                                           PASSWORD_SETTINGS)
@@ -294,23 +295,21 @@ class TestBase:
         self.axonius_system.db.restore_gui_entity_views(EntityType.Users)
         self.axonius_system.db.restore_gui_entity_views(EntityType.Devices)
 
-        self.axonius_system.db.gui_config_collection().update_one({
-            'config_name': FEATURE_FLAGS_CONFIG
-        }, {
-            '$set': {
-                f'config.{FeatureFlagsNames.TrialEnd}':
-                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+        self.axonius_system.db.plugins.gui.configurable_configs.update_config(
+            FEATURE_FLAGS_CONFIG,
+            {
+                FeatureFlagsNames.TrialEnd: (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
             }
-        })
-        self.axonius_system.db.core_configurable_config_collection().update_one({
-            'config_name': 'CoreService'
-        }, {
-            '$set': {
-                f'config.{PASSWORD_SETTINGS}.enabled': False
-            }
-        })
+        )
 
-        self.axonius_system.db.gui_config_collection().delete_one({'config_name': CONFIG_CONFIG})
+        self.axonius_system.db.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {
+                f'{PASSWORD_SETTINGS}.enabled': False
+            }
+        )
+
+        self.axonius_system.db.plugins.gui.configurable_configs.delete_config(GUI_CONFIG_NAME)
         self.axonius_system.gui.update_config()
 
     def change_base_url(self, new_url):

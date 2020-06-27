@@ -21,7 +21,6 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        PRIVATE_FIELD)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
                                           DEVICE_VIEWS,
                                           USER_VIEWS,
                                           GUI_PLUGIN_NAME,
@@ -32,7 +31,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           LIBS_PATH,
                                           AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
-                                          DEFAULT_ROLE_ID)
+                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
                                        deserialize_db_permissions as old_deserialize_db_permissions)
@@ -312,13 +311,13 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 'config_name': CONFIG_CONFIG
             }
             current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
             if current_config:
                 current_config_google = current_config['config']['google_login_settings']
                 if current_config_google.get('client_id'):
                     current_config_google['client'] = current_config_google['client_id']
                     del current_config_google['client_id']
-                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
                         config_match, current_config)
 
             self.db_schema_version = 4
@@ -384,13 +383,13 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 'config_name': CONFIG_CONFIG
             }
             current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
             if current_config:
                 current_config_okta = current_config['config']['okta_login_settings']
                 if current_config_okta.get('gui_url'):
                     current_config_okta['gui2_url'] = current_config_okta['gui_url']
                     del current_config_okta['gui_url']
-                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
                         config_match, current_config)
             self.db_schema_version = 6
         except Exception as e:
@@ -488,7 +487,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
     def _update_schema_version_10(self):
         print('Upgrade to schema 10')
-        self._update_default_locked_actions(['tenable_io_add_ips_to_target_group'])
+        self._update_default_locked_actions_legacy(['tenable_io_add_ips_to_target_group'])
         self.db_schema_version = 10
 
     def _update_schema_version_11(self):
@@ -502,7 +501,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_schema_version_12(self):
         print('Upgrade to schema 12')
         try:
-            self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+            self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
             dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
             dashboard_spaces_collection.insert_many([{
                 'name': DASHBOARD_SPACE_DEFAULT,
@@ -526,7 +525,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_schema_version_13(self):
         print('Upgrade to schema 13')
         try:
-            self._update_default_locked_actions(['sentinelone_initiate_scan_action'])
+            self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
             dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
             replace_result = dashboard_spaces_collection.replace_one({
                 'type': DASHBOARD_SPACE_TYPE_DEFAULT
@@ -581,7 +580,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
     def _update_schema_version_15(self):
         print('Upgrade to schema 15')
-        self._update_default_locked_actions(['tenable_io_create_asset'])
+        self._update_default_locked_actions_legacy(['tenable_io_create_asset'])
         self.db_schema_version = 15
 
     def _update_schema_version_16(self):
@@ -1035,11 +1034,11 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 'config_name': CONFIG_CONFIG
             }
             current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).find_one(config_match)
+                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
             if not current_config:
                 return
             current_config['config']['system_settings']['exactSearch'] = True
-            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).replace_one(
+            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
                 config_match, current_config)
             self.db_schema_version = 28
         except Exception as e:
@@ -1136,7 +1135,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 31')
         try:
-            self._migrate_old_users_and_roles()
+            self._migrate_old_users_and_roles_legacy()
             self.db_schema_version = 31
         except Exception as e:
             print(f'Exception while upgrading gui db to version 31. Details: {e}')
@@ -1150,7 +1149,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 32')
         try:
-            self._set_query_timeline_feature_flag()
+            self._set_query_timeline_feature_flag_legacy()
             self._fix_space_id_in_panels()
             self.db_schema_version = 32
         except Exception as e:
@@ -1174,11 +1173,11 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                         }
                     })
 
-    def _set_query_timeline_feature_flag(self):
+    def _set_query_timeline_feature_flag_legacy(self):
         """
         Set a default value for the Query Time-Line range FeatureFlag to be False for existing customers
         """
-        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one({
             'config_name': FEATURE_FLAGS_CONFIG
         }, {
             '$set': {'config.query_timeline_range': True}
@@ -1193,7 +1192,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         """
         print('Upgrade to schema 33')
         try:
-            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one({
                 'config_name': FEATURE_FLAGS_CONFIG
             }, {
                 '$set': {
@@ -1426,12 +1425,12 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 38. Details: {e}')
 
-    def _update_default_locked_actions(self, new_actions):
+    def _update_default_locked_actions_legacy(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
         locked_actions
         """
-        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION).update_one({
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one({
             'config_name': FEATURE_FLAGS_CONFIG
         }, {
             '$addToSet': {
@@ -1776,7 +1775,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             return None
         return hidden_user['_id']
 
-    def _migrate_old_users_and_roles(self):
+    def _migrate_old_users_and_roles_legacy(self):
         users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
         roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
         users_config_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_CONFIG_COLLECTION)
@@ -1811,7 +1810,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                     'config_name': CONFIG_CONFIG
                 }
                 config_collection = self.db.get_collection(
-                    GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION)
+                    GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
                 gui_config = config_collection.find_one(config_match)
                 if gui_config and gui_config.get('config'):
                     current_config = gui_config['config']
@@ -1822,7 +1821,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                         external_service[DEFAULT_ROLE_ID] = str(external_role_id)
 
                     self.db.get_collection(
-                        GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_COLLECTION) \
+                        GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION) \
                         .replace_one(filter=config_match,
                                      replacement={'config_name': CONFIG_CONFIG, 'config': current_config})
                 users_config_collection.drop()

@@ -37,7 +37,7 @@ def test_execution_modules(
     # Step 1, Run a cycle without execution to check how it acts.
     # We set execution to disabled while enabling pm. pm should not work in that case.
     axonius_system = get_service()
-    axonius_system.core.set_config(
+    axonius_system.core.set_config_legacy(
         {
             'config.execution_settings.enabled': False,
             'config.execution_settings.pm_rpc_enabled': True,
@@ -67,7 +67,7 @@ def test_execution_modules(
     assert general_info_fixture.log_tester.is_str_in_log('Execution is disabled, not continuing', 5)
 
     # Step 2, Run a cycle with general info & pm status, and blacklist an ad device beforehand.
-    axonius_system.core.set_config(
+    axonius_system.core.set_config_legacy(
         {
             'config.execution_settings.enabled': True,
             'config.execution_settings.pm_rpc_enabled': True,
@@ -115,7 +115,7 @@ def test_execution_modules(
     # have execution or not, but we enable here execution just to check that pm doesn't work if execution is on
     # but pm not.
     # In this stage we also add esx so that we could have correlations.
-    axonius_system.core.set_config(
+    axonius_system.core.set_config_legacy(
         {
             'config.execution_settings.enabled': True,
             'config.execution_settings.pm_rpc_enabled': False,

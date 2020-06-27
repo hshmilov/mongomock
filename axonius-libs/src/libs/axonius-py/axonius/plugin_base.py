@@ -72,7 +72,7 @@ from axonius.consts.gui_consts import (CORRELATION_REASONS,
 from axonius.consts.plugin_consts import (
     ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
     ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME,
-    ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION, CONFIGURABLE_CONFIGS_COLLECTION,
+    ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION,
     CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM,
     CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
     CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
@@ -112,6 +112,7 @@ from axonius.logging.audit_helper import (AuditCategory, AuditAction, AuditType)
 from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
+from axonius.modules.axonius_plugins import AxoniusPlugins
 from axonius.plugin_exceptions import PluginNotFoundException, SessionInvalid
 from axonius.profiling.memory_tracing import run_memory_tracing
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelateException,
@@ -403,6 +404,8 @@ class PluginBase(Configurable, Feature, ABC):
                                         localthresholdms=1000, connect=False)
 
         PluginBase.Instance = self
+        self.plugins = AxoniusPlugins(self._get_db_connection())
+
         super().__init__(*args, **kwargs)
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
@@ -420,13 +423,13 @@ class PluginBase(Configurable, Feature, ABC):
         self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
         self.__adapter_base_directory = os.path.dirname(self.config_file_path)
         self.plugin_name = os.path.basename(self.__adapter_base_directory)
+        self.plugin_settings = self.plugins.get_plugin_settings(self.plugin_name)
         self.plugin_unique_name = None
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
-        self.core_configurable_configs = self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs']
         try:
-            self._current_feature_flag_config = self.feature_flags_config()
+            self._current_feature_flag_config = self.feature_flags_config() or {}
         except TypeError:
             # Probably first boot of core and feature flags didnt initialize yet
             self._current_feature_flag_config = {}
@@ -655,7 +658,6 @@ class PluginBase(Configurable, Feature, ABC):
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
         self.users = axonius.entities.UsersNamespace(self)
-
         self._namespaces = {
             EntityType.Users: self.users,
             EntityType.Devices: self.devices
@@ -1255,12 +1257,15 @@ class PluginBase(Configurable, Feature, ABC):
         }
 
     def filter_out_custom_discovery_adapters(self, adapters: List[dict]):
+        all_plugins_with_custom_discovery_enabled = self.plugins.get_plugin_names_with_config(
+            DISCOVERY_CONFIG_NAME,
+            {
+                ENABLE_CUSTOM_DISCOVERY: True
+            }
+        )
+
         for adapter in adapters:
-            config = self._get_db_connection()[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                'config_name': DISCOVERY_CONFIG_NAME,
-                f'config.{ENABLE_CUSTOM_DISCOVERY}': True
-            })
-            if not config:
+            if not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
                 yield adapter
 
     @singlethreaded()
@@ -3090,8 +3095,7 @@ class PluginBase(Configurable, Feature, ABC):
     def __renew_global_settings_from_db(self):
         # pylint: disable=global-statement,invalid-name
         global limiter_settings
-        config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-            {'config_name': CORE_CONFIG_NAME})['config']
+        config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME]
         # pylint: disable=invalid-name
         self._email_settings = config['email_settings']
         self._getting_started_settings = config[GETTING_STARTED_CHECKLIST_SETTING]
@@ -3121,6 +3125,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._smb_settings = config.get('smb_settings') or {}
+        self._static_analysis_settings = config.get(STATIC_ANALYSIS_SETTINGS) or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
         self.update_fips_status()
 
@@ -3247,7 +3252,8 @@ class PluginBase(Configurable, Feature, ABC):
 
     def update_fips_status(self):
         try:
-            if self.feature_flags_config().get(FeatureFlagsNames.EnableFIPS, False):
+            feature_flags_config = self.feature_flags_config()
+            if feature_flags_config and feature_flags_config.get(FeatureFlagsNames.EnableFIPS, False):
                 MongoEncrypt.enable_fips()
             else:
                 MongoEncrypt.disable_fips()
@@ -3256,9 +3262,7 @@ class PluginBase(Configurable, Feature, ABC):
             MongoEncrypt.disable_fips()
 
     def feature_flags_config(self) -> dict:
-        return self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME).find_one({
-            'config_name': FEATURE_FLAGS_CONFIG
-        })['config']
+        return self.plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG]
 
     @staticmethod
     def _compliance_expired(expiry_date):

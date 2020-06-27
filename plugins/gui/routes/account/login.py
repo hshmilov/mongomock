@@ -19,11 +19,9 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE,
-                                       PREDEFINED_ROLE_RESTRICTED)
+                                       PREDEFINED_ROLE_RESTRICTED, GUI_CONFIG_NAME)
 from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          GUI_PLUGIN_NAME)
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
@@ -202,9 +200,8 @@ class Login:
         :return: None
         """
         db_connection = self._get_db_connection()
-        config_collection = db_connection[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION]
         config_name = f'{source}_login_settings'
-        config = config_collection.find_one({'config_name': f'GuiService'}, {f'config.{config_name}': 1})['config']
+        config = self.plugins.gui.configurable_configs[GUI_CONFIG_NAME]
         default_role_id = None
         if config and config.get(config_name):
             default_role_id = config.get(config_name).get('default_role_id')

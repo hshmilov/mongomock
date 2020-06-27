@@ -21,19 +21,17 @@ from flask import jsonify
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS
-from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.adapter_consts import LAST_FETCH_TIME
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          CORE_UNIQUE_NAME,
+from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           GENERAL_INFO_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME,
                                           REPORTS_PLUGIN_NAME,
                                           STATIC_ANALYSIS_PLUGIN_NAME,
-                                          STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION, AGGREGATION_SETTINGS,
-                                          UPDATE_CLIENTS_STATUS, GUI_PLUGIN_NAME, DISCOVERY_CONFIG_NAME,
+                                          STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION,
+                                          GUI_PLUGIN_NAME, DISCOVERY_CONFIG_NAME,
                                           ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON,
                                           DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME)
@@ -137,7 +135,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         )
         self._correlation_scheduler.start()
         self.configure_correlation_scheduler()
-        self.plugin_settings = self._get_collection('plugin_settings')
+        self.system_scheduler_plugin_settings = self._get_collection('plugin_settings')
 
     def run_correlations(self):
         if self.__correlation_lock.acquire(False):
@@ -157,12 +155,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Once a week, run 'detect correlation errors'
         :return:
         """
-        res = self.plugin_settings.find_one({'name': 'last_detect_correlation_errors_date'})
+        res = self.system_scheduler_plugin_settings.find_one({'name': 'last_detect_correlation_errors_date'})
         if res and (res['date'] + timedelta(days=7) > datetime.now()):
             # We need to run once a week only.
             logger.info(f'Not running detect correlation errors: last time it ran was {res["date"]}')
             return
-        self.plugin_settings.update_one(
+        self.system_scheduler_plugin_settings.update_one(
             {'name': 'last_detect_correlation_errors_date'},
             {
                 '$set': {
@@ -447,19 +445,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     )
                     logger.info(f'Adding initial job. Next run: {job.next_run_time}')
 
-    def update_global_settings(self):
-        try:
-            config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-                {'config_name': CORE_CONFIG_NAME})['config']
-            self._update_adapters_clients_periodically = config[AGGREGATION_SETTINGS].get(UPDATE_CLIENTS_STATUS, False)
-        except KeyError:
-            logger.warning('Desired key was not found in core config', exc_info=True)
-            self._update_adapters_clients_periodically = False
-
     def _global_config_updated(self):
         try:
             self.configure_correlation_scheduler()
-            self.update_global_settings()
         except Exception:
             logger.exception(f'Failed updating correlation scheduler settings')
 
@@ -753,20 +741,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.exception(f'Could not run backup phase')
 
     def __get_all_realtime_adapters(self):
-        db_connection = self._get_db_connection()
+        names = self.plugins.get_plugin_names_with_config(AdapterBase.__name__, {'realtime_adapter': True})
         for adapter in self.core_configs_collection.find(
                 {
                     'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
                 }
         ):
-            config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                'config_name': AdapterBase.__name__
-            })
-            if config:
-                config = config.get('config')
-                if config:
-                    if config.get('realtime_adapter'):
-                        yield adapter
+
+            if adapter[PLUGIN_NAME] in names:
+                yield adapter
 
     # pylint: disable=too-many-return-statements
     @staticmethod
@@ -816,22 +799,23 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         Get adapters that has custom discovery settings and should be triggered right now
         :return:
         """
-        db_connection = self._get_db_connection()
+        all_plugins_with_custom_discovery_enabled = self.plugins.get_plugin_names_with_config(
+            DISCOVERY_CONFIG_NAME,
+            {
+                ENABLE_CUSTOM_DISCOVERY: True
+            }
+        )
+
         for adapter in self.core_configs_collection.find():
             try:
-                config = db_connection[adapter[PLUGIN_UNIQUE_NAME]][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                    'config_name': DISCOVERY_CONFIG_NAME,
-                    f'config.{ENABLE_CUSTOM_DISCOVERY}': True
-                })
-                if config:
-                    config = config.get('config')
-                    last_adapter_fetch_time = db_connection[adapter[PLUGIN_UNIQUE_NAME]][ADAPTER_SETTINGS].find_one({
-                        'last_fetch_time': {
-                            '$exists': True
-                        }
-                    }) or {}
-                    if self.should_run_custom_discovery(config, last_adapter_fetch_time.get('last_fetch_time')):
-                        yield adapter
+                if adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
+                    plugin_settings = self.plugins.get_plugin_settings(adapter[PLUGIN_NAME])
+                    config = plugin_settings.configurable_configs.discovery_configuration
+
+                    if config:
+                        last_adapter_fetch_time = plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
+                        if self.should_run_custom_discovery(config, last_adapter_fetch_time):
+                            yield adapter
             except Exception:
                 logger.exception(f'Error getting adapter {adapter[PLUGIN_UNIQUE_NAME]} custom discovery settings')
 

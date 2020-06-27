@@ -393,7 +393,7 @@ class APIMixin:
 
         :return: str
         """
-        config_obj, config_schema = self._get_plugin_configs(plugin_name=plugin_name, config_name=config_name)
+        config_obj, config_schema = self._get_plugin_configs(plugin_unique_name=plugin_name, config_name=config_name)
         return jsonify({'config': config_obj, 'schema': config_schema})
 
     def _api_update_settings(self, plugin_name, config_name):
@@ -401,7 +401,7 @@ class APIMixin:
 
         :return: str
         """
-        self._save_plugin_config(plugin_name=plugin_name, config_name=config_name)
+        self._save_plugin_config(plugin_unique_name=plugin_name, config_name=config_name)
         return self._api_get_settings_json(plugin_name=plugin_name, config_name=config_name)
 
     @api_add_rule(
@@ -1080,7 +1080,7 @@ class APIMixin:
                 count of all historical assets destroyed
 
         """
-        core_config, _ = self._get_plugin_configs(plugin_name='core', config_name='CoreService')
+        core_config, _ = self._get_plugin_configs(plugin_unique_name='core', config_name='CoreService')
         api_settings = core_config.get('api_settings', {})
         destroy_enabled = api_settings.get('enable_destroy', False)
 
@@ -1474,7 +1474,7 @@ class APIMixin:
 
         :return: dict or str
         """
-        config_obj, config_schema = self._get_plugin_configs(plugin_name=plugin_name, config_name=config_name)
+        config_obj, config_schema = self._get_plugin_configs(plugin_unique_name=plugin_name, config_name=config_name)
         return jsonify({'config': config_obj, 'schema': config_schema})
 
     @api_add_rule(
@@ -1487,7 +1487,7 @@ class APIMixin:
 
         :return: dict or str
         """
-        return self._save_plugin_config(plugin_name=plugin_name, config_name=config_name)
+        return self._save_plugin_config(plugin_unique_name=plugin_name, config_name=config_name)
 
     @api_add_rule('adapters/<adapter_name>/clients', methods=['PUT', 'POST'], required_permission=PermissionValue.get(
         None, PermissionCategory.Adapters, PermissionCategory.Connections))

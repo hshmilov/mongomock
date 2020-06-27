@@ -10,7 +10,7 @@ class TestAdministration(TestBase):
         self.dashboard_page.switch_to_page()
         assert self.dashboard_page.find_trial_remainder_banner(30)
         self.administration_page.switch_to_page()
-        self.administration_page.upload_configuration_script('remove_trial.py.tar')
+        self.administration_page.upload_configuration_script('remove_trial_v2.py.tar')
         self.administration_page.execute_configuration_script()
         self.dashboard_page.switch_to_page()
         wait_until(self._check_no_trial_banner, interval=10)

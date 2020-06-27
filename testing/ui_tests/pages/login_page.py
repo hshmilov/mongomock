@@ -40,6 +40,7 @@ class LoginPage(Page):
 
         if wait_for_getting_started and self.test_base.should_getting_started_open():
             self.make_getting_started_disappear()
+            print(f'Successfully marked getting started disappear')
 
     def fill_username(self, username):
         self.fill_text_field_by_element_id(self.LOGIN_USERNAME_ID, username)

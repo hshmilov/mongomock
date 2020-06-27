@@ -53,7 +53,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           AXONIUS_DNS_SUFFIX,
                                           NODE_HOSTNAME,
                                           NODE_USE_AS_ENV_NAME,
-                                          NODE_IP_LIST, CONFIGURABLE_CONFIGS_COLLECTION, AXONIUS_SETTINGS_DIR_NAME,
+                                          NODE_IP_LIST, AXONIUS_SETTINGS_DIR_NAME,
                                           CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
@@ -676,12 +676,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 # better weave/aod support.
                 plugin_unique_name = found_document[PLUGIN_UNIQUE_NAME]
 
-                is_rt_adapter = self.mongo_client[plugin_unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one(
-                    {
-                        'config_name': 'AdapterBase',
-                        'config.realtime_adapter': True
-                    }
-                )
+                adapter_settings = self.plugins.get_plugin_settings(
+                    plugin_name).configurable_configs.adapter_configuration
+
+                is_rt_adapter = adapter_settings and adapter_settings.get('realtime_adapter') is True
 
                 if not is_rt_adapter and self.mongo_client[plugin_unique_name]['clients'].count_documents({}) > 0:
                     logger.info(f'Plugin {plugin_unique_name} has clients, do not run quick register')
@@ -730,16 +728,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
             plugin_unique_name = response_dict[PLUGIN_UNIQUE_NAME]
             empty_instance.plugin_unique_name = plugin_unique_name
+            empty_instance.plugins = self.plugins
+            empty_instance.plugin_settings = self.plugins.get_plugin_settings(plugin_name)
 
-            adapter_db = self.mongo_client[plugin_unique_name]
-
-            adapter_db['adapter_schema'].replace_one({
-                'adapter_name': plugin_unique_name
-            }, {
-                'adapter_name': plugin_unique_name,
-                'adapter_version': '%version%',  # leftover
-                'schema': clients_schema
-            }, upsert=True)
+            self.plugins.get_plugin_settings(plugin_name).adapter_client_schema = clients_schema
 
             # Insert configurable to DB
             # If this fails, we need to actually raise the adapter

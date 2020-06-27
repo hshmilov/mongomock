@@ -5,13 +5,12 @@ from testing.services.plugins.core_service import CoreService
 
 
 def main():
-    CoreService().db.gui_config_collection().update_one({
-        'config_name': FEATURE_FLAGS_CONFIG
-    }, {
-        '$set': {
-            f'config.{FeatureFlagsNames.ReenterCredentials}': True
+    CoreService().db.plugins.gui.configurable_configs.update_config(
+        FEATURE_FLAGS_CONFIG,
+        {
+            FeatureFlagsNames.ReenterCredentials: True
         }
-    })
+    )
     print(f'Done')
 
 

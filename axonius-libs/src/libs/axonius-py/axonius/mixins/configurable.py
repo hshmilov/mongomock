@@ -1,8 +1,6 @@
 import logging
 from typing import Dict, Iterable, Tuple
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -69,32 +67,22 @@ class Configurable(object):
         """
         Fetch all configs from the DB and update the classes
         """
-        configs = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION)
+        plugin_configs = self.plugin_settings.configurable_configs
 
         for inheritor in type(self).__recurse_tree(type(self)):
             if not does_method_belongs_to_class(inheritor._db_config_schema, inheritor):
                 # Classes without a db_scheme aren't expecting a config
                 continue
 
-            from_db = configs.find_one({
-                'config_name': inheritor.__name__
-            })
+            from_db = plugin_configs[inheritor.__name__]
+
             if from_db is None:
                 logger.info("Configs are corrupted")
                 logger.info(f"Can't find log for {inheritor.__name__}! Inserting default!")
-                configs.update_one(filter={
-                    'config_name': inheritor.__name__
-                },
-                    update={
-                        "$setOnInsert": {
-                            'config_name': inheritor.__name__,
-                            'config': inheritor._db_config_default()
-                        }
-                },
-                    upsert=True)
+                plugin_configs[inheritor.__name__] = inheritor._db_config_default()
                 config_to_save = inheritor._db_config_default()
             else:
-                config_to_save = from_db['config']
+                config_to_save = from_db
 
             # Call _on_config_update on the class if it was implemented
             if does_method_belongs_to_class(inheritor._on_config_update, inheritor):
@@ -161,52 +149,30 @@ class Configurable(object):
         :param config_default: schema default values
         :return:
         """
-        schemas = self._get_collection("config_schemas")
-        configs = self._get_collection(CONFIGURABLE_CONFIGS_COLLECTION)
-        old_schema = schemas.find_one_and_replace(filter={
-            'config_name': config_name,
-        }, replacement={
-            'config_name': config_name,
-            'schema': config_schema
-        }, upsert=True) or {}
-        old_schema = old_schema.get('schema')
+        plugin_configs = self.plugin_settings.configurable_configs
+
+        old_schema = self.plugin_settings.config_schemas[config_name] or {}
+        self.plugin_settings.config_schemas[config_name] = config_schema
 
         if old_schema == config_schema:
             # if the schema didn't change it means we don't override the current config with the
             # default config.
 
             # insert if nonexistent
-            configs.update_one(filter={
-                'config_name': config_name
-            },
-                update={
-                    "$setOnInsert": {
-                        'config_name': config_name,
-                        'config': config_default
-                    }
-            },
-                upsert=True)
+            if plugin_configs[config_name] is None:
+                plugin_configs[config_name] = config_default
         else:
             # if the schema did change it is likely that the old config isn't compatible so we must fix
             # it according to schema
-            previous_config = configs.find_one(filter={
-                'config_name': config_name
-            }) or {}
-            previous_config = previous_config.get('config')
+            previous_config = plugin_configs[config_name]
             if previous_config:
                 previous_config = self.__try_automigrate_config_schema(config_schema,
                                                                        previous_config,
                                                                        config_default)
             else:
                 previous_config = config_default
-            configs.replace_one(filter={
-                'config_name': config_name
-            },
-                replacement={
-                    'config_name': config_name,
-                    'config': previous_config
-            },
-                upsert=True)
+
+            plugin_configs[config_name] = previous_config
 
     def _update_schema(self):
         """

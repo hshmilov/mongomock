@@ -1,5 +1,6 @@
 import csv
 import logging
+import re
 import urllib.parse
 import json
 
@@ -13,14 +14,13 @@ import requests
 from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
-from axonius.consts.adapter_consts import ADAPTER_SETTINGS
+from axonius.consts.adapter_consts import LAST_FETCH_TIME
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
-                                       CONFIG_CONFIG, RootMasterNames)
+                                       RootMasterNames, GUI_CONFIG_NAME)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
-                                          CONFIGURABLE_CONFIGS_COLLECTION,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
@@ -106,13 +106,19 @@ class Plugins:
             'schema': schema
         })
 
-    def _get_plugin_configs(self, config_name, plugin_name):
-        db_connection = self._get_db_connection()
-        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-        schema_collection = db_connection[plugin_name]['config_schemas']
-        schema = schema_collection.find_one({'config_name': config_name})['schema']
-        config = clear_passwords_fields(config_collection.find_one({'config_name': config_name})['config'],
-                                        schema)
+    def _get_plugin_configs(self, config_name, plugin_unique_name):
+        if re.search(r'_(\d+)$', plugin_unique_name):
+            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+        else:
+            plugin_name = plugin_unique_name
+
+        schema = self.plugins.get_plugin_settings(plugin_name).config_schemas[config_name]
+
+        config = clear_passwords_fields(
+            self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name],
+            schema
+        )
+
         return config, schema
 
     @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False,
@@ -121,31 +127,30 @@ class Plugins:
         response = self._save_plugin_config(plugin_name, config_name)
         if response:
             return response
-        config_schema = self._get_collection('config_schemas', plugin_name).find_one({
-            'config_name': config_name
-        }, {
-            'schema.pretty_name': 1
-        })
+
+        config_schema = self.plugins.get_plugin_settings(plugin_name).config_schemas[config_name]
         return json.dumps({
-            'config_name': config_schema['schema'].get('pretty_name', '')
+            'config_name': config_schema.get('pretty_name', '')
         }) if config_schema else ''
 
-    def _save_plugin_config(self, plugin_name, config_name):
+    def _save_plugin_config(self, plugin_unique_name, config_name):
         """
         Set a specific config on a specific plugin
         """
-        db_connection = self._get_db_connection()
-        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
+
+        if re.search(r'_(\d+)$', plugin_unique_name):
+            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+        else:
+            plugin_name = plugin_unique_name
+
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)
 
-        config_from_db = config_collection.find_one({
-            'config_name': config_name
-        })
+        config_from_db = self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name]
 
         if config_from_db:
-            config_to_set = refill_passwords_fields(config_to_set, config_from_db['config'])
+            config_to_set = refill_passwords_fields(config_to_set, config_from_db)
 
         if plugin_name == 'core' and config_name == CORE_CONFIG_NAME:
             email_settings = config_to_set.get('email_settings')
@@ -274,7 +279,7 @@ class Plugins:
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')
 
-            password_reset_config_from_db = config_from_db['config'].get(RESET_PASSWORD_SETTINGS)
+            password_reset_config_from_db = config_from_db.get(RESET_PASSWORD_SETTINGS)
             password_reset_config_to_set = config_to_set.get(RESET_PASSWORD_SETTINGS)
 
             if password_reset_config_from_db and password_reset_config_to_set \
@@ -285,12 +290,12 @@ class Plugins:
             log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING,
                        metric_value=getting_started_feature_enabled)
 
-        elif plugin_name == 'gui' and config_name == CONFIG_CONFIG:
+        elif plugin_name == 'gui' and config_name == GUI_CONFIG_NAME:
             user_settings_permission = self.get_user_permissions().get(PermissionCategory.Settings)
             if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and \
                     not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
                 for external_service in ['ldap_login_settings', 'okta_login_settings', 'saml_login_settings']:
-                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db['config']. \
+                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db. \
                         get(external_service, {}).get(DEFAULT_ROLE_ID)
 
             mutual_tls_settings = config_to_set.get('mutual_tls_settings')
@@ -323,7 +328,7 @@ class Plugins:
                     logger.error(f'Can not validate current client certificate with the uploaded CA', exc_info=True)
                     return return_error(f'Current client certificate can not be validated by the uploaded CA', 400)
 
-        self._update_plugin_config(plugin_name, config_name, config_to_set)
+        self._update_plugin_config(plugin_unique_name, config_name, config_to_set)
         return ''
 
     @staticmethod
@@ -352,14 +357,11 @@ class Plugins:
 
     @gui_route_logged_in('gui/FeatureFlags', methods=['GET'], enforce_trial=False, enforce_permissions=False)
     def get_feature_flags(self):
-        plugin_name = GUI_PLUGIN_NAME
         config_name = FeatureFlags.__name__
-        db_connection = self._get_db_connection()
-        config_collection = db_connection[plugin_name][CONFIGURABLE_CONFIGS_COLLECTION]
-        schema_collection = db_connection[plugin_name]['config_schemas']
+
         return jsonify({
-            'config': config_collection.find_one({'config_name': config_name})['config'],
-            'schema': schema_collection.find_one({'config_name': config_name})['schema']
+            'config': self.plugins.gui.configurable_configs[config_name],
+            'schema': self.plugins.gui.plugin_settings.config_schemas[config_name],
         })
 
     @gui_route_logged_in('gui/FeatureFlags', methods=['POST'], enforce_trial=False)
@@ -381,19 +383,7 @@ class Plugins:
 
     def _get_central_core_settings(self):
         """Get the current central core (root master) configuration settings."""
-        plugin_name = GUI_PLUGIN_NAME
-        collection_name = CONFIGURABLE_CONFIGS_COLLECTION
-        config_name = FeatureFlags.__name__
-        central_core_key = RootMasterNames.root_key
-        config_to_find = {'config_name': config_name}
-
-        db_connection = self._get_db_connection()
-        config_collection = db_connection[plugin_name][collection_name]
-        config_doc = config_collection.find_one(config_to_find)
-        config = config_doc['config']
-        config_to_return = config[central_core_key]
-
-        return jsonify(config_to_return)
+        return jsonify(self.plugins.gui.configurable_configs[FeatureFlags.__name__][RootMasterNames.root_key])
 
     def _update_central_core_settings(self):
         """Set the central core (root master) configuration settings."""
@@ -408,15 +398,10 @@ class Plugins:
         enabled = request_config['enabled']
 
         plugin_name = GUI_PLUGIN_NAME
-        collection_name = CONFIGURABLE_CONFIGS_COLLECTION
         config_name = FeatureFlags.__name__
         central_core_key = RootMasterNames.root_key
-        config_to_find = {'config_name': config_name}
 
-        db_connection = self._get_db_connection()
-        config_collection = db_connection[plugin_name][collection_name]
-        config_doc = config_collection.find_one(config_to_find)
-        config_original = config_doc['config']
+        config_original = self.plugins.gui.configurable_configs[config_name]
 
         config_to_set = {}
         config_to_set.update(copy.deepcopy(config_original))
@@ -434,29 +419,23 @@ class Plugins:
         self._update_plugin_config(plugin_name=plugin_name, config_name=config_name, config_to_set=config_to_set)
         return self._get_central_core_settings()
 
-    def _delete_last_fetch_on_discovery_change(self, plugin_unique_name, current_config, config_to_set):
+    def _delete_last_fetch_on_discovery_change(self, plugin_name, current_config, config_to_set):
         """
         Check adapter custom discovery time, if fetch time was changed, delete adapter last fetch time,
         for making the adapter's next custom discovery cycle happen on the same day.
-        :param plugin_unique_name: plugin unique name
+        :param plugin_name: plugin_name
         :param current_config: current adapter discovery config
         :param config_to_set: new config to set
         :return: None
         """
-        if not config_to_set or not current_config:
-            return
-        try:
-            db_connection = self._get_db_connection()
+        # If the settings we not changed, don't do anything
+        if current_config and config_to_set:
             if current_config.get(DISCOVERY_RESEARCH_DATE_TIME) == config_to_set.get(DISCOVERY_RESEARCH_DATE_TIME):
                 return
-            adapter_settings = db_connection[plugin_unique_name][ADAPTER_SETTINGS]
-            adapter_settings.delete_one({
-                'last_fetch_time': {
-                    '$exists': True
-                }
-            })
-        except Exception:
-            logger.error(f'Error deleting adapter last fetch time: {plugin_unique_name}', exc_info=True)
+
+        # Otherwise if the settings have changed somehow (whether thery are entirely new or they replace existing
+        # settings) delete the last fetch time.
+        del self.plugins.get_plugin_settings(plugin_name).plugin_settings_keyval[LAST_FETCH_TIME]
 
     def _update_plugin_config(self, plugin_name, config_name, config_to_set):
         """
@@ -467,26 +446,20 @@ class Plugins:
         :param config_name: To update
         :param config_to_set:
         """
-        db_connection = self._get_db_connection()
         if self.request_remote_plugin('register', params={'unique_name': plugin_name}).status_code != 200:
             unique_plugins_names = self.request_remote_plugin(
                 f'find_plugin_unique_name/nodes/None/plugins/{plugin_name}').json()
         else:
             unique_plugins_names = [plugin_name]
+
+        if config_name == DISCOVERY_CONFIG_NAME:
+            current_discovery = self.plugins.get_plugin_settings(plugin_name).configurable_configs[
+                DISCOVERY_CONFIG_NAME]
+            self._delete_last_fetch_on_discovery_change(plugin_name, current_discovery, config_to_set)
+
+        self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name] = config_to_set
+
         for current_unique_plugin in unique_plugins_names:
-            config_collection = db_connection[current_unique_plugin][CONFIGURABLE_CONFIGS_COLLECTION]
-            try:
-                if config_name == DISCOVERY_CONFIG_NAME:
-                    current_config = config_collection.find_one({
-                        'config_name': DISCOVERY_CONFIG_NAME
-                    })
-                    if current_config:
-                        self._delete_last_fetch_on_discovery_change(current_unique_plugin, current_config.get('config'),
-                                                                    config_to_set)
-            except Exception:
-                logger.error('Error checking discovery settings', exc_info=True)
-            config_collection.replace_one(filter={'config_name': config_name}, replacement={
-                'config_name': config_name, 'config': config_to_set})
             self.request_remote_plugin('update_config', current_unique_plugin, method='POST')
 
     @gui_route_logged_in('<plugin_unique_name>/<command>', methods=['POST'])

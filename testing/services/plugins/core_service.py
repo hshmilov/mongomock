@@ -12,14 +12,15 @@ from pymongo.collection import Collection
 from pymongo import UpdateOne
 
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, GUI_PLUGIN_NAME, \
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
     PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION, PASSWORD_MANGER_CYBERARK_VAULT, \
     PASSWORD_MANGER_ENUM, CYBERARK_DOMAIN, CYBERARK_CERT_KEY, PASSWORD_MANGER_THYCOTIC_SS_VAULT, THYCOTIC_SS_HOST, \
-    THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID,\
-    CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED
+    THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID, \
+    CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
+    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION
 
-from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE
+from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME
 from axonius.consts.core_consts import CORE_CONFIG_NAME, NotificationHookType, LINK_REGEX
 from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
@@ -66,7 +67,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 19:
             self._update_schema_version_19()
 
-        if self.db_schema_version != 19:
+        if self.db_schema_version < 20:
+            self._update_schema_version_20()
+
+        if self.db_schema_version != 20:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -106,7 +110,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             config_match = {
                 'config_name': CORE_CONFIG_NAME
             }
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             current_config = config_collection.find_one(config_match)
             if current_config:
                 maintenance_config = current_config['config'].get('maintenance_settings')
@@ -363,7 +367,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             config_match = {
                 'config_name': CORE_CONFIG_NAME
             }
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             current_config = config_collection.find_one(config_match)
             if current_config:
                 ssl_trust_setting = current_config['config'].get('ssl_trust_settings')
@@ -647,7 +651,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             })
             for ad_adapter in all_ad_adapters:
                 plugin_unique_name = ad_adapter.get(PLUGIN_UNIQUE_NAME)
-                config_collection = self.db.get_collection(plugin_unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
+                config_collection = self.db.get_collection(plugin_unique_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
                 current_config = config_collection.find_one(config_match)
                 if current_config:
                     ldap_exclude_config = current_config['config'].get('ldap_field_to_exclude')
@@ -893,7 +897,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             }
 
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_COLLECTION)
+            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
             current_config = config_collection.find_one(config_match)
 
             if current_config:
@@ -926,7 +930,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             # 1. get advanced settings
             for plugin_unique_name in nexpose_plugin_unique_names:
                 # Take the first one we find. It should be the same for all plugins
-                advanced_settings = self.db.client[plugin_unique_name]['configurable_configs'].find_one(
+                advanced_settings = self.db.client[plugin_unique_name][CONFIGURABLE_CONFIGS_LEGACY_COLLECTION].find_one(
                     {
                         'config_name': 'NexposeAdapter'
                     }
@@ -988,7 +992,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
 
             # After we have finished the clients changing let's remove the advanced config
             for plugin_unique_name in nexpose_plugin_unique_names:
-                self.db.client[plugin_unique_name]['configurable_configs'].remove(
+                self.db.client[plugin_unique_name][CONFIGURABLE_CONFIGS_LEGACY_COLLECTION].remove(
                     {
                         'config_name': 'NexposeAdapter'
                     }
@@ -997,6 +1001,88 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 19
         except Exception as e:
             print(f'Exception while upgrading core db to version 19. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_20(self):
+        print(f'Updating to schema version 20 - New Configuable Configs location')
+        try:
+            # To support the new format per-plugin settings, we have to move
+            # 1. Configurable Configs
+            # 2. Config Schemas
+            # 3. Adapter Settings
+            # 4. Adapter Schemas
+            #
+            # In case there are several adapters, we always prioritize the first one (_0)
+            # In case _0 doesn't exist (old systems) we take one of them
+            plugins_by_plugin_name = defaultdict(list)
+            for plugin_document in self.db.client[CORE_UNIQUE_NAME]['configs'].find(
+                    {},
+                    projection={PLUGIN_NAME: 1, PLUGIN_UNIQUE_NAME: 1}
+            ):
+                plugin_i_name = plugin_document.get(PLUGIN_NAME)
+                plugin_i_unique_name = plugin_document.get(PLUGIN_UNIQUE_NAME)
+                if not plugin_i_name or not plugin_i_unique_name:
+                    continue
+                plugins_by_plugin_name[plugin_i_name].append(plugin_i_unique_name)
+
+            for plugin_name, plugin_unique_names in plugins_by_plugin_name.items():
+                # give 0 priority, as it is usually the first one in the system
+                sorted_plugin_unique_names = sorted(plugin_unique_names)
+
+                # Take the first plugin that has configurable configs and assume it has the rest as well. This will
+                # be the one that we choose for all adapters.
+                chosen_plugin_unique_name = None
+                for sorted_plugin_unique_name_i in sorted_plugin_unique_names:
+                    plugin_configurable_configs = list(
+                        self.db.client[sorted_plugin_unique_name_i][CONFIGURABLE_CONFIGS_LEGACY_COLLECTION].find({})
+                    )
+                    if plugin_configurable_configs:
+                        chosen_plugin_unique_name = sorted_plugin_unique_name_i
+                        break
+
+                if not chosen_plugin_unique_name:
+                    continue
+
+                plugin_settings = self.db.plugins.get_plugin_settings(plugin_name)
+                chosen_plugin_unique_name_db = self.db.client[chosen_plugin_unique_name]
+                # Migrate configurable configs
+                for configurable_config in list(
+                        chosen_plugin_unique_name_db[CONFIGURABLE_CONFIGS_LEGACY_COLLECTION].find({})
+                ):
+                    if not configurable_config.get('config_name') or not configurable_config.get('config'):
+                        print(f'Exception while upgrading  - plugin {chosen_plugin_unique_name} has invalid cc')
+                        continue
+                    plugin_settings.configurable_configs[
+                        configurable_config['config_name']] = configurable_config['config']
+
+                # Migrate config schemas
+                for config_schema in list(
+                        chosen_plugin_unique_name_db[CONFIG_SCHEMAS_LEGACY_COLLECTION].find({})
+                ):
+                    if not config_schema.get('config_name') or not config_schema.get('schema'):
+                        print(f'Exception while upgrading  - plugin {chosen_plugin_unique_name} has invalid cs')
+                        continue
+                    plugin_settings.config_schemas[config_schema['config_name']] = config_schema['schema']
+
+                # Migrate adapter schema
+                adapter_schema = chosen_plugin_unique_name_db[ADAPTER_SCHEMA_LEGACY_COLLECTION].find_one({})
+                if adapter_schema:
+                    plugin_settings.adapter_client_schema = adapter_schema['schema']
+
+                # Migrate adapter settings
+                for adapter_settings in list(
+                        chosen_plugin_unique_name_db[ADAPTER_SETTINGS_LEGACY_COLLECTION].find({})
+                ):
+                    last_fetch_time = adapter_settings.get(LAST_FETCH_TIME)
+                    if last_fetch_time:
+                        plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME] = last_fetch_time
+                        break
+                print(f'Successfully migrated {plugin_name}')
+
+            self.db_schema_version = 20
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 20. Details: {e}')
             traceback.print_exc()
             raise
 
@@ -1040,8 +1126,8 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def get_registered_plugins(self):
         return self.register()
 
-    def set_config(self, config):
-        self.db.get_collection('core', CONFIGURABLE_CONFIGS_COLLECTION).update_one(
+    def set_config_legacy(self, config):
+        self.db.get_collection('core', CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one(
             {'config_name': CORE_CONFIG_NAME},
             {'$set': config}
         )

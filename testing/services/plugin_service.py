@@ -24,7 +24,7 @@ from retrying import retry
 from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_COLLECTION, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION, GUI_PLUGIN_NAME
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH, NODE_MARKER_PATH
 from axonius.entities import EntityType
@@ -103,13 +103,7 @@ class PluginService(WeaveService):
         self.core.trigger(job_name=f'start:{plugin_unique_name}', blocking=True, reschedulable=False)
 
     def feature_flags_config(self) -> dict:
-        try:
-            return self.db.client[GUI_PLUGIN_NAME][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-                'config_name': FEATURE_FLAGS_CONFIG
-            })['config']
-        except Exception:
-            # Gui probably didnt initialize yet
-            return None
+        return self.db.plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG]
 
     def _verify_plugin_is_up(self, plugin_unique_name: str):
         if plugin_unique_name == CORE_UNIQUE_NAME:
@@ -375,11 +369,9 @@ class PluginService(WeaveService):
         :param conf_name: The class name of the config to return
         :return: the config or None
         """
-        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-            'config_name': conf_name})
-        if config_bulk:
-            return config_bulk.get('config')
-        return None
+        # This prevents pytest from actually referencing the last line if the class was not yet initialized
+        _ = self.unique_name
+        return self.db.plugins.get_plugin_settings(self.plugin_name).configurable_configs[conf_name]
 
     def set_configurable_config(self, conf_name: str, specific_key: str, value=None):
         """
@@ -391,14 +383,14 @@ class PluginService(WeaveService):
         :param value
         :return: the config or None
         """
-        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].find_one({
-            'config_name': conf_name})
-        config_bulk = config_bulk['config']
-        config_bulk[specific_key] = value
-        self.db.client[self.unique_name][CONFIGURABLE_CONFIGS_COLLECTION].update_one({'config_name': conf_name},
-                                                                                     {"$set":
-                                                                                      {f"config."
-                                                                                       f"{specific_key}": value}})
+
+        self.db.plugins.get_plugin_settings(self.plugin_name).configurable_configs.update_config(
+            conf_name,
+            {
+                specific_key: value
+            }
+        )
+
         self._verify_plugin_is_up(self.unique_name)
         self.update_config()
 

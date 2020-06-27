@@ -10,13 +10,13 @@ from multiprocessing.pool import ThreadPool
 
 import pytest
 
+from axonius.consts.gui_consts import GUI_CONFIG_NAME
 from axonius.utils.json import from_json
 from conf_tools import TUNNELED_ADAPTERS
 from scripts.instances.network_utils import (get_encryption_key,
                                              restore_master_connection, get_weave_subnet_ip_range,
                                              get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
-from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS_COLLECTION,
-                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
@@ -708,18 +708,24 @@ class AxoniusService:
         return short_name[:-len('_service.py')]
 
     def set_system_settings(self, settings_dict):
-        settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
-        settings.update_one(filter={'config_name': 'GuiService'},
-                            update={'$set': {f'config.{SYSTEM_SETTINGS}': settings_dict}})
+        self.db.plugins.gui.configurable_configs.update_config(
+            GUI_CONFIG_NAME,
+            {
+                SYSTEM_SETTINGS: settings_dict
+            }
+        )
 
     def add_view(self, view_params):
         views = self.db.get_collection(self.gui.unique_name, 'device_views')
         views.insert_one(view_params)
 
     def set_research_rate(self, rate):
-        settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS_COLLECTION)
-        settings.update_one(filter={'config_name': SCHEDULER_CONFIG_NAME},
-                            update={'$set': {'config.system_research_rate': rate}})
+        self.db.plugins.system_scheduler.configurable_configs.update_config(
+            SCHEDULER_CONFIG_NAME,
+            {
+                'system_research_rate': rate
+            }
+        )
 
     def set_system_server_name(self, server_name):
         system_settings = self.db.get_collection(self.gui.unique_name, GUI_SYSTEM_CONFIG_COLLECTION)
