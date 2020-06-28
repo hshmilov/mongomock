@@ -568,7 +568,7 @@ export default {
     removeEmailValidations() {
       const fieldsToRemove = [];
       this.validity.fields.forEach((field, index) => {
-        if (this.mailSchema.items.find((item) => item.name === field.name)) {
+        if (this.mailSchema.items.find((item) => `${this.mailSchema.name}.${item.name}` === field.name)) {
           fieldsToRemove.push(index);
         }
       });
@@ -878,9 +878,11 @@ export default {
         }
 
         .x-array-edit {
+          .list {
             display: grid;
             grid-template-columns: 1fr;
             grid-gap: 12px 24px;
+          }
 
             .object {
                 width: 100%;

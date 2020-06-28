@@ -68,7 +68,7 @@ import {
 } from '@store/modules/auth';
 import { mapActions, mapGetters, mapMutations } from 'vuex';
 
-import capitalize from 'lodash/capitalize';
+import _capitalize from 'lodash/capitalize';
 
 import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
@@ -116,7 +116,7 @@ export default {
         name: 'source',
         title: 'Source',
         type: 'string',
-        cellRenderer: (source) => capitalize(source),
+        cellRenderer: (source) => (source.toLowerCase() !== 'internal' ? source.toUpperCase() : _capitalize(source)),
       }, {
         name: 'last_login', title: 'Last Login', type: 'string', format: 'date-time',
       }, {

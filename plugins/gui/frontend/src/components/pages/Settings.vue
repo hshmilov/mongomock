@@ -87,6 +87,36 @@
         </div>
       </XTab>
       <XTab
+        v-if="canViewUsersAndRoles"
+        id="identity-providers-tab"
+        title="Identity Providers Settings"
+      >
+        <div class="tab-settings">
+          <template v-if="identityProvidersSettings && identityProvidersSettings.schema">
+            <XForm
+              v-model="identityProvidersSettings.config"
+              :schema="identityProvidersSettings.schema"
+              :read-only="!canUpdateSettings"
+              :error="identityProvidersError"
+              api-upload="settings/plugins/IdentityProviders"
+              @validate="updateIdentityProviders"
+            />
+            <div class="footer">
+              <XMaintenance
+                v-if="$refs.global && $refs.global.isActive"
+                :read-only="!canUpdateSettings"
+              />
+              <XButton
+                id="identity-providers-save"
+                type="primary"
+                :disabled="!identityProvidersComplete || !canUpdateSettings"
+                @click="saveIdentityProviders"
+              >Save</XButton>
+            </div>
+          </template>
+        </div>
+      </XTab>
+      <XTab
         v-if="$isAxoniusUser()"
         id="feature-flags-tab"
         title="Feature flags"
@@ -169,6 +199,7 @@ import XCustom from '../neurons/schema/Custom.vue';
 import XMaintenance from '../networks/config/Maintenance.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
 import XTunnel from '../networks/config/Tunnel.vue';
+import {validateEmail} from "@constants/validations";
 
 export default {
   name: 'XSettings',
@@ -192,8 +223,11 @@ export default {
       coreSettings: {},
       guiSettings: {},
       featureFlags: {},
+      identityProvidersSettings: {},
+      identityProvidersError: '',
       coreComplete: true,
       guiComplete: true,
+      identityProvidersComplete: true,
       schedulerComplete: true,
       message: '',
       systemInfo: {},
@@ -217,6 +251,10 @@ export default {
       featureFlagsFromState(state) {
         if (!state.settings.configurable.gui) return undefined;
         return state.settings.configurable.gui.FeatureFlags;
+      },
+      identityProvidersFromState(state) {
+        if (!state.settings.configurable.gui) return undefined;
+        return state.settings.configurable.gui.IdentityProviders;
       },
       users(state) {
         return state.auth.allUsers.data;
@@ -313,9 +351,16 @@ export default {
       pluginId: 'system_scheduler',
       configName: 'SystemSchedulerService',
     });
+    if (this.canViewUsersAndRoles) {
+      await this.loadPluginConfig({
+        pluginId: 'gui',
+        configName: 'IdentityProviders',
+      });
+    }
     this.schedulerSettings = _cloneDeep(this.schedulerSettingsFromState);
     this.coreSettings = _cloneDeep(this.coreSettingsFromState);
     this.guiSettings = _cloneDeep(this.guiSettingsFromState);
+    this.identityProvidersSettings = _cloneDeep(this.identityProvidersFromState);
     if (!this.canViewUsersAndRoles && !this.canEditRoles) {
       this.guiSettings.schema.items.forEach((serviceItem) => {
         const defaultRoleIdIndex = _findIndex(serviceItem.items, ((settingsItem) => settingsItem.name === 'default_role_id'));
@@ -400,6 +445,52 @@ export default {
     updateGuiValidity(valid) {
       this.guiComplete = valid;
     },
+    updateIdentityProviders(valid) {
+      let rulesValid = true;
+      if (valid) {
+        const ldapConfig = this.identityProvidersSettings.config.ldap_login_settings;
+        if (ldapConfig.enabled) {
+          const rulesHash = {};
+          ldapConfig.role_assignment_rules.rules.forEach((rule) => {
+            if (!rulesValid) {
+              return;
+            }
+            if (rule.type === 'Email address') {
+              if (!validateEmail(rule.value)) {
+                this.identityProvidersError = 'LDAP assignment rule - invalid email address';
+                rulesValid = false;
+                return;
+              }
+            }
+            const ruleHash = `${rule.type}_${rule.value}`;
+            if (!rulesHash[ruleHash]) {
+              rulesHash[ruleHash] = true;
+            } else {
+              this.identityProvidersError = 'Duplicated LDAP assignment rule';
+              rulesValid = false;
+            }
+          });
+        }
+
+        const samlConfig = this.identityProvidersSettings.config.saml_login_settings;
+        if (samlConfig.enabled) {
+          const rulesHash = {};
+          samlConfig.role_assignment_rules.rules.forEach((rule) => {
+            const ruleHash = `${rule.key}_${rule.value}`;
+            if (!rulesHash[ruleHash]) {
+              rulesHash[ruleHash] = true;
+            } else {
+              this.identityProvidersError = 'Duplicated SAML assignment rule';
+              rulesValid = false;
+            }
+          });
+        }
+      }
+      if (rulesValid) {
+        this.identityProvidersError = '';
+      }
+      this.identityProvidersComplete = valid && rulesValid;
+    },
     saveGuiSettings() {
       this.updatePluginConfig({
         pluginId: 'gui',
@@ -434,6 +525,20 @@ export default {
         }
       });
     },
+    saveIdentityProviders() {
+      this.updatePluginConfig({
+        pluginId: 'gui',
+        configName: 'IdentityProviders',
+        config: this.identityProvidersSettings.config,
+        schema: this.identityProvidersSettings.schema,
+      }).then((response) => {
+        this.createToast(response);
+      }).catch((error) => {
+        if (error.response.status === 400) {
+          this.message = error.response.data.message;
+        }
+      });
+    },
     createToast(response) {
       if (response.status === 200) {
         this.message = 'Saved Successfully';
@@ -455,6 +560,7 @@ export default {
       .research-settings-tab,
       .global-settings-tab,
       .gui-settings-tab,
+      .identity-providers-tab,
       .about-settings-tab {
         .x-form {
           max-width: 30%;
@@ -464,7 +570,7 @@ export default {
         padding-left: 0;
       }
 
-      .tab-settings .x-form .x-array-edit {
+      .tab-settings .x-form .x-array-edit .list{
         grid-template-columns: 1fr;
       }
     }
@@ -502,7 +608,7 @@ export default {
       padding-left: 15px;
     }
 
-    .research-settings-tab .x-form .x-array-edit {
+    .research-settings-tab .x-form .x-array-edit .list{
       grid-template-columns: 1fr;
       .item .object.expand {
         label {
@@ -520,6 +626,37 @@ export default {
 
         .v-text-field__details, .v-messages {
           min-height: 0;
+        }
+      }
+    }
+
+    .identity-providers-tab {
+      .draggable {
+        min-width: 685px;
+      }
+      #role_assignment_rules {
+        font-size: 16px;
+        margin-top: 8px;
+       }
+      #rules {
+        font-weight: unset;
+        font-size: 14px;
+        margin-top: 0;
+      }
+      .item_rules {
+        min-width: 685px;
+      }
+      .x-array-edit {
+        .list.draggable {
+          .remove-button {
+            padding-right: 0;
+          }
+
+          .list {
+            .item_value {
+              width: 300px;
+            }
+          }
         }
       }
     }

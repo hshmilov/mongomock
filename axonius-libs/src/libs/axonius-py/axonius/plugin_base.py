@@ -4123,6 +4123,7 @@ class PluginBase(Configurable, Feature, ABC):
                 },
             ],
             'pretty_name': 'Global Settings',
+            'name': 'global_settings',
             'type': 'array'
         }
 

@@ -18,7 +18,7 @@ import conftest
 from axonius.saas.input_params import read_saas_input_params
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, \
-    DASHBOARD_SPACE_TYPE_CUSTOM, GUI_CONFIG_NAME
+    DASHBOARD_SPACE_TYPE_CUSTOM, GUI_CONFIG_NAME, IDENTITY_PROVIDERS_CONFIG
 from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
                                           PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME,
                                           PASSWORD_SETTINGS)
@@ -310,6 +310,7 @@ class TestBase:
         )
 
         self.axonius_system.db.plugins.gui.configurable_configs.delete_config(GUI_CONFIG_NAME)
+        self.axonius_system.db.plugins.gui.configurable_configs.delete_config(IDENTITY_PROVIDERS_CONFIG)
         self.axonius_system.gui.update_config()
 
     def change_base_url(self, new_url):

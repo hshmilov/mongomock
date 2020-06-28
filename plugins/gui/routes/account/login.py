@@ -19,7 +19,11 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE,
-                                       PREDEFINED_ROLE_RESTRICTED, GUI_CONFIG_NAME)
+                                       PREDEFINED_ROLE_RESTRICTED, IDENTITY_PROVIDERS_CONFIG, EMAIL_ADDRESS,
+                                       EMAIL_DOMAIN, LDAP_GROUP, ASSIGNMENT_RULE_TYPE, ASSIGNMENT_RULE_VALUE,
+                                       ASSIGNMENT_RULE_ROLE_ID, ASSIGNMENT_RULE_KEY,
+                                       EVALUATE_ROLE_ASSIGNMENT_ON, ROLE_ASSIGNMENT_RULES, ASSIGNMENT_RULE_ARRAY,
+                                       DEFAULT_ROLE_ID, NEW_AND_EXISTING_USERS)
 from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.logging.audit_helper import AuditCategory, AuditAction
@@ -44,12 +48,6 @@ class Login:
     @gui_route_logged_in('get_login_options', enforce_session=False)
     def get_login_options(self):
         return jsonify({
-            'okta': {
-                'enabled': self._okta['enabled'],
-                'client_id': self._okta['client_id'],
-                'url': self._okta['url'],
-                'gui2_url': self._okta['gui2_url']
-            },
             'ldap': {
                 'enabled': self._ldap_login['enabled'],
                 'default_domain': self._ldap_login['default_domain']
@@ -184,7 +182,8 @@ class Login:
                                     last_name: str = None,
                                     email: str = None,
                                     picname: str = None,
-                                    remember_me: bool = False):
+                                    remember_me: bool = False,
+                                    rules_data: list = None):
         """
         Our system supports external login systems, such as LDAP, and Okta.
         To generically support such systems with our permission model we must normalize the login mechanism.
@@ -197,17 +196,32 @@ class Login:
         :param email: the email of the user (optional)
         :param picname: the URL of the avatar of the user (optional)
         :param remember_me: whether or not to remember the session after the browser has been closed
+        :param rules_data: the provider data for matching the assignment rules (for ldap will be the user groups
+        and for saml will be the provider attributes)
         :return: None
         """
         db_connection = self._get_db_connection()
         config_name = f'{source}_login_settings'
-        config = self.plugins.gui.configurable_configs[GUI_CONFIG_NAME]
-        default_role_id = None
+        config = self.plugins.gui.configurable_configs[IDENTITY_PROVIDERS_CONFIG]
+        role_id = None
+        evaluate_role_assignment_on = False
+        assignment_rule_match_found = False
         if config and config.get(config_name):
-            default_role_id = config.get(config_name).get('default_role_id')
-        if not default_role_id:
+            role_assignment_rules = config[config_name].get(ROLE_ASSIGNMENT_RULES)
+            if role_assignment_rules and role_assignment_rules.get(ASSIGNMENT_RULE_ARRAY):
+                evaluate_role_assignment_on = role_assignment_rules.get(EVALUATE_ROLE_ASSIGNMENT_ON)
+                identity_provider_rules = role_assignment_rules[ASSIGNMENT_RULE_ARRAY]
+                role_id = self.match_assignment_rules(source,
+                                                      identity_provider_rules,
+                                                      email,
+                                                      rules_data)
+            if not role_id:
+                role_id = role_assignment_rules.get(DEFAULT_ROLE_ID)
+            else:
+                assignment_rule_match_found = True
+        if not role_id:
             restricted_role = self._roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED})
-            default_role_id = restricted_role.get('_id')
+            role_id = restricted_role.get('_id')
         user = self._create_user_if_doesnt_exist(
             username,
             first_name,
@@ -215,9 +229,46 @@ class Login:
             email=email,
             picname=picname,
             source=source,
-            role_id=default_role_id
+            role_id=role_id,
+            assignment_rule_match_found=assignment_rule_match_found,
+            change_role_on_every_login=evaluate_role_assignment_on == NEW_AND_EXISTING_USERS
         )
         self.__perform_login_with_user(user, remember_me)
+
+    @staticmethod
+    def match_assignment_rules(source, identity_provider_rules, email, rules_data):
+        role_id = None
+        for identity_provider_rule in identity_provider_rules:
+            if role_id:
+                break
+            if source.lower() == 'ldap':
+                rule_type = identity_provider_rule.get(ASSIGNMENT_RULE_TYPE)
+                rule_value = identity_provider_rule.get(ASSIGNMENT_RULE_VALUE)
+                rule_role_id = identity_provider_rule.get(ASSIGNMENT_RULE_ROLE_ID)
+                if rule_type == EMAIL_ADDRESS and email:
+                    if rule_value == email:
+                        role_id = rule_role_id
+                elif rule_type == EMAIL_DOMAIN and email:
+                    email_domain = email.split('@')[1]
+                    if rule_value == email_domain:
+                        role_id = rule_role_id
+                elif rule_type == LDAP_GROUP and rules_data:
+                    for group in rules_data:
+                        if rule_value in group:
+                            role_id = rule_role_id
+                            break
+            elif source.lower() == 'saml':
+                rule_key = identity_provider_rule.get(ASSIGNMENT_RULE_KEY)
+                rule_value = identity_provider_rule.get(ASSIGNMENT_RULE_VALUE)
+                rule_role_id = identity_provider_rule.get(ASSIGNMENT_RULE_ROLE_ID)
+                value_from_user = rules_data.get(rule_key)
+                if isinstance(value_from_user, list) and len(value_from_user) > 0:
+                    for value in value_from_user:
+                        if rule_value == value:
+                            role_id = rule_role_id
+                elif rule_value == value_from_user:
+                    role_id = rule_role_id
+        return role_id
 
     @gui_route_logged_in('okta-redirect', enforce_session=False)
     def okta_redirect(self):
@@ -342,12 +393,15 @@ class Login:
             # Notice! If you change the first parameter, then our CURRENT customers will have their
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
+            ldap_groups = groups_prefix if not use_group_dn else groups_dn
             self.__exteranl_login_successful('ldap',  # look at the comment above
                                              user.get('displayName') or user_name,
                                              user.get('givenName') or '',
                                              user.get('sn') or '',
-                                             '',
-                                             image or self.DEFAULT_AVATAR_PIC)
+                                             user.get('mail'),
+                                             image or self.DEFAULT_AVATAR_PIC,
+                                             False,
+                                             rules_data=ldap_groups)
             response = Response('')
             self._add_expiration_timeout_cookie(response)
             return response
@@ -473,13 +527,12 @@ class Login:
                 if 'RelayState' in request.form and not request.form['RelayState'].startswith(self_url_beginning):
                     return redirect(auth.redirect_to(request.form['RelayState']))
 
-                attributes = auth.get_attributes()
-                name_id = auth.get_nameid() or \
-                    attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name')
+                attributes = {key.split('/')[-1]: value for key, value in auth.get_attributes().items()}
+                name_id = auth.get_nameid() or attributes.get('name')
 
-                given_name = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname')
-                surname = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname')
-                email = attributes.get('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')
+                given_name = attributes.get('givenname')
+                surname = attributes.get('surname')
+                email = attributes.get('emailaddress')
                 picture = None
 
                 if not name_id:
@@ -505,7 +558,8 @@ class Login:
                                                  given_name or name_id,
                                                  surname or '',
                                                  email,
-                                                 picture or self.DEFAULT_AVATAR_PIC)
+                                                 picture or self.DEFAULT_AVATAR_PIC,
+                                                 rules_data=attributes)
 
                 logger.info(f'SAML Login success with name id {name_id}')
                 redirect_response = redirect('/', code=302)

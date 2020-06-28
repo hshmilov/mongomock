@@ -9,11 +9,18 @@ import docker
 import requests
 import netifaces
 
-from ui_tests.tests.ui_test_base import TestBase
+from axonius.consts.gui_consts import PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_VIEWER
+from ui_tests.tests.permissions_test_base import PermissionsTestBase
+
+
+# pylint: disable=inconsistent-mro
 
 
 SamlServer = collections.namedtuple(
     'SamlServer', 'test_user_name test_user_password metadata_url name test_givenname test_surname')
+
+TEST_GIVENNAME = 'test_givenname'
+TEST_SURNAME = 'test_surname'
 
 
 def _docker_host_address():
@@ -32,7 +39,7 @@ def _docker_host_address():
 def create_saml_server(base_url):
     server_data = SamlServer(test_user_name='user1', test_user_password='user1pass',
                              metadata_url=f'http://{_docker_host_address()}:8080/simplesaml/saml2/idp/metadata.php',
-                             name='saml-poc', test_givenname='test_givenname', test_surname='test_surname')
+                             name='saml-poc', test_givenname=TEST_GIVENNAME, test_surname=TEST_SURNAME)
 
     authsources_data = f'''<?php
 
@@ -77,7 +84,7 @@ $config = array(
             container.remove(v=True, force=True)
 
 
-class TestSaml(TestBase):
+class TestSaml(PermissionsTestBase):
     def _simple_samlserver_page_login(self, saml_server):
         # This method deals with a page served by the saml server docker container.
         # It is a page, and thus one might be tempted to create a Page class and file for it
@@ -89,16 +96,29 @@ class TestSaml(TestBase):
         self.base_page.fill_text_field_by_element_id('password', saml_server.test_user_password)
         self.base_page.find_element_by_text('Login').click()
 
-    def _set_saml(self, name, metadata_url, external_url='', default_role_name=None):
+    def _set_saml(self, name, metadata_url, external_url='', default_role_name=None,
+                  evaluate_new_and_existing_users=False, assignment_rules=None):
+        if assignment_rules is None:
+            assignment_rules = []
         self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
+        self.settings_page.click_identity_providers_settings()
         self.settings_page.set_allow_saml_based_login()
         self.settings_page.fill_saml_idp(name)
         self.settings_page.fill_saml_metadata_url(metadata_url)
         self.settings_page.fill_saml_axonius_external_url(external_url=external_url)
         if default_role_name:
             self.settings_page.set_default_role_id(default_role_name)
-        self.settings_page.click_save_gui_settings()
+        if evaluate_new_and_existing_users or len(assignment_rules) > 0:
+            if evaluate_new_and_existing_users:
+                self.settings_page.set_evaluate_role_on_new_and_existing_users()
+            else:
+                self.settings_page.set_evaluate_role_on_new_users_only()
+            for assignment_rule in assignment_rules:
+                self.settings_page.click_add_assignment_rule()
+                self.settings_page.fill_saml_assignment_rule(
+                    assignment_rule.get('key'), assignment_rule.get('value'), assignment_rule.get('role'))
+
+        self.settings_page.click_save_identity_providers_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
     def _login_with_saml(self, saml_server):
@@ -124,7 +144,7 @@ class TestSaml(TestBase):
 
     def test_saml_user_added(self):
         with create_saml_server(self.base_url) as saml_server:
-            self._set_saml(saml_server.name, saml_server.metadata_url)
+            self._set_saml(saml_server.name, saml_server.metadata_url, '', PREDEFINED_ROLE_RESTRICTED)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
@@ -137,6 +157,53 @@ class TestSaml(TestBase):
             self.settings_page.click_manage_users_settings()
 
             assert self._fetch_saml_user().user_name
+
+    def test_saml_role_assignment_rules(self):
+        self.base_page.run_discovery()
+        with create_saml_server(self.base_url) as saml_server:
+            self._set_saml(saml_server.name, saml_server.metadata_url, '', None, True,
+                           [
+                               {
+                                   'key': 'surname',
+                                   'value': TEST_SURNAME,
+                                   'role': PREDEFINED_ROLE_VIEWER
+                               }
+                           ])
+
+            self.login_page.logout()
+            self.login_page.wait_for_login_page_to_load()
+            self._login_with_saml(saml_server)
+
+            # Making sure we are indeed logged in
+            self.account_page.switch_to_page()
+            for screen in self.get_all_screens():
+                assert not screen.is_switch_button_disabled()
+                screen.switch_to_page()
+            self._assert_viewer_role()
+
+            self.login_page.logout()
+
+            self.login()
+            self.settings_page.switch_to_page()
+            self.settings_page.click_manage_users_settings()
+
+            saml_user = self._fetch_saml_user()
+            assert saml_user.user_name
+            assert saml_user.role == PREDEFINED_ROLE_VIEWER
+
+            self.settings_page.switch_to_page()
+            self.settings_page.click_identity_providers_settings()
+            self.settings_page.fill_saml_assignment_rule('surname', 'wrong', PREDEFINED_ROLE_VIEWER, 1)
+            self.settings_page.click_add_assignment_rule()
+            self.settings_page.fill_saml_assignment_rule('surname', TEST_SURNAME, PREDEFINED_ROLE_RESTRICTED, 2)
+            self.settings_page.click_save_identity_providers_settings()
+            self.settings_page.wait_for_saved_successfully_toaster()
+            self.login_page.logout()
+            self.login_page.wait_for_login_page_to_load()
+            self.login_page.click_login_with_saml()
+            self.account_page.switch_to_page()
+            for screen in self.get_all_screens():
+                assert screen.is_switch_button_disabled()
 
     # pylint: disable=R0915
     def test_saml_same_username(self):
@@ -256,7 +323,7 @@ class TestSaml(TestBase):
     def test_metadata_contains_valid_external_url(self):
         external_url_test = 'https://i.am.just.a.placeholder'
 
-        self._set_saml('saml_name', 'https://saml_metadata_url', external_url_test)
+        self._set_saml('saml_name', 'https://saml_metadata_url', external_url_test, PREDEFINED_ROLE_RESTRICTED)
 
         response = requests.get(urllib.parse.urljoin('https://127.0.0.1', '/api/login/saml/metadata'))
         response.raise_for_status()

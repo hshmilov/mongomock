@@ -153,7 +153,7 @@ const withDynamicData = (params) => {
   });
 };
 
-export const xTagSelect = withDynamicData({
+export const XTagSelect = withDynamicData({
   id: 'tagSelect',
   action: FETCH_DATA_LABELS,
   modules: [
@@ -172,7 +172,7 @@ export const XInstancesSelect = withDynamicData({
   propertyName: 'node_name',
 });
 
-export const xClientConnectionSelect = withDynamicData({
+export const XClientConnectionSelect = withDynamicData({
   id: 'connectionLabelSelect',
   action: FETCH_ADAPTERS_CLIENT_LABELS,
   modules: [{ name: 'adapters', dataPath: '' }],
@@ -181,7 +181,7 @@ export const xClientConnectionSelect = withDynamicData({
   propertyName: 'label',
 });
 
-export const xRolesSelect = withDynamicData({
+export const XRolesSelect = withDynamicData({
   id: 'rolesSelect',
   action: GET_ALL_ROLES,
   modules: [{ name: 'auth', dataPath: '.data' }],

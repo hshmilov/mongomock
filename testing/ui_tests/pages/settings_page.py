@@ -15,7 +15,6 @@ from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
-
 # pylint: disable=too-many-lines,no-member
 
 
@@ -25,6 +24,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDILE_DATE = '13:00'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
+    IDENTITY_PROVIDERS_SETTINGS_CSS = 'li#identity-providers-tab'
     TUNNEL_SETTINGS_CSS = 'li#tunnel-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
     MANAGE_USERS_CSS = 'li#user-settings-tab'
@@ -32,6 +32,7 @@ class SettingsPage(Page):
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
     ABOUT_CSS = 'li#about-settings-tab'
     SEND_EMAILS_LABEL = 'Send emails'
+    EVALUATE_ROLE_ASSIGNMENT_ON_DDL = 'label[for=evaluate_role_assignment_on] + div.x-select'
     DISABLE_REMEMBER_ME = 'Disable \'Remember me\''
     SESSION_TIMEOUT_LABEL = 'Enable session timeout'
     GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius checklist'
@@ -113,21 +114,13 @@ class SettingsPage(Page):
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
-    CERT_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab' \
-                            ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
-                            ' > div:nth-child(4) > div > div > input[type="file"] '
-    PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab' \
-                               ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
-                               ' > div:nth-child(5) > div > div > input[type="file"] '
-    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab' \
-                                     ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
-                                     ' > div:nth-child(4) > div > div > div.file-name '
-    PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab' \
-                                        ' > .tab-settings > .x-form > .x-array-edit > div:nth-child(1) > div > div' \
-                                        ' > div:nth-child(5) > div > div > div.file-name '
-    CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab > .tab-settings > .x-form > .x-array-edit > ' \
-                                  'div:nth-child(17) > div > div > div:nth-child(3) > div > div > div:nth-child(2) > ' \
-                                  'div > div > input[type="file"]'
+    CERT_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=cert_file]'
+    PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=private_key]'
+    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=cert_file] + div[class=file-name]'
+    PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=private_key] ' \
+                                        '+ div[class=file-name]'
+    CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab ' \
+                                  'input[id=csv_ip_location_file]'
 
     LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'v-select\')]' \
                                  '//div[contains(@class, \'v-list-item\') and .//text()=\'{action_name}\']'
@@ -149,8 +142,7 @@ class SettingsPage(Page):
     CA_ADD_CERT_BUTTON = '#ca_files ~ .x-button.ant-btn-light'
     CA_ADD_CERT_BUTTON_CSS = 'div.x-array-edit > div:nth-child(2) > div > div > div:nth-child(3) > div > div > button'
 
-    CA_CERTS_FILES = 'div.x-array-edit > div:nth-child(2) > div > div >' \
-                     ' div:nth-child(3) > div > div > div:nth-child({file_index})'
+    CA_CERTS_FILES = '#ca_files + div > div:nth-child({file_index})'
 
     CA_CERT_DELETE_BUTTON = f'{CA_CERTS_FILES} > button'
 
@@ -174,8 +166,7 @@ class SettingsPage(Page):
     ACTIVE_TAB = 'div.x-tab.active'
 
     ENTERPRISE_PASSWORD_MGMT_TEXT = 'Use Password Manager'
-    ENTERPRISE_PASSWORD_MGMT_MODE_DDL = 'div > div > div:nth-child(3) > div > div'
-    ENTERPRISE_PASSWORD_MGMT_MODE_DDL_OPTIONS = '.x-select-option'
+    ENTERPRISE_PASSWORD_MGMT_MODE_DDL = 'label[for=conditional] + div.x-select'
     ENTERPRISE_PASSWORD_MGMT_THYCOTIC_SS_TEXT = 'Thycotic Secret Server'
     ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT = 'CyberArk Vault'
 
@@ -280,8 +271,8 @@ class SettingsPage(Page):
 
     LOCKED_FEATURES_INPUT_CSS = '.v-select__selections > input'
     CLEAR_FEATURES_BUTTON_CSS = '.v-input__icon--clear'
-
     ENFORCEMENTS_FEATURE_TAG_TITLE = 'Enable Enforcement Center'
+    ROLE_ASSIGNMENT_RULES_ROW = '.draggable > .item:nth-child({row_index})'
 
     @property
     def url(self):
@@ -655,6 +646,9 @@ class SettingsPage(Page):
     def click_gui_settings(self):
         self.driver.find_element_by_css_selector(self.GUI_SETTINGS_CSS).click()
 
+    def click_identity_providers_settings(self):
+        self.driver.find_element_by_css_selector(self.IDENTITY_PROVIDERS_SETTINGS_CSS).click()
+
     def click_tunnel_settings(self):
         self.driver.find_element_by_css_selector(self.TUNNEL_SETTINGS_CSS).click()
 
@@ -675,6 +669,9 @@ class SettingsPage(Page):
 
     def click_save_lifecycle_settings(self):
         self.click_generic_save_button('research-settings-save')
+
+    def click_save_identity_providers_settings(self):
+        self.click_generic_save_button('identity-providers-save')
 
     def click_save_gui_settings(self):
         self.click_generic_save_button('gui-settings-save')
@@ -1076,6 +1073,9 @@ class SettingsPage(Page):
     def assert_placeholder_is_new(self):
         assert self.find_role_dropdown().find_element_by_css_selector('div.placeholder').text == 'NEW'
 
+    def select_default_role(self, role_name):
+        self.select_option_without_search('.all-roles', self.SELECT_OPTION_CSS, role_name)
+
     def select_role(self, role_text):
         self.driver.find_element_by_css_selector(self.SELECT_ROLE_CSS).click()
         self.wait_for_element_present_by_css(self.SELECT_ROLE_LIST_BOX_CSS, is_displayed=True)
@@ -1274,7 +1274,7 @@ class SettingsPage(Page):
 
     def _get_ca_cert_element(self, ca_file_index: int):
         # first div is the test label
-        return self.driver.find_element_by_css_selector(self.CA_CERTS_FILES.format(file_index=ca_file_index + 1))
+        return self.driver.find_element_by_css_selector(self.CA_CERTS_FILES.format(file_index=ca_file_index))
 
     def get_ca_cert_fields_info(self, ca_file_index: int):
         cert_info = self._get_ca_cert_element(ca_file_index)
@@ -1297,7 +1297,7 @@ class SettingsPage(Page):
 
     def _ca_cert_delete(self, ca_delete_index=1):
         delete_button = self.driver.find_element_by_css_selector(
-            self.CA_CERT_DELETE_BUTTON.format(file_index=ca_delete_index + 1))
+            self.CA_CERT_DELETE_BUTTON.format(file_index=ca_delete_index))
         delete_button.click()
 
     @staticmethod
@@ -1457,7 +1457,7 @@ class SettingsPage(Page):
 
     def find_enterprise_password_mgmt_mode_dropdown(self):
         self.wait_for_element_present_by_css(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)
-        return self.driver.find_elements_by_css_selector(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)[1]
+        return self.driver.find_element_by_css_selector(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL)
 
     def get_enterprise_password_mgmt_settings_selected_item(self):
         return self.find_enterprise_password_mgmt_mode_dropdown().text
@@ -1465,7 +1465,7 @@ class SettingsPage(Page):
     def select_enterprise_password_mgmt_provider(self, vault_provider_text):
         if self.get_enterprise_password_mgmt_settings_selected_item() != vault_provider_text:
             self.select_option_without_search(self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL,
-                                              self.ENTERPRISE_PASSWORD_MGMT_MODE_DDL_OPTIONS,
+                                              self.SELECT_OPTION_CSS,
                                               vault_provider_text)
 
     def select_thycotic_secret_server(self):
@@ -1584,6 +1584,52 @@ class SettingsPage(Page):
         cloud_visible_toggle = self.find_checkbox_by_label(self.ENFORCEMENTS_FEATURE_TAG_TITLE)
         self.click_toggle_button(cloud_visible_toggle, make_yes=value)
         self.save_and_wait_for_toaster()
+
+    def set_evaluate_role_on_new_users_only(self):
+        self.select_option_without_search(self.EVALUATE_ROLE_ASSIGNMENT_ON_DDL,
+                                          self.SELECT_OPTION_CSS,
+                                          'New users only')
+
+    def set_evaluate_role_on_new_and_existing_users(self):
+        self.select_option_without_search(self.EVALUATE_ROLE_ASSIGNMENT_ON_DDL,
+                                          self.SELECT_OPTION_CSS,
+                                          'New and existing users')
+
+    def click_assignment_rule_collapse(self):
+        self.driver.find_element_by_css_selector('.ant-collapse-header').click()
+        self.wait_for_element_present_by_css('.ant-collapse-content-active')
+
+    def click_add_assignment_rule(self):
+        self.click_button('+', scroll_into_view_container=self.TABS_BODY_CSS)
+
+    def fill_ldap_assignment_rule(self, rule_type, value, role_name, index=1):
+        self.select_rule_type(rule_type, index)
+        self.fill_rule_value(value, index)
+        self.select_rule_role(role_name, index)
+
+    def fill_saml_assignment_rule(self, key, value, role_name, index=1):
+        self.fill_rule_key(key, index)
+        self.fill_rule_value(value, index)
+        self.select_rule_role(role_name, index)
+
+    def select_rule_type(self, rule_type, index=1):
+        rule_row = self.find_role_assignment_rule_row(index)
+        self.select_option_without_search('.x-select', self.SELECT_OPTION_CSS, rule_type, rule_row)
+
+    def fill_rule_key(self, key, index=1):
+        rule_row = self.find_role_assignment_rule_row(index)
+        self.fill_text_field_by_element_id('key', key, rule_row)
+
+    def fill_rule_value(self, value, index=1):
+        rule_row = self.find_role_assignment_rule_row(index)
+        self.fill_text_field_by_element_id('value', value, rule_row)
+
+    def select_rule_role(self, role_name, index=1):
+        rule_row = self.find_role_assignment_rule_row(index)
+        self.select_option_without_search('.all-roles', self.SELECT_OPTION_CSS, role_name, rule_row)
+
+    def find_role_assignment_rule_row(self, index=1):
+        return self.driver.find_element_by_css_selector(self.ROLE_ASSIGNMENT_RULES_ROW.format(row_index=index))
 
     def restore_feature_flags(self, restore_cloud_visible):
         self.switch_to_page()

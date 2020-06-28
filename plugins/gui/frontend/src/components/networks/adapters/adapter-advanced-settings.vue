@@ -102,7 +102,7 @@ export default {
     }
   }
   .DiscoverySchema {
-    .configuration > .x-form > .x-array-edit {
+    .configuration > .x-form > .x-array-edit .list {
       grid-template-columns: 1fr;
     }
     .x-array-edit {

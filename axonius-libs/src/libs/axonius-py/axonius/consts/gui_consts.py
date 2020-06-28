@@ -75,6 +75,7 @@ class ResearchStatus(Enum):
 CONFIG_CONFIG = 'GuiService'
 GUI_CONFIG_NAME = 'GuiService'  # duplicate of the above because i'd like to have a normal name
 FEATURE_FLAGS_CONFIG = 'FeatureFlags'
+IDENTITY_PROVIDERS_CONFIG = 'IdentityProviders'
 
 LATEST_VERSION_URL = 'https://releases.pub.axonius.com/v1/latest-version-name'
 INSTALLED_VERISON_KEY = 'Installed Version'
@@ -85,6 +86,61 @@ INSTALLED_VERISON_KEY = 'Installed Version'
 USERS_CONFIG_COLLECTION = 'users_config'
 UNCHANGED_MAGIC_FOR_GUI = ['unchanged']
 
+#############################
+# Identity providers consts #
+#############################
+
+ROLE_ASSIGNMENT_RULES = 'role_assignment_rules'
+DEFAULT_ROLE_ID = 'default_role_id'
+EVALUATE_ROLE_ASSIGNMENT_ON = 'evaluate_role_assignment_on'
+ASSIGNMENT_RULE = 'assignment_rule'
+ASSIGNMENT_RULE_ARRAY = 'rules'
+ASSIGNMENT_RULE_TYPE = 'type'
+ASSIGNMENT_RULE_KEY = 'key'
+ASSIGNMENT_RULE_VALUE = 'value'
+ASSIGNMENT_RULE_ROLE_ID = 'role_id'
+
+NEW_USERS_ONLY = 'New users only'
+NEW_AND_EXISTING_USERS = 'New and existing users'
+
+ROLES_SOURCE = {
+    'key': 'all-roles',
+    'options': {
+        'allow-custom-option': False
+    }
+}
+
+
+DEFAULT_ASSIGNMENT_RULE_SCHEMA = [
+    {
+        'name': ASSIGNMENT_RULE_VALUE,
+        'title': 'Value',
+        'placeholder': 'Value',
+        'type': 'string',
+        'errorMsg': 'Role assignment rule - missing value'
+    },
+    {
+        'name': ASSIGNMENT_RULE_ROLE_ID,
+        'title': ' Role name',
+        'placeholder': 'Role',
+        'type': 'string',
+        'enum': [],
+        'source': ROLES_SOURCE
+    },
+]
+
+EVALUATE_ROLE_ASSIGNMENT_ON_SCHEMA = {
+    'name': EVALUATE_ROLE_ASSIGNMENT_ON,
+    'title': 'Evaluate role assignment on ',
+    'type': 'string',
+    'enum': [NEW_USERS_ONLY, NEW_AND_EXISTING_USERS],
+    'default': 'New users only',
+}
+
+
+EMAIL_ADDRESS = 'Email address'
+EMAIL_DOMAIN = 'Email domain'
+LDAP_GROUP = 'Group'
 
 ######################
 # Exec report consts #
@@ -122,6 +178,7 @@ PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED_USER = 'Restricted User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted'
 IS_AXONIUS_ROLE = 'is_axonius_role'
+NO_ACCESS_ROLE = 'No Access'
 
 ####################
 # User Preferences #
@@ -267,6 +324,7 @@ LABELS_FIELD = 'labels'
 USER_NAME = 'user_name'
 ROLE_ID = 'role_id'
 USER_ID_FIELD = 'user_id'
+IGNORE_ROLE_ASSIGNMENT_RULES = 'ignore_role_assignment_rules'
 PRIVATE_FIELD = 'private'
 PREDEFINED_FIELD = 'predefined'
 PREDEFINED_PLACEHOLDER = 'Predefined'

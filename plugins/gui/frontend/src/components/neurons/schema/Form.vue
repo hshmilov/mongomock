@@ -1,40 +1,41 @@
 <template>
   <form
-          class="x-form"
-          @keyup.enter.stop="submitIfValid"
-          @submit.prevent
+    class="x-form"
+    @keyup.enter.stop="submitIfValid"
+    @submit.prevent
   >
-  <x-array-edit
-          v-model="data"
-          :schema="schema"
-          :api-upload="apiUpload"
-          :read-only="readOnly"
-          :use-vault="passwordsVaultEnabled"
-          @validate="onValidate"
-          @remove-validate="onRemoveValidate"
-  />
-  <div
-          v-if="!silent"
-          class="form-error"
-  >
-    <template v-if="error">
-      {{ error }}
-    </template>
-    <template v-else-if="validity.error">
-      {{ validity.error }}
-    </template>
-    <template v-else>
+    <XArrayEdit
+      v-model="data"
+      :schema="schema"
+      :api-upload="apiUpload"
+      :read-only="readOnly"
+      :use-vault="passwordsVaultEnabled"
+      :list-collapsible="listCollapsible"
+      @validate="onValidate"
+      @remove-validate="onRemoveValidate"
+    />
+    <div
+      v-if="!silent"
+      class="form-error"
+    >
+      <template v-if="error">
+        {{ error }}
+      </template>
+      <template v-else-if="validity.error">
+        {{ validity.error }}
+      </template>
+      <template v-else>
       &nbsp;
-    </template>
-  </div>
+      </template>
+    </div>
   </form>
 </template>
 
 <script>
-  import xArrayEdit from './types/array/ArrayEdit.vue';
-  import _differenceBy from 'lodash/differenceBy';
+import _differenceBy from 'lodash/differenceBy';
+import XArrayEdit from './types/array/ArrayEdit.vue';
 
-  /*
+/*
           Dynamically built form, according to given schema.
           Hitting the 'Enter' key from any field in the form, sends 'submit' event.
           Form elements are composed by an editable array. Therefore,
@@ -43,43 +44,62 @@
           'validate' event is emitted with the value true if no invalid
           field was found and false otherwise.
        */
-  export default {
-    name: 'XForm',
-    components: { xArrayEdit },
-    props: {
-      value: {},
-      schema: {},
-      error: {},
-      apiUpload: {},
-      readOnly: {},
-      silent: {
-        type: Boolean,
-        default: false,
+export default {
+  name: 'XForm',
+  components: { XArrayEdit },
+  props: {
+    value: {
+      type: Object,
+      default: null,
+    },
+    schema: {
+      type: Object,
+      default: () => {},
+    },
+    error: {
+      type: String,
+      default: '',
+    },
+    apiUpload: {
+      type: String,
+      default: null,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+    silent: {
+      type: Boolean,
+      default: false,
+    },
+    passwordsVaultEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    listCollapsible: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {
+      validity: {
+        fields: [], error: '',
       },
-      passwordsVaultEnabled: {
-        type: Boolean,
-        default: false,
+    };
+  },
+  computed: {
+    data: {
+      get() {
+        return this.value;
+      },
+      set(value) {
+        this.$emit('input', value);
       },
     },
-    data() {
-      return {
-        validity: {
-          fields: [], error: '',
-        },
-      };
+    isFormValid() {
+      return this.validity.fields.every((field) => field.valid);
     },
-    computed: {
-              data: {
-                get() {
-                  return this.value;
-                },
-                set(value) {
-                  this.$emit('input', value);
-                },
-              },
-              isFormValid() {
-                return this.validity.fields.every((field) => field.valid);
-              },
   },
   created() {
     if (!Object.keys(this.data).length) {
@@ -130,7 +150,7 @@
       this.$emit('validate', this.validity.fields.length === 0);
     },
   },
-  };
+};
 </script>
 
 <style lang="scss">
@@ -138,9 +158,11 @@
     font-size: 14px;
 
     > .x-array-edit {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-gap: 12px 24px;
+      > div > div > .list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 12px 24px;
+      }
       input, select, textarea {
 
         &.error-border {

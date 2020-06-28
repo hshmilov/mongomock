@@ -22,6 +22,7 @@ class LoginPage(Page):
     OKTA_URL = f'okta.{AXONIUS_DNS_SUFFIX}'
     OKTA_SUBMIT_BUTTON_ID = 'okta-signin-submit'
     LOGIN_COMPONENT_CSS = '.x-login'
+    NO_PERMISSION_MESSAGE = 'You are lacking some permissions for this request'
 
     @property
     def root_page_css(self):
@@ -58,6 +59,7 @@ class LoginPage(Page):
     def logout(self):
         self.wait_for_element_present_by_css(self.LOGOUT_CSS)
         self.driver.find_element_by_css_selector(self.LOGOUT_CSS).click()
+        self.wait_for_login_page_to_load()
 
     def logout_and_login_with_admin(self, wait_for_getting_started=True):
         self.logout()
@@ -147,9 +149,15 @@ class LoginPage(Page):
         current_url = self.current_url
         screen.refresh()
         self.assert_not_logged_in()
-        self.wait_for_login_page_to_load()
-        assert self.get_error_msg() == 'You are lacking some permissions for this request'
+        self.assert_login_permission_error_message()
         self.change_current_tab_url(current_url)
+
+    def assert_login_permission_error_message(self):
+        self.wait_for_login_page_to_load()
+        assert self.get_error_msg() == self.NO_PERMISSION_MESSAGE
+
+    def wait_for_no_permissions_message(self):
+        return self.wait_for_element_present_by_text(self.NO_PERMISSION_MESSAGE)
 
     def wait_for_user_name(self):
         self.wait_for_element_present_by_id(self.LOGIN_USERNAME_ID)

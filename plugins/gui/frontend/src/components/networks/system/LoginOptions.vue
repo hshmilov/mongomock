@@ -1,17 +1,10 @@
 <template>
   <div class="x-login-options">
     <div
-      v-if="oktaConfig.enabled || samlConfig.enabled || ldapConfig.enabled"
+      v-if="samlConfig.enabled || ldapConfig.enabled"
       class="t-center mt-12"
     >Or</div>
     <div class="options-buttons">
-      <XButton
-        v-if="oktaConfig.enabled"
-        id="okta_login_link"
-        :class="{'grid-span2': singleLoginMethod}"
-        type="link"
-        @click="onOktaLogin"
-      >Login with Okta</XButton>
       <XButton
         v-if="samlConfig.enabled"
         id="saml_login_link"
@@ -59,7 +52,6 @@
 
 <script>
 import { mapActions } from 'vuex';
-import * as OktaAuth from '@okta/okta-auth-js';
 import XForm from '../../neurons/schema/Form.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
@@ -90,9 +82,6 @@ export default {
         },
         complete: false,
       },
-      oktaConfig: {
-        enabled: false,
-      },
       samlConfig: {
         enabled: false,
       },
@@ -116,17 +105,11 @@ export default {
       };
     },
     singleLoginMethod() {
-      return (this.oktaConfig.enabled + this.samlConfig.enabled + this.ldapConfig.enabled) === 1;
+      return (this.samlConfig.enabled + this.ldapConfig.enabled) === 1;
     },
   },
   watch: {
-    oktaConfig() {
-      if (this.oktaConfig.enabled === true && this.$route.query.login_type === 'okta_login') {
-        this.onOktaLogin();
-      }
-    },
     settings() {
-      this.oktaConfig = this.settings.okta;
       this.samlConfig = this.settings.saml;
       this.ldapConfig = this.settings.ldap;
       if (this.ldapConfig.default_domain) {
@@ -141,24 +124,6 @@ export default {
     },
     onLdapLogin() {
       this.ldapLogin(this.ldapData.credentials);
-    },
-    onOktaLogin() {
-      const gui2URL = this.oktaConfig.gui2_url.endsWith('/')
-        ? this.oktaConfig.gui2_url.substr(0, this.oktaConfig.gui2_url.length - 1)
-        : this.oktaConfig.gui2_url;
-      const authorizationServer = this.oktaConfig.authorization_server
-        ? `${this.oktaConfig.url}/oauth2/${this.oktaConfig.authorization_server}`
-        : this.oktaConfig.url;
-      const x = new OktaAuth({
-        url: this.oktaConfig.url,
-        issuer: authorizationServer,
-        clientId: this.oktaConfig.client_id,
-        redirectUri: `${gui2URL}/api/okta-redirect`,
-      });
-      x.token.getWithRedirect({
-        scopes: ['openid', 'profile', 'email', 'offline_access'],
-        responseType: 'code',
-      });
     },
     onSamlLogin() {
       window.location.href = '/api/login/saml';

@@ -267,7 +267,7 @@ export default {
         }
 
         .password-account-tab {
-            .x-form .x-array-edit {
+            .x-form .x-array-edit .list{
                 grid-template-columns: 1fr;
             }
         }

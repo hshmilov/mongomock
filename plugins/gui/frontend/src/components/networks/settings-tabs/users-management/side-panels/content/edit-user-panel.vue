@@ -86,8 +86,13 @@
         v-else
         class="item form__source"
       >
+        <h5 class="grey3--text">Ignore role assignment rules</h5>
+        <input
+          v-model="user.ignore_role_assignment_rules"
+          type="checkbox"
+        >
         <h5 class="grey3--text">Source</h5>
-        <p class="grey3--text">SAML</p>
+        <p class="source--text">{{ user.source }}</p>
       </div>
     </div>
     <div class="edit-user__avatar">
@@ -140,6 +145,7 @@ export default {
       email: this.user.email,
       role: this.user.role_id,
       password: this.user.password,
+      ignore_role_assignment_rules: this.user.ignore_role_assignment_rules,
       rolesOptions: [],
     };
   },
@@ -171,6 +177,8 @@ export default {
 
       if (this.isInternalUser) {
         userInfo.password = this.password;
+      } else {
+        userInfo.ignore_role_assignment_rules = this.ignore_role_assignment_rules;
       }
       return userInfo;
     },
@@ -220,11 +228,20 @@ export default {
         margin: 0 0 3px 0;
       }
 
-      input {
+      input{
         display: block;
-        width: 100%;
         height: 30px;
         padding: 4px;
+      }
+      input[type="text"] {
+        width: 100%;
+      }
+      input[type="checkbox"] {
+        width: 16px;
+        margin-bottom: 12px;
+      }
+      .source--text {
+        text-transform: uppercase;
       }
 
       .ant-select {
@@ -242,6 +259,7 @@ export default {
             opacity: 0.6;
           }
         }
+
       }
 
       .item {

@@ -21,9 +21,11 @@ class Roles:
     @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_roles(self):
-        roles = [beautify_db_entry(entry) for entry in self._roles_collection.find(filter_archived({
-            IS_AXONIUS_ROLE: {'$ne': True}
-        }))]
+        roles = [beautify_db_entry(entry) for entry in self._roles_collection.find(
+            filter_archived({
+                IS_AXONIUS_ROLE: {'$ne': True}
+            }),
+        )]
         if not self.should_cloud_compliance_run():
             for role in roles:
                 if role.get('permissions').get(PermissionCategory.Compliance.value):

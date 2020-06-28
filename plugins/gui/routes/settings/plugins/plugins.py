@@ -18,14 +18,14 @@ from axonius.consts.adapter_consts import LAST_FETCH_TIME
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
-                                       RootMasterNames, GUI_CONFIG_NAME)
+                                       RootMasterNames, GUI_CONFIG_NAME, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, PROXY_SETTINGS,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
-                                          RESET_PASSWORD_SETTINGS, DEFAULT_ROLE_ID, STATIC_ANALYSIS_SETTINGS,
+                                          RESET_PASSWORD_SETTINGS, STATIC_ANALYSIS_SETTINGS,
                                           DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME,
                                           DISCOVERY_RESEARCH_DATE_TIME)
 from axonius.email_server import EmailServer
@@ -294,9 +294,10 @@ class Plugins:
             user_settings_permission = self.get_user_permissions().get(PermissionCategory.Settings)
             if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and \
                     not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
-                for external_service in ['ldap_login_settings', 'okta_login_settings', 'saml_login_settings']:
-                    config_to_set[external_service][DEFAULT_ROLE_ID] = config_from_db. \
-                        get(external_service, {}).get(DEFAULT_ROLE_ID)
+                for external_service in ['ldap_login_settings', 'saml_login_settings']:
+                    role_assignment_rules = config_to_set[external_service].get(ROLE_ASSIGNMENT_RULES, {})
+                    role_assignment_rules[DEFAULT_ROLE_ID] = config_from_db.\
+                        get(external_service, {}).get(ROLE_ASSIGNMENT_RULES, {}).get(DEFAULT_ROLE_ID)
 
             mutual_tls_settings = config_to_set.get('mutual_tls_settings')
             if mutual_tls_settings.get('enabled'):

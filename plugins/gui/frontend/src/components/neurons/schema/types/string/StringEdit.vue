@@ -1,6 +1,6 @@
 <template>
   <!-- Date Picker -->
-  <x-date-edit
+  <XDateEdit
     v-if="isDate"
     v-model="data"
     :read-only="readOnly"
@@ -8,7 +8,7 @@
     :clearable="clearable"
     @input="input"
   />
-  <x-time-picker
+  <XTimePicker
     v-else-if="isTime"
     v-model="data"
     :schema="schema"
@@ -43,24 +43,24 @@
     <slot name="icon" />
   </div>
   <!-- Select from enum values -->
-  <x-select
+  <XSelect
     v-else-if="enumOptions && !schema.source"
     v-model="processedData"
     :options="enumOptions"
-    placeholder="value..."
+    :placeholder="placeholder"
     :searchable="true"
     :class="{'error-border': error}"
     :read-only="readOnly || schema.readOnly"
     @input="input"
     @focusout.stop="validate"
   />
-  <component
+  <Component
     :is="dynamicType"
     v-else-if="enumOptions && schema.source"
     v-model="processedData"
     :schema="schema"
     :searchable="true"
-    placeholder="value…"
+    :placeholder="placeholder"
     :class="{'error-border': error, [`${schema.source.key}`]: true}"
     :read-only="readOnly || schema.readOnly"
     @input="input"
@@ -69,28 +69,28 @@
 </template>
 
 <script>
-import xSelect from '@axons/inputs/select/Select.vue';
+import XSelect from '@axons/inputs/select/Select.vue';
 import {
-  xTagSelect,
+  XTagSelect,
   XInstancesSelect,
-  xClientConnectionSelect,
-  xRolesSelect,
+  XClientConnectionSelect,
+  XRolesSelect,
 } from '@axons/inputs/dynamicSelects';
-import xTimePicker from '@axons/inputs/TimePicker.vue';
+import XTimePicker from '@axons/inputs/TimePicker.vue';
 import { validateEmail } from '@constants/validations';
 import primitiveMixin from '../../../../../mixins/primitive';
-import xDateEdit from './DateEdit.vue';
+import XDateEdit from './DateEdit.vue';
 
 export default {
   name: 'XStringEdit',
   components: {
-    xSelect,
-    xDateEdit,
-    xTagSelect,
+    XSelect,
+    XDateEdit,
+    XTagSelect,
     XInstancesSelect,
-    xTimePicker,
-    xClientConnectionSelect,
-    xRolesSelect,
+    XTimePicker,
+    XClientConnectionSelect,
+    XRolesSelect,
   },
   mixins: [primitiveMixin],
   props: {
@@ -122,7 +122,7 @@ export default {
       return (this.schema.format === 'date-time' || this.schema.format === 'date');
     },
     isTime() {
-      return this.schema.format === 'time'
+      return this.schema.format === 'time';
     },
     isText() {
       return this.schema.format === 'text';
@@ -145,16 +145,19 @@ export default {
       if (!this.schema.source) return null;
       switch (this.schema.source.key) {
         case 'all-tags':
-          return 'xTagSelect';
+          return 'XTagSelect';
         case 'all-instances':
           return 'XInstancesSelect';
         case 'all-connection-labels':
-          return 'xClientConnectionSelect';
+          return 'XClientConnectionSelect';
         case 'all-roles':
-          return 'xRolesSelect';
+          return 'XRolesSelect';
         default:
           return null;
       }
+    },
+    placeholder() {
+      return this.schema.placeholder || 'value...';
     },
   },
   methods: {

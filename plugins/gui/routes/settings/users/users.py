@@ -10,7 +10,7 @@ from passlib.hash import bcrypt
 
 from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID)
+                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE,
@@ -28,8 +28,9 @@ from gui.logic.db_helpers import translate_user_id_to_details
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.logic.users_helper import beautify_user_entry
-# pylint: disable=no-member
 from gui.routes.settings.users.tokens.user_token import USER_NAME
+
+# pylint: disable=no-member,too-many-arguments
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -133,12 +134,25 @@ class Users:
         return jsonify(beautify_user_entry(user))
 
     def _create_user_if_doesnt_exist(self, username, first_name, last_name, email, picname=None, source='internal',
-                                     password=None, role_id=None):
+                                     password=None, role_id=None, assignment_rule_match_found=False,
+                                     change_role_on_every_login=False):
         """
-        Create a new user in the system if it does not exist already
+         Create a new user in the system if it does not exist already
         jim - 3.0 - made private instead of protected so api.py can use
 
-        :return: Created user
+
+        :param username: the username
+        :param first_name: the first name
+        :param last_name: the last name
+        :param email: the email if there is one
+        :param picname: the pic name url
+        :param source: the source of the user - internal/<identity provider>
+        :param password: the password, if empty it will generate a random password
+        :param role_id: the user role id
+        :param assignment_rule_match_found: if the role id is from an assignment rule
+        :param change_role_on_every_login: if the role of this user should be changed
+        if it was matched with a new role_id by the assignment rules
+        :return: Created user/ Or the existing one
         """
         if source != 'internal' and password:
             password = bcrypt.hash(password)
@@ -159,7 +173,8 @@ class Users:
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe(),
                 'email': email,
-                'last_updated': datetime.now()
+                'last_updated': datetime.now(),
+                IGNORE_ROLE_ASSIGNMENT_RULES: False,
             }
             if role_id:
                 # Take the permissions set from the defined role
@@ -185,6 +200,12 @@ class Users:
             except pymongo.errors.DuplicateKeyError:
                 logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
             user = self._users_collection.find_one(filter_archived(match_user))
+        elif role_id and role_id != user.get(ROLE_ID)\
+                and not user.get(IGNORE_ROLE_ASSIGNMENT_RULES)\
+                and change_role_on_every_login\
+                and assignment_rule_match_found:
+            user[ROLE_ID] = ObjectId(role_id)
+            self._users_collection.update_one(match_user, {'$set': {ROLE_ID: user[ROLE_ID]}})
         return user
 
     # pylint: disable=too-many-return-statements
@@ -271,6 +292,8 @@ class Users:
                 new_user_info['password'] = bcrypt.hash(password)
             elif password != UNCHANGED_MAGIC_FOR_GUI:
                 return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
+        else:
+            new_user_info['ignore_role_assignment_rules'] = post_data.get('ignore_role_assignment_rules')
         logger.info(f'_update_user -> user_info {new_user_info}')
         updated_user = self._users_collection.find_one_and_update({
             '_id': ObjectId(user_id)

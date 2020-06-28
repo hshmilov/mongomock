@@ -14,15 +14,15 @@ from pathlib import Path
 from passlib.hash import bcrypt
 from bson import ObjectId
 from bson.json_util import dumps
+import requests
+
 
 import pymongo
-import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from flask import session, g
 # pylint: disable=import-error,no-name-in-module
-from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
@@ -30,7 +30,6 @@ from axonius.saas.input_params import read_saas_input_params
 from axonius.saas.saas_secrets_manager import SaasSecretsManager
 from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.clients.ldap.ldap_group_cache import set_ldap_groups_cache, get_ldap_groups_cache_ttl
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ROLES_COLLECTION,
                                        TEMP_MAINTENANCE_THREAD_ID,
@@ -47,7 +46,9 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        PREDEFINED_ROLE_OWNER_RO,
                                        IS_AXONIUS_ROLE,
                                        USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
-                                       LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames)
+                                       LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
+                                       IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
+                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -55,7 +56,6 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           GUI_SYSTEM_CONFIG_COLLECTION,
                                           METADATA_PATH, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, PROXY_VERIFY,
                                           CORE_UNIQUE_NAME, NODE_NAME, NODE_USE_AS_ENV_NAME, AXONIUS_RO_USER_NAME,
-                                          DEFAULT_ROLE_ID,
                                           PASSWORD_SETTINGS, PASSWORD_LENGTH_SETTING, PASSWORD_MIN_LOWERCASE,
                                           PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
                                           PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
@@ -69,20 +69,20 @@ from axonius.mixins.triggerable import (RunIdentifier,
                                         Triggerable)
 from axonius.plugin_base import EntityType, PluginBase, random_string
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.types.ssl_state import (COMMON_SSL_CONFIG_SCHEMA,
-                                     COMMON_SSL_CONFIG_SCHEMA_DEFAULTS)
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id)
 from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
                                               get_restricted_permissions, is_role_admin, is_axonius_role,
-                                              PermissionCategory, PermissionAction)
+                                              PermissionCategory, PermissionAction, get_permissions_structure,
+                                              serialize_db_permissions)
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import MUTUAL_TLS_CA_PATH, \
     MUTUAL_TLS_CONFIG_FILE
 from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
+from gui.identity_providers import IdentityProviders
 from gui.logic.dashboard_data import (adapter_data)
 from gui.logic.login_helper import has_customer_login_happened
 from gui.logic.filter_utils import filter_archived
@@ -97,7 +97,13 @@ DEFAULT_AWS_TEST_USER = 'admin2'
 DEFAULT_AWS_TEST_PASSWORD = 'kjhsjdhbfnlkih43598sdfnsdfjkh'
 
 
-class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, AppRoutes):
+class GuiService(Triggerable,
+                 FeatureFlags,
+                 IdentityProviders,
+                 PluginBase,
+                 Configurable,
+                 APIMixin,
+                 AppRoutes):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
@@ -161,18 +167,18 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
 
     def __add_defaults(self):
         self._add_default_roles()
-        restricted_role_id = self.get_default_external_role_id(self._roles_collection)
-        config, schema = self._get_plugin_configs(self.__class__.__name__, GUI_PLUGIN_NAME)
-        okta = config['okta_login_settings']
+        no_access_role_id = self.get_default_external_role_id(self._roles_collection)
+        config, schema = self._get_plugin_configs(IDENTITY_PROVIDERS_CONFIG, GUI_PLUGIN_NAME)
         saml_login = config['saml_login_settings']
         ldap_login = config['ldap_login_settings']
         update_external_login_config = False
-        for external_service in [okta, saml_login, ldap_login]:
-            if not external_service[DEFAULT_ROLE_ID]:
-                external_service[DEFAULT_ROLE_ID] = restricted_role_id
+        for external_service in [saml_login, ldap_login]:
+            role_assignment_rules = external_service.get(ROLE_ASSIGNMENT_RULES, {})
+            if not role_assignment_rules.get(DEFAULT_ROLE_ID):
+                role_assignment_rules[DEFAULT_ROLE_ID] = no_access_role_id
                 update_external_login_config = True
         if update_external_login_config:
-            self.plugins.gui.configurable_configs[self.__class__.__name__] = config
+            self.plugins.gui.configurable_configs[IDENTITY_PROVIDERS_CONFIG] = config
 
         current_user = self._users_collection.find_one({'user_name': 'admin'})
         if current_user is None:
@@ -321,6 +327,12 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
             # Restricted role doesn't exists - let's create it. Everything restricted except the Dashboard.
             self._roles_collection.insert_one({
                 'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True, 'permissions': get_restricted_permissions()
+            })
+        if self._roles_collection.find_one({'name': NO_ACCESS_ROLE}) is None:
+            # No access role doesn't exists - let's create it. Everything restricted.
+            self._roles_collection.insert_one({
+                'name': NO_ACCESS_ROLE, PREDEFINED_FIELD: True,
+                'permissions': serialize_db_permissions(get_permissions_structure(False))
             })
 
     def _delayed_initialization(self):
@@ -717,9 +729,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
 
     def _on_config_update(self, config):
-        self._okta = config['okta_login_settings']
-        self._saml_login = config['saml_login_settings']
-        self._ldap_login = config['ldap_login_settings']
         self._system_settings = config[SYSTEM_SETTINGS]
         self._mutual_tls_settings = config['mutual_tls_settings']
         mutual_tls_is_mandatory = self._mutual_tls_settings.get('mandatory')
@@ -766,31 +775,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
             except Exception:
                 logger.exception(f'Can not delete mutual tls settings')
-
-        metadata_url = self._saml_login.get('metadata_url')
-        if metadata_url:
-            try:
-                logger.info(f'Requesting metadata url for SAML Auth')
-                requests.get(metadata_url, timeout=10)  # If the metadataurl is not accessible, fail before
-                self._saml_login['idp_data_from_metadata'] = \
-                    OneLogin_Saml2_IdPMetadataParser.parse_remote(metadata_url)
-            except Exception:
-                logger.exception(f'SAML Configuration change: Metadata parsing error')
-                self.create_notification(
-                    'SAML config change failed',
-                    content='The metadata URL provided is invalid.',
-                    severity_type='error'
-                )
-
-        try:
-            new_ttl = self._ldap_login.get('cache_time_in_hours')
-            new_ttl = new_ttl if new_ttl is not None else 1
-
-            if (get_ldap_groups_cache_ttl() / 3600) != new_ttl:
-                logger.info(f'Setting a new cache with ttl of {new_ttl} hours')
-                set_ldap_groups_cache(new_ttl * 3600)
-        except Exception:
-            logger.exception(f'Failed - could not add LDAP groups cached')
 
     def _global_config_updated(self):
         self.store_proxy_data(self._proxy_settings)
@@ -925,171 +909,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                     'items': [
                         {
                             'name': 'enabled',
-                            'title': 'Allow Okta logins',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'client_id',
-                            'title': 'Okta application client ID',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'client_secret',
-                            'title': 'Okta application client secret',
-                            'type': 'string',
-                            'format': 'password'
-                        },
-                        {
-                            'name': 'url',
-                            'title': 'Okta application URL',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'gui2_url',
-                            'title': 'Axonius GUI URL',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'default_role_id',
-                            'title': 'Default role for Okta login',
-                            'type': 'string',
-                            'enum': [],
-                            'source': {
-                                'key': 'all-roles',
-                                'options': {
-                                    'allow-custom-option': False
-                                }
-                            }
-                        }
-                    ],
-                    'required': ['enabled', 'client_id', 'client_secret', 'url', 'gui2_url', 'default_role_id'],
-                    'name': 'okta_login_settings',
-                    'title': 'Okta Login Settings',
-                    'type': 'array'
-                },
-                {
-                    'items': [
-                        {
-                            'name': 'enabled',
-                            'title': 'Allow LDAP logins',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'dc_address',
-                            'title': 'The host domain controller IP or DNS',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'group_cn',
-                            'title': 'Group the user must be part of',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'use_group_dn',
-                            'title': 'Match group name by DN',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'default_domain',
-                            'title': 'Default domain to present to the user',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'cache_time_in_hours',
-                            'title': 'LDAP group hierarchy cache refresh rate (hours)',
-                            'type': 'integer'
-                        },
-                        *COMMON_SSL_CONFIG_SCHEMA,
-                        {
-                            'name': 'default_role_id',
-                            'title': 'Default role for LDAP login',
-                            'type': 'string',
-                            'enum': [],
-                            'source': {
-                                'key': 'all-roles',
-                                'options': {
-                                    'allow-custom-option': False
-                                }
-                            }
-                        },
-                    ],
-                    'required': ['enabled', 'dc_address', 'use_group_dn', 'cache_time_in_hours', 'default_role_id'],
-                    'name': 'ldap_login_settings',
-                    'title': 'LDAP Login Settings',
-                    'type': 'array'
-                },
-                {
-                    'items': [
-                        {
-                            'name': 'enabled',
-                            'title': 'Allow SAML-based logins',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'idp_name',
-                            'title': 'Name of the identity provider',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'metadata_url',
-                            'title': 'Metadata URL',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'axonius_external_url',
-                            'title': 'Axonius external URL',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'sso_url',
-                            'title': 'Single sign-on service URL',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'entity_id',
-                            'title': 'Entity ID',
-                            'type': 'string'
-                        },
-                        {
-                            'name': 'certificate',
-                            'title': 'Signing certificate (Base64 encoded)',
-                            'type': 'file'
-                        },
-                        {
-                            'name': 'configure_authncc',
-                            'type': 'array',
-                            'items': [
-                                {
-                                    'name': 'dont_send_authncc',
-                                    'title': 'Do not send AuthnContextClassRef',
-                                    'type': 'bool',
-                                    'default': False,
-                                },
-                            ],
-                            'required': ['dont_send_authncc'],
-                        },
-                        {
-                            'name': 'default_role_id',
-                            'title': 'Default role for SAML login',
-                            'type': 'string',
-                            'enum': [],
-                            'source': {
-                                'key': 'all-roles',
-                                'options': {
-                                    'allow-custom-option': False
-                                }
-                            }
-                        },
-                    ],
-                    'required': ['enabled', 'idp_name', 'default_role_id'],
-                    'name': 'saml_login_settings',
-                    'title': 'SAML-Based Login Settings',
-                    'type': 'array'
-                },
-                {
-                    'items': [
-                        {
-                            'name': 'enabled',
                             'title': 'Enable mutual TLS',
                             'type': 'bool'
                         },
@@ -1118,40 +937,8 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
     @classmethod
     def _db_config_default(cls):
         # pylint: disable=protected-access
-        roles_collection = PluginBase.Instance._get_collection('roles', GUI_PLUGIN_NAME)
-        restricted_role_id = cls.get_default_external_role_id(roles_collection)
+
         return {
-            'okta_login_settings': {
-                'enabled': False,
-                'client_id': '',
-                'client_secret': '',
-                'url': 'https://yourname.okta.com',
-                'gui2_url': 'https://127.0.0.1',
-                'default_role_id': restricted_role_id
-            },
-            'ldap_login_settings': {
-                'enabled': False,
-                'dc_address': '',
-                'default_domain': '',
-                'group_cn': '',
-                'use_group_dn': False,
-                'cache_time_in_hours': 720,
-                'default_role_id': restricted_role_id,
-                **COMMON_SSL_CONFIG_SCHEMA_DEFAULTS
-            },
-            'saml_login_settings': {
-                'enabled': False,
-                'idp_name': None,
-                'metadata_url': None,
-                'axonius_external_url': None,
-                'sso_url': None,
-                'entity_id': None,
-                'certificate': None,
-                'configure_authncc': {
-                    'dont_send_authncc': False,
-                },
-                'default_role_id': restricted_role_id,
-            },
             SYSTEM_SETTINGS: {
                 'refreshRate': 60,
                 'cell_joiner': None,
@@ -1182,13 +969,6 @@ class GuiService(Triggerable, FeatureFlags, PluginBase, Configurable, APIMixin, 
                 'ca_certificate': None
             }
         }
-
-    @classmethod
-    def get_default_external_role_id(cls, roles_collection):
-        restricted_role = roles_collection.find_one({
-            'name': PREDEFINED_ROLE_RESTRICTED
-        })
-        return str(restricted_role.get('_id')) if restricted_role else None
 
     def _get_entity_count(self, entity, mongo_filter, history, quick):
         col, is_date_filter_required = self.get_appropriate_view(history, entity)

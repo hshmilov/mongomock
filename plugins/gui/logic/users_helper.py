@@ -26,6 +26,7 @@ def beautify_user_entry(user):
                                                    'email',
                                                    'last_login',
                                                    'last_updated',
+                                                   'ignore_role_assignment_rules',
                                                    PREDEFINED_FIELD,
                                                    IS_AXONIUS_ROLE,
                                                    ]}

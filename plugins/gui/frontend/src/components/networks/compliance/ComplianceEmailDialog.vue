@@ -174,7 +174,7 @@ export default {
         margin-bottom: 10px;
       }
 
-      .x-form > .x-array-edit {
+      .x-form > .x-array-edit .list {
         grid-template-columns: 1fr;
         grid-gap: 24px 0;
         display: grid;

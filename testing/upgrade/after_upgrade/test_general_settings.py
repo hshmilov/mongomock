@@ -67,5 +67,5 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_saml_idp() == Saml.idp
         assert self.settings_page.get_filename_by_input_id(Saml.cert).startswith(TEMP_FILE_PREFIX)
         # note: move saml_login_settings->const
-        uuid = self.axonius_system.gui.get_saml_settings()['saml_login_settings'][Saml.cert]['uuid']
+        uuid = self.axonius_system.gui.get_identity_providers_settings()['saml_login_settings'][Saml.cert]['uuid']
         assert self.axonius_system.gui.get_file_content_from_db(uuid).decode() == Saml.cert_content

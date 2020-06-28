@@ -167,7 +167,7 @@ export default {
         .x-form {
           height: calc(100% - 96px);
 
-          .x-array-edit {
+          .x-array-edit .list {
             display: block;
 
             .object {

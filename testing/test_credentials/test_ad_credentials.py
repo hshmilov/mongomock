@@ -2,6 +2,8 @@ from test_helpers.machines import FAKE_DNS_IP
 
 fakednsaddr = FAKE_DNS_IP
 
+ad_client1_mail = 'Administrator@testdomain.test'
+
 ad_client1_details = {
     "password": "Password2",
     "user": "TestDomain\\Administrator",

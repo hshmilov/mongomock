@@ -18,7 +18,8 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        PREDEFINED_ROLE_VIEWER, PREDEFINED_ROLE_OWNER, FEATURE_FLAGS_CONFIG, Signup,
                                        EXEC_REPORT_TITLE, LAST_UPDATED_FIELD, UPDATED_BY_FIELD,
                                        PREDEFINED_FIELD, IS_AXONIUS_ROLE, PREDEFINED_ROLE_RESTRICTED_USER,
-                                       PRIVATE_FIELD)
+                                       PRIVATE_FIELD, IDENTITY_PROVIDERS_CONFIG, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES,
+                                       EVALUATE_ROLE_ASSIGNMENT_ON, NEW_USERS_ONLY, ASSIGNMENT_RULE_ARRAY)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
                                           DEVICE_VIEWS,
@@ -31,7 +32,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           LIBS_PATH,
                                           AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
-                                          DEFAULT_ROLE_ID, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+                                          CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
                                        deserialize_db_permissions as old_deserialize_db_permissions)
@@ -69,7 +70,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 38:
+        if self.db_schema_version != 39:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -153,6 +154,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_37()
         if self.db_schema_version < 38:
             self._update_schema_version_38()
+        if self.db_schema_version < 39:
+            self._update_schema_version_39()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1367,6 +1370,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_schema_version_37(self):
         """
         For 3.5 - Add a default value "not private" for all the existing devices and users views in the system
+        and move the identity providers into a separate config record
         :return:
         """
         print('Upgrade to schema 37')
@@ -1424,6 +1428,18 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 38
         except Exception as e:
             print(f'Exception while upgrading gui db to version 38. Details: {e}')
+
+    def _update_schema_version_39(self):
+        """
+        For 3.6 - Migrate the external service to a new configuration record
+        :return:
+        """
+        print('Upgrade to schema 39')
+        try:
+            self.migrate_external_services_settings()
+            self.db_schema_version = 39
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 39. Details: {e}')
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """
@@ -1658,11 +1674,20 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def put_api_report(self, report_data, *vargs, **kwargs):
         return self.put(f'V{self.get_api_version()}/reports', report_data, *vargs, **kwargs)
 
-    def get_saml_settings(self):
-        return self.get_configurable_config(CONFIG_CONFIG)
+    def get_gui_settings(self):
+        return self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[CONFIG_CONFIG]
+
+    def set_gui_settings(self, value):
+        self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[CONFIG_CONFIG] = value
 
     def get_feature_flags(self):
-        return self.get_configurable_config(FEATURE_FLAGS_CONFIG)
+        return self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[FEATURE_FLAGS_CONFIG]
+
+    def get_identity_providers_settings(self):
+        return self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[IDENTITY_PROVIDERS_CONFIG]
+
+    def set_identity_providers_settings(self, value):
+        self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[IDENTITY_PROVIDERS_CONFIG] = value
 
     def get_maintenance_flags(self):
         flags = self.db.get_collection(self.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION).find_one(MAINTENANCE_FILTER)
@@ -1989,3 +2014,28 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 self._update_all_category_permissions(permissions[category], permission_name, permission_value)
             else:
                 permissions[category][permission_name] = permission_value
+
+    def migrate_external_services_settings(self):
+        gui_config = self.get_gui_settings()
+        identity_providers_config = self.get_identity_providers_settings()
+        if not identity_providers_config:
+            identity_providers_config = {}
+        if gui_config:
+            if gui_config.get('okta_login_settings'):
+                del gui_config['okta_login_settings']
+            for external_service in ['saml_login_settings',
+                                     'ldap_login_settings']:
+                if gui_config.get(external_service):
+                    external_service_settings = gui_config[external_service]
+                    default_role_id = external_service_settings.get(DEFAULT_ROLE_ID)
+                    external_service_settings[ROLE_ASSIGNMENT_RULES] = {
+                        DEFAULT_ROLE_ID: default_role_id,
+                        EVALUATE_ROLE_ASSIGNMENT_ON: NEW_USERS_ONLY,
+                        ASSIGNMENT_RULE_ARRAY: []
+                    }
+                    identity_providers_config[external_service] = external_service_settings
+                    del gui_config[external_service]
+
+            self.set_identity_providers_settings(identity_providers_config)
+
+            self.set_gui_settings(gui_config)
