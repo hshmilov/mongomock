@@ -88,6 +88,8 @@ class JamfAdapter(AdapterBase, Configurable):
         purchase_price = Field(str, 'Purchase Price')
         purchasing_account = Field(str, 'Purchasing Account')
         purchasing_contact = Field(str, 'Purchasing Contact')
+        last_contact_time = Field(datetime.datetime, "Last Contact Time")
+        report_date = Field(datetime.datetime, "Report Date")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -329,6 +331,8 @@ class JamfAdapter(AdapterBase, Configurable):
                     # Thus we believe the following fields will be present.
                     last_contact_time_utc = general_info.get('last_contact_time_utc')
                     report_date = general_info.get('report_date')
+                    device.last_contact_time = parse_date(last_contact_time_utc)
+                    device.report_date = parse_date(report_date)
                     try:
                         if last_contact_time_utc:
                             device.last_seen = parse_date(last_contact_time_utc)
