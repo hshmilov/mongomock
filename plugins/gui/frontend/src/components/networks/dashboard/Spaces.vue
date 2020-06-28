@@ -18,17 +18,9 @@
             :title="defaultSpace.name"
             :selected="currentSpace === defaultSpace.uuid"
             :editable="canAdd"
+            :enable-menu="canAdd"
           >
             <span slot-scope="{ active }">
-              <div class="space_action_bar">
-                <XSpaceOptionsMenu
-                  v-if="canAdd"
-                  :editable="canAdd"
-                  parent-selector=".space_action_bar"
-                  @edit="openEditSpace(defaultSpace)"
-                  @remove="confirmRemoveSpace(defaultSpace.uuid)"
-                />
-              </div>
               <XDefaultSpace
                 v-if="active"
                 :panels="defaultSpace.panels"
@@ -47,7 +39,6 @@
             :selected="currentSpace === personalSpace.uuid"
           >
             <span slot-scope="{ active }">
-              <div class="space_action_bar" />
               <XPanels
                 v-if="active"
                 :panels="personalSpace.panels"
@@ -65,18 +56,9 @@
             :selected="currentSpace === space.uuid"
             :editable="canAdd"
             :removable="canDelete"
+            :enable-menu="canAdd || canDelete"
           >
             <span slot-scope="{ active }">
-              <div class="space_action_bar">
-                <XSpaceOptionsMenu
-                  v-if="canAdd || canDelete"
-                  :editable="canAdd"
-                  :removable="canDelete"
-                  parent-selector=".space_action_bar"
-                  @edit="openEditSpace(space)"
-                  @remove="confirmRemoveSpace(space.uuid)"
-                />
-              </div>
               <XPanels
                 v-if="active"
                 :panels="space.panels"
@@ -86,6 +68,17 @@
               />
             </span>
           </XTab>
+          <template
+            v-slot:menu="tab"
+          >
+            <XSpaceOptionsMenu
+              :editable="tab.editable"
+              :removable="tab.removable"
+              parent-selector=".header"
+              @edit="openEditSpace(selectedSpace)"
+              @remove="confirmRemoveSpace(currentSpace)"
+            />
+          </template>
         </XTabs>
       </template>
     </XRoleGateway>
@@ -261,14 +254,12 @@ export default {
 <style lang="scss">
     .x-spaces {
       height: calc(100% - 54px);
-      .space_action_bar {
-        display: flex;
-        flex-direction: row-reverse;
-        min-height: 30px;
-        padding: 0 15px;
-        .ant-dropdown-menu {
-          min-width: 150px;
-        }
+      .x-tabs {
+          .header {
+              .ant-dropdown-menu {
+                  min-width: 150px;
+              }
+          }
       }
     }
 </style>

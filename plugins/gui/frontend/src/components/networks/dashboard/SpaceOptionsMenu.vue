@@ -6,12 +6,13 @@
       :get-popup-container="getPopupContainer"
     >
       <XButton
-        class="action_trigger"
+        class="action-trigger"
         type="link"
       >
         <XIcon
-          type="thunderbolt"
-        />Space Actions</XButton>
+          family="symbol"
+          type="verticalDots"
+        /></XButton>
       <AMenu
         slot="overlay"
       >
@@ -76,11 +77,11 @@ export default {
 </script>
 
 <style lang="scss">
-.action_trigger {
+.action-trigger {
   cursor: pointer;
   color: $theme-black;
-  width: auto;
-  padding-right: 0;
+  padding: 0;
+  height: auto;
   svg {
     stroke: $theme-black;
   }

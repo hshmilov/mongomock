@@ -1,5 +1,6 @@
 <template>
   <AModal
+    v-if="spaceForm"
     class="edit-space-modal"
     :visible="true"
     :centered="true"
@@ -104,7 +105,7 @@ export default {
     return {
       rolesOptions: [],
       error: '',
-      spaceForm: {},
+      spaceForm: false,
     };
   },
   computed: {

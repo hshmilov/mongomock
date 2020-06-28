@@ -95,7 +95,7 @@ class DashboardPage(Page):
     SPACE_ACCESS_RADIO_BUTTON_ID = 'roles_space_access'
     SPACE_ROLES_SELECT_ID = '#select_space'
     SPACE_ROLES_DROPDOWN_CSS = '.x-multiple-select-dropdown'
-    SPACE_ACTION_MENU_CSS = '.space_action_bar .action_trigger'
+    SPACE_ACTION_MENU_CSS = '.x-spaces .x-tabs .header .action-trigger'
     PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-card\') ' \
                           'and .//text()=\'{panel_name}\']'
     NO_DATA_FOUND_TEXT = 'No data found'

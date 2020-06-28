@@ -41,6 +41,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    enableMenu: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {

@@ -21,6 +21,15 @@
           class="text"
           :title="tab.title"
         >{{ tab.title }}</div>
+        <span
+          v-if="tab.enableMenu && tab.isActive"
+          class="tab-menu"
+        >
+          <slot
+            name="menu"
+            v-bind="tab"
+          />
+        </span>
       </li>
       <li
         v-if="extendable"
@@ -157,6 +166,12 @@ export default {
         top: -1px;
         transform: rotate(-15deg);
         border-top-right-radius: 50%;
+      }
+      .tab-menu {
+        position: absolute;
+        right: -5px;
+        top: 10px;
+        z-index: 21;
       }
     }
 
