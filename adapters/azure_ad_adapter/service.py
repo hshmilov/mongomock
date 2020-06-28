@@ -296,8 +296,10 @@ class AzureAdAdapter(AdapterBase, Configurable):
             if device_raw.get('wiFiMacAddress'):
                 device.add_nic(device_raw.get('wiFiMacAddress'), None)
             device.is_encrypted = device_raw.get('isEncrypted')
-            device.user_principal_name = device_raw.get('userPrincipalName')
             device.azure_ad_id = device_raw.get('azureADDeviceId')
+            if device_raw.get('userPrincipalName'):
+                device.user_principal_name = device_raw.get('userPrincipalName')
+                device.last_used_users = [device_raw.get('userPrincipalName')]
             try:
                 installed_apps = device_raw.get('installed_apps') or []
                 for app in installed_apps:
