@@ -678,18 +678,13 @@ export const SAVE_CUSTOM_DATA = 'SAVE_CUSTOM_DATA';
 export const saveCustomData = ({ state, dispatch }, payload) => {
   const module = getModule(state, payload);
   if (!module) return;
-
-  const fieldData = payload.data.reduce((map, item) => {
-    map[item.title || item.name] = item.value;
-    return map;
-  }, {});
-  fieldData.id = 'unique';
+  payload.data.id = 'unique';
   return dispatch(REQUEST_API, {
     rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
     method: 'POST',
     data: {
       selection: payload.selection,
-      data: fieldData,
+      data: payload.data,
     },
     type: UPDATE_CUSTOM_DATA,
     payload,

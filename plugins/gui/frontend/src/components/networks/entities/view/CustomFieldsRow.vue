@@ -30,7 +30,7 @@
             :class="{'border-error': empty(fieldType), 'item-type': true}"
           />
           <input
-            v-model="fieldName"
+            v-model="fieldTitle"
             type="text"
             :class="{'border-error': empty(fieldName) || error, 'item-name': true}"
             @keypress="validateFieldName"
@@ -110,9 +110,17 @@ export default {
         this.$emit('input', { ...this.field, name });
       },
     },
+    fieldTitle: {
+      get() {
+        return this.field.title || this.field.name;
+      },
+      set(name) {
+        this.$emit('input', { ...this.field, name });
+      },
+    },
     fieldType: {
       get() {
-        return this.field.type;
+        return this.field.type || this.schema.type;
       },
       set(type) {
         this.$emit('input', {

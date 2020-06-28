@@ -410,18 +410,25 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
 
         errors = {}
         for k, v in post_data['data'].items():
-            if not isinstance(v, (str, int, bool, float)):
-                errors[k] = f'{k} is of type {type(v)} which is not allowed'
+            predefined = False
+            # support for visualization in custom data.
+            if isinstance(v, dict):
+                predefined = v.get('predefined', False)
+                if predefined:
+                    v = v.get('value')
+
             try:
                 if k.startswith('custom_'):
                     entity_to_add.set_static_field(k, Field(type(v), k))
                 elif not entity_to_add.set_field_by_title(k, v):
                     # Canonize field name with title as received
-                    field_name = f'custom_{"_".join(k.split(" ")).lower()}'
-                    entity_to_add.declare_new_field(field_name, Field(type(v), k))
+                    field_name = f'{"_".join(k.split(" ")).lower()}'
+                    if not predefined:
+                        field_name = f'custom_{field_name}'
+                        entity_to_add.declare_new_field(field_name, Field(type(v), k))
                     setattr(entity_to_add, field_name, v)
-            except Exception:
-                errors[k] = f'Value {v} not compatible with field {k}'
+            except Exception as e:
+                errors[k] = f'Value {v} not compatible with field {k}.'
                 logger.exception(errors[k])
 
         if len(errors) > 0:

@@ -403,14 +403,16 @@ export const UPDATE_CUSTOM_DATA = 'UPDATE_CUSTOM_DATA';
 export const updateCustomData = (state, payload) => {
   const module = getModule(state, payload);
   if (!payload.fetching || !module.current.data.adapters) return;
+
+  const prepareCustomFieldName = (name) => (`custom_${name.split(' ').join('_').toLowerCase()}`);
+
   const guiAdapter = module.current.data.adapters.find((item) => item.name === 'gui');
-  const data = payload.data.reduce((map, field) => {
-    let canonizedName = field.name.split(' ').join('_').toLowerCase();
-    if (!field.predefined) {
-      canonizedName = `custom_${canonizedName}`;
-    }
-    map[canonizedName] = field.value;
-    return map;
+  const data = Object.entries(payload.data).reduce((map, [fieldName, itemValue]) => {
+    if (fieldName === 'id') return map;
+    const [key, value] = itemValue.predefined
+      ? [fieldName, itemValue.value]
+      : [prepareCustomFieldName(fieldName), itemValue];
+    return { ...map, [key]: value };
   }, {});
   if (guiAdapter) {
     guiAdapter.data = data;
@@ -443,22 +445,23 @@ export const updateCustomData = (state, payload) => {
       return map;
     }, {});
 
-  payload.data.forEach((field) => {
-    if (!schemaFields[field.name]) return;
+  Object.entries(payload.data).forEach(([fieldName, fieldValue]) => {
+    const key = fieldValue.predefined ? fieldName : `custom_${fieldName}`;
+    if (!schemaFields[key]) return;
 
-    const basicField = basic[`specific_data.data.${field.name}`];
+    const basicField = basic[`specific_data.data.${fieldName}`];
 
     if (Array.isArray(basicField)) {
       if (!basicField) {
-        basic[`specific_data.data.${field.name}`] = [];
+        basic[`specific_data.data.${key}`] = [];
       }
-      if (field.new) {
-        basicField.push(field.value);
+      if (fieldValue.new) {
+        basicField.push(fieldValue);
       } else {
-        basicField[basicField.length - 1] = field.value;
+        basicField[basicField.length - 1] = fieldValue;
       }
     } else {
-      basic[`specific_data.data.${field.name}`] = field.value;
+      basic[`specific_data.data.${key}`] = fieldValue;
     }
   });
 };

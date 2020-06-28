@@ -17,8 +17,8 @@
             </template>
           </div>
           <XButton
-            type="primary"
             v-if="isGuiAdapterData(item)"
+            type="primary"
             :disabled="userCannotEditDevices"
             @click="editFields"
           >Edit Fields</XButton>
@@ -30,10 +30,10 @@
         </div>
         <XList
           v-if="viewBasic || isGuiAdapterData(item)"
-          :data="item"
+          :data="genericSchema && item"
           :schema="adapterSchema(item.plugin_name)"
         />
-        <json-view
+        <JsonView
           v-else
           :data="item.data.raw"
           root-key="raw"
@@ -69,6 +69,10 @@ import { JSONView } from 'vue-json-component';
 import {
   mapState, mapActions, mapGetters,
 } from 'vuex';
+import _get from 'lodash/get';
+import _isPlainObject from 'lodash/isPlainObject';
+import _isArray from 'lodash/isArray';
+import entityCustomData from '@mixins/entity_custom_data';
 import XTabs from '../../../axons/tabs/Tabs.vue';
 import XTab from '../../../axons/tabs/Tab.vue';
 import XList from '../../../neurons/schema/List.vue';
@@ -77,7 +81,7 @@ import XModal from '../../../axons/popover/Modal/index.vue';
 import XCustomFields from './CustomFields.vue';
 import XToast from '../../../axons/popover/Toast.vue';
 
-import { SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS } from '../../../../store/actions';
+import { FETCH_DATA_FIELDS } from '../../../../store/actions';
 
 import { pluginMeta } from '../../../../constants/plugin_meta';
 import { guiPluginName, initCustomData, getEntityPermissionCategory } from '../../../../constants/entities';
@@ -98,8 +102,9 @@ export default {
     XModal,
     XCustomFields,
     XToast,
-    'json-view': JSONView,
+    JsonView: JSONView,
   },
+  mixins: [entityCustomData],
   props: {
     entityId: {
       type: String,
@@ -158,7 +163,7 @@ export default {
       }).map((item) => {
         item.id = `${item.plugin_unique_name}_${item.data.id}`;
         let connectionLabel = this.getConnectionLabel(item.client_used, {
-          plugin_unique_name: item.plugin_unique_name
+          plugin_unique_name: item.plugin_unique_name,
         });
         item.connectionLabel = connectionLabel || item.client_used;
         if (connectionLabel !== '') {
@@ -184,8 +189,10 @@ export default {
       return this.fields.generic.map((field) => field.name);
     },
     genericSchema() {
+      const schema = _get(this.fields, 'schema.generic');
+      if (!schema) return null;
       return {
-        ...this.fields.schema.generic,
+        ...schema,
         name: 'data',
         title: 'SEPARATOR',
         hyperlinks: eval(this.hyperlinks.aggregator),
@@ -194,24 +201,23 @@ export default {
     genericSchemaNoId() {
       return {
         ...this.genericSchema,
-        items: this.genericSchema.items.filter((item) => item.name !== 'id'),
+        items: this.genericSchema.items.filter((item) => item.name !== 'id' && item.name !== 'specific_data.data.id'),
       };
-    },
-    customFields() {
-      if (!this.fields.specific.gui) {
-        return this.fields.generic;
-      }
-      return [...this.fields.generic,
-        ...this.fields.specific.gui
-          .filter((field) => !this.genericFieldNames.includes(field.name))];
     },
     customData() {
       return this.sortedSpecificData[this.sortedSpecificData.length - 1].data;
     },
+    fieldTitles() {
+      const createFieldsMap = (result, item) => ({ ...result, [this.trimName(item.name)]: item.title });
+      return {
+        predefined: this.customFields.predefined.reduce(createFieldsMap, {}),
+        custom: this.customFields.custom.reduce(createFieldsMap, {}),
+      };
+    },
   },
   methods: {
     ...mapActions({
-      saveCustomData: SAVE_CUSTOM_DATA, fetchDataFields: FETCH_DATA_FIELDS,
+      fetchDataFields: FETCH_DATA_FIELDS,
     }),
     isGuiAdapterData(data) {
       return data.plugin_name === guiPluginName;
@@ -235,21 +241,16 @@ export default {
     editFields() {
       this.fieldsEditor = {
         active: true,
-        data: Object.entries(this.customData)
-          .map(([name, value]) => ({ name, value, predefined: true })),
+        data: this.prepareCustomData(this.customData),
         valid: true,
       };
     },
     saveFieldsEditor() {
       if (!this.fieldsEditor.valid) return;
-      this.saveCustomData({
-        module: this.module,
-        selection: {
-          ids: [this.entityId],
-          include: true,
-        },
-        data: this.fieldsEditor.data,
-      }).then(() => {
+      this.saveEntityCustomData({
+        ids: [this.entityId],
+        include: true,
+      }, this.fieldsEditor.data).then(() => {
         this.toastMessage = 'Saved Custom Data';
         this.fetchDataFields({
           module: this.module,
@@ -265,6 +266,32 @@ export default {
     },
     validateFieldsEditor(valid) {
       this.fieldsEditor.valid = valid;
+    },
+    prepareCustomData(customData) {
+      return Object.entries(customData)
+        .reduce((items, [name, value]) => {
+          const res = this.customUserField(name)
+            ? [{
+              name, value, title: this.fieldTitles.custom[name], predefined: false,
+            }]
+            : this.flattenCustomData(`specific_data.data.${name}`, value);
+          return [...items, ...res];
+        }, []);
+    },
+    flattenCustomData(name, value, result = []) {
+      /**
+       * Recursive function that flats a server side object into a dot seperated path.
+       * for example {os: {type: 'windows'}} => 'specific_data.data.os.type'
+       */
+      if (_isPlainObject(value)) {
+        return Object.entries(value).reduce((accumulatorResult, [key, val]) => (
+          this.flattenCustomData(`${name}.${key}`, val, accumulatorResult)), result);
+      } if (_isArray(value)) {
+        return value.reduce((accumulatorResult, items) => (
+          Object.entries(items).reduce((nestedAccumulatorResult, [key, val]) => (
+            this.flattenCustomData(`${name}.${key}`, val, nestedAccumulatorResult)), accumulatorResult)), result);
+      }
+      return result.concat({ name, value, predefined: true });
     },
   },
 };

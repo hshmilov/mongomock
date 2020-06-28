@@ -80,7 +80,7 @@
       <XCustomFields
         v-model="customAdapterData"
         :module="module"
-        :fields="fields"
+        :fields="customFields"
       />
     </XActionMenuItem>
   </div>
@@ -88,17 +88,21 @@
 
 <script>
 import { mapState, mapActions, mapMutations } from 'vuex';
-import { Icon, Tooltip, Dropdown, Menu } from 'ant-design-vue';
+import {
+  Icon, Tooltip, Dropdown, Menu,
+} from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
+import entityCustomData from '@mixins/entity_custom_data';
 import XActionMenuItem from './ActionMenuItem.vue';
 import XCustomFields from '../../networks/entities/view/CustomFields.vue';
 import XTagModal from '../popover/TagModal.vue';
 import XButton from '../../axons/inputs/Button.vue';
 
 import {
-  DELETE_DATA, DISABLE_DATA, SAVE_CUSTOM_DATA, FETCH_DATA_FIELDS,
+  DELETE_DATA, DISABLE_DATA, FETCH_DATA_FIELDS,
 } from '../../../store/actions';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
+
 
 export default {
   name: 'XActionMenu',
@@ -114,6 +118,7 @@ export default {
     AMenuItem: Menu.Item,
     XIcon,
   },
+  mixins: [entityCustomData],
   props: {
     module: {
       type: String,
@@ -144,10 +149,7 @@ export default {
         return state[this.module].count.data;
       },
       fields(state) {
-        const fields = state[this.module].fields.data;
-        if (!fields) return [];
-        if (!fields.specific) return fields.generic;
-        return fields.specific.gui || fields.generic;
+        return state[this.module].fields.data;
       },
     }),
     selectionCount() {
@@ -174,7 +176,6 @@ export default {
     ...mapActions({
       disableData: DISABLE_DATA,
       deleteData: DELETE_DATA,
-      saveCustomData: SAVE_CUSTOM_DATA,
       fetchDataFields: FETCH_DATA_FIELDS,
     }),
     ...mapMutations({
@@ -198,11 +199,7 @@ export default {
       }).then(() => this.$emit('done'));
     },
     saveFields() {
-      return this.saveCustomData({
-        module: this.module,
-        selection: this.entities,
-        data: this.customAdapterData,
-      }).then(() => {
+      return this.saveEntityCustomData(this.entities, this.customAdapterData).then(() => {
         this.fetchDataFields({ module: this.module });
         this.initCustomFields();
       });

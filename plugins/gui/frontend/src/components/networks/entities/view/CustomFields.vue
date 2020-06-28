@@ -8,8 +8,8 @@
         v-for="(field, i) in fieldConfig"
         :key="i"
         :field="field"
-        :schema="fieldMap[field.name]"
-        :field-options="currentFieldOptions(field.name)"
+        :schema="getFieldSchema(field.name, field.predefined)"
+        :field-options="currentFieldOptions(field.name, field.predefined)"
         :external-error="externalError[field.name]"
         @input="(val) => updateField(i, val)"
         @remove="() => removeField(i)"
@@ -49,7 +49,7 @@ export default {
       required: true,
     },
     fields: {
-      type: Array,
+      type: Object,
       required: true,
     },
     externalError: {
@@ -65,7 +65,7 @@ export default {
   computed: {
     fieldConfig: {
       get() {
-        return this.value.filter((field) => field.name !== 'id');
+        return this.value.filter((field) => field.name !== 'specific_data.data.id');
       },
       set(value) {
         let valid = true;
@@ -81,9 +81,6 @@ export default {
           } else {
             this.error = '';
           }
-          if (this.fieldMap[field.name]) {
-            field.title = this.fieldMap[field.name].title;
-          }
         });
         this.$emit('input', value);
         this.$emit('validate', valid);
@@ -93,30 +90,47 @@ export default {
       return this.fieldConfig.map((field) => field.name);
     },
     fieldOptions() {
-      return this.fields
-        .filter((field) => !field.name.match(/\.id$/) && this.validType(field))
-        .sort((first, second) => {
-          if (first.dynamic) return -1;
-          if (second.dynamic) return 1;
-          return first.name > second.name;
-        })
+      const filterFields = (field) => !field.name.match(/\.id$/) && this.validType(field);
+      const sortFields = (first, second) => {
+        if (first.dynamic) return -1;
+        if (second.dynamic) return 1;
+        return first.name > second.name;
+      };
+
+      const predefined = this.fields.predefined
+        .filter(filterFields)
+        .sort(sortFields)
+        .map((field) => ({
+          name: field.name, title: field.title,
+        }));
+
+      const custom = this.fields.custom
+        .filter(filterFields)
+        .sort(sortFields)
         .map((field) => ({
           name: this.trimName(field.name), title: field.title,
         }));
+
+      return { predefined, custom };
     },
-    fieldMap() {
-      return this.fields.reduce((map, field) => {
-        map[this.trimName(field.name)] = field;
-        return map;
-      }, {});
+    predefinedFieldsMap() {
+      return this.fields.predefined.reduce((map, field) => ({ ...map, [field.name]: field }), {});
     },
-    fieldTitles() {
-      return this.fieldOptions.map((field) => field.title.toLowerCase());
+    customFieldsMap() {
+      return this.fields.custom.reduce((map, field) => ({ ...map, [this.trimName(field.name)]: field }), {});
+    },
+    customFieldTitles() {
+      const createTitles = (field) => field.title.toLowerCase();
+      return this.fieldOptions.custom.map(createTitles);
     },
   },
   methods: {
-    currentFieldOptions(fieldName) {
-      return this.fieldOptions.filter((field) => !this.definedFieldNames.includes(field.name) || field.name === fieldName);
+    getFieldSchema(fieldName, predefined) {
+      return predefined ? this.predefinedFieldsMap[fieldName] : this.customFieldsMap[fieldName];
+    },
+    currentFieldOptions(fieldName, predefined) {
+      const fields = predefined ? this.fieldOptions.predefined : this.fieldOptions.custom;
+      return fields.filter((field) => !this.definedFieldNames.includes(field.name) || field.name === fieldName);
     },
     trimName(name) {
       return name.replace(/(adapters_data|specific_data)\.(gui|data)\./g, '');
@@ -146,14 +160,14 @@ export default {
         return false;
       }
       const fieldsByName = this.definedFieldNames.filter((currentName) => {
-        if (this.fieldMap[currentName]) {
+        if (this.customFieldsMap[currentName]) {
           // Given a field definition, compare with its title
-          return fieldName === this.fieldMap[currentName].title;
+          return fieldName === this.customFieldsMap[currentName].title;
         }
         // With no field definition, the name itself (given by user) will be the title
         return fieldName === currentName;
       });
-      return (fieldsByName.length > 1 || this.fieldTitles.includes(fieldName.toLowerCase()));
+      return (fieldsByName.length > 1 || this.customFieldTitles.includes(fieldName.toLowerCase()));
     },
   },
 };
