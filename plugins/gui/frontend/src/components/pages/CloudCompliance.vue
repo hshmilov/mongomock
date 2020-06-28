@@ -160,8 +160,6 @@ export default {
       allCloudComplianceRules: [],
       accounts: [],
       rules: [],
-      failedOnly: false,
-      aggregatedView: true,
       loading: true,
       error: null,
       complianceOptions: [
@@ -240,6 +238,22 @@ export default {
       },
       set(value) {
         this.activeRules = value;
+      },
+    },
+    failedOnly: {
+      get() {
+        return this.filters.failedOnly;
+      },
+      set(value) {
+        this.updateComplianceFilters(value, 'failedOnly');
+      },
+    },
+    aggregatedView: {
+      get() {
+        return this.filters.aggregatedView;
+      },
+      set(value) {
+        this.updateComplianceFilters(value, 'aggregatedView');
       },
     },
     rulesLabels() {

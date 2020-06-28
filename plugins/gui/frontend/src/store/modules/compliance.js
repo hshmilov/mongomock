@@ -11,7 +11,7 @@ const getComplianceReportState = () => {
         filter: '', expressions: [],
       },
       filters: {
-        accounts: [], rules: [], categories: [],
+        accounts: [], rules: [], categories: [], failedOnly: false, aggregatedView: true,
       },
     },
   };
