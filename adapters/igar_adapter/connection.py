@@ -66,6 +66,25 @@ class IgarConnection(RESTConnection):
             # result = response.GetServerListFullResult.ServerFullInfo
             result = self._client.service.GetServerListFull(**dict_params)
 
+    def _paginated_get_equipment(self):
+        dict_params = {
+            'startIndex': 0,
+            'itemsCount': DEVICE_PER_PAGE
+        }
+        max_results = MAX_NUMBER_OF_DEVICES
+        result = self._client.service.GetNetworkEquipmentList(**dict_params)
+        while result and dict_params['startIndex'] < max_results:
+            logger.info(f'Yielding Network Equipment from {dict_params["startIndex"]}')
+            if isinstance(result, list):
+                yield from zeep.helpers.serialize_object(result, dict)
+            else:
+                logger.error(f'Result is not a list: {result}')
+                raise TypeError(result)
+            dict_params['startIndex'] += DEVICE_PER_PAGE
+            # response = self._client.service.GetServerListFull(**dict_params)
+            # result = response.GetServerListFullResult.ServerFullInfo
+            result = self._client.service.GetNetworkEquipmentList(**dict_params)
+
     def _paginated_get_apps(self):
         dict_params = {
             'startIndex': 0,
@@ -96,10 +115,15 @@ class IgarConnection(RESTConnection):
 
     def get_all_data(self):
         # Actual get all data, in the same format as the csv
-        return self._paginated_get_servers(), self._get_servers_to_apps_mapping(), self._paginated_get_apps()
+        return (
+            self._paginated_get_servers(),
+            self._get_servers_to_apps_mapping(),
+            self._paginated_get_apps(),
+            self._paginated_get_equipment()
+        )
 
     def get_users_list(self):
-        return self.get_all_data()
+        return self._paginated_get_servers(), self._get_servers_to_apps_mapping(), self._paginated_get_apps()
 
     def get_device_list(self):
         return self.get_all_data()

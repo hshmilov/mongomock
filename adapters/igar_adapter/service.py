@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 import logging
 import chardet
 from axonius.adapter_exceptions import ClientConnectionException
@@ -40,6 +41,10 @@ class ApplicationData(SmartJsonClass):
 class IgarAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
+        device_type = Field(str, 'Device Type', description='Server or Network Equipment',
+                            enum=['Server', 'Network Equipment'])
+        comments = Field(str, 'Comments')
+        # server stuff
         igar_server_id = Field(str, 'Igar Server ID')
         has_ip_duplication = Field(bool, 'Has IP Duplication')
         last_modified = Field(datetime.datetime, 'Last Modified')
@@ -66,11 +71,35 @@ class IgarAdapter(AdapterBase):
         authentication_record = Field(str, 'Authentication Record')
         scan_group_field = Field(str, 'Scan Group Field')
         data_center_id = Field(str, 'Data Center ID')
-        comments = Field(str, 'Comments')
         panned_availability_period = Field(str, 'Panned Availability Period')
         ci_number = Field(str, 'CI Number')
         server_environent_supported_by = Field(str, 'Server Environent Supported By')
         manua_host_ip_address = Field(str, 'Manual Host IP Address')
+        # network equipment stuff
+        att_active = Field(str, 'ATTActive')
+        addr_geid = Field(str, 'Address GEID')
+        addr_geid_from_ip = Field(str, 'Address GEID from IP')
+        ownership_status = Field(str, 'Asset Ownership Status')
+        is_deleted = Field(bool, 'Deleted')
+        sub_type = Field(str, 'Device Sub-Type')
+        network_device_type = Field(str, 'Network Equipment Type')
+        equipment_id = Field(int, 'Equipment ID')
+        is_included_hld_lld = Field(bool, 'Is Included HLD/LLD')
+        initial_delivery_date = Field(datetime.datetime, 'Initial Delivery Date')
+        is_confirmed = Field(bool, 'Is Confirmed')
+        is_external = Field(bool, 'Is External')
+        maintenance_exp_date = Field(datetime.datetime, 'Maintenance Expiry Date')
+        new_device_type = Field(str, 'New Device Type')
+        new_purchase_date = Field(datetime.datetime, 'New Purchased Date')
+        new_purchase_status = Field(str, 'New Purchased Status')
+        ref_number = Field(str, 'Reference Number')
+        router_short_hostname = Field(str, 'Router Short Host Name')
+        sw_version = Field(str, 'SW Version')
+        site_code = Field(str, 'Site Code')
+        switch_name_or_ip = Field(str, 'Switch Name or IP')
+        is_transferred_to_snow = Field(bool, 'Is Transferred to SNOW')
+        is_under_maintenance = Field(bool, 'Is Under Maintenance')
+        used_for = Field(str, 'Used For')
 
     class MyUserAdapter(UserAdapter):
         applications_data = ListField(ApplicationData, 'Applications Data')
@@ -124,16 +153,28 @@ class IgarAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     def _query_users_by_client(self, key, data):
+        """
+        Return tuple: servers_data, servers_apps_data, apps_data
+        :param key: connection name
+        :param data: connection (csv files info or IGARConnection)
+        :return: tuple(servers_data, servers_apps_data, apps_data)
+        """
         if isinstance(data, IgarConnection):
             with data:
                 return data.get_users_list()
         return self._get_csv_data(data)
 
     def _query_devices_by_client(self, client_name, client_data):
+        """
+        Return tuple: servers_data, servers_apps_data, apps_data, network_eq_data
+        :param client_name: connection name
+        :param client_data: connection (csv files info or IGARConnection)
+        :return: tuple(servers_data, servers_apps_data, apps_data, network_eq_data)
+        """
         if isinstance(client_data, IgarConnection):
             with client_data:
                 return client_data.get_device_list()
-        return self._get_csv_data(client_data)
+        return (*self._get_csv_data(client_data), [])  # eq list is empty in case of csv
 
     def _get_csv_data(self, client_data):
         servers_data = self._create_csv_data_from_file(client_data['igar_servers_file'])
@@ -265,13 +306,94 @@ class IgarAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with user mail {user_mail}')
 
+    @staticmethod
+    def _parse_bool(value):
+        if isinstance(value, (bool, int)):
+            return bool(value)
+        return None
+
     # pylint: disable=too-many-locals
     def _parse_raw_data(self, devices_raw_data):
-        servers_data, servers_applications_data, applications_data = devices_raw_data
+        servers_data, servers_applications_data, applications_data, equipment_data = devices_raw_data
 
+        yield from self._create_servers_devices(applications_data, servers_applications_data, servers_data)
+        yield from self._create_net_equipment_devices(equipment_data)
+
+    def _create_net_equipment_devices(self, equipment_data):
+        for device_raw in equipment_data:
+            try:
+                if not isinstance(device_raw, dict):
+                    continue
+                device = self._new_device_adapter()
+                eq_id = str(device_raw.get('EquipmentId') or '')
+                if not eq_id:
+                    logger.warning(f'Bad device with no ID {device_raw}')
+                    continue
+                device.id = eq_id + '_' + (device_raw.get('DeviceName') or '')
+                device.name = device_raw.get('DeviceName')
+                device.device_manufacturer = device_raw.get('Manufacturer')
+                device.device_serial = device_raw.get('SerialNumber')
+                device.device_model = device_raw.get('DeviceModel')
+                device.owner = device_raw.get('AssetOwnedBy')
+                device.device_managed_by = device_raw.get('ManagedBy')
+                device.physical_location = device_raw.get('Location')
+                try:
+                    ips = list()
+                    ip_addr = device_raw.get('IPAddress')
+                    switch_name_or_ip = device_raw.get('SwitchNameOrIP')
+                    if ip_addr:
+                        ips.append(ip_addr)
+                    if switch_name_or_ip:
+                        try:
+                            ip_switch = str(ipaddress.ip_address(switch_name_or_ip))
+                            if ip_switch != ip_addr:
+                                ips.append(ip_switch)
+                        except Exception:
+                            logger.debug(f'switch_name_or_ip {switch_name_or_ip} is not a valid ip.')
+                    if ips:
+                        device.add_nic(ips=ips)
+                except Exception as e:
+                    logger.warning(f'Failed to add IP to device {device_raw}: {str(e)}')
+
+                # And now for specific fields
+                device.comments = device_raw.get('Comments')
+                device.att_active = device_raw.get('ATTActive')
+                device.addr_geid = device_raw.get('AddressGEID')
+                device.addr_geid_from_ip = device_raw.get('AddressGEIDFromIP')
+                device.ownership_status = device_raw.get('AssetOwnershipStatus')
+                device.is_deleted = self._parse_bool(device_raw.get('Deleted'))
+                device.sub_type = device_raw.get('DeviceSubType')
+                device.network_device_type = device_raw.get('DeviceType')
+                device.equipment_id = device_raw.get('EquipmentId')
+                device.is_included_hld_lld = self._parse_bool(device_raw.get('IncludedHLDLLD'))
+                device.initial_delivery_date = parse_date(device_raw.get('InitialDeliveryDate'))
+                device.is_confirmed = self._parse_bool(device_raw.get('IsConfirmed'))
+                device.is_external = self._parse_bool(device_raw.get('IsExternal'))
+                device.maintenance_exp_date = parse_date(device_raw.get('MaintenanceExpiryDate'))
+                device.new_device_type = device_raw.get('NewDeviceType')
+                device.new_purchase_date = parse_date(device_raw.get('NewPurchasedDate'))
+                device.new_purchase_status = device_raw.get('NewPurchasedStatus')
+                device.ref_number = device_raw.get('ReferenceNumber')
+                short_host_name = device_raw.get('RouterShortHostName')
+                if short_host_name:
+                    device.hostname = short_host_name
+                device.router_short_hostname = short_host_name
+                device.sw_version = device_raw.get('SWVersion')
+                device.site_code = device_raw.get('SiteCode')
+                device.switch_name_or_ip = device_raw.get('SwitchNameOrIP')
+                device.is_transferred_to_snow = self._parse_bool(device_raw.get('TransferredToSNOW'))
+                device.is_under_maintenance = self._parse_bool(device_raw.get('UnderMaintenance'))
+                device.used_for = device_raw.get('UsedFor')
+
+                device.device_type = 'Network Equipment'
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f'Problem adding device: {str(device_raw)}')
+
+    def _create_servers_devices(self, applications_data, servers_applications_data, servers_data):
         application_data_dict = dict()
         server_applications_dict = dict()
-
         for application_raw in applications_data:
             try:
                 application_id = application_raw.get('InstallationID')
@@ -322,27 +444,7 @@ class IgarAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with server application {server_application_raw}')
         servers_data = list(servers_data)
-        ips_seen = set()
-        ips_dups = set()
-        for device_raw in servers_data:
-            try:
-                ip_raw = device_raw.get('ServerIP') or device_raw.get('IP')
-                if not (isinstance(ip_raw, str) and ip_raw):
-                    continue
-                if ',' in ip_raw:
-                    ip_list = ip_raw.split(',')
-                else:
-                    ip_list = [ip_raw]
-                for ip in ip_list:
-                    ip = ip.strip()
-                    if not ip:
-                        continue
-                    if ip in ips_seen:
-                        ips_dups.add(ip)
-                    ips_seen.add(ip)
-            except Exception:
-                logger.exception(f'Problem getting ips stuff for: {str(device_raw)}')
-        ips_dups = list(ips_dups)
+        ips_dups = list(self._get_ips_dups(servers_data))
         logger.debug(f'Ips Dups are {ips_dups}')
         for device_raw in servers_data:
             try:
@@ -425,10 +527,35 @@ class IgarAdapter(AdapterBase):
                 device.ci_number = device_raw.get('CINumber')
                 device.server_environent_supported_by = device_raw.get('Server_Environent_Supported_By') or \
                     device_raw.get('ServerEnvironentSupportedBy')
+                device.device_type = 'Server'
                 device.set_raw(device_raw)
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')
+
+    @staticmethod
+    def _get_ips_dups(servers_data):
+        ips_seen = set()
+        ips_dups = set()
+        for device_raw in servers_data:
+            try:
+                ip_raw = device_raw.get('ServerIP') or device_raw.get('IP')
+                if not (isinstance(ip_raw, str) and ip_raw):
+                    continue
+                if ',' in ip_raw:
+                    ip_list = ip_raw.split(',')
+                else:
+                    ip_list = [ip_raw]
+                for ip in ip_list:
+                    ip = ip.strip()
+                    if not ip:
+                        continue
+                    if ip in ips_seen:
+                        ips_dups.add(ip)
+                    ips_seen.add(ip)
+            except Exception:
+                logger.exception(f'Problem getting ips stuff for: {str(device_raw)}')
+        return ips_dups
 
     @classmethod
     def adapter_properties(cls):
