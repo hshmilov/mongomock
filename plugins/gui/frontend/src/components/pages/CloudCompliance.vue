@@ -2,7 +2,6 @@
   <XPage
     class="x-cloud-compliance-page"
     title="Cloud Asset Compliance Center"
-    :beta="true"
   >
     <div class="x-cloud-compliance">
       <div class="cis-header">
