@@ -22,6 +22,7 @@ import axonius
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.entities import EntityType
 from axonius.utils.datetime import is_date_real, parse_date, _parse_unix_timestamp
+from axonius.devices.msft_versions import parse_msft_release_version
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -221,6 +222,10 @@ def figure_out_cloud(s):
 
 
 def figure_out_windows_dist(s):
+    win_ver = parse_msft_release_version(s.lower())
+    if win_ver is not None:
+        return win_ver
+
     # We do this to avoid cases like "Windows 10 XXX 2016"
     if 'windows 10 ' in s.lower() and 'server' not in s.lower():
         return '10'
