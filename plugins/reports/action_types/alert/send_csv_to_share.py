@@ -95,7 +95,7 @@ class SendCsvToShare(ActionTypeAlert):
             share_password = self._config.get('csv_share_password')
             share_path = self._config.get('csv_share')[2:]
             if self._config.get('append_datetime'):
-                share_path += '_' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S').replace(' ', '-')
+                share_path += '_' + datetime.datetime.now().strftime('%Y-%m-%d %H_%M_%S').replace(' ', '-')
             if self._config.get('append_csv_ending'):
                 share_path += '.csv'
             share_path = share_path.replace('\\', '/')

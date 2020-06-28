@@ -1067,7 +1067,7 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             if preferred_field == 'specific_data.data.hostname_preferred' and field_to_value[preferred_field]:
                 field_to_value[preferred_field] = [x.upper().split('.')[0] for x in field_to_value[preferred_field]]
         except Exception as e:
-            logger.error(f'Problem in merging preferred fields: {e}')
+            logger.exception(f'Problem in merging preferred fields: {e}')
             continue
 
     # in case the entity has meta data added like client_used

@@ -9,6 +9,7 @@ from axonius.clients.rest.exception import RESTException
 from axonius.clients.xml.connection import parse_xml_from_string
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name, is_valid_ipv6
@@ -18,7 +19,7 @@ from bigfix_adapter.connection import BigfixConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class BigfixAdapter(AdapterBase):
+class BigfixAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
         bigfix_device_type = Field(str, 'Device type')
