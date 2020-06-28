@@ -1278,6 +1278,11 @@
     "link": "https://docs.axonius.com/docs/oracle-vm",
     "description": "Oracle VM's server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris. "
   },
+  "sonic_wall_adapter": {
+    "title": "SonicWall",
+    "link": "https://docs.axonius.com/docs/sonicwall",
+    "description": "SonicWall next-generation firewalls (NGFW) provide security, control and visibility to maintain an effective cybersecurity posture."
+  },
   "cisco_meraki_adapter": {
     "title": "Cisco Meraki",
     "link": "https://docs.axonius.com/docs/cisco-meraki",

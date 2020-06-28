@@ -1,0 +1,25 @@
+DEVICE_PER_PAGE = 200
+MAX_NUMBER_OF_DEVICES = 2000000
+
+API_PREFIX = 'api/sonicos'
+
+INTERFACES_IPV4_API_PREFIX = 'interfaces/ipv4'
+
+IPV4_TYPE = 'ipv4'
+IPV6_TYPE = 'ipv6'
+MAC_TYPE = 'mac'
+INTERFACES_TYPE = 'interfaces-ipv4'
+
+MAC_OBJECT_API_PREFIX = 'address-objects/mac'
+IPV4_OBJECT_API_PREFIX = 'address-objects/ipv4'
+IPV6_OBJECT_API_PREFIX = 'address-objects/ipv6'
+
+ADDRESS_OBJECTS = [(IPV4_OBJECT_API_PREFIX, IPV4_TYPE),
+                   (IPV6_OBJECT_API_PREFIX, IPV6_TYPE),
+                   (MAC_OBJECT_API_PREFIX, MAC_TYPE)]
+
+ACCESS_RULE_IPV4_PREFIX = 'access-rules/ipv4'
+ACCESS_RULE_IPV6_PREFIX = 'access-rules/ipv6'
+
+ACCESS_RULES = [(ACCESS_RULE_IPV4_PREFIX, IPV4_TYPE),
+                (ACCESS_RULE_IPV6_PREFIX, IPV6_TYPE)]
