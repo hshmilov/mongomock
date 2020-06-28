@@ -279,6 +279,17 @@ class TestDashboardCharts(TestBase):
         self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.OSX_OPERATING_SYSTEM_FILTER, self.OSX_OPERATING_SYSTEM_NAME)
         self.dashboard_page.switch_to_page()
+
+        def _test_comparison_save_disabled(module_query_list):
+            self.dashboard_page.prepare_comparison_card(module_query_list,
+                                                        title=self.TEST_EMPTY_TITLE, chart_type='pie')
+            assert self.dashboard_page.is_chart_save_disabled()
+            self.dashboard_page.click_card_cancel()
+
+        valid_queries = [{'module': 'Devices', 'query': self.OSX_OPERATING_SYSTEM_NAME}] * 2
+        _test_comparison_save_disabled(valid_queries + [{'module': '', 'query': ''}])
+        _test_comparison_save_disabled(valid_queries + [{'module': 'Devices', 'query': ''}])
+
         self.dashboard_page.add_comparison_card([{'module': 'Devices', 'query': self.OSX_OPERATING_SYSTEM_NAME},
                                                  {'module': 'Devices', 'query': self.OSX_OPERATING_SYSTEM_NAME}],
                                                 title=self.TEST_EMPTY_TITLE,

@@ -447,7 +447,8 @@ class DashboardPage(Page):
     def get_views_list_add_button(self):
         return self.driver.find_element_by_id(self.SELECT_VIEWS_ADD_BUTTON)
 
-    def add_comparison_card(self, module_query_list, title, chart_type='histogram', sort_by='value', sort_order='desc'):
+    def prepare_comparison_card(self, module_query_list, title, chart_type='histogram',
+                                sort_by='value', sort_order='desc'):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Comparison')
         views_list = self.get_views_list()
@@ -456,8 +457,10 @@ class DashboardPage(Page):
         for index, module_query in enumerate(module_query_list):
             if index > 1:
                 self.get_views_list_add_button().click()
-            self.select_chart_wizard_module_by_index(module_query['module'], index)
-            self.select_chart_view_name_by_index(module_query['query'], index)
+            if module_query['module'] != '':
+                self.select_chart_wizard_module_by_index(module_query['module'], index)
+            if module_query['query'] != '':
+                self.select_chart_view_name_by_index(module_query['query'], index)
 
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
 
@@ -465,6 +468,8 @@ class DashboardPage(Page):
             self.driver.find_element_by_css_selector(self.WIZARD_SORT_BY.format(sort_by=sort_by)).click()
             self.driver.find_element_by_css_selector(self.WIZARD_SORT_ORDER.format(sort_order=sort_order)).click()
 
+    def add_comparison_card(self, module_query_list, title, chart_type='histogram', sort_by='value', sort_order='desc'):
+        self.prepare_comparison_card(module_query_list, title, chart_type, sort_by, sort_order)
         self.click_card_save()
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()

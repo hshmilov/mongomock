@@ -22,6 +22,7 @@
 
 <script>
 import _get from 'lodash/get';
+import _every from 'lodash/every';
 import chartMixin from './chart';
 import XSelectViews from '../../../neurons/inputs/SelectViews.vue';
 import {
@@ -31,7 +32,7 @@ import {
 } from '../../../../constants/dashboard';
 import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
 
-const dashboardView = { name: '', entity: '' };
+const dashboardView = { entity: '', id: '' };
 export default {
   name: 'XChartCompare',
   components: {
@@ -102,10 +103,7 @@ export default {
   },
   methods: {
     validate() {
-      this.$emit(
-        'validate',
-        !this.selectedViews.filter((view) => view.name === '').length,
-      );
+      this.$emit('validate', _every(this.selectedViews, (view) => view.entity && view.id));
     },
     getSortTitle(type) {
       return `Sort by ${type}`;
