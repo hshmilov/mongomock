@@ -63,6 +63,7 @@ from reports.action_types.base.qualys_add_tag import QualysAddTag
 from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
 from reports.action_types.base.create_cherwell_computer import CherwellCreateComputerAction
 from reports.action_types.base.update_cherwell_computer import CherwellUpdateComputerAction
+from reports.action_types.base.create_jira_asset import CreateJiraAssetAction
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'update_cherwell_computer': CherwellUpdateComputerAction,
@@ -114,6 +115,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_fresh_service_incident': FreshServiceIncidentAction,
     'webscan_enrichment': WebscanEnrichment,
     'jira_incident_per_entity_action': JiraIncidentPerEntityAction,
+    'jira_create_asset': CreateJiraAssetAction,
     'automox_install_update': AutomoxInstallUpdateAction,
     'carbonblack_defense_quarantine': CarbonblackDefenseQuarantineAction,
     'carbonblack_defense_unquarantine': CarbonblackDefenseUnquarantineAction,

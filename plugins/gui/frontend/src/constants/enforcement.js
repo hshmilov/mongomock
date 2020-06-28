@@ -146,6 +146,9 @@ export const actionsMeta = {
     jira_incident_per_entity_action: {
         title: 'Create Jira Issue per Entity'
     },
+    jira_create_asset: {
+        title: 'Add Asset to Jira Assets Platform'
+    },
     create_sysaid_incident: {
         title: 'Create SysAid Incident'
     },
@@ -231,7 +234,7 @@ export const actionsMeta = {
     },
     create_cmdb_computer: {
         title: 'Manage CMDB Computer',
-        items: ['create_service_now_computer', 'update_service_now_computer', 'create_cherwell_computer','update_cherwell_computer']
+        items: ['create_service_now_computer', 'update_service_now_computer', 'create_cherwell_computer','update_cherwell_computer', 'jira_create_asset']
     },
     manage_directory: {
         title: 'Manage Microsoft Active Directory (AD) Services',
