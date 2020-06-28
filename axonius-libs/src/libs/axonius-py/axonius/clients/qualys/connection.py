@@ -756,7 +756,7 @@ class QualysScansConnection(RESTConnection):
 
                 # determine whether multiple results returned
                 host_assets = service_response['data']['HostAsset']
-                if isinstance(host_assets, list):
+                if not isinstance(host_assets, list):
                     host_assets = [host_assets]
                 yield from host_assets
 
