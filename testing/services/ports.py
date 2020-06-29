@@ -31,6 +31,7 @@ DOCKER_PORTS = {
     'sophos-adapter':                   5092,
     'blackberry-uem-adapter':           5101,
     'fireeye-hx-adapter':               5102,
+    'sal-adapter':                      5103,
     'esx-adapter':                      5111,
     'aws-adapter':                      5112,
     'traiana-lab-machines-adapter':     5113,

@@ -1328,6 +1328,11 @@
     "link": "",
     "description": "Stresstest can be configured with any amount of devices and it creates that number of random devices."
   },
+  "sal_adapter": {
+    "title": "Sal",
+    "link": "https://docs.axonius.com/docs/sal",
+    "description": "Sal is a open source reporting solution for managed endpoints."
+  },
   "stresstest_adapter": {
     "title": "Test adapters",
     "link": "",
