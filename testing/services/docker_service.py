@@ -463,6 +463,10 @@ class DockerService(AxonService):
         self.start(**kwargs)
         self.wait_for_service()
 
+    @retry(stop_max_attempt_number=5, wait_fixed=5)
+    def retrying_start_and_wait(self, **kwargs):
+        self.start_and_wait(**kwargs)
+
     @retry(stop_max_attempt_number=3, wait_fixed=5)
     def get_file_contents_from_container(self, file_path):
         """
@@ -550,11 +554,14 @@ class DockerService(AxonService):
 
     @contextmanager
     def contextmanager(self, *, should_delete=True, take_ownership=False, allow_restart=False,
-                       stop_grace_period=STOP_GRACE_PERIOD):
+                       stop_grace_period=STOP_GRACE_PERIOD, retry_if_fail=False):
         if take_ownership:
             self.take_process_ownership()
         try:
-            self.start_and_wait(allow_restart=allow_restart)
+            if retry_if_fail:
+                self.retrying_start_and_wait(allow_restart=allow_restart)
+            else:
+                self.start_and_wait(allow_restart=allow_restart)
             yield self
         finally:
             self.stop(should_delete=should_delete, grace_period=STOP_GRACE_PERIOD)

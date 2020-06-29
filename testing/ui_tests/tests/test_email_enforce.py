@@ -8,7 +8,7 @@ QUERY = 'Windows'
 
 class TestEmailEnforce(TestBase):
     def test_email_enforce(self):
-        with SmtpService().contextmanager(take_ownership=True) as smtp_service:
+        with SmtpService().contextmanager(take_ownership=True, retry_if_fail=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
             recipient = generate_random_valid_email()

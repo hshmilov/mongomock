@@ -71,7 +71,7 @@ class TestGlobalSettings(TestBase):
         self.settings_page.click_save_global_settings()
         self.settings_page.wait_email_connection_failure_toaster(smtp_service.fqdn)
 
-        with smtp_service.contextmanager():
+        with smtp_service.contextmanager(retry_if_fail=True):
             self.settings_page.click_save_button()
             self.settings_page.wait_for_saved_successfully_toaster()
 

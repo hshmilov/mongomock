@@ -178,7 +178,7 @@ class TestReport(TestBase):
         self.reports_page.find_missing_email_server_notification()
 
     def test_test_now_with_email_server(self):
-        with SmtpService().contextmanager(take_ownership=True) as smtp_service:
+        with SmtpService().contextmanager(take_ownership=True, retry_if_fail=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             self.reports_page.switch_to_page()
             self.reports_page.click_new_report()
@@ -202,7 +202,7 @@ class TestReport(TestBase):
         self.settings_page.remove_email_server()
 
     def test_test_now_with_tls_email_server(self):
-        with SmtpService().contextmanager(take_ownership=True) as smtp_service:
+        with SmtpService().contextmanager(take_ownership=True, retry_if_fail=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             goguerrilla_basedir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                                '../../services/standalone_services/goguerrilla'))

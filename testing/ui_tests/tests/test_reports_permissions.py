@@ -242,7 +242,8 @@ class TestReportsPermissions(PermissionsTestBase):
         smtp_service = SmtpService()
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()
-        with smtp_service.contextmanager(take_ownership=True), stress.contextmanager(take_ownership=True),\
+        with smtp_service.contextmanager(take_ownership=True, retry_if_fail=True), \
+                stress.contextmanager(take_ownership=True),\
                 stress_scanner.contextmanager(take_ownership=True):
             device_dict = {'device_count': 10, 'name': 'blah'}
             stress.add_client(device_dict)
