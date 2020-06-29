@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import pytest
+
 from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
@@ -65,9 +67,10 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.fill_schedule_rate(DISCOVERY_UPDATED_VALUE)
         self.settings_page.save_and_wait_for_toaster()
 
+    @pytest.mark.skip('removed okta from the configurations')
     def test_gui_settings(self):
         self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
+        self.settings_page.click_identity_providers_settings()
         self.settings_page.wait_for_spinner_to_end()
 
         self.settings_page.set_single_adapter_checkbox(make_yes=True)
@@ -91,7 +94,7 @@ class TestPrepareGlobalSettings(TestBase):
 
     def test_saml_settings(self):
         self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
+        self.settings_page.click_identity_providers_settings()
         self.settings_page.wait_for_spinner_to_end()
 
         self.settings_page.set_allow_saml_based_login()

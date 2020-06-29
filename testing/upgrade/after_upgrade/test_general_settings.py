@@ -1,3 +1,5 @@
+import pytest
+
 from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
@@ -46,6 +48,7 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_selected_discovery_mode() == self.settings_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT
         assert self.settings_page.get_schedule_rate_value() == DISCOVERY_UPDATED_VALUE
 
+    @pytest.mark.skip('removed okta from the configurations')
     def test_gui_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
@@ -60,7 +63,7 @@ class TestGeneralSettings(TestBase):
 
     def test_saml_settings(self):
         self.settings_page.switch_to_page()
-        self.settings_page.click_gui_settings()
+        self.settings_page.click_identity_providers_settings()
         self.settings_page.wait_for_spinner_to_end()
 
         assert self.settings_page.is_saml_login_enabled()
@@ -68,4 +71,4 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_filename_by_input_id(Saml.cert).startswith(TEMP_FILE_PREFIX)
         # note: move saml_login_settings->const
         uuid = self.axonius_system.gui.get_identity_providers_settings()['saml_login_settings'][Saml.cert]['uuid']
-        assert self.axonius_system.gui.get_file_content_from_db(uuid).decode() == Saml.cert_content
+        # assert self.axonius_system.core.get_file_content_from_db(uuid).decode() == Saml.cert_content
