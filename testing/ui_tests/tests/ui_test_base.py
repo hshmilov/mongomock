@@ -4,6 +4,7 @@ import logging.handlers
 import os
 import re
 import sys
+import tempfile
 from datetime import datetime, timedelta
 
 import pytest
@@ -80,9 +81,10 @@ logger = create_ui_tests_logger()
 
 class TestBase:
     def _initialize_driver(self):
+        self.ui_tests_download_dir = tempfile.gettempdir()
         if pytest.config.option.local_browser:
             self.local_browser = True
-            self.driver = self._get_local_browser()
+            self.driver = self._get_local_browser(self.ui_tests_download_dir)
             self.base_url = 'https://127.0.0.1'
             self.port = 443
         elif pytest.config.option.host_hub:
@@ -94,7 +96,7 @@ class TestBase:
             logger.info(f'Connecting to the remote hub {remote_hub}..')
             self.driver = webdriver.Remote(
                 command_executor=remote_hub,
-                desired_capabilities=self._get_desired_capabilities())
+                desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir))
             logger.info('Connected successfully!')
         else:
             self.local_browser = False
@@ -107,7 +109,7 @@ class TestBase:
             @retry(retry_on_exception=should_retry, stop_max_attempt_number=3, wait_fixed=1000)
             def create_remote_driver():
                 return webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
-                                        desired_capabilities=self._get_desired_capabilities())
+                                        desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir))
 
             logger.info('Before webdriver.Remote')
             self.driver = create_remote_driver()
@@ -115,8 +117,11 @@ class TestBase:
             self.base_url = f'https://gui.{AXONIUS_DNS_SUFFIX}'
 
     @staticmethod
-    def _get_desired_capabilities():
+    def _get_desired_capabilities(ui_tests_download_dir):
         if pytest.config.option.browser == conftest.CHROME:
+            caps = webdriver.DesiredCapabilities.CHROME.copy()
+            prefs = {'download.default_directory': ui_tests_download_dir}
+            caps['prefs'] = prefs
             return webdriver.DesiredCapabilities.CHROME
         if pytest.config.option.browser == conftest.FIREFOX:
             ff_profile = webdriver.FirefoxProfile()
@@ -130,9 +135,11 @@ class TestBase:
         raise AssertionError('Invalid browser selected')
 
     @staticmethod
-    def _get_local_browser():
+    def _get_local_browser(ui_tests_download_dir):
         if pytest.config.option.browser == conftest.CHROME:
             options = webdriver.ChromeOptions()
+            prefs = {'download.default_directory': ui_tests_download_dir}
+            options.add_experimental_option('prefs', prefs)
             ext_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'Vue.js-devtools_v5.3.3.crx')
             options.add_extension(ext_path)
             options.add_argument('--ignore-certificate-errors')

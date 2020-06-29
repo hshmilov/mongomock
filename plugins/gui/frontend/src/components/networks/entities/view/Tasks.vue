@@ -111,6 +111,7 @@ export default {
       this.fetchDataCSV({
         module: this.module,
         endpoint: `${this.entityType}/${this.entityId}/tasks`,
+        schema_fields: this.actionFields.items,
       });
     },
   },

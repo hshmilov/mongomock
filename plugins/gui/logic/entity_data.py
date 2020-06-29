@@ -341,25 +341,26 @@ def sort_data(data: list, field_by_name: dict, sort: dict):
     if sort:
         sort_field, sort_desc = sort.popitem()
         default_value = None
-        if field_by_name[sort_field]['type'] == 'string':
-            if field_by_name[sort_field].get('format') and 'date' in field_by_name[sort_field]['format']:
-                default_value = datetime.min
-            else:
-                default_value = ''
-        elif field_by_name[sort_field]['type'] in ['integer', 'number']:
-            default_value = 0
-        elif field_by_name[sort_field]['type'] == 'bool':
-            default_value = False
-        elif field_by_name[sort_field]['type'] == 'array':
-            default_value = []
+        if field_by_name.get(sort_field):
+            if field_by_name[sort_field]['type'] == 'string':
+                if field_by_name[sort_field].get('format') and 'date' in field_by_name[sort_field]['format']:
+                    default_value = datetime.min
+                else:
+                    default_value = ''
+            elif field_by_name[sort_field]['type'] in ['integer', 'number']:
+                default_value = 0
+            elif field_by_name[sort_field]['type'] == 'bool':
+                default_value = False
+            elif field_by_name[sort_field]['type'] == 'array':
+                default_value = []
 
-        def sort_key(row):
-            sort_value = row.get(sort_field, default_value)
-            if sort_value and isinstance(sort_value, list):
-                return ''.join(sort_value)
-            return sort_value
+            def sort_key(row):
+                sort_value = row.get(sort_field, default_value)
+                if sort_value and isinstance(sort_value, list):
+                    return ''.join(sort_value)
+                return sort_value
 
-        data.sort(key=sort_key, reverse=(int(sort_desc) == DESCENDING))
+            data.sort(key=sort_key, reverse=(int(sort_desc) == DESCENDING))
 
 
 def get_export_csv(rows: list, field_by_name: dict, sort: dict):

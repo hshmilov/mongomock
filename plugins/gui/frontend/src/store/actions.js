@@ -178,8 +178,9 @@ const createPostContentRequest = (state, payload) => {
     // so we are using ${}
     params.fields = `${fields}`;
   }
-  if (_get(view, 'schema_fields', []).length) {
-    params.schema_fields = view.schema_fields;
+  const schemaFields = payload.schema_fields || _get(view, 'schema_fields', null);
+  if (schemaFields) {
+    params.schema_fields = schemaFields;
   }
   if (_get(view, 'query')) {
     if (view.query.filter) {

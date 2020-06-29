@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timedelta
 from axonius.utils.wait import wait_until
@@ -113,8 +114,24 @@ class TestDevice(TestBase):
         self.devices_page.click_task_name(enforcement_set_id)
         self.enforcements_page.wait_for_action_result()
         assert self.enforcements_page.get_task_name() == enforcement_set_id
-
+        self._test_task_export_csv()
         self.logger.info('finished test_device_enforcement_tasks')
+
+    def _test_task_export_csv(self):
+        self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).click()
+        self.devices_page.wait_for_table_to_load()
+        self.devices_page.click_row()
+        self.devices_page.wait_for_spinner_to_end()
+        self.devices_page.click_enforcement_tasks_tab()
+        self.devices_page.click_button('Export CSV')
+        time.sleep(7)
+        for root, dirs, files in os.walk(self.ui_tests_download_dir):
+            for file in files:
+                if file.endswith('.csv') and file.find('enforcement_tasks') != -1:
+                    f = open(f'{self.ui_tests_download_dir}/{file}', 'rb')
+                    #  perform calculation
+                    self.devices_page.assert_csv_match_ui_data_with_content(f.read())
+                    f.close()
 
     def test_device_enforcement_task_sort(self):
         """
