@@ -14,7 +14,7 @@ class AlertActionResult(DataClassJsonMixin):
     # Whether or not the execution was successful
     successful: bool
     # Execution result
-    status: dict
+    status: str
 
 
 @dataclass(frozen=True)
@@ -24,7 +24,7 @@ class EntityResult(DataClassJsonMixin):
     # Whether or not the execution was successful
     successful: bool
     # Execution result
-    status: dict
+    status: str
 
 
 # This represents each entity in the results of an execution of an action

@@ -53,7 +53,7 @@ class DisableEntities(ActionTypeBase):
                 response = self._plugin_base.request_remote_plugin(urlpath, plugin_unique_name, method='POST',
                                                                    json=entities)
                 if response.status_code != 200:
-                    logger.error(f'Error on disabling on {plugin_unique_name}: {response.content}')
-                    yield from (EntityResult(id_, False, response.content) for id_ in chunk)
+                    logger.error(f'Error on disabling on {plugin_unique_name}: {response.text}')
+                    yield from (EntityResult(id_, False, response.text) for id_ in chunk)
                 else:
                     yield from (EntityResult(id_, True, 'Disabled entity') for id_ in chunk)

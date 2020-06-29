@@ -105,15 +105,15 @@ class SlackSendMessageAction(ActionTypeAlert):
                     }
                 ]
             }
-            resposne = requests.post(url=self._config['webhook_url'],
+            response = requests.post(url=self._config['webhook_url'],
                                      json=slack_dict,
                                      headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
                                      verify=self._config['verify_url'])
-            success = resposne.status_code == 200
+            success = response.status_code == 200
             if success is True:
                 message = 'Success'
             else:
-                message = resposne.content
+                message = response.text
         except Exception as e:
             logger.exception('Problem sending to slack')
             message = str(e)
