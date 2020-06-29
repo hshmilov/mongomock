@@ -81,6 +81,7 @@ func buildDetails(m map[string]interface{}) map[string]interface{} {
 	return cm
 }
 
+
 func createFieldMappings(opCtx *graphql.OperationContext, fields []graphql.CollectedField) map[string]string {
 	mappings := make(map[string]string)
 	for _, f := range fields {
@@ -115,6 +116,10 @@ func buildCompatibilityField(originalPath []string, parentValue json.Any) interf
 	case json.NilValue:
 		return nil
 	case json.ArrayValue:
+		// if its an array of size 1 simplify into a single field
+		if parentValue.Size() == 1 {
+			return buildCompatibilityField(originalPath, parentValue.Get(0))
+		}
 		values := make([]interface{}, parentValue.Size())
 		for i := 0; i < parentValue.Size(); i++ {
 			value := parentValue.Get(i)
@@ -145,6 +150,10 @@ func removeDuplicatesFromSlice(sl []interface{}) []interface{} {
 		}
 		// try type string if empty string remove
 		if s, ok := i.(*string); ok && *s == "" {
+			continue
+		}
+		// try type string if empty string remove
+		if s, ok := i.(string); ok && s == "" {
 			continue
 		}
 		exists := false

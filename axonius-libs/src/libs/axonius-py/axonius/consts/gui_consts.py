@@ -243,6 +243,7 @@ class FeatureFlagsNames:
     LockedActions = 'locked_actions'
     Bandicoot = 'bandicoot'
     ExperimentalAPI = 'experimental_api'
+    BandicootCompare = 'bandicoot_result_compare_only'
     CloudCompliance = 'cloud_compliance'
     ExpiryDate = 'expiry_date'
     LockOnExpiry = 'lock_on_expiry'

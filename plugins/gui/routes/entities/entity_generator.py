@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import (jsonify,
                    make_response, request)
 
-from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT
+from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT, FeatureFlagsNames
 from axonius.plugin_base import EntityType
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (historical, paginated,
@@ -16,16 +16,23 @@ from axonius.utils.gui_helpers import (historical, paginated,
                                        schema_fields as schema)
 from axonius.utils.json_encoders import iterator_jsonify
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.entity_data import (get_entity_data, entity_data_field_csv,
                                    entity_notes, entity_notes_update, entity_tasks_actions,
                                    entity_tasks_actions_csv)
 from gui.logic.generate_csv import get_csv_from_heavy_lifting_plugin
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.entities.views.views_generator import views_generator
-from gui.logic.graphql.graphql import allow_experimental
+from gui.logic.graphql.graphql import allow_experimental, compare_results, compare_counts
+
 # pylint: disable=no-member,no-self-use
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+def _should_allow_compare(gui):
+    return gui.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
+        and gui.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False)
 
 
 def entity_generator(rule: str, permission_category: PermissionCategory):
@@ -59,6 +66,15 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                         'defaultSort'),
                                     history_date=history,
                                     include_details=True)
+            # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
+            if self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
+                    and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
+                iterable = list(iterable)
+                logger.info('Executing query compare async')
+                # extract request and transfer it to threaded function to compare with bandicoot
+                request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+                GLOBAL_RUN_AND_FORGET.submit(compare_results, self.entity_type, request_data, iterable)
+
             return iterator_jsonify(iterable)
 
         @filtered_entities()
@@ -107,8 +123,15 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
             quick = quick == 'True'
-            return str(self._get_entity_count(
-                self.entity_type, mongo_filter, history, quick))
+            mongo_result = str(self._get_entity_count(self.entity_type, mongo_filter, history, quick))
+            # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
+            if not quick and self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
+                    and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
+                logger.info('Executing query count compare async')
+                # extract request and transfer it to threaded function to compare with bandicoot
+                request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+                GLOBAL_RUN_AND_FORGET.submit(compare_counts, self.entity_type, request_data, mongo_result)
+            return mongo_result
 
         @gui_route_logged_in('fields')
         def fields(self):

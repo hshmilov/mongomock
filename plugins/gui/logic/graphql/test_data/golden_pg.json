@@ -1,0 +1,759 @@
+{
+  "data": {
+    "devices": [
+      {
+        "adapterCount": 1,
+        "id": "350e89d0-0d60-f45d-ea63-0ecd1172cfb5",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "350e89d00d60f45dea630ecd1172cfb5",
+          "specific_data.data.hostname": [
+            "ip-10-0-247-96.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-247-96.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Auto-Test-VM-test_latest_export_TestInstancesBeforeNodeJoin "
+          ],
+          "specific_data.data.name_details": [
+            "Auto-Test-VM-test_latest_export_TestInstancesBeforeNodeJoin "
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.247.96"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.247.96"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:09:d0:f4:31:6e"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:09:d0:f4:31:6e"
+            ]
+          ],
+          "specific_data.data.os.type": [
+            "Unknown"
+          ],
+          "specific_data.data.os.type_details": [
+            "Unknown"
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Auto-Test-VM-test_latest_export_TestInstancesBeforeNodeJoin ",
+            "hostname": "ip-10-0-247-96.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:09:d0:f4:31:6e",
+                "ipAddrs": [
+                  "10.0.247.96"
+                ]
+              }
+            ],
+            "os": {
+              "type": "Unknown"
+            }
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "e4d671a1-0a84-64da-1e7f-31d1c8f8d220",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "e4d671a10a8464da1e7f31d1c8f8d220",
+          "specific_data.data.hostname": [
+            "ip-10-0-2-87.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-2-87.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Kimhi's tests"
+          ],
+          "specific_data.data.name_details": [
+            "Kimhi's tests"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.2.87"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.2.87"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:a9:6b:24:e8:be"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:a9:6b:24:e8:be"
+            ]
+          ],
+          "specific_data.data.os.type": null,
+          "specific_data.data.os.type_details": [
+            null
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Kimhi's tests",
+            "hostname": "ip-10-0-2-87.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:a9:6b:24:e8:be",
+                "ipAddrs": [
+                  "10.0.2.87"
+                ]
+              }
+            ],
+            "os": null
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "dbed19ce-e2e1-2d7c-46ea-d15c37f5715c",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "dbed19cee2e12d7c46ead15c37f5715c",
+          "specific_data.data.hostname": [
+            "ip-10-0-247-155.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-247-155.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Builds-VM-Sagi Tunnel develop server 11"
+          ],
+          "specific_data.data.name_details": [
+            "Builds-VM-Sagi Tunnel develop server 11"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.247.155"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.247.155"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:97:7b:1a:09:fa"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:97:7b:1a:09:fa"
+            ]
+          ],
+          "specific_data.data.os.type": null,
+          "specific_data.data.os.type_details": [
+            null
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Builds-VM-Sagi Tunnel develop server 11",
+            "hostname": "ip-10-0-247-155.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:97:7b:1a:09:fa",
+                "ipAddrs": [
+                  "10.0.247.155"
+                ]
+              }
+            ],
+            "os": null
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "ebe2363f-44a0-5fcd-52b9-1a7e42a7c785",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "ebe2363f44a05fcd52b91a7e42a7c785",
+          "specific_data.data.hostname": [
+            "ip-10-0-2-216.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-2-216.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Bomgar Auto Generator Jump Client"
+          ],
+          "specific_data.data.name_details": [
+            "Bomgar Auto Generator Jump Client"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.2.216"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.2.216"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:33:6c:7a:3c:ec"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:33:6c:7a:3c:ec"
+            ]
+          ],
+          "specific_data.data.os.type": [
+            "Windows"
+          ],
+          "specific_data.data.os.type_details": [
+            "Windows"
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Bomgar Auto Generator Jump Client",
+            "hostname": "ip-10-0-2-216.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:33:6c:7a:3c:ec",
+                "ipAddrs": [
+                  "10.0.2.216"
+                ]
+              }
+            ],
+            "os": {
+              "type": "Windows"
+            }
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "80d2e55c-7bed-4d3d-38c0-e2242901686a",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "80d2e55c7bed4d3d38c0e2242901686a",
+          "specific_data.data.hostname": [
+            "ip-10-0-251-3.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-251-3.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Builds-VM-TrainingsMachine3_3"
+          ],
+          "specific_data.data.name_details": [
+            "Builds-VM-TrainingsMachine3_3"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.251.3"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.251.3"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:f8:c0:fb:b8:d6"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:f8:c0:fb:b8:d6"
+            ]
+          ],
+          "specific_data.data.os.type": null,
+          "specific_data.data.os.type_details": [
+            null
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Builds-VM-TrainingsMachine3_3",
+            "hostname": "ip-10-0-251-3.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:f8:c0:fb:b8:d6",
+                "ipAddrs": [
+                  "10.0.251.3"
+                ]
+              }
+            ],
+            "os": null
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "71378359-35a1-5c20-f1ca-b86c94e448a3",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "7137835935a15c20f1cab86c94e448a3",
+          "specific_data.data.hostname": [
+            "ip-10-0-234-30.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-234-30.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            0
+          ],
+          "specific_data.data.last_seen_details": [
+            0
+          ],
+          "specific_data.data.name": [
+            "ivanti-test-1"
+          ],
+          "specific_data.data.name_details": [
+            "ivanti-test-1"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.234.30"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.234.30"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:84:6a:ae:61:40"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:84:6a:ae:61:40"
+            ]
+          ],
+          "specific_data.data.os.type": [
+            "Windows"
+          ],
+          "specific_data.data.os.type_details": [
+            "Windows"
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "ivanti-test-1",
+            "hostname": "ip-10-0-234-30.us-east-2.compute.internal",
+            "lastSeen": 0,
+            "interfaces": [
+              {
+                "macAddr": "06:84:6a:ae:61:40",
+                "ipAddrs": [
+                  "10.0.234.30"
+                ]
+              }
+            ],
+            "os": {
+              "type": "Windows"
+            }
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "f8d8219e-279b-a58f-fd51-809585c76940",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "f8d8219e279ba58ffd51809585c76940",
+          "specific_data.data.hostname": [
+            "ip-10-0-252-210.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-252-210.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            0
+          ],
+          "specific_data.data.last_seen_details": [
+            0
+          ],
+          "specific_data.data.name": [
+            "Axonius-Chef-Dashboard-OLD"
+          ],
+          "specific_data.data.name_details": [
+            "Axonius-Chef-Dashboard-OLD"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.252.210"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.252.210"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:69:12:12:cd:76"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:69:12:12:cd:76"
+            ]
+          ],
+          "specific_data.data.os.type": [
+            "Unknown"
+          ],
+          "specific_data.data.os.type_details": [
+            "Unknown"
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Axonius-Chef-Dashboard-OLD",
+            "hostname": "ip-10-0-252-210.us-east-2.compute.internal",
+            "lastSeen": 0,
+            "interfaces": [
+              {
+                "macAddr": "06:69:12:12:cd:76",
+                "ipAddrs": [
+                  "10.0.252.210"
+                ]
+              }
+            ],
+            "os": {
+              "type": "Unknown"
+            }
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "18627912-5729-b186-b74d-b278a846eff1",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "186279125729b186b74db278a846eff1",
+          "specific_data.data.hostname": [
+            "ec2-3-133-172-22.us-east-2.compute.amazonaws.com"
+          ],
+          "specific_data.data.hostname_details": [
+            "ec2-3-133-172-22.us-east-2.compute.amazonaws.com"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "insider-dev"
+          ],
+          "specific_data.data.name_details": [
+            "insider-dev"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.1.0.140",
+            "3.133.172.22"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.1.0.140",
+                "3.133.172.22"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "0a:32:e9:8c:f6:a4"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "0a:32:e9:8c:f6:a4"
+            ]
+          ],
+          "specific_data.data.os.type": null,
+          "specific_data.data.os.type_details": [
+            null
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "insider-dev",
+            "hostname": "ec2-3-133-172-22.us-east-2.compute.amazonaws.com",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "0a:32:e9:8c:f6:a4",
+                "ipAddrs": [
+                  "10.1.0.140",
+                  "3.133.172.22"
+                ]
+              }
+            ],
+            "os": null
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "0be5bd9f-90bf-4d01-f954-7778d0058b7a",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "0be5bd9f90bf4d01f9547778d0058b7a",
+          "specific_data.data.hostname": [
+            "ip-10-0-243-105.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-243-105.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "Auto-Test-VM-test_latest_export_TestInstancesUpgrade "
+          ],
+          "specific_data.data.name_details": [
+            "Auto-Test-VM-test_latest_export_TestInstancesUpgrade "
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.243.105"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.243.105"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:1a:f2:d2:fd:c0"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:1a:f2:d2:fd:c0"
+            ]
+          ],
+          "specific_data.data.os.type": [
+            "Unknown"
+          ],
+          "specific_data.data.os.type_details": [
+            "Unknown"
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "Auto-Test-VM-test_latest_export_TestInstancesUpgrade ",
+            "hostname": "ip-10-0-243-105.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:1a:f2:d2:fd:c0",
+                "ipAddrs": [
+                  "10.0.243.105"
+                ]
+              }
+            ],
+            "os": {
+              "type": "Unknown"
+            }
+          }
+        ]
+      },
+      {
+        "adapterCount": 1,
+        "id": "699bd6bf-2ac3-21eb-ebcc-370c763fc4e9",
+        "_compatibilityAPI": {
+          "adapter_list_length": 1,
+          "adapters": [
+            "json_file_adapter"
+          ],
+          "adapters_details": [
+            "json_file_adapter"
+          ],
+          "internal_axon_id": "699bd6bf2ac321ebebcc370c763fc4e9",
+          "specific_data.data.hostname": [
+            "ip-10-0-2-166.us-east-2.compute.internal"
+          ],
+          "specific_data.data.hostname_details": [
+            "ip-10-0-2-166.us-east-2.compute.internal"
+          ],
+          "specific_data.data.last_seen": [
+            1589961723000
+          ],
+          "specific_data.data.last_seen_details": [
+            1589961723000
+          ],
+          "specific_data.data.name": [
+            "AX-ArgoBuilds-001"
+          ],
+          "specific_data.data.name_details": [
+            "AX-ArgoBuilds-001"
+          ],
+          "specific_data.data.network_interfaces.ips": [
+            "10.0.2.166"
+          ],
+          "specific_data.data.network_interfaces.ips_details": [
+            [
+              [
+                "10.0.2.166"
+              ]
+            ]
+          ],
+          "specific_data.data.network_interfaces.mac": [
+            "06:25:3a:38:90:42"
+          ],
+          "specific_data.data.network_interfaces.mac_details": [
+            [
+              "06:25:3a:38:90:42"
+            ]
+          ],
+          "specific_data.data.os.type": null,
+          "specific_data.data.os.type_details": [
+            null
+          ]
+        },
+        "adapterNames": [
+          "json_file_adapter"
+        ],
+        "adapterDevices": [
+          {
+            "name": "AX-ArgoBuilds-001",
+            "hostname": "ip-10-0-2-166.us-east-2.compute.internal",
+            "lastSeen": 1589961723000,
+            "interfaces": [
+              {
+                "macAddr": "06:25:3a:38:90:42",
+                "ipAddrs": [
+                  "10.0.2.166"
+                ]
+              }
+            ],
+            "os": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,529 @@
+[
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "350e89d00d60f45dea630ecd1172cfb5",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-247-96.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-247-96.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Auto-Test-VM-test_latest_export_TestInstancesBeforeNodeJoin ",
+    "specific_data.data.name_details": [
+      "Auto-Test-VM-test_latest_export_TestInstancesBeforeNodeJoin "
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.247.96"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.247.96"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:09:D0:F4:31:6E",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:09:D0:F4:31:6E"
+    ],
+    "specific_data.data.os.type_details": [
+      null
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "e4d671a10a8464da1e7f31d1c8f8d220",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-2-87.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-2-87.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Kimhi's tests",
+    "specific_data.data.name_details": [
+      "Kimhi's tests"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.2.87"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.2.87"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:A9:6B:24:E8:BE",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:A9:6B:24:E8:BE"
+    ],
+    "specific_data.data.os.type": "Linux",
+    "specific_data.data.os.type_details": [
+      "Linux"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "dbed19cee2e12d7c46ead15c37f5715c",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-247-155.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-247-155.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Builds-VM-Sagi Tunnel develop server 11",
+    "specific_data.data.name_details": [
+      "Builds-VM-Sagi Tunnel develop server 11"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.247.155"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.247.155"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:97:7B:1A:09:FA",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:97:7B:1A:09:FA"
+    ],
+    "specific_data.data.os.type": "Linux",
+    "specific_data.data.os.type_details": [
+      "Linux"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "ebe2363f44a05fcd52b91a7e42a7c785",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-2-216.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-2-216.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Bomgar Auto Generator Jump Client",
+    "specific_data.data.name_details": [
+      "Bomgar Auto Generator Jump Client"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.2.216"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.2.216"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:33:6C:7A:3C:EC",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:33:6C:7A:3C:EC"
+    ],
+    "specific_data.data.os.type": "Windows",
+    "specific_data.data.os.type_details": [
+      "Windows"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "80d2e55c7bed4d3d38c0e2242901686a",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-251-3.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-251-3.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Builds-VM-TrainingsMachine3_3",
+    "specific_data.data.name_details": [
+      "Builds-VM-TrainingsMachine3_3"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.251.3"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.251.3"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:F8:C0:FB:B8:D6",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:F8:C0:FB:B8:D6"
+    ],
+    "specific_data.data.os.type": "Linux",
+    "specific_data.data.os.type_details": [
+      "Linux"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "7137835935a15c20f1cab86c94e448a3",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-234-30.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-234-30.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen_details": [
+      null
+    ],
+    "specific_data.data.name": "ivanti-test-1",
+    "specific_data.data.name_details": [
+      "ivanti-test-1"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.234.30"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.234.30"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:84:6A:AE:61:40",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:84:6A:AE:61:40"
+    ],
+    "specific_data.data.os.type": "Windows",
+    "specific_data.data.os.type_details": [
+      "Windows"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "f8d8219e279ba58ffd51809585c76940",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-252-210.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-252-210.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen_details": [
+      null
+    ],
+    "specific_data.data.name": "Axonius-Chef-Dashboard-OLD",
+    "specific_data.data.name_details": [
+      "Axonius-Chef-Dashboard-OLD"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.252.210"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.252.210"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:69:12:12:CD:76",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:69:12:12:CD:76"
+    ],
+    "specific_data.data.os.type_details": [
+      null
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "186279125729b186b74db278a846eff1",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ec2-3-133-172-22.us-east-2.compute.amazonaws.com",
+    "specific_data.data.hostname_details": [
+      "ec2-3-133-172-22.us-east-2.compute.amazonaws.com"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "insider-dev",
+    "specific_data.data.name_details": [
+      "insider-dev"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.1.0.140",
+      "3.133.172.22"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.1.0.140",
+        "3.133.172.22"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "0A:32:E9:8C:F6:A4",
+    "specific_data.data.network_interfaces.mac_details": [
+      "0A:32:E9:8C:F6:A4"
+    ],
+    "specific_data.data.os.type": "Linux",
+    "specific_data.data.os.type_details": [
+      "Linux"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "0be5bd9f90bf4d01f9547778d0058b7a",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-243-105.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-243-105.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "Auto-Test-VM-test_latest_export_TestInstancesUpgrade ",
+    "specific_data.data.name_details": [
+      "Auto-Test-VM-test_latest_export_TestInstancesUpgrade "
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.243.105"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.243.105"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:1A:F2:D2:FD:C0",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:1A:F2:D2:FD:C0"
+    ],
+    "specific_data.data.os.type_details": [
+      null
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  },
+  {
+    "adapter_list_length": 1,
+    "adapter_list_length_details": [
+      null
+    ],
+    "adapters": [
+      "json_file_adapter"
+    ],
+    "adapters_details": [
+      null
+    ],
+    "internal_axon_id": "699bd6bf2ac321ebebcc370c763fc4e9",
+    "internal_axon_id_details": [
+      null
+    ],
+    "labels_details": [
+      null
+    ],
+    "meta_data.client_used": [
+      "aws"
+    ],
+    "specific_data.data.hostname": "ip-10-0-2-166.us-east-2.compute.internal",
+    "specific_data.data.hostname_details": [
+      "ip-10-0-2-166.us-east-2.compute.internal"
+    ],
+    "specific_data.data.last_seen": "Wed, 20 May 2020 08:02:03 GMT",
+    "specific_data.data.last_seen_details": [
+      "Wed, 20 May 2020 08:02:03 GMT"
+    ],
+    "specific_data.data.name": "AX-ArgoBuilds-001",
+    "specific_data.data.name_details": [
+      "AX-ArgoBuilds-001"
+    ],
+    "specific_data.data.network_interfaces.ips": [
+      "10.0.2.166"
+    ],
+    "specific_data.data.network_interfaces.ips_details": [
+      [
+        "10.0.2.166"
+      ]
+    ],
+    "specific_data.data.network_interfaces.mac": "06:25:3A:38:90:42",
+    "specific_data.data.network_interfaces.mac_details": [
+      "06:25:3A:38:90:42"
+    ],
+    "specific_data.data.os.type": "Linux",
+    "specific_data.data.os.type_details": [
+      "Linux"
+    ],
+    "unique_adapter_names_details": [
+      null
+    ]
+  }
+]

@@ -40,6 +40,7 @@ class ApiMetric:
 
 
 class Query:
+    QUERY_DIFF = 'query.diff'
     QUERY_GUI = 'query.gui'
     QUERY_HISTORY = 'query.history'
 

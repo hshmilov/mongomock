@@ -113,6 +113,12 @@ class FeatureFlags(Configurable):
                     'type': 'bool',
                 },
                 {
+                    'name': FeatureFlagsNames.BandicootCompare,
+                    'title': 'Enable compare query results with Bandicoot, will not work '
+                             'with experimental API turned on',
+                    'type': 'bool',
+                },
+                {
                     'name': FeatureFlagsNames.ExpiryDate,
                     'title': 'Contract Expiry Date',
                     'type': 'string',

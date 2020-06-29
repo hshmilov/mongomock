@@ -1,18 +1,23 @@
 """
 This module allows access to the bandicoot (graphql) API
 """
-# pylint: disable=invalid-string-quote, invalid-triple-quote
+# pylint: disable=invalid-string-quote, invalid-triple-quote, C0103, W0611
 import functools
 import time
 import typing
 import logging
 import socket
 import re
+
+import cachetools
 import requests
 from flask import request
 
+from axonius.consts.metric_consts import Query
 from axonius.entities import EntityType
+from axonius.logging.metric_helper import log_metric
 from axonius.utils.parsing import is_valid_ip
+from gui.logic.graphql.differ import Differ, logger as diff_logger
 from gui.logic.graphql.translator import Translator
 
 MAC_REGEX = re.compile("[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", re.IGNORECASE)
@@ -102,6 +107,76 @@ API_QUERY = {
         False: SEARCH_USERS_API
     }
 }
+
+_diff_cache = cachetools.TTLCache(maxsize=32, ttl=10800)
+_diff_count_cache = cachetools.TTLCache(maxsize=32, ttl=10800)
+
+
+def compare_counts(entity_type: EntityType, request_data, mongo_count):
+    """
+    Compare count received from mongo with bandicoot
+    """
+    aql = request_data.get('filter')
+    if not aql:
+        logger.debug(f'aql filter missing, skipping..')
+        return
+    diff_logger.info(f'executing compare on {aql}')
+
+    if aql in _diff_count_cache:
+        diff_logger.debug(f'query {aql} already executed recently, skipping..')
+        return
+    # add to cache
+    _diff_count_cache[aql] = 1
+    # build a translator and query for results
+    resp = execute_query(Translator(entity_type), entity_type,
+                         aql=aql, offset=request_data.get('offset', 0), limit=request_data.get('limit', 0),
+                         fields_query=request_data.get('fields'))
+    if resp.status_code != 200:
+        diff_logger.info(f'Query failed. Response: {resp.json()}')
+
+    bandicoot_result = str(resp.json()['data'][f'{entity_type.value}_aggregate'])
+    if not bandicoot_result == mongo_count:
+        log_metric(diff_logger, Query.QUERY_DIFF, aql)
+        diff_logger.warning(f'Count diff found on {aql}. Bandicoot: {bandicoot_result} Mongo: {mongo_count}')
+    else:
+        diff_logger.info(f'Count same on {aql}. Bandicoot: {bandicoot_result} Mongo: {mongo_count}')
+
+
+def compare_results(entity_type, request_data, mongo_result):
+    """
+    Compare result of mongo to bandicoot
+    """
+    aql = request_data.get('filter')
+    if not aql:
+        logger.debug(f'aql filter missing, skipping..')
+        return
+
+    diff_logger.info(f'executing compare on {aql}')
+    if aql in _diff_cache:
+        diff_logger.debug(f'query {aql} already executed recently, skipping..')
+        return
+
+    mongo_result = list(mongo_result)
+    limit = request_data.get('limit', 0)
+    # if mongo result is bigger than limit we will skip compare
+    if int(limit) < len(mongo_result):
+        diff_logger.debug(f"Result set higher than limit {limit} < {len(mongo_result)} skipping..")
+        return
+    # add to cache
+    _diff_cache[aql] = 1
+    # build a translator and query for results
+    resp = execute_query(Translator(entity_type), entity_type,
+                         aql=aql, offset=request_data.get('offset', 0), limit=request_data.get('limit', 0),
+                         fields_query=request_data.get('fields'))
+    if resp.status_code != 200:
+        diff_logger.warning(f'Query failed. Response: {resp.json()}')
+
+    diff_logger.debug(f'Starting compare on results {aql}')
+    if Differ().query_difference(resp.json(), mongo_result):
+        diff_logger.info(f'Query result same on {aql}.')
+    else:
+        log_metric(diff_logger, Query.QUERY_DIFF, aql)
+        diff_logger.warning(f'Query diff found on {aql}.')
 
 
 def allow_experimental(count=False):
