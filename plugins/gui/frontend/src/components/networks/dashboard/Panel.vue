@@ -311,6 +311,8 @@ export default {
         historical,
         search: search || this.filter,
         refresh,
+        sortBy: _get(this.chart, 'selectedSort.sortBy'),
+        sortOrder: _get(this.chart, 'selectedSort.sortOrder'),
       });
     },
     async fetchAllChartData(uuid, skip) {

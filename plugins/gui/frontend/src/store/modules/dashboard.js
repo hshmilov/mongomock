@@ -170,21 +170,6 @@ export const dashboard = {
       if (!panel) {
         return;
       }
-      panel.loading = payload.fetching;
-      if (panel.loading) {
-        state.panels.data = [...state.panels.data];
-        return;
-      }
-
-      // Set the panel loading indicator to true if payload is loading or fetching
-      panel.loading = payload.loading || payload.fetching || false;
-
-      // In case the payload has a fetching status, it means that there is no need to continue processing the data.
-      // We exit the code and only once fetching is done, we will continue.
-      if (payload.fetching) {
-        state.panels.data = [...state.panels.data];
-        return;
-      }
 
       if (payload.historical !== panel.historical) {
         panel.data = [];
@@ -196,11 +181,21 @@ export const dashboard = {
         }
         panel.search = payload.search;
       }
-
+      if (payload.selectedSort) {
+        panel.selectedSort = payload.selectedSort;
+      }
+      // Set the panel loading indicator to true if payload is loading or fetching
+      const loading = payload.loading || payload.fetching || false;
+      if (loading) {
+        state.panels.data = state.panels.data.map((item) => ((item.uuid === payload.uuid)
+          ? { ...item, loading } : item));
+        return;
+      }
       const response = payload.data;
       if (!response) {
         return;
       }
+      panel.loading = false;
       panel.data.splice(payload.skip, response.data.length, ...response.data);
       const dataTail = response.data_tail;
       if (dataTail && dataTail.length) {
@@ -312,6 +307,7 @@ export const dashboard = {
       const {
         uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
       } = payload;
+
       let rule = sortBy && sortOrder ? `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`
         + `&sort_by=${sortBy}&sort_order=${sortOrder}`
         : `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`;
@@ -325,8 +321,9 @@ export const dashboard = {
             data: [],
           },
           loading: true,
-          sortBy,
-          sortOrder,
+          selectedSort: {
+            sortBy, sortOrder
+          }
         });
       }
 

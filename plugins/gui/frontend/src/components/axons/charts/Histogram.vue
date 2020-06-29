@@ -61,6 +61,7 @@
           :to.sync="dataTo"
           :limit="limit"
           :count="dataLength"
+          @change="onChangePage"
         />
       </template>
     </div>
@@ -128,12 +129,6 @@ export default {
       return this.dataFrom - 1 - this.limit;
     },
     pageData() {
-      if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
-        this.$emit('fetch', this.nextFetchFrom);
-      }
-      if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
-        this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit));
-      }
       if (!this.data[this.dataFrom - 1]) {
         return [];
       }
@@ -173,6 +168,14 @@ export default {
     onClick(pageIndex) {
       this.$emit('click-one', this.dataFrom + pageIndex - 1);
     },
+    onChangePage() {
+      if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
+        this.$emit('fetch', this.nextFetchFrom);
+      }
+      if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
+        this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit));
+      }
+    }
   },
 };
 </script>

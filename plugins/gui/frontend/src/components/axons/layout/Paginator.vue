@@ -121,6 +121,7 @@ export default {
   },
   methods: {
     onClickPage(page) {
+      this.$emit('change');
       this.page = page;
       this.emitRange();
     },

@@ -334,7 +334,6 @@ export default {
     sortClick(sortConfig) {
       this.selectedSortType = sortConfig.type;
       this.selectedSortOrder = sortConfig.order;
-      this.chart.selectedSort = sortConfig;
       this.fetchChartData();
     },
     getSortTitle(type) {
