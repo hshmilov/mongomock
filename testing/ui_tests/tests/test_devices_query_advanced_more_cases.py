@@ -2,36 +2,29 @@ import math
 from datetime import datetime
 import random
 
-import pytest
 from dateutil.relativedelta import relativedelta
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from json_file_adapter.service import DEVICES_DATA, FILE_NAME, USERS_DATA
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.adapters.tanium_asset_service import TaniumAssetService
-from services.adapters.tanium_discover_service import TaniumDiscoverService
-from services.adapters.tanium_sq_service import TaniumSqService
+from services.adapters.csv_service import CsvService
+from test_credentials.test_aws_credentials_mock import aws_json_file_mock_devices
 from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
-from test_credentials.test_tanium_asset_credentials import \
-    CLIENT_DETAILS as tanium_asset_details
-from test_credentials.test_tanium_discover_credentials import \
-    CLIENT_DETAILS as tanium_discovery_details
-from test_credentials.test_tanium_sq_credentials import \
-    CLIENT_DETAILS as tanium_sq_details
+from test_credentials.test_csv_credentials import CSV_FIELDS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.tests.test_adapters import JSON_NAME
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       LINUX_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
                                       STRESSTEST_SCANNER_ADAPTER,
-                                      TANIUM_ASSET_ADAPTER,
-                                      TANIUM_DISCOVERY_ADAPTER,
-                                      TANIUM_SQ_ADAPTER, WINDOWS_QUERY_NAME,
-                                      JSON_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_SCANNER_ADAPTER_NAME)
+                                      WINDOWS_QUERY_NAME,
+                                      JSON_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_SCANNER_ADAPTER_NAME,
+                                      LABEL_CLIENT_WITH_SAME_ID, CSV_NAME, CSV_PLUGIN_NAME)
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDevicesQueryAdvancedMoreCases(TestBase):
+    LABEL_CLIENT_WITH_SAME_ID = 'client_with_same_id'
 
     def test_devices_id_contains_query(self):
         self.dashboard_page.switch_to_page()
@@ -142,6 +135,11 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         assert chabchab_in_result() is False
         json_query_filter_last_seen_next_days(10000)
         assert chabchab_in_result()
+        self.adapters_page.remove_server(ad_client=client_details,
+                                         adapter_name=JSON_NAME,
+                                         delete_associated_entities=True,
+                                         expected_left=1,
+                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()
@@ -192,7 +190,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.devices_page.close_dropdown()
         self.devices_page.wait_for_table_to_load()
         self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_NAME,
-                                         expected_left=2, delete_associated_entities=True,
+                                         expected_left=1, delete_associated_entities=True,
                                          adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
     def test_in_enum_query(self):
@@ -242,36 +240,54 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.wait_for_stress_adapter_down(STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(STRESSTEST_SCANNER_ADAPTER)
 
-    @pytest.mark.skip('AX-7287')
     def test_connection_label_query_with_same_client_id(self):
         """
-            verify connection label when adapter client have same client_id ( like tanium adapters )
-            use case : same label on multiple adapters then remove label from one adapter and compare device count
-            is lower on label query.
+          verify connection label when adapter client have same client_id ( like tanium adapters )
+          in order to test this mock aws usign json_file adapter and csv adapter are used
+          use case : same label on multiple adapters then remove label from one adapter and compare device count
         """
+        # JSON FILE - AWS mock
+        aws_json_mock_with_label = aws_json_file_mock_devices.copy()
+        aws_json_mock_with_label[FILE_NAME] = LABEL_CLIENT_WITH_SAME_ID
+        aws_json_mock_with_label['connectionLabel'] = LABEL_CLIENT_WITH_SAME_ID
+        self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=True, position=2)
 
-        def set_tanium_adapter_details(name, details):
-            tanium_client_details = details.copy()
-            tanium_client_details['connectionLabel'] = tanium_client_details.pop('connection_label')
-            self.adapters_page.create_new_adapter_connection(name, tanium_client_details)
-
-        with TaniumAssetService().contextmanager(take_ownership=True), \
-                TaniumDiscoverService().contextmanager(take_ownership=True), \
-                TaniumSqService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(TANIUM_SQ_ADAPTER)
-            set_tanium_adapter_details(TANIUM_ASSET_ADAPTER, tanium_asset_details)
-            set_tanium_adapter_details(TANIUM_DISCOVERY_ADAPTER, tanium_discovery_details)
-            set_tanium_adapter_details(TANIUM_SQ_ADAPTER, tanium_sq_details)
-            self.base_page.run_discovery()
+        with CsvService().contextmanager(take_ownership=True, stop_grace_period='2'):
+            # CSV
+            client_details = {
+                'user_id': 'user',
+                LABEL_CLIENT_WITH_SAME_ID: FileForCredentialsMock(
+                    'csv_name',
+                    ','.join(CSV_FIELDS) +
+                    f'\nkatooth,Serial1,Windows,11:22:22:33:11:33,Office,02:11:24.485Z 02:11:24.485Z, 1.1.1.1')
+            }
+            self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details)
             self.devices_page.switch_to_page()
-            all_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
-            # remove label
-            self.adapters_page.edit_server_conn_label(TANIUM_DISCOVERY_ADAPTER, 'UPDATE_LABEL')
-            self.adapters_page.wait_for_data_collection_toaster_start()
-            self.adapters_page.wait_for_data_collection_toaster_absent()
-            tanium_discovery_details['connection_label'] = 'UPDATE_LABEL'
-            tanium_discovery_count = self.devices_page.query_tanium_connection_label(tanium_discovery_details)
-            # verify we have less devices now
-            self.devices_page.click_search()
-            updated_tanium_count = self.devices_page.query_tanium_connection_label(tanium_asset_details)
-            assert all_tanium_count - tanium_discovery_count == updated_tanium_count
+            devices_by_label = self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EQUALS, value=LABEL_CLIENT_WITH_SAME_ID)
+
+            # update label for csv mock
+            self.adapters_page.update_csv_connection_label(file_name=LABEL_CLIENT_WITH_SAME_ID,
+                                                           update_label='UPDATE_LABEL')
+
+            update_devices_by_label = self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EQUALS, value=LABEL_CLIENT_WITH_SAME_ID)
+            assert update_devices_by_label < devices_by_label
+
+            # update label for aws json file
+            self.adapters_page.update_json_file_server_connection_label(client_name=LABEL_CLIENT_WITH_SAME_ID,
+                                                                        update_label='UPDATE_LABEL')
+
+            update_devices_by_label = self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EQUALS, value='UPDATE_LABEL')
+            assert update_devices_by_label == devices_by_label
+
+            self.adapters_page.clean_adapter_servers(CSV_NAME, True)
+
+            self.adapters_page.remove_server(ad_client=aws_json_mock_with_label,
+                                             adapter_name=JSON_NAME,
+                                             delete_associated_entities=True,
+                                             expected_left=1,
+                                             adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
+
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)

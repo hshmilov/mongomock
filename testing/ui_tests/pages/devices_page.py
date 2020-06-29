@@ -309,3 +309,27 @@ class DevicesPage(EntitiesPage):
         self.refresh()
         self.run_filter_query(CSV_ADAPTER_FILTER)
         return self.count_entities()
+
+    def get_device_count_by_connection_label(self, operator: str = '', value: str = '') -> int:
+        self.switch_to_page()
+        self.wait_for_table_to_load()
+        self.click_query_wizard()
+        self.select_query_filter(attribute=self.FIELD_ADAPTER_CONNECTION_LABEL,
+                                 operator=operator,
+                                 value=value,
+                                 clear_filter=True)
+        self.wait_for_table_to_load()
+        self.close_dropdown()
+        return self.count_entities()
+
+    def verify_label_does_not_exist(self, value: str = '') -> bool:
+        self.switch_to_page()
+        self.wait_for_table_to_load()
+        self.click_query_wizard()
+        expressions = self.find_expressions()
+        self.select_query_field(self.FIELD_ADAPTER_CONNECTION_LABEL, parent=expressions[0])
+        self.select_query_comp_op('equals', parent=expressions[0])
+        if self.select_query_value_without_search(value, parent=expressions[0]) is None:
+            self.close_dropdown()
+            return True
+        return False

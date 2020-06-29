@@ -1627,9 +1627,9 @@ class EntitiesPage(Page):
         expressions = self.find_expressions()
         self.select_query_field(attribute, parent=expressions[0])
         self.select_query_comp_op(operator, parent=expressions[0])
-        if operator == 'equals':
+        if operator == self.QUERY_COMP_EQUALS:
             self.select_query_value_without_search(value, parent=expressions[0])
-        elif operator == 'in':
+        elif operator == self.QUERY_COMP_IN:
             self.fill_query_string_value(value, parent=expressions[0])
         self.wait_for_table_to_be_responsive()
 

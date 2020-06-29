@@ -1069,7 +1069,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
             # add/update clients connection labels
-            if connection_label:
+            if connection_label is not None:
                 self._write_client_connection_label(client_id, connection_label)
 
             status = 'error'  # Default is error
@@ -1141,7 +1141,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if CLIENT_ID in client_config:
             resp = self.adapter_client_labels_db.delete_one({
                 CLIENT_ID: client_config.get(CLIENT_ID),
-                PLUGIN_UNIQUE_NAME: client_config.get(PLUGIN_UNIQUE_NAME),
+                PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
                 NODE_ID: self.node_id
             })
 

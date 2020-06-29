@@ -25,9 +25,6 @@ Adapter = namedtuple('Adapter', 'name description')
 
 JSON_NAME = 'JSON File'
 
-# Junk that shouldn't be here
-CONNECTION_LABEL = 'AXON'
-CONNECTION_LABEL_UPDATED = 'AXON2'
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
 
 
@@ -489,3 +486,23 @@ class AdaptersPage(EntitiesPage):
 
     def find_server_connection_label_value(self):
         return self.driver.find_element_by_id('connectionLabel').get_attribute('value')
+
+    def update_server_connection_label(self, adapter_name, field_name, field_value, update_label):
+        # find adapter client by matching connection label, useful when having multiple
+        # clients and index is unkown. once match update the connection label value
+        self.wait_for_adapter(adapter_name)
+        self.click_adapter(adapter_name)
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        self.click_specific_row_by_field_value(field_name=field_name, field_value=field_value)
+        self.wait_for_element_present_by_id(element_id='connectionLabel', retries=5)
+        self.fill_creds(connectionLabel=update_label)
+        self.click_save()
+        self.wait_for_data_collection_toaster_start()
+        self.wait_for_data_collection_toaster_absent()
+
+    def update_json_file_server_connection_label(self, client_name, update_label):
+        self.update_server_connection_label(JSON_NAME, 'Name', client_name, update_label)
+
+    def update_csv_connection_label(self, file_name, update_label):
+        self.update_server_connection_label(CSV_NAME, 'File name', file_name, update_label)

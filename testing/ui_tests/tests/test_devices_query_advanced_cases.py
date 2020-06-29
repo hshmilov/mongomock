@@ -1,20 +1,16 @@
-import pytest
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
+from json_file_adapter.service import FILE_NAME
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.pages.adapters_page import CONNECTION_LABEL, CONNECTION_LABEL_UPDATED
 from ui_tests.tests.test_enforcement_config import JSON_NAME
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (AWS_ADAPTER,
-                                      AWS_ADAPTER_NAME,
-                                      AD_ADAPTER_NAME,
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME, JSON_ADAPTER_PLUGIN_NAME)
 from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cylance_service import CylanceService
-from services.adapters.aws_service import AwsService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
@@ -26,7 +22,6 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_NAME)
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
-from test_credentials.test_aws_credentials import client_details as aws_client_details
 from test_credentials.test_aws_credentials_mock import aws_json_file_mock_devices
 from devops.scripts.automate_dev import credentials_inputer
 
@@ -40,6 +35,8 @@ class TestDevicesQueryAdvancedCases(TestBase):
     ESX_PLUGIN_NAME = 'esx_adapter'
     CYCLANCE_PLUGIN_NAME = 'cylance_adapter'
     CYCLANCE_PRETTY_NAME = 'CylancePROTECT'
+    CONNECTION_LABEL = 'AXON'
+    CONNECTION_LABEL_UPDATED = 'AXON2'
 
     def test_empty_fields_arent_there(self):
         self.settings_page.switch_to_page()
@@ -739,72 +736,62 @@ class TestDevicesQueryAdvancedCases(TestBase):
                                          expected_left=1, delete_associated_entities=True,
                                          adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
-    # pylint: disable=R0915
-    @pytest.mark.skip('AX-7287')
     def test_connection_label_query(self):
         """
-        USE CASES :  add new AWS client with connection label
+        USE CASES :  add new AWS mock client with connection label
         test operator equal,exists,in
                       check negative with in
         update client connection label and check with eqal
         delete client connection label and check with in no match
 
         """
+        # JSON FILE - AWS mock
+        aws_json_mock_with_label = aws_json_file_mock_devices.copy()
+        aws_json_mock_with_label[FILE_NAME] = self.CONNECTION_LABEL
+        aws_json_mock_with_label['connectionLabel'] = self.CONNECTION_LABEL
 
-        with AwsService().contextmanager(take_ownership=True):
-            self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
-            aws_client_with_label = aws_client_details[0][0].copy()
-            aws_client_with_label.update({'connectionLabel': CONNECTION_LABEL})
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_with_label)
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
-            self.devices_page.switch_to_page()
-            self.devices_page.click_query_wizard()
-            # check equal
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='equals',
-                                                   value=CONNECTION_LABEL)
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count != 0
-            # check exists
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='exists',
-                                                   clear_filter=True)
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count != 0
-            # check in negative value
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='in',
-                                                   value='NOT_EXISTS')
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count == 0
-            # chec in positve value
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='in',
-                                                   value=CONNECTION_LABEL)
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count != 0
-            # update adapter client connection label
-            self.adapters_page.edit_server_conn_label(AWS_ADAPTER_NAME, CONNECTION_LABEL_UPDATED)
-            self.devices_page.switch_to_page()
-            self.devices_page.click_query_wizard()
-            self.devices_page.wait_for_table_to_load()
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='equals',
-                                                   value=CONNECTION_LABEL_UPDATED,
-                                                   clear_filter=True)
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count != 0
-            # delete adapter client connection label
-            self.adapters_page.edit_server_conn_label(AWS_ADAPTER_NAME, '')
-            self.devices_page.switch_to_page()
-            self.devices_page.click_query_wizard()
-            self.adapters_page.select_query_filter(attribute=self.devices_page.FIELD_ADAPTER_CONNECTION_LABEL,
-                                                   operator='exists',
-                                                   clear_filter=True)
-            results_count = len(self.devices_page.get_all_data())
-            assert results_count == 0
-            self.devices_page.refresh()
-            self.adapters_page.clean_adapter_servers(AWS_ADAPTER_NAME)
+        self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=True, position=2)
 
-        self.wait_for_adapter_down(AWS_ADAPTER)
+        # check equal
+        wait_until(
+            lambda: self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EQUALS,
+                value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20
+        )
+
+        # check exists
+        wait_until(
+            lambda: self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EXISTS,
+                value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20)
+
+        # check operator in positive value
+        wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
+            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20)
+
+        # update adapter client connection label
+        self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
+                                                                    update_label=self.CONNECTION_LABEL_UPDATED)
+
+        # check operator in negative - previous label
+        wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
+            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) == 0, total_timeout=200, interval=20)
+
+        wait_until(
+            lambda: self.devices_page.get_device_count_by_connection_label(
+                operator=self.devices_page.QUERY_COMP_EQUALS,
+                value=self.CONNECTION_LABEL_UPDATED) != 0, total_timeout=200, interval=20)
+
+        # clear adapter client connection label
+        self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
+                                                                    update_label='')
+
+        # expect label should be removed from drop down list
+        wait_until(lambda: self.devices_page.verify_label_does_not_exist(self.CONNECTION_LABEL_UPDATED),
+                   check_return_value=True, total_timeout=200, interval=20)
+
+        self.adapters_page.remove_server(ad_client=aws_json_mock_with_label,
+                                         adapter_name=JSON_NAME,
+                                         delete_associated_entities=True,
+                                         expected_left=1,
+                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
