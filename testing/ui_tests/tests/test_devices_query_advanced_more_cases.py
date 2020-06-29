@@ -2,6 +2,7 @@ import math
 from datetime import datetime
 import random
 
+import pytest
 from dateutil.relativedelta import relativedelta
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
@@ -240,6 +241,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.wait_for_stress_adapter_down(STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(STRESSTEST_SCANNER_ADAPTER)
 
+    @pytest.mark.skip('AX-7287')
     def test_connection_label_query_with_same_client_id(self):
         """
           verify connection label when adapter client have same client_id ( like tanium adapters )
