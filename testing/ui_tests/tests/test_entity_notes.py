@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 
 from axonius.consts.metric_consts import ApiMetric
 from axonius.entities import EntityType
+from axonius.consts.gui_consts import HAS_NOTES_TITLE
+from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
 from ui_tests.tests.ui_consts import NOTE_COLUMN
 from ui_tests.tests.ui_test_base import TestBase
@@ -125,6 +127,15 @@ class TestEntityNotes(TestBase):
         entities_page.click_notes_tab()
         assert [self.NOTE_2_TEXT] == entities_page.get_notes_column_data(NOTE_COLUMN)
 
+    @staticmethod
+    def _test_has_notes_initialized(entities_page):
+        entities_page.switch_to_page()
+        entities_page.wait_for_table_to_be_responsive()
+        initial_entities_number = entities_page.count_entities()
+        entities_page.build_query(HAS_NOTES_TITLE, None, entities_page.QUERY_COMP_FALSE)
+        entities_page.wait_for_table_to_be_responsive()
+        assert initial_entities_number == entities_page.count_entities()
+
     def test_notes_sanity(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
@@ -153,3 +164,42 @@ class TestEntityNotes(TestBase):
         note_box = self.devices_page.get_note_by_text(long_text)
         user_box = self.devices_page.get_note_by_text('internal/admin')
         assert note_box.rect['x'] + note_box.rect['width'] < user_box.rect['x']
+
+    def test_has_notes_field(self):
+        """
+        Tests the behavior of the "has notes" field
+        #1: Check that initially all entities has their "has notes" field initialized to false
+        #2: Add the "has notes" as a column and see that its value is set to "No"
+        #3: Add note for an entity and see that the column now has the value "Yes"
+        #4: Link two entities, one with Notes and the other without and see that the column value is "Yes"
+        """
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        # Check 1
+        self._test_has_notes_initialized(self.devices_page)
+        self._test_has_notes_initialized(self.users_page)
+
+        # Check 2
+        self.devices_page.switch_to_page()
+        self.devices_page.reset_query()
+        self.devices_page.edit_columns([HAS_NOTES_TITLE])
+        for has_notes in self.users_page.get_column_data_slicer(HAS_NOTES_TITLE):
+            assert has_notes == 'No'
+
+        # Check 3
+        self.devices_page.load_notes()
+        self.devices_page.create_note(self.NOTE_1_TEXT)
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
+        assert self.devices_page.get_column_data_slicer(HAS_NOTES_TITLE)[0] == 'Yes'
+
+        # Check 4
+        devices_number = self.devices_page.count_entities()
+        self.devices_page.click_row_checkbox(1)
+        self.devices_page.click_row_checkbox(2)
+        self.devices_page.open_link_dialog()
+        wait_until(lambda: 'You are about to link 2 devices.' in self.devices_page.read_delete_dialog())
+        self.devices_page.confirm_link()
+        wait_until(lambda: self.devices_page.count_entities() == devices_number - 1)
+        assert self.devices_page.get_column_data_slicer(HAS_NOTES_TITLE)[0] == 'Yes'

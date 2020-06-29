@@ -72,6 +72,7 @@ class EntitiesPage(Page):
     QUERY_COMP_EXISTS = 'exists'
     QUERY_COMP_CONTAINS = 'contains'
     QUERY_COMP_TRUE = 'true'
+    QUERY_COMP_FALSE = 'false'
     QUERY_COMP_EQUALS = 'equals'
     QUERY_COMP_IN = 'in'
     QUERY_COMP_SUBNET = 'in subnet'
@@ -643,7 +644,8 @@ class EntitiesPage(Page):
         self.click_query_wizard()
         self.select_query_field(field_name)
         self.select_query_comp_op(comp_op)
-        self.fill_query_string_value(field_value)
+        if field_value:
+            self.fill_query_string_value(field_value)
         self.wait_for_table_to_load()
         self.close_dropdown()
 

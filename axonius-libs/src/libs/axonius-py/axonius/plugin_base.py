@@ -65,6 +65,7 @@ from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (CORRELATION_REASONS,
+                                       HAS_NOTES,
                                        FEATURE_FLAGS_CONFIG,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        HASH_SALT, CloudComplianceNames,
@@ -100,7 +101,8 @@ from axonius.consts.plugin_consts import (
     CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
-    TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY)
+    TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
+    NOTES_DATA_TAG)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.devices import deep_merge_only_dict
@@ -1886,7 +1888,8 @@ class PluginBase(Configurable, Feature, ABC):
                                     'accurate_for_datetime': datetime.now(),
                                     'adapters': [parsed_to_insert],
                                     'tags': [],
-                                    ADAPTERS_LIST_LENGTH: 1
+                                    ADAPTERS_LIST_LENGTH: 1,
+                                    HAS_NOTES: False,
                                 })
                             except DuplicateKeyError:
                                 logger.warning(f'Duplicate key error on {entity_type}, {parsed_to_insert}',
@@ -1941,7 +1944,8 @@ class PluginBase(Configurable, Feature, ABC):
                     'accurate_for_datetime': datetime.now(),
                     'adapters': [parsed_to_insert],
                     'tags': [],
-                    ADAPTERS_LIST_LENGTH: 1
+                    HAS_NOTES: False,
+                    ADAPTERS_LIST_LENGTH: 1,
                 }
                     for parsed_to_insert
                     in all_parsed)
@@ -2480,6 +2484,9 @@ class PluginBase(Configurable, Feature, ABC):
                     labels_for_new_device = [label for entity in entities_candidates
                                              if 'labels' in entity for label in entity['labels']]
 
+                    # Set indication if any of the original adapters has notes
+                    has_notes = any(axonius_entity[HAS_NOTES] for axonius_entity in entities_candidates)
+
                     # Get other correlation reasons
                     correlation_reasons = [reason for candidate in entities_candidates if CORRELATION_REASONS
                                            in candidate for reason in candidate[CORRELATION_REASONS]]
@@ -2524,6 +2531,7 @@ class PluginBase(Configurable, Feature, ABC):
                         ADAPTERS_LIST_LENGTH: len({x[PLUGIN_NAME] for x in all_unique_adapter_entities_data}),
                         CORRELATION_REASONS: correlation_reasons,
                         'labels': list(set(labels_for_new_device)),
+                        HAS_NOTES: has_notes,
                         'tags': list(tags_for_new_device.values())  # Turn it to a list
                     })
             except CorrelateException:
@@ -2545,6 +2553,48 @@ class PluginBase(Configurable, Feature, ABC):
         with _entities_db.start_session() as db_session:
             with db_session.start_transaction():
                 return self.__perform_unlink_with_session(adapter_id, plugin_unique_name, db_session, entity)
+
+    @staticmethod
+    def _get_kept_and_pulled_tags(entity_to_split, adapter_entities_left_by_id):
+        """
+        Gets the tags to keep / remove from the entity to split
+        :param entity_to_split: The entity to split
+        :param adapter_entities_left_by_id: List of the adapter entities left
+        :return: Tuple of tags to remove and tags to keep
+        """
+        try:
+            # the old entity might and might not keep the tag:
+            # if the tag contains an associated_adapter that is also part of the old entity
+            # - then this tag is also associated with the old entity
+            # if it does not
+            # - this this tag is removed from the old entity
+            # so now we generate a list of all tags that must be removed from the old entity
+            # a tag will be removed if all of its associated_adapters are not in any of the
+            # adapter entities left in the old device, i.e. all of its associated_adapters have moved
+            tags_to_remove = [tag_from_old
+                              for tag_from_old
+                              in entity_to_split['tags']
+                              if 'tags' in entity_to_split
+                              if all(assoc_adapter not in adapter_entities_left_by_id
+                                     for assoc_adapter
+                                     in tag_from_old['associated_adapters']
+                                     if 'associated_adapters' in tag_from_old)]
+
+            # Get all of the tags that are STILL kept in the old entity
+            # We use them to figure out if the old entity still has any notes
+            tags_to_keep = [tag_from_old
+                            for tag_from_old
+                            in entity_to_split['tags']
+                            if 'tags' in entity_to_split
+                            if any(assoc_adapter in adapter_entities_left_by_id
+                                   for assoc_adapter
+                                   in tag_from_old['associated_adapters']
+                                   if 'associated_adapters' in tag_from_old)]
+
+            return tags_to_remove, tags_to_keep
+
+        except Exception:
+            logger.exception('Error accessing tags of the entity to split')
 
     # pylint: disable=too-many-locals
     @staticmethod
@@ -2640,23 +2690,17 @@ class PluginBase(Configurable, Feature, ABC):
             for adapter
             in adapter_entities_left
         ]
-        # the old entity might and might not keep the tag:
-        # if the tag contains an associated_adapter that is also part of the old entity
-        # - then this tag is also associated with the old entity
-        # if it does not
-        # - this this tag is removed from the old entity
-        # so now we generate a list of all tags that must be removed from the old entity
-        # a tag will be removed if all of its associated_adapters are not in any of the
-        # adapter entities left in the old device, i.e. all of its associated_adapters have moved
-        pull_those = [tag_from_old
-                      for tag_from_old
-                      in entity_to_split['tags']
-                      if all(assoc_adapter not in adapter_entities_left_by_id
-                             for assoc_adapter
-                             in tag_from_old['associated_adapters'])]
+
+        # Get tags to remove from the entity to split and tags to keep
+        entity_to_split_tags = PluginBase._get_kept_and_pulled_tags(entity_to_split, adapter_entities_left_by_id)
+        pull_those = entity_to_split_tags[0]
+        kept_tags = entity_to_split_tags[1]
+
         set_query = {
             ADAPTERS_LIST_LENGTH: len(set(x[PLUGIN_NAME] for x in adapter_entities_left)),
-            'accurate_for_datetime': datetime.now()
+            'accurate_for_datetime': datetime.now(),
+            HAS_NOTES: any(tag.get('name', None) == NOTES_DATA_TAG and tag.get('data', None)
+                           for tag in kept_tags)
         }
         if pull_those:
             pull_query = {
@@ -2684,7 +2728,9 @@ class PluginBase(Configurable, Feature, ABC):
             'internal_axon_id': entity_to_split['internal_axon_id']
         }, full_query)
         new_axonius_entity[ADAPTERS_LIST_LENGTH] = len({x[PLUGIN_NAME] for x in new_axonius_entity['adapters']})
-
+        new_axonius_entity[HAS_NOTES] = any(tag.get('name', None) == NOTES_DATA_TAG and tag.get('data', None)
+                                            for tag in new_axonius_entity['tags']
+                                            if 'tags' in new_axonius_entity)
         recalculate_adapter_oldness(new_axonius_entity['adapters'], entity_type)
         db_session.insert_one(new_axonius_entity)
 

@@ -24,7 +24,7 @@ from flask import request, session, g, Response
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
     ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS,\
-    SortType, SortOrder
+    HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder
 
 from axonius.entities import EntitiesNamespace
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -886,6 +886,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
             continue
         if field_path == CORRELATION_REASONS_FIELD:
             val = find_entity_field(entity_data, CORRELATION_REASONS)
+        elif field_path == HAS_NOTES:
+            val = find_entity_field(entity_data, HAS_NOTES)
         else:
             val = find_entity_field(entity_data, field_path)
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
@@ -1366,9 +1368,15 @@ def entity_fields(entity_type: EntityType):
         }
     ]
 
+    has_notes_json = [{
+        'name': HAS_NOTES,
+        'title': HAS_NOTES_TITLE,
+        'type': 'bool'
+    }]
+
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
-        + [tags_json] + preferred_json + correlation_reasons_json
+        + [tags_json] + preferred_json + correlation_reasons_json + has_notes_json
     fields = {
         'schema': {
             'generic': generic_fields,

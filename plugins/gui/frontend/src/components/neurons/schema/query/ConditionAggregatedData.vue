@@ -57,6 +57,7 @@ export default {
         'saved_query',
         'adapter_list_length',
         'adapters',
+        'has_notes',
       ],
     };
   },

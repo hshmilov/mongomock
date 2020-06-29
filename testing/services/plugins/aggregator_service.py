@@ -21,7 +21,7 @@ from services.updatable_service import UpdatablePluginMixin
 from services.plugin_service import API_KEY_HEADER, PluginService
 from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, ADAPTERS_LIST_LENGTH, \
     CONFIGURABLE_CONFIGS_LEGACY_COLLECTION
-from axonius.consts.gui_consts import USERS_COLLECTION
+from axonius.consts.gui_consts import USERS_COLLECTION, HAS_NOTES
 import requests
 
 
@@ -110,8 +110,10 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_38()
         if self.db_schema_version < 39:
             self._update_schema_version_39()
+        if self.db_schema_version < 40:
+            self._update_schema_version_40()
 
-        if self.db_schema_version != 39:
+        if self.db_schema_version != 40:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1795,6 +1797,37 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 39
         except Exception as e:
             print(f'Exception while upgrading core db to version 39. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_40(self):
+        print(f'Update to schema 40 - add has notes field for entities with notes')
+        try:
+            for entities_db in self._entity_db_map.values():
+                entity_with_notes = []
+                for entity in entities_db.find({
+                    'tags': {'$elemMatch': {'name': 'Notes', 'data': {'$exists': True, '$not': {'$size': 0}}}}
+                }):
+                    internal_axon_id = entity['internal_axon_id']
+                    entity_with_notes.append(internal_axon_id)
+                    entities_db.update_one(
+                        {'internal_axon_id': internal_axon_id},
+                        {
+                            '$set': {HAS_NOTES: True}
+                        }
+                    )
+                for entity in entities_db.find({'internal_axon_id': {'$nin': entity_with_notes}}):
+                    internal_axon_id = entity['internal_axon_id']
+                    entities_db.update_one(
+                        {'internal_axon_id': internal_axon_id},
+                        {
+                            '$set': {HAS_NOTES: False}
+                        }
+                    )
+
+            self.db_schema_version = 40
+        except Exception as e:
+            print(f'Exception while upgrading aggregator db to version 40. Details: {e}')
             traceback.print_exc()
             raise
 

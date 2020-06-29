@@ -9,7 +9,7 @@ from uuid import uuid4
 from pymongo import DESCENDING
 from flask import request, session, jsonify
 
-from axonius.consts.gui_consts import CORRELATION_REASONS
+from axonius.consts.gui_consts import CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE
 from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 from axonius.plugin_base import EntityType, return_error, PluginBase
@@ -154,6 +154,11 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             'name': CORRELATION_REASONS,
             'title': 'Correlation Reasons',
             'type': 'string'
+        },
+        {
+            'name': HAS_NOTES,
+            'title': HAS_NOTES_TITLE,
+            'type': 'bool'
         }
     ]
 
@@ -176,11 +181,16 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         else:
             basic_fields.append(schema)
 
+    flattened_basic_fields = [field['name'] for field in flatten_fields({
+        'type': 'array',
+        'items': basic_fields
+    }, 'specific_data.data', [HAS_NOTES])]
+
+    # Base level fields doesn't need the "specific_data" prefix, so they should be appended separately
+    flattened_basic_fields.append(HAS_NOTES)
+
     return {
-        'basic': parse_entity_fields(entity, [field['name'] for field in flatten_fields({
-            'type': 'array',
-            'items': basic_fields
-        }, 'specific_data.data')]),
+        'basic': parse_entity_fields(entity, flattened_basic_fields),
         'advanced': advanced_data,
         'data': entity['generic_data'],
         'adapters': entity['specific_data'],
@@ -409,13 +419,13 @@ def entity_notes(entity_type: EntityType, entity_id, request_data):
         notes_list = []
 
     if request.method == 'PUT':
-        return _entity_notes_create(request_data, notes_list, entity_obj)
+        return _entity_notes_create(request_data, notes_list, entity_obj, entity_type, entity_id)
 
     # Handle remaining option - DELETE request
-    return _entity_notes_delete(request_data, notes_list, entity_obj)
+    return _entity_notes_delete(request_data, notes_list, entity_obj, entity_type, entity_id)
 
 
-def _entity_notes_create(note_obj, notes_list, entity_obj: AxoniusEntity):
+def _entity_notes_create(note_obj, notes_list, entity_obj: AxoniusEntity, entity_type, entity_id):
     """
     Add a new note to the DB entity
 
@@ -432,10 +442,19 @@ def _entity_notes_create(note_obj, notes_list, entity_obj: AxoniusEntity):
     notes_list.append(note_obj)
     entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')
     note_obj['user_id'] = str(note_obj['user_id'])
+
+    # Set indicator that there are notes
+    PluginBase.Instance.get_appropriate_view(None, entity_type)[0].update_one(
+        {
+            'internal_axon_id': entity_id
+        }, {
+            '$set': {HAS_NOTES: True}
+        })
+
     return jsonify(note_obj)
 
 
-def _entity_notes_delete(note_ids_list, notes_list, entity_obj: AxoniusEntity):
+def _entity_notes_delete(note_ids_list, notes_list, entity_obj: AxoniusEntity, entity_type, entity_id):
     """
     Remove existing notes from the DB entity
 
@@ -455,6 +474,16 @@ def _entity_notes_delete(note_ids_list, notes_list, entity_obj: AxoniusEntity):
         if note['uuid'] not in note_ids_list:
             remaining_notes_list.append(note)
     entity_obj.add_data(NOTES_DATA_TAG, remaining_notes_list, action_if_exists='merge')
+
+    # Set indicator if there are no notes
+    if not remaining_notes_list:
+        PluginBase.Instance.get_appropriate_view(None, entity_type)[0].update_one(
+            {
+                'internal_axon_id': entity_id
+            }, {
+                '$set': {HAS_NOTES: False}
+            })
+
     return ''
 
 

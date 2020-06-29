@@ -10,7 +10,7 @@ from bson.json_util import default
 from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
-    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
+    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.consts.system_consts import MULTI_COMPARE_MAGIC_STRING, COMPARE_MAGIC_STRING
 from axonius.utils.datetime import parse_date
@@ -869,6 +869,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
             ADAPTERS_DATA: adapters_data,
             ADAPTERS_META: adapters_meta,
             CORRELATION_REASONS: entity.get(CORRELATION_REASONS),
+            HAS_NOTES: entity.get(HAS_NOTES),
             'adapters': adapters,
             'labels': labels,
             'accurate_for_datetime': entity.get('accurate_for_datetime')
