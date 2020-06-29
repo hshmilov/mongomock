@@ -24,43 +24,19 @@ class CreateJiraAssetAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Jira Domain',
+                    'title': 'Jira domain',
                     'type': 'string'
                 },
                 {
                     'name': 'username',
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
                     'name': 'password',
-                    'title': 'API Key',
+                    'title': 'API key',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': 'asset_type_key',
-                    'title': 'Asset Type AppKey',
-                    'type': 'string'
-                },
-                {
-                    'name': 'asset_type_id',
-                    'title': 'Asset Type OriginID',
-                    'type': 'string'
-                },
-                {
-                    'name': 'assignee_id',
-                    'title': 'Assignee Account ID',
-                    'type': 'string',
-                    'description': 'The Atlassian account id of the assignee.'
-                },
-                {
-                    'name': 'assignee_email',
-                    'title': 'Assignee Email',
-                    'type': 'string',
-                    'description': 'Only provide an email if the accountId field is omitted. '
-                                   'A mapping from the provided email to an accountId is attempted. '
-                                   'If no matching accountId is found, no assignee will be persisted'
                 },
                 {
                     'name': 'verify_ssl',
@@ -69,8 +45,32 @@ class CreateJiraAssetAction(ActionTypeBase):
                 },
                 {
                     'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'asset_type_key',
+                    'title': 'Asset type appKey',
+                    'type': 'string'
+                },
+                {
+                    'name': 'asset_type_id',
+                    'title': 'Asset type originId',
+                    'type': 'string'
+                },
+                {
+                    'name': 'assignee_id',
+                    'title': 'Assignee account ID',
+                    'type': 'string',
+                    'description': 'The Atlassian account id of the assignee.'
+                },
+                {
+                    'name': 'assignee_email',
+                    'title': 'Assignee email',
+                    'type': 'string',
+                    'description': 'Only provide an email if the accountId field is omitted. '
+                                   'A mapping from the provided email to an accountId is attempted. '
+                                   'If no matching accountId is found, no assignee will be persisted'
                 }
             ],
             'required': [
