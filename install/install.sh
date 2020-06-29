@@ -20,7 +20,7 @@ if [[ $* == *--run-system* ]]; then
     echo "Running all..."
     (
     if [[ ${optional_parameters} != *"exclude"* ]]; then
-        eval ./axonius.sh system up --services static_analysis general_info device_control --adapters ${optional_parameters} --restart
+        eval ./axonius.sh system up --services static_analysis device_control --adapters ${optional_parameters} --restart
     else
         eval ./axonius.sh system up --all ${optional_parameters} --restart
     fi
