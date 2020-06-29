@@ -28,6 +28,8 @@ class CiscoStealthwatchConnection(RESTConnection):
                        body_params=auth_data,
                        use_json_in_body=False,
                        extra_headers={'Content-Type': 'application/x-www-form-urlencoded'})
+            url = REST_PATH_EXPORTERS.format(tenant_id=self._tenant_id)
+            self._get(url)
         except RESTException as e:
             message = f'Error connecting to Cisco Stealthwatch Management: {str(e)}'
             logger.exception(message)
@@ -43,7 +45,7 @@ class CiscoStealthwatchConnection(RESTConnection):
             url = REST_PATH_EXPORTERS.format(tenant_id=self._tenant_id)
             yield from self._get(url)['data']
         except RESTException as e:
-            message = f'Failed to get exporters (devices)'
+            message = f'Failed to get exporters (devices): {str(e)}'
             logger.exception(message)
 
     # pylint: disable=W0150
