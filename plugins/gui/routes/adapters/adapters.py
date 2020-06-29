@@ -2,7 +2,6 @@ import logging
 import re
 from collections import defaultdict
 import json
-import gridfs
 import pymongo
 from flask import (jsonify,
                    request)
@@ -349,9 +348,8 @@ class Adapters(Connections):
         if not file or file.filename == '':
             return return_error('File must exist', 401)
         filename = file.filename
-        db_connection = self._get_db_connection()
-        fs = gridfs.GridFS(db_connection[plugin_unique_name])
-        written_file = fs.put(file, filename=filename)
+
+        written_file = self.db_files.upload_file(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
     def __extract_configs_and_schemas(self, db_connection, plugin_unique_name):

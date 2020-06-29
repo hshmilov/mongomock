@@ -29,12 +29,11 @@ from itertools import groupby, chain
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-import gridfs
 import pymongo
 # bson is requirement of mongo and its not recommended to install it manually
 from bson import ObjectId, json_util
 # pylint: disable=ungrouped-imports
-from pymongo import MongoClient, ReplaceOne
+from pymongo import ReplaceOne
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError, OperationFailure
 import cachetools
@@ -105,6 +104,8 @@ from axonius.consts.plugin_consts import (
     NOTES_DATA_TAG)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
+from axonius.db.db_client import get_db_client
+from axonius.db.files import DBFileHelper
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
@@ -382,9 +383,6 @@ class PluginBase(Configurable, Feature, ABC):
     Instance = None
 
     # Use the data we have from the core.
-    db_host = 'mongodb://mongo.axonius.local:27017'
-    db_user = 'ax_user'
-    db_password = 'ax_pass'
 
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
     def __init__(self, config_file_path: str, *args, core_data=None, requested_unique_plugin_name=None, **kwargs):
@@ -399,14 +397,11 @@ class PluginBase(Configurable, Feature, ABC):
         print(f'{datetime.now()} Hello docker from {type(self)}')
         self.irequests = IRequests()
         run_memory_tracing()
-
-        # https://jira.mongodb.org/browse/PYTHON-986
-        self.mongo_client = MongoClient(self.db_host, replicaSet='axon-cluster', retryWrites=True,
-                                        username=self.db_user, password=self.db_password,
-                                        localthresholdms=1000, connect=False)
+        self.mongo_client = get_db_client()
 
         PluginBase.Instance = self
         self.plugins = AxoniusPlugins(self._get_db_connection())
+        self.db_files = DBFileHelper(self._get_db_connection())
 
         super().__init__(*args, **kwargs)
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
@@ -1690,44 +1685,30 @@ class PluginBase(Configurable, Feature, ABC):
             return self.aggregator_db_connection[h_col_name], False
         return self._entity_db_map[entity_type], False
 
-    def _grab_file(self, field_data, stored_locally=True, alternative_db_name=None) -> gridfs.GridOut:
+    def _grab_file(self, field_data):
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
+        :param self:
         :param field_data:
-        :param stored_locally: True to look for the file on the current plugin's db False for core's
         :return: stream like object
         """
         if field_data and field_data.get('uuid'):
-            if alternative_db_name:
-                db_name = alternative_db_name
-            else:
-                db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
-            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
+            return self.db_files.get_file(ObjectId(field_data['uuid']))
         return None
 
-    def _grab_file_contents(self, field_data, stored_locally=True, alternative_db_name=None) -> gridfs.GridOut:
+    def _grab_file_contents(self, field_data, stored_locally=True, alternative_db_name=None) -> Optional[bytes]:
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
+        :param self:
         :param field_data:
-        :param stored_locally: Is the file stored in current plugin or in core (so it's generally available)
-        :param alternative_db_name: If specified, uses this specific db name
         :return: stream like object
         """
-        if field_data:
-            return self._grab_file(field_data, stored_locally, alternative_db_name).read()
+        contents = self._grab_file(field_data)
+        if contents:
+            return contents.read()
         return None
-
-    def grab_local_file(self, field_data) -> gridfs.GridOut:
-        """
-        Fetches the file pointed by `field_data` from the DB, assuming the file is stored
-        in current plugin.
-        The user should not assume anything else about the internals of the file.
-        :param field_data:
-        :return: stream like object
-        """
-        return self._grab_file_contents(field_data, True)
 
     @property
     def plugin_type(self):
@@ -3140,6 +3121,7 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: disable=too-many-statements
     def __renew_global_settings_from_db(self):
         # pylint: disable=global-statement,invalid-name
+        logger.info(f'Reloading global settings')
         global limiter_settings
         config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME]
         # pylint: disable=invalid-name
@@ -4435,8 +4417,8 @@ class PluginBase(Configurable, Feature, ABC):
             return CyberArkVaultConnection(domain=cyberark_vault.get(CYBERARK_DOMAIN),
                                            port=int(cyberark_vault.get(CYBERARK_PORT)),
                                            cyberark_appid=cyberark_vault.get(CYBERARK_APP_ID),
-                                           cert=self._grab_file(cyberark_vault.get(CYBERARK_CERT_KEY),
-                                                                stored_locally=False).read())
+                                           cert=self._grab_file_contents(cyberark_vault.get(CYBERARK_CERT_KEY),
+                                                                         stored_locally=False))
 
         raise RuntimeError(f'Invalid Vault connection selection --> {PASSWORD_MANGER_ENUM}')
 

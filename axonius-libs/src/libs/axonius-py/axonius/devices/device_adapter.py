@@ -1,15 +1,20 @@
 import datetime
 import ipaddress
 import logging
+import threading
 import typing
 import copy
 from enum import Enum, auto
 from collections import namedtuple
 
+import cachetools
+
 from axonius.blacklists import ALL_BLACKLIST
 from axonius.clients.cisco.port_security import PortSecurityInterface
 from axonius.clients.cisco.port_access import PortAccessEntity
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
+from axonius.modules.axonius_plugins import AxoniusPlugins
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_escaping import escape_dict, unescape_dict
@@ -73,6 +78,25 @@ logger = logging.getLogger(f'axonius.{__name__}')
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
 """
+
+
+@cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=60), lock=threading.Lock())
+def get_settings_cached() -> dict:
+    # Default values
+    should_populate_name_and_version = True
+
+    try:
+        plugins = AxoniusPlugins()
+        feature_flags = plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG]
+
+        if feature_flags and feature_flags[FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField] is True:
+            should_populate_name_and_version = False
+    except Exception:
+        logger.warning(f'Warning white trying to reload system settings for device_adapter', exc_info=True)
+
+    return {
+        'should_populate_name_and_version': should_populate_name_and_version
+    }
 
 
 class AdapterProperty(Enum):
@@ -1264,7 +1288,7 @@ class DeviceAdapter(SmartJsonClass):
             version_raw = parse_versions_raw(version) or ''
             kwargs['version'] = version
         name_version = None
-        if name and version:
+        if name and version and get_settings_cached()['should_populate_name_and_version']:
             name_version = f'{name}-{version}'
 
         self.installed_software.append(DeviceAdapterInstalledSoftware(

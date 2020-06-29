@@ -951,12 +951,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Accepts:
            POST - Triggers a refresh on all available clients from the DB and returns them
         """
-        client_config = request.get_json(silent=True)
-        if not client_config:
-            return return_error('Invalid client')
-        self._clean_unneeded_client_config_fields(client_config)
-        return '' if self._route_test_reachability(client_config) \
-            else return_error('Client is not reachable.')
+        try:
+            client_config = request.get_json(silent=True)
+            if not client_config:
+                return return_error('Invalid client')
+            self._clean_unneeded_client_config_fields(client_config)
+            return '' if self._route_test_reachability(client_config) \
+                else return_error('Client is not reachable.')
+        except Exception:
+            logger.exception(f'Failed checking client reachability')
+            raise
 
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
@@ -1370,23 +1374,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         timeout = timeout.total_seconds() if timeout else None
 
         def call_connect_as_stoppable(*args, **kwargs):
-            is_reachable, is_connected = False, False
             try:
-                try:
-                    is_reachable = self._route_test_reachability(*args, **kwargs)
-                except Exception:
-                    is_reachable = False
-
                 client = self._route_connect_client(*args, **kwargs)
-                is_connected = True
                 return client
             except BaseException as e:
                 # this is called from an external thread so if it raises the exception is lost,
                 # this allows forwarding exceptions back to the caller
                 return e
-            finally:
-                if is_connected and not is_reachable:
-                    logger.warning(f'Problem with test_reachability in adapter {self.plugin_name}')
 
         try:
             res = func_timeout.func_timeout(

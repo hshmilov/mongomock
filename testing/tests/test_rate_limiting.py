@@ -40,6 +40,7 @@ def test_rate_limiting():
                                   'content-type': 'application/json;charset=UTF-8'}, verify=False)
     assert resp.status_code == 200
     resp.close()
+    time.sleep(10)  # allow settings to apply
 
     for i in range(5):
         resp = do_login()

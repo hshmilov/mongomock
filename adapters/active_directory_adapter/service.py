@@ -25,7 +25,8 @@ from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE, LDAP_ACCO
                                                   LdapConnection,
                                                   DEFAULT_LDAP_RECIEVE_TIMEOUT,
                                                   DEFAULT_LDAP_CONNECTION_TIMEOUT,
-                                                  DEFAULT_LDAP_PAGE_SIZE)
+                                                  DEFAULT_LDAP_PAGE_SIZE, AD_GC_PORT_ENCRYPTED, AD_GC_PORT,
+                                                  AD_LDAP_PORT, AD_LDAPS_PORT)
 from axonius.consts.adapter_consts import (DEVICES_DATA, DNS_RESOLVE_STATUS,
                                            IPS_FIELDNAME,
                                            NETWORK_INTERFACES_FIELDNAME)
@@ -42,6 +43,7 @@ from axonius.plugin_base import add_rule, return_error
 from axonius.smart_json_class import SmartJsonClass
 from axonius.types.ssl_state import SSLState, COMMON_SSL_CONFIG_SCHEMA_CA_ONLY
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.networking import check_if_tcp_port_is_open
 from axonius.utils.datetime import parse_date, is_date_real
 from axonius.utils.dns import query_dns, async_query_dns_list
 from axonius.utils.entity_finder import EntityFinder
@@ -262,21 +264,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         return dc_details['dc_name']
 
     def _test_reachability(self, client_config):
-        try:
-            client_config = client_config.copy()
-            # We want to trigger a bad-password exception. This exception means that the connection itself worked.
-            client_config['password'] = 'axonius-connectivity-test'
-            conn = self._get_ldap_connection(client_config)
-            conn.disconnect()
-            return True
-        except LdapException as e:
-            if 'ldapinvalidcredentialsresult' in str(e).lower():
-                return True
-            else:
-                return False
-        except Exception as e:
-            logger.exception(f'Exception while checking connectivity: {str(e)}')
-            return False
+        connect_with_gc_mode = client_config.get('is_ad_gc') or False
+        use_ssl = SSLState[client_config.get('use_ssl', SSLState.Unencrypted.name)]
+        if connect_with_gc_mode:
+            port = AD_GC_PORT if use_ssl == SSLState.Unencrypted else AD_GC_PORT_ENCRYPTED
+        else:
+            port = AD_LDAP_PORT if use_ssl == SSLState.Unencrypted else AD_LDAPS_PORT
+
+        return check_if_tcp_port_is_open(client_config['dc_name'], port)
 
     def _get_ldap_connection(self, dc_details):
         ca_file_data = None

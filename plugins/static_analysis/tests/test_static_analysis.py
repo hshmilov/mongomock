@@ -340,7 +340,6 @@ def test_device_with_cves_only(nvd_searcher):
 
     # Check that each of the cves was actually enriched
     for cve in created_device.get('software_cves'):
-        assert cve.get('cve_description')
         assert cve.get('cvss')
 
 
@@ -375,7 +374,6 @@ def test_device_with_installed_software_only(nvd_searcher):
     # Check that each of the cves was actually enriched
     for cve in created_device.get('software_cves'):
         assert cve.get('cve_id')
-        assert cve.get('cve_description')
         assert cve.get('cvss')
         assert cve.get('software_name')
 
@@ -414,7 +412,6 @@ def test_device_with_cves_and_installed_software(nvd_searcher):
     # Check that each of the cves was actually enriched
     for cve in created_device.get('software_cves'):
         assert cve.get('cve_id')
-        assert cve.get('cve_description')
         assert cve.get('cvss')
 
 
@@ -454,7 +451,6 @@ def test_device_with_two_adapters_correlated(nvd_searcher):
     # Check that each of the cves was actually enriched
     for cve in created_device.get('software_cves'):
         assert cve.get('cve_id')
-        assert cve.get('cve_description')
         assert cve.get('cvss')
 
 
@@ -496,7 +492,6 @@ def test_device_adapter_removed_and_different_cves(nvd_searcher):
     # Check that each of the cves was actually enriched
     for cve in created_device.get('software_cves'):
         assert cve.get('cve_id')
-        assert cve.get('cve_description')
         assert cve.get('cvss')
 
 

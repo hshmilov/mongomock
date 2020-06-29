@@ -510,7 +510,8 @@ class CISAWSCategory1:
             return
 
         data = get_api_data(self.password_policy)
-        if data.get('MinimumPasswordLength') and data.get('MinimumPasswordLength') < 14:
+        minimum_password_length = data.get('MinimumPasswordLength')
+        if minimum_password_length and minimum_password_length >= 14:
             self.report.add_rule(
                 RuleStatus.Passed,
                 rule_section,
@@ -524,7 +525,8 @@ class CISAWSCategory1:
                 rule_section,
                 (1, 1),
                 0,
-                'Password policy does not require at least 14 characters'
+                f'Password policy does not require at least 14 characters. '
+                f'The minimum password length is {str(minimum_password_length)}'
             )
 
     @cis_rule('1.10')
@@ -693,7 +695,7 @@ class CISAWSCategory1:
             return
 
         data = get_api_data(self.account_summary)
-        if data.get('AccountMFAEnabled') != 1 or data.get('AccountMFAEnabled') is not True:
+        if data.get('AccountMFAEnabled') != 1 and data.get('AccountMFAEnabled') is not True:
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,

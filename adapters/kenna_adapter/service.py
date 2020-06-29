@@ -154,7 +154,6 @@ class KennaAdapter(AdapterBase):
                         open_ports_vulns_and_fixes.append(DeviceOpenPortVulnerabilityAndFix(
                             port_id=port_id,
                             cve_id=vuln.get('cve_id'),
-                            cve_description=vuln.get('cve_description'),
                             cve_severity=vuln.get('severity'),
                             wasc_id=vuln.get('wasc_id'),
                             vuln_solution=vuln.get('solution'),

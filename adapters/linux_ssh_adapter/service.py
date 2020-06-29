@@ -2,9 +2,6 @@ import copy
 import datetime
 import logging
 
-import gridfs
-from bson import ObjectId
-
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.linux_ssh.consts import (ADAPTER_SCHEMA, COMMAND,
@@ -16,7 +13,6 @@ from axonius.clients.linux_ssh.consts import (ADAPTER_SCHEMA, COMMAND,
                                               USERNAME)
 from axonius.clients.linux_ssh.data import LinuxDeviceAdapter
 from axonius.clients.linux_ssh.ppk import ppkraw_to_openssh
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.clients.linux_ssh.connection import LinuxSshConnection
@@ -69,15 +65,6 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
             logger.exception('Failed to convert to ppk')
 
         return client_config
-
-    # pylint: disable=arguments-differ
-    def _grab_file_contents(self, field_data, stored_locally=True):
-        # XXX: Ugly hack to handle EC
-        try:
-            return super()._grab_file_contents(field_data, stored_locally)
-        except gridfs.errors.NoFile:
-            db_name = DEVICE_CONTROL_PLUGIN_NAME
-            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid'])).read()
 
     def _connect_client(self, client_config):
         try:

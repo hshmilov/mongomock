@@ -94,6 +94,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField,
+                    'title': 'Do not populate software "name and version" field',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -237,5 +242,6 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
             FeatureFlagsNames.EnableSaaS: False,
             FeatureFlagsNames.QueryTimelineRange: False,
-            FeatureFlagsNames.EnforcementCenter: True
+            FeatureFlagsNames.EnforcementCenter: True,
+            FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField: False,
         }

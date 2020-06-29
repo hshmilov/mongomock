@@ -649,7 +649,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         # this is important and is described at
                         # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
                         logger.debug(f'Requesting wait/insert_to_db for {adapter[PLUGIN_UNIQUE_NAME]}')
-                        self.request_remote_plugin('wait/insert_to_db', adapter[PLUGIN_UNIQUE_NAME])
+                        self.request_remote_plugin('wait/insert_to_db?timeout=14400', adapter[PLUGIN_UNIQUE_NAME])
                     except Exception as e:
                         logger.exception(f'Failed waiting for adapter cycle {e}')
 

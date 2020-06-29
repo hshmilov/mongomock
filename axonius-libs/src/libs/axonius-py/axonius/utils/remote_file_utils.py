@@ -194,8 +194,9 @@ def load_from_smb(client_config) -> bytes:
         raise ClientConnectionException(message)
 
 
+# pylint: disable=protected-access
 def load_local_file(client_config) -> bytes:
-    return PluginBase.Instance.grab_local_file(client_config['file_path'])
+    return PluginBase.Instance._grab_file_contents(client_config['file_path'])
 
 
 def load_remote_binary_data(client_config) -> bytes:

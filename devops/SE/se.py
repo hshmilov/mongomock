@@ -12,7 +12,7 @@ import pymongo
 
 from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.utils.debug import redprint, yellowprint
+from axonius.utils.debug import redprint, yellowprint, greenprint, blueprint
 from axonius.entities import EntityType
 from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
@@ -293,6 +293,12 @@ def main():
                 print(usage())
                 return -1
 
+            try:
+                yes_for_all = sys.argv[6].lower() == '--yes'
+                blueprint('Identified --yes!')
+            except Exception:
+                yes_for_all = False
+
             entity = entity.lower()
             assert entity in ['device', 'user']
 
@@ -302,39 +308,52 @@ def main():
             match_type = 'adapters' if 'adapter' in plugin_name else 'tags'
             print(f'Note - searching in "{match_type}"')
 
-            match = {
-                match_type: {
-                    '$elemMatch': {
-                        'plugin_name': plugin_name,
-                        f'data.{field}': {'$exists': True}
+            def rf_function():
+                match = {
+                    match_type: {
+                        '$elemMatch': {
+                            'plugin_name': plugin_name,
+                            f'data.{field}': {'$exists': True}
+                        }
                     }
                 }
-            }
-            count = entity_db.count(match)
-            redprint(f'You are going to remove the field {field} from {count} {plugin_name} {entity}s. '
-                     f'This is unrecoverable!')
-            redprint(f'Are you sure? [yes/no]')
-            res = input()
-            if res != 'yes':
-                print(f'Not continuing.')
-                return 0
+                count = entity_db.count(match)
+                redprint(f'You are going to remove the field {field} from {count} {plugin_name} {entity}s. '
+                         f'This is unrecoverable!')
+                redprint(f'Are you sure? [yes/no]')
+                if yes_for_all:
+                    greenprint('Yes')
+                else:
+                    res = input()
+                    if res != 'yes':
+                        print(f'Not continuing.')
+                        return 0
 
-            result = entity_db.update_many(
-                match,
-                {
-                    '$unset': {f'{match_type}.$.data.{field}': 1}
-                }
-            )
+                result = entity_db.update_many(
+                    match,
+                    {
+                        '$unset': {f'{match_type}.$.data.{field}': 1}
+                    }
+                )
 
-            print(f'Matched {result.matched_count}, modified {result.modified_count}')
+                print(f'Matched {result.matched_count}, modified {result.modified_count}')
 
-            new_count = entity_db.count(match)
-            if new_count > 0:
-                yellowprint(f'Warning - {plugin_name} {entity}s with {field} still exist. '
-                            f'This happens because only the first occurrence of {plugin_name} in the {entity} '
-                            f'is deleted. please run this script again.')
-            else:
-                print('Done')
+                new_count = entity_db.count(match)
+                if new_count > 0:
+                    yellowprint(f'Warning - {plugin_name} {entity}s with {field} still exist. '
+                                f'This happens because only the first occurrence of {plugin_name} in the {entity} '
+                                f'is deleted. please run this script again.')
+
+                    return False
+                else:
+                    print('Done')
+                    return True
+
+            has_finished = rf_function()
+            if yes_for_all:
+                while not has_finished:
+                    has_finished = rf_function()
+
         else:
             print(usage())
             return -1

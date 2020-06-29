@@ -243,8 +243,7 @@ class SkyboxAdapter(AdapterBase):
                 for vuln_raw in vulns:
                     if vuln_raw.get('status') and str(vuln_raw.get('status')).lower() != 'fixed':
                         device.add_vulnerable_software(
-                            cve_id=vuln_raw.get('cve'),
-                            cve_description=vuln_raw.get('description')
+                            cve_id=vuln_raw.get('cve')
                         )
 
                         device.skybox_vulnerabilities.append(

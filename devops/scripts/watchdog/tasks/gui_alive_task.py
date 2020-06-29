@@ -128,8 +128,9 @@ class GuiAliveTask(WatchdogTask):
                     self.report_error(f'Failed during the restore procedure - restarting: {e}')
                     self.report_metric(metric_name=REBOOTING_MSG, metric_value=f'{e}')
                     time.sleep(30)
-                    os.system('reboot --force')
+                    output = subprocess.check_output('/sbin/reboot --force', shell=True)
                     self.report_error(f'Reboot command sent')
+                    self.report_error(f'Output is {output.decode()}')
                     time.sleep(120)
                     os.system('/sbin/shutdown -r now')
                 finally:

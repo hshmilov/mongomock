@@ -1,3 +1,4 @@
+import time
 import urllib
 import pathlib
 import tempfile
@@ -325,6 +326,7 @@ class TestSaml(PermissionsTestBase):
 
         self._set_saml('saml_name', 'https://saml_metadata_url', external_url_test, PREDEFINED_ROLE_RESTRICTED)
 
+        time.sleep(10)  # Allow settings to apply
         response = requests.get(urllib.parse.urljoin('https://127.0.0.1', '/api/login/saml/metadata'))
         response.raise_for_status()
 

@@ -1,4 +1,5 @@
 import logging
+
 from typing import Dict, Iterable, Tuple
 
 logger = logging.getLogger(f'axonius.{__name__}')

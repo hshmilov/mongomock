@@ -6,9 +6,7 @@ from datetime import datetime
 from multiprocessing.dummy import Pool
 from typing import List, Tuple
 
-import gridfs
 from dataclasses import dataclass
-from bson import ObjectId
 
 from axonius.blacklists import DANGEROUS_IPS
 from axonius.clients.wmi_query.consts import (ACTION_TYPES, CMD_ACTION_SCHEMA,
@@ -17,7 +15,7 @@ from axonius.clients.wmi_query.consts import (ACTION_TYPES, CMD_ACTION_SCHEMA,
                                               PARAMS_NAME, PASSWORD,
                                               SCAN_ACTION_SCHEMA, USERNAME, REGISTRY_EXISTS, USE_AD_CREDS)
 from axonius.clients.wmi_query.query import WmiResults, WmiStatus
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import ACTIVE_DIRECTORY_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.entities import EntityType
 from axonius.fields import Field
@@ -203,14 +201,6 @@ class WmiExecutionMixIn(Triggerable):
             return True
         return 'WINDOWS' in os_list
 
-    def _grab_file_contents(self, field_data: dict, stored_locally=True) -> gridfs.GridOut:
-        # XXX: Ugly hack to handle EC
-        try:
-            return super()._grab_file_contents(field_data, stored_locally)
-        except gridfs.errors.NoFile:
-            db_name = DEVICE_CONTROL_PLUGIN_NAME
-            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
-
     def handle_cmd_results(self, client_config: dict, client_id: str, output_data: WmiResults) -> DeviceAdapter:
         """
         :param client_config: dict of client config data
@@ -268,12 +258,12 @@ class WmiExecutionMixIn(Triggerable):
         # upload files to the device before running the command
         for file_raw in extra_files_raw:
             try:
-                file_to_upload_from_gridfs = self._grab_file_contents(file_raw)
+                file_to_upload_from_db = self._grab_file(file_raw)
                 random_filepath = get_random_uploaded_path_name('wmi_shell_extra_file')
                 # Create a temp file on disk
                 with open(random_filepath, 'wb') as binary_file:
-                    # copy file data from GridFS to the temp file
-                    shutil.copyfileobj(file_to_upload_from_gridfs, binary_file)
+                    # copy file data from db to the temp file
+                    shutil.copyfileobj(file_to_upload_from_db, binary_file)
                 extra_files[file_raw['filename']] = random_filepath
             except Exception:
                 logger.exception(f'Error getting {file_raw}')
@@ -384,13 +374,6 @@ class WmiExecutionMixIn(Triggerable):
         return {}, '', ''
 
     def _handle_device(self, device, client_config, job_name):
-        '''
-         Handle run job on the device
-        :param device: device for running the job on it
-        :param client_config: action config data
-        :param job_name: job name for running
-        :return: none
-        '''
         job_title = self._pretty_job_name(job_name)
         try:
             # Get the device adapter

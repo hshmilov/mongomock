@@ -1,6 +1,7 @@
 """
 Different settings for plugins in the system
 """
+import re
 from typing import Optional
 
 from pymongo import MongoClient
@@ -28,6 +29,10 @@ class PluginSettingsNamespace:
 
 class PluginSettings:
     def __init__(self, db: MongoClient, plugin_name: str):
+        # If you fail on the following line, this means you passed plugin_unique_name to here. But this only supports
+        # plguin name and not plugin unique name!
+        assert not re.search(r'_(\d+)$', plugin_name)
+
         self.__db = db
         self.__plugin_name = plugin_name
         self.configurable_configs = ConfigurableConfigs(self.__db, self.__plugin_name)

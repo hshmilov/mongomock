@@ -13,7 +13,6 @@ from typing import Dict, Type, Any
 
 import cachetools
 import docker
-import gridfs
 import requests
 from axonius.adapter_base import AdapterBase
 
@@ -456,7 +455,7 @@ class PluginService(WeaveService):
 
     def get_file_content_from_db(self, uuid):
         oid = ObjectId(uuid)
-        return gridfs.GridFS(self.db.client[self.unique_name]).get(oid).read()
+        return self.db.db_files.get_file(oid).read()
 
     def reload_uwsgi(self):
         response = self.get('/reload_uwsgi', headers={API_KEY_HEADER: self.api_key})
@@ -532,12 +531,12 @@ class AdapterService(PluginService):
             client_data = [self._process_clients_for_adapter(x) for x in client_data]
             return client_data
         if isinstance(client_data, FileForCredentialsMock):
-            import gridfs
-            fs = gridfs.GridFS(self.db.client[self.unique_name])
             if isinstance(client_data.file_contents, str):
-                written_file = fs.put(client_data.file_contents, filename=client_data.filename, encoding='utf8')
+                written_file = self.db.db_files.upload_file(
+                    client_data.file_contents, filename=client_data.filename, encoding='utf8'
+                )
             else:
-                written_file = fs.put(client_data.file_contents, filename=client_data.filename)
+                written_file = self.db.db_files.upload_file(client_data.file_contents, filename=client_data.filename)
             return {"uuid": str(written_file), "filename": client_data.filename}
         return client_data
 

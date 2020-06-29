@@ -6,6 +6,7 @@ import psutil
 import pymongo
 from retrying import retry
 
+from axonius.db.files import DBFileHelper
 from axonius.modules.axonius_plugins import AxoniusPlugins
 from axonius.plugin_base import EntityType
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -44,6 +45,7 @@ class MongoService(SystemService, WeaveService):
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
         self.plugins = AxoniusPlugins(self.client)
+        self.db_files = DBFileHelper(self.client)
 
     @property
     def exposed_ports(self):

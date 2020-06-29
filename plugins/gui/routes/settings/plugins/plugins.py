@@ -447,21 +447,41 @@ class Plugins:
         :param config_name: To update
         :param config_to_set:
         """
-        if self.request_remote_plugin('register', params={'unique_name': plugin_name}).status_code != 200:
-            unique_plugins_names = self.request_remote_plugin(
-                f'find_plugin_unique_name/nodes/None/plugins/{plugin_name}').json()
-        else:
-            unique_plugins_names = [plugin_name]
 
         if config_name == DISCOVERY_CONFIG_NAME:
-            current_discovery = self.plugins.get_plugin_settings(plugin_name).configurable_configs[
-                DISCOVERY_CONFIG_NAME]
-            self._delete_last_fetch_on_discovery_change(plugin_name, current_discovery, config_to_set)
+            try:
+                current_discovery = self.plugins.get_plugin_settings(plugin_name).configurable_configs[
+                    DISCOVERY_CONFIG_NAME]
+                self._delete_last_fetch_on_discovery_change(plugin_name, current_discovery, config_to_set)
+            except Exception:
+                logger.exception(f'Failed deleting last fetch on discovery change')
 
         self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name] = config_to_set
 
-        for current_unique_plugin in unique_plugins_names:
-            self.request_remote_plugin('update_config', current_unique_plugin, method='POST')
+        if plugin_name == 'core':
+            # Core is a special plugin because the 'status' there is always 'ok', not 'up' or 'down'.
+            all_online_plugin_unique_names = ['core']
+        else:
+            all_online_plugin_unique_names = [
+                x['plugin_unique_name'] for x in self.core_configs_collection.find(
+                    {
+                        'plugin_name': plugin_name,
+                        'status': 'up'
+                    }
+                )
+            ]
+
+        def update_plugin(plugin_unique_name):
+            try:
+                self.request_remote_plugin('update_config', plugin_unique_name, method='post', timeout=120)
+            except Exception:
+                logger.exception(f'Failed to update config on {plugin_name!r}')
+
+        res = self._update_config_executor.map_async(update_plugin, all_online_plugin_unique_names)
+        try:
+            res.get(3)
+        except Exception:
+            logger.warning(f'Warning - Save config takes more than 3 seconds, returning')
 
     @gui_route_logged_in('<plugin_unique_name>/<command>', methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):

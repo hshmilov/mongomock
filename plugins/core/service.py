@@ -26,6 +26,7 @@ from axonius.consts.core_consts import DEACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import InstancesMetrics, SystemMetric
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.db.db_client import DB_USER, DB_PASSWORD, DB_HOST
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.utils.json import from_json, to_json
@@ -893,7 +894,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
             if not relevant_doc:
                 # Create a new plugin line
-                plugin_user, plugin_password = self.db_user, self.db_password
+                plugin_user, plugin_password = DB_USER, DB_PASSWORD
                 doc = {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
                     'plugin_name': plugin_name,
@@ -901,7 +902,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     'plugin_subtype': plugin_subtype,
                     'supported_features': supported_features,
                     'api_key': uuid.uuid4().hex,
-                    'db_addr': self.db_host,
+                    'db_addr': DB_HOST,
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),

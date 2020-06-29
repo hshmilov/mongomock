@@ -2000,7 +2000,8 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
     def clean_db(self, blocking: bool):
         response = requests.post(
             self.req_url + f'/trigger/clean_db?blocking={blocking}',
-            headers={API_KEY_HEADER: self.api_key}
+            headers={API_KEY_HEADER: self.api_key},
+            json={'adapters': None}
         )
 
         assert response.status_code == 200, \

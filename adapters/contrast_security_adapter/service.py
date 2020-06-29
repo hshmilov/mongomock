@@ -197,8 +197,7 @@ class ContrastSecurityAdapter(AdapterBase):
                             library_version_raw=parse_versions_raw(library.get('file_version')),
                             cve_id=vuln.get('name'),
                             cvss=vuln.get('severity_value'),
-                            cve_severity=vuln.get('severity_code'),
-                            cve_description=vuln.get('description'),
+                            cve_severity=vuln.get('severity_code')
                         ))
                     except Exception:
                         logger.exception(f'Failed parsing vulnerability {vuln.get("name")} of library {library}')

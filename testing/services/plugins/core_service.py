@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import base64
 import os
 import datetime
@@ -39,8 +40,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('core')
 
-    # pylint: disable=R0912
-    # Too many branches
+    # pylint: disable=too-many-branches,too-many-lines
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 10:
@@ -82,7 +82,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 22:
             self._update_schema_version_22()
 
-        if self.db_schema_version != 22:
+        if self.db_schema_version < 23:
+            self._update_schema_version_23()
+
+        if self.db_schema_version != 23:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -1126,9 +1129,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             adapters = self.db.client[CORE_UNIQUE_NAME]['configs'].find({'plugin_type': ADAPTER_PLUGIN_TYPE})
             for adapter in adapters:
                 adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+                plugin_settings = self.db.plugins.get_plugin_settings(adapter[PLUGIN_NAME])
                 adaper_clients_collection: Collection = self.db.client[adapter_name]['clients']
-                adapter_schema_collecion: Collection = self.db.client[adapter_name]['adapter_schema']
-                pwd_fields = self._get_password_fields_from_adapter_schema(adapter_name, adapter_schema_collecion)
+                adapter_client_schema: dict = plugin_settings.adapter_client_schema
+                pwd_fields = self._get_password_fields_from_adapter_schema(adapter_client_schema)
                 if not pwd_fields:
                     continue
 
@@ -1141,6 +1145,37 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 22
         except Exception as e:
             print(f'Exception while upgrading adapters clients password vault provider . Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_23(self):
+        print(f'Updating to schema version 23 - One GridFS DB')
+        try:
+            import gridfs
+            core_fs = gridfs.GridFS(self.db.client[CORE_UNIQUE_NAME])
+
+            for plugin_document in self.db.client[CORE_UNIQUE_NAME]['configs'].find(
+                    {},
+                    projection={PLUGIN_NAME: 1, PLUGIN_UNIQUE_NAME: 1}
+            ):
+                plugin_unique_name = plugin_document.get(PLUGIN_UNIQUE_NAME)
+                if plugin_unique_name == CORE_UNIQUE_NAME:
+                    continue
+
+                fs = gridfs.GridFS(self.db.client[plugin_unique_name])
+
+                for file in self.db.client[plugin_unique_name].files.find({}):
+                    try:
+                        f = fs.get(file['_id'])
+                        core_fs.put(f, _id=file['_id'], filename=file.get('filename'), encoding=file.get('encoding'))
+                    except Exception as e:
+                        print(f'Exception while upgrading - '
+                              f'filename {file.get("filename") or ""} in {plugin_unique_name!r} '
+                              f'could not be moved: {str(e)}')
+
+            self.db_schema_version = 23
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 23. Details: {e}')
             traceback.print_exc()
             raise
 
@@ -1214,16 +1249,9 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                     DB_KEY_PATH.unlink()
 
     @staticmethod
-    def _get_password_fields_from_adapter_schema(adapter_name, adapter_schema_collecion: Collection) -> list:
-        resp = adapter_schema_collecion.find_one(
-            {
-                'adapter_name': adapter_name
-            },
-            {
-                'schema': 1
-            }
-        )
-        return [item['name'] for item in resp.get('schema', {}).get('items', []) if item.get('format') == 'password']
+    def _get_password_fields_from_adapter_schema(adapter_client_schema: dict) -> list:
+        adapter_client_schema = adapter_client_schema or {}
+        return [item['name'] for item in adapter_client_schema.get('items', []) if item.get('format') == 'password']
 
     def _check_for_legacy_vault_provider_data(self, adapter_name: str, adapter_client: dict,
                                               adapter_password_fields: list, adaper_clients_collection: Collection):

@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from typing import Tuple, List
 import json
 
-import gridfs
 import pymongo
 from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
@@ -24,7 +23,6 @@ from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_GENERATE_PDF_THREAD_ID,
                                        EXEC_REPORT_THREAD_ID,
                                        LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
-from axonius.consts.plugin_consts import (GUI_PLUGIN_NAME)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD)
@@ -281,9 +279,7 @@ class Reports:
         # First, need to delete the old report
         self._delete_last_report(report_name)
 
-        db_connection = self._get_db_connection()
-        fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-        written_file_id = fs.put(report, filename=report_name)
+        written_file_id = self.db_files.upload_file(report, filename=report_name)
         logger.info('Report successfully placed in the db')
         return str(written_file_id)
 
@@ -297,10 +293,7 @@ class Reports:
         if not attachment_name:
             return return_error('Attachment must exist', 401)
 
-        db_connection = self._get_db_connection()
-        fs = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
-        written_file_id = fs.put(attachment_stream,
-                                 filename=attachment_name)
+        written_file_id = self.db_files.upload_file(attachment_stream, filename=attachment_name)
         logger.info('Attachment successfully placed in the db')
         return str(written_file_id)
 
@@ -312,16 +305,15 @@ class Reports:
         report_collection = self._get_collection('reports')
         most_recent_report = report_collection.find_one({'filename': report_name})
         if most_recent_report is not None:
-            fs = gridfs.GridFS(self._get_db_connection()[GUI_PLUGIN_NAME])
             attachments = most_recent_report.get('attachments')
             if attachments is not None:
                 for attachment_uuid in attachments:
                     logger.info(f'DELETE attachment: {attachment_uuid}')
-                    fs.delete(ObjectId(attachment_uuid))
+                    self.db_files.delete_file(ObjectId(attachment_uuid))
             uuid = most_recent_report.get('uuid')
             if uuid is not None:
                 logger.info(f'DELETE: {uuid}')
-                fs.delete(ObjectId(uuid))
+                self.db_files.delete_file(ObjectId(uuid))
 
     @gui_route_logged_in('<report_id>/pdf')
     def export_report(self, report_id):
@@ -362,22 +354,20 @@ class Reports:
         uuid = report['uuid']
         report_path = f'axonius-{name}_{datetime.now()}.pdf'
         logger.info(f'report_path: {report_path}')
-        db_connection = self._get_db_connection()
 
         attachments_data = []
-        gridfs_connection = gridfs.GridFS(db_connection[GUI_PLUGIN_NAME])
         attachments = report.get('attachments')
         if attachments:
             for attachment_uuid in attachments:
                 try:
-                    attachment = gridfs_connection.get(ObjectId(attachment_uuid))
+                    attachment = self.db_files.get_file(ObjectId(attachment_uuid))
                     attachments_data.append({
                         'name': attachment.name,
                         'content': attachment
                     })
                 except Exception:
                     logger.error(f'failed to retrieve attachment {attachment_uuid}')
-        report_data = gridfs_connection.get(ObjectId(uuid))
+        report_data = self.db_files.get_file(ObjectId(uuid))
         return name, report_data, attachments_data
 
     def generate_report(self, generated_date, report):

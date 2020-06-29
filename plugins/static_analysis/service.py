@@ -360,7 +360,6 @@ class StaticAnalysisService(Triggerable, PluginBase):
         cve_severity = cve_data.get('severity_v3') or cve_data.get('severity_v2')
         cvss_metric_version = 'v3.0' if cve_data.get('severity_v3') else 'v2.0'
         created_device.add_vulnerable_software(cve_id=cve_data.get('id'),
-                                               cve_description=cve_data.get('description'),
                                                cve_references=cve_data.get('references'),
                                                cve_severity=cve_severity,
                                                cvss=cvss,

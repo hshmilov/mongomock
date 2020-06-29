@@ -19,10 +19,11 @@ class TestGoogleMdmAdapter(AdapterTestBase):
 
     @property
     def some_client_details(self):
-        import gridfs
-        fs = gridfs.GridFS(self.axonius_system.db.client[self.adapter_service.unique_name])
         filename = uuid.uuid4().hex
-        written_file_uuid = str(fs.put(bytes(json.dumps(service_json_data), 'ascii'), filename=filename))
+        written_file_uuid = self.axonius_system.db.db_files.upload_file(
+            bytes(json.dumps(service_json_data), 'ascii'),
+            filename=filename
+        )
         return {
             'keypair_file': {
                 'uuid': written_file_uuid,

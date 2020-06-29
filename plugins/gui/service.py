@@ -9,6 +9,7 @@ import configparser
 
 from datetime import datetime, timedelta
 from distutils.version import StrictVersion
+from multiprocessing.pool import ThreadPool
 from typing import (List, Dict)
 from pathlib import Path
 from passlib.hash import bcrypt
@@ -281,6 +282,8 @@ class GuiService(Triggerable,
             self.check_and_initialize_self_serve_instance()
         except Exception:
             logger.error('An exception happened while initializing self-server settings', exc_info=True)
+
+        self._update_config_executor = ThreadPool(30)
 
         self._job_scheduler.add_job(func=self.get_latest_version,
                                     trigger=IntervalTrigger(minutes=30),
