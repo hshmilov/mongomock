@@ -1,7 +1,7 @@
 import datetime
 import threading
-from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok
-from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
+from wmi_adapter.parsers.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok
+from wmi_adapter.parsers.general_info_subplugin import GeneralInfoSubplugin
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.parsing import parse_bool_from_raw
 
@@ -14,13 +14,7 @@ class GetUserLogons(GeneralInfoSubplugin):
     users_to_sids_last_query = None
     users_to_sids_query_lock = threading.Lock()
 
-    def __init__(self, *args, **kwargs):
-        """
-        initialization.
-        """
-        super().__init__(*args, **kwargs)
-
-    def get_sid_to_users_db(self):
+    def get_sid_to_users_db(self, plugin_base):
         """
         Instead of querying the users_to_sids db for each device again and again, query it once and return it.
         :return: sids_to_users[sid] -> ("name@domain", bool(is_local_user))
@@ -35,7 +29,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                 # This could be only from adapters.data, as it comes from active directory. Once we have
                 # this information coming from tags we should change this.
                 GetUserLogons.users_to_sids = {}
-                list_of_users_from_users_db = self.plugin_base.users_db.find(
+                list_of_users_from_users_db = plugin_base.users_db.find(
                     filter={"adapters.data.ad_sid": {"$exists": True}},
                     projection={"adapters.data.ad_sid": 1, "adapters.data.username": 1,
                                 "adapters.data.domain": 1}
@@ -76,8 +70,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 "select GroupComponent, PartComponent from Win32_GroupUser"
             ])
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
-        super().handle_result(device, executer_info, result, adapterdata_device)
+    def handle_result(self, plugin_base, result, adapterdata_device: DeviceAdapter):
+        super().handle_result(plugin_base, result, adapterdata_device)
         if not all(is_wmi_answer_ok(a) for a in result):
             self.logger.error(f"Not handling result, It has an exception: {result}")
             return False
@@ -112,8 +106,8 @@ class GetUserLogons(GeneralInfoSubplugin):
 
         # Lets build the sids_to_users table. We get the base sids_to_users from the users db first.
         local_hostname = "local"    # will be changed in the following loop
-        nbns_to_dns_translation_table = self.plugin_base.get_global_keyval('ldap_nbns_to_dns') or {}
-        sids_to_users = self.get_sid_to_users_db()
+        nbns_to_dns_translation_table = plugin_base.get_global_keyval('ldap_nbns_to_dns') or {}
+        sids_to_users = self.get_sid_to_users_db(plugin_base)
         for user in user_accounts_data:
             # a caption is domain + username.
             # Note! we can also get many more interesting info. like, is that user a local user, was is locked out,
@@ -206,9 +200,9 @@ class GetUserLogons(GeneralInfoSubplugin):
                 is_local=u.get("is_local"),
                 is_disabled=u.get("is_disabled"),
                 should_create_if_not_exists=True,
-                creation_source_plugin_type=self.plugin_base.plugin_type,
-                creation_source_plugin_name=self.plugin_base.plugin_name,
-                creation_source_plugin_unique_name=self.plugin_base.plugin_unique_name
+                creation_source_plugin_type=plugin_base.plugin_type,
+                creation_source_plugin_name=plugin_base.plugin_name,
+                creation_source_plugin_unique_name=plugin_base.plugin_unique_name
             )
 
         # Now sort the array.
@@ -234,15 +228,6 @@ class GetUserLogons(GeneralInfoSubplugin):
 
                 # Add data to that device.
                 adapterdata_device.last_used_users = one_min_last_used_users
-
-                # If the last user is local, we should tag this device.
-                if is_last_login_local is True:
-                    self.plugin_base.devices.add_label(
-                        [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                        "Last logon not from domain"
-                    )
-
-                return True
             except Exception:
                 self.logger.exception(f"Failed Setting last user logon!")
                 raise
@@ -251,5 +236,6 @@ class GetUserLogons(GeneralInfoSubplugin):
             self.logger.error(f"Did not find any users_to_sids. That is very weird and should not happen."
                               f"sids_to_users {sids_to_users}, user_accounts {user_accounts_data}, "
                               f"user_profiles {user_profiles_data}")
+            return False
 
-        return False
+        return True

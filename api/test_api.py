@@ -15,7 +15,6 @@ from services.adapters.ad_service import ad_fixture
 from services.adapters.csv_service import csv_fixture
 from services.axonius_service import get_service
 from services.plugins.device_control_service import device_control_fixture
-from services.plugins.general_info_service import general_info_fixture
 from test_credentials.test_ad_credentials import ad_client1_details
 from testing.test_credentials.test_gui_credentials import DEFAULT_USER
 from testing.tests.conftest import axonius_fixture
@@ -27,7 +26,7 @@ MAX_TIME_FOR_SYNC_RESEARCH_PHASE = 60 * 3  # the amount of time we expect a cycl
 
 # pylint: disable=redefined-outer-name
 @pytest.fixture(scope='module')
-def axonius_system(axonius_fixture, general_info_fixture, device_control_fixture, ad_fixture, csv_fixture):
+def axonius_system(axonius_fixture, device_control_fixture, ad_fixture, csv_fixture):
     axonius_system = get_service()
 
     ad_fixture.add_client(ad_client1_details)

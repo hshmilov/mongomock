@@ -7,7 +7,7 @@ from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from services.adapters.carbonblack_response_service import \
     CarbonblackResponseService
-from services.plugins.device_control_service import DeviceControlService
+from services.adapters.wmi_service import WmiService
 from testing.test_credentials.test_ad_credentials import (NONEXISTEN_AD_DEVICE_IP,
                                                           WMI_QUERIES_DEVICE)
 from ui_tests.tests.ui_consts import Enforcements
@@ -170,8 +170,17 @@ class TestTasks(TestBase):
         self._check_action_results(success_count, failure_count, action_name)
 
     def test_task_results(self):
-        with DeviceControlService().contextmanager(take_ownership=True), CarbonblackResponseService().contextmanager(
+        with WmiService().contextmanager(take_ownership=True), CarbonblackResponseService().contextmanager(
                 take_ownership=True):
+            # restart gui service for master instance to be available at node selection.
+            # should be deleted when AX-4451 is done
+            gui_service = self.axonius_system.gui
+            gui_service.take_process_ownership()
+            gui_service.stop(should_delete=False)
+            gui_service.start_and_wait()
+            time.sleep(5)
+            self.login()
+
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)
             self.enforcements_page.create_deploying_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_QUERY)

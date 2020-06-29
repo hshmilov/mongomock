@@ -112,8 +112,10 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_39()
         if self.db_schema_version < 40:
             self._update_schema_version_40()
+        if self.db_schema_version < 41:
+            self._update_schema_version_41()
 
-        if self.db_schema_version != 40:
+        if self.db_schema_version != 41:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1828,6 +1830,29 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 40
         except Exception as e:
             print(f'Exception while upgrading aggregator db to version 40. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_41(self):
+        print('Update to schema 41 - change general_info devices into WMI')
+        plugin_name = 'wmi_adapter'
+        plugin_unique_name = 'wmi_adapter_0'
+        try:
+            entities_db = self._entity_db_map[EntityType.Devices]
+            entities_db.update_many({
+                f'tags.{PLUGIN_NAME}': 'general_info'
+            },
+                {
+                    '$set': {
+                        f'tags.$.{PLUGIN_NAME}': plugin_name,
+                        f'tags.$.{PLUGIN_UNIQUE_NAME}': plugin_unique_name,
+                        'tags.$.name': plugin_unique_name,
+                    }
+            }
+            )
+            self.db_schema_version = 41
+        except Exception as e:
+            print(f'Exception while upgrading aggregator to version 41. Details: {e}')
             traceback.print_exc()
             raise
 

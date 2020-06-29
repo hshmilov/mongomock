@@ -1,17 +1,28 @@
+import traceback
 from datetime import datetime
 
 import dateutil
 from bson import ObjectId
 from pymongo.database import Database
+
+from axonius.clients.wmi_query.consts import (COMMAND_NAME, EXTRA_FILES_NAME,
+                                              PASSWORD, USERNAME)
 from axonius.consts import plugin_consts
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME
+from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME, GUI_PLUGIN_NAME,
+                                          NODE_ID, NODE_NAME, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME,
+                                          REPORTS_PLUGIN_NAME)
 from axonius.consts.report_consts import (
     ACTIONS_FAILURE_FIELD, ACTIONS_FIELD, ACTIONS_MAIN_FIELD,
     ACTIONS_POST_FIELD, ACTIONS_SUCCESS_FIELD, LAST_TRIGGERED_FIELD,
     LAST_UPDATE_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD)
+
+from reports.action_types.action_type_base import DEFAULT_INSTANCE
 from services.plugin_service import PluginService
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
+
+COMMAND_NAME_LENGTH = 30
 
 
 class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
@@ -38,7 +49,10 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 6:
             self.__update_schema_version_6()
 
-        if self.db_schema_version != 6:
+        if self.db_schema_version < 7:
+            self._update_schema_version_7()
+
+        if self.db_schema_version != 7:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -267,6 +281,92 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             print('Cannot upgrade db to version 6, libmongocrypt error')
         except Exception as e:
             print(e)
+
+    def get_plugin_unique_name(self, plugin_name: str, node_id: str) -> str:
+        """
+        Get plugin unique name from core db by plugin name and node_id
+        :param plugin_name: plugin name
+        :param node_id: node id
+        :return: plugin unique name
+        """
+        config = self.db.client[CORE_UNIQUE_NAME]['configs'].find_one({
+            PLUGIN_NAME: plugin_name,
+            NODE_ID: node_id
+        })
+        return config.get(PLUGIN_UNIQUE_NAME)
+
+    def _update_schema_version_7(self):
+        print('Upgrade to schema 7')
+        try:
+            # change deploy software action to run wmi
+            actions_collection = self.db.client[REPORTS_PLUGIN_NAME]['saved_actions']
+            old_actions = actions_collection.find(
+                filter={
+                    'action.action_name': {
+                        '$in': [
+                            'run_executable_windows', 'run_command_windows', 'run_wmi_scan'
+                        ]
+                    }
+                }
+            )
+            for action in old_actions:
+                try:
+                    action = dict(action)
+                    config = action['action']['config']
+                    # decrypt config data
+                    self.decrypt_dict(config)
+                    # update instance id
+                    default_instance = self.db.client[CORE_UNIQUE_NAME]['nodes_metadata'].find_one({
+                        NODE_NAME: DEFAULT_INSTANCE
+                    })
+                    master_node_id = default_instance[NODE_ID]
+                    config['instance'] = master_node_id
+                    # update action creds
+                    if not config.get('use_adapter'):
+                        if config.get('wmi_username'):
+                            config[USERNAME] = config['wmi_username']
+
+                        if config.get('wmi_password'):
+                            config[PASSWORD] = config['wmi_password']
+                    # pop unnecessary keys
+                    config.pop('wmi_username', None)
+                    config.pop('wmi_password', None)
+                    # update files
+                    if config.get('executable'):
+                        config[EXTRA_FILES_NAME] = [config.get('executable')]
+                        config.pop('executable')
+                    # update command name
+                    if config.get('params'):
+                        # normalize command param to command name
+                        config[COMMAND_NAME] = config.get('params').strip().lower().replace(' ', '_').replace('-', '_')
+                        config[COMMAND_NAME] = config[COMMAND_NAME][:COMMAND_NAME_LENGTH]
+                    # update action name
+                    old_action_name = action['action']['action_name']
+                    action_name = 'run_command_windows' if old_action_name == 'run_executable_windows' \
+                        else old_action_name
+                    # encrypt config data
+                    for key, val in config.items():
+                        if val:
+                            config[key] = self.db_encrypt(GUI_PLUGIN_NAME, val)
+                    actions_collection.update_one(
+                        filter={
+                            '_id': action['_id']
+                        },
+                        update={
+                            '$set': {
+                                'action.action_name': action_name,
+                                'action.config': config,
+                            }
+                        }
+                    )
+                except Exception as e:
+                    print(f'Exception while upgrading reports action id: {action["_id"]} to version 7. Details: {e}')
+                    raise
+            self.db_schema_version = 7
+        except Exception as e:
+            print(f'Exception while upgrading reports db to version 7. Details: {e}')
+            traceback.print_exc()
+            raise
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)

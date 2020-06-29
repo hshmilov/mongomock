@@ -1,9 +1,12 @@
 import logging
 
-from axonius.consts.plugin_consts import DEVICE_CONTROL_PLUGIN_NAME
+from funcy import chunks
+
+from axonius.clients.wmi_query.consts import CMD_ACTION_SCHEMA, ACTION_TYPES, EXEC_CHUNK_SIZE
+from axonius.consts.plugin_consts import WMI_PLUGIN_NAME
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
 
-from reports.action_types.action_type_base import ActionTypeBase, generic_fail
+from reports.action_types.action_type_base import ActionTypeBase, add_node_selection, add_node_default
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -13,107 +16,48 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class RunCmd(ActionTypeBase):
     """
-    Runs an cmd
+    Runs a wmi command using wmi adapter
     """
 
     @staticmethod
+    def prettify_output(id_, result: dict) -> EntityResult:
+        value = result['value']
+        success = result['success']
+        return EntityResult(id_, success, value)
+
+    @staticmethod
     def config_schema() -> dict:
-        return {
-            'items': [
-                {
-                    'name': 'use_adapter',
-                    'title': 'Use stored credentials from the Active Directory adapter',
-                    'type': 'bool'
-                },
-                {
-                    'name': 'wmi_username',
-                    'title': 'WMI user name',
-                    'type': 'string'
-                },
-                {
-                    'name': 'wmi_password',
-                    'title': 'WMI password',
-                    'type': 'string',
-                    'format': 'password'
-                },
-                {
-                    'name': 'params',
-                    'title': 'Command line parameters',
-                    'type': 'string'
-                },
-                {
-                    'name': 'extra_files',
-                    'title': 'Files to Deploy',
-                    'type': 'array',
-                    'items':
-                        {
-                            'name': 'file',
-                            'title': 'File',
-                            'type': 'file',
-                            'items': [
-                                {
-                                    'name': 'file',
-                                    'title': 'File',
-                                    'type': 'file'
-                                }
-                            ]
-                        }
-                }
-            ],
-            'required': [
-                'use_adapter',
-                'params'
-            ],
-            'type': 'array'
-        }
+        return add_node_selection(CMD_ACTION_SCHEMA)
 
     @staticmethod
     def default_config() -> dict:
-        return {
-            'use_adapter': False,
-            'params': ''
+        return add_node_default({})
+
+    def _trigger_wmi_adapter(self, node_id, axon_ids):
+        action_data = {
+            'internal_axon_ids': axon_ids,
+            'client_config': self._config
         }
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(WMI_PLUGIN_NAME, node_id)
+        action_result = self._plugin_base._trigger_remote_plugin(adapter_unique_name,
+                                                                 priority=True,
+                                                                 blocking=True,
+                                                                 data=action_data,
+                                                                 job_name=ACTION_TYPES.cmd)
+        action_result = action_result.json()
+        if action_result.get('status') == 'error':
+            raise RuntimeError(action_result['message'])
+        return action_result
 
     def _run(self) -> EntitiesResult:
-        credentials_exist = self._config.get('wmi_username') and self._config.get('wmi_password')
-        use_adapter = self._config.get('use_adapter')
-
-        if not credentials_exist and not use_adapter:
-            return generic_fail(
-                self._internal_axon_ids,
-                reason=f'Please use the adapter credentials or specify custom credentials'
-            )
-
-        if use_adapter:
-            credentials = {}
-        else:
-            credentials = {
-                'username': self._config.get('wmi_username'),
-                'password': self._config.get('wmi_password')
-            }
+        node_id = self.action_node_id
 
         logger.info(f'Executing run_cmd for {len(self._internal_axon_ids)} devices')
-        action_data = {
-            'internal_axon_ids': self._internal_axon_ids,
-            'action_type': 'shell',
-            'action_name': self._action_saved_name,
-            'extra_files': self._config.get('extra_files') or [],
-            'command': self._config['params'],
-            'custom_credentials': credentials
-        }
-        result = self._plugin_base._trigger_remote_plugin(DEVICE_CONTROL_PLUGIN_NAME,
-                                                          priority=True, blocking=True,
-                                                          data=action_data).json()
+        for chunk in chunks(EXEC_CHUNK_SIZE, self._internal_axon_ids):
+            action_result = self._trigger_wmi_adapter(node_id, chunk)
 
-        def prettify_output(id_, result: dict) -> EntityResult:
-            if not isinstance(result, dict):
-                return EntityResult(id_, False, {})
-            value = result['value']
-            success = result['success']
-            return EntityResult(id_, success, value)
-
-        return [
-            prettify_output(k, v)
-            for k, v
-            in result.items()
-        ]
+            yield from (
+                self.prettify_output(k, v)
+                for k, v
+                in action_result.items()
+            )

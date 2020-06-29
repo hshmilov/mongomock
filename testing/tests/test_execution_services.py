@@ -10,7 +10,6 @@ import pytest
 from services.axonius_service import get_service
 from services.adapters.ad_service import ad_fixture
 from services.adapters.esx_service import esx_fixture
-from services.plugins.general_info_service import general_info_fixture
 from services.plugins.device_control_service import device_control_fixture
 from services.plugins.static_analysis_service import static_analysis_fixture
 from test_credentials.test_ad_credentials import ad_client1_details, \

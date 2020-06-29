@@ -31,10 +31,12 @@ from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
 
+# pylint: disable=C0302
 class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('core')
 
+    # pylint: disable=R0912
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 10:
@@ -70,7 +72,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 20:
             self._update_schema_version_20()
 
-        if self.db_schema_version != 20:
+        if self.db_schema_version < 21:
+            self._update_schema_version_21()
+
+        if self.db_schema_version != 21:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -1083,6 +1088,22 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 20
         except Exception as e:
             print(f'Exception while upgrading core db to version 20. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_21(self):
+        # Delete general_info plugin
+        print('Upgrade to schema 21')
+        try:
+            delete_result = self.db.client['core']['configs'].delete_one(
+                {
+                    'plugin_unique_name': 'general_info'
+                })
+            if not delete_result or delete_result.deleted_count == 0:
+                print('general_info config was not deleted.')
+            self.db_schema_version = 21
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 21. Details: {e}')
             traceback.print_exc()
             raise
 

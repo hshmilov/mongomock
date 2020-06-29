@@ -1,6 +1,7 @@
-from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.wmi_service import WmiService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, WMI_INFO_ADAPTER, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
+from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY, \
+    WMI_ADAPTER_NAME
 from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 
 
@@ -112,14 +113,14 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
     def test_wmi_info_shown(self):
         self.enforcements_page.switch_to_page()
-        with GeneralInfoService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
             self.devices_page.click_query_wizard()
             adapters = self.devices_page.get_query_adapters_list()
             # WMI Info should be in the adapters list because its does have a client
-            assert WMI_INFO_ADAPTER in adapters
+            assert WMI_ADAPTER_NAME in adapters
 
     def test_devices_delete(self):
         self.settings_page.switch_to_page()

@@ -1,6 +1,6 @@
 import threading
-from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from general_info.subplugins.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
+from wmi_adapter.parsers.general_info_subplugin import GeneralInfoSubplugin
+from wmi_adapter.parsers.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
 from axonius.devices.device_adapter import DeviceAdapter
 
 import logging
@@ -48,8 +48,8 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"]) + \
             smb_shell_commands(GET_INSTALLED_SOFTWARE_COMMANDS)
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
-        super().handle_result(device, executer_info, result, adapterdata_device)
+    def handle_result(self, plugin_base, result, adapterdata_device: DeviceAdapter):
+        super().handle_result(plugin_base, result, adapterdata_device)
 
         # Vulnerability parsing moved to static_analyzer since version 1.11.
         # However old versions still have vulnerabilities that came from general_info,

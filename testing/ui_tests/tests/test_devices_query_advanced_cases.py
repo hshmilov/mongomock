@@ -9,8 +9,8 @@ from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
                                       WINDOWS_QUERY_NAME, JSON_ADAPTER_PLUGIN_NAME)
-from services.plugins.general_info_service import GeneralInfoService
 from services.adapters.cylance_service import CylanceService
+from services.adapters.wmi_service import WmiService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_THIRD_IP,
                                                     DEVICE_MAC,
@@ -478,7 +478,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
 
     def _test_complex_obj_dates(self):
         self.devices_page.close_dropdown()
-        with GeneralInfoService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
             # Wait for WMI info

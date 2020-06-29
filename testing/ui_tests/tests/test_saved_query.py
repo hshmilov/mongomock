@@ -6,7 +6,7 @@ from selenium.common.exceptions import TimeoutException as SeleniumTimeoutExcept
 from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.consts.gui_consts import PREDEFINED_PLACEHOLDER
-from services.plugins.device_control_service import DeviceControlService
+from services.adapters.wmi_service import WmiService
 from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
@@ -125,7 +125,7 @@ class TestSavedQuery(TestBase):
         self.devices_page.check_sort_column(self.devices_page.FIELD_LAST_SEEN)
 
     def test_enforcement_query(self):
-        with DeviceControlService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.dashboard_page.switch_to_page()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()

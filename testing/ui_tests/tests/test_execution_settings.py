@@ -1,5 +1,6 @@
 from axonius.utils.wait import wait_until
-from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.wmi_service import WmiService
+from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -15,9 +16,11 @@ class TestExecutionSettings(TestBase):
             self.devices_page.wait_for_table_to_load()
             assert bool(self.devices_page.get_all_data()) == should_execute
 
-        general_info_service = GeneralInfoService()
+        wmi_service = WmiService()
 
-        with general_info_service.contextmanager(take_ownership=True):
+        with wmi_service.contextmanager(take_ownership=True):
+            # Add AD server
+            self.adapters_page.add_server(ad_client1_details)
             self.base_page.run_discovery()
 
             check_execution(False)

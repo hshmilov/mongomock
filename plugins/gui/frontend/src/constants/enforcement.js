@@ -30,10 +30,10 @@ export const actionsMeta = {
         title: 'Deploy on Linux Device'
     },
     run_command_windows: {
-        title: 'Run Windows Shell Command'
+        title: 'Deploy Files and Run Windows Shell Command'
     },
     run_command_linux: {
-        title: 'Run Linux Shell Command'
+        title: 'Deploy Files and Run Linux Shell Command'
     },
     run_wmi_scan: {
         title: 'Run WMI Scan'
@@ -208,12 +208,8 @@ export const actionsMeta = {
         title: 'Manage Microsoft Azure Services',
         items: ['azure_add_tags']
     },
-    deploy_software: {
-        title: 'Deploy Software',
-        items: ['run_executable_windows']
-    },
     run_command: {
-        title: 'Run Command',
+        title: 'Deploy Files and Run Commands',
         items: ['run_command_windows', 'run_command_linux', 'run_wmi_scan', 'run_linux_ssh_scan']
     },
     isolate_edr: {
@@ -268,6 +264,5 @@ export const postCondition = 'post'
 export const actionCategories = [
     'notify', 'create_incident', 'axonius',
     'enrich_device_or_user_data', 'scan_va', 'run_command', 'isolate_edr',
-    'create_cmdb_computer', 'manage_directory', 'aws_operations', 'azure_operations',
-    'deploy_software'
+    'create_cmdb_computer', 'manage_directory', 'aws_operations', 'azure_operations'
 ]

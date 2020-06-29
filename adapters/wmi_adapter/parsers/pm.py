@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from general_info.subplugins.wmi_utils import is_wmi_answer_ok
+from wmi_adapter.parsers.general_info_subplugin import GeneralInfoSubplugin
+from wmi_adapter.parsers.wmi_utils import is_wmi_answer_ok
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
 
@@ -24,8 +24,8 @@ class GetAvailableSecurityPatches(GeneralInfoSubplugin):
     def get_wmi_smb_commands():
         return [{"type": "pmonline", "args": []}]
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
-        super().handle_result(device, executer_info, result, adapterdata_device)
+    def handle_result(self, plugin_base, result, adapterdata_device: DeviceAdapter):
+        super().handle_result(plugin_base, result, adapterdata_device)
 
         available_security_patches = result[0]["data"]
         if is_wmi_answer_ok(result[0]):
@@ -40,6 +40,7 @@ class GetAvailableSecurityPatches(GeneralInfoSubplugin):
                                 pm_publish_date = parse_date(pm_publish_date)
                     except Exception:
                         self.logger.exception(f"Error parsing publish date of patch {patch}")
+                        pass
 
                     pm_title = patch.get("Title")
                     pm_msrc_severity = patch.get("MsrcSeverity")

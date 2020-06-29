@@ -157,7 +157,7 @@ class EntitiesPage(Page):
     SPECIFIC_JSON_ADAPTER_FILTER = 'adapters_data.json_file_adapter.username == "ofri" or ' \
                                    'adapters_data.json_file_adapter.hostname == "CB First"'
     AD_ADAPTER_FILTER = 'adapters == "active_directory_adapter"'
-    AD_WMI_ADAPTER_FILTER = f'{AD_ADAPTER_FILTER} and adapters_data.general_info.id == exists(true)'
+    AD_WMI_ADAPTER_FILTER = f'{AD_ADAPTER_FILTER} and adapters_data.wmi_adapter.id == exists(true)'
 
     NOTES_CONTENT_CSS = '.x-entity-notes'
     NOTES_TAB_CSS = 'li#notes'

@@ -1,7 +1,7 @@
 import asyncio
 import socket
 from inspect import isawaitable
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import aiodns
 import dns.resolver
 from dns.exception import DNSException
@@ -22,13 +22,18 @@ async def async_query_dns(loop: asyncio.AbstractEventLoop, hostname: str,
     if nameservers == [None]:
         nameservers = None
     resolver = aiodns.DNSResolver(loop=loop, timeout=timeout, nameservers=nameservers)
-    response = await resolver.query(hostname, 'A')
+    # aiodns timeout bug https://github.com/saghul/aiodns/pull/64
+    response = await asyncio.wait_for(resolver.query(hostname, 'A'), timeout)
     return response
 
 
-async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname, nameservers: List[str],
-                            timeout: float, greedy: bool, callback=None) -> List[Tuple[str, List]]:
+# pylint: disable =R0912
+async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname: Union[str, list],
+                            nameservers: List[str],
+                            timeout: float, greedy: bool,
+                            fallback_to_default=True, callback=None) -> List[Tuple[str, List]]:
     """
+    :param fallback_to_default: fallback to default dns server in case of dns failure
     :param loop: asyncio event loop
     :param hostname: hostname to resolve
     :param nameservers: dns nameservers to query
@@ -62,6 +67,13 @@ async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname, nameserve
         except Exception:
             pass
 
+    if fallback_to_default and not results:
+        try:
+            response = await async_query_dns(loop, hostname, None, timeout)
+            results.append((response[0].host, [None, ]))
+        except Exception:
+            pass
+
     if callback:
         # call callback function and handle async callback functions
         callback_function = callback(loop, hostname, results)
@@ -70,9 +82,11 @@ async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname, nameserve
     return results
 
 
-def async_query_dns_list(names_to_query: List[dict], timeout: float, greedy=False, callback=None) -> Tuple[str, list]:
+def async_query_dns_list(names_to_query: List[dict], timeout: float,
+                         greedy=False, fallback_to_default=True, callback=None) -> Tuple[str, list]:
     """
     DNS query a list of hostnames
+    :param fallback_to_default: fallback to default dns server in case of dns failure
     :param names_to_query: list of hostnames dicts  to resolve (dict keys: [hostname : str, nameservers: list])
     :param timeout: request time per dns query
     :param greedy: if True - return the dns responses from all the given nameservers.
@@ -86,7 +100,8 @@ def async_query_dns_list(names_to_query: List[dict], timeout: float, greedy=Fals
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    tasks = [query_dns_servers(loop, host.get('hostname'), host.get('nameservers'), timeout, greedy, callback=callback)
+    tasks = [query_dns_servers(loop, host.get('hostname'), host.get('nameservers'),
+                               timeout, greedy, fallback_to_default=fallback_to_default, callback=callback)
              for host in names_to_query if host.get('hostname')]
     responses = loop.run_until_complete(asyncio.gather(*tasks))
     return responses

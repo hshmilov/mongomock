@@ -49,7 +49,7 @@ def main():
         by_plugin_name[x['plugin_name']].append(x)
 
     # Plugins that we're updating to become a singleton, let's verify this as well
-    plugins_in_question = ['reports', 'general_info', 'execution',
+    plugins_in_question = ['reports', 'execution',
                            'static_correlator', 'static_users_correlator', 'device_control']
 
     for x in plugins_in_question:

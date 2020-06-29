@@ -4,6 +4,8 @@ from enum import Enum
 from typing import List, Tuple, Iterable
 from collections import namedtuple
 
+from axonius.clients.wmi_query import consts
+from testing.test_credentials.test_wmi_credentials import CLIENT_DETAILS
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
 from testing.test_credentials.test_shodan_credentials import OLD_CLIENT_DETAILS as shodan_client_details
 from ui_tests.pages.entities_page import EntitiesPage
@@ -46,7 +48,7 @@ class Action(Enum):
     untag = 'Remove Tag'
     run_executable_windows = 'Deploy on Windows Device'
     run_wmi_scan = 'Run WMI Scan'
-    run_windows_shell_command = 'Run Windows Shell Command'
+    run_windows_shell_command = 'Deploy Files and Run Windows Shell Command'
     run_linux_ssh_scan = 'Run Linux SSH Scan'
     shodan_enrichment = 'Enrich Device Data with Shodan'
     censys_enrichment = 'Enrich Device Data with Censys'
@@ -64,8 +66,7 @@ class Action(Enum):
 
 
 class ActionCategory:
-    Deploy = 'Deploy Software'
-    Run = 'Run Command'
+    Run = 'Deploy Files and Run Commands'
     Notify = 'Notify'
     Isolate = 'Execute Endpoint Security Agent Action'
     Enrichment = 'Enrich Device or User Data'
@@ -411,7 +412,8 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.6)
         self.find_element_by_text(Action.run_wmi_scan.value).click()
         self.wait_for_action_config()
-        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
+        self.fill_text_field_by_element_id(consts.USERNAME, CLIENT_DETAILS[consts.USERNAME])
+        self.fill_text_field_by_element_id(consts.PASSWORD, CLIENT_DETAILS[consts.PASSWORD])
         self.fill_action_name(name)
         if regkey:
             add_register_key(*regkey)
@@ -471,16 +473,19 @@ class EnforcementsPage(EntitiesPage):
     def add_deploy_software(self, name='Deploy Special Software'):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
         self.wait_for_action_library()
-        self.find_element_by_text(ActionCategory.Deploy).click()
+        self.find_element_by_text(ActionCategory.Run).click()
         # Opening animation time
         time.sleep(0.2)
-        self.find_element_by_text(Action.run_executable_windows.value).click()
+        self.find_element_by_text(Action.run_windows_shell_command.value).click()
         self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
+        self.fill_text_field_by_element_id('username', CLIENT_DETAILS[consts.USERNAME])
+        self.fill_text_field_by_element_id('password', CLIENT_DETAILS[consts.PASSWORD])
         exe_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '../../../shared_readonly_files/test_binary.exe'))
-        self.upload_file_by_id('executable', open(exe_path, 'rb').read(), is_bytes=True)
+        self.click_button('+', button_class='x-button light',
+                          scroll_into_view_container=self.ACTION_CONF_BODY_CSS)
+        self.upload_file_by_id('0', open(exe_path, 'rb').read(), is_bytes=True)
         time.sleep(2)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
@@ -496,7 +501,6 @@ class EnforcementsPage(EntitiesPage):
         # Appearance animation time
         time.sleep(0.6)
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.find_checkbox_with_label_before(self.USE_ACTIVE_DIRECTORY_CREDENTIALS_CHECKBOX_LABEL).click()
         param_line = f'dir && echo {self.FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR}'
         files = files or []
         for file_num, file_data in enumerate(files):
@@ -515,6 +519,9 @@ class EnforcementsPage(EntitiesPage):
         if param_line:
             param_line += ' && '
         param_line += f'echo done && echo {self.SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR} && dir'
+        self.fill_text_field_by_element_id('username', CLIENT_DETAILS[consts.USERNAME])
+        self.fill_text_field_by_element_id('password', CLIENT_DETAILS[consts.PASSWORD])
+        self.fill_text_field_by_element_id('command_name', name)
         self.fill_text_field_by_element_id('params', param_line)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)

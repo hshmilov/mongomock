@@ -1397,7 +1397,7 @@ def entity_fields(entity_type: EntityType):
         }, {
             'plugin_name': {
                 '$in': [
-                    'gui', 'general_info'
+                    'gui'
                 ]
             }
         }]

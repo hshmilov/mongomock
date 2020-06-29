@@ -1,5 +1,5 @@
 from axonius.utils.wait import wait_until
-from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.wmi_service import WmiService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 
 
@@ -23,7 +23,7 @@ class TestDevicesTable(TestEntitiesTable):
         assert not self.devices_page.get_first_row_tags()
 
     def test_devices_action_remove_plugin_tag(self):
-        with GeneralInfoService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()

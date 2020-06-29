@@ -205,6 +205,13 @@ adapters/stresstest_scanner_adapter/service.py
 adapters/tenable_io_adapter/service.py
 adapters/tenable_security_center_adapter/utils/mock_server.py
 adapters/traiana_lab_machines_adapter/service.py
+adapters/wmi_adapter/parsers/basic_computer_info.py
+adapters/wmi_adapter/parsers/connected_hardware.py
+adapters/wmi_adapter/parsers/general_info_subplugin.py
+adapters/wmi_adapter/parsers/installed_softwares.py
+adapters/wmi_adapter/parsers/pm.py
+adapters/wmi_adapter/parsers/user_logons.py
+adapters/wmi_adapter/parsers/wmi_utils.py
 adapters/webscan_adapter/scanners/ssllabs/ssllabs.py
 adapters/webscan_adapter/scanners/cmseek/cmsbrute/dru.py
 adapters/webscan_adapter/scanners/cmseek/cmsbrute/joom.py

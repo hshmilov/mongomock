@@ -312,6 +312,7 @@ DOCKER_PORTS = {
     'nozomi-guardian-adapter':          14284,
     'ip-fabric-adapter':                14285,
     'sumo-logic-adapter':               14286,
+    'wmi-adapter':                      14287,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

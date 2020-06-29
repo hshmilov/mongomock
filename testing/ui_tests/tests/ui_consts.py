@@ -44,9 +44,9 @@ NOTE_COLUMN = 'Note'
 JSON_ADAPTER_NAME = 'JSON File'
 JSON_ADAPTER_SEARCH = 'json'
 JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
-WMI_INFO_ADAPTER = 'WMI Info'
 
 AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
+WMI_ADAPTER_NAME = 'Windows Management Instrumentation (WMI)'
 CISCO_PRIME_ADAPTER_NAME = 'Cisco Prime'
 
 
@@ -59,6 +59,7 @@ STRESSTEST_SCANNER_ADAPTER = 'stresstest_scanner_adapter'
 STRESSTEST_SCANNER_ADAPTER_NAME = 'Test adapters for scanners'
 ALERTLOGIC_ADAPTER = 'alertlogic_adapter'
 ALERTLOGIC_ADAPTER_NAME = 'Alert Logic'
+WMI_INFO_ADAPTER = 'wmi_adapter'
 
 AWS_ADAPTER = 'aws_adapter'
 AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'

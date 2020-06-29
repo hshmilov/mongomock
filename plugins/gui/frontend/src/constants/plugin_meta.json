@@ -1,4 +1,9 @@
 {
+  "wmi_adapter": {
+    "title": "Windows Management Instrumentation (WMI)",
+    "link": "https://docs.axonius.com/docs/wmi",
+    "description": "Windows Management Instrumentation (WMI) is a set of specifications from Microsoft for consolidating the management of devices and applications in a Windows network. WMI provides users with information about the status of local or remote computer systems."
+  },
   "g_naapi_adapter": {
     "title": "GE NAAPI",
     "description": "GE NAAPI"

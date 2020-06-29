@@ -25,7 +25,6 @@ from axonius.consts.adapter_consts import LAST_FETCH_TIME
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
-                                          GENERAL_INFO_PLUGIN_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME,
                                           REPORTS_PLUGIN_NAME,
@@ -54,7 +53,7 @@ from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # Plugins that should always run async
-ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, GENERAL_INFO_PLUGIN_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
+ALWAYS_ASYNC_PLUGINS = [STATIC_ANALYSIS_PLUGIN_NAME, REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME]
 MIN_GB_TO_SAVE_HISTORY = 15
 
 

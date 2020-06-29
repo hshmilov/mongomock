@@ -70,7 +70,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 39:
+        if self.db_schema_version != 40:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -156,6 +156,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_38()
         if self.db_schema_version < 39:
             self._update_schema_version_39()
+        if self.db_schema_version < 40:
+            self._update_schema_version_40()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1440,6 +1442,48 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 39
         except Exception as e:
             print(f'Exception while upgrading gui db to version 39. Details: {e}')
+
+    def _update_schema_version_40(self):
+        """
+        Change 'general_info' service to 'wmi_adapter' in saved queries.
+        """
+        print('Upgrade to schema 39')
+        try:
+            views_collection = self._entity_views_map[EntityType.Devices]
+            general_info_views = views_collection.find({
+                'view.query.filter': {
+                    '$regex': '.*general_info.*'
+                }
+            })
+            for view_doc in general_info_views:
+                original_fields = view_doc.get('view', {}).get('fields', [])
+                # update fields names
+                original_fields = [field.replace('general_info', 'wmi_adapter') for field in original_fields]
+                # update query filter
+                query = view_doc.get('view', {}).get('query', {})
+                query['filter'] = query.get('filter').replace('general_info', 'wmi_adapter')
+                query['onlyExpressionsFilter'] = query.get('onlyExpressionsFilter').replace('general_info',
+                                                                                            'wmi_adapter')
+                # update expressions
+                expressions = query.get('expressions')
+                for expression in expressions:
+                    for k, v in expression.items():
+                        if not isinstance(expression[k], str):
+                            continue
+                        expression[k] = expression[k].replace('general_info', 'wmi_adapter')
+                views_collection.update_one({
+                    '_id': view_doc['_id']
+                }, {
+                    '$set': {
+                        'view.fields': original_fields,
+                        'view.query': query
+                    }
+                })
+
+            self.db_schema_version = 40
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 40. Details: {e}')
+            raise
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """

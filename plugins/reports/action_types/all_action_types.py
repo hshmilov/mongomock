@@ -25,7 +25,6 @@ from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAc
 from reports.action_types.base.disable_entity import DisableEntities
 from reports.action_types.base.enable_entity import EnableEntities
 from reports.action_types.base.run_cmd import RunCmd
-from reports.action_types.base.run_executable import RunExecutable
 from reports.action_types.base.run_linux_ssh_scan import RunLinuxSSHScan
 from reports.action_types.base.shodan_enrichment import ShodanEnrichment
 from reports.action_types.base.censys_enrichment import CensysEnrichment
@@ -77,7 +76,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'update_service_now_computer': UpdateServicenowComputerAction,
     'carbonblack_unisolate': CarbonblackUnisolateAction,
     'untag': UntagAllEntitiesAction,
-    'run_executable_windows': RunExecutable,
     'run_command_windows': RunCmd,
     'create_notification': SystemNotificationAction,
     'send_emails': SendEmailsAction,

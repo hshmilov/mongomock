@@ -2,7 +2,7 @@
 import time
 
 from axonius.utils.wait import wait_until
-from services.plugins.device_control_service import DeviceControlService
+from services.adapters.wmi_service import WmiService
 from test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE
 from ui_tests.pages.enforcements_page import Action
 from ui_tests.tests.ui_test_base import TestBase
@@ -21,7 +21,7 @@ SECOND_FILE_CONTENTS = 'second-file-contents'
 
 class TestEnforcementExecution(TestBase):
     def test_run_cmd_with_files(self):
-        with DeviceControlService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.base_page.run_discovery()
             self.enforcements_page.create_basic_empty_enforcement(RUN_CMD_ENFORCEMENT_NAME)
             current_prefix = CONSTANT_PREFIX + str(time.time()) + '_'
@@ -57,7 +57,7 @@ class TestEnforcementExecution(TestBase):
                 except Exception:
                     return False
 
-            wait_until(_check_task_finished, check_return_value=True, total_timeout=60 * 3, interval=5)
+            wait_until(_check_task_finished, check_return_value=True, total_timeout=60 * 5, interval=5)
             self.enforcements_page.find_task_action_success(RUN_CMD_ACTION_NAME).click()
             self.devices_page.wait_for_table_to_load()
             assert self.devices_page.count_entities() == 1
@@ -71,13 +71,13 @@ class TestEnforcementExecution(TestBase):
             assert enforcement_set_name == RUN_CMD_ACTION_NAME
             assert action_name == Action.run_windows_shell_command.value
             assert is_success == 'Yes'
-            assert 'axonius_output_' in output
+            assert 'success' in output
             self.devices_page.click_extended_data_tasks_tab()
             vertical_tabs = self.devices_page.find_vertical_tabs()
-            assert [f'Action \'{RUN_CMD_ACTION_NAME}\''] == vertical_tabs, 'Different vertical tabs than excepted'
+            assert any(RUN_CMD_ACTION_NAME.lower().replace(' ', '_') in name for name in vertical_tabs), \
+                'Different vertical tabs than excepted'
             custom_execution_data = self.devices_page.get_all_custom_data()
-            assert len(custom_execution_data) == 1
-            assert 'Action type: shell. Command:' in custom_execution_data[0]
+            assert len(custom_execution_data) == 4
 
             # Check file existence
             dir_contents, after_dir = custom_execution_data[0].split(

@@ -394,6 +394,7 @@ class TestEnforcementActions(TestBase):
             assert self.enforcements_page.find_disabled_save_action()
         self.settings_page.remove_email_server()
 
+    @pytest.mark.skip('AX-5223')
     def test_enforcement_wmi_register_key(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()

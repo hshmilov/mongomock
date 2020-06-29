@@ -2,12 +2,12 @@ import time
 
 from axonius.entities import EntityType
 from axonius.utils.wait import wait_until
-from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.wmi_service import WmiService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP,
                                                     DEVICE_SUBNET)
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_INFO_ADAPTER
+from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_ADAPTER_NAME
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -47,7 +47,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         assert all_ips[0] == f'{DEVICE_FIRST_IP}\n{DEVICE_SECOND_IP}\n+1'
 
     def test_devices_config(self):
-        with GeneralInfoService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
 
@@ -86,7 +86,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_adapters_tab()
-            assert self.devices_page.find_vertical_tabs() == [WMI_INFO_ADAPTER,
+            assert self.devices_page.find_vertical_tabs() == [WMI_ADAPTER_NAME,
                                                               AD_ADAPTER_NAME,
                                                               'Custom Data']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)

@@ -5,7 +5,7 @@ from selenium.common.exceptions import NoSuchElementException
 
 from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
-from services.plugins.general_info_service import GeneralInfoService
+from services.adapters.wmi_service import WmiService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
@@ -44,7 +44,7 @@ class TestDevicesTable(TestEntitiesTable):
     @pytest.mark.skip('AX-8062')
     def test_device_table_field_export(self):
         self.enforcements_page.switch_to_page()
-        with GeneralInfoService().contextmanager(take_ownership=True):
+        with WmiService().contextmanager(take_ownership=True):
             self.enforcements_page.create_run_wmi_scan_on_each_cycle_enforcement()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
