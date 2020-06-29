@@ -634,6 +634,7 @@ textarea {
   border-style: solid;
   border-width: 1px;
   -webkit-appearance: textarea;
+  border: 1px solid $grey-2;
 }
 
 input[type='text'], input[type='password'], input[type='number'] {
@@ -641,26 +642,40 @@ input[type='text'], input[type='password'], input[type='number'] {
   border: 1px solid $grey-2;
 }
 
-.ant-modal {
-    &.w-xl {
-      width: 770px;
-    }
-    .ant-modal-header {
+.ant-modal-root {
+  .ant-modal-mask {
+    z-index: 1001;
+  }
+
+  .ant-modal-wrap {
+    z-index: 1001;
+
+    .ant-modal {
+      &.w-xl {
+        width: 770px;
+      }
+
+      .ant-modal-header {
         border-bottom: unset;
+
         .ant-modal-title {
           font-weight: normal;
           font-size: 18px;
         }
-    }
-    &:not(.ant-modal-confirm) {
-      .ant-modal-body {
-        padding: 0 24px;
       }
-      .ant-modal-footer {
-        border-top: unset;
-        padding: 10px 24px;
+
+      &:not(.ant-modal-confirm) {
+        .ant-modal-body {
+          padding: 0 24px;
+        }
+
+        .ant-modal-footer {
+          border-top: unset;
+          padding: 10px 24px;
+        }
       }
     }
+  }
 }
 
 .ant-dropdown .ant-dropdown-menu-item,

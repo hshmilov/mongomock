@@ -18,6 +18,7 @@
   />
   <textarea
     v-else-if="isText"
+    :id="schema.name"
     v-model="data"
     :maxlength="schema.limit"
     :disabled="readOnly || schema.readOnly"

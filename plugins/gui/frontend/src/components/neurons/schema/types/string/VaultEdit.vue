@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <string
+  <div class="x-vault-edit">
+    <XStringEdit
       v-model="processedData"
       :schema="schema"
       :read-only="readOnly"
@@ -12,47 +12,72 @@
         <AIcon
           v-if="loading"
           type="loading"
+          class="provider-loading"
         />
         <div
           v-else
           :title="getTooltip"
           class="provider-toggle"
+          @click="toggleQueryModal"
         >
-          <VIcon
-            @click.native="toggleQueryModal"
-          >{{ `$${vaultStatusIcon}` }}</VIcon>
+          <XIcon
+            v-if="vaultIcon"
+            family="logo"
+            :type="vaultIcon"
+            class="provider-toggle__icon"
+          />
+          <XIcon
+            v-if="vaultStatus"
+            family="symbol"
+            :type="vaultStatus"
+            class="provider-toggle__status"
+            :class="vaultStatus"
+          />
         </div>
       </template>
-    </string>
-    <XModal
-      v-if="queryModal.open"
-      approve-text="Fetch"
-      size="md"
-      :disabled="!queryModal.valid"
-      @close="toggleQueryModal"
-      @confirm="testValueQuery"
+    </XStringEdit>
+    <AModal
+      :visible="queryModal.open"
+      class="vault-fetch w-md"
+      :closable="false"
+      :width="null"
+      :centered="true"
+      @cancel="toggleQueryModal"
     >
-
-      <div slot="body">
-        <div class="vault-header">
-          <VIcon>{{ `$${vaultIcon}` }}</VIcon>{{ vaultProvider.title }}
+      <template #title>
+        <div class="vault-fetch__title">
+          <XIcon
+            family="logo"
+            :type="vaultIcon"
+            :style="{fontSize: '24px'}"
+          />
+          {{ vaultProvider.title }}
         </div>
-        <label for="provider-input">{{ vaultProvider.schema.title }}:</label>
-        <Component
-          :is="vaultProvider.schema.type"
-          id="provider-input"
-          v-model="queryModal.current_query"
-          :schema="vaultProvider.schema"
-          @validate="updateFetchValidity"
-        />
-      </div>
-    </XModal>
+      </template>
+      <XForm
+        v-model="queryModal.data"
+        :schema="vaultProvider.schema"
+        @validate="updateFetchValidity"
+      />
+      <template #footer>
+        <XButton
+          type="link"
+          @click="toggleQueryModal"
+        >Cancel</XButton>
+        <XButton
+          type="primary"
+          :disabled="!queryModal.valid"
+          @click="testValueQuery"
+        >Fetch</XButton>
+      </template>
+    </AModal>
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
 
 import axiosClient from '@api/axios';
 import { LOAD_PLUGIN_CONFIG } from '@store/modules/settings';
@@ -60,15 +85,16 @@ import { parseVaultError } from '@constants/utils';
 import { vaultProviderEnum } from '@constants/settings';
 import primitiveMixin from '@mixins/primitive';
 
-import { Icon } from 'ant-design-vue';
-import XModal from '@axons/popover/Modal/index.vue';
-import string from './StringEdit.vue';
-import integer from '../numerical/IntegerEdit.vue';
+import { Icon, Modal } from 'ant-design-vue';
+import XButton from '@axons/inputs/Button.vue';
+import XForm from '@neurons/schema/Form.vue';
+import XStringEdit from './StringEdit.vue';
+import XIcon from '@axons/icons/Icon';
 
 export default {
   name: 'XVaultEdit',
   components: {
-    XModal, AIcon: Icon, string, integer,
+    XStringEdit, AIcon: Icon, AModal: Modal, XButton, XForm, XIcon,
   },
   mixins: [primitiveMixin],
   data() {
@@ -76,7 +102,7 @@ export default {
       queryModal: {
         open: false,
         valid: false,
-        current_query: '',
+        data: {},
       },
       passString: '',
       error: '',
@@ -104,7 +130,8 @@ export default {
         return this.error;
       }
       if (this.success) {
-        return `${this.vaultProvider.schema.title}: ${this.queryModal.current_query}`;
+        const fieldToTitledValue = (item) => `${item.title}: ${this.queryModal.data[item.name]}`;
+        return this.vaultProvider.schema.items.map(fieldToTitledValue).join('\n');
       }
       return `Use ${this.vaultProvider.title}`;
     },
@@ -112,17 +139,16 @@ export default {
       return this.inputType === 'password' && this.data && this.data[0] === 'unchanged';
     },
     vaultIcon() {
-      return this.vaultProvider.name;
+      return this.vaultProvider.name || '';
     },
-    vaultStatusIcon() {
-      let statusPostfix = '';
+    vaultStatus() {
       if (this.success) {
-        statusPostfix = 'Success';
+        return 'success';
       }
       if (this.error) {
-        statusPostfix = 'Error';
+        return 'error';
       }
-      return `${this.vaultIcon}${statusPostfix}`;
+      return '';
     },
   },
   async created() {
@@ -132,9 +158,9 @@ export default {
     });
   },
   mounted() {
-    if (this.value && this.value.query) {
+    if (this.value && this.value.data) {
       this.data = this.value;
-      this.queryModal.current_query = this.data.query;
+      this.queryModal.data = this.value.data;
       if (this.value.error) {
         this.error = this.value.error;
       } else {
@@ -156,13 +182,13 @@ export default {
       this.loading = true;
       this.validate();
       axiosClient.post('password_vault', {
-        query: this.queryModal.current_query,
+        data: this.queryModal.data,
         field: this.schema.name,
         vault_type: 'vault_provider',
       }).then((testRes) => {
         if (!testRes) return;
         this.success = true;
-        this.data = { query: this.queryModal.current_query, type: 'vault_provider' };
+        this.data = { data: this.queryModal.data, type: 'vault_provider' };
         this.input();
         this.validate();
       }).catch((recievedError) => {
@@ -177,8 +203,10 @@ export default {
       this.$emit('validate', validity);
     },
     onKeyPress() {
-      if (!this.queryModal.current_query) return;
-      this.queryModal.current_query = '';
+      if (_isEmpty(this.queryModal.data)) {
+        return;
+      }
+      this.queryModal.data = {};
       this.data = '';
       this.success = false;
       this.input();
@@ -187,43 +215,55 @@ export default {
       return this.success || !this.schema.required;
     },
     updateFetchValidity(validity) {
-      this.queryModal.valid = validity.valid;
+      this.queryModal.valid = validity;
     },
   },
 };
 </script>
 
 <style lang="scss">
-
+  .x-vault-edit {
     .string-input-container {
-        position: relative;
+      position: relative;
 
-        .provider-toggle {
-            position: absolute;
-            right: 4px;
-            cursor: pointer;
-            top: 0;
+      .provider-toggle, .provider-loading {
+        position: absolute;
+        right: 4px;
+        top: 0;
+        height: 22px;
+      }
+
+      .provider-toggle {
+        cursor: pointer;
+
+        &__icon {
+          font-size: 22px;
         }
-        .anticon {
-            border: 0;
-            position: absolute;
-            right: 8px;
-            top: 2px;
-            line-height: 24px;
-            cursor: pointer;
+
+        &__status {
+          font-size: 10px;
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          background-color: unset !important;
         }
-    }
+      }
 
-    .vault-header {
-      margin-bottom: 8px;
-
-      .v-icon {
-        height: 36px;
-        width: 32px;
+      .provider-loading {
+        font-size: 22px;
       }
     }
+  }
 
-    #provider-input {
-        resize: none;
+  .vault-fetch {
+    &__title {
+      font-size: 16px;
+      display: flex;
+      align-items: center;
     }
+
+    .x-array-edit > div > div > .list {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>

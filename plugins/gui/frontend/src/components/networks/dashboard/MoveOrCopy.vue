@@ -4,7 +4,6 @@
     :visible="true"
     class="w-xl"
     title="Move or Copy"
-    :cancel-button-props="{ props: { type: 'link' } }"
     :closable="false"
     :width="null"
     :centered="true"

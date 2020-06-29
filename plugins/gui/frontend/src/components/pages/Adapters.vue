@@ -15,7 +15,7 @@
       >Configured Only ({{ configuredAdaptersCount }})</MdSwitch>
     </div>
     <div
-      v-if="!adaptersData.length"
+      v-if="!adaptersData.length && adaptersFetching"
       class="adapters-loader"
     >
       <PulseLoader
@@ -125,6 +125,9 @@ export default {
       adaptersData(state) {
         return state.adapters.adapters.data;
       },
+      adaptersFetching(state) {
+        return state.adapters.adapters.fetching;
+      }
     }),
     ...mapGetters({
       getConfiguredAdapters: 'getConfiguredAdapters',
@@ -151,12 +154,15 @@ export default {
     };
   },
   methods: {
-    ...mapActions({ fetchAdapters: FETCH_ADAPTERS, milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION }),
+    ...mapActions({
+      fetchAdapters: FETCH_ADAPTERS,
+      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION
+    }),
     configAdapter(adapterId) {
       /*
-                    Fetch adapters requested to be configured asynchronously, before navigating to the
-                    configuration page, so it will return meanwhile
-                 */
+        Fetch adapters requested to be configured asynchronously, before navigating to the
+        configuration page, so it will return meanwhile
+     */
       this.$router.push({ path: `adapters/${adapterId}` });
     },
     notifyIfMilestoneCompleted() {
@@ -166,7 +172,7 @@ export default {
     },
   },
   watch: {
-    successfullyconfiguredAdapters(value) {
+    successfullyconfiguredAdapters() {
       this.notifyIfMilestoneCompleted();
     },
   },

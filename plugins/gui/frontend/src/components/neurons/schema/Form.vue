@@ -36,14 +36,14 @@ import _differenceBy from 'lodash/differenceBy';
 import XArrayEdit from './types/array/ArrayEdit.vue';
 
 /*
-          Dynamically built form, according to given schema.
-          Hitting the 'Enter' key from any field in the form, sends 'submit' event.
-          Form elements are composed by an editable array. Therefore,
-          schema is expected to be of type array.
-          'input' event is captured and bubbled, with current data, to implement v-model.
-          'validate' event is emitted with the value true if no invalid
-          field was found and false otherwise.
-       */
+  Dynamically built form, according to given schema.
+  Hitting the 'Enter' key from any field in the form, sends 'submit' event.
+  Form elements are composed by an editable array. Therefore,
+  schema is expected to be of type array.
+  'input' event is captured and bubbled, with current data, to implement v-model.
+  'validate' event is emitted with the value true if no invalid
+  field was found and false otherwise.
+*/
 export default {
   name: 'XForm',
   components: { XArrayEdit },

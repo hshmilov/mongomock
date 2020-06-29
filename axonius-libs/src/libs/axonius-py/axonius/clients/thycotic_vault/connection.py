@@ -175,26 +175,35 @@ class ThycoticVaultConnection(AbstractVaultConnection):
         """
         return next((item.get('itemValue') for item in attributes if item.get('fieldName') == attribute_name), None)
 
-    def query_password(self, filed_name, query) -> str:
+    def query_password(self, adapter_field_name, vault_data) -> str:
         """
-        :param filed_name: gui filed name
-        :param query: get secret by id
+        :param adapter_field_name: adapter gui filed name
+        :param vault_data: [secret_id,vault_field_name]
         :return: secret entity password
         """
         try:
+
+            secret_id = str(vault_data.get('secret'))
+            vault_field = vault_data.get('field')
+
             if self._is_connected:
                 self._connect()
             else:
                 self.connect()
 
-            response = self._get(f'api/v1/secrets/{query}')
+            if not secret_id or not vault_field:
+                raise ThycoticVaultException(adapter_field_name, 'invalid missing secret id or password field')
 
-        except Exception as exc:
-            logger.exception(f'Failed to fetch password from vault using query: {query}')
-            raise ThycoticVaultException(filed_name, exc)
+            response = self._get(f'api/v1/secrets/{secret_id}')
 
-        password = self._get_attribute_value(attributes=response.get('items'))
+        except Exception:
+            message = f'Failed to fetch password. Secret ID: {secret_id}. Field Name: {vault_field}'
+            logger.exception(message)
+            raise ThycoticVaultException(adapter_field_name, message)
+
+        password = self._get_attribute_value(attributes=response.get('items'), attribute_name=vault_field)
 
         if password is None:
-            logger.warning(f'No Password item  match for secret id {query}')
+            raise ThycoticVaultException(adapter_field_name,
+                                         f'Secret not found. Secret ID: {secret_id}. Field Name: {vault_field}')
         return password

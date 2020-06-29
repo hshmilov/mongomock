@@ -17,6 +17,7 @@ LAST_FETCH_TIME = 'last_fetch_time'
 CONNECTION_LABEL = 'connection_label'
 # Adapter Client Config
 CLIENT_CONFIG = 'client_config'
+CLIENT_PASSWORD = 'password'
 
 MAX_ASYNC_FETCH_WORKERS = 10
 
@@ -27,3 +28,4 @@ DEFAULT_PARALLEL_COUNT = 5
 
 # Enterprise Password Mgr
 VAULT_PROVIDER = 'vault_provider'
+LEGACY_VAULT_PROVIDER = 'cyberark_vault'

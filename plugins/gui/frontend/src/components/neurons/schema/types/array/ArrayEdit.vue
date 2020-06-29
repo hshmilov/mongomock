@@ -124,8 +124,9 @@ import range from '../string/RangeEdit.vue';
 import XButton from '../../../../axons/inputs/Button.vue';
 import XListInput from '../../../../axons/inputs/ListInput.vue';
 import { validateEmail } from '../../../../../constants/validations';
-import XVaultEdit from '../string/VaultEdit.vue';
 import arrayMixin from '../../../../../mixins/array';
+
+const vault = () => import('../string/VaultEdit.vue');
 
 const { Panel } = Collapse;
 
@@ -143,7 +144,7 @@ export default {
     range,
     XButton,
     XListInput,
-    XVaultEdit,
+    vault,
     draggable,
   },
   mixins: [arrayMixin],
@@ -248,8 +249,7 @@ export default {
         updateData = true;
       }
       if (item.format && item.format === 'password' && this.useVault) {
-        // eslint-disable-next-line no-param-reassign
-        item.type = 'XVaultEdit';
+        item.type = 'vault';
       }
       if (!item.default) {
         // Nothing defined to set
@@ -290,10 +290,8 @@ export default {
     formatFieldName(validity) {
       let fieldName = validity.name;
       if (Array.isArray(this.schema.items)
-              && this.schema.items[0]
-              && this.schema.items[1]
-              && this.schema.items[0].name === 'enabled'
               && this.schema.items.length > 1
+              && this.schema.items[0].name === 'enabled'
               && this.schema.items[1].name === 'conditional') {
         const fileNameParts = fieldName.split('.');
         fileNameParts.splice(0, 1);
@@ -323,6 +321,7 @@ export default {
                     && this.schema.items[1]
                     && this.schema.items[0].name === 'enabled'
                     && this.schema.items.length > 1
+                    && this.schema.items[0].name === 'enabled'
                     && this.schema.items[1].name === 'conditional') {
         const enabledItem = this.schema.items[0].name;
         const conditionalSelectedItem = this.schema.items[1].name;

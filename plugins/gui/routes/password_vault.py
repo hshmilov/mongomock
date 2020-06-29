@@ -25,7 +25,8 @@ class PasswordVault:
         """
         vault_fetch_data = self.get_request_data_as_object()
         try:
-            if self.check_password_fetch(vault_fetch_data['field'], vault_fetch_data['query']):
+            if self.check_password_fetch(adapter_field_name=vault_fetch_data['field'],
+                                         vault_data=vault_fetch_data['data']):
                 return ''
         except Exception as exc:
             return return_error(str(exc), non_prod_error=True, http_status=500)

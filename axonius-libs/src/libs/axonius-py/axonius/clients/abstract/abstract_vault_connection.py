@@ -40,5 +40,5 @@ class AbstractVaultConnection(RESTConnection):
         super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def query_password(self, filed_name, query) -> str:
+    def query_password(self, adapter_field_name, vault_data) -> str:
         pass

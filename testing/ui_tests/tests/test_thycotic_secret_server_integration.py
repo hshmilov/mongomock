@@ -3,15 +3,16 @@ import copy
 from axonius.utils.wait import wait_until
 from services.adapters.csv_service import CsvService
 from test_credentials.test_csv_credentials import client_details as csv_client_details
-from test_credentials.test_thycotic_vault_credentials import THYCOTIC_SECRET_SEREVER,\
-    THYCOTIC_SECRET_SERVER_CSV_SECRET_ID
+from test_credentials.test_thycotic_vault_credentials import THYCOTIC_SECRET_SEREVER, \
+    THYCOTIC_SECRET_SERVER_CSV_SECRET_ID, THYCOTIC_SECRET_SERVER_CSV_SECRET_KEY_ID
 from ui_tests.tests.ui_consts import CSV_NAME, CSV_PLUGIN_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestThycoticIntegration(TestBase):
 
-    def _create_new_csv_connection_with_vault(self, screct_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_ID,
+    def _create_new_csv_connection_with_vault(self, secret_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_ID,
+                                              vault_field=None,
                                               is_negative_test=False):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_adapter(CSV_NAME)
@@ -21,7 +22,9 @@ class TestThycoticIntegration(TestBase):
         # add new connection
         self.adapters_page.click_new_server()
         self.adapters_page.fill_upload_csv_form_with_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-        self.adapters_page.fetch_password_from_thycotic_vault(screct_id=screct_id, is_negative_test=is_negative_test)
+        self.adapters_page.fetch_password_from_thycotic_vault(secret_id=secret_id,
+                                                              vault_field=vault_field,
+                                                              is_negative_test=is_negative_test)
 
         if is_negative_test:
             self.adapters_page.click_cancel()
@@ -31,10 +34,11 @@ class TestThycoticIntegration(TestBase):
             self.adapters_page.wait_for_data_collection_toaster_start()
             self.adapters_page.wait_for_data_collection_toaster_absent()
 
-    def test_fetch_password_from_vault(self):
+    def test_fetch_secret_key_field_from_vault(self):
         self.settings_page.enable_thycotic_vault_global_config(THYCOTIC_SECRET_SEREVER)
         with CsvService().contextmanager(take_ownership=True):
-            self._create_new_csv_connection_with_vault()
+            self._create_new_csv_connection_with_vault(secret_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_KEY_ID,
+                                                       vault_field='Secret Key')
             wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)
@@ -46,7 +50,7 @@ class TestThycoticIntegration(TestBase):
         """
         self.settings_page.enable_thycotic_vault_global_config(THYCOTIC_SECRET_SEREVER)
         with CsvService().contextmanager(take_ownership=True):
-            self._create_new_csv_connection_with_vault(screct_id='666', is_negative_test=True)
+            self._create_new_csv_connection_with_vault(secret_id='666', is_negative_test=True)
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
@@ -99,7 +103,7 @@ class TestThycoticIntegration(TestBase):
             # step 3 : verify password fetch error
             self.adapters_page.switch_to_page()
             self.adapters_page.open_add_edit_server(CSV_NAME)
-            self.adapters_page.fetch_password_from_thycotic_vault(screct_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_ID,
+            self.adapters_page.fetch_password_from_thycotic_vault(secret_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_ID,
                                                                   is_negative_test=True)
             self.adapters_page.click_cancel()
 
@@ -109,8 +113,7 @@ class TestThycoticIntegration(TestBase):
             # step 5 : verify error msg on client connection edit .
             self.adapters_page.switch_to_page()
             self.adapters_page.open_add_edit_server(CSV_NAME, row_position=1)
-            assert 'Connection refused' in self.adapters_page.find_server_error()
-            assert invalid_thycotic_server['port'] in self.adapters_page.find_server_error()
+            assert 'Failed to fetch password.' in self.adapters_page.find_server_error()
             self.adapters_page.click_cancel()
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)

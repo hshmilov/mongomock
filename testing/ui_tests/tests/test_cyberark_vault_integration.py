@@ -101,7 +101,7 @@ class TestCyberarkIntegration(TestBase):
 
         self.adapters_page.click_new_server()
         self.adapters_page.find_password_vault_button().click()
-        self.adapters_page.fill_text_field_by_element_id('provider-input', query)
+        self.adapters_page.fill_text_field_by_element_id('query', query)
 
         print('Fetching cyberark query.')
         self.adapters_page.click_button('Fetch')

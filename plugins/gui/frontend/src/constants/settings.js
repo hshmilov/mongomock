@@ -3,19 +3,32 @@ export const vaultProviderEnum = {
     name: 'thycotic',
     title: 'Thycotic Secret Server',
     schema: {
-      title: 'Secret ID',
-      type: 'integer',
-      required: true,
-    },
+      type: 'array',
+      items: [{
+        name: 'secret',
+        title: 'Secret ID',
+        type: 'integer',
+      }, {
+        name: 'field',
+        title: 'Field Name',
+        type: 'string',
+        default: 'Password',
+      }],
+      required: ['secret', 'field'],
+    }
   },
   cyberark_vault: {
     name: 'cyberark',
     title: 'CyberArk Vault',
+    type: 'array',
     schema: {
-      title: 'Query',
-      type: 'string',
-      format: 'text',
-      required: true,
-    },
+      items: [{
+        name: 'query',
+        title: 'Query',
+        type: 'string',
+        format: 'text',
+      }],
+      required: ['query'],
+    }
   },
 };

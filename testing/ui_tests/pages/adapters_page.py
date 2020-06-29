@@ -372,7 +372,7 @@ class AdaptersPage(EntitiesPage):
             self.find_password_vault_button()
 
     def find_password_vault_button_status(self):
-        return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS} .status')
+        return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS}__status')
 
     def get_connected_adapters_number_form_switch_label(self):
         pattern = r'configured only \((\d)\)'
@@ -455,7 +455,7 @@ class AdaptersPage(EntitiesPage):
     def click_vault_button(self):
         self.find_password_vault_button().click()
         # wait for vault popup by sync on fetch button
-        self.wait_for_element_present_by_id(element_id='approveId', retries=5)
+        self.wait_for_element_present_by_id(element_id='secret', retries=5)
 
     def check_vault_fetch_status(self, should_succeed=True) -> bool:
         try:
@@ -471,12 +471,15 @@ class AdaptersPage(EntitiesPage):
     def check_vault_passsword_failure_status(self) -> bool:
         return self.check_vault_fetch_status(should_succeed=False)
 
-    def fetch_password_from_thycotic_vault(self, screct_id: str, is_negative_test=False):
+    def fetch_password_from_thycotic_vault(self, secret_id: str, vault_field: str = None, is_negative_test=False):
         wait_until(self.find_password_vault_button,
                    check_return_value=True,
                    tolerated_exceptions_list=[NoSuchElementException])
         self.click_vault_button()
-        self.fill_text_field_by_xpath('//label[contains(.,\'Secret ID\')]//following::input[1]', screct_id)
+
+        self.fill_text_field_by_element_id('secret', secret_id)
+        if vault_field:
+            self.fill_text_field_by_element_id('field', vault_field)
         self.click_button('Fetch')
 
         if is_negative_test:

@@ -3120,14 +3120,14 @@ class PluginBase(Configurable, Feature, ABC):
     def vault_pwd_mgmt(self) -> AbstractVaultConnection:
         return self._vault_connection
 
-    def check_password_fetch(self, field_name: str, query: str) -> bool:
+    def check_password_fetch(self, adapter_field_name: str, vault_data: dict) -> bool:
         """
         Checks if the query correctly fetches a password from the requested vault.
-        :param field_name: The field name for gui to recognize.
-        :param query: The query to use to fetch from vault.
+        :param vault_data: The query data to use to fetch from vault.
+        :param adapter_field_name: The field name for gui to recognize.
         :return: True if successfully fetched the password.
         """
-        password = self.vault_pwd_mgmt.query_password(field_name, query)
+        password = self.vault_pwd_mgmt.query_password(adapter_field_name, vault_data)
         return password is not None
 
     # Global settings
@@ -3662,6 +3662,7 @@ class PluginBase(Configurable, Feature, ABC):
                                     'name': THYCOTIC_SS_PASSWORD,
                                     'title': 'Password',
                                     'type': 'string',
+                                    'format': 'password'
                                 },
                                 {
                                     'name': THYCOTIC_SS_PORT,

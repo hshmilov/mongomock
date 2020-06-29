@@ -5,8 +5,7 @@ from pathlib import Path
 import requests
 from gridfs import GridOut
 
-from axonius.clients.abstract.abstract_vault_connection import VaultException, VaultProvider
-from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.abstract.abstract_vault_connection import VaultException, VaultProvider, AbstractVaultConnection
 from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -18,7 +17,7 @@ class CyberarkVaultException(VaultException):
         super().__init__(VaultProvider.CyberArk, field_name, *args, **kwargs)
 
 
-class CyberArkVaultConnection(RESTConnection):
+class CyberArkVaultConnection(AbstractVaultConnection):
     def get_device_list(self):
         pass
 
@@ -47,13 +46,14 @@ class CyberArkVaultConnection(RESTConnection):
     def cert_path(self) -> Path:
         return Path(self._cert_file.name)
 
-    def query_password(self, field_name, query):
+    def query_password(self, adapter_field_name, vault_data) -> str:
+        query = str(vault_data.get('query'))
         payload = {'AppID': self._appid, 'Query': query}
         try:
             response = self._handle_response(
                 requests.get(self._url, cert=self.cert_path.as_posix(), params=payload, timeout=30))
         except Exception as exc:
             logger.exception(f'Failed to fetch password from vault using query: {query}')
-            raise CyberarkVaultException(field_name, exc)
+            raise CyberarkVaultException(adapter_field_name, exc)
 
         return response.get('Content')

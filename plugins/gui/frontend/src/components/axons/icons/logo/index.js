@@ -1,9 +1,11 @@
 import axonius from './axonius';
-import cyberarkLogo from './cyberark_logo';
 import logo from './logo';
+import thycotic from './thycotic';
+import cyberark from './cyberark';
 
 export default {
   axonius,
-  cyberark_logo: cyberarkLogo,
   logo,
+  thycotic,
+  cyberark,
 };

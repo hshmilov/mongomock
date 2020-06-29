@@ -20,7 +20,8 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
     ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION
 
-from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME
+from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
+    CLIENT_ID, LEGACY_VAULT_PROVIDER
 from axonius.consts.core_consts import CORE_CONFIG_NAME, NotificationHookType, LINK_REGEX
 from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
@@ -30,13 +31,16 @@ from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PA
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
-
 # pylint: disable=C0302
+# Too many lines in module
+
+
 class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def __init__(self):
         super().__init__('core')
 
     # pylint: disable=R0912
+    # Too many branches
     def _migrate_db(self):
         super()._migrate_db()
         if self.db_schema_version < 10:
@@ -75,7 +79,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 21:
             self._update_schema_version_21()
 
-        if self.db_schema_version != 21:
+        if self.db_schema_version < 22:
+            self._update_schema_version_22()
+
+        if self.db_schema_version != 22:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -1107,6 +1114,36 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             traceback.print_exc()
             raise
 
+    def _update_schema_version_22(self):
+        # ------------------------------------------------------------- #
+        # fix legacy vault provider:
+        # migrate adapter's clients if any of adapter schema fields is password type
+        # and contain either old cyberark or thycotic vault data.
+        # client_config will be decrypt and encrypt in case of data migration
+        # ------------------------------------------------------------- #
+        print(f'Upgrading version 22 - fix legacy vault provider')
+        try:
+            adapters = self.db.client[CORE_UNIQUE_NAME]['configs'].find({'plugin_type': ADAPTER_PLUGIN_TYPE})
+            for adapter in adapters:
+                adapter_name = adapter[PLUGIN_UNIQUE_NAME]
+                adaper_clients_collection: Collection = self.db.client[adapter_name]['clients']
+                adapter_schema_collecion: Collection = self.db.client[adapter_name]['adapter_schema']
+                pwd_fields = self._get_password_fields_from_adapter_schema(adapter_name, adapter_schema_collecion)
+                if not pwd_fields:
+                    continue
+
+                for client in adaper_clients_collection.find({}):
+                    self._check_for_legacy_vault_provider_data(adapter_name,
+                                                               client,
+                                                               pwd_fields,
+                                                               adaper_clients_collection)
+
+            self.db_schema_version = 22
+        except Exception as e:
+            print(f'Exception while upgrading adapters clients password vault provider . Details: {e}')
+            traceback.print_exc()
+            raise
+
     def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}
@@ -1175,6 +1212,65 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 print(f'Error writing db encryption key: {e}')
                 if DB_KEY_PATH.is_file():
                     DB_KEY_PATH.unlink()
+
+    @staticmethod
+    def _get_password_fields_from_adapter_schema(adapter_name, adapter_schema_collecion: Collection) -> list:
+        resp = adapter_schema_collecion.find_one(
+            {
+                'adapter_name': adapter_name
+            },
+            {
+                'schema': 1
+            }
+        )
+        return [item['name'] for item in resp.get('schema', {}).get('items', []) if item.get('format') == 'password']
+
+    def _check_for_legacy_vault_provider_data(self, adapter_name: str, adapter_client: dict,
+                                              adapter_password_fields: list, adaper_clients_collection: Collection):
+        try:
+            client_config_copy = adapter_client.get(CLIENT_CONFIG).copy()
+            self.decrypt_dict(client_config_copy)
+            save_to_db = False
+            client_id = adapter_client[CLIENT_ID]
+
+            for pwd_field in adapter_password_fields:
+                if not isinstance(client_config_copy.get(pwd_field), dict):
+                    continue
+
+                if (client_config_copy[pwd_field]['type'] == LEGACY_VAULT_PROVIDER or
+                        isinstance(client_config_copy[pwd_field].get('query'), str)):
+                    print(f'Updating Adapter:{adapter_name} Client:{client_id} '
+                          f'found with legacy cyberark vault data field {pwd_field}')
+                    client_config_copy[pwd_field] = {
+                        'data': {'query': client_config_copy[pwd_field]['query']},
+                        'type': VAULT_PROVIDER
+                    }
+                    save_to_db = True
+                # legacy thycotic format is  {'query': int}
+                elif isinstance(client_config_copy[pwd_field].get('query'), int):
+                    print(f'Updating Adapter:{adapter_name} Client:{client_id} '
+                          f'found with legacy thycotic vault data field {pwd_field}')
+                    client_config_copy[pwd_field] = {
+                        'data': {'secret': client_config_copy[pwd_field]['query'],
+                                 'field': 'Password'},
+                        'type': VAULT_PROVIDER
+                    }
+                    save_to_db = True
+
+            if save_to_db:
+                self.encrypt_dict(adapter_name, client_config_copy)
+                adaper_clients_collection.update_one(
+                    {
+                        '_id': adapter_client.get('_id')
+                    },
+                    {
+                        '$set': {CLIENT_CONFIG: client_config_copy}
+                    }
+                )
+
+        except Exception as e:
+            print(f'failed to fix client config with legacy vault data format: {e}')
+            traceback.print_exc()
 
 
 def replace_notification_content_with_hooks(notification_content, regex):

@@ -1297,6 +1297,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :return: unique key for the client, composed by given field values, according to adapter's definition
         """
 
+    def _get_password_fields_from_schema(self):
+        """
+            Get all the password fields from schema
+        """
+        return [item['name'] for item in self._clients_schema()['items'] if item.get('format') == 'password']
+
     def _normalize_password_fields(self, client_config):
         """
         Checks if a vault password needs to be fetched replaces.
@@ -1304,7 +1310,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         client_config_copy = copy.deepcopy(client_config)
         # Get all the password fields from schema
-        password_fields = [item['name'] for item in self._clients_schema()['items'] if item.get('format') == 'password']
+        password_fields = self._get_password_fields_from_schema()
 
         # Get all the vault fields from the client_config
         vault_connection_fields = [(field, client_config_copy[field])
@@ -1313,8 +1319,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                    if isinstance(client_config_copy.get(field), dict) and
                                    client_config_copy[field].get('type') == VAULT_PROVIDER]
 
-        for field_name, field in vault_connection_fields:
-            client_config_copy[field_name] = self.vault_pwd_mgmt.query_password(field_name, field.get('query'))
+        for adapter_field_name, vault_data in vault_connection_fields:
+            client_config_copy[adapter_field_name] = self.vault_pwd_mgmt.query_password(adapter_field_name,
+                                                                                        vault_data.get('data'))
 
         return client_config_copy
 
