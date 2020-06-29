@@ -4,7 +4,7 @@ from axonius.consts import remote_file_consts
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
 from axonius.utils.json import from_json
-from axonius.utils.parsing import get_exception_string, is_domain_valid
+from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -36,9 +36,10 @@ class EsentireJsonAdapter(ScannerAdapterBase):
             file_name, file_data = load_remote_data(client_config)
 
             return file_name, from_json(file_data)
-        except Exception:
-            logger.exception(f'Error connecting to esentire json')
-            raise ClientConnectionException(get_exception_string())
+        except Exception as e:
+            message = f'Error connecting to esentire json: {str(e)}'
+            logger.exception(message)
+            raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         file_name, json_data = client_data
@@ -81,13 +82,17 @@ class EsentireJsonAdapter(ScannerAdapterBase):
             hostname = device_raw.get('hostname')
             device.id = f'{ip}_{hostname or ""}'
 
+            # example: hostname = "[\"REDACTED\"]"
             if isinstance(hostname, str) and ('[' in hostname) and (']' in hostname):
                 try:
                     hostname = from_json(hostname)
-                    if isinstance(hostname, list) and hostname:
-                        hostname = hostname[0]
                 except Exception:
                     logger.warning(f'Failed parsing json hostname: {hostname}')
+
+            if isinstance(hostname, list) and hostname:
+                # save the original list in a proprietary field
+                device.parsed_hostnames = hostname
+                hostname = hostname[0]
 
             device.hostname = hostname
 
