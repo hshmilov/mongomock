@@ -6,16 +6,33 @@ from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterVlan,
                                             DeviceAdapterNeighbor,
                                             AdapterProperty)
-from axonius.fields import Field
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
+from axonius.fields import Field, ListField
+from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class JuniperFeature(SmartJsonClass):
+    name = Field(str, 'Feature Name')
+    validity_type = Field(str, 'Validity Type')
+    start_date = Field(datetime.datetime, 'Start Date')
+    end_date = Field(datetime.datetime, 'End Date')
+
+
+class JuniperLicense(SmartJsonClass):
+    license_name = Field(str, 'License Name')
+    license_state = Field(str, 'License State')
+    license_version = Field(str, 'License Version')
+    license_features = ListField(JuniperFeature, 'License Features')
 
 
 class JuniperDeviceAdapter(DeviceAdapter):
     device_type = Field(str, 'Device Type', enum=['LLDP Device', 'ARP Device',
                                                   'FDB Device', 'Juniper Device', 'Juniper Space Device'])
     connection_status = Field(str, 'Connection Status', enum=['up', 'down'])
+    licenses = ListField(JuniperLicense, 'Licenses')
 
 
 def _get_lldp_id(lldp_raw_device):
@@ -353,6 +370,37 @@ def create_juniper_device(create_device_func, raw_device):
             raw_device.get('version', {}).get('product-model', '')
 
         device.device_serial = raw_device.get('hardware', {}).get('serial-number', '')
+        try:
+            license_data = raw_device.get('license')
+            if not isinstance(license_data, dict):
+                license_data = {}
+            licenses_list = license_data.get('licenses')
+            if not isinstance(licenses_list, list):
+                licenses_list = []
+            for license_raw in licenses_list:
+                try:
+                    license_name = license_raw.get('name')
+                    license_state = license_raw.get('license-state')
+                    license_version = license_raw.get('license-version')
+                    features_list = license_raw.get('features_list')
+                    if not isinstance(features_list, list):
+                        features_list = []
+                    license_features = []
+                    for feature_raw in features_list:
+                        license_features.append(JuniperFeature(name=feature_raw.get('name'),
+                                                               validity_type=feature_raw.get('validity-type'),
+                                                               start_date=parse_date(feature_raw.get('start-date')),
+                                                               end_date=parse_date(feature_raw.get('end-date'))
+                                                               ))
+                    license_obj = JuniperLicense(license_name=license_name,
+                                                 license_state=license_state,
+                                                 license_version=license_version,
+                                                 license_features=license_features)
+                    device.licenses.append(license_obj)
+                except Exception:
+                    logger.exception(f'Problem with license {license_raw}')
+        except Exception:
+            logger.warning(f'Problem with license', exc_info=True)
         _juniper_add_nic(device, raw_device)
         device.set_raw(raw_device)
         yield device

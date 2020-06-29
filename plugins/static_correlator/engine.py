@@ -108,6 +108,7 @@ def is_only_host_adapter(adapter_device):
                                               'crowd_strike_adapter',
                                               'amd_db_adapter',
                                               'hp_nnmi_adapter',
+                                              'sal_adapter',
                                               'druva_adapter']):
         return True
     try:

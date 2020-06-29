@@ -106,7 +106,7 @@ class JuniperClient:
             pu_dict = tm.wait_for_tasks(task_ids)
 
             juniper_device_actions = [
-                'interface list', 'hardware', 'version', 'vlans', 'base-mac']
+                'interface list', 'hardware', 'version', 'vlans', 'base-mac', 'license']
             juniper_devices = defaultdict(list)
             for id_, pu in pu_dict.items():
                 try:
@@ -197,6 +197,7 @@ class JuniperClient:
                 ('interface list', '<get-interface-information/>'),
                 ('hardware', '<get-chassis-inventory/>'),
                 ('version', '<get-software-information/>'),
+                ('license', '<get-license-summary-information/>'),
                 ('vlans', '<get-ethernet-switching-interface-information>'
                           '<detail/>'
                           '</get-ethernet-switching-interface-information>'),

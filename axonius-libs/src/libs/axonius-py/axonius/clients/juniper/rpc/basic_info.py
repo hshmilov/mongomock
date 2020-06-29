@@ -128,6 +128,47 @@ def parse_interface_list(xml):
     return result, rr
 
 
+def parse_license(xml):
+    """ parse get-license-summary-information """
+    result = {}
+    result['licenses'] = []
+    if gettag(xml.tag) != 'license-summary-information':
+        raise ValueError(f'license-summary-information not found, got {gettag(xml.tag)}')
+    for field in xml:
+        tag = gettag(field.tag)
+        if tag == 'license-information':
+            for entry in field:
+                tag = gettag(entry.tag)
+                if tag == 'license':
+                    license_dict = {}
+                    for entry_2 in entry:
+                        tag = gettag(entry_2.tag)
+                        text = gettext(entry_2.text)
+                        if tag in ['name', 'license-state', 'license-version']:
+                            license_dict[tag] = text
+                        elif tag == 'feature-block':
+                            features_list = []
+                            for entry_3 in entry_2:
+                                tag = gettag(entry_3.tag)
+                                if tag == 'feature':
+                                    feature_dict = {}
+                                    for entry_4 in entry_3:
+                                        tag = gettag(entry_4.tag)
+                                        text = gettext(entry_4.text)
+                                        if tag in ['name']:
+                                            feature_dict[tag] = text
+                                        if tag == 'validity-information':
+                                            for entry_5 in entry_4:
+                                                tag = gettag(entry_5.tag)
+                                                text = gettext(entry_5.text)
+                                                if tag in ['validity-type', 'start-date', 'end-date']:
+                                                    feature_dict[tag] = text
+                                    features_list.append(feature_dict)
+                            license_dict['features_list'] = features_list
+                    result['licenses'].append(license_dict)
+    return result
+
+
 def parse_hardware(xml):
     """ parse get-chassis-inventory """
     result = {}
@@ -272,4 +313,5 @@ BASIC_INFO_TYPES = {
     'version': parse_version,                # show version
     'vlans': parse_vlans,                    # show ethernet-switching interfaces detail
     'base-mac': parse_base_mac,
+    'license': parse_license,
 }

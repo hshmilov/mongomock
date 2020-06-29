@@ -51,6 +51,7 @@ class JunOSClient:
                 ('version', self._dev.rpc.get_software_information),
                 ('vlans', lambda: self._dev.rpc.get_ethernet_switching_interface_information(detail=True)),
                 ('base-mac', self._dev.rpc.get_chassis_mac_addresses),
+                ('license', self._dev.rpc.get_license_summary_information),
         ]:
             try:
                 results.append((name, action()))
