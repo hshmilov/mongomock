@@ -398,7 +398,7 @@ class ReportGenerator:
         :param queries_data:
         :return:
         """
-        queries = [item for item in queries_data[1:] if item.get('value')]
+        queries = [item for item in queries_data[1:] if item.get('portion')]
         queries.insert(0, queries_data[0])
         portions = [{'portion': item['portion'], 'title': item['name'], 'remainder': False} for item in queries]
 
