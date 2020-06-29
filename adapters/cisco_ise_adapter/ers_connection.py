@@ -13,6 +13,7 @@ from cisco_ise_adapter.consts import (
     SECRETS,
     ERS_URL_BASE_PREFIX,
     CiscoIseDeviceType,
+    MAX_FAULT_PAGES,
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -87,50 +88,84 @@ class CiscoIseERSConnection(RESTConnection):
             if key in SECRETS:
                 device_raw[key] = '*******'
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-statements
     def get_device_list(self):
+        faulty_page_count = 0
         for page in range(1, MAX_NETWORK_DEVICE_PAGE):
-            devices = self.get_devices(page=page)
-            if not devices['success']:
-                logger.error(f'Unable to get device list {devices.get("error")} {devices.get("response")}')
-                break
-            for device_name, device_id in devices['response']:
-                try:
-                    device = self.get_device(device_id)
-                    if not device['success']:
-                        logger.error(f'Unable to get device {device.get("error")} {devices.get("response")}')
+            try:
+                if faulty_page_count == MAX_FAULT_PAGES:
+                    # break on max faulty tries
+                    break
+                # Note - we print page because some pages gets stuck and timeout on RECV, we want to know about it.
+                logger.info(f'page {page}')
+                devices = self.get_devices(page=page)
+                # Note: devices is promised to be {'success': bool, 'response': str / [(X,Y),..], 'error': str}
+                if not (devices['success'] and isinstance(devices['response'], list)):
+                    logger.error(f'Unable to get device list {devices.get("error")} {devices.get("response")}')
+                    break
+                logger.debug(f'got page {page} - {len(devices["response"])} devices')
+                for device_response in devices['response']:
+                    if not (isinstance(device_response, tuple) and len(device_response) == 2):
+                        logger.warning(f'Got invalid device_response {device_response}')
                         continue
-                    self._strip_secrets(device['response'])
-                    yield (CiscoIseDeviceType.NetworkDevice.name, device['response'])
-                except Exception:
-                    logger.exception(f'Unable to get device')
-            if len(devices['response']) < PAGE_SIZE:
-                break
+                    try:
+                        device_name, device_id = device_response
+                        device = self.get_device(device_id)
+                        # Note: device is promised to be {'success': bool, 'response': ANY, 'error': str}
+                        if not device['success']:
+                            logger.error(f'Unable to get device {device.get("error")} {devices.get("response")}')
+                            continue
+                        self._strip_secrets(device['response'])
+                        yield (CiscoIseDeviceType.NetworkDevice.name, device['response'])
+                    except Exception:
+                        logger.exception(f'Unable to get device', exc_info=True)
+                if len(devices['response']) < PAGE_SIZE:
+                    break
+            except Exception as e:
+                logger.warning(f'page {page} - {str(e)}', exc_info=True)
+                faulty_page_count += 1
 
         if not self._fetch_endpoints:
             return
 
+        faulty_page_count = 0
         for page in range(1, MAX_NETWORK_DEVICE_PAGE):
-            endpoints = self.get_endpoints(page=(page + self.top_endpoint_page))
-            if not endpoints['success']:
-                logger.error(f'Unable to get device list {endpoints.get("error")} {endpoints.get("response")}')
-                self.top_endpoint_page = 0
-                break
-            for endpoint_name, endpoint_id in endpoints['response']:
-                try:
-                    endpoint = self.get_endpoint(endpoint_id)
-                    if not endpoint['success']:
-                        logger.error(f'Unable to get endpoint {endpoint.get("error")} {endpoints.get("response")}')
+            try:
+                if faulty_page_count == MAX_FAULT_PAGES:
+                    # break on max faulty tries
+                    break
+                # Note - we print page because some pages gets stuck and timeout on RECV, we want to know about it.
+                logger.info(f'page {page}')
+                endpoints = self.get_endpoints(page=(page + self.top_endpoint_page))
+                # Note: endpoints is promised to be {'success': bool, 'response': str / [(X,Y),..], 'error': str}
+                if not (endpoints['success'] and isinstance(endpoints['response'], list)):
+                    logger.error(f'Unable to get device list {endpoints.get("error")} {endpoints.get("response")}')
+                    self.top_endpoint_page = 0
+                    break
+                logger.debug(f'got page {page} - {len(endpoints["response"])} endpoints')
+                for endpoint_response in endpoints['response']:
+                    if not (isinstance(endpoint_response, tuple) and len(endpoint_response) == 2):
+                        logger.warning(f'Got invalid endpoint_response {endpoint_response}')
                         continue
-                    yield (CiscoIseDeviceType.EndpointDevice.name, endpoint['response'])
-                except Exception:
-                    logger.exception(f'Unable to get endpoint')
-            if len(endpoints['response']) < PAGE_SIZE:
-                self.top_endpoint_page = 0
-                break
+                    try:
+                        endpoint_name, endpoint_id = endpoint_response
+                        endpoint = self.get_endpoint(endpoint_id)
+                        # Note: endpoint is promised to be {'success': bool, 'response': ANY, 'error': str}
+                        if not endpoint['success']:
+                            logger.error(f'Unable to get endpoint {endpoint.get("error")} {endpoints.get("response")}')
+                            continue
+                        yield (CiscoIseDeviceType.EndpointDevice.name, endpoint['response'])
+                    except Exception:
+                        logger.exception(f'Unable to get endpoint', exc_info=True)
+                if len(endpoints['response']) < PAGE_SIZE:
+                    self.top_endpoint_page = 0
+                    break
 
-        if page == MAX_NETWORK_DEVICE_PAGE - 1:
-            self.top_endpoint_page += MAX_NETWORK_DEVICE_PAGE
+                if page == MAX_NETWORK_DEVICE_PAGE - 1:
+                    self.top_endpoint_page += MAX_NETWORK_DEVICE_PAGE
+            except Exception as e:
+                logger.warning(f'page {page} - {str(e)}', exc_info=True)
+                faulty_page_count += 1
 
     def get_users_list(self):
         raise NotImplementedError()

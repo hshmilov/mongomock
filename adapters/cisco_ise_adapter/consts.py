@@ -38,6 +38,7 @@ SECRETS = ['previousSharedSecret', 'roCommunity', 'radiusSharedSecret', 'sharedS
 
 MAX_NETWORK_DEVICE_PAGE = 1000
 PAGE_SIZE = 100
+MAX_FAULT_PAGES = 3
 
 
 class CiscoIseDeviceType(Enum):

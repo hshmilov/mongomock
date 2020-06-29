@@ -103,7 +103,7 @@ class CiscoIsePxGridConnection(RESTConnection):
 
         url = service['properties']['restBaseUrl']
         logger.info(f'url = {url}')
-        path = url[url.index(PXGRID_URL_BASE_PREFIX) + len(PXGRID_URL_BASE_PREFIX) + 1:] + '/getSessions'
+        path = f'{url}/getSessions'
         node_name = service['nodeName']
 
         response = self._post('control/AccessSecret',
@@ -131,6 +131,11 @@ class CiscoIsePxGridConnection(RESTConnection):
         if self._date_filter:
             body_params = {'startTimestamp': self._date_filter}
         with self.secret():
-            response = self._post(self._get_sessions_path, body_params=body_params)
-        for session in response['sessions']:
+            response = self._post(self._get_sessions_path, force_full_url=True, body_params=body_params)
+        if not (isinstance(response, dict) and isinstance(response.get('sessions'), list)):
+            logger.error(f'Invalid response retrieved: {response}')
+            return
+        sessions = response['sessions']
+        logger.info(f'Yielding {len(sessions)} sessions')
+        for session in sessions:
             yield (CiscoIseDeviceType.LiveSessionDevice.name, session)

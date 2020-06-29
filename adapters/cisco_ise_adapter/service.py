@@ -2,10 +2,7 @@ import logging
 import datetime
 
 from axonius.fields import JsonStringFormat
-from axonius.utils.parsing import (
-    format_ip,
-    format_mac,
-)
+from axonius.utils.parsing import format_ip
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTException
@@ -53,8 +50,8 @@ class CiscoIseAdapter(AdapterBase, Configurable):
         nas_id = Field(str, 'Nas Identifier')
         nas_ip = Field(str, 'Nas IP Address', converter=format_ip, json_format=JsonStringFormat.ip)
         service_type = Field(str, 'ServiceType')
-        ssid = Field(str, 'ssid', converter=format_mac)
-        state = Field(str, 'state')
+        ssid = Field(str, 'SSID')
+        state = Field(str, 'State')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -153,6 +150,7 @@ class CiscoIseAdapter(AdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(message)
 
+    # pylint:disable=invalid-triple-quote
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
         """
@@ -166,12 +164,19 @@ class CiscoIseAdapter(AdapterBase, Configurable):
         ers_client = client_data[0]
         pxgrid_client = client_data[1]
 
-        with ers_client:
-            yield from ers_client.get_device_list()
+        try:
+            with ers_client:
+                yield from ers_client.get_device_list()
+        except Exception as e:
+            logger.exception(f'Failed querying ERS: {str(e)}')
+            # fallthrough
 
-        if pxgrid_client:
-            with pxgrid_client:
-                yield from pxgrid_client.get_device_list()
+        try:
+            if pxgrid_client:
+                with pxgrid_client:
+                    yield from pxgrid_client.get_device_list()
+        except Exception as e:
+            logger.exception(f'Failed querying pxGrid: {str(e)}')
 
     @staticmethod
     def _clients_schema():
