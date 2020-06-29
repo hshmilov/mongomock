@@ -353,8 +353,8 @@ class AggregatorService(Triggerable, PluginBase):
         :param post_json: trigger post json data
         :return: adapters data
         """
-        adapters_list = post_json.pop('adapters', [])
-        if adapters_list:
+        if post_json and post_json.get('adapters'):
+            adapters_list = post_json.pop('adapters', [])
             adapters_filter = {
                 PLUGIN_UNIQUE_NAME: {
                     '$in': adapters_list

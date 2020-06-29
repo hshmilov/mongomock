@@ -728,7 +728,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if user_id % 10000 == 0:
                 logger.info(f'Users Devices association - Step 2 - finished {user_id}')
             user = self.__get_users_by_identifier(username)
-            if len(user) == 0:
+            if not user:
                 if username_data['should_create_if_not_exists']:
                     # user does not exists, create it.
                     user_dict = self._new_user_adapter()
