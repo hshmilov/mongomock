@@ -100,6 +100,7 @@ class BuildsInstance(BuildsAPI):
                 self.sshc.connect(self.ip, username=self.ssh_user, password=self.ssh_pass, timeout=60, auth_timeout=60)
                 self.sftp = self.sshc.open_sftp()
                 connected = True
+                break
             except (TimeoutError, paramiko.SSHException, paramiko.ssh_exception.NoValidConnectionsError):
                 num_tries += 1
                 if num_tries == MAX_SSH_TRIES:
