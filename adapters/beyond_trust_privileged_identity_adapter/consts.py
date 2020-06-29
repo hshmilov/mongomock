@@ -16,16 +16,11 @@ DOMAIN_ACCOUNTS = {
 
 
 class AuthenticationMethods(Enum):
-    NativeStaticAccount = 'Native Static Account'
-    FullyQualifiedAccount = 'Fully Qualified Account'
-    IntegratedAuthentication = 'Integrated Authentication'
-    CertificateAuthentication = 'Certificate Authentication'
+    NativeStaticAccount = 'NativeStaticAccount'
+    FullyQualifiedAccount = 'FullyQualifiedAccount'
 
 
 AUTHENTICATION_METHOD_CONVERT = {
     AuthenticationMethods.NativeStaticAccount.value: 1,
     AuthenticationMethods.FullyQualifiedAccount.value: 2,
-    AuthenticationMethods.IntegratedAuthentication.value: 3,
-    AuthenticationMethods.CertificateAuthentication.value: 4,
-
 }
