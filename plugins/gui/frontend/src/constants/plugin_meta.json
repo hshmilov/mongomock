@@ -1377,5 +1377,10 @@
     "title": "SQLite",
     "link": "https://docs.axonius.com/docs/sqlite",
     "description": "The SQLite adapter imports device information from SQLite database."
+  },
+  "rancher_adapter": {
+    "title": "Rancher",
+    "link": "https://docs.axonius.com/docs/rancher",
+    "description": "Rancher is an open-source multi-cluster orchestration platform that enables operations teams deploy, manage and secure enterprise Kubernetes."
   }
 }
