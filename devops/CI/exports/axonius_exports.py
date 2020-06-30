@@ -265,7 +265,7 @@ def local_installer_path(args, notify):
     else:
         if not args.installer_url:
             releases_bucket = args.s3_bucket
-            base_url = f'https://{releases_bucket}.s3.us-east-2.amazonaws.com/'
+            base_url = f'https://{releases_bucket}.s3-accelerate.amazonaws.com/'
             path_template = '{0}/axonius_{0}.{1}'
             suffix = 'py' if args.unencrypted else 'zip'
             axonius_releases_url_for_release = (base_url + path_template).format
