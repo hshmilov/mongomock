@@ -1281,7 +1281,7 @@ def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, sele
         if not query_filter:
             adapter_view['query']['filter'] = adapter_filter
         else:
-            adapter_view['query']['filter'] = f'{query_filter} and {adapter_filter}'
+            adapter_view['query']['filter'] = f'({query_filter}) and {adapter_filter}'
         data.append({
             'name': adapter_name,
             'fullName': adapters_metadata[adapter_name]['title'],
