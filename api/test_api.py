@@ -40,6 +40,7 @@ def axonius_system(axonius_fixture, device_control_fixture, ad_fixture, csv_fixt
 
 
 ERROR = False
+PROBLEMS = []
 
 
 # We don't want to run this for the meanwhile
@@ -74,6 +75,7 @@ def test_api_in_parallel(axonius_system):
             ERROR = True
             logger.exception(None)
             print(f'Error in in test_api for name {name}: \n {traceback.format_exc()}')
+            PROBLEMS.append(name)
             raise
 
     to_run = ((client, name)
@@ -83,4 +85,4 @@ def test_api_in_parallel(axonius_system):
         pool.starmap_async(run_specific_configuration, to_run).wait(timeout=60 * 60 * 3)
 
     global ERROR
-    assert not ERROR
+    assert not ERROR, PROBLEMS
