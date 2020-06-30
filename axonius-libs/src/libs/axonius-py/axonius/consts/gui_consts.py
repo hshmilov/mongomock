@@ -10,6 +10,7 @@ class ChartMetrics(Enum):
     compare = auto()
     intersect = auto()
     segment = auto()
+    segment_timeline = auto()
     adapter_segment = auto()
     abstract = auto()
     timeline = auto()

@@ -515,9 +515,10 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
 
 
 # pylint: disable-msg=too-many-branches
+# pylint: disable=too-many-arguments
 def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, sort, value_filter: list = None,
                         include_empty: bool = False, for_date=None,
-                        selected_sort_by=None, selected_sort_order=None) -> List:
+                        selected_sort_by=None, selected_sort_order=None, timeframe=None, show_timeline=None) -> List:
     """
     Perform aggregation which matching given view's filter and grouping by given fields, in order to get the
     number of results containing each available value of the field.
@@ -532,42 +533,16 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     field_name_partition = field['name'].rpartition('.')
     field_parent = field_name_partition[0] or ''
     field_name = field_name_partition[2]
-    if not value_filter:
-        value_filter = []
-    # backward compatibility: old filters used to be strings
-    if isinstance(value_filter, str):
-        value_filter = [
-            {'name': field_name, 'value': value_filter}
-        ]
-    # remove unnamed filters
-    value_filter = [x for x in value_filter if x['name']]
-    # add default filter ( field name with '' as value to search)
-    value_filter = [{'name': field_name, 'value': ''}] + value_filter
-    # create merged filter object by uniq filter key ( field name )
-    # rpartition docs : https://docs.python.org/3.6/library/stdtypes.html#str.rpartition
-    reduced_filters = defaultdict(list)
-    for item in value_filter:
-        reduced_filters[item['name'].rpartition('.')[2]].append(item['value'])
-    # remove empty search value,
-    # this value if exist with another value at the same array can make the string query not valid
-    for key, value in reduced_filters.items():
-        if len(value) > 1:
-            reduced_filters[key] = [x for x in value if x]
+    reduced_filters = _get_reduced_filters(field_name, value_filter)
+
     # Query and data collections according to given module
     base_view, aggregate_results = _query_chart_segment_results(field_parent, view, entity, for_date,
                                                                 filters_keys=[*reduced_filters])
     if not base_view or not aggregate_results:
         return None
-    base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
-    counted_results = Counter()
-    for item in aggregate_results:
-        extra_data = item.get('extra_data', [])
-        if 'No Value' in extra_data:
-            counted_results['No Value'] += 1
-        elif _match_result_item_to_filters(extra_data, reduced_filters):
-            result_name = item.get('_id', {}).get('name', 'No Value')
-            counted_results[str(result_name)] += 1
 
+    base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
+    counted_results = _get_counted_results(aggregate_results, reduced_filters)
     data = []
     for result_name, result_count in counted_results.items():
         if result_name == 'No Value':
@@ -595,6 +570,43 @@ def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field,
     data = _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
     total = sum([x['value'] for x in data])
     return [{**x, 'portion': x['value'] / total} for x in data]
+
+
+def _get_counted_results(aggregate_results, reduced_filters):
+    counted_results = Counter()
+    for item in aggregate_results:
+        extra_data = item.get('extra_data', [])
+        if 'No Value' in extra_data:
+            counted_results['No Value'] += 1
+        elif _match_result_item_to_filters(extra_data, reduced_filters):
+            result_name = item.get('_id', {}).get('name', 'No Value')
+            counted_results[str(result_name)] += 1
+    return counted_results
+
+
+def _get_reduced_filters(field_name, value_filter):
+    if not value_filter:
+        value_filter = []
+    # backward compatibility: old filters used to be strings
+    if isinstance(value_filter, str):
+        value_filter = [
+            {'name': field_name, 'value': value_filter}
+        ]
+    # remove unnamed filters
+    value_filter = [x for x in value_filter if x['name']]
+    # add default filter ( field name with '' as value to search)
+    value_filter = [{'name': field_name, 'value': ''}] + value_filter
+    # create merged filter object by uniq filter key ( field name )
+    # rpartition docs : https://docs.python.org/3.6/library/stdtypes.html#str.rpartition
+    reduced_filters = defaultdict(list)
+    for item in value_filter:
+        reduced_filters[item['name'].rpartition('.')[2]].append(item['value'])
+    # remove empty search value,
+    # this value if exist with another value at the same array can make the string query not valid
+    for key, value in reduced_filters.items():
+        if len(value) > 1:
+            reduced_filters[key] = [x for x in value if x]
+    return reduced_filters
 
 
 def _match_result_item_to_filters(extra_data: list, filters: dict) -> bool:
@@ -990,6 +1002,39 @@ def _intersect_timeline_lines(views, date_ranges):
     }
 
 
+def fetch_timeline_points_for_segmentation(entity_type: EntityType, match_filter: str, date_ranges):
+    # pylint: disable=protected-access
+    def aggregate_for_date_range(args):
+        range_from, range_to = args
+        historical_collection = PluginBase.Instance._historical_entity_views_db_map[entity_type]
+        historical_in_range = historical_collection.aggregate([{
+            '$project': {
+                'accurate_for_datetime': 1
+            }
+        }, {
+            '$match': {
+                'accurate_for_datetime': {
+                    '$lte': datetime.combine(range_to, datetime.min.time()),
+                    '$gte': datetime.combine(range_from, datetime.min.time()),
+                }
+            }
+        }, {
+            '$group': {
+                '_id': '$accurate_for_datetime'
+            }
+        }])
+
+        return [historical_group['_id'] for historical_group in historical_in_range]
+    full_dates = []
+    for results in list(GLOBAL_RUN_AND_FORGET.map(aggregate_for_date_range, date_ranges)):
+        for accurate_for_datetime in results:
+            full_dates.append({
+                'date': accurate_for_datetime.strftime('%m/%d/%Y'),
+                'full_date': accurate_for_datetime
+            })
+    return full_dates
+
+
 def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_ranges):
     # pylint: disable=protected-access
     def aggregate_for_date_range(args):
@@ -1061,7 +1106,51 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
         lines = list(_compare_timeline_lines(views, date_ranges))
     if not lines:
         return None
+    return _format_timeline_chart(date_from, date_to, lines)
 
+
+def fetch_chart_segment_timeline(_: ChartViews, entity: EntityType, view, field,
+                                 include_empty: bool = False, value_filter: list = None, timeframe=None):
+    date_from, date_to = _parse_range_timeline(timeframe)
+    if not date_from or not date_to:
+        return None
+    date_ranges = list(_get_date_ranges(date_from, date_to))
+    date_points = fetch_timeline_points_for_segmentation(EntityType(entity), '', date_ranges)
+
+    field_name_partition = field['name'].rpartition('.')
+    field_parent = field_name_partition[0] or ''
+    field_name = field_name_partition[2]
+    reduced_filters = _get_reduced_filters(field_name, value_filter)
+
+    lines = [{'title': 'Segment count', 'points': {}}, {'title': 'Total segment values', 'points': {}}]
+    for curr_point in date_points:
+        base_view, aggregate_results = _query_chart_segment_results(field_parent, view, entity,
+                                                                    curr_point['full_date'],
+                                                                    filters_keys=[*reduced_filters])
+        if not base_view or not aggregate_results:
+            continue
+
+        # go over segmentation results
+        counted_results = _get_counted_results(aggregate_results, reduced_filters)
+        total_count = 0
+        num_of_segments = 0
+        for result_name, result_count in counted_results.items():
+            if result_name == 'No Value':
+                if not include_empty or ''.join(reduced_filters[field_name]):
+                    continue
+            num_of_segments += 1
+            total_count += result_count
+        # number of segments for this date
+        lines[0]['points'][curr_point['date']] = num_of_segments
+        # total values of all segments for this date
+        lines[1]['points'][curr_point['date']] = total_count
+
+    if not lines:
+        return None
+    return _format_timeline_chart(date_from, date_to, lines)
+
+
+def _format_timeline_chart(date_from, date_to, lines):
     # find the first date with value
     # before this date data is not relevant
     first_date_with_value = datetime.strptime(min([min(line_group['points'].keys()) for line_group in lines]),
@@ -1221,6 +1310,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
         ChartMetrics.compare: fetch_chart_compare,
         ChartMetrics.intersect: fetch_chart_intersect,
         ChartMetrics.segment: fetch_chart_segment,
+        ChartMetrics.segment_timeline: fetch_chart_segment_timeline,
         ChartMetrics.adapter_segment: fetch_chart_adapter_segment,
         ChartMetrics.abstract: fetch_chart_abstract,
         ChartMetrics.timeline: fetch_chart_timeline,

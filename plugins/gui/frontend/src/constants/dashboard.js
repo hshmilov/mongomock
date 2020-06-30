@@ -3,6 +3,7 @@ export const ChartTypesEnum = {
   compare: 'compare',
   intersect: 'intersect',
   segment: 'segment',
+  segment_timeline: 'segment_timeline',
   adapter_segment: 'adapter_segment',
   timeline: 'timeline',
   matrix: 'matrix',

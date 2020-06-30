@@ -12,6 +12,7 @@ export const UPDATE_DASHBOARD_SPACES = 'UPDATE_DASHBOARD_SPACES';
 export const FETCH_DASHBOARD_PANELS = 'FETCH_DASHBOARD_PANELS';
 export const UPDATE_DASHBOARD_PANELS = 'UPDATE_DASHBOARD_PANELS';
 export const FETCH_DASHBOARD_PANEL = 'FETCH_DASHBOARD_PANEL';
+export const FETCH_SEGMENT_TIMELINE = 'FETCH_SEGMENT_TIMELINE';
 export const UPDATE_DASHBOARD_PANEL = 'UPDATE_DASHBOARD_PANEL';
 
 export const SAVE_DASHBOARD_SPACE = 'SAVE_DASHBOARD_SPACE';
@@ -119,6 +120,17 @@ export const dashboard = {
         payload.data.forEach((item, index) => {
           const newItem = item;
           const dataTail = item.data_tail;
+
+          if (newItem.is_linked_dashboard && !newItem.loading) {
+            const itemLinkedToMeIndex =
+              state.panels.data.findIndex((panel) => panel.linked_dashboard === newItem.uuid);
+            if (itemLinkedToMeIndex !== -1) {
+              state.panels.data[itemLinkedToMeIndex] = {
+                ...state.panels.data[itemLinkedToMeIndex],
+                linkedData: newItem.data,
+              };
+            }
+          }
           if (payload.skip + index < state.panels.data.length) {
             const oldItem = state.panels.data[payload.skip + index];
             if (oldItem.historical || oldItem.search || oldItem.selectedSort) return;
@@ -344,6 +356,12 @@ export const dashboard = {
         rule,
         type: UPDATE_DASHBOARD_PANEL,
         payload,
+      });
+    },
+    [FETCH_SEGMENT_TIMELINE]({ dispatch }, payload) {
+      const { uuid } = payload;
+      return dispatch(REQUEST_API, {
+        rule: `dashboard/charts/${uuid}/segment_timeline`,
       });
     },
     [SAVE_REORDERED_PANELS]({ dispatch, commit }, payload) {

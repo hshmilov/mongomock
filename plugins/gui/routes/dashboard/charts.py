@@ -29,7 +29,6 @@ from gui.logic.dashboard_data import (fetch_chart_segment,
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
 
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 REQUEST_MAX_WAIT_TIME = 10 * 60
@@ -101,6 +100,7 @@ class Charts:
         insert_result = self._dashboard_collection.insert_one(dashboard_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
+        self._link_dashboard(dashboard_data, insert_result.inserted_id, space_id)
         # Adding to the 'panels_order' attribute the newly panelId created through the wizard
         dashboard_space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(space_id)
@@ -114,6 +114,29 @@ class Charts:
             CHART_NAME: dashboard_data.get('name', ''),
             CHART_TYPE: ChartTitle.from_name(dashboard_data.get('metric'))
         })
+
+    def _link_dashboard(self, dashboard_data, dashboard_id, space_id):
+        if dashboard_data.get('config').get('show_timeline'):
+            config = dashboard_data.get('config')
+            hidden_dashboard_data = {'metric': 'segment_timeline',
+                                     'name': dashboard_data.get('name'), 'view': 'line',
+                                     'space': ObjectId(space_id), 'user_id': get_connected_user_id(),
+                                     'is_linked_dashboard': True, 'hide_empty': True,
+                                     'config': {'entity': config['entity'], 'view': config['view'],
+                                                'field': config['field'], 'value_filter': config['value_filter'],
+                                                'include_empty': config.get('include_empty', False),
+                                                'timeframe': config['timeframe']}, LAST_UPDATED_FIELD: datetime.now()}
+            insert_result = self._dashboard_collection.insert_one(hidden_dashboard_data)
+            if insert_result and insert_result.inserted_id:
+                # link original dashboard to hidden dashboard
+                hidden_dashboard_id = str(insert_result.inserted_id)
+                self._dashboard_collection.find_one_and_update({
+                    '_id': ObjectId(dashboard_id)
+                }, {
+                    '$set': {'linked_dashboard': hidden_dashboard_id}
+                })
+                return hidden_dashboard_id
+        return None
 
     @paginated()
     @historical_range()
@@ -190,18 +213,33 @@ class Charts:
         new_chart = self._dashboard_collection.find_one_and_update(
             filter={'_id': panel_id},
             update={'$set': update_data},
-            projection={'name': 1, 'space': 1, 'config.sort': 1},
+            projection={'name': 1, 'space': 1, 'config.sort': 1, 'linked_dashboard': 1},
             return_document=ReturnDocument.AFTER)
 
         if not new_chart:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
+        space = self._dashboard_spaces_collection.find_one({'_id': new_chart.get('space')}, {'name': 1})
+        # if required by config, recreate and link a linked dashboard
+        new_linked_dashboard = self._link_dashboard(update_data, panel_id, space['_id'])
+        # config changes require linked dashboard recalculation
+        old_linked_dashboard = new_chart.get('linked_dashboard', None)
+        if old_linked_dashboard:
+            # delete linked dashboard
+            self.delete_dashboard_panel(old_linked_dashboard)
+            generate_dashboard.clean_cache([old_linked_dashboard, None, None])
+            generate_dashboard_historical.clean_cache([old_linked_dashboard, WILDCARD_ARG, WILDCARD_ARG])
+            # if no new linked dashboard, clear link field
+            if not new_linked_dashboard:
+                self._dashboard_collection.find_one_and_update({
+                    '_id': ObjectId(panel_id)
+                }, {
+                    '$unset': {'linked_dashboard': 1}
+                })
         # we clean the cache of the updated config, in the next request the chart data will be refreshed
         chart_sort_config = new_chart['config'].get('sort', {}) or {}
         generate_dashboard.clean_cache(
             [panel_id, chart_sort_config.get('sort_by', None), chart_sort_config.get('sort_order', None)])
         generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
-
-        space = self._dashboard_spaces_collection.find_one({'_id': new_chart.get('space')}, {'name': 1})
 
         return jsonify({
             SPACE_NAME: space.get('name', ''),
@@ -228,8 +266,7 @@ class Charts:
         }
 
         chart = self._dashboard_collection.find_one_and_update(
-            {'_id': panel_id}, {'$set': update_data}, {'name': 1, 'space': 1})
-
+            {'_id': panel_id}, {'$set': update_data}, {'name': 1, 'space': 1, 'linked_dashboard': 1})
         if not chart:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
 
@@ -253,6 +290,9 @@ class Charts:
 
         generate_dashboard.remove_from_cache([panel_id])
         generate_dashboard_historical.remove_from_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+
+        if chart.get('linked_dashboard'):
+            self.delete_dashboard_panel(chart['linked_dashboard'])
 
         return jsonify({
             SPACE_NAME: space.get('name', ''),
@@ -341,6 +381,10 @@ class Charts:
                 'handler': self.generate_timeline_csv,
                 'required_config': [],
             },
+            'segment_timeline': {
+                'handler': self.generate_segment_timeline_csv,
+                'required_config': [],
+            }
         }
 
         if not card.get('view') or not card.get('config'):
@@ -353,8 +397,11 @@ class Charts:
         if card['config'].get('entity'):
             card['config']['entity'] = EntityType(card['config']['entity'])
 
-        column_headers, rows = handler_by_metric[card['metric']]['handler'](card) if card['metric'] == 'timeline' else \
-            handler_by_metric[card['metric']]['handler'](card, from_date, to_date)
+        metric = card['metric']
+        if metric in ('timeline', 'segment_timeline'):
+            column_headers, rows = handler_by_metric[card['metric']]['handler'](card)
+        else:
+            column_headers, rows = handler_by_metric[metric]['handler'](card, from_date, to_date)
 
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, column_headers)
@@ -435,3 +482,13 @@ class Charts:
         else:
             data = fetch_chart_adapter_segment(ChartViews[card['view']], **card['config'])
         return ['Adapter Name', 'count'], [{'Adapter Name': x['fullName'], 'count': x['value']} for x in data]
+
+    @staticmethod
+    def generate_segment_timeline_csv(card):
+        generated_dashboard = generate_dashboard(card['_id'], sort_by=None, sort_order=None)
+        data = copy.deepcopy(generated_dashboard.get('data', []))
+        if data is None:
+            return None
+        return ['Date', 'Total segment values', 'Segment count'], \
+               [{'Date': data[index][0], 'Total segment values': data[index][2], 'Segment count': data[index][1]}
+                for index in range(1, len(data))]

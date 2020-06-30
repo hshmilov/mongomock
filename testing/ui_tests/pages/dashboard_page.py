@@ -766,6 +766,7 @@ class DashboardPage(Page):
         assert summary_data == data_list
 
     def assert_timeline_svg_exist(self, card):
+        time.sleep(2)
         assert card.find_element_by_css_selector(self.TEST_TIMELINE_SVG_CSS)
 
     def get_uncovered_from_pie(self, pie):

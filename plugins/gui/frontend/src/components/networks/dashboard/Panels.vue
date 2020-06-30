@@ -147,8 +147,11 @@ export default {
     },
     processedPanels() {
       // Filter out spaces without data or with hide_empty and remainder 100%
-      return this.panels.filter((chart) => (chart && chart.data && chart.data.length
-                && ![0, 1].includes(chart.data[0].portion)) || !chart.hide_empty);
+      return this.panels.filter((chart) => (chart
+        && chart.data
+        && chart.data.length
+        && !chart.is_linked_dashboard
+        && ![0, 1].includes(chart.data[0].portion)) || !chart.hide_empty);
     },
   },
   methods: {

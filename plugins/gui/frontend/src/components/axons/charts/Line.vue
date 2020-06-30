@@ -4,6 +4,7 @@
     :data="processedData"
     :options="chartOptions"
     class="x-line"
+    v-on="$listeners"
   />
 </template>
 
@@ -13,7 +14,16 @@ import { GChart } from 'vue-google-charts';
 export default {
   name: 'XLine',
   components: { GChart },
-  props: { data: { required: true } },
+  props: {
+    data: {
+      type: Array,
+      required: true,
+    },
+    showReadySpinner: {
+      type: Boolean,
+      required: false,
+    },
+  },
   computed: {
     processedData() {
       if (!this.data[0]) return [];

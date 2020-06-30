@@ -8,7 +8,7 @@
         <span
           v-if="isChartFilterable"
           class="actions__search"
-          @click="$emit('toggleShowSearch')"
+          @click="handleClick('toggleShowSearch')"
         >
           <VIcon
             size="15"
@@ -35,7 +35,7 @@
               v-if="canUpdate && chart.user_id !== '*'"
               id="edit_chart"
               key="0"
-              @click="$emit('edit')"
+              @click="handleClick('edit')"
             >
               Edit
             </AMenuItem>
@@ -43,7 +43,7 @@
               v-if="canDelete"
               id="remove_chart"
               key="1"
-              @click="$emit('remove')"
+              @click="handleClick('remove')"
             >
               Delete
             </AMenuItem>
@@ -56,9 +56,17 @@
               Export to CSV
             </AMenuItem>
             <AMenuItem
+              v-if="isLinkedCsvExportable"
+              id="export_linked_chart"
+              key="3"
+              @click="() => exportCSV(chart.linked_dashboard, chart.name, false)"
+            >
+              Export to CSV - Timeline
+            </AMenuItem>
+            <AMenuItem
               v-if="canAdd || canUpdate"
               id="move_or_copy_chart"
-              key="3"
+              key="4"
               :disabled="chart.loading"
               @click="openMoveOrCopy"
             >
@@ -66,7 +74,7 @@
             </AMenuItem>
             <AMenuItem
               id="refresh_chart"
-              key="4"
+              key="5"
               @click="fetchChartData"
             >
               Refresh
@@ -93,7 +101,7 @@
                 </span>
                 <AMenuItem
                   :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.desc)"
-                  key="5"
+                  key="6"
                   @click="
                     sortClick({
                       type: ChartSortTypeEnum.value,
@@ -115,7 +123,7 @@
                 </AMenuItem>
                 <AMenuItem
                   :id="getSortOrderId(ChartSortTypeEnum.value, ChartSortOrderEnum.asc)"
-                  key="6"
+                  key="7"
                   @click="
                     sortClick({
                       type: ChartSortTypeEnum.value,
@@ -153,7 +161,7 @@
                 </span>
                 <AMenuItem
                   :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.desc)"
-                  key="7"
+                  key="8"
                   @click="
                     sortClick({
                       type: ChartSortTypeEnum.name,
@@ -175,7 +183,7 @@
                 </AMenuItem>
                 <AMenuItem
                   :id="getSortOrderId(ChartSortTypeEnum.name, ChartSortOrderEnum.asc)"
-                  key="8"
+                  key="9"
                   @click="
                     sortClick({
                       type: ChartSortTypeEnum.name,
@@ -268,6 +276,9 @@ export default {
     isCsvExportable() {
       return _includes(['segment', 'adapter_segment', 'timeline'], this.chart.metric);
     },
+    isLinkedCsvExportable() {
+      return !!this.chart.linked_dashboard;
+    },
   },
   watch: {
     chart() {
@@ -292,12 +303,14 @@ export default {
       return document.querySelector('.x-tabs .body');
     },
     openMoveOrCopy() {
+      this.$emit('menu-clicked');
       this.moveOrCopyToggle({
         active: true,
         currentPanel: this.chart,
       });
     },
     fetchChartData() {
+      this.$emit('menu-clicked');
       this.fetchDashboardPanel({
         uuid: this.chart.uuid,
         spaceId: this.currentSpace,
@@ -310,12 +323,13 @@ export default {
         sortOrder: this.sortOrder,
       });
     },
-    exportCSV() {
-      this.fetchChartCSV({
-        uuid: this.chart.uuid,
-        name: this.chart.name,
-        historical: this.chart.historical,
-      });
+    exportCSV(uuid, name, historical) {
+      this.$emit('menu-clicked');
+      this.fetchChartCSV({ uuid, name, historical });
+    },
+    handleClick(event) {
+      this.$emit('menu-clicked');
+      this.$emit(event);
     },
     isSortMethodActive(type) {
       if (this.selectedSortType) {

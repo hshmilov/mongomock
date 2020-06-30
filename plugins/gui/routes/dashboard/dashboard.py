@@ -306,7 +306,9 @@ class Dashboard(Charts, Notifications):
                     'space': True,
                     'name': True,
                     'config.sort': True,
-                    'hide_empty': True
+                    'hide_empty': True,
+                    'linked_dashboard': True,
+                    'is_linked_dashboard': True
                 }):
             dashboard_sort_config = dashboard['config'].get('sort', {}) or {}
             # Let's fetch and execute them query filters
@@ -332,6 +334,8 @@ class Dashboard(Charts, Notifications):
                     yield {
                         'uuid': str(dashboard['_id']),
                         'name': dashboard['name'],
+                        'is_linked_dashboard': dashboard.get('is_linked_dashboard', False),
+                        'linked_dashboard': dashboard.get('linked_dashboard', None),
                         'data': [],
                         'loading': True,
                         'hide_empty': dashboard.get('hide_empty', False)

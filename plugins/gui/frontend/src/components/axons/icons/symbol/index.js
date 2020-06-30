@@ -14,6 +14,7 @@ import user from './user';
 import warning from './warning';
 import stacked from './stacked';
 import verticalDots from './verticaldots';
+import trend from './trend';
 
 export default {
   error,
@@ -32,4 +33,5 @@ export default {
   warning,
   stacked,
   verticalDots,
+  trend,
 };

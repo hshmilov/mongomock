@@ -37,6 +37,18 @@
       class="grid-span3"
     />
 
+    <XCheckbox
+      v-model="showTimeline"
+      label="Include timeline"
+      class="grid-span1"
+    />
+    <XSelectTimeframe
+      v-if="showTimeline"
+      ref="timeframe"
+      v-model="timeframe"
+      class="segment-timeline-timeframe"
+    />
+
     <XChartSortSelector
       v-if="showSortOptions"
       class="grid-span3"
@@ -54,9 +66,11 @@ import { mapGetters } from 'vuex';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import _cloneDeep from 'lodash/cloneDeep';
+import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import XSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue';
+import XSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue'
 import XFilterContains from '../../../neurons/schema/query/FilterContains.vue';
 import XCheckbox from '../../../axons/inputs/Checkbox.vue';
 import chartMixin from './chart';
@@ -80,6 +94,12 @@ const initConfigFilter = [{
   name: '', value: '',
 }];
 
+const defaultTimeframe = {
+  type: TimelineTimeframesTypesEnum.relative,
+  unit: TimelineTimeframesUnitsEnum.days.name,
+  count: 7,
+};
+
 export default {
   name: 'XChartSegment',
   components: {
@@ -89,6 +109,7 @@ export default {
     XCheckbox,
     XFilterContains,
     XChartSortSelector,
+    XSelectTimeframe,
   },
   mixins: [chartMixin],
   data() {
@@ -110,6 +131,8 @@ export default {
         field: { name: '' },
         filters: _cloneDeep(initConfigFilter),
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
+        show_timeline: false,
+        timeframe: { ...defaultTimeframe },
       };
     },
     entity: {
@@ -170,6 +193,22 @@ export default {
       },
       set(includeEmpty) {
         this.config = { ...this.config, include_empty: includeEmpty };
+      },
+    },
+    showTimeline: {
+      get() {
+        return this.config.show_timeline;
+      },
+      set(showTimeline) {
+        this.config = { ...this.config, show_timeline: showTimeline };
+      },
+    },
+    timeframe: {
+      get() {
+        return this.config.timeframe;
+      },
+      set(timeframe) {
+        this.config = { ...this.config, timeframe };
       },
     },
     sortType: {
@@ -262,7 +301,10 @@ export default {
   },
   methods: {
     validate() {
-      this.$emit('validate', this.fieldName && this.isFiltersValid);
+      const isValid = this.fieldName
+        && this.isFiltersValid
+        && (!this.$refs.timeframe || this.$refs.timeframe.isValid);
+      this.$emit('validate', isValid);
     },
     updateEntity(entity) {
       if (entity === this.entity) return;
@@ -274,6 +316,8 @@ export default {
         },
         value_filter: _cloneDeep(initConfigFilter),
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
+        show_timeline: false,
+        timeframe: defaultTimeframe,
       };
     },
     isFieldFilterable(field) {
@@ -295,6 +339,12 @@ export default {
   .filter-by-label {
     align-self: flex-start;
     margin-top: 14px;
+  }
+
+  .segment-timeline-timeframe {
+    .x-select-timeframe_config--limited {
+      margin-top: auto;
+    }
   }
 }
 </style>

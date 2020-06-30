@@ -60,37 +60,37 @@ const axoniusIcons = {
   legendOpen: {
     component: Toggle,
     props: {
-      leftFill: '#DEDEDE',
-      leftStroke: '#DEDEDE',
+      leftFill: '#0076FF',
+      leftStroke: '#0076FF',
       rightFill: 'Transparent',
-      rightStroke: '#DEDEDE',
+      rightStroke: '#0076FF',
     },
   },
   legendClosed: {
     component: Toggle,
     props: {
       leftFill: 'Transparent',
-      leftStroke: '#DEDEDE',
-      rightFill: '#DEDEDE',
-      rightStroke: '#DEDEDE',
+      leftStroke: '#0076FF',
+      rightFill: '#0076FF',
+      rightStroke: '#0076FF',
     },
   },
   legendOpenDarker: {
     component: Toggle,
     props: {
-      leftFill: '#4A4A4A',
-      leftStroke: '#4A4A4A',
+      leftFill: '#2994ff',
+      leftStroke: '#2994ff',
       rightFill: 'Transparent',
-      rightStroke: '#4A4A4A',
+      rightStroke: '#2994ff',
     },
   },
   legendClosedDarker: {
     component: Toggle,
     props: {
       leftFill: 'Transparent',
-      leftStroke: '#4A4A4A',
-      rightFill: '#4A4A4A',
-      rightStroke: '#4A4A4A',
+      leftStroke: '#2994ff',
+      rightFill: '#2994ff',
+      rightStroke: '#2994ff',
     },
   },
   resetPassword: {

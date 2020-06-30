@@ -2,19 +2,31 @@
   <div
     class="card-container-outer"
     :name="chart.name"
-    :class="{ 'double-card': showLegend }"
+    :class="{ 'double-card': !!attachedCardData }"
     @mouseenter="showHistory = true"
     @mouseleave="showHistory = false"
   >
     <div class="card-container-inner">
       <XCard
-        v-if="showLegend"
-        class="legend"
+        v-if="attachedCardData"
+        class="attachedCardData.cardClass"
       >
-        <XChartLegend
-          :data="legendData"
+        <Component
+          :is="attachedCardData.component"
+          v-if="attachedCardData.data.length"
+          :data="attachedCardData.data"
           @on-item-click="onLegendItemClick"
         />
+        <div
+          v-else
+          class="no-data-found"
+        >
+          <XIcon
+            family="illustration"
+            type="binocular"
+          />
+          <div>No data found</div>
+        </div>
       </XCard>
       <div
         class="x-card card__item"
@@ -35,6 +47,7 @@
             v-on="$listeners"
             @edit="editPanel"
             @toggleShowSearch="toggleShowSearch"
+            @menu-clicked="menuClicked"
           />
 
         </div>
@@ -74,7 +87,7 @@
           <Component
             :is="chartView"
             v-if="chart.view && !isChartEmpty(chart)"
-            v-show="!chart.loading"
+            v-show="!showLoading"
             :data="chart.data"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
             @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
@@ -105,17 +118,32 @@
           </div>
         </div>
         <div class="footer">
-          <div
-            v-if="chart.view === 'pie' && !isChartEmpty(chart)"
-            class="toggle-legend"
-            @click="showLegend = !showLegend"
-          >
-            <VIcon
-              size="16"
-              @mouseover="toggleIconHover = true"
-              @mouseout="toggleIconHover = false"
-            >{{ `$vuetify.icon.${legendIcon}` }}
-            </VIcon>
+          <div class="toggle-container">
+            <div
+              v-if="showTrendToggle && !isChartEmpty(chart) && chart.linkedData"
+              class="toggle toggle-trend"
+              :class="{'trend-toggle-disabled': trendDisabled}"
+              :title="trendToggleTooltip"
+              @click="toggleTrend"
+            >
+              <XIcon
+                family="symbol"
+                type="trend"
+                :style="{fontSize: '16px'}"
+              />
+            </div>
+            <div
+              v-if="chart.view === 'pie' && !isChartEmpty(chart)"
+              class="toggle toggle-legend"
+              @click="toggleLegend"
+            >
+              <VIcon
+                size="16"
+                @mouseover="toggleIconHover = true"
+                @mouseout="toggleIconHover = false"
+              >{{ `$vuetify.icon.${legendIcon}` }}
+              </VIcon>
+            </div>
           </div>
           <div
             v-if="draggable"
@@ -126,6 +154,7 @@
             </VIcon>
           </div>
         </div>
+        <div class="right-padding" />
       </div>
     </div>
   </div>
@@ -142,7 +171,7 @@ import _isNil from 'lodash/isNil';
 import _findIndex from 'lodash/findIndex';
 import _get from 'lodash/get';
 import XIcon from '@axons/icons/Icon';
-import { FETCH_DASHBOARD_PANEL } from '../../../store/modules/dashboard';
+import { FETCH_DASHBOARD_PANEL, FETCH_SEGMENT_TIMELINE } from '../../../store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import XCard from '../../axons/layout/Card.vue';
 import XHistoricalDate from '../../neurons/inputs/HistoricalDate.vue';
@@ -193,6 +222,7 @@ export default {
     return {
       filter: '',
       showLegend: false,
+      showTrend: false,
       showSearch: false,
       showHistory: false,
       toggleIconHover: false,
@@ -239,13 +269,54 @@ export default {
       return `legend${this.showLegend ? 'Open' : 'Closed'}${this.toggleIconHover ? 'Darker' : ''}`;
     },
     showLoading() {
-      return this.chart.loading;
+      return this.chart.loading
+        || (!this.isChartEmpty() && (this.chart.linked_dashboard && !this.chart.linkedData));
     },
     isTimelinePartialData() {
       return this.chart.metric === ChartTypesEnum.timeline && !this.historyEnabled;
     },
     chartView() {
       return ChartComponentByViewEnum[this.chart.view];
+    },
+    showTrendToggle() {
+      return _get(this.chart, 'config.show_timeline');
+    },
+    trendDisabled() {
+      if (!this.showTrendToggle || !this.chart.historical) {
+        return false;
+      }
+      const selectedDate = new Date(this.chart.historical).getTime();
+      const timeframeDate = this.getPastDateFromTimeframe();
+
+      const isDisabled = selectedDate < timeframeDate;
+      if (isDisabled) {
+        // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+        this.showTrend = false;
+      }
+      return isDisabled;
+    },
+    trendToggleTooltip() {
+      if (this.trendDisabled) {
+        return `Timeline is limited to the last ${this.chart.config.timeframe.count} days`;
+      }
+      return '';
+    },
+    attachedCardData() {
+      if (this.showLegend) {
+        return {
+          cardClass: 'legend',
+          component: 'XChartLegend',
+          data: this.chart.data,
+        };
+      }
+      if (this.showTrend) {
+        return {
+          cardClass: 'trend',
+          component: 'XLine',
+          data: this.chart.linkedData,
+        };
+      }
+      return null;
     },
   },
   mounted() {
@@ -261,6 +332,7 @@ export default {
     }),
     ...mapActions({
       fetchDashboardPanel: FETCH_DASHBOARD_PANEL,
+      fetchSegmentTimeline: FETCH_SEGMENT_TIMELINE,
     }),
     confirmPickDate(chart, selectedDate) {
       if (selectedDate === chart.historical) {
@@ -353,6 +425,7 @@ export default {
     editPanel() {
       this.filter = '';
       this.showLegend = false;
+      this.showTrend = false;
     },
     onlegendDataModified(legendData) {
       this.legendData = legendData;
@@ -374,6 +447,27 @@ export default {
               && chart.view === ChartViewEnum.histogram)
               || chart.view === ChartViewEnum.stacked
               || chart.view === ChartViewEnum.adapter_histogram);
+    },
+    menuClicked() {
+      this.showTrend = false;
+    },
+    toggleLegend() {
+      if (this.showTrend) {
+        this.showTrend = false;
+      }
+      this.showLegend = !this.showLegend;
+    },
+    toggleTrend() {
+      if (this.trendDisabled) {
+        return;
+      }
+      if (this.showLegend) {
+        this.showLegend = false;
+      }
+      this.showTrend = !this.showTrend;
+    },
+    getPastDateFromTimeframe() {
+      return new Date().getTime() - this.chart.config.timeframe.count * 60 * 60 * 24;
     },
   },
 };
@@ -404,9 +498,44 @@ export default {
     }
   }
 
-  .toggle-legend {
-    padding: 4px;
-    cursor: pointer;
+  .toggle-container {
+    display: flex;
+
+    .toggle {
+      cursor: pointer;
+    }
+
+    .toggle-legend {
+      padding: 4px;
+    }
+
+    .toggle-trend {
+      margin: 6px 0 0 10px;
+
+      i {
+        font-size: 20px !important;
+      }
+
+      path {
+        fill: #0076FF;
+      }
+
+      &.trend-toggle-disabled {
+        cursor: auto;
+      }
+
+      &:not(.trend-toggle-disabled) {
+        &:hover {
+          path {
+            fill: #2994ff;
+          }
+        }
+      }
+    }
+  }
+
+  .right-padding {
+    flex: 1;
   }
 
   .card-container-outer {
@@ -473,7 +602,8 @@ export default {
       }
     }
     .footer {
-      display: flex;
+      display: grid;
+      grid-template-columns: 20% auto 20%;
       margin: -2px;
     }
   }
