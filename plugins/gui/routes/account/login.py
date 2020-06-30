@@ -200,7 +200,6 @@ class Login:
         and for saml will be the provider attributes)
         :return: None
         """
-        db_connection = self._get_db_connection()
         config_name = f'{source}_login_settings'
         config = self.plugins.gui.configurable_configs[IDENTITY_PROVIDERS_CONFIG]
         role_id = None
@@ -253,10 +252,9 @@ class Login:
                     if rule_value == email_domain:
                         role_id = rule_role_id
                 elif rule_type == LDAP_GROUP and rules_data:
-                    for group in rules_data:
-                        if rule_value in group:
-                            role_id = rule_role_id
-                            break
+                    # The rules_data will be an array of the user groups
+                    if rule_value in rules_data:
+                        role_id = rule_role_id
             elif source.lower() == 'saml':
                 rule_key = identity_provider_rule.get(ASSIGNMENT_RULE_KEY)
                 rule_value = identity_provider_rule.get(ASSIGNMENT_RULE_VALUE)
