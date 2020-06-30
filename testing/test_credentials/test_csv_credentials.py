@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 
@@ -57,7 +59,7 @@ CSV_LIST = [
         'csv_OS': 'Windows',
         'csv_MAC_Address': '11:22:22:33:11:33',
         'csv_Office': 'Office',
-        'csv_Last_Seen': '2020-01-03 02:13:24.485Z',
+        'csv_Last_Seen': str(datetime.now()),
         'csv_IP': '127.0.0.2'
     },
     {
@@ -66,7 +68,7 @@ CSV_LIST = [
         'csv_OS': 'Windows',
         'csv_MAC_Address': '11:22:22:33:11:33',
         'csv_Office': 'Office',
-        'csv_Last_Seen': '2020-04-01 02:13:24.485Z',
+        'csv_Last_Seen': str(datetime.now()),
         'csv_IP': '127.0.0.2'
     },
     {
@@ -75,7 +77,7 @@ CSV_LIST = [
         'csv_OS': 'Linux',
         'csv_MAC_Address': '11:22:22:33:11:33',
         'csv_Office': 'Office',
-        'csv_Last_Seen': '2020-01-03 02:13:24.485Z',
+        'csv_Last_Seen': str(datetime.now()),
     }
 ]
 
