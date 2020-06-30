@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from axonius.consts.gui_consts import DISTINCT_ADAPTERS_COUNT_FIELD, ADAPTER_CONNECTIONS_FIELD
@@ -17,7 +19,7 @@ from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 AD_NAME = 'Microsoft Active Directory (AD)'
 JSON_NAME = 'JSON File'
-QUERY_WIZARD_CSV_DATE_PICKER_VALUE = '2020-01-02 02:13:24.485Z'
+QUERY_WIZARD_CSV_DATE_PICKER_VALUE = str(datetime.now())
 EXPECTED_ADAPTER_LIST_LABELS = [
     'CSV - users_1',
     'CSV - users_2',
@@ -65,8 +67,8 @@ class TestAdapters(TestBase):
                 'file_path': FileForCredentialsMock(
                     'file_path',
                     ','.join(CSV_FIELDS) +
-                    f'\n{hostname},Serial2,Windows,{mac_address},Office,2020-04-01 02:13:24.485Z, {ip_address}'
-                    '\nJames,Serial3,Linux,11:22:22:33:11:33,Office,2020-01-01 02:13:24.485Z')
+                    f'\n{hostname},Serial2,Windows,{mac_address},Office,{str(datetime.now())}, {ip_address}'
+                    f'\nJames,Serial3,Linux,11:22:22:33:11:33,Office,{str(datetime.now())}')
             }
             self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
             self.adapters_page.wait_for_data_collection_toaster_start()

@@ -1,9 +1,8 @@
 #!/usr/bin/env python36
 import logging
 
-# pylint: disable=E0611
+# pylint: disable=E0611,import-error
 from axoniussdk import argument_parser
-# pylint: disable=E0611
 from axoniussdk.client import RESTClient
 
 __author__ = 'Axonius, Inc'
@@ -138,7 +137,7 @@ class RESTExample:
                               cls.add_and_delete_devices_labels,
                               cls.add_and_delete_users_labels,
                               cls.get_adapters,
-                              cls.check_connectivity,
+                              # cls.check_connectivity,
                               cls.add_and_delete_client,
                               cls.get_devices_fields,
                               cls.get_users_fields,
@@ -594,26 +593,27 @@ class RESTExample:
         status_code, resp = self._client.delete_client(adapter_name, id_, node_id)
         assert status_code == 200, resp
 
-    def check_connectivity(self):
-        status_code, adapters = self._client.get_adapters()
-        assert status_code == 200, 'Failed to get adapter and client list'
-
-        assert 'active_directory_adapter' in adapters
-
-        nodes = adapters['active_directory_adapter']
-        master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
-
-        node_id = master_node['node_id']
-
-        first_client = master_node['clients'][0]
-        first_client_config = first_client['client_config']
-
-        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
-        assert status_code == 200, resp
-
-        first_client_config['dc_name'] = 'fail'
-        status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
-        assert status_code == 500, resp
+    # AX-8225
+    # def check_connectivity(self):
+    #     status_code, adapters = self._client.get_adapters()
+    #     assert status_code == 200, 'Failed to get adapter and client list'
+    #
+    #     assert 'active_directory_adapter' in adapters
+    #
+    #     nodes = adapters['active_directory_adapter']
+    #     master_node = list(filter(lambda node: node['node_name'] == 'Master', nodes))[0]
+    #
+    #     node_id = master_node['node_id']
+    #
+    #     first_client = master_node['clients'][0]
+    #     first_client_config = first_client['client_config']
+    #
+    #     status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
+    #     assert status_code == 200, resp
+    #
+    #     first_client_config['dc_name'] = 'fail'
+    #     status_code, resp = self._client.check_connectivity('active_directory_adapter', first_client_config, node_id)
+    #     assert status_code == 500, resp
 
     def add_and_delete_client(self):
         status_code, adapters = self._client.get_adapters()
