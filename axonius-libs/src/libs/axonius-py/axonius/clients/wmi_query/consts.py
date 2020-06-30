@@ -12,8 +12,8 @@ REGISTRY_EXISTS = 'reg_check_exists'
 USE_AD_CREDS = 'use_adapter'
 
 ACTION_TYPES = namedtuple('ActionTypes', ('scan', 'cmd'))(scan='execute_scan', cmd='execute_cmd')
-SCAN_CHUNK_SIZE = 1000
-EXEC_CHUNK_SIZE = 1000
+SCAN_CHUNK_SIZE = 50
+EXEC_CHUNK_SIZE = 50
 WMI_SCAN_PORTS = [135, 445]
 BASE_SCHEMA = {
     'items': [

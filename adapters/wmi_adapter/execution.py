@@ -107,6 +107,9 @@ class WmiExecutionMixIn(Triggerable):
             if not all(arg in config for arg in required_fields):
                 logger.error(f'Wrong action config: {config}')
                 return None
+            if not config.get(USERNAME) and not config.get(USE_AD_CREDS):
+                logger.error('No username and not using ad creds')
+                return None
         except Exception:
             logger.exception('Error when preparing arguments')
             return None
@@ -126,7 +129,7 @@ class WmiExecutionMixIn(Triggerable):
             logger.debug(f'Bad config {client_config}')
             return {
                 'status': 'error',
-                'message': f'Argument Error: Please specify valid Username and Password'
+                'message': f'Argument Error: Please specify valid Username and Password or use AD Creds'
             }
 
         devices = iterate_axonius_entities(EntityType.Devices, internal_axon_ids)
@@ -400,7 +403,7 @@ class WmiExecutionMixIn(Triggerable):
                     'success': False,
                     'value': f'{job_title} Error: Missing Hostname and IPs'
                 }
-                return json
+                return device['internal_axon_id'], json
 
             # find the best ip for running the job on it
             reachable_hostname_adapter, reachable_hostname, reachable_ip = \
