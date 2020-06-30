@@ -1,3 +1,4 @@
+import copy
 import csv
 import io
 import logging
@@ -24,8 +25,7 @@ from gui.logic.dashboard_data import (fetch_chart_segment,
                                       fetch_chart_segment_historical,
                                       fetch_chart_adapter_segment,
                                       fetch_chart_adapter_segment_historical,
-                                      generate_dashboard_historical,
-                                      fetch_chart_timeline)
+                                      generate_dashboard_historical)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
 
@@ -385,7 +385,8 @@ class Charts:
 
     @staticmethod
     def generate_timeline_csv(card):
-        data = fetch_chart_timeline(ChartViews[card['view']], **card['config'])
+        generated_dashboard = generate_dashboard(card['_id'], sort_by=None, sort_order=None)
+        data = copy.deepcopy(generated_dashboard.get('data', []))
 
         def get_row_data_as_dict(row_data, headers_names):
             """
