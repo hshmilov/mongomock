@@ -28,15 +28,11 @@ class BeyondTrustPrivilegedIdentityConnection(RESTConnection):
                 'Password': self._password
             }
 
-            token = self._post('Login', body_params=body_params, use_json_in_response=False,
-                               return_response_raw=False)  # type: bytes
-
-            if isinstance(token, bytes):
-                self._token = token.decode('utf-8').strip('"')
-            elif isinstance(token, str):
+            token = self._post('Login', body_params=body_params)
+            if isinstance(token, str):
                 self._token = token
             else:
-                raise ValueError(f'Error: Received invalid token {token}')
+                raise ValueError(f'Error: Received invalid token {token}, type {type(token)}')
 
             self._session_headers = {
                 'AuthenticationToken': self._token
@@ -62,7 +58,10 @@ class BeyondTrustPrivilegedIdentityConnection(RESTConnection):
             logger.warning('Tried to logout of a session that is not logged in!')
             return
         try:
-            self._post('Logout')
+            body_params = {
+                'AuthenticationToken': self._token
+            }
+            self._post('Logout', body_params=body_params, use_json_in_response=False, return_response_raw=True)
         except Exception as e:
             message = f'Delete token failed! - {str(e)}'
             logger.warning(message, exc_info=RESTException(message))
