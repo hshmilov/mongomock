@@ -1164,7 +1164,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
 
                 fs = gridfs.GridFS(self.db.client[plugin_unique_name])
 
-                for file in self.db.client[plugin_unique_name].files.find({}):
+                for file in self.db.client[plugin_unique_name].fs.files.find({}):
                     try:
                         f = fs.get(file['_id'])
                         core_fs.put(f, _id=file['_id'], filename=file.get('filename'), encoding=file.get('encoding'))
