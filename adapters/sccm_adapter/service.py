@@ -617,7 +617,10 @@ class SccmAdapter(AdapterBase, Configurable):
                                     file_data = new_asset_data.get('file_data')
                                     if not isinstance(file_data, dict):
                                         file_data = {}
-                                    path = file_data.get('FileName')
+                                    path = file_data.get('FilePath') or ''
+                                    path += file_data.get('FileName') or ''
+                                    if not path:
+                                        path = None
                                 except Exception:
                                     logger.warning(f'Problem with file data {new_asset_data}', exc_info=True)
                                 device.add_installed_software(

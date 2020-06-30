@@ -57,6 +57,9 @@ class CherwellAdapter(AdapterBase, Configurable):
         created_by = Field(str, 'Created By')
         customer_type_name = Field(str, 'Customer Type Name')
         company_name = Field(str, 'Company Name')
+        full_name = Field(str, 'Full Name')
+        company_id = Field(str, 'Company ID')
+        employee_status = Field(str, 'Employee Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -253,7 +256,7 @@ class CherwellAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_user(self, user_raw):
         try:
             user = self._new_user_adapter()
@@ -294,6 +297,16 @@ class CherwellAdapter(AdapterBase, Configurable):
                         user.user_country = field_value
                     elif field_name == 'CompanyName':
                         user.company_name = field_value
+                    elif field_name == 'EmployeeStatus':
+                        user.employee_status = field_value
+                    elif field_name == 'CompanyID':
+                        user.company_id = field_value
+                    elif field_name == 'FullName':
+                        user.full_name = field_value
+                    elif field_name == 'Title':
+                        user.user_title = field_value
+                    elif field_name == 'EmployeeID':
+                        user.employee_id = field_value
                 except Exception:
                     logger.exception(f'Problem with field {field_raw}')
             user.set_raw(user_raw)

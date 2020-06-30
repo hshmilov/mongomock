@@ -128,8 +128,12 @@ class BitdefenderAdapter(AdapterBase):
                     continue
                 device_id += device_raw.get('name') or ''
                 device.id = device_id
-                device.name = device_raw.get('name')
-                device.hostname = device_raw.get('fqdn')
+                name = device_raw.get('name')
+                device.name = name
+                hostname = device_raw.get('fqdn')
+                if hostname and name and name.strip().lower().split('.')[0] != hostname.strip().lower().split('.')[0]:
+                    hostname = name
+                device.hostname = hostname
                 device.figure_os(device_raw.get('operatingSystemVersion'))
                 try:
                     ip_address = device_raw.get('ip')
