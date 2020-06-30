@@ -142,6 +142,7 @@ class SendEmailsAction(ActionTypeAlert):
         email = mail_sender.new_email(subject,
                                       self._config['emailList'],
                                       cc_recipients=self._config.get('emailListCC', []))
+        field_filters = self.trigger_view_config.get('colFilters', {})
         try:
             # all the trigger result
             if self._config.get('sendDeviceCSV', False):
@@ -150,7 +151,6 @@ class SendEmailsAction(ActionTypeAlert):
                     'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
                     'specific_data.data.last_used_users', 'labels'
                 ])
-                field_filters = self.trigger_view_config.get('colFilters', {})
                 csv_string = gui_helpers.get_csv(self.trigger_view_parsed_filter,
                                                  sort,
                                                  {field: 1 for field in field_list},
@@ -223,17 +223,17 @@ class SendEmailsAction(ActionTypeAlert):
             results = perform_saved_view_converted(self._entity_type, self.trigger_view_from_db, projection, limit=10)
         else:
             results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
-                                   projection, self._entity_type)
+                                   projection, self._entity_type, field_filters=field_filters)
 
         self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
         if added_result_count > 0:
             results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
-                                   projection, self._entity_type)
+                                   projection, self._entity_type, field_filters=field_filters)
             self.__create_table_in_email(email, results, html_sections, images_cid,
                                          f'Top 5 new {self._entity_type} in query')
         if removed_result_count > 0:
             results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
-                                   projection, self._entity_type)
+                                   projection, self._entity_type, field_filters=field_filters)
 
             self.__create_table_in_email(email, results, html_sections, images_cid,
                                          f'Top 5 {self._entity_type} removed from query')

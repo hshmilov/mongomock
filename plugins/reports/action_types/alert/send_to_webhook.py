@@ -144,6 +144,7 @@ class SendWebhookAction(ActionTypeAlert):
             'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.os.type',
             'specific_data.data.last_used_users', 'labels'
         ])
+        col_filters = self.trigger_view_config.get('colFilters', {})
         entities_raw = db_querying_helper.get_entities(None,
                                                        None,
                                                        self.trigger_view_parsed_filter,
@@ -151,7 +152,9 @@ class SendWebhookAction(ActionTypeAlert):
                                                            field: 1
                                                            for field
                                                            in field_list
-                                                       }, self._entity_type)
+                                                       },
+                                                       self._entity_type,
+                                                       field_filters=col_filters)
         entities = list(entities_raw)
         entities_json = to_json(entities or None)
         final_body = (self._config.get('custom_format') or '{"entities": {$BODY}}').replace(CUSTOM_FORMAT_STRING,

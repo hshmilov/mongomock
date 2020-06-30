@@ -460,7 +460,8 @@ class ReportsService(Triggerable, PluginBase):
                       trigger: Trigger,
                       current_result: List[str],
                       added_results: List[str],
-                      removed_results: List[str]) -> Recipe:
+                      removed_results: List[str],
+                      manual_input: dict = None) -> Recipe:
         """
         Calls the actions in the recipe of the given report
         :param report_data: The report, as is, in the DB
@@ -483,7 +484,8 @@ class ReportsService(Triggerable, PluginBase):
                                     internal_axon_ids=list(current_result),
                                     entity_type=trigger.view.entity,
                                     added_axon_ids=list(added_results),
-                                    removed_axon_ids=list(removed_results))
+                                    removed_axon_ids=list(removed_results),
+                                    manual_input=manual_input)
             if issubclass(action_class, ActionTypeBase):
                 return action_class(action_saved_name=recipe_action.name,
                                     config=recipe_action.action.config,
@@ -493,7 +495,6 @@ class ReportsService(Triggerable, PluginBase):
                                     internal_axon_ids=list(internal_axon_ids),
                                     entity_type=trigger.view.entity)
             raise RuntimeError('No such action')
-
         if not recipe.main:
             return recipe
 
@@ -638,7 +639,8 @@ class ReportsService(Triggerable, PluginBase):
                                         query_difference.added
                                         if trigger.run_on == RunOnEntities.AddedEntities
                                         else query_result,
-                                        query_difference.added, query_difference.removed)
+                                        query_difference.added, query_difference.removed,
+                                        manual_input)
 
             # Update last triggered.
             self.__update_run_configuration(report['_id'], trigger.name, {

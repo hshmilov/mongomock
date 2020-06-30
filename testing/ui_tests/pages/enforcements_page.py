@@ -218,9 +218,9 @@ class EnforcementsPage(EntitiesPage):
         # Due to a UI bug, the screen will change again to EC table
         time.sleep(10)
 
-    def add_main_action_send_email(self, action_name, recipient):
+    def add_main_action_send_email(self, action_name, recipient, attach_csv=False):
         self.add_main_action(ActionCategory.Notify, Action.send_emails.value)
-        self.fill_send_email_config(action_name, recipient=recipient)
+        self.fill_send_email_config(action_name, recipient=recipient, attach_csv=attach_csv)
         self.click_save_button()
         # Due to a UI bug, the screen will change again to EC table
         time.sleep(10)

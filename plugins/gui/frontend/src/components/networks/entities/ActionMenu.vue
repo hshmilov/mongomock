@@ -206,10 +206,13 @@ export default {
       }).then(() => this.$emit('done'));
     },
     enforceEntities() {
+      const { fields, sort, colFilters } = this.view;
       return this.enforceData({
         module: this.module,
         data: {
-          name: this.selectedEnforcement, ...this.entities,
+          name: this.selectedEnforcement,
+          view: { fields, sort, colFilters },
+          selection: { ...this.entities },
         },
       });
     },

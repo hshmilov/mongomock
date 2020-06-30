@@ -141,7 +141,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             'input': {
                 'entity': entity_type.name,
                 'filter': escape_dict(mongo_filter),
-                'selection': post_data
+                'selection': post_data.get('selection'),
+                'view': escape_dict(post_data.get('view'))
             }
         })
         return '', 200

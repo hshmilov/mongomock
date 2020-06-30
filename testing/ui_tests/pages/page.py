@@ -118,6 +118,7 @@ class Page:
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
+    ANTD_MODAL_OVERLAY_CSS = '.ant-modal-mask'
     DIALOG_OVERLAY_CSS = '.v-dialog'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
@@ -936,6 +937,7 @@ class Page:
 
     def wait_for_modal_close(self):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def close_modal_overlay(self):
         self.find_elements_by_css(self.MODAL_OVERLAY_CSS).click()

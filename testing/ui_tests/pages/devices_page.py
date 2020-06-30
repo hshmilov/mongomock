@@ -123,16 +123,21 @@ class DevicesPage(EntitiesPage):
         self.open_actions_menu()
         self.click_actions_enforce_button()
 
-    def enforce_action_on_query(self, query, action):
+    def enforce_action_on_query(self, query, action, filter_column_data: dict = None):
         self.run_filter_query(query)
+        if filter_column_data:
+            self.filter_column(filter_column_data.get('col_name'), filter_column_data.get('filter_list'))
         self.toggle_select_all_rows_checkbox()
+        selected_count = len(self.find_rows_with_data())
         self.open_enforce_dialog()
         self.select_option_without_search(
             self.ENFORCEMENT_DIALOG_DROPDOWN_CSS,
             self.DROPDOWN_SELECTED_OPTION_CSS, action
         )
         self.click_button('Run')
+        self.wait_for_modal_close()
         time.sleep(1.5)  # wait for run to fade away
+        return selected_count
 
     def query_hostname_contains(self, string):
         self.run_filter_query(self.FILTER_HOSTNAME.format(filter_value=string))

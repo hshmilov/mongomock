@@ -10,11 +10,12 @@ from axonius.types.enforcement_classes import (Trigger, TriggeredReason,
                                                AlertActionResult, ActionRunResults, EntityResult)
 from axonius.utils.axonius_query_language import parse_filter
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
+from axonius.utils.mongo_escaping import unescape_dict
 from reports.action_types.action_type_base import ActionTypeBase
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-# pylint: disable=W0212
+# pylint: disable=W0212, too-many-arguments
 
 
 class ActionTypeAlert(ActionTypeBase, ABC):
@@ -27,7 +28,8 @@ class ActionTypeAlert(ActionTypeBase, ABC):
                  internal_axon_ids: List[str],
                  entity_type: EntityType,
                  added_axon_ids: List[str],
-                 removed_axon_ids: List[str]):
+                 removed_axon_ids: List[str],
+                 manual_input: dict = None):
         """
         CTOR
         :param action_saved_name: see ActionTypeBase
@@ -44,6 +46,7 @@ class ActionTypeAlert(ActionTypeBase, ABC):
                                 internal_axon_ids, entity_type)
         self._added_axon_ids = added_axon_ids
         self._removed_axon_ids = removed_axon_ids
+        self._manual_input = manual_input
 
     def run(self) -> ActionRunResults:
         """
@@ -104,6 +107,8 @@ class ActionTypeAlert(ActionTypeBase, ABC):
         """
         :return: View configuration of the trigger's view or empty dict if none exists
         """
+        if self._manual_input and self._manual_input.get('view'):
+            return unescape_dict(self._manual_input['view'])
         return self.trigger_view_from_db.get('view', {})
 
     @property

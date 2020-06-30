@@ -741,6 +741,8 @@ class EntitiesPage(Page):
                 self.driver.find_element_by_css_selector('#column_filter .addFilter').click()
             self.fill_text_field_by_css_selector('#column_filter .filter:last-child input', filter_dict['term'])
         self.save_column_filter_modal()
+        self.wait_for_modal_close()
+        self.wait_for_table_to_load()
 
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)

@@ -110,7 +110,7 @@ class SendHttpsLogAction(ActionTypeAlert):
                 log_message_full += '\n' + log_message
             self._plugin_base.send_https_log_message(log_message_full, authorization_header)
             return AlertActionResult(True, 'Sent Https message')
-
+        col_filters = self.trigger_view_config.get('colFilters', {})
         all_gui_entities = db_querying_helper.get_entities(None,
                                                            None,
                                                            self.trigger_view_parsed_filter,
@@ -118,7 +118,9 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                                field: 1
                                                                for field
                                                                in field_list
-                                                           }, self._entity_type)
+                                                           },
+                                                           self._entity_type,
+                                                           field_filters=col_filters)
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']
