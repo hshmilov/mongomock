@@ -1380,7 +1380,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             for entity_type in EntityType:
                 self._entity_views_map[entity_type].update_many({
                     PRIVATE_FIELD: {'$exists': False}
-                },  {
+                }, {
                     '$set': {
                         PRIVATE_FIELD: False
                     }
@@ -1443,42 +1443,46 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 39. Details: {e}')
 
+    # pylint: disable=R1702
     def _update_schema_version_40(self):
         """
         Change 'general_info' service to 'wmi_adapter' in saved queries.
         """
-        print('Upgrade to schema 39')
+        print('Upgrade to schema 40')
         try:
-            views_collection = self._entity_views_map[EntityType.Devices]
-            general_info_views = views_collection.find({
-                'view.query.filter': {
-                    '$regex': '.*general_info.*'
-                }
-            })
-            for view_doc in general_info_views:
-                original_fields = view_doc.get('view', {}).get('fields', [])
-                # update fields names
-                original_fields = [field.replace('general_info', 'wmi_adapter') for field in original_fields]
-                # update query filter
-                query = view_doc.get('view', {}).get('query', {})
-                query['filter'] = query.get('filter').replace('general_info', 'wmi_adapter')
-                query['onlyExpressionsFilter'] = query.get('onlyExpressionsFilter').replace('general_info',
-                                                                                            'wmi_adapter')
-                # update expressions
-                expressions = query.get('expressions')
-                for expression in expressions:
-                    for k, v in expression.items():
-                        if not isinstance(expression[k], str):
-                            continue
-                        expression[k] = expression[k].replace('general_info', 'wmi_adapter')
-                views_collection.update_one({
-                    '_id': view_doc['_id']
-                }, {
-                    '$set': {
-                        'view.fields': original_fields,
-                        'view.query': query
+            for entity_type in EntityType:
+                views_collection = self._entity_views_map[entity_type]
+                general_info_views = views_collection.find({
+                    'view.query.filter': {
+                        '$regex': '.*general_info.*'
                     }
                 })
+                for view_doc in general_info_views:
+                    original_fields = view_doc.get('view', {}).get('fields', [])
+                    # update fields names
+                    original_fields = [field.replace('general_info', 'wmi_adapter') for field in original_fields]
+                    # update query filter
+                    query = view_doc.get('view', {}).get('query', {})
+                    query['filter'] = query.get('filter', '').replace('general_info', 'wmi_adapter')
+                    query['onlyExpressionsFilter'] = query.get('onlyExpressionsFilter', '').replace('general_info',
+                                                                                                    'wmi_adapter')
+                    # update expressions
+                    expressions = query.get('expressions', [])
+                    for expression in expressions:
+                        if not expression:
+                            continue
+                        for k, v in expression.items():
+                            if not isinstance(expression[k], str):
+                                continue
+                            expression[k] = expression[k].replace('general_info', 'wmi_adapter')
+                    views_collection.update_one({
+                        '_id': view_doc['_id']
+                    }, {
+                        '$set': {
+                            'view.fields': original_fields,
+                            'view.query': query
+                        }
+                    })
 
             self.db_schema_version = 40
         except Exception as e:
