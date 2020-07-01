@@ -11,7 +11,7 @@ import pytest
 pytestmark = pytest.mark.sanity
 
 NUMBER_OF_PROCESSES = 6
-TIMEOUT_MINUTES = 60
+TIMEOUT_MINUTES = 90
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [
     'devops',
