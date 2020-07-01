@@ -9,7 +9,7 @@
     <div class="card-container-inner">
       <XCard
         v-if="attachedCardData"
-        class="attachedCardData.cardClass"
+        :class="attachedCardData.cardClass"
       >
         <Component
           :is="attachedCardData.component"
