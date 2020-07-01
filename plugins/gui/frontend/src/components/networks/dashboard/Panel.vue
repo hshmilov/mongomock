@@ -467,7 +467,7 @@ export default {
       this.showTrend = !this.showTrend;
     },
     getPastDateFromTimeframe() {
-      return new Date().getTime() - this.chart.config.timeframe.count * 60 * 60 * 24;
+      return Date.now() - this.chart.config.timeframe.count * 1000 * 60 * 60 * 24;
     },
   },
 };
@@ -516,15 +516,16 @@ export default {
         font-size: 20px !important;
       }
 
-      path {
-        fill: #0076FF;
-      }
-
       &.trend-toggle-disabled {
         cursor: auto;
+        color: rgba(0, 0, 0, .25);
       }
 
       &:not(.trend-toggle-disabled) {
+        path {
+          fill: #0076FF;
+        }
+
         &:hover {
           path {
             fill: #2994ff;
