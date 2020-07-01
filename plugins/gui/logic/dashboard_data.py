@@ -1389,8 +1389,8 @@ def fetch_chart_compare_historical(card, from_given_date, to_given_date, selecte
     historical_views = []
     default_sort = {**card['config']}.get('sort', None)
     for view in card['config']['views']:
-        view_name = view.get('name')
-        if not view.get('entity') or not view_name:
+        view_id = view.get('id')
+        if not view.get('entity') or not view_id:
             continue
         try:
             latest_date = fetch_latest_date(EntityType(view['entity']), from_given_date, to_given_date)
@@ -1399,7 +1399,7 @@ def fetch_chart_compare_historical(card, from_given_date, to_given_date, selecte
             historical_views.append({'for_date': latest_date, **view})
 
         except Exception:
-            logger.exception(f'When dealing with {view_name} and {view["entity"]}')
+            logger.exception(f'When dealing with {view_id} and {view["entity"]}')
             continue
     if not historical_views:
         return []
