@@ -26,7 +26,7 @@ def destroy():
     instances_docker_tag_substring_to_keep = ['selenium']
     stop_weave_network()
 
-    for container in client.containers.list():
+    for container in client.containers.list(ignore_removed=True):
         if [current_container_name for current_container_name in instances_dockers_container_names_substrings_to_keep if
                 current_container_name in container.name]:
             print(f'Skipping {container.name}')
