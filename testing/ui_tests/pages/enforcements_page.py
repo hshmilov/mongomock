@@ -94,7 +94,7 @@ class EnforcementsPage(EntitiesPage):
     POST_ACTIONS_TEXT = 'post actions'
     ACTION_LIBRARY_CONTAINER_CSS = '.x-action-library'
     ACTION_CONF_CONTAINER_CSS = '.x-action-config'
-    ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .main'
+    ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .config'
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
     ACTION_NAME_ID = 'action-name'
     API_KEY_ID = 'apikey'

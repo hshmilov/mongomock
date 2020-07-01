@@ -1,7 +1,10 @@
 <template>
   <div class="x-action-config">
-    <div class="header">
-      <label for="action-name">Action name:</label>
+    <div class="name">
+      <label
+          for="action-name"
+          class="name__label"
+      >Action name:</label>
       <input
         id="action-name"
         ref="name"
@@ -11,9 +14,9 @@
         :class="{disabled: disableName}"
       >
     </div>
-    <div class="main">
+    <div class="config">
       <template v-if="actionSchema && actionSchema.type">
-        <h4 class="config-title">
+        <h4 class="config__title">
           Configuration
         </h4>
         <XForm
@@ -27,7 +30,7 @@
         />
       </template>
     </div>
-    <div class="footer">
+    <div class="actions">
       <div class="error-text">
         {{ nameError || formError }}
       </div>
@@ -172,22 +175,23 @@ export default {
         display: grid;
         grid-template-rows: 60px calc(100% - 108px) 48px;
         align-items: flex-start;
-        .header {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
+        .name {
+            display: flex;
             align-items: center;
+            &__label {
+                flex: 1 0 auto;
+            }
             #action-name {
                 margin-left: 12px;
-                flex: 1 0 auto;
                 &.disabled {
                     opacity: 0.6;
                 }
             }
         }
-        .main {
+        .config {
             overflow: auto;
             height: 100%;
-            .config-title {
+            .config__title {
                 margin-top: 0;
                 margin-bottom: 12px;
             }
@@ -197,7 +201,7 @@ export default {
                 display: grid;
             }
         }
-        .footer {
+        .actions {
             text-align: right;
             .error-text {
                 min-height: 20px;
