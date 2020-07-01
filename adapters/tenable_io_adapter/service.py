@@ -478,7 +478,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_agent_data',
-                    'title': 'Fetch Agent Data',
+                    'title': 'Fetch agent data',
                     'type': 'bool'
                 }
             ],

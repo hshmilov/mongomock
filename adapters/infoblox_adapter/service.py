@@ -448,8 +448,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
             ],
             'required': [
                 'use_discovered_data',
-                'result_per_page'
-                'fetch_lease',
+                'result_per_page',
+                'fetch_lease'
             ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'

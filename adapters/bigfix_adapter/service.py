@@ -349,7 +349,7 @@ class BigfixAdapter(AdapterBase, Configurable):
                 }
             ],
             "required": ['exclude_ipv6'],
-            "pretty_name": "Bigfix Configuration",
+            "pretty_name": "BigFix Configuration",
             "type": "array"
         }
 

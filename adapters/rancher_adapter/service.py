@@ -80,7 +80,7 @@ class RancherAdapter(AdapterBase):
                 },
                 {
                     'name': 'username',
-                    'title': 'Username',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {
