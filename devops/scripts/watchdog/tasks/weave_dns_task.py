@@ -8,10 +8,11 @@ from SE.se import AXONIUS_SH
 from axonius.consts.system_consts import WEAVE_PATH, AXONIUS_DNS_SUFFIX
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.axonius_service import AxoniusService
+from services.weave_service import is_weave_up
 
 SLEEP_SECONDS = 60
 CORTEX_CWD = '/home/ubuntu/cortex'
-SCRIPT_TIMEOUT = 10
+SCRIPT_TIMEOUT = 60
 WEAVE_IP_REGEX = r'(.*)/\d+'
 
 
@@ -19,7 +20,8 @@ class WeaveDNSTask(WatchdogTask):
 
     def run(self):
         while True:
-            self.check_weave_dns_status()
+            if is_weave_up():
+                self.check_weave_dns_status()
             time.sleep(SLEEP_SECONDS)
 
     def get_weave_containers(self) -> List[Tuple]:
