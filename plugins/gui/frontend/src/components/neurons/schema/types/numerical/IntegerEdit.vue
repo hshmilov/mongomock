@@ -9,7 +9,9 @@
         components: { xSelect },
         mixins: [primitiveMixin, numericalMixin],
         methods: {
-		    validateNumber: validateInteger,
+		    validateNumber(e) {
+		      return validateInteger(e, this.schema && this.schema.allow_negatives);
+            },
 			formatData() {
 				if (this.data === '-' || this.data === '') {
 					return this.data

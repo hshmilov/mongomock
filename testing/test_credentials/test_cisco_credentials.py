@@ -71,7 +71,8 @@ cisco_json_file_mock_credentials = {
             "plugin_name": "cisco_adapter",
             "client_used": "192.168.20.42",
             "pretty_id": "AX-1",
-            "type": "entitydata"
+            "type": "entitydata",
+            "last_seen": "2020-06-01 19:05:53"
         },
         {
             "accurate_for_datetime": "2020-05-13 19:05:53",

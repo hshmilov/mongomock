@@ -10,9 +10,10 @@ export const validateNumber = (e) => {
     event.preventDefault()
 }
 
-export const validateInteger = (e) => {
+export const validateInteger = (e, allowNegative) => {
     const key = getEventKey(e)
-    if (key.match(new RegExp('[0-9]'))) {
+    const regex = allowNegative ? '[-0-9]' : '[0-9]';
+    if (key.match(new RegExp(regex))) {
         return true
     }
     event.preventDefault()

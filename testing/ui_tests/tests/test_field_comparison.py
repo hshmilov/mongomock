@@ -136,7 +136,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.click_query_wizard()
         days_diff = (esx_last_seen - ad_last_seen).days
         days_diff += 1 if not grater else -1
-        self.devices_page.fill_field_comparison_query_value(str(days_diff))
+        self.devices_page.fill_field_comparison_query_value(str(abs(days_diff)))
         # adapters_data.active_directory_adapter.last_seen </> adapters_data.json_file_adapter.last_seen + days_diff
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()

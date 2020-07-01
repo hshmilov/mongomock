@@ -85,6 +85,13 @@ export default {
       if (_isPlainObject(firstOption) && 'name' in firstOption) {
         schema.enum = schema.enum.filter((item) => item.name);
       }
+      if (this.isNumericSchema(schema.type)) {
+        if (this.isNegativeNumberAllowed()) {
+          schema.allow_negatives = true;
+        } else {
+          schema.min = 0;
+        }
+      }
       return schema;
     },
     valueType() {
@@ -107,6 +114,7 @@ export default {
     onInputOperator(compOp) {
       let value = this.argument;
       // Reset the value if the value schema is about to change
+      delete this.valueSchema.allow_negatives;
       if (!_isEqual(getValueSchema(this.schema, compOp), this.valueSchema)) {
         value = '';
       }
@@ -114,6 +122,13 @@ export default {
     },
     onInputArgument(value) {
       this.$emit('update', { value });
+    },
+    isNegativeNumberAllowed() {
+      return this.schema.format === 'date-time';
+    },
+    isNumericSchema(type) {
+      const numericTypes = ['number', 'integer', 'array'];
+      return numericTypes.includes(type);
     },
   },
 };

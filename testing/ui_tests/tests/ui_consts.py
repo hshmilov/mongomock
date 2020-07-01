@@ -115,6 +115,8 @@ S3_USERS_BACKUP_FILE_NAME = 'users_file_name'
 CSV_ADAPTER_FILTER = 'adapters == "csv_adapter"'
 LABEL_CLIENT_WITH_SAME_ID = 'client_with_same_id'
 
+DEVICES_SEEN_NEGATIVE_VALUE_QUERY = '(adapters_data.json_file_adapter.last_seen <= date("NOW - 1d"))'
+
 
 class EmailSettings:
     port = '25'

@@ -185,6 +185,15 @@ class DevicesPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.close_dropdown()
 
+    def add_query_last_seen_negative_value(self, adapter, field, com_op, value):
+        self.click_query_wizard()
+        self.select_column_adapter(adapter)
+        self.select_query_field(field)
+        self.select_query_comp_op(com_op)
+        self.fill_query_value(value)
+        self.wait_for_table_to_be_responsive()
+        self.close_dropdown()
+
     def add_query_last_seen_last_day(self):
         self._add_query_last_seen(self.QUERY_COMP_DAYS)
 
