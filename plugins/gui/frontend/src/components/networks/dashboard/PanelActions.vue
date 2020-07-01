@@ -104,8 +104,8 @@
                   key="6"
                   @click="
                     sortClick({
-                      type: ChartSortTypeEnum.value,
-                      order: ChartSortOrderEnum.desc
+                      sortBy: ChartSortTypeEnum.value,
+                      sortOrder: ChartSortOrderEnum.desc
                     })
                   "
                 >
@@ -126,8 +126,8 @@
                   key="7"
                   @click="
                     sortClick({
-                      type: ChartSortTypeEnum.value,
-                      order: ChartSortOrderEnum.asc
+                      sortBy: ChartSortTypeEnum.value,
+                      sortOrder: ChartSortOrderEnum.asc
                     })
                   "
                 >
@@ -164,8 +164,8 @@
                   key="8"
                   @click="
                     sortClick({
-                      type: ChartSortTypeEnum.name,
-                      order: ChartSortOrderEnum.desc
+                      sortBy: ChartSortTypeEnum.name,
+                      sortOrder: ChartSortOrderEnum.desc
                     })
                   "
                 >
@@ -186,8 +186,8 @@
                   key="9"
                   @click="
                     sortClick({
-                      type: ChartSortTypeEnum.name,
-                      order: ChartSortOrderEnum.asc
+                      sortBy: ChartSortTypeEnum.name,
+                      sortOrder: ChartSortOrderEnum.asc
                     })
                   "
                 >
@@ -211,14 +211,12 @@
     </template>
   </XRoleGateway>
 </template>
-
 <script>
 import { mapMutations, mapActions } from 'vuex';
 import { Menu, Dropdown } from 'ant-design-vue';
 import _get from 'lodash/get';
 import _capitalize from 'lodash/capitalize';
 import _includes from 'lodash/includes';
-
 import {
   MOVE_OR_COPY_TOGGLE,
   FETCH_DASHBOARD_PANEL,
@@ -229,7 +227,6 @@ import {
   ChartSortOrderEnum,
   ChartSortOrderLabelEnum,
 } from '../../../constants/dashboard';
-
 export default {
   name: 'PanelActions',
   components: {
@@ -256,19 +253,19 @@ export default {
     return {
       filter: '',
       showSearch: false,
-      selectedSortType: null,
+      selectedSortBy: null,
       selectedSortOrder: null,
     };
   },
   mounted() {
     if (this.chart.selectedSort) {
-      this.selectedSortType = this.chart.selectedSort.type;
-      this.selectedSortOrder = this.chart.selectedSort.order;
+      this.selectedSortBy = this.chart.selectedSort.sortBy;
+      this.selectedSortOrder = this.chart.selectedSort.sortOrder;
     }
   },
   computed: {
-    sortType() {
-      return this.selectedSortType || _get(this.chart, 'config.sort.sort_by');
+    sortBy() {
+      return this.selectedSortBy || _get(this.chart, 'config.sort.sort_by');
     },
     sortOrder() {
       return this.selectedSortOrder || _get(this.chart, 'config.sort.sort_order');
@@ -278,12 +275,6 @@ export default {
     },
     isLinkedCsvExportable() {
       return !!this.chart.linked_dashboard;
-    },
-  },
-  watch: {
-    chart() {
-      this.selectedSortType = null;
-      this.selectedSortOrder = null;
     },
   },
   created() {
@@ -319,7 +310,7 @@ export default {
         historical: this.chart.historical,
         search: this.filter,
         refresh: true,
-        sortBy: this.sortType,
+        sortBy: this.sortBy,
         sortOrder: this.sortOrder,
       });
     },
@@ -332,22 +323,22 @@ export default {
       this.$emit(event);
     },
     isSortMethodActive(type) {
-      if (this.selectedSortType) {
-        return type === this.selectedSortType;
+      if (this.selectedSortBy) {
+        return type === this.selectedSortBy;
       }
-      return type === this.sortType;
+      return type === this.sortBy;
     },
     isSortOrderActive(type, order) {
-      if (this.selectedSortType) {
+      if (this.selectedSortBy) {
         return (
-          type === this.selectedSortType && order === this.selectedSortOrder
+          type === this.selectedSortBy && order === this.selectedSortOrder
         );
       }
-      return type === this.sortType && order === this.sortOrder;
+      return type === this.sortBy && order === this.sortOrder;
     },
     sortClick(sortConfig) {
-      this.selectedSortType = sortConfig.type;
-      this.selectedSortOrder = sortConfig.order;
+      this.selectedSortBy = sortConfig.sortBy;
+      this.selectedSortOrder = sortConfig.sortOrder;
       this.fetchChartData();
     },
     getSortTitle(type) {
@@ -362,13 +353,11 @@ export default {
   },
 };
 </script>
-
 <style lang="scss">
   // make menu stay in positon while scrolling
   .x-spaces .x-tabs > .body {
     position: relative;
   }
-
   .x-card-header {
     display: flex;
     &.hidden {
@@ -390,7 +379,6 @@ export default {
           cursor: pointer;
           padding: 8px 0;
         }
-
         .actions__search {
           cursor: pointer;
           margin-right: 8px;
