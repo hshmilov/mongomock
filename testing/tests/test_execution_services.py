@@ -272,14 +272,6 @@ def test_execution_modules(
                                'the DNS dissector could crash. '
                                'This was addressed in epan/dissectors/packet-dns.c by avoiding a NULL pointer '
                                'dereference for an empty name in an SRV record.',
-            'cve_references': [
-                'http://www.securityfocus.com/bid/104308',
-                'http://www.securitytracker.com/id/1041036',
-                'https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=14681',
-                'https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=4425716ddba99374749bd033d9bc0f4'
-                'add2fb973',
-                'https://www.wireshark.org/security/wnpa-sec-2018-29.html'
-            ],
             'cve_severity': 'HIGH'
         } in dv_static_analysis
 

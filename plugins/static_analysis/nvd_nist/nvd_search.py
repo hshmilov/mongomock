@@ -135,9 +135,6 @@ class NVDSearcher:
                         cve_description = data['value']
                         break
 
-                cve_references = [x.get('url') for x in cve_raw['cve'].get(
-                    'references', {}).get('reference_data', []) if x.get('url') is not None]
-
                 cve_severity_v2 = ((cve_raw.get('impact') or {}).get(
                     'baseMetricV2') or {}).get('severity')
 
@@ -157,7 +154,6 @@ class NVDSearcher:
                 self.__cve_db[cve_id_from_nvd] = {
                     'id': cve_id_from_nvd,
                     'description': cve_description,
-                    'references': cve_references,
                     'severity_v2': cve_severity_v2,
                     'severity_v3': cve_severity_v3,
                     'cvss_v2': cvss_v2,

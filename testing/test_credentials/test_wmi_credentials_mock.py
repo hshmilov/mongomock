@@ -3133,7 +3133,6 @@ wmi_json_file_mock_devices = {
         "software_cves.cve_severity",
         "software_cves.cve_description",
         "software_cves.cve_synopsis",
-        "software_cves.cve_references",
         "security_patches",
         "security_patches.security_patch_id",
         "security_patches.patch_description",
@@ -3952,14 +3951,6 @@ wmi_json_file_mock_devices = {
                         "name": "cve_synopsis",
                         "title": "CVE Synopsis",
                         "type": "string"
-                    },
-                    {
-                        "items": {
-                            "type": "string"
-                        },
-                        "name": "cve_references",
-                        "title": "CVE References",
-                        "type": "array"
                     }
                 ],
                 "type": "array"
@@ -4039,14 +4030,6 @@ wmi_json_file_mock_devices = {
             "name": "software_cves.cve_synopsis",
             "title": "Vulnerable Software: CVE Synopsis",
             "type": "string"
-        },
-        {
-            "items": {
-                "type": "string"
-            },
-            "name": "software_cves.cve_references",
-            "title": "Vulnerable Software: CVE References",
-            "type": "array"
         },
         {
             "format": "table",
