@@ -1,5 +1,7 @@
 import argparse
 
+from botocore.config import Config
+
 from scripts.automate_dev.latest_ami import get_latest_version
 import boto3
 
@@ -23,7 +25,7 @@ def main():
         version_name = get_latest_version()
 
     try:
-        s3_client = boto3.client('s3')
+        s3_client = boto3.client('s3', config=Config(s3={'use_accelerate_endpoint': True}))
         response = s3_client.generate_presigned_url('get_object',
                                                     Params={'Bucket': 'axonius-releases',
                                                             'Key': f'{version_name}/axonius_{version_name}.py'},
