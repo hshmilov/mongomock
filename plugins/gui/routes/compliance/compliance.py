@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import re
 import io
+from typing import Optional
 
 from flask import (jsonify,
                    make_response)
@@ -161,19 +162,19 @@ class Compliance:
             return return_error(str(e), non_prod_error=True)
 
     @staticmethod
-    def _get_account_ids(accounts):
-        account_ids = []
-        for account_name in accounts:
-            match = re.search(r'\((.+)\)', account_name)
-            if match:
-                # If account includes <name> (<id>).
-                account_ids.append(match.group(1))
-            match = re.match(r'^([\s\d]+)$', account_name)
-            if match:
-                # If account includes only the account id.
-                account_ids.append(match.group(1))
-        return account_ids
+    def _get_account_id(account: str) -> Optional[str]:
+        match = re.search(r'\((.+)\)', account)
+        if match:
+            # If account includes <name> (<id>).
+            return match.group(1)
+        match = re.match(r'^([\s\d]+)$', account)
+        if match:
+            # If account includes only the account id.
+            return match.group(1)
 
+        return None
+
+    # pylint: disable=too-many-locals
     def _send_compliance_email(self, name, schema_fields, accounts, email_props, rules, categories, failed_only,
                                aggregated):
         if not self.mail_sender:
@@ -182,30 +183,57 @@ class Compliance:
         try:
             # Prepare email props.
             subject = email_props.get('mailSubject', '')
-            email_list = email_props.get('emailList', [])
-            email_list_cc = email_props.get('emailListCC', [])
+            email_list = email_props.get('emailList') or []
+            email_list_cc = email_props.get('emailListCC') or []
             email_text_content = email_props.get('mailMessage', '')
             timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
 
-            if email_props.get('accountAdmins'):
-                account_ids = self._get_account_ids(accounts)
-                email_list_admins = get_cloud_admin_users(name, account_ids)
-                logger.info(f'{name} CIS Admin users: {email_list_admins} for accounts: {account_ids}')
-                email_list.extend(email_list_admins)
+            emails_per_account = {}
 
-            if email_list is None or len(email_list) == 0:
+            if email_props.get('accountAdmins'):
+                for account_name in accounts:
+                    account_id = self._get_account_id(account_name)
+                    if not account_id:
+                        logger.critical(f'Could not find account id from account name {account_name}! not sending')
+                        continue
+
+                    email_list_admins = get_cloud_admin_users(name, account_id) or []
+                    logger.info(f'{name} CIS Admin users for account {account_name} with account_id {account_id}: '
+                                f'{str(email_list_admins)}')
+
+                    # if one of the admins are already in emailList, do not send this email again
+                    emails_per_account[account_name] = list(set(email_list_admins) - set(email_list))
+
+            if not email_list and not email_list_cc and not emails_per_account:
                 logger.error('Can\'t send email to an empty list.')
                 return return_error('Send Email Failed', http_status=400)
 
+            # Send to the emailList + emailListCC
             csv_string = self._get_compliance_rules_csv_file(name, schema_fields, accounts,
                                                              rules, categories, failed_only, aggregated)
-
             email = self.mail_sender.new_email(subject,
                                                email_list,
                                                cc_recipients=email_list_cc)
             email.add_attachment(f'axonius-cloud_{timestamp}.csv', csv_string.getvalue().encode('utf-8'),
                                  'text/csv')
             email.send(email_text_content)
+
+            # Send to the accounts
+            for account, emails in emails_per_account.items():
+                try:
+                    if not emails:
+                        continue
+                    logger.info(f'Sending cis report for account {account!r} with emails: {emails}')
+                    csv_string = self._get_compliance_rules_csv_file(name, schema_fields, [account],
+                                                                     rules, categories, failed_only, aggregated)
+                    email = self.mail_sender.new_email(subject,
+                                                       emails,
+                                                       cc_recipients=email_list_cc)
+                    email.add_attachment(f'axonius-cloud_{timestamp}.csv', csv_string.getvalue().encode('utf-8'),
+                                         'text/csv')
+                    email.send(email_text_content)
+                except Exception:
+                    logger.exception(f'Problem sending compliance email for account {account} to {emails}')
 
             return 'Email sent.'
         except Exception:

@@ -2466,7 +2466,7 @@ class PluginBase(Configurable, Feature, ABC):
                                              if 'labels' in entity for label in entity['labels']]
 
                     # Set indication if any of the original adapters has notes
-                    has_notes = any(axonius_entity[HAS_NOTES] for axonius_entity in entities_candidates)
+                    has_notes = any(axonius_entity.get(HAS_NOTES) for axonius_entity in entities_candidates)
 
                     # Get other correlation reasons
                     correlation_reasons = [reason for candidate in entities_candidates if CORRELATION_REASONS

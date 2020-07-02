@@ -3,7 +3,7 @@ import io
 import json
 import logging
 from datetime import datetime
-from typing import Generator
+from typing import Generator, List
 from uuid import uuid4
 
 from pymongo import DESCENDING
@@ -527,47 +527,44 @@ def get_task_full_name(name, pretty_id):
     return f'{name} - Task {pretty_id}'
 
 
-def get_cloud_admin_users(cloud_name, account_ids):
+def get_cloud_admin_users(cloud_name: str, account_id: str) -> List[str]:
     """
         Fetch all cloud (currently aws) admin users.
         Get all users with  AdministratorAccess role. and then, get the users email
         address which can be retrieved from other adapters (the email is fetched not only by aws adapter).
 
         :param cloud_name:  The cis name, like aws or azure,
-        :param account_ids: Array of filtered account ids.
+        :param account_id: The account id
         :return: the admin user emails list.
         """
     try:
-        users_raw_db = PluginBase.Instance._raw_adapter_entity_db_map[EntityType.Users]
+        mail_addresses = []
         users_db = PluginBase.Instance._entity_db_map[EntityType.Users]
 
-        admin_users = users_raw_db.find({
-            'plugin_unique_name': {'$regex': f'{cloud_name}_adapter_*'},
-            'raw_data.attached_policies': 'AdministratorAccess'
-        }, projection={'raw_data': 1})
+        if cloud_name == 'aws':
+            all_administrator_access_users = users_db.find(
+                {
+                    'adapters': {
+                        '$elemMatch': {
+                            'plugin_name': 'aws_adapter',
+                            'data.aws_account_id': str(account_id),
+                            'data.has_administrator_access': True
+                        }
+                    }
+                },
+                projection={
+                    'adapters.data.mail'
+                }
+            )
 
-        mail_addresses = []
-        for user in admin_users:
-            user_id = user['raw_data'].get('UserId', None)
-            if not user_id:
-                continue
-            correlated_admin_users = users_db.find({
-                '$and': [
-                    {'adapters': {'$elemMatch': {
-                        'data.id': user_id,
-                        'data.aws_account_id': {'$in': account_ids},
-                        'plugin_name': f'{cloud_name}_adapter',
-                    }}},
-                    {'adapters': {'$elemMatch': {'data.mail': {'$exists': True}}}}
-                ]
-            }, projection={'adapters': {'$elemMatch': {'data.mail': {'$exists': True}}}})
+            for user in all_administrator_access_users:
+                for adapter in (user.get('adapters') or []):
+                    if (adapter.get('data') or {}).get('mail'):
+                        mail_addresses.append((adapter.get('data') or {}).get('mail'))
 
-            if correlated_admin_users:
-                for correlated_user in correlated_admin_users:
-                    adapter = correlated_user.get('adapters', None)
-                    if not adapter:
-                        continue
-                    mail_addresses.append(adapter[0]['data']['mail'])
+        elif cloud_name == 'azure':
+            # not implemented yet
+            pass
 
         return mail_addresses
     except Exception:

@@ -223,6 +223,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.LockOnExpiry: False,
             FeatureFlagsNames.LockedActions: [],
             FeatureFlagsNames.Bandicoot: False,
+            FeatureFlagsNames.BandicootCompare: False,
             FeatureFlagsNames.ExperimentalAPI: False,
             FeatureFlagsNames.CloudCompliance: {
                 CloudComplianceNames.Visible: False,
