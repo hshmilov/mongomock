@@ -139,11 +139,6 @@
     },
     {
       "type": "shell",
-      "inline": "mv /home/ubuntu/uploads/daemon_json_gce_mirror.json /etc/docker/daemon.json",
-      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    },
-    {
-      "type": "shell",
       "script": "{{user `host_installation`}}{{user `init_host_filename`}}",
       "remote_folder": "/home/ubuntu/",
       "expect_disconnect": true,
