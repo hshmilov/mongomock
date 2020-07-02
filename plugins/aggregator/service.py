@@ -201,7 +201,7 @@ class AggregatorService(Triggerable, PluginBase):
             except Exception as e:
                 # request failed
                 logger.exception(f'Exception while querying adapter {adapter} with client {client_name}: {repr(e)}')
-            if data and data.status_code != 200 or not data.content:
+            if data and data.status_code != 200 or data and not data.content:
                 logger.warning(f'{client_name} client for adapter {adapter} is returned HTTP {data.status_code}.'
                                f' Reason: {str(data.content)}')
                 continue
