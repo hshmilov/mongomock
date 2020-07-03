@@ -18,6 +18,14 @@ export const SAVE_MAINTENANCE_CONFIG = 'SAVE_MAINTENANCE_CONFIG';
 export const START_MAINTENANCE_CONFIG = 'START_MAINTENANCE_CONFIG';
 export const STOP_MAINTENANCE_CONFIG = 'STOP_MAINTENANCE_CONFIG';
 
+export const GET_CERTIFICATE_DETAILS = 'GET_CERTIFICATE_DETAILS';
+export const SET_GLOBAL_SSL_SETTINGS = 'SET_GLOBAL_SSL_SETTINGS';
+export const SET_CERTIFICATE_SETTINGS = 'SET_CERTIFICATE_SETTINGS';
+export const CREATE_CSR = 'CREATE_CSR';
+export const DELETE_CSR = 'DELETE_CSR';
+export const IMPORT_SIGNED_CERTIFICATE = 'IMPORT_SIGNED_CERTIFICATE';
+export const RESET_CERTIFICATE_SETTINGS = 'RESET_CERTIFICATE_SETTINGS';
+
 export const settings = {
   state: {
     configurable: {},
@@ -200,6 +208,52 @@ export const settings = {
             },
           });
         }
+      });
+    },
+    [GET_CERTIFICATE_DETAILS]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/details`,
+        method: 'GET',
+      });
+    },
+    [SET_GLOBAL_SSL_SETTINGS]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/global_ssl`,
+        method: 'POST',
+        data: payload,
+      });
+    },
+    [SET_CERTIFICATE_SETTINGS]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/certificate_settings`,
+        method: 'POST',
+        data: payload,
+      });
+    },
+    [CREATE_CSR]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/csr`,
+        method: 'POST',
+        data: payload,
+      });
+    },
+    [DELETE_CSR]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/csr`,
+        method: 'DELETE',
+      });
+    },
+    [IMPORT_SIGNED_CERTIFICATE]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/import_cert`,
+        method: 'POST',
+        data: payload,
+      });
+    },
+    [RESET_CERTIFICATE_SETTINGS]({ state, dispatch }, payload) {
+      return dispatch(REQUEST_API, {
+        rule: `certificate/reset_to_defaults`,
+        method: 'GET',
       });
     },
   },

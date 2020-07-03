@@ -23,6 +23,7 @@ class SettingsPage(Page):
     DEFAULT_SCHEDULE_RATE = '12'
     DEFAULT_SCHEDILE_DATE = '13:00'
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
+    CERTIFICATE_SETTINGS_CSS = 'li#certificate-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
     IDENTITY_PROVIDERS_SETTINGS_CSS = 'li#identity-providers-tab'
     TUNNEL_SETTINGS_CSS = 'li#tunnel-tab'
@@ -114,10 +115,11 @@ class SettingsPage(Page):
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
-    CERT_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=cert_file]'
-    PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=private_key]'
-    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=cert_file] + div[class=file-name]'
-    PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.global-settings-tab input[id=private_key] ' \
+    CERT_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file]'
+    PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key]'
+    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + ' \
+                                     'div[class=file-name]'
+    PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key] ' \
                                         '+ div[class=file-name]'
     CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab ' \
                                   'input[id=csv_ip_location_file]'
@@ -172,6 +174,7 @@ class SettingsPage(Page):
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
+    ROLE_PANEL_CLOSED = '.role-panel.v-navigation-drawer--close'
     USER_PANEL_CLOSED = '.user-panel.v-navigation-drawer--close'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
     CSS_SELECTOR_ROLE_PANEL_ACTION_BY_NAME = '.role-panel .actions .action-{action_name}'
@@ -297,10 +300,14 @@ class SettingsPage(Page):
     def click_global_settings(self):
         self.driver.find_element_by_css_selector(self.GLOBAL_SETTINGS_CSS).click()
 
+    def click_certificate_settings(self):
+        self.driver.find_element_by_css_selector(self.CERTIFICATE_SETTINGS_CSS).click()
+
     def click_lifecycle_settings(self):
         self.driver.find_element_by_css_selector(self.LIFECYCLE_SETTINGS_CSS).click()
 
     def click_manage_users_settings(self):
+        time.sleep(1.5)
         self.driver.find_element_by_css_selector(self.MANAGE_USERS_CSS).click()
 
     def click_manage_roles_settings(self):
@@ -323,6 +330,8 @@ class SettingsPage(Page):
                                              is_displayed=True)
 
     def click_new_role(self):
+        # wait for the panel animation
+        time.sleep(2)
         self.get_enabled_button(self.ADD_ROLE_BUTTON_TEXT).click()
         # wait for the panel animation
         time.sleep(2)
@@ -511,7 +520,7 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
     def wait_for_role_panel_absent(self):
-        self.wait_for_element_absent_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
+        self.wait_for_element_present_by_css(self.ROLE_PANEL_CLOSED)
 
     def wait_for_user_panel_closed(self):
         self.wait_for_element_present_by_css(self.USER_PANEL_CLOSED)
@@ -667,6 +676,21 @@ class SettingsPage(Page):
     def click_save_global_settings(self):
         self.click_generic_save_button('global-settings-save')
 
+    def click_reset_to_defaults(self):
+        self.find_elements_by_css('.actions-toggle')[0].click()
+        time.sleep(1)
+        self.driver.find_element_by_id('reset_to_defaults').click()
+        self.click_modal_approve()
+
+    def click_modal_approve(self):
+        self.driver.find_element_by_id('approveId').click()
+
+    def click_cancel_csr(self):
+        self.find_element_parent_by_text('Cancel Pending Request').click()
+
+    def get_modal_approve_button_status(self):
+        return not self.is_element_disabled(self.driver.find_element_by_id('approveId'))
+
     def click_save_lifecycle_settings(self):
         self.click_generic_save_button('research-settings-save')
 
@@ -712,11 +736,23 @@ class SettingsPage(Page):
     def find_getting_started_toggle(self):
         return self.find_checkbox_by_label(self.GETTING_STARTED_LABEL)
 
-    def open_global_ssl_toggle(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.GLOBAL_SSL_LABEL)
-        self.click_toggle_button(toggle, make_yes=make_yes)
+    def open_import_key_and_cert_modal(self):
+        self.find_elements_by_css('.actions-toggle')[0].click()
+        time.sleep(0.5)
+        self.driver.find_element_by_id('import_cert_and_key').click()
+
+    def open_generate_csr_modal(self):
+        self.find_elements_by_css('.actions-toggle')[0].click()
+        time.sleep(0.5)
+        self.driver.find_element_by_id('generate_csr').click()
+
+    def open_import_sign_csr_modal(self):
+        self.find_elements_by_css('.actions-toggle')[0].click()
+        time.sleep(0.5)
+        self.driver.find_element_by_id('import_csr').click()
 
     def set_global_ssl_settings(self, hostname: str, cert_data, private_data):
+        self.open_import_key_and_cert_modal()
         self.fill_text_field_by_element_id('hostname', hostname)
         cert_element = self.driver.find_element_by_css_selector(self.CERT_ELEMENT_SELECTOR)
         self.upload_file_on_element(cert_element, cert_data)
@@ -874,8 +910,11 @@ class SettingsPage(Page):
     def wait_email_connection_failure_toaster(self, host):
         return self.wait_for_toaster(f'Could not connect to mail server "{host}"')
 
-    def wait_for_saved_successfully_toaster(self):
-        self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
+    def wait_for_saved_successfully_toaster(self, toaster_message=None):
+        if toaster_message:
+            self.wait_for_toaster(toaster_message)
+        else:
+            self.wait_for_toaster(self.SAVED_SUCCESSFULLY_TOASTER)
 
     def wait_for_role_successfully_created_toaster(self):
         self.wait_for_toaster(self.ROLE_SUCCESSFULLY_CREATED_TOASTER)
@@ -990,9 +1029,9 @@ class SettingsPage(Page):
     def click_stop_remote_access(self):
         self.click_button('Stop', scroll_into_view_container=PAGE_BODY)
 
-    def save_and_wait_for_toaster(self):
+    def save_and_wait_for_toaster(self, toaster_message=None):
         self.click_save_button()
-        self.wait_for_saved_successfully_toaster()
+        self.wait_for_saved_successfully_toaster(toaster_message=toaster_message)
 
     def assert_screen_is_restricted(self):
         assert len(self.driver.find_elements_by_css_selector('li.nav-item.disabled #settings')) == 1

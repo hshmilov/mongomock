@@ -929,6 +929,7 @@ class GuiService(Triggerable,
                     ],
                     'required': ['enabled', 'ca_certificate', 'mandatory'],
                     'name': 'mutual_tls_settings',
+                    'hidden': True,
                     'title': 'Mutual TLS Settings',
                     'type': 'array'
                 },

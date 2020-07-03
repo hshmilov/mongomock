@@ -136,7 +136,8 @@ from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.revving_cache import rev_cached
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase, \
+    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 from axonius.utils.mongo_indices import (
@@ -3153,6 +3154,8 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._smb_settings = config.get('smb_settings') or {}
+        self._global_ssl = config.get('global_ssl') or {}
+        self._ssl_trust_settings = config.get('ssl_trust_settings') or {}
         self._static_analysis_settings = config.get(STATIC_ANALYSIS_SETTINGS) or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
         self.update_fips_status()
@@ -3224,18 +3227,33 @@ class PluginBase(Configurable, Feature, ABC):
             config_key = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
             config_key_no_passphrase = get_private_key_without_passphrase(config_key, global_ssl.get('passphrase'))
 
-            current_cert = open(SSL_CERT_PATH, 'rb').read()
-            current_key = open(SSL_KEY_PATH, 'rb').read()
+            with open(SSL_CERT_PATH, 'rb') as fh:
+                current_cert = fh.read()
+            with open(SSL_KEY_PATH, 'rb') as fh:
+                current_key = fh.read()
 
             if config_cert != current_cert or config_key_no_passphrase != current_key:
-                open(SSL_CERT_PATH, 'wb').write(config_cert)
-                open(SSL_KEY_PATH, 'wb').write(config_key_no_passphrase)
+                with open(SSL_CERT_PATH, 'wb') as fh:
+                    fh.write(config_cert)
+                with open(SSL_KEY_PATH, 'wb') as fh:
+                    fh.write(config_key_no_passphrase)
 
                 # Restart Openresty (NGINX)
                 subprocess.check_call(['openresty', '-s', 'reload'])
 
         else:
-            pass
+            current_cert = open(SSL_CERT_PATH, 'rb').read()
+            axonius_cert = open(SSL_CERT_PATH_LIBS, 'rb').read()
+            if current_cert != axonius_cert:
+                with open(SSL_CERT_PATH, 'wb') as fh:
+                    fh.write(axonius_cert)
+                with open(SSL_KEY_PATH, 'wb') as fh:
+                    with open(SSL_KEY_PATH_LIBS, 'rb') as fhr:
+                        fh.write(fhr.read())
+
+                # Restart Openresty (NGINX)
+                subprocess.check_call(['openresty', '-s', 'reload'])
+
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
 
@@ -3359,11 +3377,12 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': 'enabled',
                             'title': 'Configure custom SSL certificate',
+                            'hidden': True,
                             'type': 'bool'
                         },
                         {
                             'name': 'hostname',
-                            'title': 'Site hostname',
+                            'title': 'Domain name',
                             'type': 'string'
                         },
                         *MANDATORY_SSL_CONFIG_SCHEMA,
@@ -3377,6 +3396,7 @@ class PluginBase(Configurable, Feature, ABC):
                     ],
                     'name': 'global_ssl',
                     'title': 'GUI SSL Settings',
+                    'hidden': True,
                     'type': 'array',
                     'required': ['enabled', 'hostname', 'cert_file', 'private_key']
                 },
@@ -3384,6 +3404,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'ssl_trust_settings',
                     'title': 'SSL Trust & CA Settings',
                     'type': 'array',
+                    'hidden': True,
                     'required': ['enabled', 'ca_files'],
                     'items': [
                         {
@@ -3398,6 +3419,35 @@ class PluginBase(Configurable, Feature, ABC):
                             'items': {
                                 'type': 'file'
                             }
+                        }
+                    ]
+                },
+                {
+                    'required': ['status', 'csr_file', 'subject_name', 'submission_date', 'key_file'],
+                    'name': 'csr_settings',
+                    'format': 'hidden',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': 'status',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'subject_name',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'submission_date',
+                            'type': 'string',
+                            'format': 'date-time'
+                        },
+                        {
+                            'name': 'csr_file',
+                            'type': 'file'
+                        },
+                        {
+                            'name': 'key_file',
+                            'type': 'file'
                         }
                     ]
                 },
@@ -4192,11 +4242,17 @@ class PluginBase(Configurable, Feature, ABC):
                 'enabled': False,
                 'hostname': None,
                 **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
-                'passphrase': b''
+                'passphrase': ''
             },
             'ssl_trust_settings': {
                 'enabled': False,
                 'ca_files': []
+            },
+            'csr_settings': {
+                'status': False,
+                'csr_file': '',
+                'subject_name': '',
+                'submission_date': ''
             },
             'https_log_settings': {
                 'enabled': False,

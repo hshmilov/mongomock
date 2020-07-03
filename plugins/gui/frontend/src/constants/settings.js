@@ -32,3 +32,8 @@ export const vaultProviderEnum = {
     }
   },
 };
+
+export const generateCSRAction = 'generateCSR'
+export const importCertAndKeyAction = 'importCertAndKey'
+export const importCSRAction = 'importCSR'
+export const resetSystemDefaultsAction = 'resetSystemDefaults'

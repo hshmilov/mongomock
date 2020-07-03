@@ -1,14 +1,12 @@
 import csv
 import logging
 import re
-import urllib.parse
 import json
 
 import copy
 from io import StringIO
 from ipaddress import ip_network
 
-import OpenSSL
 import pymongo
 import requests
 from flask import (jsonify, request)
@@ -36,7 +34,6 @@ from axonius.utils.backup import verify_preshared_key
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.smb import SMBClient
-from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import clear_passwords_fields, refill_passwords_fields
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
@@ -181,32 +178,6 @@ class Plugins:
             if not self.is_proxy_allows_web(proxy_settings):
                 return return_error(PROXY_ERROR_MESSAGE, 400)
 
-            global_ssl = config_to_set.get('global_ssl')
-            if global_ssl and global_ssl.get('enabled') is True:
-                config_cert = self._grab_file_contents(global_ssl.get('cert_file'), stored_locally=False)
-                config_private = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
-                try:
-                    parsed_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, config_cert)
-                except Exception:
-                    logger.exception(f'Error loading certificate')
-                    return return_error(
-                        f'Error loading certificate file. Please upload a pem-type certificate file.', 400)
-                cn = dict(parsed_cert.get_subject().get_components())[b'CN'].decode('utf8')
-                if cn != global_ssl['hostname']:
-                    return return_error(f'Hostname does not match the hostname in the certificate file, '
-                                        f'hostname in given cert is {cn}', 400)
-
-                ssl_check_result = False
-                try:
-                    ssl_check_result = check_associate_cert_with_private_key(
-                        config_cert, config_private, global_ssl.get('passphrase')
-                    )
-                except Exception as e:
-                    return return_error(f'Error - can not load ssl settings: {str(e)}', 400)
-
-                if not ssl_check_result:
-                    return return_error(f'Private key and public certificate do not match each other', 400)
-
             try:
                 data_enrichment_settings = config_to_set.get(STATIC_ANALYSIS_SETTINGS, None)
                 if data_enrichment_settings and data_enrichment_settings.get(DEVICE_LOCATION_MAPPING, None) and \
@@ -299,37 +270,7 @@ class Plugins:
                     role_assignment_rules[DEFAULT_ROLE_ID] = config_from_db.\
                         get(external_service, {}).get(ROLE_ASSIGNMENT_RULES, {}).get(DEFAULT_ROLE_ID)
 
-            mutual_tls_settings = config_to_set.get('mutual_tls_settings')
-            if mutual_tls_settings.get('enabled'):
-                is_mandatory = mutual_tls_settings.get('mandatory')
-                client_ssl_cert = request.environ.get('HTTP_X_CLIENT_ESCAPED_CERT')
-
-                if is_mandatory and not client_ssl_cert:
-                    logger.error(f'Client certificate not found in request.')
-                    return return_error(f'Client certificate not found in request. Please make sure your client '
-                                        f'uses a certificate to access Axonius', 400)
-
-                try:
-                    ca_certificate = self._grab_file_contents(mutual_tls_settings.get('ca_certificate'))
-                except Exception:
-                    logger.exception(f'Error getting ca certificate from db')
-                    return return_error(f'can not find uploaded certificate', 400)
-
-                try:
-                    OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_certificate)
-                except Exception:
-                    logger.error(f'Can not load ca certificate', exc_info=True)
-                    return return_error(f'The uploaded file is not a pem-format certificate', 400)
-                try:
-                    if is_mandatory and \
-                            not validate_cert_with_ca(urllib.parse.unquote(client_ssl_cert), ca_certificate):
-                        logger.error(f'Current client certificate is not trusted by the uploaded CA')
-                        return return_error(f'Current client certificate is not trusted by the uploaded CA', 400)
-                except Exception:
-                    logger.error(f'Can not validate current client certificate with the uploaded CA', exc_info=True)
-                    return return_error(f'Current client certificate can not be validated by the uploaded CA', 400)
-
-        self._update_plugin_config(plugin_unique_name, config_name, config_to_set)
+        self._update_plugin_config(plugin_name, config_name, config_to_set)
         return ''
 
     @staticmethod

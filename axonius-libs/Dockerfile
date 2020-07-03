@@ -28,6 +28,7 @@ RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcryp
 # Install axonius-libs.
 COPY src/libs /home/axonius/libs
 COPY src/hacks /home/axonius/hacks
+COPY src/keys /home/axonius/keys
 RUN pip3 install -e /home/axonius/libs/axonius-py
 
 # Notice that supervisord runs a couple of processes (look at supervisord.conf).

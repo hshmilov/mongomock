@@ -186,11 +186,7 @@ class TestGlobalSettings(TestBase):
         and then disabled the checkbox again, the save button gets enabled again.
         I.e, make sure validation checks are deactivated once the settings group isn't chosen
         - First step: Check that the save buttons behaves like it should for Amazon settings.
-        - Second step: Check that the save button gets disabled and enabled for the "GUI SSL Settings" just to
-          check consistency.
-          This check is also important because the "GUI SSL Settings" has a "file type" input field.
-          So we check to see that this "file type" input field gets valid once the settings is un-checked.
-        - Third step: Check that if there was an existing error (including error message), and there
+        - Second step: Check that if there was an existing error (including error message), and there
           is also an error from the Amazon settings, that after we un-check the amazon settings,
           the previous error (including error message) still appears.
           * In the middle also checks that after settings the bucket name for amazon
@@ -211,12 +207,6 @@ class TestGlobalSettings(TestBase):
         assert not self.settings_page.is_save_button_disabled()
 
         # Second step
-        self.settings_page.set_gui_ssl_settings_enabled()
-        assert self.settings_page.is_save_button_disabled()
-        self.settings_page.set_gui_ssl_settings_enabled(False)
-        assert not self.settings_page.is_save_button_disabled()
-
-        # Third step
         self.settings_page.set_correlation_schedule_settings_enabled()
         self.settings_page.fill_correlation_hours_interval(0)
         self.settings_page.key_down_tab()
