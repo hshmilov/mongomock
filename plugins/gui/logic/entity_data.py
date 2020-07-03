@@ -141,6 +141,26 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             'type': 'string'
         },
         {
+            'name': 'os.os_str_preferred',
+            'title': 'Preferred Full OS String',
+            'type': 'string'
+        },
+        {
+            'name': 'os.bitness_preferred',
+            'title': 'Preferred OS Bitness',
+            'type': 'string'
+        },
+        {
+            'name': 'os.kernel_version_preferred',
+            'title': 'Preferred OS Kernel Version',
+            'type': 'string'
+        },
+        {
+            'name': 'os.build_preferred',
+            'title': 'Preferred OS Build',
+            'type': 'string'
+        },
+        {
             'name': 'network_interfaces.mac_preferred',
             'title': 'Preferred MAC Address',
             'type': 'string'
@@ -148,6 +168,16 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
         {
             'name': 'network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
+            'type': 'string'
+        },
+        {
+            'name': 'device_model_preferred',
+            'title': 'Preferred Device Model',
+            'type': 'string'
+        },
+        {
+            'name': 'domain_preferred',
+            'title': 'Preferred Domain',
             'type': 'string'
         },
         {

@@ -1358,6 +1358,26 @@ def entity_fields(entity_type: EntityType):
             'type': 'string'
         },
         {
+            'name': 'specific_data.data.os.os_str_preferred',
+            'title': 'Preferred Full OS String',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.os.bitness_preferred',
+            'title': 'Preferred OS Bitness',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.os.kernel_version_preferred',
+            'title': 'Preferred OS Kernel Version',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.os.build_preferred',
+            'title': 'Preferred OS Build',
+            'type': 'string'
+        },
+        {
             'name': 'specific_data.data.network_interfaces.mac_preferred',
             'title': 'Preferred MAC Address',
             'type': 'string'
@@ -1365,6 +1385,16 @@ def entity_fields(entity_type: EntityType):
         {
             'name': 'specific_data.data.network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.device_model_preferred',
+            'title': 'Preferred Device Model',
+            'type': 'string'
+        },
+        {
+            'name': 'specific_data.data.domain_preferred',
+            'title': 'Preferred Domain',
             'type': 'string'
         }
     ]

@@ -890,7 +890,6 @@ def convert_db_projection_to_view(projection):
 
         if field in ['adapters']:
             continue
-
         if splitted[0] == SPECIFIC_DATA:
             splitted[0] = 'adapters'
             if splitted[-1].endswith(PREFERRED_SUFFIX):
@@ -901,7 +900,7 @@ def convert_db_projection_to_view(projection):
                 save_last = splitted[-1]
                 del splitted[-1]
                 # pylint: disable=W0106
-                [splitted.append(x) for x in save_last.replace(PREFERRED_SUFFIX, '').split('_')]
+                splitted.append(save_last.replace(PREFERRED_SUFFIX, ''))
             view_projection['.'.join(splitted)] = v
             splitted[0] = 'tags'
             view_projection['.'.join(splitted)] = v
