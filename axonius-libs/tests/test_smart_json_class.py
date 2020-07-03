@@ -281,3 +281,33 @@ def test_smart_json_class_multiple_inheritance():
         'field_3': '3',
         'field_4': 4
     }
+
+
+def test_multiple_inheritance_override():
+    class SomeBase1(SmartJsonClass):
+        generic_name = Field(str, 'Generic Name')
+
+    class SomeBase2(SmartJsonClass):
+        source = Field(str, 'source')
+
+    # The declaration of this class is important. We are testing the meta-class and so there is a code that runs here.
+    class MyDeviceTest(SomeBase1, SomeBase2):
+        name = Field(str, 'name')
+
+    # In the past, we had a bug in which SomeBase1 would be extended right now to have the fileds of SomeBase2,
+    # Even if the class was only declared and not used.
+    # The following test checks that it doesn't happen again
+
+    def create_my_device_test_2():
+        class MyDeviceTest2(SomeBase1):
+            source = Field(str, 'source')
+
+        return MyDeviceTest2()
+
+    assert create_my_device_test_2().get_fields_info() == {
+        'items': [
+            {'name': 'source', 'type': 'string', 'title': 'source'},
+            {'name': 'generic_name', 'type': 'string', 'title': 'Generic Name'}
+        ],
+        'type': 'array'
+    }

@@ -39,9 +39,9 @@ class SmartJsonClassMetaclass(type):
         # append a list of the original fields to the class
         base_fields = []
         if bases:
-            base_fields = getattr(bases[0], 'fields_info', [])
+            base_fields = list(getattr(bases[0], 'fields_info', []))
             for more_bases in bases[1:]:
-                base_fields.extend(getattr(more_bases, 'fields_info', []))
+                base_fields.extend(list(getattr(more_bases, 'fields_info', [])))
 
         # Check multiple inheritance conflicts
         assert sorted(list(set([field.name for field in base_fields]))) == sorted(

@@ -69,6 +69,11 @@ class RESTConnection(ABC):
         self._password = password
         self._apikey = apikey
         self._verify_ssl = verify_ssl
+        # Due to an old bug some http/https proxy values are bool in the db (because of a false old schema)
+        if not isinstance(http_proxy, str):
+            http_proxy = None
+        if not isinstance(https_proxy, str):
+            https_proxy = None
         self._http_proxy = http_proxy
         self._https_proxy = https_proxy
         self._url_base_prefix = url_base_prefix
