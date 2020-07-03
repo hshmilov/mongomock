@@ -255,12 +255,16 @@ def _concat_rules_results(target_rule, secondary_rule):
     target_rule_results = target_rule.get('results')
     if not target_rule_results:
         return
-    secondary_rule_results = secondary_rule.get('results')
-    target_rule_results['failed'] = target_rule_results.get('failed') + secondary_rule_results.get('failed')
-    target_rule_results['checked'] = target_rule_results.get('checked') + secondary_rule_results.get('checked')
+    secondary_rule_results = secondary_rule.get('results', {}) or {} if secondary_rule else {}
+    if not secondary_rule_results:
+        return
+    target_rule_results['failed'] = target_rule_results.get('failed', 0) + secondary_rule_results.get('failed', 0)
+    target_rule_results['checked'] = target_rule_results.get('checked', 0) + secondary_rule_results.get('checked', 0)
 
-    target_rule['affected_entities'] = target_rule.get('affected_entities') + secondary_rule.get('affected_entities')
-    target_rule['entities_results'] = f'{target_rule["entities_results"]} \n{secondary_rule["entities_results"]}'
+    target_rule['affected_entities'] = target_rule.get('affected_entities') + \
+        secondary_rule.get('affected_entities', '')
+    target_rule['entities_results'] = f'{target_rule["entities_results"]} \n{secondary_rule["entities_results"]}' \
+        if secondary_rule.get('affected_entities') else target_rule.get('entities_results', '')
 
 
 def _replace_entities_results_query(aggregated_rules, accounts_ids):
