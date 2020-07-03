@@ -6,6 +6,8 @@ from typing import List, Tuple
 import docker
 from SE.se import AXONIUS_SH
 from axonius.consts.system_consts import WEAVE_PATH, AXONIUS_DNS_SUFFIX
+from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, create_lock_file, \
+    WEAVE_WATCHDOG_IN_PROGRESS
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.axonius_service import AxoniusService
 from services.weave_service import is_weave_up
@@ -14,13 +16,14 @@ SLEEP_SECONDS = 60
 CORTEX_CWD = '/home/ubuntu/cortex'
 SCRIPT_TIMEOUT = 60
 WEAVE_IP_REGEX = r'(.*)/\d+'
+ERROR_SLEEP_TIME = 60
 
 
 class WeaveDNSTask(WatchdogTask):
 
     def run(self):
         while True:
-            if is_weave_up():
+            if is_weave_up() and not check_installer_locks() and not check_watchdog_action_in_progress():
                 self.check_weave_dns_status()
             time.sleep(SLEEP_SECONDS)
 
@@ -61,6 +64,11 @@ class WeaveDNSTask(WatchdogTask):
                     try:
                         if self.check_name_registered_in_weave(container_id):
                             continue
+                        # see if the problem persists
+                        time.sleep(ERROR_SLEEP_TIME)
+                        if self.check_name_registered_in_weave(container_id):
+                            continue
+                        create_lock_file(WEAVE_WATCHDOG_IN_PROGRESS)
                         fixed = self.fix_container_dns(client=client,
                                                        container_id=container_id,
                                                        container_ip=container_ip,
@@ -71,6 +79,9 @@ class WeaveDNSTask(WatchdogTask):
                         self.report_error(f'Error while registering dns for {container_id} - {str(e)}')
         except Exception as e:
             self.report_error(f'Error while checking weave dns status: {e}')
+        finally:
+            if WEAVE_WATCHDOG_IN_PROGRESS.is_file():
+                WEAVE_WATCHDOG_IN_PROGRESS.unlink()
 
     # pylint: disable=W0212
     def fix_container_dns(self, client: docker.APIClient,
