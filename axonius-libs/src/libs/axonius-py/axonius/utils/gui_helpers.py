@@ -759,7 +759,8 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                             v[0], list) else v[0][complicated_field[0]]
                     complicated_field = complicated_field[1:]
                 return values
-            return [(entity_adapter[field_path], entity_adapter['last_seen'] if 'last_seen' in entity_adapter else None)
+            return [(entity_adapter[field_path] if field_path in entity_adapter else None,
+                     entity_adapter['last_seen'] if 'last_seen' in entity_adapter else None)
                     for entity_adapter in entity_data['adapters_data'][specific_adapter]]
         except Exception:
             logger.warning('An error parsing field from specific adapter', exc_info=True)
