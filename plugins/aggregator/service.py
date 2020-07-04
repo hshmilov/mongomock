@@ -122,7 +122,8 @@ class AggregatorService(Triggerable, PluginBase):
         :return: yields client of each adapter and its final data count
         """
         clients = {adapter_clients: [db_results['client_id'] for adapter_clients in adapters for
-                                     db_results in self._get_db_connection()[adapter_clients]['clients'].find(projection={
+                                     db_results in
+                                     self._get_db_connection()[adapter_clients]['clients'].find(projection={
                                          'client_id': True,
                                          '_id': False
                                      })] for adapter_clients in adapters}
@@ -201,11 +202,23 @@ class AggregatorService(Triggerable, PluginBase):
             except Exception as e:
                 # request failed
                 logger.exception(f'Exception while querying adapter {adapter} with client {client_name}: {repr(e)}')
-            if data and data.status_code != 200 or not data.content:
-                logger.warning(f'{client_name} client for adapter {adapter} is returned HTTP {data.status_code}.'
-                               f' Reason: {str(data.content)}')
+            try:
+                if data:
+                    if data.status_code != 200 or not data.content:
+                        logger.warning(
+                            f'{client_name} client for adapter {adapter} is returned HTTP {data.status_code}.'
+                            f' Reason: {str(data.content)}')
+                        continue
+                yield client_name, from_json(data.content)
+            except Exception:
+                try:
+                    data_status_code = data.status_code
+                except Exception:
+                    data_status_code = 'unknown'
+                logger.warning(
+                    f'{client_name} client for adapter {adapter} is returned HTTP {data_status_code}.'
+                    f' From unknown reason')
                 continue
-            yield client_name, from_json(data.content)
 
     def _create_daily_historic_collection(self, entity_type, col, date):
         if get_free_disk_space() < MIN_DISK_SIZE:
@@ -294,19 +307,19 @@ class AggregatorService(Triggerable, PluginBase):
                            "_id": 0
                        }},
                        {
-                       "$addFields": {
-                           "accurate_for_datetime": {
-                               "$literal": now
-                           },
-                           "short_axon_id": {
-                               "$substrCP": [
-                                   "$internal_axon_id", 0, 1
-                               ]
+                           "$addFields": {
+                               "accurate_for_datetime": {
+                                   "$literal": now
+                               },
+                               "short_axon_id": {
+                                   "$substrCP": [
+                                       "$internal_axon_id", 0, 1
+                                   ]
+                               }
                            }
-                       }
                    },
                        {
-                       "$merge": to_db.name
+                           "$merge": to_db.name
                    }
                    ],)),
             Thread(target=self.call_safe_collection_transfer,
@@ -395,7 +408,7 @@ class AggregatorService(Triggerable, PluginBase):
         calls /clean_devices on the given adapter unique name
         :return:
         '''
-        if self.devices_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1) or\
+        if self.devices_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1) or \
                 self.users_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1):
             response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
 
