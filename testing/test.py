@@ -272,7 +272,8 @@ class InstanceManager:
         :return:
         """
         free_instances = self.__instances.copy()
-        free_instances_lock = threading.Lock()
+        instances_lists_lock = threading.Lock()
+        instances_in_use = []
         tests_statistics = []
         tests_with_exceptions = []
         last_exception = ValueError('General Error')
@@ -283,8 +284,9 @@ class InstanceManager:
             # Do note this function runs in different threads and thus should be thread-safe in terms of printing.
             # We use the flow-id feature of teamcity to achieve this.
             start_time = time.time()
-            with free_instances_lock:
+            with instances_lists_lock:
                 instance_to_run_on = free_instances.pop()
+                instances_in_use.append(instance_to_run_on)
 
             try:
                 current_output = self.__ssh_execute(instance_to_run_on, command_job_name, command)
@@ -353,7 +355,8 @@ class InstanceManager:
 
             print('Finished artifacts db backup')
 
-            with free_instances_lock:
+            with instances_lists_lock:
+                instances_in_use.remove(instance_to_run_on)
                 free_instances.append(instance_to_run_on)
 
             return instance_to_run_on, current_output, time.time() - start_time, start_time
@@ -381,9 +384,9 @@ class InstanceManager:
             })
             jobs_left.pop(job_name)
             print(f'Jobs left: {jobs_left.keys()}')
-            with free_instances_lock:
+            with instances_lists_lock:
                 redundant_instances = []
-                for _ in range(len(free_instances) - len(jobs_left)):
+                for _ in range(len(free_instances) - len(jobs_left) + len(instances_in_use)):
                     redundant_instances.append(free_instances.pop())
             print(f'Removing {len(redundant_instances)} redundant instances.')
             for instance_to_delete in redundant_instances:
