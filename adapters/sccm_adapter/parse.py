@@ -54,6 +54,18 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
         except Exception:
             logger.warning(f'Problem getting services', exc_info=True)
 
+        disks_dict = dict()
+        try:
+            for disks_data in client_data.query(_wrap_query_with_resource_id(consts.DISKS_QUERY, device_id)):
+                asset_id = disks_data.get('ResourceID')
+                if not asset_id:
+                    continue
+                if asset_id not in disks_dict:
+                    disks_dict[asset_id] = []
+                disks_dict[asset_id].append(disks_data)
+        except Exception:
+            logger.warning(f'Problem getting Shares', exc_info=True)
+
         shares_dict = dict()
         try:
             for share_data in client_data.query(_wrap_query_with_resource_id(consts.SHARES_QUERY, device_id)):
@@ -476,6 +488,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             device_raw['drivers_data'] = drivers_dict.get(device_raw.get('ResourceID'))
             device_raw['network_drivers_data'] = network_drivers_dict.get(device_raw.get('ResourceID'))
             device_raw['share_data'] = shares_dict.get(device_raw.get('ResourceID'))
+            device_raw['disks_data'] = disks_dict.get(device_raw.get('ResourceID'))
             device_raw['svc_data'] = svc_dict.get(device_raw.get('ResourceID'))
             device_raw['top_data'] = asset_top_dict.get(device_raw.get('ResourceID'))
             device_raw['compliance_data'] = compliance_dict.get(device_raw.get('ResourceID'))

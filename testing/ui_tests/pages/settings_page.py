@@ -1596,15 +1596,6 @@ class SettingsPage(Page):
     def enable_auto_querying(self):
         self.toggle_auto_querying(make_yes=True)
 
-    def set_notify_on_adapters_fetch(self, enable=True):
-        self.switch_to_page()
-        self.click_global_settings()
-        self.wait_for_spinner_to_end()
-        toggle = self.find_notify_on_adapters_fetch_toggle()
-        self.click_toggle_button(toggle, make_yes=enable, scroll_to_toggle=True)
-        self.click_save_button()
-        self.wait_for_saved_successfully_toaster()
-
     def toggle_compliance_visible_feature(self, show_feature):
         cloud_visible_toggle = self.find_checkbox_by_label('Cloud Visible')
         self.click_toggle_button(cloud_visible_toggle, make_yes=show_feature)

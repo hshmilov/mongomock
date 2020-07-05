@@ -42,7 +42,7 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
-OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin']
+OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin', 'catalina']
 MAC_NAMES = ['os x', 'osx', 'macos', 'mac os', 'macbook']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
@@ -154,6 +154,7 @@ def get_manufacturer_from_mac(mac: str) -> Optional[str]:
         except Exception as e:
             logger.exception(f'Error in parsing mac vendor: {e}')
             return None
+    return None
 
 
 def normalize_var_name(name):
@@ -314,7 +315,7 @@ def figure_out_os(s):
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
         linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo',
-                               'Arch', 'Oracle', 'SuSe']
+                               'Arch', 'Oracle', 'SuSe', 'Centos']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:

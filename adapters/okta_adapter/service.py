@@ -1,11 +1,13 @@
+import datetime
 import hashlib
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.smart_json_class import SmartJsonClass
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -15,6 +17,17 @@ from okta_adapter.connection import OktaConnection
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+class ClientData(SmartJsonClass):
+    published = Field(datetime.datetime, 'Published')
+    ip = Field(str, 'IP')
+    device = Field(str, 'Device')
+    browser = Field(str, 'Browser')
+    os = Field(str, 'OS')
+    city = Field(str, 'City')
+    state = Field(str, 'State')
+    country = Field(str, 'Country')
+
+
 class OktaAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         pass
@@ -22,6 +35,7 @@ class OktaAdapter(AdapterBase, Configurable):
     class MyUserAdapter(UserAdapter):
         # pylint: disable=R0902
         manager_id = Field(str, 'Manager ID')
+        user_clients = ListField(ClientData, 'User Clients')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -48,7 +62,8 @@ class OktaAdapter(AdapterBase, Configurable):
     def _query_users_by_client(self, client_name, client_data):
         return client_data.get_users(self.__parallel_requests,
                                      fetch_apps=self.__fetch_apps,
-                                     fetch_factors=self.__fetch_factors)
+                                     fetch_factors=self.__fetch_factors,
+                                     fetch_logs=self.__fetch_logs)
 
     def _clients_schema(self):
         return {
@@ -102,6 +117,32 @@ class OktaAdapter(AdapterBase, Configurable):
                     # according to `user_adapter.py` - a username is required for every User adapter
                     logger.error('User without email and login from Okta')
                     continue
+                log_data = user_raw.get('log_data')
+                if not isinstance(log_data, list):
+                    log_data = []
+                for log_raw in log_data:
+                    try:
+                        client_raw = log_raw.get('client')
+                        if not isinstance(client_raw, dict):
+                            client_raw = {}
+                        user_agent = client_raw.get('userAgent')
+                        if not isinstance(user_agent, dict):
+                            user_agent = {}
+                        geographical_context = client_raw.get('geographicalContext')
+                        if not isinstance(geographical_context, dict):
+                            geographical_context = {}
+
+                        client_obj = ClientData(published=parse_date(log_raw.get('published')),
+                                                ip=client_raw.get('ipAddress'),
+                                                device=client_raw.get('device'),
+                                                browser=user_agent.get('browser'),
+                                                os=user_agent.get('os'),
+                                                city=geographical_context.get('city'),
+                                                state=geographical_context.get('state'),
+                                                country=geographical_context.get('country'))
+                        user.user_clients.append(client_obj)
+                    except Exception:
+                        logger.exception(f'Problem with log {log_raw}')
                 user.first_name = profile.get('firstName')
                 user.last_name = profile.get('lastName')
                 user.user_telephone_number = profile.get('mobilePhone')
@@ -182,12 +223,18 @@ class OktaAdapter(AdapterBase, Configurable):
                     'name': 'parallel_requests',
                     'title': 'Number of parallel requests',
                     'type': 'integer'
+                },
+                {
+                    'name': 'fetch_logs',
+                    'type': 'bool',
+                    'title': 'Fetch Logs'
                 }
             ],
             'required': [
                 'fetch_apps',
                 'parallel_requests',
-                'fetch_factors'
+                'fetch_factors',
+                'fetch_logs'
             ],
             'pretty_name': 'Okta Configuration',
             'type': 'array'
@@ -198,6 +245,7 @@ class OktaAdapter(AdapterBase, Configurable):
         return {
             'fetch_apps': False,
             'fetch_factors': False,
+            'fetch_logs': False,
             'parallel_requests': 75
         }
 
@@ -205,3 +253,4 @@ class OktaAdapter(AdapterBase, Configurable):
         self.__fetch_apps = config['fetch_apps']
         self.__parallel_requests = config['parallel_requests']
         self.__fetch_factors = config.get('fetch_factors')
+        self.__fetch_logs = config.get('fetch_logs')

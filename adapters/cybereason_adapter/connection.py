@@ -54,6 +54,31 @@ class CybereasonConnection(RESTConnection):
         response = self._post('rest/sensors/query', body_params=query_dict)
         yield from response['sensors']
 
+    def tag_sensor(self, machine_name, tags_dict):
+        tags_url = 'rest/tagging/process_tags'
+        tags_json = {}
+        for tag_name in tags_dict:
+            tags_json[tag_name] = {'value': tags_dict[tag_name], 'operation': 'SET'}
+        body_params = {'entities': {machine_name: {'tags': tags_json, 'entityType': 'MACHINE'}}}
+        self._post(tags_url, body_params=body_params)
+        query_dict = {'filters': [{'fieldName': 'status',
+                                   'operator': 'NotEquals',
+                                   'values': ['Archived']
+                                   },
+                                  {'fieldName': 'machineName',
+                                   'operator': 'Equals',
+                                   'values': [str(machine_name)]
+                                   }
+                                  ],
+                      'sortingFieldName': 'machineName',
+                      'sortDirection': 'ASC',
+                      'limit': 1,
+                      'offset': 0,
+                      'batchId': None
+                      }
+        response = self._post('rest/sensors/query', body_params=query_dict)
+        return response['sensors'][0]
+
     def update_isolate_status(self, pylum_id, do_isolate):
         if not do_isolate:
             command_url = 'rest/monitor/global/commands/un-isolate'

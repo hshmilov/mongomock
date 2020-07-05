@@ -51,6 +51,7 @@ MALWARE_QUERY = 'Select ResourceID, EngineVersion, Version, LastFullScanDateTime
                 'ProductStatus, LastQuickScanDateTimeEnd, Enabled from v_GS_AntimalwareHealthStatus'
 LENOVO_QUERY = 'select ResourceID, Version0 from v_GS_COMPUTER_SYSTEM_PRODUCT'
 CHASIS_QUERY = 'select ResourceID, ChassisTypes0 from v_GS_SYSTEM_ENCLOSURE'
+DISKS_QUERY = 'select ResourceID, FreeSpace0, Size0, DeviceID0 from v_GS_LOGICAL_DISK'
 ENCRYPTION_QUERY = 'select ResourceID,DriveLetter0,ProtectionStatus0 from v_GS_ENCRYPTABLE_VOLUME'
 VM_QUERY = 'select ResourceID, ' \
            'DNSName0, IPAddress0, State0, VMName0, Path0, Type0, TimeStamp from V_GS_VIRTUAL_MACHINES'

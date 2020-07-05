@@ -19,6 +19,7 @@ class StaticUsersCorrelatorService(CorrelatorBase):
                                                       'email_prefix_correlation': self._email_prefix_correlation,
                                                       'correlate_only_on_username_domain':
                                                           self._correlate_only_on_username_domain,
+                                                      'username_aws_correlation': self._username_aws_correlation,
                                                       'ad_display_name_correlation':
                                                           self._ad_display_name_correlation})
 

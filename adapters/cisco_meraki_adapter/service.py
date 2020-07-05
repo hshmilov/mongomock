@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
+from axonius.utils.parsing import get_manufacturer_from_mac
 from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection, RESTException
@@ -204,7 +205,12 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                 hostname = client_raw.get('mdnsName')
             if str(hostname).lower().endswith('.local'):
                 hostname = str(hostname)[:-len('.local')]
-            device.hostname = hostname
+            mac_manufacturer = get_manufacturer_from_mac(mac_address)
+            if not mac_manufacturer:
+                mac_manufacturer = ''
+            mac_manufacturer = mac_manufacturer.lower()
+            if 'cisco meraki' not in mac_manufacturer:
+                device.hostname = hostname
             try:
                 ip_addresses = list(client_raw.get('ip'))
                 if ip_addresses or mac_address:

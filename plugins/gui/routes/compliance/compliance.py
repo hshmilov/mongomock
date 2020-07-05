@@ -266,15 +266,15 @@ class Compliance:
         csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
         timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)
         file_name = f'axonius - cloud_{timestamp}.csv'
-        message = PluginBase.Instance.create_jira_ticket(jira_props.get('project_key'),
-                                                         jira_props.get('incident_title'),
-                                                         jira_props.get('incident_description'),
-                                                         jira_props.get('issue_type'),
-                                                         assignee=jira_props.get('assignee'),
-                                                         labels=jira_props.get('labels'),
-                                                         components=jira_props.get('components'),
-                                                         csv_file_name=file_name,
-                                                         csv_bytes=csv_bytes)
+        message, permalink = PluginBase.Instance.create_jira_ticket(jira_props.get('project_key'),
+                                                                    jira_props.get('incident_title'),
+                                                                    jira_props.get('incident_description'),
+                                                                    jira_props.get('issue_type'),
+                                                                    assignee=jira_props.get('assignee'),
+                                                                    labels=jira_props.get('labels'),
+                                                                    components=jira_props.get('components'),
+                                                                    csv_file_name=file_name,
+                                                                    csv_bytes=csv_bytes)
         if message:
             return return_error('Creating Jira issue failed', http_status=500)
         return make_response('Jira issue created.', 200)

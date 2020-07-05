@@ -22,7 +22,7 @@ def get_ad_upn(adapter_data):
 
 def get_aws_username(adapter_data):
     if adapter_data.get('plugin_name') in ['aws_adapter', 'axonius_users_adapter'] and get_username(adapter_data) \
-            and 'service_account@' not in get_username(adapter_data):
+            and 'service_account@' not in get_username(adapter_data) and 'admin' not in get_username(adapter_data):
         return get_username(adapter_data)
     return None
 
@@ -66,7 +66,7 @@ def get_ad_display_name(adapter_data):
 
 def get_ad_display_name_username(adapter_data):
     ad_display_name = get_ad_display_name(adapter_data)
-    if ad_display_name:
+    if ad_display_name and ad_display_name not in ['admin']:
         return ad_display_name
     username = get_username(adapter_data)
     if username:
@@ -376,7 +376,8 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
             yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
             yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
         yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
-        yield from self._correlate_username_aws(normalize_adapter_users(entities))
+        if self._correlation_config and self._correlation_config.get('username_aws_correlation') is True:
+            yield from self._correlate_username_aws(normalize_adapter_users(entities))
         yield from self._correlate_username_domain(normalize_adapter_users(entities))
         yield from self._correlate_username_due_no_mail(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:

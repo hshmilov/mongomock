@@ -44,6 +44,7 @@ from reports.action_types.alert.send_csv_to_scp import SendCsvToScp
 from reports.action_types.base.run_linux_command import RunLinuxCommand
 from reports.action_types.alert.create_cherwell_incident import CherwellIncidentAction
 from reports.action_types.base.tenable_io_create_asset import TenableIoCreateAsset
+from reports.action_types.base.cybereason_tags import CybereasonTagAction
 from reports.action_types.alert.create_zendesk_ticket import ZendeskTicketAction
 from reports.action_types.alert.create_remedy_ticket import RemedyTicketAction
 from reports.action_types.base.portnox_enrichment import PortnoxEnrichment
@@ -91,6 +92,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,
     'cybereason_isolate': CybereasonIsolateAction,
     'cybereason_unisolate': CybereasonUnisolateAction,
+    'cybereason_tag': CybereasonTagAction,
     'tenable_sc_add_ips_to_asset': TenableScAddIPsToAsset,
     'tenable_io_add_ips_to_target_group': TenableIoAddIPsToTargetGroup,
     'send_email_to_entities': SendEmailToEntities,

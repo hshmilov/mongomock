@@ -360,7 +360,18 @@ class SccmAdapter(AdapterBase, Configurable):
                                 logger.exception(f'Problem with service data {svc_data}')
                 except Exception:
                     logger.exception(f'Problem getting services data dor {device_raw}')
-
+                try:
+                    if isinstance(device_raw['disks_data'], list):
+                        for disks_data in device_raw['disks_data']:
+                            try:
+                                free_space = disks_data.get('FreeSpace0')
+                                size_space = disks_data.get('Size0')
+                                hd_name = disks_data.get('DeviceID0')
+                                device.add_hd(total_size=size_space, free_size=free_space, device=hd_name)
+                            except Exception:
+                                logger.exception(f'Problem with share data {disks_data}')
+                except Exception:
+                    logger.exception(f'Problem getting disks data dor {device_raw}')
                 try:
                     if isinstance(device_raw['share_data'], list):
                         for share_data in device_raw['share_data']:
