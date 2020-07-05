@@ -32,7 +32,7 @@ def views_generator(base_permission_category: PermissionCategory):
         @gui_route_logged_in(methods=['PUT'], proceed_and_set_access=True)
         def add_entity_views(self, no_access):
             """
-            Add/ Update views over the devices db
+            Add views over the devices db
             :return:
             """
             # If there are no permissions, also check that the request doesn't relate to the private query

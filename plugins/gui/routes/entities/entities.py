@@ -186,7 +186,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         if not self.is_axonius_user():
             view_to_update[LAST_UPDATED_FIELD] = datetime.now()
             view_to_update[UPDATED_BY_FIELD] = get_connected_user_id()
-            view_to_update['user_id'] = get_connected_user_id()
+        view_to_update['user_id'] = get_connected_user_id()
         update_result = entity_views_collection.find_one_and_update({
             'name': view_data['name']
         }, {
