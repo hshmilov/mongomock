@@ -2,7 +2,6 @@ import subprocess
 import time
 
 import paramiko
-import pytest
 from retry.api import retry_call
 from selenium.common.exceptions import NoSuchElementException
 
@@ -14,8 +13,6 @@ from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NOD
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
-
-    @pytest.mark.skip('Might get all tests after stuck.')
     def test_instances_after_join(self):
         self.put_customer_conf_file()
 

@@ -496,7 +496,7 @@ class QualysScansConnection(RESTConnection):
 
             return hosts
         except Exception as e:
-            logger.warning(f'Failed getting hosts with {e}')
+            logger.warning(f'Failed getting hosts with {e}', exc_info=True)
             return {}
 
     # pylint: disable=too-many-branches

@@ -43,6 +43,7 @@ class Action(Enum):
     carbonblack_isolate = 'Isolate in Carbon Black CB Response'
     cybereason_isolate = 'Isolate in Cybereason Deep Detect & Respond'
     cybereason_unisolate = 'Unisolate in Cybereason Deep Detect & Respond'
+    cybereason_tag = 'Tag in Cybereason Deep Detect & Respond'
     notify_syslog = 'Send to Syslog System'
     tag = 'Add Tag'
     untag = 'Remove Tag'

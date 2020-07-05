@@ -24,6 +24,7 @@ class CybereasonAdapter(AdapterBase, Configurable):
         ransomware_status = Field(str, 'Ransomware Status')
         isolated = Field(bool, 'Isolated')
         prevention_status = Field(str, 'Prevention Status')
+        sensor_id = Field(str, 'Sensor ID')
         pylum_id = Field(str, 'Pylum ID')
         custom_tags = ListField(str, 'Custom Tags')
         remote_shell_status = Field(str, 'Remote Shell Status')
@@ -141,6 +142,7 @@ class CybereasonAdapter(AdapterBase, Configurable):
                                      version=device_raw.get('version'),
                                      status=device_raw.get('status'))
             device.id = sensor_id + '_' + (device_raw.get('machineName') or '')
+            device.sensor_id = sensor_id
             name = device_raw.get('machineName')
             device.name = name
             hostname = device_raw.get('fqdn') or device_raw.get('machineName')
@@ -202,6 +204,32 @@ class CybereasonAdapter(AdapterBase, Configurable):
     @add_rule('unisolate_device', methods=['POST'])
     def unisolate_device(self):
         return self._parse_isolating_request(False)
+
+    @add_rule('tag_sensor', methods=['POST'])
+    def tag_sensor(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            cybereason_response_dict = self.get_request_data_as_object()
+            machine_name = cybereason_response_dict.get('machine_name')
+            tags_dict = cybereason_response_dict.get('tags_dict')
+            client_id = cybereason_response_dict.get('client_id')
+            cybereason_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with cybereason_obj:
+                device_raw = cybereason_obj.tag_sensor(machine_name, tags_dict)
+            if not device_raw:
+                return return_error('Problem tagging device', 400)
+            device = self._create_device(device_raw)
+            if device:
+                self._save_data_from_plugin(
+                    client_id,
+                    {'raw': [], 'parsed': [device.to_dict()]},
+                    EntityType.Devices, False)
+                self._save_field_names_to_db(EntityType.Devices)
+        except Exception as e:
+            logger.exception(f'Problem during tagging changes')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return '', 200
 
     def _parse_isolating_request(self, do_isolate):
         try:

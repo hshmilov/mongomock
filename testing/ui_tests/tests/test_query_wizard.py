@@ -10,7 +10,6 @@ class TestQueryWizard(TestBase):
 
         self.adapters_page.add_json_server(cisco_json_file_mock_credentials)
 
-        self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.add_query_last_seen_negative_value(JSON_NAME,
@@ -20,3 +19,5 @@ class TestQueryWizard(TestBase):
         current_query = self.devices_page.find_search_value()
         assert DEVICES_SEEN_NEGATIVE_VALUE_QUERY == current_query
         assert self.devices_page.count_entities() == 1
+
+        self.adapters_page.remove_json_extra_server(cisco_json_file_mock_credentials)

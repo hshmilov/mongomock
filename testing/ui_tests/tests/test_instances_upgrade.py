@@ -9,8 +9,6 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 
 class TestInstancesUpgrade(TestInstancesBase):
-
-    @pytest.mark.skip('Might get all tests after stuck.')
     def test_instances_upgrade(self):
         self.put_customer_conf_file()
 

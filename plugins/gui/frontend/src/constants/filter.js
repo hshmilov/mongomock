@@ -84,9 +84,10 @@ const date = {
   next_hours: '{field} <= date("NOW {op} {val}h")',
   exists,
 };
+export const SIZE_OPERATOR = 'size';
 export const compOps = {
   array: {
-    size: '{field} == size({val})',
+    [SIZE_OPERATOR]: '{field} == size({val})',
     exists: exists_array,
   },
   array_discrete: {

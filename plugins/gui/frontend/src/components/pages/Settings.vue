@@ -144,6 +144,12 @@
         <XRolesTable />
       </XTab>
       <XTab
+        id="certificate-settings-tab"
+        title="Certificate Settings"
+      >
+        <XCertificateSettings />
+      </XTab>
+      <XTab
         v-if="tunnelTabEnabled || $isAxoniusUser()"
         id="tunnel-tab"
         title="Tunnel Settings"
@@ -199,6 +205,7 @@ import XCustom from '../neurons/schema/Custom.vue';
 import XMaintenance from '../networks/config/Maintenance.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
 import XTunnel from '../networks/config/Tunnel.vue';
+import XCertificateSettings from '../networks/config/CertificateSettings.vue';
 import {validateEmail} from "@constants/validations";
 
 export default {
@@ -214,6 +221,7 @@ export default {
     XMaintenance,
     XFeatureFlags,
     XTunnel,
+    XCertificateSettings,
     XUsersManagement,
     XRolesTable,
   },

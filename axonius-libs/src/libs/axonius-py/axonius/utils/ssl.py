@@ -7,6 +7,8 @@ from OpenSSL import crypto
 
 SSL_CERT_PATH = '/etc/ssl/certs/nginx-selfsigned.crt'
 SSL_KEY_PATH = '/etc/ssl/private/nginx-selfsigned.key'
+SSL_CERT_PATH_LIBS = '/home/axonius/keys/nginx-selfsigned.crt'
+SSL_KEY_PATH_LIBS = '/home/axonius/keys/nginx-selfsigned.key'
 MUTUAL_TLS_CA_PATH = '/home/axonius/mutual_tls_ca.crt'
 MUTUAL_TLS_CONFIG_FILE = '/home/axonius/config/gui_external_configs/mtls.conf'
 CA_CERT_PATH = '/usr/local/share/ca-certificates/'

@@ -157,13 +157,13 @@ class JiraIncidentPerEntityAction(ActionTypeBase):
                 if self._config.get('add_full_device_content'):
                     log_message_full += '\n\n' + str(entry)
 
-                message = self._plugin_base.create_jira_ticket(self._config['project_key'],
-                                                               summary,
-                                                               log_message_full, self._config['issue_type'],
-                                                               assignee=self._config.get('assignee'),
-                                                               labels=self._config.get('labels'),
-                                                               extra_fields=self._config.get('extra_fields'),
-                                                               components=self._config.get('components'))
+                message, permalink = self._plugin_base.create_jira_ticket(self._config['project_key'],
+                                                                          summary,
+                                                                          log_message_full, self._config['issue_type'],
+                                                                          assignee=self._config.get('assignee'),
+                                                                          labels=self._config.get('labels'),
+                                                                          extra_fields=self._config.get('extra_fields'),
+                                                                          components=self._config.get('components'))
                 results.append(EntityResult(entry['internal_axon_id'], not message, message or 'Success'))
             except Exception:
                 logger.exception(f'Problem with entry {entry}')

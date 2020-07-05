@@ -14,6 +14,7 @@
       v-if="showArgument"
       :value="argumentProxy"
       :schema="valueSchema"
+      :operator="operator"
       :read-only="readOnly"
       :clearable="false"
       class="argument"
@@ -37,6 +38,7 @@ import bool from '../types/boolean/BooleanEdit.vue';
 import integer from '../types/numerical/IntegerEdit.vue';
 // eslint-disable-next-line import/no-duplicates
 import array from '../types/numerical/IntegerEdit.vue';
+import { SIZE_OPERATOR } from '../../../../constants/filter';
 
 import {
   checkShowValue, getOpsList, getOpsMap, schemaEnumFind, getValueSchema
@@ -74,7 +76,8 @@ export default {
       return this.operator;
     },
     argumentProxy() {
-      if (!_isEmpty(this.valueSchema.enum) && !schemaEnumFind(this.valueSchema, this.argument)) {
+      if (!_isEmpty(this.valueSchema.enum) && !schemaEnumFind(this.valueSchema, this.argument)
+          && this.operator !== SIZE_OPERATOR) {
         return null;
       }
       return this.argument;

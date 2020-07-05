@@ -86,7 +86,7 @@ def create_lldp_device(create_device_func, raw_device):
                 connected_iface_name = entry.get(
                     'lldp-local-port-id', '') or entry.get('lldp-local-interface', '')
 
-                device.name = device_name
+                device.hostname = device_name
 
                 if mac not in all_macs:
                     # New mac - add new nic

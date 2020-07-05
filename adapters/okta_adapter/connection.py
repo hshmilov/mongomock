@@ -18,7 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 PARALLEL_REQUESTS_DEFAULT = 75
 DEFAULT_SLEEP_TIME = 60
-_MAX_PAGE_COUNT = 1000
+_MAX_PAGE_COUNT = 10000
 
 
 class OktaConnection:
@@ -159,9 +159,13 @@ class OktaConnection:
         obj_data = []
         page_count = 0
         response = self.__make_request(url)
+        logger.info(f'Starting to get paginated {url}')
         if isinstance(response.json(), list):
             obj_data.extend(response.json())
         while 'next' in response.links and page_count < _MAX_PAGE_COUNT:
+            if page_count % 10 == 0:
+                logger.info(f'Got to page {page_count}')
+            page_count += 1
             try:
                 response = self.__make_request(forced_url=response.links['next']['url'])
                 if isinstance(response.json(), list):
@@ -199,7 +203,8 @@ class OktaConnection:
         return users_to_data
 
     # pylint: disable=R1702,R0912,R0915
-    def get_users(self, parallel_requests, fetch_apps=False, fetch_factors=False) -> Iterable[dict]:
+    def get_users(self, parallel_requests, fetch_apps=False, fetch_factors=False,
+                  fetch_logs=False) -> Iterable[dict]:
         """
         Fetches all users
         :return: iterable of dict
@@ -209,6 +214,7 @@ class OktaConnection:
             users_page = response.json()
             try:
                 if fetch_factors:
+                    logger.info(f'Fetching factors')
                     self._get_extra_data_async(users_page, 'api/v1/users/{item_id}/factors', 'factors_raw')
             except Exception:
                 logger.exception(f'Problem getting factors')
@@ -223,11 +229,36 @@ class OktaConnection:
                     for app_raw in users_to_apps.get(user_raw.get('id')):
                         app_raw.pop('users_raw', None)
                         user_raw['apps_data'].append(app_raw)
+                if user_raw.get('id') and users_to_logs.get((user_raw.get('profile') or {}).get('login')):
+                    user_raw['log_data'] = users_to_logs.get((user_raw.get('profile') or {}).get('login'))
+
             return users_page, response
 
         if parallel_requests <= 0:
             parallel_requests = PARALLEL_REQUESTS_DEFAULT
         self.__parallel_requests = parallel_requests
+        users_to_logs = {}
+        if fetch_logs:
+            logger.info('Starting to fetch logs')
+            try:
+                for log_raw in self._get_url_paginated('api/v1/logs?'
+                                                       'filter=event_type+eq+%22user.authentication.sso%22'):
+                    try:
+                        target_list = log_raw.get('target')
+                        if not isinstance(target_list, list):
+                            continue
+                        for target_raw in target_list:
+                            if not isinstance(target_raw, dict) or not target_raw.get('alternateId'):
+                                continue
+                            user_id = target_raw['alternateId']
+                            if user_id not in users_to_logs:
+                                users_to_logs[user_id] = []
+                            users_to_logs[user_id].append(log_raw)
+                    except Exception:
+                        logger.exception(f'Problem with log {log_raw}')
+            except Exception:
+                logger.exception(f'Problem getting logs')
+
         logger.info('Starting to get groups')
         users_to_group = self._add_object_to_users('groups')
         users_to_apps = dict()

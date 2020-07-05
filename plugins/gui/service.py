@@ -242,6 +242,7 @@ class GuiService(Triggerable,
         self.latest_version = None
         if read_saas_input_params():
             self.ssm_client = SaasSecretsManager()
+            self.saas_params = read_saas_input_params()
             self.tunnel_status = False
 
         try:
@@ -929,6 +930,7 @@ class GuiService(Triggerable,
                     ],
                     'required': ['enabled', 'ca_certificate', 'mandatory'],
                     'name': 'mutual_tls_settings',
+                    'hidden': True,
                     'title': 'Mutual TLS Settings',
                     'type': 'array'
                 },

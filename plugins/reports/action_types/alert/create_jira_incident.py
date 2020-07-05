@@ -1,5 +1,7 @@
 import io
+import json
 import logging
+import requests
 
 from axonius.consts import report_consts
 from axonius.utils import gui_helpers
@@ -8,6 +10,9 @@ from axonius.types.enforcement_classes import AlertActionResult
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+LINK_TEMPLATE = '<<ISSUE_LINK>>'
 
 
 class JiraIncidentAction(ActionTypeAlert):
@@ -69,6 +74,17 @@ class JiraIncidentAction(ActionTypeAlert):
                     'name': 'send_csv_data',
                     'title': 'Send CSV data',
                     'type': 'bool'
+                },
+                {
+                    'name': 'created_issue_webhook_url',
+                    'title': 'Send created issue link to webhook URL',
+                    'type': 'string'
+                },
+                {
+                    'name': 'created_issue_webhook_content',
+                    'title': 'Send created issue link to webhook Content',
+                    'type': 'string',
+                    'default': '{"text": "Created issue link is:' + LINK_TEMPLATE + '"}'
                 }
             ],
             'required': [
@@ -101,7 +117,9 @@ class JiraIncidentAction(ActionTypeAlert):
             'incident_title': None,
             'assignee': None,
             'labels': None,
-            'components': None
+            'components': None,
+            'created_issue_webhook_url': None,
+            'created_issue_webhook_content': None
         }
 
     def _run(self) -> AlertActionResult:
@@ -134,13 +152,27 @@ class JiraIncidentAction(ActionTypeAlert):
                                              field_filters=field_filters)
             csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
 
-        message = self._plugin_base.create_jira_ticket(self._config['project_key'],
-                                                       self._config['incident_title'],
-                                                       log_message_full, self._config['issue_type'],
-                                                       assignee=self._config.get('assignee'),
-                                                       labels=self._config.get('labels'),
-                                                       components=self._config.get('components'),
-                                                       csv_file_name='Axonius Entities Data.csv',
-                                                       extra_fields=self._config.get('extra_fields'),
-                                                       csv_bytes=csv_bytes)
+        message, permalink = self._plugin_base.create_jira_ticket(self._config['project_key'],
+                                                                  self._config['incident_title'],
+                                                                  log_message_full, self._config['issue_type'],
+                                                                  assignee=self._config.get('assignee'),
+                                                                  labels=self._config.get('labels'),
+                                                                  components=self._config.get('components'),
+                                                                  csv_file_name='Axonius Entities Data.csv',
+                                                                  extra_fields=self._config.get('extra_fields'),
+                                                                  csv_bytes=csv_bytes)
+        if permalink and \
+                self._config.get('created_issue_webhook_url') and self._config.get('created_issue_webhook_content'):
+            try:
+                created_issue_webhook_url = self._config.get('created_issue_webhook_url')
+                created_issue_webhook_content = self._config.get('created_issue_webhook_content')
+                created_issue_webhook_content = created_issue_webhook_content.replace(LINK_TEMPLATE, permalink)
+                response = requests.post(url=created_issue_webhook_url,
+                                         json=json.loads(created_issue_webhook_content),
+                                         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                                         verify=False)
+                response.raise_for_status()
+            except Exception:
+                logger.exception(f'Problem sending created issue to webhoot')
+
         return AlertActionResult(not message, message or 'Success')

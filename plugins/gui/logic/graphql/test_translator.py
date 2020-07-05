@@ -7,6 +7,7 @@ from axonius.entities import EntityType
 import axonius.pql.matching
 from gui.logic.graphql.translator import Translator
 from ui_tests.tests.ui_consts import DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
+# pylint: disable=C0301
 
 # hack parse date so it will return a constant date
 axonius.pql.matching.parse_date = lambda x: datetime.datetime(year=2020, month=6, day=6)
@@ -15,6 +16,15 @@ axonius.pql.matching.parse_date = lambda x: datetime.datetime(year=2020, month=6
 def get_timestamp():
     return datetime.datetime(year=2020, month=6, day=6).timestamp() * 1000
 
+
+PROJECTION_QUERIES = [
+    ('Simple Projection', EntityType.Devices, 'hostname',
+     'query GQLQuery($where: device_bool_exp!, $limit: Int = 20, $offset: Int = 0, $orderBy: [device_order_by!]) { devices(where: $where, limit: $limit, offset: $offset, orderBy: $orderBy) { adapterCount id _compatibilityAPI hostname } }'),
+    ('Common device Projection', EntityType.Devices, 'adapters,specific_data.data.name,specific_data.data.hostname,specific_data.data.last_seen,specific_data.data.network_interfaces.mac,specific_data.data.network_interfaces.ips,specific_data.data.os.type,labels',
+     'query GQLQuery($where: device_bool_exp!, $limit: Int = 20, $offset: Int = 0, $orderBy: [device_order_by!]) { devices(where: $where, limit: $limit, offset: $offset, orderBy: $orderBy) { adapterCount id _compatibilityAPI adapterNames adapterDevices { name hostname lastSeen interfaces { macAddr ipAddrs } os { type } } } }'),
+    ('Common user Projection', EntityType.Users, 'adapters,specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.is_admin,specific_data.data.last_seen,labels',
+     'query GQLQuery($where: user_bool_exp!, $limit: Int = 20, $offset: Int = 0, $orderBy: [user_order_by!]) { users(where: $where, limit: $limit, offset: $offset, orderBy: $orderBy) { adapterCount id _compatibilityAPI adapterNames adapterUsers { username domain admin lastSeen } } }')
+]
 
 SAVED_QUERIES = [
 
@@ -80,16 +90,6 @@ USER_QUERIES = [
         '(adapter_list_length > 3)',
         {'adapterCount': {'gt': 3}},
     )
-
-
-    # (
-    #     '',
-    #     '(specific_data.data.account_disabled == false) '
-    #     'and not (specific_data.data.last_password_change >= date("NOW - 30d")) '
-    #     'and (specific_data.data.last_seen >= date("NOW - 7d")) '
-    #     'and (((specific_data.data.first_name == ({"$exists":true,"$ne":""}))) '
-    #     'or ((specific_data.data.image == ({"$exists":true,"$ne":""}))))'
-    # )
 
 ]
 
@@ -171,6 +171,11 @@ class TestTranslator(unittest.TestCase):
     def test_user_queries(self):
         for name, aql, expected_gql in USER_QUERIES:
             gql = Translator(EntityType.Users).translate(aql)
+            self.assertEqual(expected_gql, gql, name)
+
+    def test_projection(self):
+        for name, entity_type, fields, expected_gql in PROJECTION_QUERIES:
+            gql = Translator(entity_type).build_gql(fields)
             self.assertEqual(expected_gql, gql, name)
 
 

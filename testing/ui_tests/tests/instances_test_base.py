@@ -189,6 +189,7 @@ def connect_to_linux_user(instance, password, username):
     return chan
 
 
+@pytest.mark.instances
 class TestInstancesBase(TestBase):
     def setup_method(self, method):
         super().setup_method(method)

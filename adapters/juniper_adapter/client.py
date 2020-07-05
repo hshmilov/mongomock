@@ -135,7 +135,7 @@ class JuniperClient:
 
     def _do_junus_space_command_not_async(self, devices, queue_name, actions):
         juniper_device_actions = [
-            'interface list', 'hardware', 'version', 'vlans', 'base-mac']
+            'interface list', 'hardware', 'version', 'vlans', 'base-mac', 'license']
         juniper_devices = defaultdict(list)
         for current_device in devices:
             device_name = str(current_device.name)
@@ -193,18 +193,18 @@ class JuniperClient:
         if fetch_only_client_info:
             extra_actions = []
         else:
-            extra_actions = [
-                ('interface list', '<get-interface-information/>'),
-                ('hardware', '<get-chassis-inventory/>'),
-                ('version', '<get-software-information/>'),
-                ('license', '<get-license-summary-information/>'),
-                ('vlans', '<get-ethernet-switching-interface-information>'
-                          '<detail/>'
-                          '</get-ethernet-switching-interface-information>'),
-                ('base-mac', '<get-chassis-mac-addresses/>'),
-            ]
-        client_actions = [('LLDP Device', '<get-lldp-neighbors-information/>'),
-                          ('ARP Device', '<get-arp-table-information/>'),
-                          ('FDB Device', '<get-ethernet-switching-table-information/>')]
+            extra_actions = [('LLDP Device', '<get-lldp-neighbors-information/>'),
+                             ('ARP Device', '<get-arp-table-information/>'),
+                             ('FDB Device', '<get-ethernet-switching-table-information/>')]
+        client_actions = [
+            ('interface list', '<get-interface-information/>'),
+            ('hardware', '<get-chassis-inventory/>'),
+            ('version', '<get-software-information/>'),
+            ('license', '<get-license-summary-information/>'),
+            ('vlans', '<get-ethernet-switching-interface-information>'
+                      '<detail/>'
+                      '</get-ethernet-switching-interface-information>'),
+            ('base-mac', '<get-chassis-mac-addresses/>'),
+        ]
         actions = extra_actions + client_actions
         yield from self._do_junus_space_command(up_devices, 'get_info_q', actions, do_async)

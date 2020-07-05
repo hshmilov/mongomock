@@ -1,7 +1,7 @@
 """
 This module allows access to the bandicoot (graphql) API
 """
-# pylint: disable=invalid-string-quote, invalid-triple-quote, C0103, W0611
+# pylint: disable=invalid-string-quote, invalid-triple-quote, C0103, W0611, R0911
 import functools
 import time
 import typing
@@ -13,6 +13,7 @@ import cachetools
 import requests
 from flask import request
 
+from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import Query
 from axonius.entities import EntityType
 from axonius.logging.metric_helper import log_metric
@@ -195,6 +196,12 @@ def allow_experimental(count=False):
         def actual_wrapper(self, *args, **kwargs):
             content = self.get_request_data_as_object() if request.method == 'POST' else request.args
             if not content.get('experimental', False):
+                return func(self, *args, **kwargs)
+            if not self.feature_flags_config().get(FeatureFlagsNames.Bandicoot, False):
+                logger.debug('bandicoot not turned on, feature flag must be turned on')
+                return func(self, *args, **kwargs)
+            if not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
+                logger.debug('experimental API not turned on backend, feature flag must be turned on')
                 return func(self, *args, **kwargs)
             # fallback... fallback to mongodb...
             if content.get('sort') is not None:

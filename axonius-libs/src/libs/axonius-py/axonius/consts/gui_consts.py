@@ -316,8 +316,14 @@ UPDATED_BY_FIELD = 'updated_by'
 PREFERRED_FIELDS = ('specific_data.data.hostname_preferred',
                     'specific_data.data.os.type_preferred',
                     'specific_data.data.os.distribution_preferred',
+                    'specific_data.data.os.os_str_preferred',
+                    'specific_data.data.os.bitness_preferred',
+                    'specific_data.data.os.kernel_version_preferred',
+                    'specific_data.data.os.build_preferred',
                     'specific_data.data.network_interfaces.mac_preferred',
-                    'specific_data.data.network_interfaces.ips_preferred')
+                    'specific_data.data.network_interfaces.ips_preferred',
+                    'specific_data.data.device_model_preferred',
+                    'specific_data.data.domain_preferred')
 ADAPTER_CONNECTIONS_FIELD = 'Adapter Connections'
 DISTINCT_ADAPTERS_COUNT_FIELD = 'Distinct Adapter Connections Count'
 LABELS_FIELD = 'labels'

@@ -37,7 +37,7 @@ def test_create_lldp_device():
 
     raw_result = result[0].to_dict()
     assert all(map(lambda x: x in raw_result, [
-        'name', 'network_interfaces', 'connected_devices']))
+        'hostname', 'network_interfaces', 'connected_devices']))
     assert len(raw_result['connected_devices']) == 4
     assert raw_result['connected_devices'] == [{'connection_type': 'Direct',
                                                 'local_ifaces': [{'name': 'Ethernet3/29/1'}],

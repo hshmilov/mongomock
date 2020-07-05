@@ -29,6 +29,7 @@ from gui.routes.labels.labels import Labels
 from gui.routes.graphql.api import GraphQLAPI
 # pylint: disable=no-member,invalid-name,no-self-use
 from gui.routes.tunnel import Tunnel
+from gui.routes.certificate import Certificate
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -47,6 +48,7 @@ class AppRoutes(Signup,
                 Instances,
                 PasswordVault,
                 Labels,
+                Certificate,
                 Tunnel,
                 GraphQLAPI):
 

@@ -6,8 +6,8 @@ from ui_tests.tests.ui_test_base import TestBase
 class TestGlobalSSL(TestBase):
     def test_global_ssl(self):
         self.settings_page.switch_to_page()
-        self.settings_page.click_global_settings()
-        self.settings_page.open_global_ssl_toggle()
+        self.settings_page.click_certificate_settings()
+        self.settings_page.open_import_key_and_cert_modal()
         keys_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                       '../../ssl_keys_for_tests'))
 
@@ -17,5 +17,5 @@ class TestGlobalSSL(TestBase):
 
         # Test that the right hostname works
         self.settings_page.set_global_ssl_settings('localhost', cert_data, private_data)
-        self.settings_page.click_save_global_settings()
-        self.settings_page.wait_for_saved_successfully_toaster()
+        self.settings_page.click_modal_approve()
+        self.settings_page.wait_for_saved_successfully_toaster(toaster_message='Certificate imported successfully')

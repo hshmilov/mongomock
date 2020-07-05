@@ -559,12 +559,12 @@ class DockerService(AxonService):
             self.take_process_ownership()
         try:
             if retry_if_fail:
-                self.retrying_start_and_wait(allow_restart=allow_restart)
+                self.retrying_start_and_wait(allow_restart=True)
             else:
                 self.start_and_wait(allow_restart=allow_restart)
             yield self
         finally:
-            self.stop(should_delete=should_delete, grace_period=STOP_GRACE_PERIOD)
+            self.stop(should_delete=should_delete, grace_period=stop_grace_period)
 
     def set_system_config(self, system_config):
         if system_config:

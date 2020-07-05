@@ -10,11 +10,13 @@ from flask import Response, request
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FeatureFlagsNames
+from axonius.consts.metric_consts import TunnelMetrics
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, \
     TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_SETTINGS, \
     TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT, TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW
 from axonius.consts.system_consts import VPN_DATA_DIR_FROM_GUI
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
+from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
@@ -58,12 +60,9 @@ class Tunnel:
         if internal_use:
             status = '4 packets transmitted, 4 packets received' in res
             if not status == self.tunnel_status and not status:
-                self.log_activity(AuditCategory.Tunnel, AuditAction.Disconnected, activity_type=AuditType.Error)
-                self.create_notification('Tunnel is disconnected')
-                self.send_tunnel_status_update_email()
+                self._tunnel_is_down()
             elif not status == self.tunnel_status and status:
-                self.log_activity(AuditCategory.Tunnel, AuditAction.Connected)
-            self.tunnel_status = status
+                self._tunnel_is_up()
             return Response(str(status))
 
         return Response(str(EXPECTED_RESULT in res))
@@ -74,11 +73,15 @@ class Tunnel:
             self.create_notification('Tunnel is disconnected')
             self.send_tunnel_status_update_email()
             self.tunnel_status = False
+            log_metric(logger, metric_name=TunnelMetrics.TUNNEL_DISCONNECTED,
+                       metric_value=0, details=self.saas_params.get('COMPANY_FOR_SIGNUP', ''))
 
     def _tunnel_is_up(self):
         if not self.tunnel_status:
             self.log_activity(AuditCategory.Tunnel, AuditAction.Connected)
             self.tunnel_status = True
+            log_metric(logger, metric_name=TunnelMetrics.TUNNEL_CONNECTED,
+                       metric_value=1, details=self.saas_params.get('COMPANY_FOR_SIGNUP', ''))
 
     @gui_route_logged_in('download_agent', methods=['GET'], enforce_trial=True)
     # pylint: disable=no-self-use
@@ -96,6 +99,9 @@ class Tunnel:
         else:
             return return_error('User configuration file not exists')
         proxy_settings = self._get_tunnel_proxy_settings()
+        log_metric(logger, metric_name=TunnelMetrics.TUNNEL_DOWNLOADED,
+                   metric_value='With proxy' if proxy_settings['enabled'] else 'Without proxy',
+                   details=self.saas_params.get('COMPANY_FOR_SIGNUP', ''))
         return Response(
             base_config.format(payload=base64.b64encode(gzip.compress(payload, compresslevel=9)).decode('utf-8'),
                                proxy_enabled=proxy_settings['enabled'],

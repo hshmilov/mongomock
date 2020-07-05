@@ -59,3 +59,9 @@ class GettingStartedMetric:
 
 class InstancesMetrics:
     INSTANCE_LAST_SEEN = 'instance_last_seen'
+
+
+class TunnelMetrics:
+    TUNNEL_DOWNLOADED = 'tunnel_client_downloaded'
+    TUNNEL_CONNECTED = 'tunnel_connected'
+    TUNNEL_DISCONNECTED = 'tunnel_disconnected'

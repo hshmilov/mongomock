@@ -428,8 +428,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 for software in softwares_data.get('software'):
                     device.add_installed_software(name=software.get('fullName'),
                                                   version=software.get('version'),
-                                                  architecture=software.get('architecture'),
-                                                  description=software.get('category'),
                                                   publisher=software.get('publisher'))
 
             tag_list = device_raw.get('tagList')
@@ -546,6 +544,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             if device_raw.get('lastSystemBoot'):
                 device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
             try:
+                if not device_raw.get('networkInterface'):
+                    device.add_nic(ips=[device_raw.get('address')])
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
                     try:
                         if self.__use_dns_host_as_hostname:

@@ -88,6 +88,7 @@ class MaildiranasaurusService(SmtpService):
     def wait_for_email_first_csv_content(self, recipient):
         return wait_until(self.get_email_first_csv_content,
                           check_return_value=True,
+                          total_timeout=60 * 5,
                           recipient=recipient)
 
     def get_email_first_csv_content(self, recipient):

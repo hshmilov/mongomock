@@ -179,7 +179,8 @@ class ServiceNowComputerAction(ActionTypeBase):
             'adapters.data.network_interfaces.ips': 1
         }
         for ax_field in ax_snow_fields_map_dict.keys():
-            service_now_projection[f'adapters.data.{ax_field}'] = 1
+            ax_field_projection = ax_field.split(':')[-1]
+            service_now_projection[f'adapters.data.{ax_field_projection}'] = 1
         current_result = self._get_entities_from_view(service_now_projection)
         results = []
         for entry in current_result:
@@ -225,9 +226,15 @@ class ServiceNowComputerAction(ActionTypeBase):
                         manufacturer_raw = data_from_adapter.get('device_manufacturer')
                     try:
                         for ax_field in ax_snow_fields_map_dict:
+                            ax_field_adapter = None
+                            ax_field_project = ax_field
+                            if ':' in ax_field:
+                                ax_field_adapter = ax_field.split(':')[0]
+                                ax_field_project = ax_field.split(':')[-1]
                             snow_field = ax_snow_fields_map_dict[ax_field]
-                            if not ax_snow_values_map_dict.get(snow_field) and data_from_adapter.get(ax_field):
-                                snow_value = data_from_adapter[ax_field]
+                            if not ax_snow_values_map_dict.get(snow_field) and data_from_adapter.get(ax_field_project) \
+                                    and (from_adapter.get('plugin_name') == ax_field_adapter or not ax_field_adapter):
+                                snow_value = data_from_adapter[ax_field_project]
                                 if snow_value and not isinstance(snow_value, str):
                                     snow_value = str(snow_value)
                                 ax_snow_values_map_dict[snow_field] = snow_value

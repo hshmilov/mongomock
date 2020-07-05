@@ -55,6 +55,8 @@ class DesktopCentralConnection(RESTConnection):
 
                 for page_sw in range(2, sw_pages + 1):
                     sw_raw = _get_extra_request()
+                    if not sw_raw or not sw_raw.get('message_response'):
+                        break
                     if not sw_raw['message_response'][inner_object_attribute]:
                         break
                     device_raw[raw_name].extend(sw_raw['message_response'][inner_object_attribute])

@@ -57,7 +57,8 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
-                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter']
+                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter',
+                      'solarwinds_orion_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
@@ -300,7 +301,8 @@ def is_from_digicert_pki(adapter_device):
 
 
 def is_claroty_ten_adapter_more_mac(adapter_device):
-    if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter', 'office_scan_adapter']:
+    if adapter_device.get('plugin_name') not in ['claroty_adapter', 'tenable_io_adapter', 'opswat_adapter',
+                                                 'office_scan_adapter']:
         return False
     macs = adapter_device.get(NORMALIZED_MACS)
     if macs and len(macs) > 1:

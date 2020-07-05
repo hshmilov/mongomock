@@ -25,10 +25,16 @@ class FeatureFlags(Configurable):
                 self.start_bandicoot()
             else:
                 self.stop_bandicoot()
+
         # In order for core to update all plugins with the new settings (specially fips)
         logger.info(f'Loading FeatureFlags config: {config}')
         # this variable is set in PluginBase
         self._current_feature_flag_config = self.feature_flags_config()
+
+        if config.get(FeatureFlagsNames.ExperimentalAPI, False) and not config.get(FeatureFlagsNames.Bandicoot, False):
+            logger.warning('Experimental API turned on without bandicoot contrainer flag on')
+            self._current_feature_flag_config.setdefault(FeatureFlagsNames.ExperimentalAPI, False)
+
         resp = self.request_remote_plugin('update_config', 'core', method='POST')
         if resp.status_code == 200:
             logger.info('Feature Flags settings updated in all plugins')

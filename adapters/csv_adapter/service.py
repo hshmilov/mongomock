@@ -187,6 +187,8 @@ class CsvAdapter(AdapterBase):
             try:
                 vals = {field_name: device_raw.get(fields[field_name][0]) for field_name in fields}
                 hostname = vals.get('hostname')
+                if not hostname:
+                    continue
                 if hostname not in hostname_sw_dict:
                     hostname_sw_dict[hostname] = []
                 installed_sw_name = vals.get('installed_sw_name')

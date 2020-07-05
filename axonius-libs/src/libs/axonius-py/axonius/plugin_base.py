@@ -74,7 +74,7 @@ from axonius.consts.plugin_consts import (
     ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
     ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME,
     ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION,
-    CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM,
+    CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM, CORRELATE_AWS_USERNAME,
     CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
     CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
     CORRELATE_GLOBALY_ON_HOSTNAME, CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_ENABLED,
@@ -86,7 +86,7 @@ from axonius.consts.plugin_consts import (
     GUI_PLUGIN_NAME, HEAVY_LIFTING_PLUGIN_NAME,
     KEYS_COLLECTION, MAX_WORKERS, NODE_ID, NODE_ID_ENV_VAR_NAME,
     NODE_INIT_NAME, NODE_USER_PASSWORD, NOTIFICATIONS_SETTINGS,
-    NOTIFY_ADAPTERS_FETCH, PASSWORD_PROTECTION_BY_USERNAME,
+    PASSWORD_PROTECTION_BY_USERNAME,
     PASSWORD_LENGTH_SETTING, PASSWORD_MANGER_THYCOTIC_SS_VAULT, PASSWORD_MANGER_ENUM,
     PASSWORD_MIN_LOWERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MANGER_ENABLED,
     PASSWORD_MIN_SPECIAL_CHARS, PASSWORD_MIN_UPPERCASE,
@@ -137,7 +137,8 @@ from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.revving_cache import rev_cached
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase, \
+    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 from axonius.utils.mongo_indices import (
@@ -2927,6 +2928,7 @@ class PluginBase(Configurable, Feature, ABC):
     def create_jira_ticket(self, project_key, summary, description, issue_type,
                            assignee=None, labels=None, components=None, csv_file_name=None, csv_bytes=None,
                            extra_fields=None):
+        permalink = None
         jira_settings = self._jira_settings
         if jira_settings['enabled'] is not True:
             return 'Jira Settings missing'
@@ -2955,6 +2957,10 @@ class PluginBase(Configurable, Feature, ABC):
             except Exception:
                 logger.exception(f'Problem parsing extra fields')
             issue = jira.create_issue(fields=issue_dict)
+            try:
+                permalink = issue.permalink()
+            except Exception:
+                logger.exception(f'Problem get permalink')
             if csv_file_name and csv_bytes:
                 jira.add_attachment(issue=issue, attachment=csv_bytes, filename=csv_file_name)
             try:
@@ -2962,10 +2968,10 @@ class PluginBase(Configurable, Feature, ABC):
                 jira.assign_issue(issue, assignee)
             except Exception:
                 pass
-            return ''
+            return '', permalink
         except Exception as e:
             logger.exception('Error in Jira ticket')
-            return str(e)
+            return str(e), permalink
 
     def send_external_info_log(self, message):
         try:
@@ -3129,11 +3135,12 @@ class PluginBase(Configurable, Feature, ABC):
         self._email_settings = config['email_settings']
         self._getting_started_settings = config[GETTING_STARTED_CHECKLIST_SETTING]
         self._https_logs_settings = config['https_log_settings']
-        self._notify_on_adapters = config[NOTIFICATIONS_SETTINGS].get(NOTIFY_ADAPTERS_FETCH)
+        self._notify_on_adapters = False
         self._adapter_errors_mail_address = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_MAIL_ADDRESS)
         self._adapter_errors_webhook = config[NOTIFICATIONS_SETTINGS].get(ADAPTERS_ERRORS_WEBHOOK_ADDRESS)
         self._email_prefix_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_BY_EMAIL_PREFIX)
         self._ad_display_name_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_AD_DISPLAY_NAME)
+        self._username_aws_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_AWS_USERNAME)
         self._correlate_only_on_username_domain = config[CORRELATION_SETTINGS].get(CORRELATE_BY_USERNAME_DOMAIN_ONLY)
         self._fetch_empty_vendor_software_vulnerabilites = (config.get(STATIC_ANALYSIS_SETTINGS) or {}).get(
             FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES) or False
@@ -3154,6 +3161,8 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._smb_settings = config.get('smb_settings') or {}
+        self._global_ssl = config.get('global_ssl') or {}
+        self._ssl_trust_settings = config.get('ssl_trust_settings') or {}
         self._static_analysis_settings = config.get(STATIC_ANALYSIS_SETTINGS) or {}
         self._correlation_schedule_settings = config[CORRELATION_SCHEDULE]
         self.update_fips_status()
@@ -3225,18 +3234,33 @@ class PluginBase(Configurable, Feature, ABC):
             config_key = self._grab_file_contents(global_ssl.get('private_key'), stored_locally=False)
             config_key_no_passphrase = get_private_key_without_passphrase(config_key, global_ssl.get('passphrase'))
 
-            current_cert = open(SSL_CERT_PATH, 'rb').read()
-            current_key = open(SSL_KEY_PATH, 'rb').read()
+            with open(SSL_CERT_PATH, 'rb') as fh:
+                current_cert = fh.read()
+            with open(SSL_KEY_PATH, 'rb') as fh:
+                current_key = fh.read()
 
             if config_cert != current_cert or config_key_no_passphrase != current_key:
-                open(SSL_CERT_PATH, 'wb').write(config_cert)
-                open(SSL_KEY_PATH, 'wb').write(config_key_no_passphrase)
+                with open(SSL_CERT_PATH, 'wb') as fh:
+                    fh.write(config_cert)
+                with open(SSL_KEY_PATH, 'wb') as fh:
+                    fh.write(config_key_no_passphrase)
 
                 # Restart Openresty (NGINX)
                 subprocess.check_call(['openresty', '-s', 'reload'])
 
         else:
-            pass
+            current_cert = open(SSL_CERT_PATH, 'rb').read()
+            axonius_cert = open(SSL_CERT_PATH_LIBS, 'rb').read()
+            if current_cert != axonius_cert:
+                with open(SSL_CERT_PATH, 'wb') as fh:
+                    fh.write(axonius_cert)
+                with open(SSL_KEY_PATH, 'wb') as fh:
+                    with open(SSL_KEY_PATH_LIBS, 'rb') as fhr:
+                        fh.write(fhr.read())
+
+                # Restart Openresty (NGINX)
+                subprocess.check_call(['openresty', '-s', 'reload'])
+
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
 
@@ -3360,11 +3384,12 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': 'enabled',
                             'title': 'Configure custom SSL certificate',
+                            'hidden': True,
                             'type': 'bool'
                         },
                         {
                             'name': 'hostname',
-                            'title': 'Site hostname',
+                            'title': 'Domain name',
                             'type': 'string'
                         },
                         *MANDATORY_SSL_CONFIG_SCHEMA,
@@ -3378,6 +3403,7 @@ class PluginBase(Configurable, Feature, ABC):
                     ],
                     'name': 'global_ssl',
                     'title': 'GUI SSL Settings',
+                    'hidden': True,
                     'type': 'array',
                     'required': ['enabled', 'hostname', 'cert_file', 'private_key']
                 },
@@ -3385,6 +3411,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'ssl_trust_settings',
                     'title': 'SSL Trust & CA Settings',
                     'type': 'array',
+                    'hidden': True,
                     'required': ['enabled', 'ca_files'],
                     'items': [
                         {
@@ -3399,6 +3426,35 @@ class PluginBase(Configurable, Feature, ABC):
                             'items': {
                                 'type': 'file'
                             }
+                        }
+                    ]
+                },
+                {
+                    'required': ['status', 'csr_file', 'subject_name', 'submission_date', 'key_file'],
+                    'name': 'csr_settings',
+                    'format': 'hidden',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': 'status',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'subject_name',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'submission_date',
+                            'type': 'string',
+                            'format': 'date-time'
+                        },
+                        {
+                            'name': 'csr_file',
+                            'type': 'file'
+                        },
+                        {
+                            'name': 'key_file',
+                            'type': 'file'
                         }
                     ]
                 },
@@ -3839,11 +3895,6 @@ class PluginBase(Configurable, Feature, ABC):
                 {
                     'items': [
                         {
-                            'name': NOTIFY_ADAPTERS_FETCH,
-                            'title': 'Notify on adapters fetch',
-                            'type': 'bool'
-                        },
-                        {
                             'name': ADAPTERS_ERRORS_MAIL_ADDRESS,
                             'title': 'Adapters errors email address',
                             'type': 'string'
@@ -3857,7 +3908,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': NOTIFICATIONS_SETTINGS,
                     'title': 'Notifications Settings',
                     'type': 'array',
-                    'required': [NOTIFY_ADAPTERS_FETCH]
+                    'required': []
                 },
                 {
                     'items': [
@@ -3869,6 +3920,11 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': CORRELATE_AD_DISPLAY_NAME,
                             'title': 'Correlate users by AD display name',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': CORRELATE_AWS_USERNAME,
+                            'title': 'Correlate users by AWS username',
                             'type': 'bool'
                         },
                         {
@@ -3923,7 +3979,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                 CORRELATE_SNOW_NO_DASH,
+                                 CORRELATE_SNOW_NO_DASH, CORRELATE_AWS_USERNAME,
                                  CORRELATE_GLOBALY_ON_HOSTNAME, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
@@ -4193,11 +4249,17 @@ class PluginBase(Configurable, Feature, ABC):
                 'enabled': False,
                 'hostname': None,
                 **MANDATORY_SSL_CONFIG_SCHEMA_DEFAULTS,
-                'passphrase': b''
+                'passphrase': ''
             },
             'ssl_trust_settings': {
                 'enabled': False,
                 'ca_files': []
+            },
+            'csr_settings': {
+                'status': False,
+                'csr_file': '',
+                'subject_name': '',
+                'submission_date': ''
             },
             'https_log_settings': {
                 'enabled': False,
@@ -4258,13 +4320,13 @@ class PluginBase(Configurable, Feature, ABC):
                 }
             },
             NOTIFICATIONS_SETTINGS: {
-                NOTIFY_ADAPTERS_FETCH: False,
                 ADAPTERS_ERRORS_MAIL_ADDRESS: None,
                 ADAPTERS_ERRORS_WEBHOOK_ADDRESS: None
             },
             CORRELATION_SETTINGS: {
                 CORRELATE_BY_EMAIL_PREFIX: False,
                 CORRELATE_AD_DISPLAY_NAME: False,
+                CORRELATE_AWS_USERNAME: True,
                 CORRELATE_BY_USERNAME_DOMAIN_ONLY: False,
                 CORRELATE_AD_SCCM: False,
                 CSV_FULL_HOSTNAME: False,
