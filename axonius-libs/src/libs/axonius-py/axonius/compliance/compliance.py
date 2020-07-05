@@ -301,6 +301,12 @@ def _build_aggregation_query(accounts):
             }
         },
         {
+            '$group': {
+                '_id': '$last.account_name',
+                'last': {'$last': '$$ROOT.last'}
+            }
+        },
+        {
             '$sort': {'last.account_name': 1},
         }
     ]

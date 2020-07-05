@@ -426,6 +426,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
+        self.nodes_metadata_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['nodes_metadata']
         try:
             self._current_feature_flag_config = self.feature_flags_config() or {}
         except TypeError:

@@ -8,6 +8,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.fields import Field, ListField
 from axonius.clients.rest.connection import RESTConnection
+from axonius.utils.parsing import format_mac
 from axonius.smart_json_class import SmartJsonClass
 from redseal_adapter.client import RedSealClient
 from redseal_adapter.client_id import get_client_id
@@ -40,11 +41,18 @@ class RedSealVulnerability(SmartJsonClass):
     application_name = Field(str, "Application Name")
 
 
+class ArpData(SmartJsonClass):
+    mac = Field(str, 'MAC Address')
+    ip = Field(str, 'IP Address')
+    interface = Field(str, 'Interface')
+
+
 class RedsealAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         rs_primary_capability = Field(str, 'Primary Capability', enum=PRIMARY_CAPABILITY)
         rs_imported_from = Field(str, 'Imported from')
         rs_vulnerabilities = ListField(RedSealVulnerability, "Vulnerability")
+        arp_data = ListField(ArpData, 'ARP Data')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -169,7 +177,30 @@ class RedsealAdapter(AdapterBase, Configurable):
                             logger.exception('Error while adding vulnerability')
 
         device.rs_imported_from = raw_device_data.get('ImportDevicePluginName')
-
+        try:
+            arp = ((raw_device_data.get('ARP table_full') or {}).get('Configuration') or {}).get('FileLine')
+            if not isinstance(arp, list):
+                arp = []
+            for arp_line in arp:
+                if not arp_line.get('Text'):
+                    continue
+                arp_text = arp_line.get('Text')
+                arp_text_list = arp_text.split(' ')
+                arp_text_list = [inner_text.strip() for inner_text in arp_text_list if inner_text.strip()]
+                try:
+                    format_mac(arp_text_list[0])
+                    if not is_ipaddr(arp_text_list[1]):
+                        continue
+                    mac = arp_text_list[0]
+                    ip = arp_text_list[1]
+                    interface = None
+                    if len(arp_text_list) > 2:
+                        interface = arp_text_list[2]
+                    device.arp_data.append(ArpData(mac=mac, ip=ip, interface=interface))
+                except Exception:
+                    continue
+        except Exception:
+            logger.exception('Problem with arp data')
         device.set_raw(raw_device_data)
 
         return device

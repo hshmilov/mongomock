@@ -42,7 +42,7 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
-OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin']
+OSX_NAMES = ['mojave', 'sierra', 'capitan', 'yosemite', 'mavericks', 'darwin', 'catalina']
 MAC_NAMES = ['os x', 'osx', 'macos', 'mac os', 'macbook']
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
@@ -914,6 +914,7 @@ def hostname_not_problematic(adapter_device):
              and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro_root' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'dev' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'test' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'playtikas-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'unknown' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()

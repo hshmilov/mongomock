@@ -10,10 +10,17 @@ from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.smart_json_class import SmartJsonClass
 from guardicore_adapter.connection import GuardicoreConnection
 from guardicore_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class GuardiLabel(SmartJsonClass):
+    key = Field(str, 'Key')
+    name = Field(str, 'Name')
+    value = Field(str, 'Value')
 
 
 class GuardicoreAdapter(AdapterBase):
@@ -25,6 +32,7 @@ class GuardicoreAdapter(AdapterBase):
         is_active = Field(bool, 'Is Active')
         supported_features = ListField(str, 'Supported Features')
         incidents_descriptions = ListField(str, 'Incidents Descriptions')
+        labels = ListField(GuardiLabel, 'Labels')
 
     class MyUserAdapter(UserAdapter):
         created_at = Field(datetime.datetime, 'Created At')
@@ -135,6 +143,19 @@ class GuardicoreAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('name') or '')
             device.name = device_raw.get('name')
+            try:
+                labels = device_raw.get('labels')
+                if not isinstance(labels, list):
+                    labels = []
+                for label in labels:
+                    if not isinstance(label, dict):
+                        continue
+                    label_obj = GuardiLabel(key=label.get('key'),
+                                            name=label.get('name'),
+                                            value=label.get('value'))
+                    device.labels.append(label_obj)
+            except Exception:
+                logger.exception(f'Problem getting labels')
             try:
                 if device_raw.get('vm_id') in incidents_dict:
                     incidents_data = incidents_dict[device_raw.get('vm_id')]

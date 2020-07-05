@@ -13,6 +13,7 @@ import aiohttp
 from redseal_adapter.connection import RedsealConnection
 
 from axonius.utils import json
+import requests
 
 logger = logging.getLogger(f'axonius.{__name__}')
 DEFAULT_ASYNC_CHUNKS = 50
@@ -31,6 +32,28 @@ class RedSealClient:
         self._username = username
         self._password = password
         self._connection = None
+
+    def _get(self, session, path, *args, headers=None, **kwargs):
+        """
+        Wrapper for invoking async session get
+        Disables ssl verify, adds url and creds.
+        add accpet json header to tell the server that we want json
+        """
+        url = ''
+        try:
+            if headers is None:
+                headers = {}
+
+            headers['Accept'] = 'application/json'
+
+            url = urljoin(self._url + '/', path)
+            logger.debug(f'getting {url}')
+
+            with session.get(url, headers=headers, auth=(self._username, self._password), verify=False) as response:
+                response.raise_for_status()
+                return response.json()
+        except Exception:
+            logger.exception(f'exception while handling respones {url}')
 
     async def get(self, session, path, *args, headers=None, **kwargs):
         """
@@ -86,8 +109,7 @@ class RedSealClient:
 
 # pylint: disable=R0912
 # This function has too many branches becuse redseal json is wierd
-    @staticmethod
-    def reassemble_device_json(response):
+    def reassemble_device_json(self, response):
         """
         In redseal rest api, list with one object == the object,
         so we must first fix this bug inorder to parse the json
@@ -140,6 +162,16 @@ class RedSealClient:
                             vulnerability['Vulnerability'] = [vulnerability['Vulnerability'], ]
         else:
             logging.warning('Missing Applications in response')
+        session = requests.session()
+        if 'Configuration' in data and isinstance(data['Configuration'], list):
+            for config_raw in data['Configuration']:
+                try:
+                    config_name = config_raw.get('Name')
+                    config_url = config_raw.get('URL')
+                    if config_name in ['ARP table']:
+                        data[f'{config_name}_full'] = self._get(session, config_url)
+                except Exception:
+                    logger.exception(f'Problem with config raw')
         return response
 
     @staticmethod
