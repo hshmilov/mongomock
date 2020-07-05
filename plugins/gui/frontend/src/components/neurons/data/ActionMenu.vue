@@ -99,7 +99,7 @@ import XTagModal from '../popover/TagModal.vue';
 import XButton from '../../axons/inputs/Button.vue';
 
 import {
-  DELETE_DATA, DISABLE_DATA, FETCH_DATA_FIELDS,
+  DELETE_DATA, FETCH_DATA_FIELDS,
 } from '../../../store/actions';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 
@@ -174,7 +174,6 @@ export default {
   },
   methods: {
     ...mapActions({
-      disableData: DISABLE_DATA,
       deleteData: DELETE_DATA,
       fetchDataFields: FETCH_DATA_FIELDS,
     }),

@@ -456,17 +456,6 @@ export const fetchDataLabels = ({ state, dispatch }, payload) => {
   });
 };
 
-export const FETCH_COMMON_LABELS = 'FETCH_COMMON_LABELS';
-export const fetchCommonLabels = ({ state, dispatch }, payload) => {
-  const moduleState = getModule(state, payload);
-  if (!moduleState) return;
-  return dispatch(REQUEST_API, {
-    rule: `${payload.module}/labels/common?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
-    method: 'POST',
-    data: payload.entities,
-  });
-};
-
 export const ADD_DATA_LABELS = 'ADD_DATA_LABELS';
 export const addDataLabels = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);
@@ -501,18 +490,6 @@ export const removeDataLabels = ({ state, dispatch }, payload) => {
   });
 };
 
-export const DISABLE_DATA = 'DISABLE_DATA';
-export const disableData = ({ state, dispatch }, payload) => {
-  const moduleState = getModule(state, payload);
-  if (!moduleState) return;
-
-  return dispatch(REQUEST_API, {
-    rule: `${payload.module}/disable?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
-    method: 'POST',
-    data: payload.data,
-  });
-};
-
 export const DELETE_DATA = 'DELETE_DATA';
 export const deleteData = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);
@@ -540,9 +517,9 @@ export const LINK_DATA = 'LINK_DATA';
 export const linkData = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);
   if (!moduleState || !payload.data) return;
-
+  payload.data.filter = moduleState.view.query.filter;
   return dispatch(REQUEST_API, {
-    rule: `${payload.module}/manual_link?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+    rule: `${payload.module}/manual_link`,
     method: 'POST',
     data: payload.data,
   });
@@ -552,9 +529,9 @@ export const UNLINK_DATA = 'UNLINK_DATA';
 export const unlinkData = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);
   if (!moduleState || !payload.data) return;
-
+  payload.data.filter = moduleState.view.query.filter;
   return dispatch(REQUEST_API, {
-    rule: `${payload.module}/manual_unlink?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+    rule: `${payload.module}/manual_unlink`,
     method: 'POST',
     data: payload.data,
   });
@@ -564,9 +541,9 @@ export const ENFORCE_DATA = 'ENFORCE_DATA';
 export const enforceData = ({ state, dispatch }, payload) => {
   const moduleState = getModule(state, payload);
   if (!moduleState || !payload.data) return;
-
+  payload.data.filter = moduleState.view.query.filter;
   return dispatch(REQUEST_API, {
-    rule: `${payload.module}/enforce?filter=${encodeURIComponent(moduleState.view.query.filter)}`,
+    rule: `${payload.module}/enforce`,
     method: 'POST',
     data: payload.data,
   }).then(() => {
@@ -650,8 +627,9 @@ export const runAction = ({ state, dispatch }, payload) => {
   if (!payload || !payload.type || !payload.data) {
     return;
   }
+  payload.data.filter = moduleState.view.query.filter;
   return dispatch(REQUEST_API, {
-    rule: `actions/${payload.type}?filter=${encodeURIComponent(state.devices.view.query.filter)}`,
+    rule: `actions/${payload.type}`,
     method: 'POST',
     data: payload.data,
   });
@@ -681,11 +659,12 @@ export const saveCustomData = ({ state, dispatch }, payload) => {
   if (!module) return;
   payload.data.id = 'unique';
   return dispatch(REQUEST_API, {
-    rule: `${payload.module}/custom?filter=${encodeURIComponent(module.view.query.filter)}`,
+    rule: `${payload.module}/custom`,
     method: 'POST',
     data: {
       selection: payload.selection,
       data: payload.data,
+      filter: module.view.query.filter,
     },
     type: UPDATE_CUSTOM_DATA,
     payload,
