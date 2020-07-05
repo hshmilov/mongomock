@@ -714,7 +714,7 @@ class LdapConnection(object):
                     logger.exception(f"Problem getting server for {server}")
 
         except Exception:
-            logger.exception("exception while getting dfsr shares")
+            logger.warning("exception while getting dfsr shares", exc_info=True)
 
         yield from dfsr_shares.items()
 

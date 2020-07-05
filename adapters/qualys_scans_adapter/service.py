@@ -544,7 +544,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             if device_raw.get('lastSystemBoot'):
                 device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
             try:
-                if not device_raw.get('networkInterface'):
+                if not device_raw.get('networkInterface') and device_raw.get('address'):
                     device.add_nic(ips=[device_raw.get('address')])
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
                     try:

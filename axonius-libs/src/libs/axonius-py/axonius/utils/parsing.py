@@ -915,6 +915,7 @@ def hostname_not_problematic(adapter_device):
              and 'macbook pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro_root' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'dev' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'test' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'playtikas-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'unknown' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
