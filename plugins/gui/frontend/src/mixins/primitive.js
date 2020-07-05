@@ -15,8 +15,9 @@
 	 - isEmpty - If the type requires a special method to determine whether it is empty
 
  */
+import { SIZE_OPERATOR } from '../constants/filter';
 export default {
-	props: ['schema', 'value', 'readOnly'],
+	props: ['schema', 'value', 'readOnly', 'operator'],
 	data() {
 		return {
 			data: null,
@@ -26,7 +27,7 @@ export default {
 	},
 	computed: {
 		enumOptions() {
-			if (!this.schema.enum) return undefined
+			if (!this.schema.enum || this.operator === SIZE_OPERATOR) return undefined
 			return this.schema.enum.map((item, index) => {
 				if (item instanceof Object && 'name' in item && 'title' in item) {
 					return item;
