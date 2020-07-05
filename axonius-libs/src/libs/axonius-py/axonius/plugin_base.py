@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 import pymongo
+from urllib3.exceptions import ProtocolError
 # bson is requirement of mongo and its not recommended to install it manually
 from bson import ObjectId, json_util
 # pylint: disable=ungrouped-imports
@@ -310,7 +311,7 @@ def retry_if_connection_error(exception):
 def retry_if_remote_disconnected(exception):
     """Return True if we should retry (in this case when it's an connection), False otherwise"""
     return isinstance(exception, requests.exceptions.ConnectionError) and\
-        exception.args and isinstance(exception.args[0], urllib3.exceptions.ProtocolError)
+        exception.args and isinstance(exception.args[0], ProtocolError)
 
 
 def return_error(error_message, http_status=500, additional_data=None, non_prod_error=False):
