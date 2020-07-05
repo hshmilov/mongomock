@@ -617,12 +617,12 @@ def main():
 
             # Priority tests
             priority_tests = [
+                'ui_test_global_settings',
                 'ui_test_devices_table_tags',
                 'ui_test_devices_table',
                 'ui_test_instances_upgrade',
                 'Unit Tests',
                 'ui_test_instances_after_join',
-                'ui_test_global_settings',
                 'ui_test_report_generation',
                 'ui_test_devices_query_advanced_more_cases',
                 'ui_test_enforcement_actions',
