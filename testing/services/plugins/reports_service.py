@@ -52,7 +52,10 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 7:
             self._update_schema_version_7()
 
-        if self.db_schema_version != 7:
+        if self.db_schema_version < 8:
+            self._update_schema_version_8()
+
+        if self.db_schema_version != 8:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -367,6 +370,26 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             print(f'Exception while upgrading reports db to version 7. Details: {e}')
             traceback.print_exc()
             raise
+
+    def _update_schema_version_8(self):
+        print('Upgrade to schema 8')
+        try:
+            enforcement_tasks_collection = self.db.client[REPORTS_PLUGIN_NAME]['triggerable_history']
+            for result_type in ['main', 'failure', 'success', 'post']:
+                enforcement_tasks_collection.update_many(
+                    filter={
+                        f'result.{result_type}.action.action_name': 'run_executable_windows',
+                    },
+                    update={
+                        '$set': {
+                            f'result.{result_type}.action.action_name': 'run_command_windows'
+                        }
+                    }
+                )
+            self.db_schema_version = 8
+        except Exception as e:
+            print(f'Exception while upgrading reports db to version 8. Details: {e}')
+            traceback.print_exc()
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)
