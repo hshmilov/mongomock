@@ -1,4 +1,3 @@
-import pytest
 from retrying import retry
 
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
@@ -8,8 +7,6 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 
 class TestInstanceMasterDockerRestart(TestInstancesBase):
-
-    @pytest.mark.skip('Might get all tests after stuck.')
     def test_instances_after_master_docker_restart(self):
         self.put_customer_conf_file()
 

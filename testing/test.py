@@ -53,7 +53,7 @@ MAX_SECONDS_FOR_THREAD_POOL = 60 * 260  # Just an extra caution for a timeout
 TC = TeamcityHelper()
 
 
-def execute(commands, cwd=None, timeout=None, stream_output: bool=False):
+def execute(commands, cwd=None, timeout=None, stream_output: bool=False, allowed_return_codes=(0,)):
     if not isinstance(commands, list):
         commands = ['/bin/bash', '-c', commands]
 
@@ -75,7 +75,7 @@ def execute(commands, cwd=None, timeout=None, stream_output: bool=False):
         raise ValueError(f'subprocess "{commands}" timed-out after {timeout} seconds, \n'
                          f'stdout: {stdout.decode("utf-8")}\nstderr: {stderr.decode("utf-8")}')
 
-    if subprocess_handle.returncode != 0:
+    if subprocess_handle.returncode not in allowed_return_codes:
         raise ValueError(f'subprocess "{commands}" returned rc {subprocess_handle.returncode}, \n'
                          f'stdout: {stdout.decode("utf-8")} \nstderr: {stderr.decode("utf-8")}')
 
@@ -459,8 +459,9 @@ class InstanceManager:
             raise last_exception
 
 
-def get_list_of_tests_in_path(path):
-    output, _ = execute('pytest --collect-only', cwd=path)
+def get_list_of_tests_in_path(path, extra_args):
+    # 5 means that no tests were collected (documented pytest feature.)
+    output, _ = execute(f'pytest --collect-only {extra_args}', cwd=path, allowed_return_codes={0, 5})
 
     # we have to extract the path, this will look like:
     # <Module 'plugins/static_users_correlator/tests/test_static_users_correlator.py'>
@@ -505,6 +506,9 @@ def main():
         else ''
     all_extra_pytest_args = f'{extra_pytest_args} {extra_pytest_single_args}'
 
+    # This is a patch, only used to get rid of `Unit Tests` without actually running pytest.
+    is_instances = '--instances' in all_extra_pytest_args.split()
+
     print(f'Cloud type: {args.cloud}')
     print(f'Number of instances: {args.number_of_instances}')
     print(f'Instance Type: {args.instance_type}')
@@ -526,10 +530,10 @@ def main():
             def get_ut_tests_jobs():
                 return {
                     'Unit Tests': f'./run_ut_tests.sh {all_extra_pytest_args}'
-                }
+                } if not is_instances else dict()
 
             def get_integ_tests_jobs():
-                integ_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['integ']))
+                integ_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['integ']), all_extra_pytest_args)
                 with TC.block('Collected integration tests modules'):
                     for test_module in integ_tests:
                         print(test_module)
@@ -542,7 +546,8 @@ def main():
                 }
 
             def get_parallel_tests_jobs():
-                parallel_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['parallel']))
+                parallel_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['parallel']),
+                                                           all_extra_pytest_args)
                 with TC.block('Collected parallel tests modules'):
                     for test_module in parallel_tests:
                         print(test_module)
@@ -582,7 +587,7 @@ def main():
                 return parallel_jobs
 
             def get_ui_tests_jobs():
-                ui_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['ui']))
+                ui_tests = get_list_of_tests_in_path(os.path.join(ROOT_DIR, DIR_MAP['ui']), all_extra_pytest_args)
 
                 with TC.block('Collected ui tests modules'):
                     for test_module in ui_tests:
@@ -607,8 +612,8 @@ def main():
                 parallel_tests_jobs = get_parallel_tests_jobs()
                 priority_parallel = list(parallel_tests_jobs.keys())[:2]
                 jobs.update(parallel_tests_jobs)
-                jobs.move_to_end(priority_parallel[0], last=False)
-                jobs.move_to_end(priority_parallel[1], last=False)
+                for p in priority_parallel:
+                    jobs.move_to_end(p, last=False)
 
             # Priority tests
             priority_tests = [
