@@ -211,9 +211,10 @@ DOCKER_PORTS = {
     'malwarebytes-cloud-adapter':       6692,
     'bigid-adapter':                    6693,
     'panorays-adapter':                 6694,
+    'chisel':                           8887,  # reserved
     'master-proxy':                     8888,  # reserved
-    'bandicoot':                        9090,
     'httpd-service':                    8889,  # reserved
+    'bandicoot':                        9090,
     'avamar-adapter':                   9930,
     'riskiq-csv-adapter':               9931,
     'ivanti-sm-adapter':                9940,

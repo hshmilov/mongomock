@@ -39,6 +39,10 @@ def destroy():
         except Exception as e:
             print(f'Error while removing container {container.name}: {e}')
 
+    # restart docker service
+    print_state(f'Restarting docker service')
+    subprocess.check_call('service docker restart'.split())
+
     # remove gui volume
     print(f'Removing gui volume')
     try:
@@ -66,10 +70,6 @@ def destroy():
                 print(f'Removed {image}')
             except Exception as e:
                 print(f'Error while stopping Image {image} {e}')
-
-    # restart docker service
-    print_state(f'Restarting docker service')
-    subprocess.check_call('service docker restart'.split())
 
 
 def main():
