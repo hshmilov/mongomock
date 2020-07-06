@@ -10,6 +10,7 @@ from aws_adapter.connection.structures import AWSDeviceAdapter, \
     AWSElasticsearchSecurityOption, AWSElasticsearchVPCOptions, \
     AWSElasticsearchLogOptions, AWSElasticsearchClusterConfig, AWSIAMPolicy, \
     AWSIAMPolicyPermission, AWSIAMPolicyPrincipal
+from aws_adapter.consts import ELASTICSEARCH_DOMAIN_LIMIT
 from axonius.utils.datetime import parse_date
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -26,30 +27,34 @@ def query_devices_by_client_by_source_elasticsearch(client_data: dict):
             domains_discovered = response.get('DomainNames')
             if domains_discovered and isinstance(domains_discovered, list):
                 domains = [domain.get('DomainName') for domain in domains_discovered]
+
+                # this is a new issue in the AWS ES API. A limit of 5
+                # domains can be retrieved at any one time
                 try:
-                    response = es_client.describe_elasticsearch_domains(
-                        DomainNames=domains)
-                    if isinstance(response, dict) and isinstance(
-                            response.get('DomainStatusList'), list):
+                    for i in range(0, len(domains), ELASTICSEARCH_DOMAIN_LIMIT):
+                        response = es_client.describe_elasticsearch_domains(
+                            DomainNames=domains[i:i + ELASTICSEARCH_DOMAIN_LIMIT])
+                        if isinstance(response, dict) and isinstance(
+                                response.get('DomainStatusList'), list):
 
-                        for domain_status in response.get('DomainStatusList'):
-                            if isinstance(domain_status, dict):
-                                is_public = check_security_groups(
-                                    client_data,
-                                    domain_status)
+                            for domain_status in response.get('DomainStatusList'):
+                                if isinstance(domain_status, dict):
+                                    is_public = check_security_groups(
+                                        client_data,
+                                        domain_status)
 
-                                domain_status['IsPublic'] = is_public
+                                    domain_status['IsPublic'] = is_public
 
-                                yield domain_status
-                            else:
-                                logger.warning(f'Malformed domain. Expected a '
-                                               f'dict, got {type(domain_status)}: '
-                                               f'{str(domain_status)}')
-                                continue
-                    else:
-                        logger.warning(f'Malformed response from describe '
-                                       f'Elasticsearch domains: {str(response)}')
-                        return
+                                    yield domain_status
+                                else:
+                                    logger.warning(f'Malformed domain. Expected a '
+                                                   f'dict, got {type(domain_status)}: '
+                                                   f'{str(domain_status)}')
+                                    continue
+                        else:
+                            logger.warning(f'Malformed response from describe '
+                                           f'Elasticsearch domains: {str(response)}')
+                            return
                 except Exception:
                     logger.exception(f'Unable to parse Elasticsearch domains: '
                                      f'{str(domains_discovered)}')
@@ -157,8 +162,21 @@ def parse_raw_data_inner_elasticsearch(device: AWSDeviceAdapter,
                     for statement in statements:
                         permissions = list()
                         if statement and isinstance(statement, dict):
+                            action = statement.get('Action')
+                            if action and isinstance(action, str):
+                                action = [action]
+                            elif not isinstance(action, list):
+                                action = None
+
+                            not_action = statement.get('NotAction')
+                            if not_action and isinstance(not_action, str):
+                                not_action = [not_action]
+                            elif not isinstance(not_action, list):
+                                not_action = None
+
                             permission = AWSIAMPolicyPermission(
-                                policy_action=[statement.get('Action')],
+                                policy_action=action,
+                                policy_not_action=not_action,
                                 policy_effect=statement.get('Effect'),
                                 policy_resource=statement.get('Resource')
                             )

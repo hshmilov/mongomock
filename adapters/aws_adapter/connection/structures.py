@@ -85,6 +85,7 @@ class AWSIAMPolicyCondition(SmartJsonClass):
 
 class AWSIAMPolicyPermission(SmartJsonClass):
     policy_action = ListField(str, 'Policy Action')
+    policy_not_action = ListField(str, 'Policy NotAction')
     policy_conditions = ListField(str, 'Policy Conditions')
     policy_effect = Field(str, 'Policy Effect')
     policy_principals = ListField(AWSIAMPolicyPrincipal, 'Policy Principals')

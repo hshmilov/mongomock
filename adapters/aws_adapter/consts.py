@@ -4,3 +4,5 @@ EKS_YAML_FILE = 'apiVersion: v1\nclusters:\n- cluster:\n    server: {endpoint}\n
                 'kind: Config\npreferences: {preferences}\nusers:\n- name: aws\n  user:\n    exec:\n' + \
                 '      apiVersion: client.authentication.k8s.io/v1alpha1\n      command: aws-iam-authenticator\n' + \
                 '      args:\n        - \"token\"\n        - \"-i\"\n        - \"{cluster_name}\"'
+
+ELASTICSEARCH_DOMAIN_LIMIT = 5
