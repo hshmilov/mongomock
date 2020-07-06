@@ -5,6 +5,7 @@ from typing import List, Tuple, Iterable
 from collections import namedtuple
 
 from axonius.clients.wmi_query import consts
+from axonius.utils.wait import wait_until
 from testing.test_credentials.test_wmi_credentials import CLIENT_DETAILS
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
 from testing.test_credentials.test_shodan_credentials import OLD_CLIENT_DETAILS as shodan_client_details
@@ -156,6 +157,10 @@ class EnforcementsPage(EntitiesPage):
     QUERY_TITLE_CSS = '.query-title'
 
     ENFORCEMENT_LOCK_MODAL_CSS = '#enforcement_feature_lock'
+
+    FIELD_COMPLETED = 'Completed'
+    FIELD_STATUS = 'Status'
+    FIELD_NAME = 'Name'
 
     @property
     def url(self):
@@ -595,6 +600,7 @@ class EnforcementsPage(EntitiesPage):
 
     def click_tasks_button(self):
         self.click_button(self.VIEW_TASKS_BUTTON_TEXT)
+        self.wait_for_table_to_be_responsive()
 
     def get_view_tasks_button(self, context=None):
         return self.get_button(self.VIEW_TASKS_BUTTON_TEXT, context=context)
@@ -924,3 +930,11 @@ class EnforcementsPage(EntitiesPage):
 
     def assert_lock_modal_is_visible(self):
         self.wait_for_element_present_by_css(self.ENFORCEMENT_LOCK_MODAL_CSS)
+
+    def wait_until_enforcement_task_completion(self):
+        wait_until(lambda: self.FIELD_COMPLETED in self.get_column_data_inline(self.FIELD_STATUS),
+                   interval=1,
+                   total_timeout=60 * 2)
+
+    def get_enforcement_table_task_name(self):
+        return self.get_column_data_inline(self.FIELD_NAME)[0]
