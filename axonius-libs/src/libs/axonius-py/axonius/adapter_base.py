@@ -429,8 +429,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.info(f'Querying {data} took {query_time.seconds} seconds')
 
         except adapter_exceptions.AdapterException:
-            problematic_client = client_name if isinstance(client_name, str) else client if\
-                isinstance(client, str) else data[client]
+            try:
+                problematic_client = client_name if isinstance(client_name, str) else client if\
+                    isinstance(client, str) else data[client]
+            except Exception:
+                problematic_client = 'Unknown'
             logger.warning(f'Failed fetching data for client {problematic_client}', exc_info=True)
             yield data[client], ''
         except Exception as e:
@@ -481,8 +484,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     finished[data[client]] = client
 
             except adapter_exceptions.AdapterException:
-                problematic_client = client_name if isinstance(client_name, str) else client if \
-                    isinstance(client, str) else data[client]
+                try:
+                    problematic_client = client_name if isinstance(client_name, str) else client if \
+                        isinstance(client, str) else data[client]
+                except Exception:
+                    problematic_client = 'Unknown'
                 logger.warning(f'Failed fetching data for client {problematic_client}', exc_info=True)
                 yield data[client], ''
             except Exception as e:
