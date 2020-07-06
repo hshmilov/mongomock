@@ -37,7 +37,7 @@
           @click="openJiraDialog"
         >
           <div class="enforce-item">
-            Create JIRA Issue
+            Create Jira Issue
           </div>
         </AMenuItem>
       </AMenu>

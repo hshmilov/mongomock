@@ -12,7 +12,7 @@
       <MdSwitch
         v-model="showOnlyConfigured"
         class="md-primary"
-      >Configured Only ({{ configuredAdaptersCount }})</MdSwitch>
+      >Configured only ({{ configuredAdaptersCount }})</MdSwitch>
     </div>
     <div
       v-if="!adaptersData.length && adaptersFetching"

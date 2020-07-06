@@ -69,13 +69,13 @@
           <XSwitch
             :checked="failedOnly"
             class="failed-only"
-            label="Failed Only"
+            label="Failed only"
             @change="toggleFailedSwitch"
           />
           <XSwitch
               :checked="aggregatedView"
               class="cross-account"
-              label="Aggregated View"
+              label="Aggregated view"
               @change="toggleCrossAccountsSwitch"
           />
           <XButton

@@ -1331,7 +1331,7 @@
   "sal_adapter": {
     "title": "Sal",
     "link": "https://docs.axonius.com/docs/sal",
-    "description": "Sal is a open source reporting solution for managed endpoints."
+    "description": "Sal is an open-source reporting solution for managed endpoints."
   },
   "stresstest_adapter": {
     "title": "Test adapters",
@@ -1341,7 +1341,7 @@
   "digital_shadows_adapter": {
     "title": "Digital Shadows SearchLight",
     "link": "https://docs.axonius.com/docs/digital-shadows-searchlight",
-    "description": "Digital Shadows SearchLight is a Digital Risk Protection solution that protects organizations against external risk exposure."
+    "description": "Digital Shadows SearchLight is a digital risk protection solution that protects organizations against external risk exposure."
   },
   "hyper_v_adapter": {
     "title": "Microsoft Hyper-V",
@@ -1381,6 +1381,6 @@
   "rancher_adapter": {
     "title": "Rancher",
     "link": "https://docs.axonius.com/docs/rancher",
-    "description": "Rancher is an open-source multi-cluster orchestration platform that enables operations teams deploy, manage and secure enterprise Kubernetes."
+    "description": "Rancher is an open-source multi-cluster orchestration platform that enables operations teams to deploy, manage and secure enterprise Kubernetes."
   }
 }

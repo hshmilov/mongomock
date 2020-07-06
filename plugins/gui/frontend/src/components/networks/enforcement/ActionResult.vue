@@ -27,7 +27,7 @@
       :data="resultData"
       @click-one="$emit('click-one', $event)"
     />
-    <div v-else>Not ran</div>
+    <div v-else>No assets found</div>
   </div>
 </template>
 
