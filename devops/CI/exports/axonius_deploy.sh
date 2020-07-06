@@ -6,7 +6,7 @@ sudo_pass=$3
 build_name=$4
 build_mode=$5
 rm -rf cortex
-git clone https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/$fork/cortex
+git clone https://b1654a5e47ffc47b5e945f0c3d34bdced6ec2ab6@github.com/$fork/cortex
 cd cortex
 git checkout $branch
 # add go packages
