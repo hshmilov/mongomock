@@ -31,7 +31,7 @@ def get_credential_report(iam_client):
                     break
             except ClientError as err:
                 # pylint: disable=no-member
-                if 'Rate exceeded' in err.error.get('Message', 'Unknown'):
+                if 'Rate exceeded' in err.response.get('Error', {}).get('Message', 'Unknown'):
                     time.sleep(CREDS_REPORT_DELAY_TIME_IN_SECONDS)
                     continue
                 raise
