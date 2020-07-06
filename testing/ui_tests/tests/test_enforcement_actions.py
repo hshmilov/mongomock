@@ -12,7 +12,6 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.parsing import make_dict_from_csv
 from axonius.utils.wait import wait_until
-from services.adapters.esx_service import EsxService
 from services.adapters.stresstest_scanner_service import StresstestScannerService
 from services.adapters.stresstest_service import StresstestService
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
@@ -23,8 +22,7 @@ from test_credentials.json_file_credentials import \
     client_details as json_file_creds
 from test_credentials.test_aws_credentials import (EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
                                                    EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
-from test_credentials.test_esx_credentials import \
-    client_details as esx_client_details
+from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 from test_helpers.log_tester import LogTester
 from ui_tests.pages.enforcements_page import (ENFORCEMENT_WMI_SAVED_QUERY,
                                               ENFORCEMENT_WMI_SAVED_QUERY_NAME)
@@ -229,47 +227,37 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.wait_for_table_to_load()
             tagged_check_result = self.devices_page.get_first_row_tags() == UNTAG_UNQUERIED
             assert tagged_check_result == tagged
-            with EsxService().contextmanager(take_ownership=True):
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_adapter(ESX_NAME)
-                self.adapters_page.click_adapter(ESX_NAME)
-                self.adapters_page.wait_for_spinner_to_end()
-                self.adapters_page.wait_for_table_to_load()
-                self.adapters_page.click_new_server()
-                self.adapters_page.fill_creds(**esx_client_details[0][0])
-                self.adapters_page.click_save()
-                self.adapters_page.wait_for_spinner_to_end()
-                self.devices_page.switch_to_page()
-                self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
-                self.enforcements_page.switch_to_page()
-                self.enforcements_page.wait_for_table_to_load()
-                self.enforcements_page.click_new_enforcement()
-                self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
-                self.enforcements_page.select_trigger()
-                self.enforcements_page.check_scheduling()
-                self.enforcements_page.select_saved_view(AD_QUERY_NAME)
-                self.enforcements_page.save_trigger()
-                self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
-                                                        should_delete_unqueried=True)
-                self.enforcements_page.click_save_button()
-                self.base_page.run_discovery()
+            self.adapters_page.add_json_server(esx_json_file_mock_devices)
 
-                _check_query_result_is_tagged(AD_QUERY, True)
-                _check_query_result_is_tagged(JSON_ONLY_QUERY, False)
+            self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
+            self.enforcements_page.switch_to_page()
+            self.enforcements_page.wait_for_table_to_load()
+            self.enforcements_page.click_new_enforcement()
+            self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
+            self.enforcements_page.select_trigger()
+            self.enforcements_page.check_scheduling()
+            self.enforcements_page.select_saved_view(AD_QUERY_NAME)
+            self.enforcements_page.save_trigger()
+            self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
+                                                    should_delete_unqueried=True)
+            self.enforcements_page.click_save_button()
+            self.base_page.run_discovery()
 
-                self.devices_page.run_filter_and_save(AD_ESX_AND_JSON_QUERY_NAME, AD_ESX_AND_JSON_QUERY)
+            _check_query_result_is_tagged(AD_QUERY, True)
+            _check_query_result_is_tagged(JSON_ONLY_QUERY, False)
 
-                self.enforcements_page.switch_to_page()
-                self.enforcements_page.wait_for_spinner_to_end()
-                self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
-                self.enforcements_page.select_trigger()
-                self.enforcements_page.select_saved_view(AD_ESX_AND_JSON_QUERY_NAME)
-                self.enforcements_page.save_trigger()
-                self.enforcements_page.click_run_button()
-                _check_query_result_is_tagged(AD_ONLY_QUERY, False)
-                _check_query_result_is_tagged(JSON_ONLY_QUERY, True)
-                self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
-                self.wait_for_adapter_down(ESX_PLUGIN_NAME)
+            self.devices_page.run_filter_and_save(AD_ESX_AND_JSON_QUERY_NAME, AD_ESX_AND_JSON_QUERY)
+
+            self.enforcements_page.switch_to_page()
+            self.enforcements_page.wait_for_spinner_to_end()
+            self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
+            self.enforcements_page.select_trigger()
+            self.enforcements_page.select_saved_view(AD_ESX_AND_JSON_QUERY_NAME)
+            self.enforcements_page.save_trigger()
+            self.enforcements_page.click_run_button()
+            _check_query_result_is_tagged(AD_ONLY_QUERY, False)
+            _check_query_result_is_tagged(JSON_ONLY_QUERY, True)
+            self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
 
     @flaky(max_runs=3)
     def test_tag_entities(self):
