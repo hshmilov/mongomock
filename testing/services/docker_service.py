@@ -112,7 +112,7 @@ class DockerService(AxonService):
 
     @property
     def run_timeout(self):
-        return 60 * 3
+        return 60 * 5
 
     @property
     def volumes(self):
