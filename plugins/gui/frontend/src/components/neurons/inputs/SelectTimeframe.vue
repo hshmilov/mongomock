@@ -17,7 +17,7 @@
           type="number"
           @keypress="validateNumber"
         >
-        <x-select
+        <XSelect
           v-model="unit"
           :options="relativeRangeUnits"
           placeholder="Units"
@@ -35,14 +35,14 @@
       >
       <label for="range_absolute">Show results in date range</label>
       <template v-if="isRangeAbsolute">
-        <x-date-edit
+        <XDateEdit
           v-model="from"
           :check-disabled="checkDateAvailabilityFrom"
           :format="false"
           :clearable="false"
           label="From"
         />
-        <x-date-edit
+        <XDateEdit
           v-model="to"
           :check-disabled="checkDateAvailabilityTo"
           :format="false"
@@ -71,127 +71,128 @@
 </template>
 
 <script>
-  import xSelect from '../../axons/inputs/select/Select.vue'
-  import xDateEdit from '../schema/types/string/DateEdit.vue'
-  import {validateNumber} from '../../../constants/validations'
+import { mapState, mapGetters } from 'vuex';
+import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
+import { FeatureFlagsEnum } from '@constants/feature_flags';
+import XSelect from '../../axons/inputs/select/Select.vue';
+import XDateEdit from '../schema/types/string/DateEdit.vue';
+import { validateNumber } from '../../../constants/validations';
 
-  import { mapState, mapGetters } from 'vuex'
-  import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
-  import { FeatureFlagsEnum } from '@constants/feature_flags';
 
-  export default {
-    name: 'XSelectTimeframe',
-    components: {
-      xSelect, xDateEdit
+export default {
+  name: 'XSelectTimeframe',
+  components: {
+    XSelect, XDateEdit,
+  },
+  props: {
+    value: {
+      type: Object,
+      default: () => {},
     },
-    props: {
-      value: {
-        type: Object,
-        default: () => {}
-      }
+  },
+  data() {
+    return {
+      TimelineTimeframesTypesEnum,
+      maxDaysForLimitedQuery: 30,
+      selectedFrom: false,
+      selectedTo: false,
+    };
+  },
+  computed: {
+    ...mapState({
+      ...mapGetters({
+        featureFlags: 'featureFlags',
+      }),
+      firstHistoricalDate(state) {
+        return Object.values(state.constants.firstHistoricalDate)
+          .map((dateStr) => new Date(dateStr))
+          .reduce((a, b) => ((a < b) ? a : b), new Date());
+      },
+      isUnlimitedHistory() {
+        return this.featureFlags[FeatureFlagsEnum.query_timeline_range];
+      },
+    }),
+    type: {
+      get() {
+        return this.value.type;
+      },
+      set(type) {
+        this.$emit('input', (type === TimelineTimeframesTypesEnum.absolute) ? {
+          type, from: null, to: null,
+        } : {
+          type, unit: TimelineTimeframesUnitsEnum.days.name, count: 7,
+        });
+      },
     },
-    data() {
-      return { TimelineTimeframesTypesEnum, maxDaysForLimitedQuery: 30 };
+    to: {
+      get() {
+        return this.value.to;
+      },
+      set(to) {
+        this.$emit('input', { ...this.value, to });
+      },
     },
-    computed: {
-      ...mapState({
-        ...mapGetters({
-          featureFlags: 'featureFlags',
-        }),
-        firstHistoricalDate (state) {
-          return Object.values(state.constants.firstHistoricalDate)
-            .map(dateStr => new Date(dateStr))
-            .reduce((a, b) => {
-              return (a < b) ? a : b
-            }, new Date())
-        },
-        isUnlimitedHistory() {
-          return this.featureFlags[FeatureFlagsEnum.query_timeline_range];
-        },
-       }),
-      type: {
-        get () {
-          return this.value.type
-        },
-        set (type) {
-          this.$emit('input', (type === TimelineTimeframesTypesEnum.absolute) ? {
-            type, from: null, to: null
-          } : {
-            type, unit: TimelineTimeframesUnitsEnum.days.name, count: 7,
-          })
-        }
+    from: {
+      get() {
+        return this.value.from;
       },
-      to: {
-        get () {
-          return this.value.to
-        },
-        set (to) {
-          this.$emit('input', {...this.value, to})
-        }
+      set(from) {
+        this.$emit('input', { ...this.value, from });
       },
-      from: {
-        get () {
-          return this.value.from
-        },
-        set (from) {
-          this.$emit('input', {...this.value, from})
-        }
-      },
-      unit: {
-        get () {
-          return this.value.unit
-        },
-        set (unit) {
-          this.$emit('input', {...this.value, unit})
-        }
-      },
-      count: {
-        get () {
-          return this.value.count
-        },
-        set (count) {
-          let daysCount = count;
-          if (!this.isUnlimitedHistory) {
-            if (Number.parseInt(daysCount, 10) > this.maxDaysForLimitedQuery) {
-              daysCount = this.maxDaysForLimitedQuery;
-            }
-          } 
-          this.$emit('input', { ...this.value, count: daysCount });
-        }
-      },
-      isRangeAbsolute () {
-        return this.type === TimelineTimeframesTypesEnum.absolute
-      },
-      relativeRangeUnits () {
-        return [
-          TimelineTimeframesUnitsEnum.days,
-          TimelineTimeframesUnitsEnum.week,
-          TimelineTimeframesUnitsEnum.month,
-          TimelineTimeframesUnitsEnum.year,
-        ];
-      },
-      isValid () {
-        return (this.from != null && this.to !== null) || (this.count > 0 && this.unit)
-      }
     },
-    methods: {
-      validateNumber,
-      checkDateAvailabilityFrom (date) {
-        let isPast = date < new Date(this.firstHistoricalDate)
-        if (!this.to) {
-          return isPast || date >= new Date()
-        }
-        return isPast || date >= this.to
+    unit: {
+      get() {
+        return this.value.unit;
       },
-      checkDateAvailabilityTo (date) {
-        let isFuture = date > new Date()
-        if (!this.from) {
-          return date < this.firstHistoricalDate || isFuture
+      set(unit) {
+        this.$emit('input', { ...this.value, unit });
+      },
+    },
+    count: {
+      get() {
+        return this.value.count;
+      },
+      set(count) {
+        let daysCount = count;
+        if (!this.isUnlimitedHistory) {
+          if (Number.parseInt(daysCount, 10) > this.maxDaysForLimitedQuery) {
+            daysCount = this.maxDaysForLimitedQuery;
+          }
         }
-        return date <= this.from || isFuture
-      }
-    }
-  }
+        this.$emit('input', { ...this.value, count: daysCount });
+      },
+    },
+    isRangeAbsolute() {
+      return this.type === TimelineTimeframesTypesEnum.absolute;
+    },
+    relativeRangeUnits() {
+      return [
+        TimelineTimeframesUnitsEnum.days,
+        TimelineTimeframesUnitsEnum.week,
+        TimelineTimeframesUnitsEnum.month,
+        TimelineTimeframesUnitsEnum.year,
+      ];
+    },
+    isValid() {
+      return (this.from != null && this.to !== null) || (this.count > 0 && this.unit);
+    },
+  },
+  methods: {
+    validateNumber,
+    checkDateAvailabilityFrom(date) {
+      // return true if date is unavailable, return false if date is available
+      const firstDay = this.firstHistoricalDate;
+      const lastDay = this.to ? new Date(this.to) : new Date();
+      return date < firstDay || date > lastDay;
+    },
+    checkDateAvailabilityTo(date) {
+      // return true if date is unavailable, return false if date is available
+      const firstDay = this.from ? new Date(this.from) : this.firstHistoricalDate;
+      const lastDay = new Date();
+      return date < firstDay || date > lastDay;
+    },
+  },
+};
 </script>
 
 <style lang="scss">
