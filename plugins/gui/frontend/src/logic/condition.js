@@ -316,38 +316,41 @@ export const getOpsList = (opsMap) => Object.keys(opsMap).map((op) => ({
   title: opTitleTranslation[op] ? opTitleTranslation[op].toLowerCase() : op.toLowerCase(),
 }));
 
-const isExpectedValueString = (schema, compOp) => {
+const isStringComparison = (schema, compOp) => {
   const typesExpectingString = ['string', 'integer', 'number', 'array'];
   const opsExpectingString = ['IN', 'contains'];
   return typesExpectingString.includes(schema.type) && opsExpectingString.includes(compOp);
 };
 
-const isExpectedValueItems = (schema, compOp) => {
+const isArrayItemsComparison = (schema, compOp) => {
   const typesExpectingItems = ['array'];
   const opsExpectingItems = ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'];
   return typesExpectingItems.includes(schema.type) && opsExpectingItems.includes(compOp);
 };
 
-const isExpectedValueInteger = (schema, compOp) => {
+const isDateCountComparison = (schema, compOp) => {
   const opsExpectingInteger = ['days', 'next_days', 'hours', 'next_hours'];
   const isSchemaDate = schema.format && schema.format === 'date-time';
   return isSchemaDate && opsExpectingInteger.includes(compOp);
 };
 
+const isNaturalIntComparison = (schema) => ['number', 'integer', 'array'].includes(schema.type);
+
 export const getValueSchema = (fieldSchema, compOp) => {
   if (!fieldSchema) {
     return {};
   }
-  if (isExpectedValueString(fieldSchema, compOp)) {
+  if (isStringComparison(fieldSchema, compOp)) {
     return { type: 'string' };
   }
-  if (isExpectedValueItems(fieldSchema, compOp)) {
-    return fieldSchema.items;
+  if (isDateCountComparison(fieldSchema, compOp)) {
+    return {
+      type: 'integer',
+      allow_negatives: true,
+    };
   }
-  if (isExpectedValueInteger(fieldSchema, compOp)) {
-    return { type: 'integer' };
-  }
-  return fieldSchema;
+  const finalSchema = isArrayItemsComparison(fieldSchema, compOp) ? fieldSchema.items : fieldSchema
+  return isNaturalIntComparison(finalSchema) ? { ...finalSchema, min: 0 } : finalSchema;
 };
 
 export const getUpdatedValueAfterFieldChange = (
