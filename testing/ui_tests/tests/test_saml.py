@@ -86,52 +86,6 @@ $config = array(
 
 
 class TestSaml(PermissionsTestBase):
-    def _simple_samlserver_page_login(self, saml_server):
-        # This method deals with a page served by the saml server docker container.
-        # It is a page, and thus one might be tempted to create a Page class and file for it
-        # I think that it is so tightly coupled to this container and code that it will cause
-        # more confusion and won't reduce complexity.
-
-        self.base_page.wait_for_element_present_by_text('A service has requested you to authenticate yourself.')
-        self.base_page.fill_text_field_by_element_id('username', saml_server.test_user_name)
-        self.base_page.fill_text_field_by_element_id('password', saml_server.test_user_password)
-        self.base_page.find_element_by_text('Login').click()
-
-    def _set_saml(self, name, metadata_url, external_url='', default_role_name=None,
-                  evaluate_new_and_existing_users=False, assignment_rules=None):
-        if assignment_rules is None:
-            assignment_rules = []
-        self.settings_page.switch_to_page()
-        self.settings_page.click_identity_providers_settings()
-        self.settings_page.set_allow_saml_based_login()
-        self.settings_page.fill_saml_idp(name)
-        self.settings_page.fill_saml_metadata_url(metadata_url)
-        self.settings_page.fill_saml_axonius_external_url(external_url=external_url)
-        if default_role_name:
-            self.settings_page.set_default_role_id(default_role_name)
-        if evaluate_new_and_existing_users or len(assignment_rules) > 0:
-            if evaluate_new_and_existing_users:
-                self.settings_page.set_evaluate_role_on_new_and_existing_users()
-            else:
-                self.settings_page.set_evaluate_role_on_new_users_only()
-            for assignment_rule in assignment_rules:
-                self.settings_page.click_add_assignment_rule()
-                self.settings_page.fill_saml_assignment_rule(
-                    assignment_rule.get('key'), assignment_rule.get('value'), assignment_rule.get('role'))
-
-        self.settings_page.click_save_identity_providers_settings()
-        self.settings_page.wait_for_saved_successfully_toaster()
-
-    def _login_with_saml(self, saml_server):
-        self.login_page.wait_for_login_page_to_load()
-        self.login_page.click_login_with_saml()
-        self._simple_samlserver_page_login(saml_server)
-
-    def _fetch_saml_user(self):
-        all_users = self.settings_page.get_all_users_data()
-        valid_users = [u for u in all_users if u.source.lower() == 'saml']
-        assert len(valid_users) == 1, 'Got more or less than expected valid saml usernames'
-        return valid_users[0]
 
     @staticmethod
     def _extract_saml_and_internal_user_with_name(all_users, username):
@@ -145,11 +99,11 @@ class TestSaml(PermissionsTestBase):
 
     def test_saml_user_added(self):
         with create_saml_server(self.base_url) as saml_server:
-            self._set_saml(saml_server.name, saml_server.metadata_url, '', PREDEFINED_ROLE_RESTRICTED)
+            self.settings_page.set_saml(saml_server.name, saml_server.metadata_url, '', PREDEFINED_ROLE_RESTRICTED)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
-            self._login_with_saml(saml_server)
+            self.login_page.login_with_saml_server(saml_server)
 
             self.login_page.logout()
 
@@ -157,23 +111,27 @@ class TestSaml(PermissionsTestBase):
             self.settings_page.switch_to_page()
             self.settings_page.click_manage_users_settings()
 
-            assert self._fetch_saml_user().user_name
+            assert self.settings_page.fetch_saml_user().user_name
 
     def test_saml_role_assignment_rules(self):
         self.base_page.run_discovery()
         with create_saml_server(self.base_url) as saml_server:
-            self._set_saml(saml_server.name, saml_server.metadata_url, '', None, True,
-                           [
-                               {
-                                   'key': 'surname',
-                                   'value': TEST_SURNAME,
-                                   'role': PREDEFINED_ROLE_VIEWER
-                               }
-                           ])
+            self.settings_page.set_saml(saml_server.name,
+                                        saml_server.metadata_url,
+                                        '',
+                                        None,
+                                        True,
+                                        [
+                                            {
+                                                'key': 'surname',
+                                                'value': TEST_SURNAME,
+                                                'role': PREDEFINED_ROLE_VIEWER
+                                            }
+                                        ])
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
-            self._login_with_saml(saml_server)
+            self.login_page.login_with_saml_server(saml_server)
 
             # Making sure we are indeed logged in
             self.account_page.switch_to_page()
@@ -188,7 +146,7 @@ class TestSaml(PermissionsTestBase):
             self.settings_page.switch_to_page()
             self.settings_page.click_manage_users_settings()
 
-            saml_user = self._fetch_saml_user()
+            saml_user = self.settings_page.fetch_saml_user()
             assert saml_user.user_name
             assert saml_user.role == PREDEFINED_ROLE_VIEWER
 
@@ -249,12 +207,14 @@ class TestSaml(PermissionsTestBase):
             self.settings_page.wait_for_table_to_load()
             self.settings_page.create_new_role(saml_users_role_name, saml_users_permissions)
 
-            self._set_saml(saml_server.name, saml_server.metadata_url, default_role_name=saml_users_role_name)
+            self.settings_page.set_saml(saml_server.name,
+                                        saml_server.metadata_url,
+                                        default_role_name=saml_users_role_name)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
 
-            self._login_with_saml(saml_server)
+            self.login_page.login_with_saml_server(saml_server)
             self.account_page.switch_to_page()
             self.account_page.wait_for_spinner_to_end()
             actual_saml_user_initial_api_key_and_secret = self.account_page.get_api_key_and_secret()
@@ -265,7 +225,7 @@ class TestSaml(PermissionsTestBase):
             self.settings_page.switch_to_page()
             self.settings_page.click_manage_users_settings()
 
-            saml_user_initial_snapshot = self._fetch_saml_user()
+            saml_user_initial_snapshot = self.settings_page.fetch_saml_user()
             saml_username = saml_user_initial_snapshot.user_name
 
             initial_internal_user_password = 'PASSWORD1'
@@ -324,7 +284,10 @@ class TestSaml(PermissionsTestBase):
     def test_metadata_contains_valid_external_url(self):
         external_url_test = 'https://i.am.just.a.placeholder'
 
-        self._set_saml('saml_name', 'https://saml_metadata_url', external_url_test, PREDEFINED_ROLE_RESTRICTED)
+        self.settings_page.set_saml('saml_name',
+                                    'https://saml_metadata_url',
+                                    external_url_test,
+                                    PREDEFINED_ROLE_RESTRICTED)
 
         time.sleep(10)  # Allow settings to apply
         response = requests.get(urllib.parse.urljoin('https://127.0.0.1', '/api/login/saml/metadata'))

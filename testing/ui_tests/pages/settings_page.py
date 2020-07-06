@@ -1681,3 +1681,34 @@ class SettingsPage(Page):
         toggle = self.driver.find_element_by_id('save_history')
         self.click_toggle_button(toggle, make_yes=enable)
         self.save_and_wait_for_toaster()
+
+    def set_saml(self, name, metadata_url, external_url='', default_role_name=None,
+                 evaluate_new_and_existing_users=False, assignment_rules=None):
+        if assignment_rules is None:
+            assignment_rules = []
+        self.switch_to_page()
+        self.click_identity_providers_settings()
+        self.set_allow_saml_based_login()
+        self.fill_saml_idp(name)
+        self.fill_saml_metadata_url(metadata_url)
+        self.fill_saml_axonius_external_url(external_url=external_url)
+        if default_role_name:
+            self.set_default_role_id(default_role_name)
+        if evaluate_new_and_existing_users or len(assignment_rules) > 0:
+            if evaluate_new_and_existing_users:
+                self.set_evaluate_role_on_new_and_existing_users()
+            else:
+                self.set_evaluate_role_on_new_users_only()
+            for assignment_rule in assignment_rules:
+                self.click_add_assignment_rule()
+                self.fill_saml_assignment_rule(
+                    assignment_rule.get('key'), assignment_rule.get('value'), assignment_rule.get('role'))
+
+        self.click_save_identity_providers_settings()
+        self.wait_for_saved_successfully_toaster()
+
+    def fetch_saml_user(self):
+        all_users = self.get_all_users_data()
+        valid_users = [u for u in all_users if u.source.lower() == 'saml']
+        assert len(valid_users) == 1, 'Got more or less than expected valid saml usernames'
+        return valid_users[0]

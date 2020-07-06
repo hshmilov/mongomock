@@ -3,10 +3,8 @@ client_details = {
     'api_key': '00E03SMh_F1CFo2wicgcx8s0R6E1GWYz5Xi2e_AjtA',
 }
 OKTA_LOGIN_DETAILS = {
-    'client_id': '0oafnwsabgsiZGSQx0h7',
-    'client_secret': 'wf9ldosnEPUle9zXRnmF873SOf23ndibNa55CRk8',
-    'url': 'https://dev-734958.oktapreview.com',
-    'gui2_url': 'https://okta.axonius.local',
+    'name': 'Okta login',
+    'meta_data_url': 'https://dev-734958.oktapreview.com/app/exkmpcikff88mhSRC0h7/sso/saml/metadata',
 }
 OKTA_CLIENT_LOGIN_DETAILS = {
     'username': 'ofri@axonius.com',

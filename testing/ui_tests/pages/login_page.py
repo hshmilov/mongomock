@@ -103,6 +103,25 @@ class LoginPage(Page):
     def click_login_with_saml(self):
         self.driver.find_element_by_id('saml_login_link').click()
 
+    def login_with_saml_server(self, saml_server):
+        self.wait_for_login_page_to_load()
+        self.click_login_with_saml()
+        # This method deals with a page served by the saml server docker container.
+        # It is a page, and thus one might be tempted to create a Page class and file for it
+        # I think that it is so tightly coupled to this container and code that it will cause
+        # more confusion and won't reduce complexity.
+
+        self.wait_for_element_present_by_text('A service has requested you to authenticate yourself.')
+        self.fill_text_field_by_element_id('username', saml_server.test_user_name)
+        self.fill_text_field_by_element_id('password', saml_server.test_user_password)
+        self.find_element_by_text('Login').click()
+
+    def login_with_okta_server(self, okta_login_details):
+        self.click_login_with_saml()
+        self.fill_okta_client_login_details(okta_login_details)
+        self.driver.find_element_by_id(self.OKTA_SUBMIT_BUTTON_ID).click()
+        self.wait_for_spinner_to_end()
+
     def fill_okta_client_login_details(self, login_details):
         self.wait_for_element_present_by_id(self.OKTA_LOGIN_USERNAME_ID)
         self.fill_text_field_by_element_id(self.OKTA_LOGIN_USERNAME_ID, login_details['username'])

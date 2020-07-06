@@ -1,8 +1,6 @@
-import pytest
 
 from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
-from test_credentials.test_okta_credentials import OKTA_LOGIN_DETAILS
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import EmailSettings, Saml, TEMP_FILE_PREFIX, DISCOVERY_UPDATED_VALUE
 
@@ -48,16 +46,15 @@ class TestGeneralSettings(TestBase):
         assert self.settings_page.get_selected_discovery_mode() == self.settings_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT
         assert self.settings_page.get_schedule_rate_value() == DISCOVERY_UPDATED_VALUE
 
-    @pytest.mark.skip('removed okta from the configurations')
     def test_gui_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_gui_settings()
         self.settings_page.wait_for_spinner_to_end()
 
         assert self.settings_page.get_single_adapter_checkbox()
-        okta_no_secret = OKTA_LOGIN_DETAILS.copy()
-        okta_no_secret['client_secret'] = '********'
-        assert self.settings_page.get_okta_login_details() == okta_no_secret
+
+        self.settings_page.click_identity_providers_settings()
+        self.settings_page.wait_for_spinner_to_end()
 
         assert self.settings_page.get_dc_address() == ad_client1_details['dc_name']
 
