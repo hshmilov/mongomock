@@ -1806,26 +1806,43 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
         print(f'Update to schema 40 - add has notes field for entities with notes')
         try:
             for entities_db in self._entity_db_map.values():
-                entity_with_notes = []
-                for entity in entities_db.find({
-                    'tags': {'$elemMatch': {'name': 'Notes', 'data': {'$exists': True, '$not': {'$size': 0}}}}
-                }):
-                    internal_axon_id = entity['internal_axon_id']
-                    entity_with_notes.append(internal_axon_id)
-                    entities_db.update_one(
-                        {'internal_axon_id': internal_axon_id},
-                        {
-                            '$set': {HAS_NOTES: True}
+                entities_db.update_many({
+                    'tags': {
+                        '$elemMatch': {
+                            'name': 'Notes',
+                            'data': {
+                                '$exists': True,
+                                '$not': {
+                                    '$size': 0
+                                }
+                            }
                         }
-                    )
-                for entity in entities_db.find({'internal_axon_id': {'$nin': entity_with_notes}}):
-                    internal_axon_id = entity['internal_axon_id']
-                    entities_db.update_one(
-                        {'internal_axon_id': internal_axon_id},
-                        {
-                            '$set': {HAS_NOTES: False}
+                    }
+                },
+                    {
+                        '$set': {HAS_NOTES: True}
+                }
+                )
+
+                entities_db.update_many({
+                    'tags': {
+                        '$not': {
+                            '$elemMatch': {
+                                'name': 'Notes',
+                                'data': {
+                                    '$exists': True,
+                                    '$not': {
+                                        '$size': 0
+                                    }
+                                }
+                            }
                         }
-                    )
+                    }
+                },
+                    {
+                        '$set': {HAS_NOTES: False}
+                }
+                )
 
             self.db_schema_version = 40
         except Exception as e:
