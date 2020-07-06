@@ -6,15 +6,18 @@ import urllib
 import urllib.parse
 from datetime import datetime
 from typing import List
+
 from pymongo import UpdateOne
 
-from axonius.compliance.aws_cis_default_rules import get_default_cis_aws_compliance_report
-from axonius.compliance.azure_cis_default_rules import get_default_cis_azure_compliance_report
+from axonius.compliance.aws_cis_default_rules import \
+    get_default_cis_aws_compliance_report
+from axonius.compliance.azure_cis_default_rules import \
+    get_default_cis_azure_compliance_report
 from axonius.consts import adapter_consts
+from axonius.consts.compliance_consts import (COMPLIANCE_AWS_RULES_COLLECTION,
+                                              COMPLIANCE_AZURE_RULES_COLLECTION)
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
-from axonius.consts.compliance_consts import COMPLIANCE_AWS_RULES_COLLECTION, COMPLIANCE_AZURE_RULES_COLLECTION
-
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -263,8 +266,9 @@ def _concat_rules_results(target_rule, secondary_rule):
 
     target_rule['affected_entities'] = target_rule.get('affected_entities') + \
         secondary_rule.get('affected_entities', '')
-    target_rule['entities_results'] = f'{target_rule["entities_results"]} \n{secondary_rule["entities_results"]}' \
-        if secondary_rule.get('affected_entities') else target_rule.get('entities_results', '')
+    target_rule['entities_results'] = f'{target_rule.get("entities_results")}' \
+                                      f'\n{secondary_rule.get("entities_results")}'\
+        if target_rule.get('entities_results') else secondary_rule.get('entities_results')
 
 
 def _replace_entities_results_query(aggregated_rules, accounts_ids):

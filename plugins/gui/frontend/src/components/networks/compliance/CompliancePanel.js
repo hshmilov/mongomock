@@ -6,6 +6,7 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { mapMutations } from 'vuex';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
+import _get from 'lodash/get';
 import { formatDate } from '@constants/utils';
 import { getEntityPermissionCategory } from '@constants/entities';
 
@@ -59,6 +60,10 @@ export default {
       return this.$can(getEntityPermissionCategory(this.data.entities_results_query.type),
         this.$permissionConsts.actions.View);
     },
+    expandablePanelFieldsToDisplay() {
+      const shouldDisplayResultField = (item) => !(item.name === 'entities_results' && _get(this.data, 'status') === 'Passed');
+      return expandablePanelFields.filter(shouldDisplayResultField);
+    },
   },
   mounted() {
     this.updateActivePanels();
@@ -67,7 +72,7 @@ export default {
     ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
     updateActivePanels() {
       this.expandedValues = [];
-      expandablePanelFields.forEach((field, index) => {
+      this.expandablePanelFieldsToDisplay.forEach((field, index) => {
         if (field.expanded) {
           this.expandedValues.push(index);
         }
@@ -92,7 +97,7 @@ export default {
       return value;
     },
     renderExpandableFields() {
-      return expandablePanelFields.map((field) => {
+      return this.expandablePanelFieldsToDisplay.map((field) => {
         if (!this.data[field.name]) {
           return null;
         }
