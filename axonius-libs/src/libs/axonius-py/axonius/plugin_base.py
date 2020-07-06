@@ -4259,7 +4259,8 @@ class PluginBase(Configurable, Feature, ABC):
                 'status': False,
                 'csr_file': '',
                 'subject_name': '',
-                'submission_date': ''
+                'submission_date': '',
+                'key_file': ''
             },
             'https_log_settings': {
                 'enabled': False,
