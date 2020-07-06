@@ -29,7 +29,7 @@ import {
   GET_DATA_SCHEMA_BY_NAME,
   GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
 } from '../../../../store/getters';
-import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
+import { getOpsMap, getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 export default {
   name: 'XConditionAggregatedData',
@@ -118,17 +118,21 @@ export default {
   },
   methods: {
     onChangeField(field, fieldType, filteredAdapters) {
-      const value = getUpdatedValueAfterFieldChange(this.getFieldSchema(field),
+      const newFieldSchema = this.getFieldSchema(field);
+      const opsMap = getOpsMap(newFieldSchema);
+      const compOp = opsMap[this.condition.compOp] ? this.condition.compOp : '';
+      const value = getUpdatedValueAfterFieldChange(newFieldSchema,
         this.fieldSchema,
-        this.condition.compOp,
+        compOp,
         this.condition.value);
       const update = {
         field,
         fieldType,
         filteredAdapters,
         value,
+        compOp,
       };
-      if (field.endsWith('.id') && !this.condition.compOp) {
+      if (field.endsWith('.id') && !compOp) {
         update.compOp = 'exists';
       }
       this.$emit('update', update);
