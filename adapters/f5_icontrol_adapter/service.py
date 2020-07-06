@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, Field
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import is_valid_ip
 from f5_icontrol_adapter.connection import F5IcontrolConnection
 from f5_icontrol_adapter.client_id import get_client_id
 from f5_icontrol_adapter.consts import SERVER_TYPES
@@ -25,6 +26,7 @@ class F5IcontrolAdapter(AdapterBase):
         rate_limit = Field(bool, 'Rate Limit')
         mobile_app_tunnel = Field(bool, 'Mobile App Tunnel')
         mirror = Field(bool, 'mirror')
+        destination = Field(str, 'Destination Address')
 
         allow_nat = Field(bool, 'Allow Nat')
         allow_snat = Field(bool, 'Allow SNat')
@@ -129,8 +131,8 @@ class F5IcontrolAdapter(AdapterBase):
             ],
             'type': 'array'
         }
-    # pylint: disable=too-many-branches
 
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_virtual_server_device(self, device_raw):
         try:
             device = self._new_device_adapter()
@@ -148,16 +150,31 @@ class F5IcontrolAdapter(AdapterBase):
                 pool = pool[1:].split('/', 1)[-1]
                 device.pool_name = pool
             destination = device_raw.get('destination')
+            if destination and isinstance(destination, str):
+                device.destination = destination
             port = None
-            if destination:
-                destination = destination[1:].split('/', 1)[-1]
-                if ':' in destination:
-                    destination, port = destination.split(':', 1)
-                if destination:
-                    device.add_ips_and_macs(ips=[destination])
+            try:
+                # There are two variants of "destination":
+                # `/hostname/v4.v4.v4.v4:port` and `/hostname/v6:[v6]:[v6]:[v6]:[v6]:[v6]:v6.port`
+                # where [v6] are optional ipv6 string components and v4 are non-optional ipv4 components.
+                # The other option is that destination is "any4:any" or "any6:any" which may be an issue.
+                if destination and isinstance(destination, str):
+                    destination = destination[1:].split('/', 1)[-1]
+                    if ':' in destination:
+                        # filter out ipv6 v.s. ipv4
+                        partition_char = '.' if destination.count(':') > 1 else ':'
+                        destination, _char, port = destination.partition(partition_char)
+                    if destination and is_valid_ip(destination):
+                        device.add_ips_and_macs(ips=[destination])
+            except Exception:
+                logger.exception(f'Failed to add ips for device: {device_raw}')
+
             protocol = device_raw.get('ipProtocol')
             if port:
-                device.add_open_port(port_id=port, protocol=protocol)
+                try:
+                    device.add_open_port(port_id=port, protocol=protocol)
+                except Exception as e:
+                    logger.warning(f'Failed to add open port for device {device_raw}: {str(e)}', exc_info=True)
 
             cmp_enabled = device_raw.get('cmpEnabled')
             if cmp_enabled:
