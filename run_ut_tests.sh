@@ -6,7 +6,7 @@ echo "Running rest mock server"
 python3 -u ./testing/mocks/rest_server.py &> ./logs/mock_server.log &
 
 echo "Running unitests"
-python3 -u ./testing/run_pytest.py --ignore=testing --ignore=deployment --ignore=plugins/gui/src/frontend --ignore=libs/axonius-base-image/libs/py-space-platform $@
+python3 -u ./testing/run_pytest.py -p no:testing/tests/conftest.py --ignore=testing --ignore=deployment --ignore=plugins/gui/src/frontend --ignore=libs/axonius-base-image/libs/py-space-platform $@
 RC=$?
 if [ $RC -ne 0 ]
 then
