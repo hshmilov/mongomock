@@ -775,8 +775,8 @@ class DashboardPage(Page):
     def get_covered_from_pie(self, pie):
         return int(pie.find_element_by_css_selector(self.COVERED_PIE_SLICE_CSS).text.rstrip('%'))
 
-    def click_uncovered_pie_slice(self):
-        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, self.MANAGED_DEVICE_COVERAGE)
+    def click_uncovered_pie_slice(self, xoffset=10, yoffset=10):
+        self.click_pie_slice(self.UNCOVERED_PIE_SLICE_CSS, self.MANAGED_DEVICE_COVERAGE, xoffset, yoffset)
 
     def click_covered_pie_slice(self):
         self.click_pie_slice(self.COVERED_PIE_SLICE_CSS, self.MANAGED_DEVICE_COVERAGE)
@@ -790,10 +790,14 @@ class DashboardPage(Page):
     def click_symmetric_difference_first_query_pie_slice(self, card_title):
         self.click_pie_slice(self.SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS, card_title)
 
-    def click_pie_slice(self, slice_css, card_title):
+    def click_pie_slice(self, slice_css, card_title, xoffset=10, yoffset=10):
         card = self.get_card(card_title)
         time.sleep(1.2)
         self.scroll_into_view_js(card)
+        if xoffset and yoffset:
+            el = self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css)
+            ActionChains(self.driver).move_to_element_with_offset(el, xoffset, yoffset).click().perform()
+            return
         self.get_pie_chart_from_card(card).find_element_by_css_selector(slice_css).click()
 
     @staticmethod

@@ -196,7 +196,6 @@ def test_get_domains_in_forest(ldap_connection: LdapConnection):
     assert domains_in_forest['RAINDOMAIN']['msDS-Behavior-Version'] == 7
 
 
-@pytest.mark.skip('ad change')
 def test_get_report_statistics(ldap_connection: LdapConnection):
     fs = ldap_connection.get_report_statistics()
     fs = {o['name']: o['data'] for o in fs}
@@ -217,6 +216,12 @@ def test_get_report_statistics(ldap_connection: LdapConnection):
         'domains': 'TestDomain.test',
         'dcs': 'dcny1.TestDomain.test',
         'subnets': '10.0.224.0/20, 10.0.240.0/20, 10.0.3.0/24, 10.0.2.0/24'
+    } in fs['Forest Site Summary'] or {
+        'name': 'TestDomain-NewYork',
+        'location': 'New York',
+        'domains': 'TestDomain.test',
+        'dcs': 'dcny1.TestDomain.test',
+        'subnets': '10.0.3.0/24, 10.0.240.0/20, 10.0.2.0/24, 10.0.224.0/20'
     } in fs['Forest Site Summary']
     assert {
         'name': 'TestDomain-TelAviv',

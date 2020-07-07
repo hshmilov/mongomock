@@ -112,7 +112,6 @@ class TestDashboardCharts(TestBase):
         assert self.dashboard_page.is_missing_add_space()
         self._test_read_only_user_with_dashboard_read_write()
 
-    @pytest.mark.skip('ad change')
     def test_dashboard_coverage_chart(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
