@@ -114,8 +114,10 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_40()
         if self.db_schema_version < 41:
             self._update_schema_version_41()
+        if self.db_schema_version < 42:
+            self._update_schema_version_42()
 
-        if self.db_schema_version != 41:
+        if self.db_schema_version != 42:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1870,6 +1872,46 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 41
         except Exception as e:
             print(f'Exception while upgrading aggregator to version 41. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_42(self):
+        print(f'Upgrading to schema version 42 - migrate historic labels from tags')
+        try:
+            for entities_db in self._historical_entity_views_db_map.values():
+                to_fix = []
+                count = 0
+                print('Updating new entity type')
+                for entity in entities_db.find({'tags': {'$elemMatch': {'type': 'label'}}}):
+                    internal_axon_id = entity['internal_axon_id']
+                    labels = []
+                    new_tags = []
+                    count += 1
+                    if 'labels' in entity:
+                        continue
+                    for tag in entity['tags']:
+                        if tag['type'] == 'label' and tag['label_value'] and tag['data']:
+                            labels.append(tag['label_value'])
+                        elif tag['type'] != 'label':
+                            new_tags.append(tag)
+                    to_fix.append(pymongo.operations.UpdateOne(
+                        {'internal_axon_id': internal_axon_id},
+                        {
+                            '$set': {'tags': new_tags, 'labels': labels}
+                        }
+                    ))
+                    if to_fix and count % 1000 == 0:
+                        print(f'Updated {count} entities')
+                        entities_db.bulk_write(to_fix, ordered=False)
+                        to_fix.clear()
+                if to_fix:
+                    print(f'Finished updating {count} entities')
+                    entities_db.bulk_write(to_fix, ordered=False)
+                    to_fix.clear()
+
+            self.db_schema_version = 42
+        except Exception as e:
+            print(f'Exception while upgrading aggregator db to version 42. Details: {e}')
             traceback.print_exc()
             raise
 
