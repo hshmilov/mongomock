@@ -971,7 +971,7 @@ def _compare_timeline_lines(views, date_ranges):
 def _intersect_timeline_lines(views, date_ranges):
     if len(views) != 2 or not views[0].get('id'):
         logger.error(f'Unexpected number of views for performing intersection {len(views)}')
-        yield {}
+        return
     first_entity_type = EntityType(views[0]['entity'])
     second_entity_type = EntityType(views[1]['entity'])
 
@@ -991,7 +991,7 @@ def _intersect_timeline_lines(views, date_ranges):
     # second query handling
     intersecting_from_db = find_view_by_id(second_entity_type, views[1]['id'])
     if not intersecting_from_db or not intersecting_from_db.get('view', {}).get('query'):
-        yield {}
+        return
     intersecting_view = intersecting_from_db['view']
     intersecting_filter = intersecting_view.get('query', {}).get('filter', '')
     if base_filter:
