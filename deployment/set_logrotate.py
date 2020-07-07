@@ -42,6 +42,21 @@ def set_logrotate(args):
     # our logs
     ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(cortex_path, 'logs', '*', '*.log')))
 
+    log_paths = ['/var/log/chef*.log',
+                 '/var/log/teleport.log']
+    formatted = '\n'.join(log_paths)
+
+    Path('/etc/logrotate.d/axonius_var_log').write_text(f'''{formatted} {{
+        su root
+        weekly
+        rotate 7
+        compress
+        delaycompress
+        missingok
+        notifempty
+        create 644 root root
+}}\n''')
+
     # Check if we need to update the files, if not, skip elevation (prompt for root password...)
     commit_ops = []
     for op in ops:
