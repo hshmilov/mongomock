@@ -539,7 +539,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             log_fetch = True
             if post_json:
                 log_fetch = post_json.get('log_fetch', True)
-            parallel_fetch = self.feature_flags_config()[ParallelSearch.root_key].get(ParallelSearch.enabled)
+            parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(ParallelSearch.enabled,
+                                                                                              False)
             try:
                 try:
                     if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:

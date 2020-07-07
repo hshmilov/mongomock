@@ -461,7 +461,8 @@ class AggregatorService(Triggerable, PluginBase):
 
         try:
             futures_for_adapter = {}
-            parallel_fetch = self.feature_flags_config()[ParallelSearch.root_key].get(ParallelSearch.enabled)
+            parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(ParallelSearch.enabled,
+                                                                                              False)
             logger.info(f'Parallel fetch status: {parallel_fetch}')
             async_adapters = {x: [] for x in PARALLEL_ADAPTERS}
 
