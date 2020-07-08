@@ -42,6 +42,7 @@ TEMP_FILE_PREFIX = 'tfu_'
 NOTE_COLUMN = 'Note'
 
 JSON_ADAPTER_NAME = 'JSON File'
+JSON_FILE = 'json_file'
 JSON_ADAPTER_SEARCH = 'json'
 JSON_ADAPTER_PLUGIN_NAME = 'json_file_adapter'
 
@@ -116,6 +117,8 @@ CSV_ADAPTER_FILTER = 'adapters == "csv_adapter"'
 LABEL_CLIENT_WITH_SAME_ID = 'client_with_same_id'
 
 DEVICES_SEEN_NEGATIVE_VALUE_QUERY = '(adapters_data.json_file_adapter.last_seen <= date("NOW - 1d"))'
+
+MASTER_NODE_NAME = 'Master'
 
 
 class EmailSettings:

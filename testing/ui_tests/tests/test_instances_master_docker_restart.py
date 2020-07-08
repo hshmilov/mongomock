@@ -7,8 +7,9 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 
 class TestInstanceMasterDockerRestart(TestInstancesBase):
+
     def test_instances_after_master_docker_restart(self):
-        self.put_customer_conf_file()
+        self.setup_conf_files()
 
         self.join_node()
 

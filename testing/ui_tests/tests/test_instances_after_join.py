@@ -1,7 +1,9 @@
+import re
 import subprocess
 import time
 
 import paramiko
+import pytest
 from retry.api import retry_call
 from selenium.common.exceptions import NoSuchElementException
 
@@ -10,11 +12,14 @@ from axonius.utils.wait import wait_until, expect_specific_exception_to_be_raise
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from ui_tests.tests.instances_test_base import TestInstancesBase, NODE_NAME, NODE_HOSTNAME, NEW_NODE_NAME, \
     NEXPOSE_ADAPTER_NAME, wait_for_booted_for_production, UPDATE_HOSTNAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, MASTER_NODE_NAME
 
 
 class TestInstancesAfterNodeJoin(TestInstancesBase):
+    MASTER_REPLACE_NAME = 'Master2'
+
     def test_instances_after_join(self):
-        self.put_customer_conf_file()
+        self.setup_conf_files()
 
         self.base_page.run_discovery()
         self.change_node_hostname()
@@ -24,6 +29,8 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_instance_indication()
         self.check_password_change()
         self.check_add_adapter_to_node()
+        self.check_move_ad_to_node()
+        self.check_move_cisco_from_node()
         self.axonius_system.core.log_tester.is_metric_in_log(SystemMetric.NEW_NODE_CONNECTED, r'.*node_id.*')
         self.check_correct_ip_is_shown_in_table()
         self.check_correct_hostname_is_shown_in_table()
@@ -33,15 +40,60 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_ssh_tunnel()
         self.check_node_restart()
         self.check_master_disconnect()
+        self.adapters_page.restore_json_client()
 
     def check_add_adapter_to_node(self):
-        self._add_nexpose_adadpter_and_discover_devices()
+        self.adapters_page.switch_to_page()
+        self._add_adapter_and_discover_devices(NODE_NAME)
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_spinner_to_end()
+        self.adapters_page.click_adapter(adapter_name=JSON_ADAPTER_NAME)
+        self.adapters_page.wait_for_table_to_be_responsive()
+        assert NODE_NAME in self.adapters_page.get_column_data_inline('Instance Name')[1]
+
+    def check_move_ad_to_node(self):
+        self.move_adapter_between_instances(AD_ADAPTER_NAME, NODE_NAME)
+        self.base_page.run_discovery()
+        self.dashboard_page.switch_to_page()
+        dd_card = self.dashboard_page.find_device_discovery_card()
+        quantities = self.dashboard_page.find_quantity_in_card_string(dd_card)
+        # Searches for a device duplication pattern
+        # and checks if the number inside the parentheses is larger from the one outside.
+        pattern = re.compile(r'(.*)\ \((.*?)\)')
+
+        for current_quantity in quantities:
+            # Meaning there is no duplication in device discovery card
+            result = pattern.search(current_quantity)
+            if not result:
+                continue
+
+            # Checking that the duplication numbers match (that there are more devices in the sum).
+            assert result.group(2) > result.group(1)
+            break
+        else:
+            raise AssertionError('Expected device duplication was not found')
+
+    def check_move_cisco_from_node(self):
+        self.move_adapter_between_instances(JSON_ADAPTER_NAME, MASTER_NODE_NAME, position=2)
+
+    def move_adapter_between_instances(self, adapter_name, node_destination, position=1):
+        self.adapters_page.switch_to_page()
+        self.adapters_page.wait_for_adapter(adapter_name)
+        self.adapters_page.click_adapter(adapter_name)
+        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.click_row()
+        self.adapters_page.select_instance(node_destination)
+        self.adapters_page.click_save()
+        self.adapters_page.wait_for_server_green(position=position)
+        self.adapters_page.wait_for_data_collection_toaster_absent()
+        assert node_destination in self.adapters_page.get_column_data_inline('Instance Name')[0]
 
     def check_node_restart(self):
-        self._delete_nexpose_adapter_and_data()
-
+        self.adapters_page.restore_json_client()
+        tmp_file = '/tmp/should_be_deleted'
         # Using bare sshc.exec_command because we want to fire and forget.
         # Sync files
+        self._instances[0].ssh(f'echo \'{NODE_HOSTNAME}\' > {tmp_file}')
         self._instances[0].sshc.exec_command('sudo sh -c "echo s > /proc/sysrq-trigger"')
         # Do a hard reboot
         self._instances[0].sshc.exec_command('sudo sh -c "echo b > /proc/sysrq-trigger"')
@@ -49,11 +101,13 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         time.sleep(5)
         self._instances[0].wait_for_ssh()
         wait_for_booted_for_production(self._instances[0])
-        self._add_nexpose_adadpter_and_discover_devices()
+        with pytest.raises(IOError):
+            self._instances[0].get_file(tmp_file)
+        self._add_adapter_and_discover_devices(NEW_NODE_NAME)
 
     def _try_discovery_until_check_devices_count_goes_up(self):
         self.base_page.run_discovery()
-        return self._check_device_count() > 1
+        return self._check_device_count() == 1
 
     def check_master_disconnect(self):
         self.devices_page.delete_devices()
@@ -173,7 +227,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
                    tolerated_exceptions_list=[AssertionError])
 
         # Re-adding client after deactivation deleted it (without it's devices).
-        self._add_nexpose_adadpter_and_discover_devices()
+        self._add_adapter_and_discover_devices(NEW_NODE_NAME)
 
     def verify_hostname_changed(self):
         output = self.get_hostname_from_node()
@@ -218,26 +272,26 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.instances_page.click_button('Cancel')
 
         # change name
-        self.instances_page.change_instance_name('Master', 'Master2')
+        self.instances_page.change_instance_name(MASTER_NODE_NAME, self.MASTER_REPLACE_NAME)
         self.instances_page.assert_footer_element_absent()
-        self.instances_page.toggle_instance_indication('Master2')
-        assert self.instances_page.verify_footer_element_text('Master2')
-        self.instances_page.change_instance_name('Master2', 'Master')
-        assert self.instances_page.verify_footer_element_text('Master')
+        self.instances_page.toggle_instance_indication(self.MASTER_REPLACE_NAME)
+        assert self.instances_page.verify_footer_element_text(self.MASTER_REPLACE_NAME)
+        self.instances_page.change_instance_name(self.MASTER_REPLACE_NAME, MASTER_NODE_NAME)
+        assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)
 
         # toggle off
-        self.instances_page.toggle_instance_indication('Master')
+        self.instances_page.toggle_instance_indication(MASTER_NODE_NAME)
         self.instances_page.assert_footer_element_absent()
-        self.instances_page.toggle_instance_indication('Master')
-        assert self.instances_page.verify_footer_element_text('Master')
+        self.instances_page.toggle_instance_indication(MASTER_NODE_NAME)
+        assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)
 
         # other page
         self.devices_page.switch_to_page()
-        assert self.instances_page.verify_footer_element_text('Master')
+        assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)
 
         # login - modified
         self.login_page.logout()
-        assert self.instances_page.verify_footer_element_text('Master')
+        assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
-        assert self.instances_page.verify_footer_element_text('Master')
+        assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)

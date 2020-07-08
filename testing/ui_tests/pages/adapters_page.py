@@ -65,7 +65,8 @@ class AdaptersPage(EntitiesPage):
     JSON_FILE_SERVER_SEARCH_FIELD = ('file_name', 'Name')
     ADAPTER_INSTANCE_CONFIG_CSS_SELECTOR = '.config-server'
     EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
-    INSTANCE_DROPDOWN_CSS = '#serverInstance div.trigger-text'
+    INSTANCE_DROPDOWN_CSS_SELECTED = '#serverInstance div.trigger-text'
+    INSTANCE_DROPDOWN_CSS = '.x-dropdown #serverInstance'
 
     INPUT_TYPE_PWD_VALUE = '********'
 
@@ -308,7 +309,10 @@ class AdaptersPage(EntitiesPage):
     def wait_for_data_collection_failed_toaster_absent(self):
         self.wait_for_toaster_to_end(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN, retries=1200)
 
-    def add_server(self, ad_client, adapter_name=AD_ADAPTER_NAME):
+    def select_instance(self, instance):
+        self.select_option_without_search(self.INSTANCE_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, instance)
+
+    def add_server(self, ad_client, adapter_name=AD_ADAPTER_NAME, instance=None):
         self.switch_to_page()
         self.click_adapter(adapter_name)
         self.wait_for_table_to_load()
@@ -321,6 +325,8 @@ class AdaptersPage(EntitiesPage):
         dict_.pop('verify_ssl', None)
 
         self.fill_creds(**dict_)
+        if instance:
+            self.select_instance(instance)
         self.click_save()
 
     def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):
@@ -392,17 +398,18 @@ class AdaptersPage(EntitiesPage):
         self.click_save()
 
     def get_instances_dropdown_selected_value(self):
-        return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS).text
+        return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS_SELECTED).text
 
-    def connect_adapter(self, adapter_name, server_details, position=1):
+    def connect_adapter(self, adapter_name, server_details, position=1, instance=None):
         self.wait_for_adapter(adapter_name)
-        self.add_server(ad_client=server_details, adapter_name=adapter_name)
+        self.add_server(ad_client=server_details, adapter_name=adapter_name, instance=instance)
         self.wait_for_server_green(position=position)
         self.wait_for_data_collection_toaster_absent()
         self.switch_to_page()
 
-    def add_json_server(self, server_details, position=2, run_discovery_at_last=True):
-        self.connect_adapter(adapter_name=JSON_ADAPTER_NAME, server_details=server_details, position=position)
+    def add_json_server(self, server_details, position=2, run_discovery_at_last=True, instance=None):
+        self.connect_adapter(adapter_name=JSON_ADAPTER_NAME, server_details=server_details,
+                             position=position, instance=instance)
         self.click_adapter(adapter_name=JSON_ADAPTER_NAME)
         self.wait_for_table_to_be_responsive()
         self.click_advanced_settings()

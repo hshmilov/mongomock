@@ -10,7 +10,7 @@ from ui_tests.tests.instances_test_base import TestInstancesBase
 
 class TestInstancesUpgrade(TestInstancesBase):
     def test_instances_upgrade(self):
-        self.put_customer_conf_file()
+        self.setup_conf_files()
 
         self.join_node()
 
@@ -22,8 +22,8 @@ class TestInstancesUpgrade(TestInstancesBase):
         self.logger.info('Starting an upgrade')
         self.run_upgrade_on_node()
         self.logger.info('Upgrade finished')
-        self._delete_nexpose_adapter_and_data()
-        self._add_nexpose_adadpter_and_discover_devices()
+        self.adapters_page.restore_json_client()
+        self._add_adapter_and_discover_devices()
 
     def run_upgrade_on_node(self):
         instance = self._instances[0]

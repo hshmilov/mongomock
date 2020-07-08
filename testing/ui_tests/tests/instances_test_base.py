@@ -13,7 +13,7 @@ import pytest
 from retrying import retry
 
 from CI.exports.version_passwords import VersionPasswords
-from axonius.consts.system_consts import CUSTOMER_CONF_PATH
+from axonius.consts.system_consts import CUSTOMER_CONF_PATH, SYSTEM_CONF_PATH
 from axonius.utils.wait import wait_until
 from builds import Builds
 from builds.builds_factory import BuildsInstance
@@ -23,7 +23,8 @@ from devops.scripts.instances.system_boot import \
 from scripts.automate_dev.download_version import get_export
 from scripts.instances.instances_consts import CORTEX_PATH
 from services.axonius_service import AxoniusService
-from test_credentials.test_nexpose_credentials import client_details
+from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials, SOME_DEVICE_ID
+from ui_tests.tests.ui_consts import JSON_FILE
 from ui_tests.tests.ui_test_base import TestBase
 
 NODE_MAKER_USERNAME = 'node_maker'
@@ -46,14 +47,13 @@ NEW_NODE_NAME = 'Changed_node'
 NODE_HOSTNAME = 'node-test-hostname'
 UPDATE_HOSTNAME = 'SLAVE-1'
 NEXPOSE_ADAPTER_NAME = 'Rapid7 Nexpose'
-NEXPOSE_ADAPTER_FILTER = 'adapters == "nexpose_adapter"'
 PRIVATE_IP_ADDRESS_REGEX = r'inet (10\..*|192\.168.*|172\..*)\/'
 
 # Don't add Nexpose, AD
 CUSTOMER_CONF = json.dumps({
     'exclude-list': {
         'add-to-exclude': [adapter[0] for adapter in AxoniusService().get_all_adapters() if
-                           adapter[0] not in ['nexpose', 'ad', 'json']],
+                           adapter[0] not in ['nexpose', 'ad', JSON_FILE]],
         'remove-from-exclude': []
     }
 })
@@ -226,35 +226,28 @@ class TestInstancesBase(TestBase):
 
         self.instances_page.wait_until_node_appears_in_table(NODE_NAME)
 
-    def put_customer_conf_file(self):
-        instance = self._instances[0]
+    def setup_conf_files(self, instance_index=0):
+        # Put customer_conf file.
+        instance = self._instances[instance_index]
         instance.put_file(file_object=io.StringIO(CUSTOMER_CONF),
                           remote_file_path=str(CUSTOMER_CONF_PATH))
 
-    def _add_nexpose_adadpter_and_discover_devices(self):
-        # Using nexpose on all these test since i do not raise
-        # nexpose as part of the tests so the only nexpose adapter present
-        # should be from the node (and the client add should only have that option)
-        # and for any reason it is not present than we have an instances bug.
-        self.adapters_page.add_server(client_details, adapter_name=NEXPOSE_ADAPTER_NAME)
-        self.adapters_page.wait_for_spinner_to_end()
-        self.base_page.run_discovery()
-        wait_until(lambda: self._check_device_count() > 1, total_timeout=200, interval=20)
+        # Remove json_file adapter from system conf file.
+        file = instance.get_file(str(SYSTEM_CONF_PATH)).decode('utf-8')
+        new_file_lines = [line for line in file.splitlines() if JSON_FILE not in line]
+        instance.put_file(file_object=io.StringIO(''.join(new_file_lines)),
+                          remote_file_path=str(SYSTEM_CONF_PATH))
+
+    def _add_adapter_and_discover_devices(self, instance=None):
+        self.adapters_page.add_json_server(cisco_json_file_mock_credentials, position=2, instance=instance)
+        self.base_page.wait_for_run_research()
+        wait_until(lambda: self._check_device_count() == 1)
 
     def _check_device_count(self):
         self.devices_page.switch_to_page()
         self.devices_page.refresh()
-        self.devices_page.run_filter_query(NEXPOSE_ADAPTER_FILTER)
+        self.devices_page.run_filter_query(f'(specific_data.data.id == "{SOME_DEVICE_ID}")')
         return self.devices_page.count_entities()
-
-    def _delete_nexpose_adapter_and_data(self):
-        self.adapters_page.remove_server(adapter_name=NEXPOSE_ADAPTER_NAME, delete_associated_entities=True)
-
-        @retry(stop_max_attempt_number=100, wait_fixed=2000)
-        def to_check():
-            assert self._check_device_count() == 0
-
-        to_check()
 
     def check_ssh_tunnel(self):
         test_string = 'I Am Here'
