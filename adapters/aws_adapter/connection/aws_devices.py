@@ -2,6 +2,7 @@ import concurrent.futures
 import logging
 import time
 
+from aws_adapter.connection.aws_cloudfront import populate_cloudfront_resource
 from aws_adapter.connection.aws_connections import connect_client_by_source
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import query_devices_by_client_for_all_sources, \
     query_devices_by_client_by_source
@@ -23,7 +24,8 @@ from axonius.clients.aws.aws_clients import get_boto3_session
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements, too-many-locals, too-many-lines
+# pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
+# pylint: disable=too-many-locals, too-many-lines
 def query_devices_for_one_account(
         account,
         account_regions_clients,
@@ -76,12 +78,24 @@ def query_devices_for_one_account(
                 else list(connected_clients_by_region.keys())[0]
             first_connected_client = connected_clients_by_region[first_connected_client_region]
             account_metadata = get_account_metadata(first_connected_client)
+
+            # pull region-specific data
             parsed_data_for_all_regions = query_devices_by_client_for_all_sources(
                 first_connected_client,
                 options
             )
 
-            logger.info(f'Finished querying account metadata and all-sources info')
+            # cloudfront
+            cloudfront_resource = {}
+            if options.get('fetch_cloudfront') is True:
+                logger.info(f'Fetching Cloudfront distribution data')
+                try:
+                    cloudfront_resource = populate_cloudfront_resource(
+                        client=first_connected_client)
+                except Exception:
+                    logger.exception(f'Unable to fetch Cloudfront data')
+
+                logger.info(f'Finished fetching Cloudfront distribution data')
 
             if options.get('fetch_route53') is True:
                 logger.info(f'Fetching Route53 for {account}')
@@ -103,7 +117,10 @@ def query_devices_for_one_account(
                 source_name = f'{account}_Global'
                 account_metadata['region'] = 'Global'
                 try:
-                    for parse_data_for_source in query_devices_by_client_by_source_s3(first_connected_client):
+                    for parse_data_for_source in query_devices_by_client_by_source_s3(
+                            client_data=first_connected_client,
+                            cloudfront_data=cloudfront_resource
+                    ):
                         yield source_name, \
                             account_metadata, \
                             parse_data_for_source, \
@@ -137,7 +154,8 @@ def query_devices_for_one_account(
                     query_devices_by_client_by_source,
                     connected_client,
                     https_proxy,
-                    options
+                    options,
+                    cloudfront_resource
                 ): region_name for region_name, connected_client in connected_clients_by_region.items()
             }
 

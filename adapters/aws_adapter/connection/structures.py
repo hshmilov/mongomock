@@ -2,6 +2,10 @@ import datetime
 import logging
 from enum import Enum, auto
 
+from aws_adapter.consts import FORWARDED_COOKIES, VIEWER_PROTOCOL_POLICY, \
+    PROTOCOL_POLICY, SSL_SUPPORT_METHOD, MINIMUM_PROTOCOL_VERSION, \
+    CERTIFICATE_SOURCE, CLOUDFRONT_RESTRICTION_TYPE, PRICE_CLASS, \
+    HTTP_VERSION, ALIAS_RECORDALS_STATUS
 from axonius.devices.device_adapter import DeviceRunningState
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
@@ -49,6 +53,153 @@ AWS_POWER_STATE_MAP = {
     'shutting-down': DeviceRunningState.ShuttingDown,
     'stopping': DeviceRunningState.ShuttingDown,
 }
+
+
+class AWSCloudfrontCookie(SmartJsonClass):
+    forward = Field(str, 'Forwarded Cookies', enum=FORWARDED_COOKIES)
+    allowed_names = ListField(str, 'Allowed Names')
+
+
+class AWSCloudfrontForwardedValues(SmartJsonClass):
+    query_string = Field(bool, 'Query String')
+    cookies = Field(AWSCloudfrontCookie, 'Cookies')
+    headers = ListField(str, 'Forwarded Headers')
+    query_string_cache_keys = ListField(str, 'Query String Cache Keys')
+
+
+class AWSCloudfrontTrustedSignersDetails(SmartJsonClass):
+    account_number = Field(str, 'Account Number')
+    keypair_ids = ListField(str, 'Keypair IDs')
+
+
+class AWSCloudfrontActiveTrustedSigners(SmartJsonClass):
+    enabled = Field(bool, 'Enabled')
+    signers = ListField(AWSCloudfrontTrustedSignersDetails, 'Details')
+
+
+class AWSCloudfrontTrustedSigners(SmartJsonClass):
+    enabled = Field(bool, 'Enabled')
+    signers = ListField(str, 'Trusted Signers')
+
+
+class AWSCloudfrontLambdaAssociations(SmartJsonClass):
+    arn = Field(str, 'ARN')
+    event_type = Field(str, 'Event Type')
+    include_body = Field(bool, 'Include Body')
+
+
+class AWSCloudfrontCacheBehavior(SmartJsonClass):
+    target_origin_id = Field(str, 'Target Origin ID')
+    forwarded_values = Field(AWSCloudfrontForwardedValues, 'Forwarded Values')
+    trusted_signers = Field(AWSCloudfrontTrustedSigners, 'Trusted Signers')
+    viewer_protocol_policy = Field(str, 'Viewer Protocol Policy', enum=VIEWER_PROTOCOL_POLICY)
+    min_ttl = Field(int, 'Minimum TTL')
+    max_ttl = Field(int, 'Maximum TTL')
+    default_ttl = Field(int, 'Default TTL')
+    allowed_methods = ListField(str, 'Allowed Methods')
+    cached_methods = ListField(str, 'Cached Methods')
+    smooth_streaming = Field(bool, 'Smooth Streaming')
+    compress = Field(bool, 'Compress')
+    lambda_function_associations = ListField(AWSCloudfrontLambdaAssociations, 'Lambda Function Associations')
+    field_level_encryption_id = Field(str, 'Field Level Encryption ID')
+
+
+class AWSCustomHeaders(SmartJsonClass):
+    name = Field(str, 'Name')
+    value = Field(str, 'Value')
+
+
+class AWSCloudfrontOriginGroups(SmartJsonClass):
+    id = Field(str, 'ID')
+    members = ListField(str, 'Members')
+    status_codes = ListField(int, 'Status Codes')
+
+
+class AWSCloudfrontCustomOriginConfig(SmartJsonClass):
+    http_port = Field(int, 'HTTP Port')
+    https_port = Field(int, 'HTTPS Port')
+    protocol_policy = Field(str, 'Protocol Policy', enum=PROTOCOL_POLICY)
+    protocols = ListField(str, 'SSL Protocols')
+    read_timeout = Field(int, 'Read Timeout')
+    keepalive_timeout = Field(int, 'Keepalive Timeout')
+
+
+class AWSCloudfrontOrigins(SmartJsonClass):
+    id = Field(str, 'ID')
+    domain_name = Field(str, 'Domain Name')
+    origin_path = Field(str, 'Path')
+    s3_origin_config = Field(str, 'Access Identity')
+    connection_attempts = Field(int, 'Connection Attempts')
+    connection_timeout = Field(int, 'Connection Timeout')
+    custom_headers = ListField(AWSCustomHeaders, 'Custom Headers')
+    custom_origin_config = Field(AWSCloudfrontCustomOriginConfig, 'Custom Origin Configuration')
+
+
+class AWSCloudfrontCustomErrors(SmartJsonClass):
+    error_code = Field(int, 'Error Code')
+    response_page_path = Field(str, 'Response Page Path')
+    response_code = Field(str, 'Response Code')
+    error_caching_min_ttl = Field(int, 'Error Caching Minimum TTL')
+
+
+class AWSCloudfrontLoggingConfig(SmartJsonClass):
+    bucket = Field(str, 'Logging Bucket')
+    enabled = Field(bool, 'Logging Enabled')
+    include_cookies = Field(bool, 'Include Cookies')
+    prefix = Field(str, 'Bucket Prefix')
+
+
+class AWSCloudfrontViewerCertificate(SmartJsonClass):
+    default_certificate = Field(bool, 'Cloud')
+    iam_certificate_id = Field(str, 'IAM Certificate ID')
+    acm_certificate_arn = Field(str, 'ACM Certificate ARN')
+    ssl_support_method = Field(str, 'SSL Support Method', enum=SSL_SUPPORT_METHOD)
+    min_protocol_version = Field(str, 'Minimum Protocol Version',
+                                 enum=MINIMUM_PROTOCOL_VERSION)
+    certificate = Field(str, 'Certificate')
+    certificate_source = Field(str, 'Certificate Source', enum=CERTIFICATE_SOURCE)
+
+
+class AWSCloudfrontRestriction(SmartJsonClass):
+    restriction_type = Field(str, 'Restriction Type', enum=CLOUDFRONT_RESTRICTION_TYPE)
+    restrictions = ListField(str, 'Restrictions')
+
+
+class AWSCloudfrontDistributionConfig(SmartJsonClass):
+    caller_reference = Field(str, 'Caller Reference')
+    comment = Field(str, 'Comment')
+    aliases = ListField(str, 'Aliases')
+    default_root_object = Field(str, 'Default Root Object')
+    price_class = Field(str, 'Price Class', enum=PRICE_CLASS)
+    enabled = Field(bool, 'Enabled')
+    web_acl_id = Field(str, 'Web ACL ID')
+    http_version = Field(str, 'HTTP Version', enum=HTTP_VERSION)
+    ipv6_enabled = Field(bool, 'IPv6 Enabled')
+    origins = ListField(AWSCloudfrontOrigins, 'Origins')
+    origin_groups = ListField(AWSCloudfrontOriginGroups, 'Origin Groups')
+    default_cache_behavior = Field(AWSCloudfrontCacheBehavior, 'Default Cache Behavior')
+    cache_behavior = Field(AWSCloudfrontCacheBehavior, 'Cache Behavior')
+    custom_error_responses = ListField(AWSCloudfrontCustomErrors, 'Custom Error Responses')
+    logging_config = Field(AWSCloudfrontLoggingConfig, 'Logging Configuration')
+    viewer_certificate = Field(AWSCloudfrontViewerCertificate, 'Viewer Certificate')
+    restriction = Field(AWSCloudfrontRestriction, 'Restriction')
+
+
+class AWSCloudfrontAliasRecordals(SmartJsonClass):
+    cname = Field(str, 'CNAME')
+    status = Field(str, 'Status', enum=ALIAS_RECORDALS_STATUS)
+
+
+class AWSCloudfrontDistribution(SmartJsonClass):
+    id = Field(str, 'Cloudfront ID')
+    arn = Field(str, 'Cloudfront ARN')
+    status = Field(str, 'Cloudfront Status')
+    last_modified = Field(datetime.datetime, 'Last Modified')
+    in_progress_validation_batches = Field(int, 'In-Progress Validation Batches')
+    domain_name = Field(str, 'Cloudfront Domain Name')
+    active_trusted_signers = Field(AWSCloudfrontActiveTrustedSigners, 'Active Trusted Signers')
+    distribution_config = Field(AWSCloudfrontDistributionConfig, 'Distribution Configuration')
+    alias_ipc_recordals = ListField(AWSCloudfrontAliasRecordals, 'Alias ICP Recordals')
 
 
 class AWSTagKeyValue(SmartJsonClass):
@@ -692,6 +843,9 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     es_advanced_security_options = Field(AWSElasticsearchSecurityOption,
                                          'Domain Advanced Security Options')
     es_configured_as_public = Field(bool, 'Configured as Public')
+
+    # cloudfront (ELB / S3)
+    cloudfront_distribution = ListField(AWSCloudfrontDistribution, 'Cloudfront Distribution')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

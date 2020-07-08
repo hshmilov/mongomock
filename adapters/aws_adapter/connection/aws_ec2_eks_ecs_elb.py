@@ -11,6 +11,7 @@ from typing import Optional, Callable
 
 import kubernetes
 
+from aws_adapter.connection.aws_cloudfront import fetch_cloudfront
 from aws_adapter.connection.aws_route_table import populate_route_tables
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWS_POWER_STATE_MAP, AWSRole, AWSEBSVolumeAttachment, \
     AWSTagKeyValue, AWSEBSVolume
@@ -112,7 +113,8 @@ def query_devices_by_client_for_all_sources(client_data: dict, options: dict):
 def query_devices_by_client_by_source(
         client_data,
         https_proxy,
-        options: dict
+        options: dict,
+        cloudfront_data: dict
 ):
     """
     Get all AWS (EC2 & EKS) instances from a specific client
@@ -125,6 +127,10 @@ def query_devices_by_client_by_source(
     """
     raw_data = dict()
     region = client_data.get('region')
+
+    if options.get('fetch_cloudfront'):
+        if cloudfront_data:
+            raw_data['cloudfront'] = cloudfront_data
 
     # Checks whether client_data contains EC2 data
     if client_data.get('ec2') is not None:
@@ -574,6 +580,7 @@ def parse_raw_data_inner_regular(
     elb_by_iid = devices_raw_data.get('elb_by_iid') or {}
     all_elbs = devices_raw_data.get('all_elbs') or []
     volumes_by_iid = devices_raw_data.get('volumes') or {}
+    cloudfront_distributions = devices_raw_data.get('cloudfront') or {}
 
     ec2_id_to_ips = dict()
     private_ips_to_ec2 = dict()
@@ -895,6 +902,25 @@ def parse_raw_data_inner_regular(
                         logger.exception(f'Unable to populate route tables: '
                                          f'{str(route_tables)} for '
                                          f'{str(device.id)}')
+
+                # cloudfront
+                if options.get('fetch_cloudfront'):
+                    try:
+                        if cloudfront_distributions and \
+                                isinstance(cloudfront_distributions, dict):
+                            fetch_cloudfront(device=device,
+                                             distributions=cloudfront_distributions)
+                        else:
+                            if cloudfront_distributions is not None:
+                                logger.warning(f'Malformed Cloudfront distributions. '
+                                               f'Expected a dict, got '
+                                               f'{type(cloudfront_distributions)}: '
+                                               f'{str(cloudfront_distributions)}')
+                    except Exception:
+                        logger.exception(
+                            f'Unable to populate Cloudfront distributions '
+                            f'for {device.aws_device_type} resource: '
+                            f'{device.name}')
 
                 device.set_raw(device_raw)
                 yield device
@@ -1313,6 +1339,26 @@ def parse_raw_data_inner_regular(
                     logger.exception(f'Unable to populate route tables: '
                                      f'{str(route_tables)} for '
                                      f'{str(device.id)}')
+
+            # cloudfront
+            if options.get('fetch_cloudfront'):
+                try:
+                    if cloudfront_distributions and \
+                            isinstance(cloudfront_distributions, dict):
+                        fetch_cloudfront(device=device,
+                                         distributions=cloudfront_distributions)
+                    else:
+                        if cloudfront_distributions is not None:
+                            logger.warning(
+                                f'Malformed Cloudfront distributions. '
+                                f'Expected a dict, got '
+                                f'{type(cloudfront_distributions)}: '
+                                f'{str(cloudfront_distributions)}')
+                except Exception:
+                    logger.exception(
+                        f'Unable to populate Cloudfront distributions '
+                        f'for {device.aws_device_type} resource: '
+                        f'{device.name}')
 
             device.set_raw(elb_raw)
             yield device

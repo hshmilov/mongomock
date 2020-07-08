@@ -598,7 +598,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         device = parse_raw_data_inner_s3(self._new_device_adapter(),
                                                          devices_raw_data_by_source,
-                                                         generic_resources
+                                                         generic_resources,
+                                                         self.__options
                                                          )
                         if device:
                             self.append_metadata_to_entity(device, account_metadata, aws_source, {'region': 'Global'})
@@ -772,6 +773,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_route_table = config.get('fetch_route_table') or False
         self.__fetch_route_table_for_devices = config.get('fetch_route_table_for_devices') or False
         self.__fetch_elasticsearch = config.get('fetch_elasticsearch') or False
+        self.__fetch_cloudfront = config.get('fetch_cloudfront') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
@@ -886,6 +888,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_cloudfront',
+                    'title': 'Fetch information about Cloudfront',
+                    'type': 'bool'
+                },
+                {
                     'name': 'verbose_auth_notifications',
                     'title': 'Show verbose notifications about connection failures',
                     'type': 'bool'
@@ -937,6 +944,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_route_table',
                 'fetch_route_table_for_devices',
                 'fetch_elasticsearch',
+                'fetch_cloudfront',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
                 'verify_all_roles',
@@ -970,6 +978,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_route_table': False,
             'fetch_route_table_for_devices': False,
             'fetch_elasticsearch': False,
+            'fetch_cloudfront': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,

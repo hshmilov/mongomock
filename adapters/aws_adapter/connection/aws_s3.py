@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Optional
 
+from aws_adapter.connection.aws_cloudfront import fetch_cloudfront
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWSS3BucketACL, AWSS3BucketPolicy, \
     AWSS3PublicAccessBlockConfiguration
 from aws_adapter.connection.utils import parse_bucket_policy_statements
@@ -10,7 +11,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
-def query_devices_by_client_by_source_s3(client_data: dict):
+def query_devices_by_client_by_source_s3(client_data: dict, cloudfront_data: dict):
     if client_data.get('s3') is not None:
         try:
             cloudtrail_s3_bucket_names = None
@@ -79,6 +80,12 @@ def query_devices_by_client_by_source_s3(client_data: dict):
                 except Exception:
                     pass
 
+                try:
+                    if cloudfront_data:
+                        bucket_raw['cloudfront'] = cloudfront_data
+                except Exception:
+                    pass
+
                 yield bucket_raw
         except Exception:
             logger.exception(f'Problem fetching information about S3')
@@ -87,7 +94,8 @@ def query_devices_by_client_by_source_s3(client_data: dict):
 def parse_raw_data_inner_s3(
         device: AWSDeviceAdapter,
         s3_bucket_raw: dict,
-        generic_resources: dict
+        generic_resources: dict,
+        options: dict
 ) -> Optional[AWSDeviceAdapter]:
     # Parse S3 Buckets
     try:
@@ -170,6 +178,23 @@ def parse_raw_data_inner_s3(
                 device.s3_bucket_used_for_cloudtrail = s3_bucket_raw.get('s3_bucket_used_for_cloudtrail')
         except Exception:
             logger.exception(f'Problem setting s3 cloudtrail status')
+
+        # cloudfront
+        try:
+            cloudfront_distributions = s3_bucket_raw.get('cloudfront')
+            if cloudfront_distributions and \
+                    isinstance(cloudfront_distributions, dict):
+                fetch_cloudfront(device=device,
+                                 distributions=cloudfront_distributions)
+            else:
+                if cloudfront_distributions is not None:
+                    logger.warning(f'Malformed Cloudfront distributions. Expected '
+                                   f'a dict, got {type(cloudfront_distributions)}: '
+                                   f'{str(cloudfront_distributions)}')
+        except Exception:
+            logger.exception(f'Unable to populate Cloudfront distributions '
+                             f'for {device.aws_device_type} resource: '
+                             f'{device.name}')
 
         device.set_raw(s3_bucket_raw)
         return device

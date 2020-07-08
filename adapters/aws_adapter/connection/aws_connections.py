@@ -5,9 +5,13 @@ from axonius.clients.aws.utils import get_aws_config
 
 
 # pylint: disable=too-many-branches, too-many-statements
-def connect_client_by_source(
-        session: boto3.Session, region_name: str, client_config: dict, asset_type: str = 'device'):
-    params = {AWS_CONFIG: get_aws_config(client_config.get(PROXY)), REGION_NAME: region_name}
+def connect_client_by_source(session: boto3.Session,
+                             region_name: str,
+                             client_config: dict,
+                             asset_type: str = 'device'):
+    params = {AWS_CONFIG: get_aws_config(client_config.get(PROXY)),
+              REGION_NAME: region_name}
+
     clients = dict()
     errors = dict()
 
@@ -134,6 +138,13 @@ def connect_client_by_source(
             clients['es'] = c
         except Exception as e:
             errors['es'] = str(e)
+
+        try:
+            c = session.client('cloudfront', **params)
+            c.list_distributions()
+            clients['cloudfront'] = c
+        except Exception as e:
+            errors['cloudfront'] = str(e)
 
     clients['account_tag'] = client_config.get(ACCOUNT_TAG)
     clients['credentials'] = client_config
