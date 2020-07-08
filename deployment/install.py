@@ -67,6 +67,7 @@ def check_lock_file(path):
 
 
 def main():
+    metadata = ''
     with AutoOutputFlush():
         success = False
         try:
@@ -77,9 +78,16 @@ def main():
                     PYTHON_INSTALLER_LOCK_DIR.mkdir(exist_ok=True)
                 PYTHON_INSTALLER_LOCK_FILE.touch()
                 success = start_install_flow()
+
+            try:
+                metadata_path = Path(AXONIUS_DEPLOYMENT_PATH) / 'shared_readonly_files' / '__build_metadata'
+                metadata = metadata_path.read_text()
+            except Exception:
+                print(f'Failed to read metadata')
+
         finally:
             status = 'success' if success else 'failure'
-            print(f'Upgrader completed - {status}')
+            print(f'Upgrader completed - {status} {metadata}')
 
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()
