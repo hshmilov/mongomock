@@ -384,7 +384,7 @@ export default {
       grid-template-columns: 1fr !important;
       grid-gap: 0 !important;
     }
-    .x-button {
+    .x-modal .x-button {
       width: auto;
     }
   }

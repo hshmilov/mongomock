@@ -439,6 +439,6 @@ class Plugins:
             return ''
         return response.json(), response.status_code
 
-    @gui_route_logged_in('<plugin_name>/upload_file', methods=['POST'])
+    @gui_route_logged_in('<plugin_name>/upload_file', methods=['POST'], skip_activity=True)
     def plugins_upload_file(self, plugin_name):
         return self._upload_file(plugin_name)

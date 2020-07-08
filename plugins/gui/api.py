@@ -150,6 +150,7 @@ def api_add_rule(rule,
                  *args,
                  required_permission: PermissionValue,
                  activity_params: List[str] = None,
+                 skip_activity: bool = False,
                  enforce_permissions: bool = True,
                  **kwargs,
                  ):
@@ -171,9 +172,10 @@ def api_add_rule(rule,
             *args,
             **kwargs,
         )
+        if skip_activity:
+            return authenticated_rule(func)
 
         activity_category = required_permission.Category.value
-
         if required_permission.Section:
             activity_category = f'{activity_category}.{required_permission.Section.value}'
 
@@ -1506,7 +1508,8 @@ class APIMixin:
         return self._test_connection(adapter_name, instance_id, request_data)
 
     @api_add_rule('adapters/<adapter_name>/<node_id>/upload_file', methods=['POST'],
-                  required_permission=PermissionValue.get(None, PermissionCategory.Adapters))
+                  required_permission=PermissionValue.get(None, PermissionCategory.Adapters),
+                  skip_activity=True)
     def api_adapter_upload_file(self, adapter_name, node_id):
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'

@@ -390,6 +390,6 @@ class Enforcements(Tasks):
             self._tasks_query(mongo_filter, enforcement['name'])
         ))
 
-    @gui_route_logged_in('actions/upload_file', methods=['POST'])
+    @gui_route_logged_in('actions/upload_file', methods=['POST'], skip_activity=True)
     def actions_upload_file(self):
         return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
