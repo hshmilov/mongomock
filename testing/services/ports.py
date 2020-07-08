@@ -22,6 +22,7 @@ DOCKER_PORTS = {
     'csv-adapter':                      5013,
     'qcore-adapter':                    5015,
     'qcore-mediator':                   5016,
+    'next-think-adapter':               5017,
     'igar-adapter':                     5025,
     'careful-execution-correlator':     5039,
     'bitdefender-adapter':              5044,

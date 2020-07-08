@@ -1323,6 +1323,11 @@
     "link": "",
     "description": "The JSON File Adapter processes files containing JSON formatted devices."
   },
+  "next_think_adapter": {
+    "title": "Nexthink - BETA",
+    "link": "https://docs.axonius.com/docs/nextthink",
+    "description": "Nexthink is an IT solution that provides insights into activity across devices, operating systems, and workplace locations to improve IT experiences for employees."
+  },
   "stresstest_scanner_adapter": {
     "title": "Test adapters for scanners",
     "link": "",
