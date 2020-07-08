@@ -23,6 +23,7 @@ class CompliancePage(Page):
     CATEGORIES_FILTER_DROPDOWN_CSS = '.categories-filter .x-combobox'
     ACCOUNTS_FILTER_DROPDOWN_CSS = '.accounts-filter .x-combobox'
     ACCOUNTS_FILTER_OPTIONS_CSS = '.v-select-list .v-list-item'
+    FAILED_ONLY_FILTER_CSS = 'button[label=\'Failed only\']'
 
     FILTER_ROW_XPATH = '//div[contains(@class, \'v-select-list\')]//div[contains(@class, \'v-list\')]//' \
                        'div[contains(@class, \'v-list-item\')]//' \
@@ -34,6 +35,7 @@ class CompliancePage(Page):
 
     COMPLIANCE_TABLE_TOTAL_RULE_COUNT_CSS = '.table-title .count'
     ACCOUNT_FIELD = 'Results (Failed/Checked)'
+    AWS_DEFAULT_RULES_NUMBER = 43
 
     @property
     def url(self):
@@ -147,3 +149,11 @@ class CompliancePage(Page):
     def save_score_rules(self):
         self.get_rules_dialog_modal().find_element_by_css_selector(self.SCORE_RULES_SAVE_BUTTON_CSS).click()
         time.sleep(0.5)  # wait for dialog to close
+
+    def toggle_failed_rules(self):
+        self.driver.find_element_by_css_selector(self.FAILED_ONLY_FILTER_CSS).click()
+        self.wait_for_table_to_load()
+
+    def assert_default_number_of_rules(self):
+        #  asserts the count, to the default number of rules currently defined in cac.
+        return self.get_total_rules_count() == self.AWS_DEFAULT_RULES_NUMBER
