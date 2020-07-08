@@ -337,17 +337,24 @@ class DevicesPage(EntitiesPage):
         self.close_dropdown()
         return self.count_entities()
 
-    def verify_label_does_not_exist(self, value: str = '') -> bool:
+    def check_connection_label_removed(self, label: str = ''):
         self.switch_to_page()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_query_wizard()
+        self.clear_query_wizard()
         expressions = self.find_expressions()
         self.select_query_field(self.FIELD_ADAPTER_CONNECTION_LABEL, parent=expressions[0])
         self.select_query_comp_op('equals', parent=expressions[0])
-        if self.select_query_value_without_search(value, parent=expressions[0]) is None:
-            self.close_dropdown()
-            return True
-        return False
+        with pytest.raises(NoSuchElementException):
+            self.select_option(
+                self.QUERY_VALUE_COMPONENT_CSS,
+                self.DROPDOWN_TEXT_BOX_CSS,
+                self.DROPDOWN_SELECTED_OPTION_CSS,
+                label,
+                expressions[0])
+        # require in order to change focus to main page
+        self.close_dropdown()
+        self.click_search()
 
     def get_host_name_aggregated_value(self):
         return [item.text for item in self.driver.find_elements_by_css_selector(self.HOST_NAME_AGGREGATED_FIELD_CSS)]

@@ -2,7 +2,6 @@ import math
 from datetime import datetime
 import random
 
-import pytest
 from dateutil.relativedelta import relativedelta
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
@@ -136,11 +135,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         assert chabchab_in_result() is False
         json_query_filter_last_seen_next_days(10000)
         assert chabchab_in_result()
-        self.adapters_page.remove_server(ad_client=client_details,
-                                         adapter_name=JSON_NAME,
-                                         delete_associated_entities=True,
-                                         expected_left=1,
-                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
+        self.adapters_page.remove_json_extra_server(client_details)
 
     def test_saved_query_field(self):
         self.settings_page.switch_to_page()
@@ -241,7 +236,6 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.wait_for_stress_adapter_down(STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(STRESSTEST_SCANNER_ADAPTER)
 
-    @pytest.mark.skip('AX-7287')
     def test_connection_label_query_with_same_client_id(self):
         """
           verify connection label when adapter client have same client_id ( like tanium adapters )
@@ -254,7 +248,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         aws_json_mock_with_label['connectionLabel'] = LABEL_CLIENT_WITH_SAME_ID
         self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=True, position=2)
 
-        with CsvService().contextmanager(take_ownership=True, stop_grace_period='2'):
+        with CsvService().contextmanager(take_ownership=True):
             # CSV
             client_details = {
                 'user_id': 'user',
@@ -264,7 +258,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
                     f'\nkatooth,Serial1,Windows,11:22:22:33:11:33,Office,02:11:24.485Z 02:11:24.485Z, 1.1.1.1')
             }
             self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details)
-            self.devices_page.switch_to_page()
+
             devices_by_label = self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EQUALS, value=LABEL_CLIENT_WITH_SAME_ID)
 
@@ -286,10 +280,5 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
 
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
 
-            self.adapters_page.remove_server(ad_client=aws_json_mock_with_label,
-                                             adapter_name=JSON_NAME,
-                                             delete_associated_entities=True,
-                                             expected_left=1,
-                                             adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
-
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)
+        self.adapters_page.remove_json_extra_server(aws_json_mock_with_label)

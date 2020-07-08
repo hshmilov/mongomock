@@ -750,24 +750,25 @@ class TestDevicesQueryAdvancedCases(TestBase):
         aws_json_mock_with_label[FILE_NAME] = self.CONNECTION_LABEL
         aws_json_mock_with_label['connectionLabel'] = self.CONNECTION_LABEL
 
-        self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=True, position=2)
+        self.adapters_page.add_json_server(aws_json_mock_with_label)
 
         # check equal
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EQUALS,
-                value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20
+                value=self.CONNECTION_LABEL) != 0
         )
 
         # check exists
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EXISTS,
-                value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20)
+                value=self.CONNECTION_LABEL) != 0
+        )
 
         # check operator in positive value
         wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
-            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) != 0, total_timeout=200, interval=20)
+            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) != 0)
 
         # update adapter client connection label
         self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
@@ -775,23 +776,18 @@ class TestDevicesQueryAdvancedCases(TestBase):
 
         # check operator in negative - previous label
         wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
-            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) == 0, total_timeout=200, interval=20)
+            operator=self.devices_page.QUERY_COMP_IN, value=self.CONNECTION_LABEL) == 0)
 
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EQUALS,
-                value=self.CONNECTION_LABEL_UPDATED) != 0, total_timeout=200, interval=20)
+                value=self.CONNECTION_LABEL_UPDATED) != 0)
 
         # clear adapter client connection label
         self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
                                                                     update_label='')
 
         # expect label should be removed from drop down list
-        wait_until(lambda: self.devices_page.verify_label_does_not_exist(self.CONNECTION_LABEL_UPDATED),
-                   check_return_value=True, total_timeout=200, interval=20)
+        self.devices_page.check_connection_label_removed(self.CONNECTION_LABEL_UPDATED)
 
-        self.adapters_page.remove_server(ad_client=aws_json_mock_with_label,
-                                         adapter_name=JSON_NAME,
-                                         delete_associated_entities=True,
-                                         expected_left=1,
-                                         adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
+        self.adapters_page.remove_json_extra_server(aws_json_mock_with_label)
