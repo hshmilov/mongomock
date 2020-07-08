@@ -233,3 +233,14 @@ class TestEntityCustomData(TestBase):
         finally:
             self.adapters_page.clean_adapter_servers(LINUX_SSH_ADAPTER_NAME)
             self.wait_for_adapter_down(LINUX_SSH_DOCKER_ADAPTER_NAME)
+
+    def test_custom_data_in_aggregated_view(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+
+        self.devices_page.load_custom_data(self.devices_page.JSON_ADAPTER_FILTER)
+        self._test_first_data(self.devices_page, self.devices_page.FIELD_HOSTNAME_TITLE)
+        self.devices_page.click_general_tab()
+        host_name_value = self.devices_page.get_host_name_aggregated_value()
+        assert len(host_name_value) == 2
+        assert self.CUSTOM_PREDEFINED_VALUE in host_name_value

@@ -141,12 +141,12 @@ export default {
     },
     addPredefinedField() {
       this.fieldConfig = [...this.fieldConfig, {
-        predefined: true, new: true,
+        predefined: true, isNew: true,
       }];
     },
     addCustomField() {
       this.fieldConfig = [...this.fieldConfig, {
-        predefined: false, new: true,
+        predefined: false, isNew: true,
       }];
     },
     updateField(index, fieldToUpdate) {

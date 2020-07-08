@@ -3,6 +3,8 @@ import { FETCH_DATA_FIELDS, SAVE_CUSTOM_DATA } from '@store/actions';
 import _merge from 'lodash/merge';
 import _get from 'lodash/get';
 import _set from 'lodash/set';
+import _isPlainObject from 'lodash/isPlainObject';
+import _isArray from 'lodash/isArray';
 
 export default {
   computed: {
@@ -23,10 +25,14 @@ export default {
     },
     customFields() {
       return {
-        predefined: this.fields.generic,
+        predefined: _get(this.fields, 'generic', []).filter((item) => this.fieldsWithSchemaSet.has(item.name)),
         custom: _get(this.fields, 'specific.gui', [])
           .filter((field) => !this.genericFieldNames.includes(field.name)),
       };
+    },
+    fieldsWithSchemaSet() {
+      // Create a set of all generic fields with existing schema.
+      return this.flatGenericFieldsSchema(this.genericSchema ? this.genericSchema.items : []);
     },
   },
   methods: {
@@ -43,7 +49,7 @@ export default {
     prepareServerCustomData(customFieldsArray) {
       const res = customFieldsArray.map((item) => {
         if (item.name === 'specific_data.data.id') return { id: 'unique' };
-        return this.convertGuiCustomData(item.name, item.value, item.predefined, item.title, {});
+        return this.convertGuiCustomData(item.name, item.value, item.predefined, item.title, item.isNew, {});
       });
       return res;
     },
@@ -61,7 +67,7 @@ export default {
       }
       return { ...data, [realKey]: item[key] };
     },
-    convertGuiCustomData(name, value, predefined, title, result = {}) {
+    convertGuiCustomData(name, value, predefined, title, isNew, result = {}) {
       /**
        * This method converts the custom fields into a proper object according to their schema.
        * for example, the pair {name: value} as {"specific_data.data.os.type" : "Windows"} will be converted into
@@ -98,8 +104,8 @@ export default {
 
       const fieldRootKey = Object.keys(currentResult)[0];
       return predefined
-        ? { [fieldRootKey]: { predefined, value: currentResult[fieldRootKey] } }
-        : { [fieldRootKey]: currentResult[fieldRootKey] };
+        ? { [fieldRootKey]: { predefined, value: currentResult[fieldRootKey], isNew } }
+        : { [fieldRootKey]: currentResult[fieldRootKey], isNew };
     },
     convertPathBySchemaStructure(path, remainingPath, schema, value, result) {
       let currentPath = path;
@@ -125,6 +131,33 @@ export default {
     },
     customUserField(name) {
       return name.startsWith('custom_');
+    },
+    flatGenericFieldsSchema(genericSchemaItems) {
+      // Flat every schema field to a dot separated path.
+      return genericSchemaItems
+        .reduce((set, item) => {
+          const res = this.flatItem(`specific_data.data.${item.name}`, item);
+          res.forEach(set.add, set);
+          return set;
+        }, new Set());
+    },
+    flatItem(name, schemaItem, result = []) {
+      /**
+       * Recursive function that flats a schema item object into a dot separated path.
+       */
+      if (_isArray(schemaItem.items)) {
+        return schemaItem.items.reduce((res, item) => res.concat(...this.flatItem(`${name}.${item.name}`, item, result)), result);
+      }
+      if (_isPlainObject(schemaItem.items)) {
+        const subItems = schemaItem.items.items;
+        if (_isArray(subItems)) {
+          return subItems.reduce((res, item) => res.concat(...this.flatItem(`${name}.${item.name}`, item, result)), result);
+        }
+      }
+      if (!schemaItem.name) {
+        return result;
+      }
+      return result.concat(name);
     },
   },
 };

@@ -1,6 +1,6 @@
 import _pickBy from 'lodash/pickBy';
 import _isEmpty from 'lodash/isEmpty';
-import _toString from 'lodash/toString'
+import _toString from 'lodash/toString';
 import { getModule } from './actions';
 import { pluginMeta } from '../constants/plugin_meta';
 import { initCustomData } from '../constants/entities';
@@ -122,9 +122,7 @@ export const updateDataView = (state, payload) => {
   if (payload.view) {
     module.view = { ...module.view, ...payload.view };
     if (payload.view.fields) {
-      module.view.colFilters = _pickBy(module.view.colFilters, (value, key) => {
-        return payload.view.fields.includes(key);
-      });
+      module.view.colFilters = _pickBy(module.view.colFilters, (value, key) => payload.view.fields.includes(key));
     }
   }
   if (payload.selectedView !== undefined) {
@@ -439,7 +437,7 @@ export const updateCustomData = (state, payload) => {
         .filter((field) => !genericFieldNames.includes(field.name))];
   };
 
-  const schemaFields = customFields().filter((field) => !genericFieldNames.includes(field.name))
+  const schemaFields = customFields()
     .reduce((map, field) => {
       map[trimName(field.name)] = field;
       return map;
@@ -449,19 +447,23 @@ export const updateCustomData = (state, payload) => {
     const key = fieldValue.predefined ? fieldName : `custom_${fieldName}`;
     if (!schemaFields[key]) return;
 
+    const value = fieldValue.predefined ? fieldValue.value : fieldValue;
+    const fullPath = `specific_data.data.${key}`;
     const basicField = basic[`specific_data.data.${fieldName}`];
 
     if (Array.isArray(basicField)) {
       if (!basicField) {
-        basic[`specific_data.data.${key}`] = [];
+        basic[fullPath] = [];
       }
-      if (fieldValue.new) {
-        basicField.push(fieldValue);
+      if (fieldValue.isNew) {
+        basicField.push(value);
       } else {
-        basicField[basicField.length - 1] = fieldValue;
+        basicField[basicField.length - 1] = value;
       }
+    } else if (basic[fullPath]) {
+      basic[fullPath] = [basicField, value];
     } else {
-      basic[`specific_data.data.${key}`] = fieldValue;
+      basic[fullPath] = value;
     }
   });
 };

@@ -87,6 +87,7 @@ class DevicesPage(EntitiesPage):
                                           '//div[contains(text(),\'{query_name_text}\')]'
     SPECIFIC_SEARCH_CLOSE_BUTTON_CSS = '.search-input-badge__remove'
     SPECIFIC_SEARCH_DROPDOWN_CONTENT_CSS = '#specific_search_select .menu-content .x-menu-item'
+    HOST_NAME_AGGREGATED_FIELD_CSS = '.x-list .item-container .label[for="specific_data.data.hostname"] ~ div .item'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -347,3 +348,6 @@ class DevicesPage(EntitiesPage):
             self.close_dropdown()
             return True
         return False
+
+    def get_host_name_aggregated_value(self):
+        return [item.text for item in self.driver.find_elements_by_css_selector(self.HOST_NAME_AGGREGATED_FIELD_CSS)]

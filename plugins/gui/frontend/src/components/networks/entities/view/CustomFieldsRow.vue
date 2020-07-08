@@ -7,7 +7,7 @@
           :options="fieldOptions"
           placeholder="Field..."
           :searchable="true"
-          :read-only="!field.new"
+          :read-only="!field.isNew"
           :container="$refs.fields"
           :class="{'border-error': empty(fieldName) || error, 'item-name': true}"
         />
@@ -46,7 +46,7 @@
         <div v-else />
       </template>
       <XButton
-        v-if="field.new"
+        v-if="field.isNew"
         type="link"
         @click="$emit('remove')"
       >X</XButton>
