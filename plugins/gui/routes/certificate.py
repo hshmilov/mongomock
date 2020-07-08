@@ -5,7 +5,6 @@ import urllib.parse
 from pathlib import Path
 
 import OpenSSL
-import gridfs
 from bson import ObjectId
 from flask import request, Response
 from flask.json import jsonify
@@ -14,7 +13,7 @@ from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import GUI_CONFIG_NAME
 from axonius.consts.plugin_consts import CORE_UNIQUE_NAME
 from axonius.plugin_base import return_error
-from axonius.utils.permissions_helper import PermissionCategory, PermissionValue, PermissionAction
+from axonius.utils.permissions_helper import PermissionCategory
 from axonius.utils.ssl import check_associate_cert_with_private_key, validate_cert_with_ca, SSL_CERT_PATH
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 # pylint: disable=no-member,access-member-before-definition
@@ -104,8 +103,19 @@ class Certificate:
             return jsonify(True)
         return return_error('Import certificate request not according to schema', 400)
 
-    @gui_route_logged_in('csr', methods=['GET', 'POST', 'DELETE'], enforce_trial=True,
-                         required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings))
+    @gui_route_logged_in('cancel_csr', methods=['POST'], enforce_trial=True)
+    # pylint: disable=lost-exception
+    def cancel_csr(self):
+        try:
+            csr_req = self.plugins.get_plugin_settings(CORE_UNIQUE_NAME).configurable_configs[CORE_CONFIG_NAME][CSR_KEY]
+            self.db_files.delete_file(ObjectId(csr_req.get('csr_file', {}).get('uuid', None)))
+            self.db_files.delete_file(ObjectId(csr_req.get('key_file', {}).get('uuid', None)))
+        except Exception:
+            logger.error('Error while deleting old csr and key files', exc_info=True)
+        finally:
+            return jsonify(self._reset_csr())
+
+    @gui_route_logged_in('csr', methods=['GET', 'POST'], enforce_trial=True)
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     def csr(self):
         csr_req = self.plugins.get_plugin_settings(CORE_UNIQUE_NAME).configurable_configs[CORE_CONFIG_NAME][CSR_KEY]
@@ -120,19 +130,6 @@ class Certificate:
             except Exception:
                 return return_error('Couldn\'t get csr file from db', 400)
             return Response(csr_file, headers=headers)
-
-        # Delete the stored certificate in the DB
-        if request.method == 'DELETE':
-            try:
-                db_connection = self._get_db_connection()
-                fs = gridfs.GridFS(db_connection[CORE_UNIQUE_NAME])
-                fs.delete(ObjectId(csr_req.get('csr_file', {}).get('uuid', None)))
-                fs.delete(ObjectId(csr_req.get('key_file', {}).get('uuid', None)))
-            except Exception:
-                logger.error('Error while deleting old csr and key files', exc_info=True)
-            finally:
-                self._reset_csr()
-            return jsonify(True)
 
         # Means its a POST request with CSR creation details
         try:
@@ -175,10 +172,8 @@ class Certificate:
                 csr.sign(key, 'sha256')
                 csr_pem = OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csr)
 
-                db_connection = self._get_db_connection()
-                fs = gridfs.GridFS(db_connection[CORE_UNIQUE_NAME])
-                csr_uuid = fs.put(csr_pem, filename='cert.csr')
-                key_uuid = fs.put(key_pem, filename='cert.key')
+                csr_uuid = self.db_files.upload_file(csr_pem, filename='cert.csr')
+                key_uuid = self.db_files.upload_file(key_pem, filename='cert.key')
 
                 self.plugins.core.configurable_configs.update_config(
                     CORE_CONFIG_NAME,

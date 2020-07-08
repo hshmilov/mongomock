@@ -356,5 +356,18 @@ class Labels:
             'audit.compliance.rules': 'Updated Scoring Rules',
             'audit.compliance.rules.template': 'Updated scoring rules for compliance {cis_title}',
             'audit.compliance.create_jira': 'Create Jira Issue',
-            'audit.compliance.create_jira.template': 'Jira issue created for compliance {cis_title}'
+            'audit.compliance.create_jira.template': 'Jira issue created for compliance {cis_title}',
+
+            'audit.certificate': 'Certificate Settings',
+            'audit.certificate.certificate_settings': 'Edit Settings',
+            'audit.certificate.certificate_settings.template': 'Edited Certificate Settings',
+            'audit.certificate.global_ssl': 'Import Certificate',
+            'audit.certificate.global_ssl.template': 'Public and private certificate was imported',
+            'audit.certificate.csr': 'Generate CSR',
+            'audit.certificate.csr.template': 'CSR was generated',
+            'audit.certificate.import_cert': 'Import CSR',
+            'audit.certificate.import_cert.template': 'CSR was imported',
+            'audit.certificate.cancel_csr': 'Cancel CSR',
+            'audit.certificate.cancel_csr.template': 'CSR was canceled'
+
         }

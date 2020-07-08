@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 import requests
 
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, \
+    ElementNotInteractableException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -737,9 +738,17 @@ class SettingsPage(Page):
         return self.find_checkbox_by_label(self.GETTING_STARTED_LABEL)
 
     def open_import_key_and_cert_modal(self):
-        self.find_elements_by_css('.actions-toggle')[0].click()
-        time.sleep(0.5)
-        self.driver.find_element_by_id('import_cert_and_key').click()
+        try:
+            self.find_elements_by_css('.actions-toggle')[0].click()
+        except ElementClickInterceptedException:
+            pass
+        time.sleep(1)
+        try:
+            self.driver.find_element_by_id('import_cert_and_key').click()
+        except ElementClickInterceptedException:
+            pass
+        except ElementNotInteractableException:
+            pass
 
     def open_generate_csr_modal(self):
         self.find_elements_by_css('.actions-toggle')[0].click()

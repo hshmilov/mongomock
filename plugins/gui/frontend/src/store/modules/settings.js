@@ -239,8 +239,8 @@ export const settings = {
     },
     [DELETE_CSR]({ state, dispatch }, payload) {
       return dispatch(REQUEST_API, {
-        rule: `certificate/csr`,
-        method: 'DELETE',
+        rule: `certificate/cancel_csr`,
+        method: 'POST',
       });
     },
     [IMPORT_SIGNED_CERTIFICATE]({ state, dispatch }, payload) {
