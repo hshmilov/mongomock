@@ -24,9 +24,10 @@ from builds import Builds
 from builds.builds_factory import BuildsInstance
 from testing.test_helpers.ci_helper import TeamcityHelper
 
-
-DEFAULT_CLOUD_INSTANCE_CLOUD = 'aws'
-DEFAULT_CLOUD_INSTANCE_TYPE = 't2.2xlarge'
+# These are probably not actually used, see teamcity for actual defaults.
+DEFAULT_BASE_IMAGE_NAME = 'ubuntu-base-tests-machine-patched-nexus-gcp-mirror'
+DEFAULT_CLOUD_INSTANCE_CLOUD = 'gcp'
+DEFAULT_CLOUD_INSTANCE_TYPE = 'e2-standard-4'
 DEFAULT_CLOUD_NUMBER_OF_INSTANCES = 10
 DEFAULT_MAX_PARALLEL_TESTS_IN_INSTANCE = 5
 BUILDS_GROUP_NAME_ENV = 'BUILDS_GROUP_NAME'
@@ -100,10 +101,12 @@ def tp_execute(list_of_execs: List[Tuple[Callable, Tuple, Dict, object]], tp_ins
 
 
 class InstanceManager:
-    def __init__(self, cloud, instance_type, number_of_instances, build_tag=None):
+    def __init__(self, cloud, instance_type, number_of_instances, build_tag=None,
+                 base_image_name=DEFAULT_BASE_IMAGE_NAME):
         self.cloud = cloud
         self.instance_type = instance_type
         self.number_of_instances = number_of_instances
+        self.base_image_name = base_image_name
         self.__instances: List[BuildsInstance] = []
         self.__builds = Builds()
         self.__group_name = None
@@ -198,7 +201,7 @@ class InstanceManager:
             self.instance_type,
             self.number_of_instances,
             instance_cloud=cloud,
-            instance_image='ubuntu-base-tests-machine-patched-nexus-gcp-mirror',
+            instance_image=self.base_image_name,
             force_password_change=True
         )
         TC.set_environment_variable(BUILDS_GROUP_NAME_ENV, group_name_from_builds)
@@ -492,6 +495,8 @@ def main():
                              'This should be used only for debugging')
     parser.add_argument('--pytest-args', nargs='*', help='Extra args to pass to pytest, with a -- prefix.')
     parser.add_argument('--pytest-single-args', nargs='*', help='Extra single args to pass to pytest, with a - prefix.')
+    parser.add_argument('--base-image-name', type=str, default=DEFAULT_BASE_IMAGE_NAME,
+                        help='Name of the base image to create test instances from.')
 
     try:
         args = parser.parse_args()
@@ -512,6 +517,7 @@ def main():
     print(f'Cloud type: {args.cloud}')
     print(f'Number of instances: {args.number_of_instances}')
     print(f'Instance Type: {args.instance_type}')
+    print(f'Base Instance Name: {args.base_image_name}')
     print(f'Max Parallel Builder Tasks: {args.max_parallel_builder_tasks}')
     print(f'Extra pytest arguments: {extra_pytest_args}')
     print(f'Extra pytest single arguments: {extra_pytest_single_args}')
@@ -522,7 +528,8 @@ def main():
     # test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
 
     if args.action == 'run':
-        instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances, args.build_tag)
+        instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances, args.build_tag,
+                                           args.base_image_name)
         try:
             instance_manager.prepare_all(group_name)
             print(f'Is running under teamcity: {TC.is_in_teamcity()}')

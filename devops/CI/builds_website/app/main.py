@@ -91,7 +91,7 @@ mkdir /home/ubuntu/cortex
 cd /home/ubuntu/cortex
 git init
 # Beware! do not save this token.
-git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
+git pull https://b1654a5e47ffc47b5e945f0c3d34bdced6ec2ab6@github.com/{fork}/cortex {branch}
 ./devops/scripts/host_installation/init_host.sh
 cd /home/ubuntu/cortex/bandicoot
 sudo go mod vendor
