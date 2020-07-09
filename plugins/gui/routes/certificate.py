@@ -265,6 +265,15 @@ class Certificate:
                         f'{MUTUAL_TLS_KEY}.ca_certificate': mutual_tls_settings['ca_certificate']
                     }
                 )
+            elif mutual_tls_settings:
+                self.plugins.gui.configurable_configs.update_config(
+                    GUI_CONFIG_NAME,
+                    {
+                        f'{MUTUAL_TLS_KEY}.enabled': False,
+                        f'{MUTUAL_TLS_KEY}.mandatory': False,
+                        f'{MUTUAL_TLS_KEY}.ca_certificate': ''
+                    }
+                )
             self._update_config_inner()
         except Exception:
             return return_error('Error while saving certificate settings', 400)

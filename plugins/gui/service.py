@@ -736,13 +736,13 @@ class GuiService(Triggerable,
         self._system_settings = config[SYSTEM_SETTINGS]
         self._mutual_tls_settings = config['mutual_tls_settings']
         mutual_tls_is_mandatory = self._mutual_tls_settings.get('mandatory')
+        ca_certificate = self._grab_file_contents(self._mutual_tls_settings.get('ca_certificate'))
 
         if self._mutual_tls_settings.get('enabled') and mutual_tls_is_mandatory:
             # Enable Mutual TLS.
             # Note that we have checked before (plugin_configs) that the issuer is indeed part of this cert
             # as input validation. So input validation is not needed here.
             try:
-                ca_certificate = self._grab_file_contents(self._mutual_tls_settings.get('ca_certificate'))
 
                 current_ca_cert = None
                 if os.path.exists(MUTUAL_TLS_CA_PATH):
@@ -769,7 +769,7 @@ class GuiService(Triggerable,
             # Disable mandatory Mutual TLS
             mutual_tls_state = f'optional_no_ca' if self._mutual_tls_settings.get('enabled') else 'off'
             try:
-                if os.path.exists(MUTUAL_TLS_CA_PATH):
+                if os.path.exists(MUTUAL_TLS_CA_PATH) or ca_certificate:
                     logger.info(f'Deleting mutual tls settings')
                     with open(MUTUAL_TLS_CONFIG_FILE, 'wt') as mtls_config_file:
                         mtls_config_file.write(f'ssl_verify_client {mutual_tls_state};')

@@ -118,6 +118,7 @@ class SettingsPage(Page):
     # those are the fully fledged css selectors for the elements
     CERT_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file]'
     PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key]'
+    MUTUAL_TLS_CERTIFICATE_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=ca_certificate]'
     CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + ' \
                                      'div[class=file-name]'
     PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key] ' \
@@ -1427,6 +1428,15 @@ class SettingsPage(Page):
         self.select_option_without_search(self.DATE_FORMAT_CSS,
                                           self.SELECT_OPTION_CSS,
                                           date_format)
+
+    def set_mutual_tls(self, certificate_file_content):
+        self.find_checkbox_by_label('Enable mutual TLS').click()
+        mutual_tls_cert_element = self.find_elements_by_css(self.MUTUAL_TLS_CERTIFICATE_SELECTOR)[0]
+        fname = self.upload_file_on_element(mutual_tls_cert_element, certificate_file_content, is_bytes=True)
+        return fname
+
+    def set_enforce_mutual_tls(self):
+        self.find_checkbox_by_label('Enforce client certificate validation').click()
 
     def set_csv_delimiter(self, delimiter):
         self.switch_to_page()
