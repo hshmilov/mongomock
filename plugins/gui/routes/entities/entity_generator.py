@@ -175,10 +175,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @search_filter()
         @historical()
         @sorted_endpoint()
-        @gui_route_logged_in('<entity_id>/<field_name>/csv', methods=['POST'],
-                             required_permissions_values={
-                                 PermissionValue.get(
-                                     PermissionAction.View, permission_category)})
+        @gui_route_logged_in('<entity_id>/<field_name>/csv', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category))
         def entity_generic_field_csv(
                 self, entity_id, field_name, mongo_sort, history: datetime, search: str):
             """

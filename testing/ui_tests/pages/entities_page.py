@@ -1206,6 +1206,9 @@ class EntitiesPage(Page):
 
     def click_export_csv(self):
         self.click_button(self.EXPORT_CSV_BUTTON_TEXT)
+
+    def open_export_csv(self):
+        self.click_export_csv()
         self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
         time.sleep(0.1)  # wait for modal to open
 
