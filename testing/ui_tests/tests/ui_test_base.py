@@ -75,16 +75,15 @@ def create_ui_tests_logger():
 logger = create_ui_tests_logger()
 
 
-# pylint: disable=too-many-instance-attributes
-# pylint: disable=no-value-for-parameter
+# pylint: disable=too-many-instance-attributes,no-value-for-parameter,no-member,access-member-before-definition
 
 
 class TestBase:
-    def _initialize_driver(self):
+    def _initialize_driver(self, incognito_mode=False):
         self.ui_tests_download_dir = tempfile.gettempdir()
         if pytest.config.option.local_browser:
             self.local_browser = True
-            self.driver = self._get_local_browser(self.ui_tests_download_dir)
+            self.driver = self._get_local_browser(self.ui_tests_download_dir, incognito_mode=incognito_mode)
             self.base_url = 'https://127.0.0.1'
             self.port = 443
         elif pytest.config.option.host_hub:
@@ -92,11 +91,17 @@ class TestBase:
             self.port = 443
             remote_hub = f'http://{os.environ["REMOTE_HUB_ADDR"]}:4444/wd/hub'
             self.base_url = f'https://{os.environ["LOCAL_EXTERNAL_ADDR"]}'
+            options = webdriver.ChromeOptions()
             logger.info(f'Base Url: {self.base_url}')
             logger.info(f'Connecting to the remote hub {remote_hub}..')
+            if incognito_mode:
+                logger.info('Adding incognito mode')
+                options.add_argument('--incognito')
             self.driver = webdriver.Remote(
                 command_executor=remote_hub,
-                desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir))
+                options=options,
+                desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir,
+                                                                    incognito_mode=incognito_mode))
             logger.info('Connected successfully!')
         else:
             self.local_browser = False
@@ -108,21 +113,31 @@ class TestBase:
 
             @retry(retry_on_exception=should_retry, stop_max_attempt_number=3, wait_fixed=1000)
             def create_remote_driver():
-                return webdriver.Remote(command_executor=f'http://127.0.0.1:{DOCKER_PORTS["selenium-hub"]}/wd/hub',
-                                        desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir))
+                remote_options = webdriver.ChromeOptions()
+                remote_port = DOCKER_PORTS['selenium-hub']
+                if incognito_mode:
+                    remote_options.add_argument('--incognito')
+                return webdriver.Remote(command_executor=f'http://127.0.0.1:{remote_port}/wd/hub',
+                                        options=remote_options,
+                                        desired_capabilities=self._get_desired_capabilities(
+                                            self.ui_tests_download_dir,
+                                            incognito_mode=incognito_mode)
+                                        )
 
             logger.info('Before webdriver.Remote')
+            if incognito_mode:
+                logger.info('webdriver.Remote with incognito mode')
             self.driver = create_remote_driver()
             logger.info('After webdriver.Remote')
             self.base_url = f'https://gui.{AXONIUS_DNS_SUFFIX}'
 
     @staticmethod
-    def _get_desired_capabilities(ui_tests_download_dir):
+    def _get_desired_capabilities(ui_tests_download_dir, incognito_mode=False):
         if pytest.config.option.browser == conftest.CHROME:
             caps = webdriver.DesiredCapabilities.CHROME.copy()
             prefs = {'download.default_directory': ui_tests_download_dir}
             caps['prefs'] = prefs
-            return webdriver.DesiredCapabilities.CHROME
+            return caps
         if pytest.config.option.browser == conftest.FIREFOX:
             ff_profile = webdriver.FirefoxProfile()
             ff_profile.set_preference('security.insecure_field_warning.contextual.enabled', False)
@@ -130,12 +145,14 @@ class TestBase:
             ff_opts = webdriver.firefox.options.Options()
             ff_opts.profile = ff_profile
             ff_caps = ff_opts.to_capabilities()
+            if incognito_mode:
+                ff_caps.add_argument('-private')
             ff_caps.update(webdriver.DesiredCapabilities.FIREFOX)
             return ff_caps
         raise AssertionError('Invalid browser selected')
 
     @staticmethod
-    def _get_local_browser(ui_tests_download_dir):
+    def _get_local_browser(ui_tests_download_dir, incognito_mode=False):
         if pytest.config.option.browser == conftest.CHROME:
             options = webdriver.ChromeOptions()
             prefs = {'download.default_directory': ui_tests_download_dir}
@@ -143,9 +160,15 @@ class TestBase:
             ext_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'Vue.js-devtools_v5.3.3.crx')
             options.add_extension(ext_path)
             options.add_argument('--ignore-certificate-errors')
+            if incognito_mode:
+                options.add_argument('--incognito')
             return webdriver.Chrome(chrome_options=options)
         if pytest.config.option.browser == conftest.FIREFOX:
-            return webdriver.Firefox()
+            ff_opts = webdriver.firefox.options.Options()
+            ff_caps = ff_opts.to_capabilities()
+            if incognito_mode:
+                ff_caps.add_argument('-private')
+            return webdriver.Firefox(desired_capabilities=ff_caps)
         raise AssertionError('Invalid browser selected')
 
     @staticmethod
@@ -327,20 +350,21 @@ class TestBase:
 
     def setup_method(self, method):
         logger.info(f'starting setup_method {method.__name__}')
-        self.logger = logger
         self.setup_browser()
+        self.init_system()
+        logger.info(f'finishing setup_method {method.__name__}')
 
+    def init_system(self):
         self.username = DEFAULT_USER['user_name'] if not read_saas_input_params() else \
             AXONIUS_AWS_TESTS_USER['user_name']
         self.password = DEFAULT_USER['password'] if not read_saas_input_params() else AXONIUS_AWS_TESTS_USER['password']
         self.axonius_system = get_service()
-
         self.login()
         self.base_page.wait_for_run_research()
-        logger.info(f'finishing setup_method {method.__name__}')
 
-    def setup_browser(self):
-        self._initialize_driver()
+    def setup_browser(self, incognito_mode=False):
+        self.logger = logger
+        self._initialize_driver(incognito_mode=incognito_mode)
 
         # mac issues, maximize is not working on mac anyway now
         if sys.platform != 'darwin':
@@ -351,6 +375,14 @@ class TestBase:
         self.driver.set_script_timeout(30)
         self.register_components()
         self.register_pages()
+
+    def open_another_session(self, incognito_mode=False):
+        new_test_base = TestBase()
+        new_test_base.setup_browser(incognito_mode=incognito_mode)
+        new_test_base.axonius_system = self.axonius_system
+        new_test_base.driver.get(new_test_base.base_url)
+        new_test_base.login_page.wait_for_login_page_to_load()
+        return new_test_base
 
     def restart_browser(self):
         self.driver.quit()
@@ -369,12 +401,18 @@ class TestBase:
         self._save_js_logs()
         if not pytest.config.option.teardown_keep_db:
             self._clean_db()
-        if self.driver:
-            self.driver.quit()
+        self.quit_browser()
         logger.info(f'finishing teardown_method {method.__name__}')
 
+    def quit_browser(self):
+        if self.driver:
+            self.driver.quit()
+
     def register_pages(self):
-        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)
+        params = dict(driver=self.driver,
+                      base_url=self.base_url,
+                      local_browser=self.local_browser,
+                      test_base=self)
         self.base_page = BasePage(**params)
         self.login_page = LoginPage(**params)
         self.reset_password_page = ResetPasswordPage(**params)
@@ -396,7 +434,10 @@ class TestBase:
         self.administration_page = AdministrationPage(**params)
 
     def register_components(self):
-        params = dict(driver=self.driver, base_url=self.base_url, local_browser=self.local_browser, test_base=self)
+        params = dict(driver=self.driver,
+                      base_url=self.base_url,
+                      local_browser=self.local_browser,
+                      test_base=self)
         self.tag_component = TagComponent(**params)
 
     def get_all_screens(self):

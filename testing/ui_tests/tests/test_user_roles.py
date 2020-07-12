@@ -155,3 +155,35 @@ class TestUserRoles(TestBase):
         self.settings_page.click_save_button()
         self.settings_page.safeguard_click_confirm('Yes')
         self.settings_page.wait_for_role_successfully_saved_toaster()
+
+    def test_change_role_while_user_is_logged_in(self):
+        role_name = self.settings_page.add_user_with_duplicated_role(ui_consts.RESTRICTED_USERNAME,
+                                                                     ui_consts.NEW_PASSWORD,
+                                                                     ui_consts.FIRST_NAME,
+                                                                     ui_consts.LAST_NAME,
+                                                                     self.settings_page.RESTRICTED_ROLE)
+
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        new_test_user_roles = self.open_another_session(incognito_mode=True)
+        new_test_user_roles.login_page.login(self.username, self.password)
+        self.base_page.wait_for_run_research()
+
+        new_permissions = {
+            'settings': 'all'
+        }
+        # Check changing of the another session logged in user's role
+        new_test_user_roles.settings_page.update_role(role_name, new_permissions, True)
+        new_test_user_roles.quit_browser()
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.base_page.wait_for_run_research()
+        self.login_page.assert_logged_in()
+        new_permissions = {
+            'reports': 'all'
+        }
+        # Check changing of the current logged in user's role
+        self.settings_page.update_role(role_name, new_permissions, True)
+        self.login_page.wait_for_login_page_to_load()
+        self.login_page.login(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.base_page.wait_for_run_research()
+        self.login_page.assert_logged_in()
