@@ -13,12 +13,12 @@ from test_credentials.test_carbonblack_defense_credentials import client_details
 from test_credentials.test_csv_credentials import \
     client_details as csv_client_details, USERS_CLIENT_FILES
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import CSV_PLUGIN_NAME, CSV_NAME, JSON_ADAPTER_PLUGIN_NAME
+from ui_tests.tests.ui_consts import (CSV_PLUGIN_NAME, CSV_NAME,
+                                      JSON_ADAPTER_PLUGIN_NAME, JSON_ADAPTER_NAME,
+                                      AD_ADAPTER_NAME)
 from testing.test_credentials.test_csv_credentials import CSV_FIELDS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 
-AD_NAME = 'Microsoft Active Directory (AD)'
-JSON_NAME = 'JSON File'
 QUERY_WIZARD_CSV_DATE_PICKER_VALUE = str(datetime.now())
 EXPECTED_ADAPTER_LIST_LABELS = [
     'CSV - users_1',
@@ -137,16 +137,16 @@ class TestAdapters(TestBase):
                 self.adapters_page.upload_csv(list(client.keys())[0], client, True)
                 self.adapters_page.wait_for_server_green(position)
             self.adapters_page.switch_to_page()
-            self.adapters_page.open_add_edit_server(JSON_NAME, 1)
-            self.adapters_page.fill_creds(connectionLabel=JSON_NAME)
+            self.adapters_page.open_add_edit_server(JSON_ADAPTER_NAME, 1)
+            self.adapters_page.fill_creds(connectionLabel=JSON_ADAPTER_NAME)
             self.adapters_page.click_save()
             self.adapters_page.wait_for_server_green(1)
             self.adapters_page.refresh()
-            self.adapters_page.click_adapter(JSON_NAME)
+            self.adapters_page.click_adapter(JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_table_to_be_responsive()
-            assert self.adapters_page.get_column_data_inline('Connection Label')[0] == JSON_NAME
+            assert self.adapters_page.get_column_data_inline('Connection Label')[0] == JSON_ADAPTER_NAME
             self.adapters_page.click_edit_server()
-            assert self.adapters_page.find_server_connection_label_value() == JSON_NAME
+            assert self.adapters_page.find_server_connection_label_value() == JSON_ADAPTER_NAME
             self.adapters_page.click_cancel()
 
             self.check_for_connection_labels()
@@ -214,7 +214,7 @@ class TestAdapters(TestBase):
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
-        self.devices_page.select_query_adapter(AD_NAME)
+        self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
         self.devices_page.select_query_field(DISTINCT_ADAPTERS_COUNT_FIELD)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()

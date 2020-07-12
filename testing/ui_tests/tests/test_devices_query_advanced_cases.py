@@ -4,11 +4,11 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.wait import wait_until
 from json_file_adapter.service import FILE_NAME
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.tests.test_enforcement_config import JSON_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
-                                      WINDOWS_QUERY_NAME, JSON_ADAPTER_PLUGIN_NAME)
+                                      WINDOWS_QUERY_NAME,
+                                      JSON_ADAPTER_PLUGIN_NAME)
 from services.adapters.cylance_service import CylanceService
 from services.adapters.wmi_service import WmiService
 from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
@@ -562,7 +562,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
             # enum of type string
             {'field': ADAPTER_CONNECTIONS_FIELD,
              'comp_op': self.devices_page.QUERY_COMP_EQUALS,
-             'value': JSON_NAME,
+             'value': JSON_ADAPTER_NAME,
              'field_type': 'string',
              'expected_query': f'(adapters == "{JSON_ADAPTER_PLUGIN_NAME}")'},
             # enum of type string
@@ -603,11 +603,11 @@ class TestDevicesQueryAdvancedCases(TestBase):
         ]
         with CylanceService().contextmanager(take_ownership=True):
             credentials_inputer.main()
-            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
+            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.wait_for_data_collection_toaster_absent()
-            self.adapters_page.add_server(cisco_json_file_mock_credentials, JSON_NAME)
+            self.adapters_page.add_server(cisco_json_file_mock_credentials, JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.wait_for_data_collection_toaster_absent()
@@ -709,7 +709,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         self._test_asset_entity_expressions()
 
     def test_change_field_with_different_value_schema(self):
-        self.adapters_page.add_server(aws_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.add_server(aws_json_file_mock_devices, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green(position=2)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()
@@ -732,7 +732,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
         self.devices_page.click_search()
 
-        self.adapters_page.remove_server(ad_client=aws_json_file_mock_devices, adapter_name=JSON_NAME,
+        self.adapters_page.remove_server(ad_client=aws_json_file_mock_devices, adapter_name=JSON_ADAPTER_NAME,
                                          expected_left=1, delete_associated_entities=True,
                                          adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 
@@ -789,5 +789,4 @@ class TestDevicesQueryAdvancedCases(TestBase):
 
         # expect label should be removed from drop down list
         self.devices_page.check_connection_label_removed(self.CONNECTION_LABEL_UPDATED)
-
         self.adapters_page.remove_json_extra_server(aws_json_mock_with_label)

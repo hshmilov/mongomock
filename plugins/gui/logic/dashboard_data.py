@@ -12,7 +12,8 @@ from dateutil.parser import parse as parse_date
 
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA, RANGE_UNIT_DAYS,
-                                       DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD)
+                                       DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD, DASHBOARD_CALL_LOCK,
+                                       DASHBOARD_CALL_LIMIT)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
@@ -26,22 +27,29 @@ from gui.logic.db_helpers import beautify_db_entry
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-def dashboard_call_limit(limit):
+def dashboard_call_limit():
     """
     Limits the amount of calls to dashboard creation to only Limit at a time
     """
 
     def limit_dec(func):
-        semaphore = Semaphore(limit)
+        g = func.__globals__
+
+        def init_semaphore(semaphore_limit):
+            g[DASHBOARD_CALL_LOCK] = Semaphore(semaphore_limit)
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            semaphore.acquire()
+            if DASHBOARD_CALL_LOCK not in g:
+                init_semaphore(DASHBOARD_CALL_LIMIT)
+
+            g[DASHBOARD_CALL_LOCK].acquire()
             try:
                 return func(*args, **kwargs)
             finally:
-                semaphore.release()
+                g[DASHBOARD_CALL_LOCK].release()
 
+        wrapper.init_semaphore = init_semaphore
         return wrapper
 
     return limit_dec
@@ -1104,8 +1112,6 @@ def fetch_chart_timeline(_: ChartViews, views, timeframe, intersection=False):
         lines = list(_intersect_timeline_lines(views, date_ranges))
     else:
         lines = list(_compare_timeline_lines(views, date_ranges))
-    if not lines:
-        return None
     return _format_timeline_chart(date_from, date_to, lines)
 
 
@@ -1145,12 +1151,12 @@ def fetch_chart_segment_timeline(_: ChartViews, entity: EntityType, view, field,
         # total values of all segments for this date
         lines[1]['points'][curr_point['date']] = total_count
 
-    if not lines:
-        return None
     return _format_timeline_chart(date_from, date_to, lines)
 
 
 def _format_timeline_chart(date_from, date_to, lines):
+    if not lines or not lines[0].keys():
+        return None
     # find the first date with value
     # before this date data is not relevant
     first_date_with_value = datetime.strptime(min([min(line_group['points'].keys()) for line_group in lines]),
@@ -1296,7 +1302,7 @@ def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, sele
     return data
 
 
-@dashboard_call_limit(10)
+@dashboard_call_limit()
 def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
     See _get_dashboard
@@ -1455,7 +1461,7 @@ def fetch_chart_matrix_historical(card, from_given_date, to_given_date):
     return fetch_chart_matrix(ChartViews[card['view']], **config, for_date=latest_date)
 
 
-@dashboard_call_limit(5)
+@dashboard_call_limit()
 def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
                                   sort_by=None, sort_order=None):
     # pylint: disable=protected-access

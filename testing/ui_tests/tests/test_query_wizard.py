@@ -1,6 +1,5 @@
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import DEVICES_SEEN_NEGATIVE_VALUE_QUERY, WINDOWS_QUERY_NAME
-from ui_tests.tests.test_enforcement_config import JSON_NAME
+from ui_tests.tests.ui_consts import DEVICES_SEEN_NEGATIVE_VALUE_QUERY, WINDOWS_QUERY_NAME, JSON_ADAPTER_NAME
 from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 
 
@@ -12,7 +11,7 @@ class TestQueryWizard(TestBase):
 
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_be_responsive()
-        self.devices_page.add_query_last_seen_negative_value(JSON_NAME,
+        self.devices_page.add_query_last_seen_negative_value(JSON_ADAPTER_NAME,
                                                              self.devices_page.FIELD_LAST_SEEN,
                                                              self.devices_page.QUERY_COMP_NEXT_DAYS,
                                                              -1)

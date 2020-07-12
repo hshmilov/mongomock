@@ -7,8 +7,8 @@ import pytest
 from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, AUDIT_COLLECTION
 from axonius.saas.input_params import read_saas_input_params
 from test_credentials.test_ad_credentials import ad_client1_details
-from ui_tests.tests.test_adapters import AD_NAME
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 
 class TestTunnel(TestBase):
@@ -46,7 +46,7 @@ class TestTunnel(TestBase):
     def test_connect_adapter_to_tunnel(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.search('microsoft')
-        self.adapters_page.click_adapter(AD_NAME)
+        self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.click_advanced_settings()
         self.adapters_page.click_advanced_configuration()
         self.adapters_page.click_toggle_button(
@@ -78,14 +78,14 @@ class TestTunnel(TestBase):
         assert self.devices_page.get_table_count() > 0
         self.users_page.switch_to_page()
         assert self.users_page.get_table_count() > 0
-        self.adapters_page.clean_adapter_servers(AD_NAME)
+        self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
 
     @pytest.mark.skipif(not read_saas_input_params(), reason='Can run only on a tunnel image')
     def test_skip_adapter_fetch_if_tunnel_disconnected(self):
         # Initialize AD Adapter
         self.adapters_page.switch_to_page()
         self.adapters_page.search('microsoft')
-        self.adapters_page.click_adapter(AD_NAME)
+        self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_server_green()
 

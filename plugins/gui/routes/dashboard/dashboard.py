@@ -9,7 +9,7 @@ from flask import jsonify
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
                                        DASHBOARD_SPACE_PERSONAL,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       ResearchStatus)
+                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT)
 from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -23,7 +23,7 @@ from axonius.utils.permissions_helper import (PermissionAction,
 from axonius.utils.revving_cache import (NoCacheException,
                                          rev_cached)
 from gui.logic.dashboard_data import (adapter_data, generate_dashboard,
-                                      generate_dashboard_uncached)
+                                      generate_dashboard_uncached, dashboard_historical_uncached)
 from gui.logic.fielded_plugins import get_fielded_plugins
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import (all_historical_dates,
@@ -243,6 +243,11 @@ class Dashboard(Charts, Notifications):
         """
         Warms up the cache for all dashboards for all users
         """
+        dashboard_control = self._current_feature_flag_config.get(DashboardControlNames.root_key, {})
+        generate_dashboard_uncached.init_semaphore(dashboard_control.get(
+            DashboardControlNames.present_call_limit, DASHBOARD_CALL_LIMIT))
+        dashboard_historical_uncached.init_semaphore(dashboard_control.get(
+            DashboardControlNames.historical_call_limit, DASHBOARD_CALL_LIMIT))
         for dashboard in self._dashboard_collection.find(
                 filter=filter_archived(),
                 projection={

@@ -5,7 +5,7 @@ from flaky import flaky
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import SystemMetric
-from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME, JSON_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.json_file_credentials import client_details as json_file_creds
 
@@ -15,8 +15,6 @@ ENFORCEMENT_CHANGE_FILTER = 'adapters_data.json_file_adapter.test_enforcement_ch
 
 FIELD_NAME = 'Name'
 FIELD_QUERY_NAME = 'Trigger Query Name'
-
-JSON_NAME = 'JSON File'
 VIEW_TASKS_CSS = '#view_tasks'
 
 
@@ -57,7 +55,7 @@ class TestEnforcementSanity(TestBase):
         # make sure it is still 1
         self.notification_page.verify_amount_of_notifications(1)
 
-        self.adapters_page.clean_adapter_servers(JSON_NAME)
+        self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
 
         try:
             # Making the query return 0 results
@@ -71,13 +69,13 @@ class TestEnforcementSanity(TestBase):
 
         finally:
             # restore JSON client
-            self.adapters_page.add_server(json_file_creds, JSON_NAME)
+            self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
             self.adapters_page.wait_for_table_to_load()
             self.adapters_page.wait_for_data_collection_toaster_absent()
 
     def test_new(self):
-        self.adapters_page.clean_adapter_servers(JSON_NAME)
+        self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
         self._create_enforcement_change_query()
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
@@ -98,7 +96,7 @@ class TestEnforcementSanity(TestBase):
         assert self.axonius_system.gui.log_tester.is_metric_in_log(SystemMetric.ENFORCEMENT_RAW,
                                                                    ENFORCEMENT_CHANGE_NAME)
         # restore JSON client
-        self.adapters_page.add_server(json_file_creds, JSON_NAME)
+        self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()

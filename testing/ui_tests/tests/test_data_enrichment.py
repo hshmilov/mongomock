@@ -1,11 +1,11 @@
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
-from ui_tests.pages.adapters_page import JSON_NAME
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
 
 
 class TestDataEnrichment(TestBase):
     def test_ip_to_location_enrichment(self):
-        self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.add_server(esx_json_file_mock_devices, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green()
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()

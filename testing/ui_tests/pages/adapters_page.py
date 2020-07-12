@@ -22,9 +22,6 @@ from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
 # NamedTuple doesn't need to be uppercase
 # pylint: disable=C0103
 Adapter = namedtuple('Adapter', 'name description')
-
-JSON_NAME = 'JSON File'
-
 TANIUM_ADAPTERS_CONNECTION_LABEL_UPDATED = '4250'
 
 
@@ -224,7 +221,7 @@ class AdaptersPage(EntitiesPage):
         self.remove_server(None, name, delete_associated_entities=delete_associated_entities)
 
     def restore_json_client(self):
-        self.clean_adapter_servers(JSON_NAME, delete_associated_entities=True)
+        self.clean_adapter_servers(JSON_ADAPTER_NAME, delete_associated_entities=True)
         self.add_json_server(json_file_creds, position=1, run_discovery_at_last=False)
 
     def checkboxes_count(self):
@@ -512,7 +509,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_data_collection_toaster_absent()
 
     def update_json_file_server_connection_label(self, client_name, update_label):
-        self.update_server_connection_label(JSON_NAME, 'Name', client_name, update_label)
+        self.update_server_connection_label(JSON_ADAPTER_NAME, 'Name', client_name, update_label)
 
     def update_csv_connection_label(self, file_name, update_label):
         self.update_server_connection_label(CSV_NAME, 'File name', file_name, update_label)

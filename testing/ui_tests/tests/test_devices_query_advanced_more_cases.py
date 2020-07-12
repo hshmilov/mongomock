@@ -12,7 +12,6 @@ from test_credentials.test_aws_credentials_mock import aws_json_file_mock_device
 from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
 from test_credentials.test_csv_credentials import CSV_FIELDS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
-from ui_tests.tests.test_adapters import JSON_NAME
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       LINUX_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
@@ -166,7 +165,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         Also make sure that if a different field was selected,
         It will be shown and not the ID.
         """
-        self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_NAME)
+        self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green(position=2)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()
@@ -175,17 +174,17 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
         self.devices_page.select_query_field(self.devices_page.ID_FIELD)
-        self.devices_page.select_query_adapter(JSON_NAME)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME)
         assert self.devices_page.get_query_field() == self.users_page.ID_FIELD
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
         assert self.devices_page.get_query_field() == self.devices_page.FIELD_NETWORK_INTERFACES
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN)
-        self.devices_page.select_query_adapter(JSON_NAME)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME)
         assert self.devices_page.get_query_field() == self.devices_page.FIELD_LAST_SEEN
         self.devices_page.close_dropdown()
         self.devices_page.wait_for_table_to_load()
-        self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_NAME,
+        self.adapters_page.remove_server(ad_client=crowd_strike_json_file_mock_devices, adapter_name=JSON_ADAPTER_NAME,
                                          expected_left=1, delete_associated_entities=True,
                                          adapter_search_field=self.adapters_page.JSON_FILE_SERVER_SEARCH_FIELD)
 

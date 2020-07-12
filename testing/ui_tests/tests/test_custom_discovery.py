@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from axonius.utils.wait import wait_until
 from services.axonius_service import get_service
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
-from ui_tests.pages.adapters_page import JSON_NAME
 from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
 
 
 MAX_WAIT_TIME_FOR_CUSTOM_DISCOVERY = 60 * 5
@@ -19,7 +19,7 @@ class TestCustomDiscoverySchedule(TestBase):
 
     def test_custom_discovery_time(self):
         try:
-            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_NAME)
+            self.adapters_page.add_server(esx_json_file_mock_devices, JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green(2)
 
             self.adapters_page.click_advanced_settings()

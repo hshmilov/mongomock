@@ -275,6 +275,12 @@ class ParallelSearch:
     enabled = 'enabled'
 
 
+class DashboardControlNames:
+    root_key = 'dashboard_control'
+    present_call_limit = 'present_call_limit'
+    historical_call_limit = 'historical_call_limit'
+
+
 class Signup:
     SignupCollection = 'signup'
     SignupField = 'signup'
@@ -306,6 +312,9 @@ DASHBOARD_SPACE_TYPE_DEFAULT = 'default'
 DASHBOARD_SPACE_TYPE_PERSONAL = 'personal'
 DASHBOARD_SPACE_TYPE_CUSTOM = 'custom'
 DASHBOARD_LIFECYCLE_ENDPOINT = 'lifecycle'
+
+DASHBOARD_CALL_LOCK = 'semaphore'
+DASHBOARD_CALL_LIMIT = 5
 
 #########################
 # Field names #

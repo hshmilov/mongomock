@@ -2,8 +2,7 @@ import pytest
 from dateutil import parser
 from selenium.common.exceptions import NoSuchElementException
 
-from ui_tests.tests.test_adapters import JSON_NAME
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 
@@ -61,7 +60,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_GREATER_THAN)
-        self.devices_page.select_query_adapter(JSON_NAME, select_num=1)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
@@ -73,7 +72,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_LESS_THAN)
-        self.devices_page.select_query_adapter(JSON_NAME, select_num=1)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
@@ -86,7 +85,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_context_cmp(expression)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expression)
-        self.devices_page.select_query_adapter(JSON_NAME, select_num=1)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(
             self.devices_page.FIELD_HOSTNAME_TITLE, parent=expression, select_num=1)
         self.devices_page.click_search()
@@ -104,7 +103,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
         self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_GREATER_THAN)
-        self.devices_page.select_query_adapter(JSON_NAME, select_num=1)
+        self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()

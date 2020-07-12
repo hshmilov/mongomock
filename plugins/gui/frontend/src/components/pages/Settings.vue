@@ -565,6 +565,8 @@ export default {
 
   .x-settings {
     .x-tabs {
+      height: calc(100% - 12px);
+
       .research-settings-tab,
       .global-settings-tab,
       .gui-settings-tab,

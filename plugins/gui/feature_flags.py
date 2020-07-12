@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime, timedelta
 
-from axonius.consts.gui_consts import FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch
+from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch,
+                                       DashboardControlNames)
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.build_modes import get_build_mode, BuildModes
+from gui.logic.dashboard_data import (generate_dashboard_uncached, dashboard_historical_uncached)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -25,6 +27,8 @@ class FeatureFlags(Configurable):
                 self.start_bandicoot()
             else:
                 self.stop_bandicoot()
+
+        self.process_dashboard_call_limit(config)
 
         # In order for core to update all plugins with the new settings (specially fips)
         logger.info(f'Loading FeatureFlags config: {config}')
@@ -63,6 +67,18 @@ class FeatureFlags(Configurable):
         # see start bandicoot function
         except BaseException:
             pass
+
+    def process_dashboard_call_limit(self, config):
+        current_setting = config.get(DashboardControlNames.root_key, {})
+        previous_setting = self._current_feature_flag_config.get(DashboardControlNames.root_key, {})
+
+        present_limit = current_setting.get(DashboardControlNames.present_call_limit)
+        if present_limit != previous_setting.get(DashboardControlNames.present_call_limit):
+            generate_dashboard_uncached.init_semaphore(present_limit)
+
+        historical_limit = current_setting.get(DashboardControlNames.historical_call_limit)
+        if historical_limit != previous_setting.get(DashboardControlNames.historical_call_limit):
+            dashboard_historical_uncached.init_semaphore(historical_limit)
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -212,6 +228,28 @@ class FeatureFlags(Configurable):
                     'required': [
                         ParallelSearch.enabled
                     ],
+                },
+                {
+                    'name': DashboardControlNames.root_key,
+                    'title': 'Dashboard Control Settings',
+                    'type': 'array',
+                    'items': [{
+                        'name': DashboardControlNames.present_call_limit,
+                        'title': 'Limit parallel calculation of charts',
+                        'type': 'integer',
+                        'default': 10,
+                        'min': 0
+                    }, {
+                        'name': DashboardControlNames.historical_call_limit,
+                        'title': 'Limit parallel calculation of historical charts',
+                        'type': 'integer',
+                        'default': 5,
+                        'min': 0
+                    }],
+                    'required': [
+                        DashboardControlNames.present_call_limit,
+                        DashboardControlNames.historical_call_limit
+                    ]
                 }
             ],
             'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
@@ -251,4 +289,8 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.QueryTimelineRange: False,
             FeatureFlagsNames.EnforcementCenter: True,
             FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField: False,
+            DashboardControlNames.root_key: {
+                DashboardControlNames.present_call_limit: 10,
+                DashboardControlNames.historical_call_limit: 5
+            }
         }
