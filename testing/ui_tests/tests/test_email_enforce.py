@@ -1,3 +1,5 @@
+import pytest
+
 from ui_tests.tests.ui_test_base import TestBase
 from services.standalone_services.smtp_service import generate_random_valid_email
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
@@ -18,6 +20,7 @@ class TestEmailEnforce(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.assert_csv_match_ui_data_with_content(mail_content)
 
+    @pytest.mark.skip('AX-8323')
     def test_email_enforce(self):
         with MaildiranasaurusService().contextmanager(take_ownership=True, retry_if_fail=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
