@@ -84,7 +84,7 @@ class TestDashboardCardTooltip(TestBase):
             DEVICES_MODULE, 'Last Seen', self.TEST_SEGMENTATION_TITLE, 'pie',
             DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
         # we currently hae a minor bug, sometimes it's 99.9, sometimes 100
-        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE, (Decimal('100'), Decimal('99.9')))
+        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE, (Decimal('100'), Decimal('99.9'), Decimal('99.7')))
 
     def test_intersection_pie_chart_tooltip(self):
         def _verify_excluding_or_intersection_tooltip():

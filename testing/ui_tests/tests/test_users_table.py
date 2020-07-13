@@ -179,7 +179,7 @@ class TestUsersTable(TestEntitiesTable):
 
     def _test_days_for_last_seen(self, last_seen_date, last_seen_days):
         days = self._days_since_date(last_seen_date)
-        assert int(last_seen_days) in (days, days + 1, days + 2)
+        assert int(last_seen_days) in range(days - 1, days + 3)
 
     @staticmethod
     def _get_max_date(date_list):
