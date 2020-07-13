@@ -7,11 +7,15 @@ import multiprocessing
 import queue
 import sys
 import threading
+import time
 
 from typing import List, Callable, Tuple, Dict
 
+import psutil
+
 logger = logging.getLogger(f'axonius.{__name__}')
-CHECK_QUEUE_INTERVAL = 60   # every minute
+CHECK_QUEUE_INTERVAL = 5
+SIGTERM_TO_SIGKILL_TIME = 10
 
 
 class EnhancedGenerator:
@@ -35,6 +39,38 @@ def multiprocess_yield_wrapper(func: Tuple[Callable, Tuple, Dict], m_queue: mult
         logger.exception(f'Multiprocess_yield_wrapper exception while calling {str(func[0])}')
     finally:
         m_queue.put(None)
+
+
+def kill_ids(pids: list):
+    try:
+        # Try gracefully
+        for pid in pids:
+            try:
+                proc = psutil.Process(pid)
+                logger.info(f'Terminating pid {pid} (SIGTERM)')
+                if proc.is_running():
+                    proc.terminate()
+                    logger.info(f'sent SIGTERM to {pid}')
+                else:
+                    logger.info(f'pid {pid} not running')
+            except Exception:
+                logger.exception(f'Could not SIGTERM pid {pid}')
+
+        time.sleep(SIGTERM_TO_SIGKILL_TIME)
+        # kill whatever stayed
+        for pid in pids:
+            try:
+                proc = psutil.Process(pid)
+                if proc.is_running():
+                    logger.info(f'Terminating pid {pid} (SIGKILL)')
+                    proc.kill()
+                    logger.info(f'sent SIGKILL to {pid}')
+                else:
+                    logger.info(f'pid {pid} not running')
+            except Exception:
+                logger.exception(f'Could not SIGKILL pid {pid}')
+    except Exception:
+        logger.exception(f'Could not kill pids {pids}')
 
 
 def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]], parallel_count):
@@ -85,8 +121,12 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
                         yield res
             except Exception:
                 logger.critical(f'Error while yielding results from concurrent_multiprocess_yield', exc_info=True)
-        except Exception:
-            logger.critical(f'General exception in processpoolexecutor', exc_info=True)
+        except BaseException as e:
+            # pylint: disable=protected-access
+            threading.Thread(target=kill_ids, args=(pool._processes.keys(), ), daemon=True).start()
+            # pylint: enable=protected-access
+            logger.exception(f'Got event {str(e).strip()!r} event. Stopping')
+            return []
 
     return results
 

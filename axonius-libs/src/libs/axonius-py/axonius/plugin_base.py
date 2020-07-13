@@ -24,7 +24,7 @@ import traceback
 import uuid
 from abc import ABC
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import groupby, chain
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
@@ -427,6 +427,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
+        self.nodes_metadata_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['nodes_metadata']
         try:
             self._current_feature_flag_config = self.feature_flags_config() or {}
         except TypeError:
@@ -1679,8 +1680,12 @@ class PluginBase(Configurable, Feature, ABC):
         """
         if historical:
             h_col_name = f'historical_{entity_type.value.lower()}_{historical.strftime("%Y_%m_%d")}'
-            if (datetime.now() - historical).days > 30:
-                return self._historical_entity_views_db_map[entity_type], True
+            now = datetime.now(timezone.utc)
+            try:
+                if (now - historical.astimezone(timezone.utc)).days > 30:
+                    return self._historical_entity_views_db_map[entity_type], True
+            except Exception as e:
+                logger.exception(f'Error getting historical day collection: {e}')
             # if for any reason the historical day collection wasn't created fall back to regular history collection
             if h_col_name not in self.aggregator_db_connection.list_collection_names():
                 return self._historical_entity_views_db_map[entity_type], True

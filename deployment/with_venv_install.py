@@ -253,12 +253,16 @@ def setup_host():
 
     for user in ['ubuntu', 'customer']:
         try:
-            with open(f'/home/{user}/.bash_aliases', 'rt') as f:
-                content = f.read().splitlines()
+            try:
+                with open(f'/home/{user}/.bash_aliases', 'rt') as f:
+                    content = f.read().splitlines()
+            except FileNotFoundError:
+                content = []
+
             alias_line = 'alias axenv="source /home/ubuntu/cortex/ax_env.sh"'
 
             for i, line in enumerate(content):
-                if line.startswith('alias ax_env'):
+                if line.startswith('alias axenv'):
                     content[i] = alias_line
                     break
             else:
@@ -266,8 +270,8 @@ def setup_host():
 
             with open(f'/home/{user}/.bash_aliases', 'wt') as f:
                 f.write('\n'.join(content))
-        except Exception:
-            print(f'Could not install bash_aliases for user {user}')
+        except Exception as e:
+            print(f'Could not install bash_aliases for user {user}: {str(e)}')
 
 
 def set_booted_for_production():

@@ -7,7 +7,8 @@ from enum import Enum, auto
 from threading import Thread
 from typing import List
 
-from pymongo.errors import CollectionInvalid, PyMongoError
+import pymongo
+from pymongo.errors import CollectionInvalid, BulkWriteError
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
@@ -51,6 +52,14 @@ class AggregatorService(Triggerable, PluginBase):
         self.__last_date = datetime.min
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
+        self.local_db_schema_version = self.aggregator_db_connection['version']
+
+    def _migrate_async_db(self):
+        if self.db_async_schema_version < 1:
+            self._update_async_schema_version_1()
+
+        if self.db_async_schema_version != 1:
+            logger.error(f'Upgrade failed, db_async_schema_version is {self.db_async_schema_version}')
 
     def _delayed_initialization(self):
         """
@@ -63,6 +72,11 @@ class AggregatorService(Triggerable, PluginBase):
         # Setting up historical
         logger.info(f'Creating historic collections')
         create_retrospective_historic_collections(self.aggregator_db_connection, self._historical_entity_views_db_map)
+
+        try:
+            self._migrate_async_db()
+        except Exception:
+            logger.exception('There was an error while migrating data asynchronicity')
 
         # Clean all raw data from the db and move it to the relevant db, only if they exist
         for entity_type in EntityType:
@@ -576,3 +590,76 @@ class AggregatorService(Triggerable, PluginBase):
     @property
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.Core
+
+    @property
+    def db_async_schema_version(self):
+        version = self.local_db_schema_version.find_one({'name': 'async_schema'})
+        if version:
+            return version.get('version', 0)
+        return 0
+
+    @db_async_schema_version.setter
+    def db_async_schema_version(self, val):
+        self.local_db_schema_version.update_one(
+            {'name': 'async_schema'},
+            {
+                '$set': {
+                    'version': val
+                }
+            },
+            upsert=True
+        )
+
+    def _update_async_schema_version_1(self):
+        logger.info(f'Upgrading to schema version 1 - migrate historic labels from tags')
+        try:
+            collections_devices = self.aggregator_db_connection.list_collection_names(
+                filter={'name': {'$regex': r'historical_devices_\d{4}_\d{2}_\d{2}'}})
+            collections_devices.sort()
+            collections_devices = list(reversed(collections_devices))
+            collections_users = self.aggregator_db_connection.list_collection_names(
+                filter={'name': {'$regex': r'historical_users_\d{4}_\d{2}_\d{2}'}})
+            collections_users.sort()
+            collections_users = list(reversed(collections_users))
+            collections = collections_devices + collections_users
+            for entities_db in [self.aggregator_db_connection[x] for x in collections] + list(
+                    self._historical_entity_views_db_map.values()):
+                to_fix = []
+                logger.info('Updating new entity type for collection {str(entities_db)}')
+                count = 0
+                for entity in entities_db.find({'tags': {'$elemMatch': {'type': 'label'}}}):
+                    internal_axon_id = entity.get('internal_axon_id')
+                    if not internal_axon_id:
+                        continue
+                    labels = []
+                    new_tags = []
+                    if 'labels' in entity or not 'tags' in entity:
+                        continue
+                    for tag in entity['tags']:
+                        if tag.get('type') == 'label' and tag.get('label_value') and tag.get('data'):
+                            labels.append(tag['label_value'])
+                        elif tag.get('type') != 'label':
+                            new_tags.append(tag)
+                    to_fix.append(pymongo.operations.UpdateOne(
+                        {'internal_axon_id': internal_axon_id},
+                        {
+                            '$set': {'tags': new_tags, 'labels': labels}
+                        }
+                    ))
+                    if len(to_fix) % 2500 == 0:
+                        count += 1
+                        logger.info(f'{str(entities_db)}: Updated {count * 2500} entities')
+                        entities_db.bulk_write(to_fix, ordered=False)
+                        to_fix.clear()
+                if to_fix:
+                    logger.info(f'Finished updating {count * 2500 + len(to_fix)} entities')
+                    entities_db.bulk_write(to_fix, ordered=False)
+                    to_fix.clear()
+
+            self.db_async_schema_version = 1
+        except BulkWriteError as e:
+            logger.error(f'BulkWriteError: {e.details}')
+            raise
+        except Exception as e:
+            logger.exception(f'Exception while upgrading aggregator db to async version 1. Details: {e}')
+            raise

@@ -216,17 +216,20 @@ class InstanceControlService(Triggerable, PluginBase):
         my_plugin_entity = self.core_configs_collection.find_one({
             PLUGIN_UNIQUE_NAME: self.plugin_unique_name
         }, projection=instance_projection)
-        insances = self.core_configs_collection.find({PLUGIN_NAME: 'instance_control'},
-                                                     projection=instance_projection)
+        instances = self.core_configs_collection.find({PLUGIN_NAME: 'instance_control'}, projection=instance_projection)
         signup_collection = self._get_collection(Signup.SignupCollection, db_name=GUI_PLUGIN_NAME)
         signup = signup_collection.find_one({})
         if signup:
             signup.pop('_id', None)
             signup['newPassword'] = ''
 
+        active_nodes = [x['node_id'] for x in self.nodes_metadata_collection.find({'status': {'$ne': 'Deactivated'}})]
+        # filter out inactive instance-control's
+        instances = [x for x in instances if x['node_id'] in active_nodes]
+
         result = {
             'my_entity': my_plugin_entity,
-            'instances': insances,
+            'instances': instances,
             'signup': signup
         }
         return jsonify(result)

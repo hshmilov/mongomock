@@ -51,7 +51,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                 'View Enforcement Center'
             ]
         }
-        self._test_entities_with_only_view_permission(settings_permissions, user_role, self.devices_page)
+        self._test_entities_with_only_view_permission(settings_permissions, user_role, self.devices_page,
+                                                      self.devices_page.FIELD_NETWORK_INTERFACES)
 
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'devices_assets',
@@ -288,7 +289,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                                                         self.CUSTOM_USERS_QUERY_SAVE_NAME,
                                                         self.CUSTOM_NEW_USERS_SAVE_NAME)
 
-    def _test_entities_with_only_view_permission(self, settings_permissions, user_role, entities_page):
+    def _test_entities_with_only_view_permission(self, settings_permissions, user_role, entities_page,
+                                                 table_field=None):
         self.settings_page.update_role(user_role, settings_permissions, True)
         self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
         entities_page.switch_to_page()
@@ -305,6 +307,10 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.click_adapters_tab()
         entities_page.click_custom_data_tab()
         assert entities_page.is_custom_data_edit_disabled()
+        if table_field:
+            entities_page.click_general_tab()
+            entities_page.click_tab(table_field)
+            entities_page.click_export_csv()
 
     def _test_entities_with_edit_permission(self, entities_page):
         entities_page.switch_to_page()

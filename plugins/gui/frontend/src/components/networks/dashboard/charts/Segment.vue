@@ -200,7 +200,12 @@ export default {
         return this.config.show_timeline;
       },
       set(showTimeline) {
-        this.config = { ...this.config, show_timeline: showTimeline };
+        const timeframe = this.config.timeframe || { ...defaultTimeframe };
+        this.config = {
+          ...this.config,
+          show_timeline: showTimeline,
+          timeframe,
+        };
       },
     },
     timeframe: {
