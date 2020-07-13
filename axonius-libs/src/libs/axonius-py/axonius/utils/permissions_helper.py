@@ -197,6 +197,7 @@ def get_viewer_permissions():
     viewer_permissions[PermissionCategory.Instances][PermissionAction.View] = True
     viewer_permissions[PermissionCategory.Adapters][PermissionAction.View] = True
     viewer_permissions[PermissionCategory.Enforcements][PermissionAction.View] = True
+    viewer_permissions[PermissionCategory.Enforcements][PermissionCategory.Tasks][PermissionAction.View] = True
     viewer_permissions[PermissionCategory.Compliance][PermissionAction.View] = True
 
     return serialize_db_permissions(viewer_permissions)

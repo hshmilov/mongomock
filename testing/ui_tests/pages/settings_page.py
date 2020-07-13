@@ -216,6 +216,7 @@ class SettingsPage(Page):
         ],
         'enforcements': [
             'View Enforcement Center',
+            'View Enforcement Tasks'
         ],
         'reports': [
             'View reports',
