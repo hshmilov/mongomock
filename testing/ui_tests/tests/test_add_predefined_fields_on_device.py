@@ -1,9 +1,9 @@
-from ui_tests.tests.device_test_base import TestDeviceBase
+from ui_tests.tests.ui_test_base import TestBase
 
 AZURE_AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 
 
-class TestAddPredefinedFieldsOnDevice(TestDeviceBase):
+class TestAddPredefinedFieldsOnDevice(TestBase):
     def test_add_predefined_fields_on_device(self):
         """
         Tests that we can more than one predefined fields on a device

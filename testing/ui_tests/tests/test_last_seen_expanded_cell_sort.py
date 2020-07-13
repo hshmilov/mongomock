@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 from services.adapters.csv_service import CsvService
 from test_credentials.test_csv_credentials import CSV_FIELDS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
-from ui_tests.tests.device_test_base import TestDeviceBase
 from ui_tests.tests.test_adapters_connections import CSV_NAME
 from ui_tests.tests.ui_consts import CSV_PLUGIN_NAME
+from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestLastSeenExpandCellSort(TestDeviceBase):
+class TestLastSeenExpandCellSort(TestBase):
     def test_last_seen_expanded_cell_sort(self):
         """
         Test that the expanded details table under last seen field is sorted decreasingly by date-time

@@ -20,8 +20,12 @@ class TestReportGeneration(TestReportGenerationBase):
             self.base_page.run_discovery()
             self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True))
             doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            downloaded_doc = self._download_report_pdf_doc(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
+            downloaded_texts = [page.extractText() for page in doc.pages]
+            downloaded_text = ' '.join(texts)
+            assert text == downloaded_text
             assert 'Device Discovery' in text
             assert 'User Discovery' in text
             self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)

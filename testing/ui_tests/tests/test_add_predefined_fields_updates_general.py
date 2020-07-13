@@ -1,7 +1,7 @@
-from ui_tests.tests.device_test_base import TestDeviceBase
+from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestAddPredefinedFieldsUpdatesGeneral(TestDeviceBase):
+class TestAddPredefinedFieldsUpdatesGeneral(TestBase):
     def test_add_predefined_fields_updates_general(self):
         print('starting test_add_predefined_fields_updates_general', flush=True)
         asset_name = 'asset name 123'

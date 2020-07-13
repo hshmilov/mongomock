@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import logging.handlers
@@ -12,6 +13,7 @@ from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
 import selenium.common.exceptions
+from selenium.webdriver.support.wait import WebDriverWait
 
 from devops.scripts.backup.axonius_full_backup_restore import backup
 import conftest
@@ -75,15 +77,15 @@ def create_ui_tests_logger():
 logger = create_ui_tests_logger()
 
 
-# pylint: disable=too-many-instance-attributes,no-value-for-parameter,no-member,access-member-before-definition
+# pylint: disable=too-many-instance-attributes,no-value-for-parameter,no-member,access-member-before-definition,protected-access
 
 
 class TestBase:
     def _initialize_driver(self, incognito_mode=False):
-        self.ui_tests_download_dir = tempfile.gettempdir()
+        self.ui_tests_download_dir = tempfile.TemporaryDirectory()
         if pytest.config.option.local_browser:
             self.local_browser = True
-            self.driver = self._get_local_browser(self.ui_tests_download_dir, incognito_mode=incognito_mode)
+            self.driver = self._get_local_browser(self.ui_tests_download_dir.name, incognito_mode=incognito_mode)
             self.base_url = 'https://127.0.0.1'
             self.port = 443
         elif pytest.config.option.host_hub:
@@ -94,14 +96,16 @@ class TestBase:
             options = webdriver.ChromeOptions()
             logger.info(f'Base Url: {self.base_url}')
             logger.info(f'Connecting to the remote hub {remote_hub}..')
+            os.environ['XDG_DOWNLOAD_DIR'] = self.ui_tests_download_dir.name
+            os.system('xdg-user-dirs-update --set DOWNLOAD ' + self.ui_tests_download_dir.name)
+            options = webdriver.ChromeOptions()
             if incognito_mode:
                 logger.info('Adding incognito mode')
                 options.add_argument('--incognito')
             self.driver = webdriver.Remote(
                 command_executor=remote_hub,
                 options=options,
-                desired_capabilities=self._get_desired_capabilities(self.ui_tests_download_dir,
-                                                                    incognito_mode=incognito_mode))
+                desired_capabilities=self._get_desired_capabilities(incognito_mode=incognito_mode))
             logger.info('Connected successfully!')
         else:
             self.local_browser = False
@@ -120,7 +124,6 @@ class TestBase:
                 return webdriver.Remote(command_executor=f'http://127.0.0.1:{remote_port}/wd/hub',
                                         options=remote_options,
                                         desired_capabilities=self._get_desired_capabilities(
-                                            self.ui_tests_download_dir,
                                             incognito_mode=incognito_mode)
                                         )
 
@@ -132,12 +135,9 @@ class TestBase:
             self.base_url = f'https://gui.{AXONIUS_DNS_SUFFIX}'
 
     @staticmethod
-    def _get_desired_capabilities(ui_tests_download_dir, incognito_mode=False):
+    def _get_desired_capabilities(incognito_mode=False):
         if pytest.config.option.browser == conftest.CHROME:
-            caps = webdriver.DesiredCapabilities.CHROME.copy()
-            prefs = {'download.default_directory': ui_tests_download_dir}
-            caps['prefs'] = prefs
-            return caps
+            return webdriver.DesiredCapabilities.CHROME
         if pytest.config.option.browser == conftest.FIREFOX:
             ff_profile = webdriver.FirefoxProfile()
             ff_profile.set_preference('security.insecure_field_warning.contextual.enabled', False)
@@ -407,6 +407,8 @@ class TestBase:
     def quit_browser(self):
         if self.driver:
             self.driver.quit()
+        if self.ui_tests_download_dir:
+            self.ui_tests_download_dir.cleanup()
 
     def register_pages(self):
         params = dict(driver=self.driver,
@@ -515,3 +517,78 @@ class TestBase:
         # except AssertionError:
         #     pass
         # self.wait_for_adapter_down(adapter_name)
+
+    def get_current_window(self):
+        return self.driver.current_window_handle
+
+    def open_new_tab(self):
+        self.driver.execute_script(f'window.open("{self.base_url}");')
+        return self.driver.window_handles[len(self.driver.window_handles) - 1]
+
+    def open_empty_tab(self):
+        self.driver.execute_script(f'window.open("");')
+        return self.driver.window_handles[len(self.driver.window_handles) - 1]
+
+    def close_tab(self):
+        self.driver.execute_script(f'window.close();')
+
+    def switch_tab(self, tab):
+        self.driver.switch_to.window(tab)
+
+    def get_downloaded_file_content(self, file_name_substring, file_suffix):
+        def correct_file_name(name):
+            return name.endswith(file_suffix) and file_name_substring in name
+        if pytest.config.option.local_browser:
+            for root, dirs, files in os.walk(self.ui_tests_download_dir.name):
+                for file_name in files:
+                    if correct_file_name(file_name):
+                        with open(f'{self.ui_tests_download_dir.name}/{file_name}', 'rb') as f:
+                            return f.read()
+        else:
+            content = None
+            current_tab = self.get_current_window()
+            empty_tab = self.open_empty_tab()
+            self.switch_tab(empty_tab)
+            files = WebDriverWait(self.driver, 20, 1).until(self.get_downloaded_files)
+            for file_name in files:
+                if correct_file_name(file_name):
+                    content = self.get_file_content(file_name)
+            self.close_tab()
+            self.switch_tab(current_tab)
+            return content
+        return None
+
+    @staticmethod
+    def get_downloaded_files(driver):
+        if not driver.current_url.startswith('chrome://downloads'):
+            driver.get('chrome://downloads/')
+
+        return driver.execute_script(
+            'return downloads.Manager.get().items_   '
+            '  .filter(e => e.state === "COMPLETE")  '
+            '  .map(e => e.filePath || e.file_path); ')
+
+    def get_file_content(self, path):
+        if not self.driver.current_url.startswith('chrome://downloads'):
+            self.driver.get('chrome://downloads/')
+        elem = self.driver.execute_script(
+            'var input = window.document.createElement("INPUT"); '
+            'input.setAttribute("type", "file"); '
+            'input.hidden = true; '
+            'input.onchange = function (e) { e.stopPropagation() }; '
+            'return window.document.documentElement.appendChild(input); ')
+
+        elem._execute('sendKeysToElement', {'value': [path], 'text': path})
+
+        result = self.driver.execute_async_script(
+            'var input = arguments[0], callback = arguments[1]; '
+            'var reader = new FileReader(); '
+            'reader.onload = function (ev) { callback(reader.result) }; '
+            'reader.onerror = function (ex) { callback(ex.message) }; '
+            'reader.readAsDataURL(input.files[0]); '
+            'input.remove(); ', elem)
+
+        if not result.startswith('data:'):
+            raise Exception('Failed to get file content: %s' % result)
+
+        return base64.b64decode(result[result.find('base64,') + 7:])

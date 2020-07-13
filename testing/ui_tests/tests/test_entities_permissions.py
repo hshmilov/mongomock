@@ -1,17 +1,14 @@
-import time
-
 import pytest
 
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
-from ui_tests.tests.permissions_test_base import PermissionsTestBase
+from ui_tests.tests.entities_enforcements_tasks_test_base import EntitiesEnforcementTasksTestBase
 
 # pylint: disable=no-member
 
 
-class TestEntitiesPermissions(PermissionsTestBase):
+class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
     NOTE_TEXT = 'note text'
     TAG_NAME = 'test tag'
 
@@ -69,7 +66,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
     def test_devices_saved_queries(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
-        self._create_enforcement_with_create_tag_and_run_it()
+        self.create_tag_enforcement_run_it_return_entity_count()
         enforcement_set_id = self._find_enforcement_task_id()
 
         self.settings_page.switch_to_page()
@@ -418,35 +415,6 @@ class TestEntitiesPermissions(PermissionsTestBase):
         self.enforcements_page.select_trigger()
         assert self.enforcements_page.get_selected_saved_view_name() == query_name
 
-    def _create_enforcement_with_create_tag_and_run_it(self):
-        custom_unmanaged_devices = 'custom unmanaged devices'
-        self.devices_page.create_saved_query(self.devices_page.UNMANAGED_QUERY, custom_unmanaged_devices)
-        self.enforcements_page.switch_to_page()
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, custom_unmanaged_devices,
-                                                      'tag search test', 'tag search test')
-        self.base_page.run_discovery()
-        self.devices_page.switch_to_page()
-        self.devices_page.execute_saved_query(custom_unmanaged_devices)
-        self.devices_page.wait_for_table_to_load()
-        entity_count = self.devices_page.get_table_count()
-        self.enforcements_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
-        self.enforcements_page.click_tasks_button()
-        self.enforcements_page.wait_for_table_to_load()
-        self.enforcements_page.click_row()
-
-        def _check_task_finished():
-            self.driver.refresh()
-            time.sleep(3)
-            try:
-                assert self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).text \
-                    == str(entity_count)
-                return True
-            except Exception:
-                return False
-
-        wait_until(_check_task_finished, check_return_value=True, total_timeout=60 * 3, interval=5)
-
     def _test_enforcements_without_view_tasks_permissions(self, enforcement_set_id):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
@@ -479,16 +447,7 @@ class TestEntitiesPermissions(PermissionsTestBase):
         self.devices_page.click_row()
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
-        assert enforcement_set_id == f'{self.RUN_TAG_ENFORCEMENT_NAME} - Task 1'
-        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id)
-        assert self.devices_page.get_enforcement_tasks_count() == 1
-        self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id + '1')
-        assert self.devices_page.get_enforcement_tasks_count() == 0
-        self.devices_page.search_enforcement_tasks_search_input('')
-        self.devices_page.wait_for_table_to_load()
-        self.devices_page.click_task_name(enforcement_set_id)
-        self.enforcements_page.wait_for_action_result()
-        assert self.enforcements_page.get_task_name() == enforcement_set_id
+        self.assert_device_enforcement_task(enforcement_set_id)
 
     def _test_run_enforcement_permission(self, entities_page, settings_permissions, user_role):
         entities_page.switch_to_page()

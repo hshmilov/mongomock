@@ -1,9 +1,9 @@
 from axonius.utils.wait import wait_until
-from ui_tests.tests.device_test_base import TestDeviceBase
 from ui_tests.tests.ui_consts import WINDOWS_QUERY_NAME
+from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestDeviceEnforcementTaskSort(TestDeviceBase):
+class TestDeviceEnforcementTaskSort(TestBase):
     def test_device_enforcement_task_sort(self):
         """
         Test for checking the sort order in the enforcement tasks of a device
@@ -20,9 +20,11 @@ class TestDeviceEnforcementTaskSort(TestDeviceBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME, WINDOWS_QUERY_NAME,
+        self.enforcements_page.create_tag_enforcement(self.enforcements_page.RUN_TAG_ENFORCEMENT_NAME,
+                                                      WINDOWS_QUERY_NAME,
                                                       'tag search test', 'tag search test', 2)
-        self.enforcements_page.create_tag_enforcement(self.RUN_TAG_ENFORCEMENT_NAME_SECOND, WINDOWS_QUERY_NAME,
+        self.enforcements_page.create_tag_enforcement(self.enforcements_page.RUN_TAG_ENFORCEMENT_NAME_SECOND,
+                                                      WINDOWS_QUERY_NAME,
                                                       'second tag search test', 'second tag search test', 1)
 
         # check in enforcements tasks that all running enforcements were completed

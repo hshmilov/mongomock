@@ -26,3 +26,16 @@ class TestReportGenerationBase(TestBase):
         report_pdf = self.axonius_system.gui.get_report_pdf(report_id)
         pdf_file = io.BytesIO(report_pdf.content)
         return PdfFileReader(pdf_file)
+
+    def _download_report_pdf_doc(self, report_name, go_to_report=True):
+        if go_to_report:
+            self.reports_page.switch_to_page()
+            self.reports_page.wait_for_table_to_load()
+            self.reports_page.wait_for_report_generation(report_name)
+            self.reports_page.click_report(report_name)
+            self.reports_page.wait_for_spinner_to_end()
+        self.reports_page.click_report_download()
+
+        report = self.get_downloaded_file_content(report_name, 'pdf')
+        pdf_file = io.BytesIO(report)
+        return PdfFileReader(pdf_file)

@@ -46,14 +46,14 @@ class TestSession(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.set_session_timeout(True, self.TIMEOUT_IN_MINUTES)
         self.dashboard_page.switch_to_page()
-        first_tab = self.settings_page.get_current_window()
+        first_tab = self.get_current_window()
         self.settings_page.switch_to_page()
-        self.settings_page.switch_tab(first_tab)
+        self.switch_tab(first_tab)
         self.settings_page.change_current_tab_url('https://www.axonius.com/')
         # Wait for the timeout time + 30 seconds
         time.sleep(self.TIMEOUT_IN_MINUTES * 60 + 30)
-        new_tab = self.settings_page.open_new_tab()
-        self.settings_page.switch_tab(new_tab)
+        new_tab = self.open_new_tab()
+        self.switch_tab(new_tab)
         self.login_page.wait_for_login_page_to_load()
         assert self.login_page.get_error_msg() == 'Session timed out'
 
@@ -74,11 +74,11 @@ class TestSession(TestBase):
         self.dashboard_page.switch_to_page()
         # Wait for half of the timeout time + 30 seconds ( after the original timeout ended )
         time.sleep((self.TIMEOUT_IN_MINUTES * 60 / 2) + 30)
-        self.settings_page.open_empty_tab()
+        self.open_empty_tab()
         # Wait for more then 10 seconds - bug# AX-6565
         time.sleep(20)
-        new_tab = self.settings_page.open_new_tab()
-        self.settings_page.switch_tab(new_tab)
+        new_tab = self.open_new_tab()
+        self.switch_tab(new_tab)
         # Before the bug fix the user was logged out due to timeout here
         self.login_page.assert_logged_in()
 
@@ -89,10 +89,10 @@ class TestSession(TestBase):
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login(False)
-        first_tab = self.settings_page.get_current_window()
+        first_tab = self.get_current_window()
         self.settings_page.switch_to_page()
-        second_tab = self.settings_page.open_new_tab()
-        self.settings_page.switch_tab(second_tab)
+        second_tab = self.open_new_tab()
+        self.switch_tab(second_tab)
         self.reports_page.switch_to_page()
         # Wait for half of the timeout time
         time.sleep(self.TIMEOUT_IN_MINUTES * 60 / 2)
@@ -100,12 +100,12 @@ class TestSession(TestBase):
         self.settings_page.switch_to_page()
         # Wait for half a minute more then half the timeout time (check that the renew of the session works)
         time.sleep(self.TIMEOUT_IN_MINUTES * 60 / 2 + 30)
-        self.settings_page.switch_tab(first_tab)
+        self.switch_tab(first_tab)
         self.login_page.assert_logged_in()
         # Wait for half a minute more then the timeout time (check that the session timed out)
         time.sleep(self.TIMEOUT_IN_MINUTES * 60 + 30)
         self.login_page.assert_not_logged_in()
         assert self.login_page.get_error_msg() == 'Session timed out'
         time.sleep(20)
-        self.settings_page.switch_tab(second_tab)
+        self.switch_tab(second_tab)
         self.login_page.assert_not_logged_in()

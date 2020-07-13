@@ -162,6 +162,9 @@ class EnforcementsPage(EntitiesPage):
     FIELD_STATUS = 'Status'
     FIELD_NAME = 'Name'
 
+    RUN_TAG_ENFORCEMENT_NAME = 'Run Tag Enforcement'
+    RUN_TAG_ENFORCEMENT_NAME_SECOND = 'Second Run Tag Enforcement'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'

@@ -10,8 +10,15 @@
     <template slot="actions">
       <XButton
         type="link"
+        class="entityMenu"
+        :disabled="exportInProgress"
         @click="exportCSV"
-      >Export CSV</XButton>
+      >
+        <template v-if="exportInProgress">
+          <AIcon type="loading" />Exporting...
+        </template>
+        <template v-else>Export CSV</template>
+      </XButton>
     </template>
   </XTable>
 </template>
@@ -46,6 +53,11 @@ export default {
       type: String,
       required: true,
     },
+  },
+  data() {
+    return {
+      exportInProgress: false,
+    };
   },
   computed: {
     actionFields() {
@@ -108,10 +120,13 @@ export default {
       fetchDataCSV: FETCH_DATA_CONTENT_CSV,
     }),
     exportCSV() {
+      this.exportInProgress = true;
       this.fetchDataCSV({
         module: this.module,
         endpoint: `${this.entityType}/${this.entityId}/tasks`,
         schema_fields: this.actionFields.items,
+      }).then(() => {
+        this.exportInProgress = false;
       });
     },
   },

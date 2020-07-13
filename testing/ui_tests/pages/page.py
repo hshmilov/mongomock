@@ -247,6 +247,9 @@ class Page:
         full_url = urllib.parse.urljoin(self.base_url, url)
         self.driver.get(full_url)
 
+    def change_current_tab_url(self, url):
+        self.driver.get(url)
+
     @staticmethod
     def has_class(element, lookup_class):
         classes = element.get_attribute('class')
@@ -1131,25 +1134,8 @@ class Page:
         else:
             self.safeguard_click_cancel()
 
-    def get_current_window(self):
-        return self.driver.current_window_handle
-
     def get_body_element(self):
         return self.driver.find_element_by_css_selector('body')
-
-    def open_new_tab(self):
-        self.driver.execute_script(f'window.open("{self.base_url}");')
-        return self.driver.window_handles[len(self.driver.window_handles) - 1]
-
-    def open_empty_tab(self):
-        self.driver.execute_script(f'window.open("");')
-        return self.driver.window_handles[len(self.driver.window_handles) - 1]
-
-    def change_current_tab_url(self, url):
-        self.driver.get(url)
-
-    def switch_tab(self, tab):
-        self.driver.switch_to_window(tab)
 
     def get_multiple_select_values(self):
         chips = self.driver.find_elements_by_css_selector('.v-select .v-select__selections .v-chip')

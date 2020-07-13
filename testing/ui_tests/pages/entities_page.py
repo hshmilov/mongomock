@@ -1204,13 +1204,18 @@ class EntitiesPage(Page):
         delimiter = self.get_csv_delimiter_field().replace('\\n', '\n')
         return delimiter == CELL_JOIN_DEFAULT and self.get_csv_max_rows_field() == MAX_ROWS_LEN
 
-    def click_export_csv(self):
+    def click_export_csv(self, wait_for_config_modal=True):
         self.click_button(self.EXPORT_CSV_BUTTON_TEXT)
-        self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
-        time.sleep(0.1)  # wait for modal to open
+        if wait_for_config_modal:
+            self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
+            time.sleep(0.1)  # wait for modal to open
 
     def wait_for_csv_loading_absent(self):
         self.wait_for_element_absent_by_text(self.EXPORT_CSV_LOADING_TEXT, retries=450)
+
+    def click_device_enforcement_task_export_csv(self):
+        self.click_export_csv(False)
+        self.wait_for_csv_loading_absent()
 
     def get_csrf_token(self) -> str:
         session = requests.Session()
@@ -1271,7 +1276,7 @@ class EntitiesPage(Page):
 
     # pylint: disable=too-many-locals, too-many-branches
     def assert_csv_match_ui_data_with_content(self, content, max_rows=MAX_ROWS_LEN, ui_data=None, ui_headers=None,
-                                              sort_columns=True):
+                                              sort_columns=True, exclude_column_indexes=None):
         content = self.handle_bom(content)
         all_csv_rows = content.decode('utf-8').split('\r\n')
         csv_headers = all_csv_rows[0].split(',')
@@ -1298,6 +1303,8 @@ class EntitiesPage(Page):
 
         if any(csv_data_rows) or any(ui_data_rows):
             for idx, ui_header in enumerate(csv_headers_cmp):
+                if exclude_column_indexes and idx in exclude_column_indexes:
+                    continue
                 csv_header = ui_headers_cmp[idx]
                 assert ui_header == csv_header
 
@@ -1305,7 +1312,9 @@ class EntitiesPage(Page):
         # the reason we check it is because the csv have more columns with data
         # than the columns that we getting from the ui (boolean in the ui are represented by the css)
         for index, data_row in enumerate(csv_data_rows[:max_rows]):
-            for ui_data_cell in ui_data_rows[index]:
+            for cell_index, ui_data_cell in enumerate(ui_data_rows[index]):
+                if exclude_column_indexes and cell_index in exclude_column_indexes:
+                    continue
                 cell_value = ui_data_cell.strip().split(', ')[0]
                 # the boolean field return 'Yes' or 'No' instead of the regular true/false boolean
                 # so we do a little hack on the returned data from the UI
