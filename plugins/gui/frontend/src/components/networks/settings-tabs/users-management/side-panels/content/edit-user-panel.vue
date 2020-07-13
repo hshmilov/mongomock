@@ -276,7 +276,7 @@ export default {
       display: none !important;
     }
   }
-  .x-side-panel__footer {
+  .ant-drawer-body__footer {
     > div {
       display: flex;
       flex-direction: column;

@@ -43,6 +43,7 @@
       </template>
     </XTable>
     <XCompliancePanel
+      :visible="isPanelOpen"
       :data="currentRule"
       :fields="fields"
       :date-format="dateFormat"
@@ -143,6 +144,7 @@ export default {
     return {
       currentRuleId: null,
       exporting: null,
+      isPanelOpen: false,
     };
   },
   computed: {
@@ -198,10 +200,12 @@ export default {
     },
     openSidePanel(id) {
       this.currentRuleId = id;
+      this.isPanelOpen = true;
       this.$router.push({ path: encodeURI(`/cloud_asset_compliance/${id}`) });
     },
     closeSidePanel() {
       this.currentRuleId = null;
+      this.isPanelOpen = false;
       this.$router.push({ path: '/cloud_asset_compliance' });
     },
     exportCSV() {

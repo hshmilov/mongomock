@@ -1,20 +1,8 @@
 .role-panel {
-    &.with-footer {
-        .v-navigation-drawer__content {
-            .x-side-panel__content {
-                height: calc(100% - 150px);
-            }
-        }
-    }
-    .v-navigation-drawer__content {
-        overflow-y: unset;
-        .x-side-panel__content {
-            height: calc(100% - 64px);
-            padding-bottom: 30px;
-            overflow-y: auto;
-            bottom: 0;
-        }
+    .ant-drawer-body {
+
         .body {
+
             h5 {
                 display: inline;
                 font-size: 16px;
@@ -83,7 +71,7 @@
             }
         }
 
-        .x-side-panel__footer {
+        &__footer {
             > div {
                 display: flex;
                 flex-direction: row-reverse;
@@ -97,5 +85,5 @@
         }
     }
 
-    
+
   }

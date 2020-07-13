@@ -1,8 +1,5 @@
 import {
-  mapActions,
-  mapMutations,
-  mapGetters,
-  mapState,
+  mapActions, mapGetters, mapMutations, mapState,
 } from 'vuex';
 import _get from 'lodash/get';
 import _set from 'lodash/set';
@@ -21,12 +18,12 @@ import './role-panel.scss';
 import {
   CHANGE_ROLE,
   CREATE_ROLE,
-  REMOVE_ROLE,
   GET_PERMISSION_STRUCTURE,
+  REMOVE_ROLE,
 } from '@store/modules/auth';
 import { GET_LABELS } from '@store/modules/labels';
 import { getPermissionState, PermissionCategoryState } from '@constants/permissions';
-import { getRoleUserCount, fetchAssignableRolesList } from '@api/roles';
+import { fetchAssignableRolesList, getRoleUserCount } from '@api/roles';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export const FormMode = {
@@ -62,13 +59,14 @@ export default {
     XCombobox,
   },
   props: {
-    value: {
+    visible: {
       type: Boolean,
       default: false,
     },
     role: {
       type: Object,
-      default: () => {},
+      default: () => {
+      },
     },
   },
   data() {
@@ -82,7 +80,10 @@ export default {
     };
   },
   validations: {
-    name: { required, uniqueRoleName },
+    name: {
+      required,
+      uniqueRoleName,
+    },
   },
   computed: {
     ...mapState({
@@ -95,7 +96,10 @@ export default {
       getPermissionsStructure: GET_PERMISSION_STRUCTURE,
     }),
     currentRole() {
-      const role = { name: this.name, permissions: this.permissions };
+      const role = {
+        name: this.name,
+        permissions: this.permissions,
+      };
       if (this.role.uuid) {
         role.uuid = this.role.uuid;
       }
@@ -179,10 +183,10 @@ export default {
       const userCategoryPermissions = this.permissions[categoryName];
       const categoryState = this.getCategoriesStates[index];
       return (
-          <v-expansion-panel class={categoryName}>
-            <v-expansion-panel-header>
-              <div>
-                <XCheckbox
+        <v-expansion-panel class={categoryName}>
+          <v-expansion-panel-header>
+            <div>
+              <XCheckbox
                 data={categoryState === PermissionCategoryState.full}
                 value={categoryName}
                 indeterminate={categoryState === PermissionCategoryState.partial}
@@ -191,31 +195,31 @@ export default {
                 onChange={(event) => {
                   this.onChangeCategoryCheckbox(event, categoryName, categoryState);
                 }}
-                />
-              </div>
+              />
+            </div>
           </v-expansion-panel-header>
-            {
-              categoryActions.map((valueLabelKey) => {
-                const permissionKey = valueLabelKey.replace(`permissions.${categoryName}.`, '');
-                const currentPermission = _get(userCategoryPermissions, permissionKey, false);
-                if (currentPermission !== undefined) {
-                  return (
-                    <v-expansion-panel-content eager={true}>
-                      <XCheckbox
-                        data={currentPermission}
-                        value={permissionKey}
-                        label={this.getLabels[valueLabelKey]}
-                        read-only={this.isPredefined || this.mode === FormMode.ViewRole}
-                        onChange={
-                          (value) => this.updatePermissionValue(categoryName, permissionKey, value)
-                        }
-                      />
-                    </v-expansion-panel-content>
-                  );
-                }
-                return null;
-              })
-            }
+          {
+            categoryActions.map((valueLabelKey) => {
+              const permissionKey = valueLabelKey.replace(`permissions.${categoryName}.`, '');
+              const currentPermission = _get(userCategoryPermissions, permissionKey, false);
+              if (currentPermission !== undefined) {
+                return (
+                  <v-expansion-panel-content eager={true}>
+                    <XCheckbox
+                      data={currentPermission}
+                      value={permissionKey}
+                      label={this.getLabels[valueLabelKey]}
+                      read-only={this.isPredefined || this.mode === FormMode.ViewRole}
+                      onChange={
+                        (value) => this.updatePermissionValue(categoryName, permissionKey, value)
+                      }
+                    />
+                  </v-expansion-panel-content>
+                );
+              }
+              return null;
+            })
+          }
         </v-expansion-panel>
       );
     },
@@ -305,7 +309,7 @@ export default {
       }
     },
     closePanel() {
-      this.$emit('input', false);
+      this.$emit('close', false);
     },
     duplicateRole() {
       this.mode = FormMode.DuplicateRole;
@@ -327,18 +331,19 @@ export default {
       // return name field markup if in create edit or duplicate mode. Else, return null.
       return ((this.role.uuid && this.userCanEditRoles) || this.userCanAddRole)
       && this.mode !== FormMode.ViewRole ? (
-          <div class="item form__name">
-            <h5>Name</h5>
-            <input
-              value={this.name}
-              type="text"
-              onInput={this.setNameField}
-              placeholder="New Role"
-              class="name_input"
-              maxLength={30}
-            />
-            {nameError && <p class="error-input indicator-error--text">{nameRequired ? 'Name is a required field' : 'Name is used by another role'}</p>}
-          </div>
+        <div class="item form__name">
+          <h5>Name</h5>
+          <input
+            value={this.name}
+            type="text"
+            onInput={this.setNameField}
+            placeholder="New Role"
+            class="name_input"
+            maxLength={30}
+          />
+          {nameError && <p
+            class="error-input indicator-error--text">{nameRequired ? 'Name is a required field' : 'Name is used by another role'}</p>}
+        </div>
         ) : null;
     },
     genActionsButtonsMarkup() {
@@ -378,50 +383,56 @@ export default {
       return actions;
     },
     expandAll() {
-      this.expandedCategories = Array.from(Array(this.getPermissionsStructure.length).keys());
+      this.expandedCategories = Array.from(Array(this.getPermissionsStructure.length)
+        .keys());
     },
     collapseAll() {
       this.expandedCategories = [];
     },
+    getSidePanelContainer() {
+      return document.querySelector('.x-tabs .body');
+    },
   },
   render() {
     return (
-        <XSidePanel
-            value={this.value}
-            panelClass={`role-panel ${this.mode !== FormMode.ViewRole ? 'with-footer' : ''}`}
-            title={this.name}
-            onInput={(value) => this.$emit('input', value)}
-            temporary={!this.inSaveMode && this.value}
+      this.visible
+        ? <XSidePanel
+          visible={this.visible}
+          mask={!this.inSaveMode && this.visible}
+          panel-container={this.getSidePanelContainer}
+          panelClass={`role-panel ${this.mode !== FormMode.ViewRole ? 'with-footer' : ''}`}
+          title={this.name}
+          onClose={this.closePanel}
         >
-            {
-                <x-actions-group slot="panelHeader">
-                    {this.genActionsButtonsMarkup()}
-                </x-actions-group>
+          {
+            <x-actions-group slot="panelHeader">
+              {this.genActionsButtonsMarkup()}
+            </x-actions-group>
 
-            }
-            <div slot="panelContent" class="body">
-              {this.genNameMarkup()}
-              <div class="collapse-expand-buttons">
-                <XButton
-                  type="link"
-                  onClick={this.expandAll}
-                >Expand All</XButton>
-                <XButton
-                  type="link"
-                  onClick={this.collapseAll}
-                >Collapse All</XButton>
-              </div>
-              <v-expansion-panels
-                value={this.expandedCategories}
-                multiple
-                accordion
-              >
-                { this.getPermissionsStructure.map(
-                  (permissionCategory, index) => this.renderPermissionCategory(permissionCategory,
-                    index),
-                )}
-              </v-expansion-panels>
+          }
+          <div slot="panelContent" class="body">
+            {this.genNameMarkup()}
+            <div class="collapse-expand-buttons">
+              <XButton
+                type="link"
+                onClick={this.expandAll}
+              >Expand All</XButton>
+              <XButton
+                type="link"
+                onClick={this.collapseAll}
+              >Collapse All</XButton>
             </div>
+            <v-expansion-panels
+              value={this.expandedCategories}
+              multiple
+              accordion
+            >
+              {this.getPermissionsStructure.map(
+                (permissionCategory, index) => this.renderPermissionCategory(permissionCategory,
+                  index),
+              )}
+            </v-expansion-panels>
+          </div>
           {
             (!this.isPredefined && this.mode !== FormMode.ViewRole
               && ((this.userCanEditRoles && this.roleId)
@@ -444,7 +455,7 @@ export default {
                   </div>
                 </div>) : null
           }
-        </XSidePanel>
+        </XSidePanel> : null
     );
   },
 };

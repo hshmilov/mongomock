@@ -33,7 +33,7 @@ export default {
     XModalResetPassword,
   },
   props: {
-    value: {
+    visible: {
       type: Boolean,
       default: false,
     },
@@ -73,9 +73,6 @@ export default {
         this.$permissionConsts.actions.Delete,
         this.$permissionConsts.categories.Users);
     },
-    showPanel() {
-      return this.value;
-    },
   },
   watch: {
     userId(id) {
@@ -91,12 +88,6 @@ export default {
       createNewUser: CREATE_USER,
       updateUser: UPDATE_USER,
     }),
-    onPanelStateChange(isOpen) {
-      if (!isOpen) {
-        this.onCancel();
-      }
-      this.$emit('input', isOpen);
-    },
     genPanelActions() {
       if (this.panelType !== 'new') {
         const panelActions = [];
@@ -188,13 +179,14 @@ export default {
     callDeleteUser() {
       this.$emit('delete');
     },
-    displayResetPasswordModal(userId, email, userName ,invite=false ) {
+    displayResetPasswordModal(userId, email, userName, invite = false) {
       if (!invite) {
         this.temporary = false;
       }
       this.$emit('reset-password', {
         userId,
-        email, userName,
+        email,
+        userName,
         invite,
 
         onClose: this.restoreTemporaryPanel,
@@ -209,16 +201,21 @@ export default {
       this.serverError = null;
       this.$emit('close');
     },
+    getSidePanelContainer() {
+      return document.querySelector('.x-users-management');
+    },
   },
   // eslint-disable-next-line no-unused-vars
-  render(h) {
+  render() {
     return (
-      <XSidePanel
-        value={this.showPanel}
+      this.visible
+        ? (<XSidePanel
+        visible={this.visible}
         title={this.title}
         panel-class="user-panel"
-        temporary={this.temporary}
-        onInput={this.onPanelStateChange}
+        mask={this.temporary}
+        onClose={this.onCancel}
+        panel-container={this.getSidePanelContainer}
       >
         <XActionsGroup slot="panelHeader">
           {this.genPanelActions()}
@@ -228,7 +225,7 @@ export default {
           class="body"
         >
           {
-            this.value ? this.genPanelContent() : null
+            this.visible ? this.genPanelContent() : null
           }
         </div>
         <div slot="panelFooter">
@@ -243,7 +240,7 @@ export default {
             <XButton type="primary" onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
           </div>
         </div>
-      </XSidePanel>
+      </XSidePanel>) : null
     );
   },
 };

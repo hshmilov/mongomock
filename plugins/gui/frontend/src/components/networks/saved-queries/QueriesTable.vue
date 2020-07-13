@@ -10,7 +10,6 @@
         />
         <div class="tags-filter">
           <XCombobox
-            v-if="entityTags.length"
             v-model="filterTags"
             height="30"
             :selection-display-limit="1"
@@ -43,13 +42,12 @@
       >Learn about Axonius use cases</XButton>
     </section>
     <XSavedQueriesPanel
-      v-model="isPanelOpen"
+      :visible="isPanelOpen"
       :namespace="namespace"
-      @input="panelStateChanged"
       @run="runQuery"
       @delete="handleSelectedQueriesDeletion"
       @save-changes="saveQueryChanges"
-      @close="closeQuerySidePanel"
+      @close="closeSidePanelAndReset"
       @new-enforcement="createEnforcement"
       @set-public="setQueryPublic"
     />
@@ -349,20 +347,18 @@ export default {
         },
       });
     },
-    panelStateChanged(open) {
-      if (!open) {
-        this.$router.push({ name: `${this.namespace}-queries` });
-        this.fetchTagsApi();
-        this.resetTableSelections();
-      }
-    },
     openQuerySidePanel(selectedQueryId) {
-      this.isPanelOpen = !this.isPanelOpen;
+      this.isPanelOpen = true;
       this.selection = { ids: [selectedQueryId], include: true };
       this.$router.push({ path: '', params: { queryId: selectedQueryId } });
+      this.fetchTagsApi();
     },
     closeQuerySidePanel() {
       this.isPanelOpen = false;
+    },
+    closeSidePanelAndReset() {
+      this.isPanelOpen = false;
+      this.resetTableSelections();
     },
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW, setEnforcement: SET_ENFORCEMENT,

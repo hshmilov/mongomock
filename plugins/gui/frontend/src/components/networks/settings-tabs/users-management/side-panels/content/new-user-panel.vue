@@ -61,6 +61,7 @@
       <ASelect
         v-model="$v.role.$model"
         placeholder="Select Role"
+        :get-popup-container="getPopupContainer"
       >
         <ASelectOption
           v-for="selectRole in rolesOptions"
@@ -225,6 +226,9 @@ export default {
       this.$v.$touch();
       return this.$v.$invalid;
     },
+    getPopupContainer() {
+      return document.querySelector('.x-users-management .ant-drawer-body__content');
+    },
   },
 };
 </script>
@@ -279,7 +283,7 @@ export default {
       display: none !important;
     }
   }
-  .x-side-panel__footer {
+  .ant-drawer-body__footer {
     > div {
       display: flex;
       flex-direction: column;

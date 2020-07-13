@@ -37,6 +37,10 @@ export default {
     XButton,
   },
   props: {
+    visible: {
+      type: Boolean,
+      default: false,
+    },
     data: {
       type: Object,
     },
@@ -115,10 +119,8 @@ export default {
         );
       });
     },
-    onPanelStateChanged(value) {
-      if (!value) {
-        this.$emit('close');
-      }
+    onClose() {
+      this.$emit('close');
     },
     runQueryOnAffectedEntities() {
       /*
@@ -209,14 +211,20 @@ export default {
         return false;
       }
     },
+    getSidePanelContainer() {
+      return document.querySelector('.x-cloud-compliance');
+    },
   },
-  render(h) {
+  render() {
     return (
-      <x-side-panel
-        value={this.data !== null}
-        panelClass="compliance-panel"
+      this.visible
+        ? <x-side-panel
+        visible={this.visible}
+        mask={!this.inSaveMode && this.visible}
+        panel-container={this.getSidePanelContainer}
+        panelClass='compliance-panel'
         title={this.data ? `${this.data.section} ${this.data.rule}` : ''}
-        onInput={this.onPanelStateChanged}
+        onClose={this.onClose}
       >
         {
           this.renderBody()
@@ -224,7 +232,7 @@ export default {
         {
           this.renderFooter()
         }
-      </x-side-panel>
+      </x-side-panel> : null
     );
   },
 };

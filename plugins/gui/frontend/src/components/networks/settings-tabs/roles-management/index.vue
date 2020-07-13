@@ -30,9 +30,9 @@
         </XTableWrapper>
       </div>
       <XRolePanel
-        v-model="isPanelOpen"
+        :visible="isPanelOpen"
         :role="currentRole"
-        @input="(value) => !value && closePanel()"
+        @close="closePanel"
         @duplicate="handleDuplicateRole"
       />
     </template>>

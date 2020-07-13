@@ -20,7 +20,7 @@ class QueriesPage(EntitiesPage):
     SAFEGUARD_REMOVE_BUTTON_MULTI = 'Delete Saved Queries'
     SAFEGUARD_SET_PUBLIC = 'Set Public'
     RUN_QUERY_BUTTON_TEXT = 'Run Query'
-    QUERY_EXPRESSION_VALUE_CSS = '.v-navigation-drawer .body .expression span'
+    QUERY_EXPRESSION_VALUE_CSS = '.x-side-panel .ant-drawer-body .body .expression span'
     NO_EXPRESSIONS_DEFINED_MSG = 'No query defined'
     EXPRESSION_UNSUPPORTED_MSG = 'Query not supported for the existing data'
     SAVE_CHANGES_BUTTON_TEXT = 'Save Changes'
@@ -123,7 +123,7 @@ class QueriesPage(EntitiesPage):
         return self.wait_for_element_present_by_css('.x-side-panel .description p').text
 
     def get_query_name_from_panel(self):
-        return self.wait_for_element_present_by_css('.x-side-panel__header .title').text
+        return self.wait_for_element_present_by_css('.x-side-panel .ant-drawer-header .title').text
 
     def get_query_update_user_from_panel(self):
         return self.wait_for_element_present_by_css('.x-side-panel .updater div').text

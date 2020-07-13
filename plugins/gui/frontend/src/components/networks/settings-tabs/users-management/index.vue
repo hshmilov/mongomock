@@ -35,7 +35,7 @@
           </template>
         </XTable>
         <XUsersPanel
-          v-model="isPanelOpen"
+          :visible="isPanelOpen"
           :panel-type="panelType"
           :user-id="editUserId"
           :title="UserSidePanelTitle"
@@ -193,6 +193,7 @@ export default {
           await this.removerUsers(this.selectedRows);
           this.showSnackbar({ message: 'Users removed.' });
           this.selectedRows = { ids: [], include: true };
+          this.isPanelOpen = false;
         },
       });
     },

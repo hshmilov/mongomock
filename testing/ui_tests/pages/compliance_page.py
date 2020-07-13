@@ -10,7 +10,7 @@ class CompliancePage(Page):
     ROOT_PAGE_CSS = 'li#compliance.x-nav-item'
     COMPLIANCE_TIP_CSS = '.x-compliance-tip'
     COMPLIANCE_EXPIRY_MODAL_CSS = '#x-compliance-expire-modal'
-    COMPLIANCE_PANEL_OPEN_CSS = '.v-navigation-drawer--open'
+    COMPLIANCE_PANEL_OPEN_CSS = '.ant-drawer-open'
     TITLE_FAILED_CSS = 'div[title="Failed"]'
     TITLE_PASSED_CSS = 'div[title="Passed"]'
     SCORE_VALUE_CSS = 'span.score-value'

@@ -1,32 +1,36 @@
 .saved-query-panel {
-    .body {
-        .name_input, .description_input {
-            width: 100%;
-            resize: none;
-            border-color:$grey-3;
-            border-style: solid;
-            border-width: 0.5px;
-        }
-  
-        .chips {
-            margin: 4px;
-        }
-  
-        & > div {
-            margin-bottom: 20px;
-            h5 {
-                margin-bottom: 8px;
+
+    .ant-drawer-body {
+
+        .body {
+            .name_input, .description_input {
+                width: 100%;
+                resize: none;
+                border-color:$grey-3;
+                border-style: solid;
+                border-width: 0.5px;
+            }
+
+            .chips {
+                margin: 4px;
+            }
+
+            & > div {
+                margin-bottom: 20px;
+                h5 {
+                    margin-bottom: 8px;
+                }
+            }
+            .error-input {
+                margin-bottom: 4px;
+                font-size: 11px;
             }
         }
-        .error-input {
-            margin-bottom: 4px;
-            font-size: 11px;
-          }
+
+        .buttons {
+            display: flex;
+            justify-content: flex-end;
+        }
     }
 
-    .buttons {
-        display: flex;
-        justify-content: flex-end;
-    }
-    
   }

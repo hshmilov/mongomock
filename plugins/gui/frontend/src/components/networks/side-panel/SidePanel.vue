@@ -1,14 +1,16 @@
 <template>
-  <VNavigationDrawer
-    :class="['x-side-panel', panelClass]"
-    :value="value"
-    absolute
-    :temporary="temporary"
-    right
+  <ADrawer
+    :destroyOnClose="true"
+    :wrap-class-name="wrapClass"
+    :visible="visible"
+    :wrap-style="wrapStyle"
+    :closable="false"
+    :mask="mask"
     :width="width"
-    @input="stateChanged"
+    :get-container="sidePanelContainer"
+    @close="onClose"
   >
-    <header class="x-side-panel__header">
+    <template #title>
       <span
         class="title"
         :title="title"
@@ -18,39 +20,51 @@
         <span
           class="action-close"
           title="Close"
+          @click="onClose"
         >
-          <VIcon
-            size="20"
-            color="#fff"
-            @click="closePanel"
-          >{{ closeSvgIconPath }}
-          </VIcon>
+          <XIcon
+            :style="{fontSize: '20px'}"
+            family="action"
+            type="close"
+          />
         </span>
       </div>
-    </header>
-    <section class="x-side-panel__content">
+    </template>
+
+    <section class="ant-drawer-body__content">
       <slot name="panelContent" />
     </section>
+
     <footer
       v-if="$slots.panelFooter"
-      class="x-side-panel__footer"
+      class="ant-drawer-body__footer"
     >
       <slot name="panelFooter" />
     </footer>
-  </VNavigationDrawer>
+  </ADrawer>
 </template>
 
 <script>
-import { mdiClose } from '@mdi/js';
+import { Drawer } from 'ant-design-vue';
+import XIcon from '@axons/icons/Icon';
+
 
 export default {
   name: 'XSidePanel',
+  components: {
+    ADrawer: Drawer,
+    XIcon
+  },
   props: {
+    panelContainer: {
+      type: Function,
+      default: null,
+    },
     panelClass: {
       type: String,
       default: '',
     },
-    value: {
+    visible: {
       type: Boolean,
       default: false,
     },
@@ -62,81 +76,113 @@ export default {
       type: String,
       default: '',
     },
-    temporary: {
+    mask: {
       type: Boolean,
       default: true,
     },
   },
-  data() {
-    return {
-      closeSvgIconPath: mdiClose,
-    };
+  computed: {
+    sidePanelContainer() {
+      return this.panelContainer || undefined;
+    },
+    wrapClass() {
+      return ['x-side-panel', this.panelClass].join(' ');
+    },
+    wrapStyle() {
+      return this.panelContainer ? { position: 'absolute' } : {};
+    },
   },
   methods: {
-    stateChanged(panelState) {
-      this.$emit('input', panelState);
-    },
-    closePanel() {
-      this.$emit('input', false);
+    onClose() {
+      this.$emit('close');
     },
   },
 };
 </script>
 
 <style lang="scss">
-.x-side-panel {
-    height: 100%;
-    z-index: 1002;
+    .x-side-panel {
+        left: 0;
 
-    &__header {
-        position: fixed;
-        top: 0;
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        padding: 16px 28px;
-        background-color: $theme-orange;
-        align-items: center;
-        z-index: 2;
-        height: 64px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-
-        .title {
-            color: #fff;
-            max-width: 90%;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            overflow: hidden;
+        .ant-drawer-mask {
+            position: absolute;
         }
 
-        .actions {
-            display: flex;
-            ul {
-                list-style: none;
+        .ant-drawer-content-wrapper {
+            position: absolute;
+
+          .ant-drawer-wrapper-body {
+            overflow: hidden !important;  // antd adds for some reason overflow: auto.
+
+            .ant-drawer-header {
+              width: 100%;
+              padding: 16px 28px;
+              background-color: $theme-orange;
+              align-items: center;
+              z-index: 2;
+              height: 64px;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              overflow: hidden;
+
+              .ant-drawer-title {
                 display: flex;
-                li {
-                    padding: 0 4px;
-                    cursor: pointer;
+                justify-content: space-between;
+
+                .title {
+                  color: #fff;
+                  max-width: 90%;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                  overflow: hidden;
                 }
+
+                .actions {
+                  display: flex;
+
+                  .action-close {
+                    font-size: 20px;
+                    line-height: 25px;
+                    color: $theme-white;
+                    cursor: pointer;
+                  }
+
+
+                  ul {
+                    list-style: none;
+                    display: flex;
+
+                    li {
+                      padding: 0 4px;
+                      cursor: pointer;
+                    }
+                  }
+                }
+              }
             }
-      }
+
+            .ant-drawer-body {
+              height: calc(100% - 64px);
+              padding: 24px 0px 24px 24px;
+
+              &__content {
+                position: relative;
+                padding: 5px 28px 110px 5px;
+                height: calc(100% - 50px);
+                overflow-y: auto;
+              }
+              &__footer {
+                position: absolute;
+                padding: 5px 30px 0px 30px;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #fff;
+                height: 50px;
+              }
+            }
+          }
+        }
     }
 
-    &__content {
-        padding: 28px 28px 110px 28px;
-        position: relative;
-        top: 64px;
-    }
-
-
-    &__footer {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        padding: 28px;
-        background-color: #fff;
-    }
-}
 </style>

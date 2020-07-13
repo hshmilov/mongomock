@@ -175,9 +175,9 @@ class SettingsPage(Page):
     ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT = 'CyberArk Vault'
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
-    ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
-    ROLE_PANEL_OVERLAY = '.v-overlay--absolute'
-    USER_PANEL_CLOSED = '.user-panel.v-navigation-drawer--close'
+    ROLE_PANEL_CONTENT = '.role-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
+    ROLE_PANEL = '.role-panel'
+    USER_PANEL = '.user-panel'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
     CSS_SELECTOR_ROLE_PANEL_ACTION_BY_NAME = '.role-panel .actions .action-{action_name}'
     CSS_SELECTOR_USER_PANEL_ACTION_BY_NAME = '.user-panel .actions .action-{action_name}'
@@ -194,7 +194,7 @@ class SettingsPage(Page):
     USE_S3_BACKUP = 'Enable backup to Amazon S3'
     USE_ROOT_MASTER = 'Enable Root Master Mode'
 
-    FOOTER_ERROR_CSS = '.x-side-panel__footer .indicator-error--text'
+    FOOTER_ERROR_CSS = '.ant-drawer-body__footer .indicator-error--text'
 
     EXPANSION_HEADER_ICON_CSS = '.v-expansion-panel-header__icon'
 
@@ -329,7 +329,7 @@ class SettingsPage(Page):
         time.sleep(2)
 
     def wait_for_new_user_panel(self):
-        self.wait_for_element_present_by_css('.x-side-panel.user-panel.v-navigation-drawer--open',
+        self.wait_for_element_present_by_css('.x-side-panel.user-panel.ant-drawer-open',
                                              is_displayed=True)
 
     def click_new_role(self):
@@ -490,7 +490,7 @@ class SettingsPage(Page):
                 categoryPanel.find_element_by_css_selector('.v-expansion-panel-header--active .x-checkbox').click()
             else:
                 category_checkboxes = categoryPanel.find_elements_by_css_selector('.x-checkbox')
-                category_checkboxes_by_text = {checkbox.text: checkbox for checkbox in category_checkboxes}
+                category_checkboxes_by_text = {checkbox.text.strip(): checkbox for checkbox in category_checkboxes}
                 for permissionValue in permissionValues:
                     self.click_toggle_button(category_checkboxes_by_text[permissionValue],
                                              make_yes=True,
@@ -523,10 +523,10 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
     def wait_for_role_panel_absent(self):
-        self.wait_for_element_absent_by_css(self.ROLE_PANEL_OVERLAY)
+        self.wait_for_element_absent_by_css(self.ROLE_PANEL)
 
     def wait_for_user_panel_closed(self):
-        self.wait_for_element_present_by_css(self.USER_PANEL_CLOSED)
+        self.wait_for_element_absent_by_css(self.USER_PANEL)
 
     def match_role_permissions(self, name, permissions):
         self.click_role_by_name(name)

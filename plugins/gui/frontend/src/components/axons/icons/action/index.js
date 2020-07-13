@@ -3,6 +3,7 @@ import help from './help';
 import search from './search';
 import start from './start';
 import stop from './stop';
+import close from './close';
 
 export default {
   drag,
@@ -10,4 +11,5 @@ export default {
   search,
   start,
   stop,
+  close,
 };

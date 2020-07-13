@@ -1,90 +1,95 @@
 .compliance-panel {
-    .x-side-panel__content {
-        padding-top: 10px;
-    }
 
-    .body {
-        padding-bottom: 84px;
+    .ant-drawer-body {
 
-        > div {
-            margin-bottom: 20px;
+        &__content {
+            overflow-y: auto;
+            bottom: 0;
         }
 
-        .last-updated {
-            font-size: 12px;
-            opacity: 0.73;
-            margin-bottom: 10px
-        }
+        .body {
+            padding-bottom: 84px;
 
-        h5 {
-            padding-bottom: 8px;
-        }
-        .v-expansion-panels {
-            z-index: unset;
-            .v-expansion-panel:first-child:after {
-                color: rgba(0, 0, 0, 0.12);
-                border-top: thin solid;
-                content: "";
-                left: 0;
-                position: absolute;
-                right: 0;
-                top: 0;
-                transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            > div {
+                margin-bottom: 20px;
             }
 
-            > .v-expansion-panel::before {
-                box-shadow: none;
+            .last-updated {
+                font-size: 12px;
+                opacity: 0.73;
+                margin-bottom: 10px
             }
 
-            .v-expansion-panel--active {
+            h5 {
+                padding-bottom: 8px;
+            }
+            .v-expansion-panels {
+                z-index: unset;
+                .v-expansion-panel:first-child:after {
+                    color: rgba(0, 0, 0, 0.12);
+                    border-top: thin solid;
+                    content: "";
+                    left: 0;
+                    position: absolute;
+                    right: 0;
+                    top: 0;
+                    transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                > .v-expansion-panel::before {
+                    box-shadow: none;
+                }
+
+                .v-expansion-panel--active {
+                    .v-expansion-panel-header {
+                        min-height: 48px;
+                    }
+                }
+
                 .v-expansion-panel-header {
-                    min-height: 48px;
+                    padding: 8px 0 8px 0;
+                }
+
+                .v-expansion-panel-content__wrap {
+                    padding: 0 0 16px;
+                    white-space: pre-line;
                 }
             }
 
-            .v-expansion-panel-header {
-                padding: 8px 0 8px 0;
-            }
-
-            .v-expansion-panel-content__wrap {
-                padding: 0 0 16px;
-                white-space: pre-line;
-            }
         }
 
-    }
-    .x-side-panel__footer {
-        > div {
-            display: flex;
-
-            .status-container {
-                flex: 50%;
-                justify-content: flex-start;
-                > div {
-                    display: inline-block;
-                }
-                .status {
-                }
-                .status-text {
-                    margin-left: 10px;
-                }
-                .results-text {
-                    margin-left: 5px;
-                }
-            }
-
-
-            .buttons {
-                flex: 50%;
+        &__footer {
+            > div {
                 display: flex;
-                justify-content: flex-end;
 
-                .x-button {
-                    width: 180px;
+                .status-container {
+                    flex: 50%;
+                    justify-content: flex-start;
+                    > div {
+                        display: inline-block;
+                    }
+                    .status {
+                    }
+                    .status-text {
+                        margin-left: 10px;
+                    }
+                    .results-text {
+                        margin-left: 5px;
+                    }
+                }
+
+
+                .buttons {
+                    flex: 50%;
+                    display: flex;
+                    justify-content: flex-end;
+
+                    .x-button {
+                        width: 180px;
+                    }
                 }
             }
         }
-
     }
 
 

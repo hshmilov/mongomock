@@ -48,13 +48,13 @@ export default {
     xCombobox,
   },
   props: {
+    visible: {
+      type: Boolean,
+      default: false,
+    },
     namespace: {
       required: true,
       type: String,
-    },
-    value: {
-      type: Boolean,
-      default: false,
     },
   },
   validations: {
@@ -287,12 +287,8 @@ export default {
     runQuery() {
       this.$emit('run', this.queryId);
     },
-    onPanelStateChange(isOpen) {
-      if (!isOpen) {
-        this.closePanel();
-        this.reset();
-      }
-      this.$emit('input', isOpen);
+    onClose() {
+      this.$emit('close');
     },
     genQueryExpressionMarkup(usecase) {
       return () => {
@@ -414,6 +410,9 @@ export default {
       const tags = await fetchEntityTags(Entities[this.namespace]);
       this.entityTags = tags;
     },
+    getSidePanelContainer() {
+      return document.querySelector('.x-queries-table');
+    },
   },
   created() {
     this.fetchDataFields({ module: this.namespace });
@@ -429,12 +428,17 @@ export default {
     ]);
 
     return (
-        <x-side-panel
-            value={this.value}
+      this.visible
+        ? <x-side-panel
+            visible={this.visible}
+            mask={!this.keepPanelStatic}
+            panel-container={this.getSidePanelContainer}
             panelClass="saved-query-panel"
             title={this.name}
-            temporary={!this.keepPanelStatic}
-            onInput={this.onPanelStateChange}
+            onClose={this.onClose}
+
+
+
         >
             {
                 <x-actions-group slot="panelHeader">
@@ -495,7 +499,7 @@ export default {
                     }
                 </div>
             </div>
-        </x-side-panel>
+        </x-side-panel> : null
     );
   },
 };
