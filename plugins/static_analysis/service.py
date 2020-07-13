@@ -561,6 +561,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
                     data = entity_data['data']
 
+                    if not isinstance(data, dict):
+                        continue
+
                     if data.get('id'):
                         users_by_id[str(data['id']).lower()].add(user_internal_axon_id)
                     if data.get('username'):

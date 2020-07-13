@@ -78,6 +78,9 @@ class SendEmailToEntities(ActionTypeBase):
                     logger.exception(f'Problem with tags data')
                 for adapter_data in adapters_entries:
                     adapter_data = adapter_data.get('data') or {}
+                    if not isinstance(adapter_data, dict):
+                        # could happen with some tags that have notes
+                        continue
                     if adapter_data.get('mail'):
                         mail_list.add(adapter_data.get('mail'))
                     if adapter_data.get('email'):

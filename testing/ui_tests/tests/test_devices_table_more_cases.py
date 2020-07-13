@@ -56,7 +56,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
     def _check_default_csv_config(self):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_be_responsive()
-        self.devices_page.click_export_csv()
+        self.devices_page.open_export_csv()
         assert self.devices_page.is_csv_config_matching_default_fields()
         self.devices_page.close_csv_config_dialog()
 
@@ -64,7 +64,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.settings_page.set_csv_delimiter('B')
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_be_responsive()
-        self.devices_page.click_export_csv()
+        self.devices_page.open_export_csv()
         assert self.devices_page.get_csv_delimiter_field() == 'B'
 
     def _check_delimiter_setting_reset(self):
@@ -72,7 +72,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.settings_page.set_csv_delimiter('')
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_be_responsive()
-        self.devices_page.click_export_csv()
+        self.devices_page.open_export_csv()
         assert self.devices_page.is_csv_config_matching_default_fields()
 
     def _check_max_rows_range(self):
@@ -86,7 +86,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
     def _check_csv_config_after_export(self):
         self.devices_page.confirm_csv_config_dialog()
         self.devices_page.wait_for_csv_loading_absent()
-        self.devices_page.click_export_csv()
+        self.devices_page.open_export_csv()
         assert self.devices_page.is_csv_config_matching_default_fields()
 
     def test_devices_save_query(self):

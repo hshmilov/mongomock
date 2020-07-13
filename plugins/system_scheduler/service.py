@@ -78,10 +78,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         self.state = SchedulerState()
 
-        # this lock is held while the system performs a rt process or a process that musn't run in parallel
-        # to fetching or correlation
-        self.__trigger_lock = threading.Lock()
-
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
 
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
@@ -542,8 +538,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 })
 
         def _start_subphase(subphase: scheduler_consts.ResearchPhases):
-            with self.__trigger_lock:
-                self.state.SubPhase = subphase
+            self.state.SubPhase = subphase
             logger.info(f'Started Subphase {subphase}')
             _log_activity_phase(AuditAction.StartPhase)
             if self._notify_on_adapters is True:
@@ -636,22 +631,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             try:
                 _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
                 self._request_gui_dashboard_cache_clear()
-
-                for adapter in list(
-                        self.core_configs_collection.find(
-                            {
-                                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE,
-                                'status': 'up'
-                            }
-                        )
-                ):
-                    try:
-                        # this is important and is described at
-                        # https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
-                        logger.debug(f'Requesting wait/insert_to_db for {adapter[PLUGIN_UNIQUE_NAME]}')
-                        self.request_remote_plugin('wait/insert_to_db?timeout=14400', adapter[PLUGIN_UNIQUE_NAME])
-                    except Exception as e:
-                        logger.exception(f'Failed waiting for adapter cycle {e}')
 
                 self._run_cleaning_phase()
             except Exception:
@@ -864,15 +843,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             # Not in cycle - can do all
             should_trigger_plugins = True
             should_fetch_adapters = True
-
-        elif self.state.SubPhase in [scheduler_consts.ResearchPhases.Fetch_Devices,
-                                     scheduler_consts.ResearchPhases.Fetch_Scanners]:
-            # In cycle and fetching entities - no alerts for consistency
-            should_trigger_plugins = False
-            should_fetch_adapters = True
-
         else:
-            # In cycle and after fetching entities - can't do anything for consistency
+            # In cycle and can't do anything for consistency
             should_trigger_plugins = False
             should_fetch_adapters = False
 
@@ -906,8 +878,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             return
         logger.debug('Starting RT cycle')
         try:
-            with self.__trigger_lock:
-                self.trigger_adapters_out_of_cycle(adapters_to_call, log_fetch=False)
+            self.trigger_adapters_out_of_cycle(adapters_to_call, log_fetch=False)
         except Exception:
             logger.exception('Error triggering realtime adapters')
         logger.debug('Finished RT cycle')

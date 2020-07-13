@@ -127,6 +127,8 @@ class CounterActAdapter(AdapterBase):
                     ips = [ip]
                 if mac or ips:
                     device.add_nic(mac, ips)
+
+                hostname = None
                 try:
                     fields_dict = ((device_raw.get('extra') or {}).get('host') or {}).get('fields')
                     if isinstance(fields_dict, dict):
@@ -159,9 +161,8 @@ class CounterActAdapter(AdapterBase):
                                     device.add_agent_version(agent=AGENT_NAMES.counter_act,
                                                              version=field_raw_data.get('value'))
                                 elif field_raw_name == 'hostname':
-                                    device.hostname = field_raw_data.get('value')
-                                    if field_raw_data.get('value'):
-                                        device.id += '_' + field_raw_data.get('value')
+                                    hostname = field_raw_data.get('value')
+                                    device.hostname = hostname
                                 elif field_raw_name == 'dhcp_hostname':
                                     device.name = field_raw_data.get('value')
                                 elif field_raw_name == 'os_classification':
@@ -193,6 +194,8 @@ class CounterActAdapter(AdapterBase):
                                 logger.exception(f'Problem with field {field_raw_name}')
                 except Exception:
                     logger.exception(f'Problem with fields')
+
+                device.id += '_' + (hostname or '')
                 device.set_raw(device_raw)
                 yield device
             except Exception:
