@@ -176,7 +176,7 @@ class SettingsPage(Page):
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel .x-side-panel__content'
-    ROLE_PANEL_CLOSED = '.role-panel.v-navigation-drawer--close'
+    ROLE_PANEL_OVERLAY = '.v-overlay--absolute'
     USER_PANEL_CLOSED = '.user-panel.v-navigation-drawer--close'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
     CSS_SELECTOR_ROLE_PANEL_ACTION_BY_NAME = '.role-panel .actions .action-{action_name}'
@@ -522,7 +522,7 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
     def wait_for_role_panel_absent(self):
-        self.wait_for_element_present_by_css(self.ROLE_PANEL_CLOSED)
+        self.wait_for_element_absent_by_css(self.ROLE_PANEL_OVERLAY)
 
     def wait_for_user_panel_closed(self):
         self.wait_for_element_present_by_css(self.USER_PANEL_CLOSED)
