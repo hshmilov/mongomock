@@ -23,7 +23,7 @@ class CybereasonTagAction(ActionTypeBase):
                 },
                 {
                     'name': 'tag_value',
-                    'title': 'Tag Value',
+                    'title': 'Tag value',
                     'type': 'string'
                 },
             ],

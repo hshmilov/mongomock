@@ -227,7 +227,7 @@ class OktaAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_logs',
                     'type': 'bool',
-                    'title': 'Fetch Logs'
+                    'title': 'Fetch logs'
                 }
             ],
             'required': [

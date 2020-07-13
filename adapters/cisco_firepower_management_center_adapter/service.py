@@ -130,7 +130,7 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Cisco Firepower Management Center Domain',
+                    'title': 'Host Name or IP Address',
                     'type': 'string'
                 },
                 {

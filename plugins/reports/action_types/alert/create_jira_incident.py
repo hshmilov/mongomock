@@ -82,7 +82,7 @@ class JiraIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'created_issue_webhook_content',
-                    'title': 'Send created issue link to webhook Content',
+                    'title': 'Webhook content',
                     'type': 'string',
                     'default': '{"text": "Created issue link is:' + LINK_TEMPLATE + '"}'
                 }
