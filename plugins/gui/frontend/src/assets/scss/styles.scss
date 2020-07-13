@@ -686,4 +686,26 @@ input[type='text'], input[type='password'], input[type='number'] {
   margin-left: 3px;
 }
 
+.ant-popover {
+  z-index: 200 !important;
+  .ant-popover-arrow {
+    display: none;
+  }
+  .ant-popover-inner {
+    max-width: 600px;
+    max-height: 300px;
+    padding: 8px;  
+    .ant-popover-inner-content {
+      font-weight: 200;
+      padding: 0;
+      .x-table {
+        overflow: auto;
+        max-height: 240px;
+        @include  x-scrollbar;
+        @include  y-scrollbar;  
+      }
+    }
+  }
+}
+
 /* override ant-design-vue reset css [end]*/
