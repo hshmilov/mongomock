@@ -117,10 +117,13 @@ class InstanceManager:
             os.makedirs(ARTIFACTS_DIR_ABSOLUTE)
 
     @staticmethod
-    def __ssh_execute(instance, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, append_ts=True):
+    def __ssh_execute(instance, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, append_ts=True, as_root=False,
+                      ignore_rc=False):
         assert isinstance(commands, str), 'ssh execute command must be a shell command'
         assert '"' not in commands, 'Not supported'
         commands = f'/bin/bash -c "{commands}"'
+        if as_root:
+            commands = f'sudo {commands}'
         if append_ts:
             commands = f'{commands} | ts -s'  # ts to print timestamp
         if timeout > 0:
@@ -131,7 +134,7 @@ class InstanceManager:
 
         rc, output = instance.ssh(commands)  # a timeout is implemented using the timeout command.
         end_time = time.time()
-        if rc != 0:
+        if rc != 0 and not ignore_rc:
             if (end_time - start_time) > timeout:
                 raise ValueError(f'Error, instance {instance} with job {job_name} and commands {commands} '
                                  f'timeout and was killed with SIGKILL. Output is {output}')

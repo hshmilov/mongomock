@@ -1,5 +1,4 @@
 import os
-import subprocess
 import time
 
 import pytest
@@ -41,11 +40,16 @@ class TestTunnel(TestBase):
         finally:
             # Cleanup
             os.system('sudo iptables -D INPUT -p tcp -m tcp --dport 2212 -j DROP')
+            self.axonius_system.openvpn.take_process_ownership()
+            self.axonius_system.openvpn.stop()
+            time.sleep(5)
+            self.axonius_system.openvpn.start()
 
     @pytest.mark.skipif(not read_saas_input_params(), reason='Can run only on a tunnel image')
     def test_connect_adapter_to_tunnel(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.search('microsoft')
+        time.sleep(1)
         self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.click_advanced_settings()
         self.adapters_page.click_advanced_configuration()
@@ -53,25 +57,19 @@ class TestTunnel(TestBase):
             self.adapters_page.find_checkbox_by_label('Use Tunnel to connect to source'),
             make_yes=True)
         self.adapters_page.save_advanced_settings()
-        self.adapters_page.wait_for_toaster('Adapter configuration saving in progress...')
         try:
+            self.adapters_page.wait_for_toaster('Adapter configuration saving in progress...')
+
             self.adapters_page.wait_for_toaster('Adapter configuration saved')
             self.adapters_page.wait_for_toaster_to_end('Adapter configuration saved')
         except Exception:
-            # Adapter uwsgi probably taking time to load
-            nics = ''
-            tries = 0
-            while 'eth2' not in nics and tries < 5:
-                tries += 1
-                time.sleep(60)
-                try:
-                    nics = subprocess.check_output(
-                        'sudo docker exec -it active-directory-adapter ifconfig -a'.split(' ')).decode('utf-8')
-                except subprocess.SubprocessError:
-                    continue
+            # Sometimes its too fast
+            pass
+        time.sleep(90)
 
-        self.adapters_page.click_advanced_configuration()
+        self.adapters_page.safe_refresh()
         self.adapters_page.add_server(ad_client1_details)
+
         self.adapters_page.wait_for_server_green()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
@@ -85,6 +83,7 @@ class TestTunnel(TestBase):
         # Initialize AD Adapter
         self.adapters_page.switch_to_page()
         self.adapters_page.search('microsoft')
+        time.sleep(1)
         self.adapters_page.click_adapter(AD_ADAPTER_NAME)
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_server_green()

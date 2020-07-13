@@ -73,7 +73,9 @@ EOF
 echo -n {payload} | base64 -d | gzip -d > conf/user.ovpn
 docker build -t tunnel .
 
+exec 2>/dev/null
 docker stop tunnel; docker rm tunnel
+exec 2>&1
 docker run --privileged -v $PWD/conf:/conf --net=host --name tunnel -d tunnel
 docker exec tunnel iptables -P FORWARD ACCEPT
 IFACE=$(docker exec tunnel route | grep '^default' | grep -o '[^ ]*$')
