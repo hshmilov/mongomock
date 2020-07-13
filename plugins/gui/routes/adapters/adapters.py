@@ -318,7 +318,7 @@ class Adapters(Connections):
                 self._trigger('clear_dashboard_cache', blocking=False)
 
             def rejected(err):
-                logger.exception(f'Failed fetching from {adapter_unique_name} for {client_to_add}', exc_info=err)
+                logger.exception(f'Failed fetching from {adapter_unique_name}', exc_info=err)
 
             self._async_trigger_remote_plugin(adapter_unique_name,
                                               'insert_to_db',

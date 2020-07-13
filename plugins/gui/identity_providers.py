@@ -69,7 +69,6 @@ class IdentityProviders(Configurable):
         except Exception:
             logger.exception(f'Failed - could not add LDAP groups cached')
 
-        logger.info(f'Loading IdentityProviders config: {config}')
         current_id_providers_config = self.identity_providers_config()
         self._saml_login = current_id_providers_config['saml_login_settings']
         if saml_login.get('idp_data_from_metadata'):

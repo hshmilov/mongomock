@@ -1,14 +1,20 @@
 # pylint: disable=access-member-before-definition
-# THIS FILE IS NOT WORKING! It is a preparation for Azure REST Only client to be used by the compliance.
 import datetime
 import logging
 from collections import namedtuple
+from typing import Dict, NamedTuple
 
 import adal
 
 from axonius.clients.azure.ad import AzureADConnection
+from axonius.clients.azure.app_service import AzureAppServiceConnection
 from axonius.clients.azure.compute import AzureComputeConnection
 from axonius.clients.azure.consts import AzureStackHubProxySettings, PAGINATION_LIMIT, AzureClouds
+from axonius.clients.azure.keyvault import AzureKeyvaultConnection
+from axonius.clients.azure.kubernetes import AzureKubernetesConnection
+from axonius.clients.azure.network_watchers import AzureNetworkWatchersConnection
+from axonius.clients.azure.sql_db import AzureSQLDBConnection
+from axonius.clients.azure.storage import AzureStorageConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
@@ -57,6 +63,12 @@ AZURE_CLOUD_ENDPOINTS = {
 DOD_GRAPH_URL = 'https://dod-graph.microsoft.us'
 
 
+class OAuth2Token(NamedTuple):
+    last_refresh: datetime.datetime
+    expires_in: int
+    token: str
+
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments
 class AzureCloudConnection(RESTConnection):
     """ Regular Azure Management connection. supports Azure stack hub as well """
@@ -80,9 +92,7 @@ class AzureCloudConnection(RESTConnection):
         self._azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
         self.is_azure_ad_b2c = is_azure_ad_b2c
 
-        self._mgmt_token_last_refresh = None
-        self._mgmt_token_expires_in = None
-        self._mgmt_token = None
+        self._oauth2_token_details: Dict[str, OAuth2Token] = dict()
         self._graph_token_last_refresh = None
         self._graph_token_expires_in = None
         self._graph_token = None
@@ -137,12 +147,17 @@ class AzureCloudConnection(RESTConnection):
         # pylint: disable=invalid-name
         self.compute = AzureComputeConnection(self)
         self.ad = AzureADConnection(self)
+        self.storage = AzureStorageConnection(self)
+        self.keyvault = AzureKeyvaultConnection(self)
+        self.sql_db = AzureSQLDBConnection(self)
+        self.network_watchers = AzureNetworkWatchersConnection(self)
+        self.kubernetes = AzureKubernetesConnection(self)
+        self.app_service = AzureAppServiceConnection(self)
 
         self.__all_subscriptions = None
 
-    def _mgmt_refresh_token(self):
-        last_refresh = self._mgmt_token_last_refresh
-        expires_in = self._mgmt_token_expires_in
+    def _oauth2_refresh_token(self, resource):
+        last_refresh, expires_in, _ = self._oauth2_token_details.get(resource) or (None, None, None)
 
         if last_refresh and expires_in \
                 and last_refresh + datetime.timedelta(seconds=expires_in) > datetime.datetime.now():
@@ -151,7 +166,7 @@ class AzureCloudConnection(RESTConnection):
         body_params = f'grant_type=client_credentials' \
             f'&client_id={self._app_client_id}' \
             f'&client_secret={self._app_client_secret}' \
-            f'&resource={self._resource}'
+            f'&resource={resource}'
 
         response = self._post(f'{self._auth_url}/{self.tenant_id}/oauth2/token',
                               extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
@@ -162,13 +177,21 @@ class AzureCloudConnection(RESTConnection):
                               )
         if 'access_token' not in response:
             raise RESTException(f'Invalid Response: {response}')
-        self._mgmt_token = response['access_token']
-        self._mgmt_token_last_refresh = datetime.datetime.now()
-        self._mgmt_token_expires_in = int(response['expires_in']) - 600     # be on the safe side with 10 minutes
+
+        self._oauth2_token_details[resource] = OAuth2Token(
+            datetime.datetime.now(),
+            int(response['expires_in']) - 600,  # be on the safe side with 10 minutes
+            response['access_token']
+        )
 
     # Resource Management API (https://docs.microsoft.com/en-us/rest/api/azure/)
-    def _rm_request(self, *args, **kwargs):
-        self._mgmt_refresh_token()
+    def _rm_request(self, method, url, *args, **kwargs):
+        resource = kwargs.pop('resource', None)
+        if not resource:
+            resource = self._resource
+
+        self._oauth2_refresh_token(resource)
+        token = self._oauth2_token_details[resource].token
 
         kwargs['alternative_proxies'] = self._mgmt_url_alternative_proxies
 
@@ -181,9 +204,14 @@ class AzureCloudConnection(RESTConnection):
         elif not kwargs.get('url_params', {}).get('api-version'):
             kwargs['url_params']['api-version'] = api_version
 
+        if 'api-version' in url:
+            kwargs['url_params'].pop('api-version', None)
+
         response = self._do_request(
+            method,
+            url,
             *args,
-            extra_headers={'Authorization': f'Bearer {self._mgmt_token}'},
+            extra_headers={'Authorization': f'Bearer {token}'},
             raise_for_status=False,
             use_json_in_response=False,
             return_response_raw=True,
@@ -192,7 +220,7 @@ class AzureCloudConnection(RESTConnection):
 
         if response.status_code == 429:
             self.handle_sync_429_default(response)
-            return self._graph_request(*args, **kwargs)
+            return self._rm_request(*args, **kwargs)
 
         return self._handle_response(
             response, raise_for_status=True, use_json_in_response=True, return_response_raw=False
@@ -200,7 +228,7 @@ class AzureCloudConnection(RESTConnection):
 
     def rm_paginated_request(self, method: str, url: str, **kwargs):
         page = 0
-        force_full_url = False
+        force_full_url = kwargs.pop('force_full_url', False)
         while page < PAGINATION_LIMIT:
             try:
                 result = self._rm_request(method, url.lstrip('/'), force_full_url=force_full_url, **kwargs)
@@ -387,14 +415,13 @@ class AzureCloudConnection(RESTConnection):
         if not self._app_client_id or not self._app_client_secret or not self.tenant_id:
             raise RESTException('No Client ID or Secret or Tenant ID')
 
-        self._mgmt_token_last_refresh = None
-        self._mgmt_token_expires_in = None
+        self._oauth2_token_details = dict()
         self._graph_token_last_refresh = None
         self._graph_token_expires_in = None
         self._ad_graph_token_last_refresh = None
         self._ad_graph_token_expires_in = None
 
-        self._mgmt_refresh_token()
+        self._oauth2_refresh_token(self._resource)
         self._graph_refresh_token()
         self._ad_graph_refresh_token()
 
@@ -410,6 +437,13 @@ class AzureCloudConnection(RESTConnection):
 
     def get_organization_information(self):
         return self.graph_get('organization')
+
+    def get_subscription_id_by_subscription_name(self, display_name: str):
+        subscription_id = [
+            key for key, value in self.all_subscriptions.items()
+            if value.get('displayName') == display_name
+        ]
+        return subscription_id[0] if subscription_id else None
 
     @property
     def all_subscriptions(self) -> dict:

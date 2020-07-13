@@ -16,7 +16,7 @@ class ArsenalConnection(RESTConnection):
                          headers={
                              'RPC-Service': 'arsenal',
                              'RPC-Procedure': 'uber.engsec.arsenal.Arsenal::Search',
-                             'RPC-Caller': 'my-service-name',
+                             'RPC-Caller': 'axonius-adapter',
                              'RPC-Encoding': 'json',
                              'Context-TTL-MS': '20000'},
                          **kwargs)
@@ -49,9 +49,10 @@ class ArsenalConnection(RESTConnection):
         yield from json_data['assets']
         token = json_data['page'].get('token')
         while token:
+            query['page']['token'] = token
             try:
-                response = self._post('', body_params={'page': {'size': DEVICE_PER_PAGE, 'token': token}},
-                                      return_response_raw=True, use_json_in_response=False)
+                response = self._post('', body_params=query, return_response_raw=True,
+                                      use_json_in_response=False)
                 json_data = response.json()
                 error_header = response.headers.get('Grpc-Status-Details-Bin')
                 if error_header is not None:

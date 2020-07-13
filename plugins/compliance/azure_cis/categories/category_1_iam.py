@@ -39,7 +39,7 @@ class CISAzureCategory1:
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                len(errors),
+                0,
                 errors_to_gui(errors)
             )
         else:
@@ -69,12 +69,12 @@ class CISAzureCategory1:
                 api_version='2018-07-01'
             ))
 
-            total_resources += len(all_roles)
-
             for role_raw in all_roles:
                 role = role_raw.get('properties') or {}
                 if role.get('type') != 'CustomRole':
                     continue
+
+                total_resources += 1
 
                 assignable_scopes = role.get('assignableScopes') or []
                 permissions = role.get('permissions') or []

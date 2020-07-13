@@ -13,7 +13,6 @@ from axonius.fields import Field, ListField
 from axonius.utils.dynamic_fields import put_dynamic_field
 from arsenal_adapter.connection import ArsenalConnection
 from arsenal_adapter.client_id import get_client_id
-from arsenal_adapter.consts import ALLOWED_TYPES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -104,8 +103,6 @@ class ArsenalAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-branches, too-many-statements
     def _create_device(self, device_raw):
         try:
-            if device_raw.get('type') not in ALLOWED_TYPES:
-                return None
             device = self._new_device_adapter()
             device_id = device_raw.get('id').get('id')
             if device_id is None:

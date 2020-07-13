@@ -52,9 +52,12 @@ class RunWMIScan(ActionTypeBase):
     def _run(self) -> EntitiesResult:
         node_id = self.action_node_id
 
+        chunks_processed = 0
         for chunk in chunks(SCAN_CHUNK_SIZE, self._internal_axon_ids):
             # pylint: disable=protected-access
-            logger.info(f'Sending wmi scan request to {len(chunk)} devices using wmi adapter')
+            logger.info(f'Sending wmi scan request to {len(chunk)} devices '
+                        f'using wmi adapter - ({chunks_processed} / ({len(self._internal_axon_ids)})')
+            chunks_processed += len(chunk)
             action_result = self._trigger_wmi_adapter(node_id, chunk)
 
             yield from (

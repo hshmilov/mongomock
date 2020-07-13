@@ -4,6 +4,7 @@ import logging
 import os
 import secrets
 import subprocess
+import threading
 import time
 import configparser
 
@@ -16,6 +17,7 @@ from passlib.hash import bcrypt
 from bson import ObjectId
 from bson.json_util import dumps
 import requests
+import cachetools
 
 
 import pymongo
@@ -275,7 +277,7 @@ class GuiService(Triggerable,
                                         name=TEMP_MAINTENANCE_THREAD_ID,
                                         id=TEMP_MAINTENANCE_THREAD_ID,
                                         max_instances=1)
-        self.metadata = self.load_metadata()
+        logger.info(self.metadata)
         self.encryption_key = self.load_encryption_key()
         self._set_first_time_use()
         self._trigger('clear_dashboard_cache', blocking=False)
@@ -293,6 +295,11 @@ class GuiService(Triggerable,
                                     id='get_latest_version',
                                     max_instances=1,
                                     coalesce=True)
+
+    @property
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=300), lock=threading.Lock())
+    def metadata(self):
+        return self.load_metadata()
 
     def _add_default_roles(self):
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER}) is None:

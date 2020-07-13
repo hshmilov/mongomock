@@ -790,6 +790,11 @@ def parse_raw_data_inner_regular(
                 device.image_id = device_raw.get('ImageId')
 
                 try:
+                    device.aws_availability_zone = (device_raw.get('Placement') or {}).get('AvailabilityZone')
+                except Exception:
+                    logger.exception(f'Could not parse aws availability zone')
+
+                try:
                     iam_instance_profile_raw = device_raw.get('IamInstanceProfile')
                     if iam_instance_profile_raw:
                         iam_instance_profile_id = iam_instance_profile_raw.get('Id')

@@ -16,7 +16,7 @@ class RapidGroupAccount(SmartJsonClass):
 
 # pylint: disable=too-many-instance-attributes
 class RapidVulnerability(SmartJsonClass):
-    vulnerability_id = Field(int, 'ID')
+    vulnerability_id = Field(int, 'Vulnerability ID')
     nexpose_id = Field(str, 'Nexpose ID')
     title = Field(str, 'Title')
     date_published = Field(datetime.datetime, 'Date Published')

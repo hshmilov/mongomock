@@ -16,12 +16,7 @@ def get_all_storage_accounts(azure):
         subscription_name = subscription_data.get('displayName') or subscription_id
 
         try:
-            response = list(azure.rm_subscription_paginated_get(
-                'providers/Microsoft.Storage/storageAccounts',
-                subscription_id,
-                api_version='2019-06-01'
-            ))
-
+            response = list(azure.storage.get_all_storage_accounts_for_subscription(subscription_id))
             results[subscription_name] = response
         except Exception as e:
             logger.exception('Exception while getting storage accounts')

@@ -164,7 +164,7 @@ export default {
       error: null,
       complianceOptions: [
         { name: 'aws', title: 'CIS Amazon Web Services Foundations Benchmark V1.2' },
-        /* { name: 'azure', title: 'CIS Microsoft Azure Foundations Benchmark V1.1' }, */
+        { name: 'azure', title: 'CIS Microsoft Azure Foundations Benchmark V1.1' },
       ],
       score: 0,
       activeRules: [],

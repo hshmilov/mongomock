@@ -6,6 +6,7 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.utils.files import get_local_config_file
 from compliance.aws_cis.aws_cis import AWSCISGenerator
+from compliance.azure_cis.azure_cis import AzureCISGenerator
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -43,9 +44,8 @@ class ComplianceService(Triggerable, PluginBase):
 
         if not report_type or report_type == 'azure':
             try:
-                # azure_cis_generator = AzureCISGenerator()
-                # azure_cis_generator.generate()
-                pass
+                azure_cis_generator = AzureCISGenerator()
+                azure_cis_generator.generate()
             except Exception:
                 logger.exception(f'Could not generate Azure CIS Report')
 
