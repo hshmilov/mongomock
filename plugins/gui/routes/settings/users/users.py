@@ -10,7 +10,7 @@ from passlib.hash import bcrypt
 
 from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES)
+                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES, PREDEFINED_FIELD)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE,
@@ -23,7 +23,7 @@ from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import paginated, sorted_endpoint
 from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
-                                              PermissionValue)
+                                              PermissionValue, get_restricted_permissions)
 from gui.logic.db_helpers import translate_user_id_to_details
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
@@ -133,6 +133,13 @@ class Users:
         )
         return jsonify(beautify_user_entry(user))
 
+    def _create_restricted_role(self):
+        insert_result = self._roles_collection.insert_one({
+            'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True,
+            'permissions': get_restricted_permissions()
+        })
+        return insert_result.inserted_id
+
     def _create_user_if_doesnt_exist(self, username, first_name, last_name, email, picname=None, source='internal',
                                      password=None, role_id=None, assignment_rule_match_found=False,
                                      change_role_on_every_login=False):
@@ -189,7 +196,7 @@ class Users:
                 role_doc = self._roles_collection.find_one(filter_archived({
                     'name': PREDEFINED_ROLE_RESTRICTED
                 }))
-                user[ROLE_ID] = role_doc.get('_id')
+                user[ROLE_ID] = role_doc.get('_id') if role_doc else self._create_restricted_role()
             try:
                 self._users_collection.replace_one(match_user, user, upsert=True)
                 if source != 'internal':

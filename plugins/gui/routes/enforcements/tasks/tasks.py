@@ -119,21 +119,28 @@ class Tasks:
                     '_id': saved_action_results['unsuccessful_entities']
                 }
 
-            def clear_saved_action_passwords(action):
-                action_configs = self._get_actions_from_reports_plugin()
-                if not action_configs:
-                    return
-                clear_passwords_fields(action['config'], action_configs[action['action_name']]['schema'])
+            result = task.get('result')
+            if not result:
+                return {}
 
-            normalize_saved_action_results(task['result']['main']['action']['results'])
-            clear_saved_action_passwords(task['result']['main']['action'])
-            for key in [ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
-                arr = task['result'][key]
-                for x in arr:
-                    normalize_saved_action_results(x['action']['results'])
-                    clear_saved_action_passwords(x['action'])
+            if result.get(ACTIONS_MAIN_FIELD) and result[ACTIONS_MAIN_FIELD].get('action'):
+                main_action = result[ACTIONS_MAIN_FIELD]['action']
+                normalize_saved_action_results(main_action['results'])
 
-            task_metadata = task.get('result', {}).get('metadata', {})
+                def clear_saved_action_passwords(action):
+                    action_configs = self._get_actions_from_reports_plugin()
+                    if not action_configs:
+                        return
+                    clear_passwords_fields(action['config'], action_configs[action['action_name']]['schema'])
+
+                clear_saved_action_passwords(main_action)
+                for key in [ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
+                    arr = result.get(key, [])
+                    for x in arr:
+                        normalize_saved_action_results(x['action']['results'])
+                        clear_saved_action_passwords(x['action'])
+
+            task_metadata = result.get('metadata', {})
             trigger = task_metadata.get('trigger', {})
             trigger_view_name = ''
             trigger_view = trigger.get('view')
@@ -147,7 +154,7 @@ class Tasks:
                 'condition': task_metadata.get('triggered_reason', ''),
                 'started': task['started_at'],
                 'finished': task['finished_at'],
-                'result': task['result'],
+                'result': result,
                 'task_name': get_task_full_name(task.get('post_json', {}).get('report_name', ''),
                                                 task_metadata.get('pretty_id', ''))
             })
@@ -195,7 +202,7 @@ class Tasks:
                 'started_at': task.get('started_at', ''),
                 'finished_at': task.get('finished_at', '')
             })
-        except Exception as e:
+        except Exception:
             logger.exception(f'Invalid task {task.get("_id")}')
             return beautify_db_entry({
                 '_id': task.get('_id', 'Invalid ID'),

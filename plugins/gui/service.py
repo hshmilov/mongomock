@@ -74,7 +74,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id)
 from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
-                                              get_restricted_permissions, is_role_admin, is_axonius_role,
+                                              is_role_admin, is_axonius_role,
                                               PermissionCategory, PermissionAction, get_permissions_structure,
                                               serialize_db_permissions)
 from axonius.utils.proxy_utils import to_proxy_string
@@ -329,9 +329,7 @@ class GuiService(Triggerable,
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED}) is None:
             # Restricted role doesn't exists - let's create it. Everything restricted except the Dashboard.
-            self._roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True, 'permissions': get_restricted_permissions()
-            })
+            self._create_restricted_role()
         if self._roles_collection.find_one({'name': NO_ACCESS_ROLE}) is None:
             # No access role doesn't exists - let's create it. Everything restricted.
             self._roles_collection.insert_one({
