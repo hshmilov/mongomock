@@ -25,6 +25,7 @@ class AzureImage(SmartJsonClass):
     offer = Field(str, 'Image Offer')
     sku = Field(str, 'Image SKU')
     version = Field(str, 'Image Version')
+    exact_version = Field(str, 'Exact Version')
 
 
 class AzureNetworkSecurityGroupRule(SmartJsonClass):
@@ -291,8 +292,16 @@ class AzureAdapter(AdapterBase):
                         device.custom_image_name = image_id[image_id.find('/images/') + len('/images/'):].split('/')[0]
                     device.image = AzureImage(publisher=image.get('publisher'),
                                               offer=image.get('offer'),
-                                              sku=image.get('sku'), version=image.get('version'))
-                    os_info.extend([image.get('offer'), image.get('sku')])
+                                              sku=image.get('sku'),
+                                              version=image.get('version'),
+                                              exact_version=image.get('exact_version'))
+                    os_info.extend([image.get('offer'), image.get('sku'), image.get('exact_version')])
+                instance_view = device_raw.get('instance_view')
+                if instance_view and isinstance(instance_view, dict):
+                    if instance_view.get('os_name'):
+                        os_info.append(str(instance_view.get('os_name')))
+                    if instance_view.get('os_version'):
+                        os_info.append(str(instance_view.get('os_version')))
                 device.figure_os(' '.join([v for v in os_info if v is not None]))
                 for disk in device_raw.get('storage_profile', {}).get('data_disks', []):
                     # add also the attached HDs
