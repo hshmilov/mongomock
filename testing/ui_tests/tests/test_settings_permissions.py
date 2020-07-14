@@ -202,6 +202,7 @@ class TestSettingsPermissions(PermissionsTestBase):
         self.login()
 
     def test_settings_general_permissions(self):
+        self.base_page.run_discovery()
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
 
@@ -230,6 +231,8 @@ class TestSettingsPermissions(PermissionsTestBase):
         assert self.base_page.is_run_research_disabled()
         self.account_page.switch_to_page()
         assert self.account_page.is_reset_key_displayed()
+        with pytest.raises(NoSuchElementException):
+            self.dashboard_page.find_system_lifecycle_card()
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'settings',
                                                      'Run manual discovery cycle',
@@ -238,6 +241,7 @@ class TestSettingsPermissions(PermissionsTestBase):
                                                      ui_consts.NEW_PASSWORD)
 
         assert not self.base_page.is_run_research_disabled()
+        assert self.dashboard_page.find_system_lifecycle_card()
 
         self.settings_page.switch_to_page()
         self.settings_page.click_lifecycle_settings()
