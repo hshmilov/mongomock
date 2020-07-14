@@ -124,10 +124,13 @@ class DevicesPage(EntitiesPage):
         self.open_actions_menu()
         self.click_actions_enforce_button()
 
-    def enforce_action_on_query(self, query, action, filter_column_data: dict = None):
+    def enforce_action_on_query(self, query, action, filter_column_data: dict = None,
+                                add_col_names: list = None, remove_col_names: list = None):
         self.run_filter_query(query)
         if filter_column_data:
             self.filter_column(filter_column_data.get('col_name'), filter_column_data.get('filter_list'))
+        if add_col_names or remove_col_names:
+            self.edit_columns(add_col_names=add_col_names, remove_col_names=remove_col_names)
         self.toggle_select_all_rows_checkbox()
         selected_count = len(self.find_rows_with_data())
         self.open_enforce_dialog()

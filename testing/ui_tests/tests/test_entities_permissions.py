@@ -310,7 +310,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         if table_field:
             entities_page.click_general_tab()
             entities_page.click_tab(table_field)
-            entities_page.click_export_csv()
+            entities_page.click_export_csv(False)
 
     def _test_entities_with_edit_permission(self, entities_page):
         entities_page.switch_to_page()

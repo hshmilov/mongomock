@@ -1,12 +1,9 @@
-import pytest
-
 from ui_tests.tests.ui_test_base import TestBase
 from services.standalone_services.smtp_service import generate_random_valid_email
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
 
 ENFORCEMENT_NAME = 'lalala'
 ENFORCEMENT_ACTION_NAME = 'send email please'
-QUERY = 'Windows'
 
 
 class TestEmailEnforce(TestBase):
@@ -20,8 +17,7 @@ class TestEmailEnforce(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.assert_csv_match_ui_data_with_content(mail_content)
 
-    @pytest.mark.skip('AX-8323')
-    def test_email_enforce(self):
+    def _test_email_enforce(self, query_params):
         with MaildiranasaurusService().contextmanager(take_ownership=True, retry_if_fail=True) as smtp_service:
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
 
@@ -30,19 +26,35 @@ class TestEmailEnforce(TestBase):
             self.base_page.run_discovery()
 
             self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, trigger=False)
-            self.enforcements_page.add_main_action_send_email(ENFORCEMENT_ACTION_NAME, recipient=recipient,
+            self.enforcements_page.add_main_action_send_email(ENFORCEMENT_ACTION_NAME,
+                                                              recipient=recipient,
                                                               attach_csv=True)
 
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_be_responsive()
-            devices_count = self.devices_page.enforce_action_on_query(QUERY, ENFORCEMENT_NAME,
-                                                                      {
-                                                                          'col_name':
-                                                                              self.devices_page.FIELD_HOSTNAME_TITLE,
-                                                                          'filter_list': [{'term': 'win'}]
-                                                                      })
+            devices_count = self.devices_page.enforce_action_on_query(**query_params)
 
             smtp_service.verify_email_send(recipient)
             self._test_csv(recipient, smtp_service, devices_count)
-
         self.settings_page.remove_email_server()
+
+    def test_email_enforce_with_filtered_columns(self):
+        self._test_email_enforce(dict(
+            query=self.devices_page.VALUE_OS_WINDOWS,
+            action=ENFORCEMENT_NAME,
+            filter_column_data={
+                'col_name':
+                    self.devices_page.FIELD_HOSTNAME_TITLE,
+                'filter_list': [{'term': 'win'}]
+            }
+        ))
+
+    def test_email_enforce_with_changed_columns(self):
+        self._test_email_enforce(dict(
+            query=self.devices_page.VALUE_OS_WINDOWS,
+            action=ENFORCEMENT_NAME,
+            add_col_names=[
+                self.devices_page.FIELD_FETCH_TIME],
+            remove_col_names=[
+                self.devices_page.FIELD_OS_TYPE]
+        ))
