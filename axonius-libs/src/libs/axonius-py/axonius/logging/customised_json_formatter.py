@@ -105,6 +105,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                         extra['ui_user_source'] = source
                     elif request.headers.get(X_UI_USER_SOURCE):
                         extra['ui_user_source'] = request.headers.get(X_UI_USER_SOURCE)
+                    extra['ui_path'] = request.path
 
             except Exception:
                 pass
