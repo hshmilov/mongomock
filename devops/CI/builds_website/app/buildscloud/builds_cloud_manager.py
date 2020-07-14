@@ -69,9 +69,9 @@ class BuildsCloudManager:
 
     def get_instances(
             self,
-            cloud: str=None,
-            instance_id: str=None,
-            vm_type: str=None,
+            cloud: str = None,
+            instance_id: str = None,
+            vm_type: str = None,
     ):
         cloud_types = [cloud] if cloud else [ct.name.lower() for ct in BuildsComputeType]
         for cloud_type in cloud_types:
@@ -94,8 +94,11 @@ class BuildsCloudManager:
             code: str = None,
             network_security_options: str = None,
             tunnel: str = '',
+            base_instance: str = ''
     ):
         if cloud == 'aws':
+            if base_instance:
+                raise ValueError('Does not support base_instance in AWS')
             if not image:
                 image = AWS_UBUNTU_VANILLA_IMAGE_ID
                 hd_size = AWS_REGULAR_INSTANCE_DEFAULT_HD_SIZE
@@ -130,7 +133,10 @@ class BuildsCloudManager:
         elif cloud == 'gcp':
             assert network_security_options is None, \
                 'Currently Builds GCP module does not support network security options'
-            if not image:
+            if base_instance and image:
+                raise ValueError('Got both base_instance and image')
+
+            if not image and not base_instance:
                 image = GCP_UBUNTU_VANILLA_IMAGE_ID
                 hd_size = GCP_REGULAR_INSTANCE_DEFAULT_HD_SIZE
             else:
@@ -152,7 +158,8 @@ class BuildsCloudManager:
                 labels,
                 False,
                 code,
-                tunnel
+                tunnel,
+                base_instance
             )
         else:
             raise ValueError(f'Unsupported compute cloud type {cloud}')

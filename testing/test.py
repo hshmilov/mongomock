@@ -118,7 +118,7 @@ class InstanceManager:
 
     @staticmethod
     def __ssh_execute(instance, job_name, commands, timeout=MAX_SECONDS_FOR_ONE_JOB, append_ts=True, as_root=False,
-                      ignore_rc=False):
+                      ignore_rc=False, return_times=False):
         assert isinstance(commands, str), 'ssh execute command must be a shell command'
         assert '"' not in commands, 'Not supported'
         commands = f'/bin/bash -c "{commands}"'
@@ -141,7 +141,7 @@ class InstanceManager:
             raise ValueError(f'Error, instance {instance} with job {job_name} and '
                              f'commands {commands} returned rc {rc}: {output}')
 
-        return output
+        return output if not return_times else (end_time - start_time), output
 
     def __execute_ssh_on_all(self, job_name, command, max_parallel=None, **kwargs):
         """
@@ -160,6 +160,11 @@ class InstanceManager:
             ) for instance in self.__instances]
         yield from tp_execute(what_to_run, max_parallel or len(self.__instances))
 
+    @staticmethod
+    def __put_file_in_instance(instance: BuildsInstance, file_local_path, file_remote_path):
+        with open(file_local_path, 'rb') as f:
+            instance.put_file(f, file_remote_path)
+
     def __put_file_in_all_instances(self, local_path, remote_path):
         """
         Copies a local path to a remote destination on all instances
@@ -168,13 +173,9 @@ class InstanceManager:
         :return:
         """
 
-        def copy_and_open_tar(instance: BuildsInstance, file_local_path, file_remote_path):
-            with open(file_local_path, 'rb') as f:
-                instance.put_file(f, file_remote_path)
-
         what_to_run = [
             (
-                copy_and_open_tar,
+                self.__put_file_in_instance,
                 (instance, local_path, remote_path),
                 {},
                 instance
@@ -199,26 +200,31 @@ class InstanceManager:
         # ubuntu-base-tests-machine-patched-nexus-gcp-mirror
         # is just an image of bare ubuntu, used to control disk size and other future
         # possible optimizations.
-        self.__instances, group_name_from_builds = self.__builds.create_instances(
-            group_name,
+        instances_one, group_name_from_builds = self.__builds.create_instances(
+            group_name + '-base',
             self.instance_type,
-            self.number_of_instances,
+            1,
             instance_cloud=cloud,
             instance_image=self.base_image_name,
             force_password_change=True
         )
         TC.set_environment_variable(BUILDS_GROUP_NAME_ENV, group_name_from_builds)
 
-        for instance in self.__instances:
-            print(f'Waiting for instance {instance} to initialize...')
-            instance.wait_for_ssh()
+        assert len(instances_one) == 1
+        base_instance = instances_one[0]
 
-        for instance_name, ret, overall_time in \
-                self.__execute_ssh_on_all('Initialize the cortex environment',
-                                          'rm -rf /home/ubuntu/cortex; mkdir /home/ubuntu/cortex; ls -lah /home/ubuntu',
-                                          append_ts=False):
-            with TC.block(f'content of {instance_name}:/home/ubuntu'):
-                print(ret)
+        print(f'Waiting for instance {base_instance} to initialize...')
+        base_instance.wait_for_ssh()
+
+        ret = self.__ssh_execute(base_instance, 'Initialize the cortex environment',
+                                 'rm -rf /home/ubuntu/cortex; mkdir /home/ubuntu/cortex; ls -lah /home/ubuntu',
+                                 append_ts=False)
+        with TC.block(f'content of {base_instance.id}:/home/ubuntu'):
+            print(ret)
+
+        print('Making sure our git repository is self-contained')
+        execute('git repack -a -d', stream_output=True)
+        execute('rm .git/objects/info/alternates', stream_output=True)
 
         # Create a copy of the source code and copy it to there.
         print(f'Creating source code tar and copying it..')
@@ -227,45 +233,65 @@ class InstanceManager:
                 '--exclude .idea --exclude logs --exclude .cache *')
 
         print(f'Transfering cortex.tar to all instances..')
-        list(self.__put_file_in_all_instances(os.path.abspath('cortex.tar'), '/home/ubuntu/cortex/cortex.tar'))
+        self.__put_file_in_instance(base_instance, os.path.abspath('cortex.tar'), '/home/ubuntu/cortex/cortex.tar')
         print(f'Unpacking cortex.tar..')
-        list(
-            self.__execute_ssh_on_all(
-                'Untar tar file', 'cd /home/ubuntu/cortex; tar -xjf cortex.tar', append_ts=False)
-        )
+        self.__ssh_execute(base_instance,
+                           'Untar tar file', 'cd /home/ubuntu/cortex; tar -xjf cortex.tar', append_ts=False)
 
-        for instance_name, ret, overall_time in \
-                self.__execute_ssh_on_all('show files on axonius', 'whoami; ls -lah /home/ubuntu', append_ts=False):
-            with TC.block(f'content of {instance_name}:/home/ubuntu'):
-                print(ret)
+        self.__ssh_execute(base_instance, 'show files on axonius', 'whoami; ls -lah /home/ubuntu', append_ts=False)
+        with TC.block(f'content of {base_instance.id}:/home/ubuntu'):
+            print(ret)
 
         print(f'Source code copying complete, installing Axonius..')
         execute('rm cortex.tar')
 
         # init host.
-        for instance_name, ret, overall_time in self.__execute_ssh_on_all(
-                'Init host',
-                'cd /home/ubuntu/cortex/; sudo ./devops/scripts/host_installation/init_host.sh',
-                append_ts=False
-        ):
-            with TC.block(f'Finished init_host on {instance_name}, took {overall_time} seconds'):
-                print(ret)
+        init_host_cmd = 'cd /home/ubuntu/cortex/; sudo ./devops/scripts/host_installation/init_host.sh'
+        overall_time, ret = self.__ssh_execute(base_instance,
+                                               'Init host',
+                                               init_host_cmd,
+                                               append_ts=False,
+                                               return_times=True)
+        with TC.block(f'Finished init_host on {base_instance.id}, took {overall_time} seconds'):
+            print(ret)
+
+        self.__ssh_execute(base_instance, 'Remove Cloud-Init',
+                           'sudo apt-get remove cloud-init -y')
 
         # Since we just installed docker, re-connect.
-        for instance in self.__instances:
-            instance.wait_for_ssh()
+        base_instance.wait_for_ssh()
 
         prepare_ci_cmd = 'cd /home/ubuntu/cortex/; ./prepare_ci_env.sh --cache-images'
         if self.__build_tag:
             prepare_ci_cmd = f'{prepare_ci_cmd} --build-tag {self.__build_tag}'
 
         # Build everything.
-        for instance_name, ret, overall_time in self.__execute_ssh_on_all(
-                'Prepare ci env with caching of images',
-                prepare_ci_cmd
-        ):
-            with TC.block(f'Finished building axonius on {instance_name}, took {overall_time} seconds'):
-                print(ret)
+        ret, overall_time = self.__ssh_execute(base_instance,
+                                               'Prepare ci env with caching of images',
+                                               prepare_ci_cmd,
+                                               return_times=True)
+        with TC.block(f'Finished building axonius on {ret}, took {overall_time} seconds'):
+            print(ret)
+
+        if self.number_of_instances > 1:
+
+            self.__instances, group_name_from_builds = self.__builds.create_instances(
+                group_name,
+                self.instance_type,
+                self.number_of_instances - 1,
+                instance_cloud=cloud,
+                instance_image='',
+                base_instance=base_instance.id,
+                predefined_ssh_username=base_instance.ssh_user,
+                predefined_ssh_password=base_instance.ssh_pass
+            )
+
+            self.__instances.append(base_instance)
+
+            for instance in self.__instances:
+                instance.wait_for_ssh()
+        else:
+            self.__instances = [base_instance]
 
     def terminate_all(self):
         print(f'Terminating all instances..')

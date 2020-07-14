@@ -102,7 +102,7 @@ class BuildsManager(object):
 
     def add_instances(
             self, cloud, vm_type, name, instance_type, num, image, key_name, public, code, network_security_options,
-            owner, fork, branch, tunnel
+            owner, fork, branch, tunnel, base_instance
     ) -> (List[str], str):
         if public is True:
             generic, _ = self.bcm.create_public_instances(
@@ -110,7 +110,8 @@ class BuildsManager(object):
             )
         else:
             generic, _ = self.bcm.create_regular_instances(
-                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options, tunnel
+                cloud, vm_type, name, instance_type, num, key_name, image, code, network_security_options, tunnel,
+                base_instance
             )
 
         owner_full_name, owner_slack_id = owner
@@ -135,7 +136,7 @@ class BuildsManager(object):
             )
             self.update_last_user_interaction_time(cloud, instance_id)
 
-        if image is not None:
+        if image is not None and owner_full_name != 'Auto-Tests':
             # We must let the realtime monitor update itself.
             time.sleep(10)
             for instance_generic in generic:

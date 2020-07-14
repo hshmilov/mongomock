@@ -231,7 +231,8 @@ class Builds(BuildsAPI):
             predefined_ssh_username: str = None,
             predefined_ssh_password: str = None,
             network_security_options: NetworkSecurityOptions = NetworkSecurityOptions.Regular,
-            force_password_change: bool = False
+            force_password_change: bool = False,
+            base_instance: str = ''
 
     ) -> (List[BuildsInstance], str):
         request_obj = {
@@ -240,7 +241,8 @@ class Builds(BuildsAPI):
             'cloud': instance_cloud.value,
             'vm_type': vm_type.value,
             'num': num,
-            'force_custom_code_to_run': force_password_change
+            'force_custom_code_to_run': force_password_change,
+            'base_instance': base_instance
         }
 
         if key_name:

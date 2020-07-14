@@ -275,6 +275,7 @@ def instances():
         key_name = data.get('key_name')
         instance_cloud = data.get('cloud') or DEFAULT_CLOUD
         instance_image = data.get('image')
+        base_instance = data.get('base_instance')
         is_public = data.get('public') is True
         num = int(data.get('num')) if data.get('num') else 1
         config = data.get('config') or {}
@@ -282,7 +283,7 @@ def instances():
         force_custom_code_to_run = data.get('force_custom_code_to_run') or False
         config_code = None
         post_script = config.get('post_script') or ''
-        if instance_image is None or force_custom_code_to_run:
+        if instance_image is None and not base_instance or force_custom_code_to_run:
             if config.get('empty') is True:
                 config_code = STARTUP_SCRIPT_TEMPLATE.format(install_system_line='', post_script=post_script)
 
@@ -327,7 +328,8 @@ def instances():
             user_auth,
             config.get('fork'),
             config.get('branch'),
-            argo_token
+            argo_token,
+            base_instance
         )
         result = dict()
         is_async = request.args.get('async') and request.args.get('async').lower() == 'true'

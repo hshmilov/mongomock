@@ -1,4 +1,5 @@
 import ipaddress
+import contextlib
 import traceback
 import string
 import time
@@ -79,9 +80,12 @@ class GCPComputeManager:
             labels: Dict[str, str],
             is_public: bool,
             code: str,
-            tunnel: str='',
+            tunnel: str = '',
+            base_instance: str = ''
     ):
+        assert not (base_instance and image), 'One should choose from base_instance and image'
         assert not (is_public and num != 1), 'Does not support multiple public instances'
+
         name = ''.join(c if c in APPROVED_NODE_CHARACTERS else '-' for c in name.lower()) + \
                '-' + str(round(time.time()))
         name = name[:55]
@@ -96,9 +100,6 @@ class GCPComputeManager:
         }
         final_labels.update(labels)
 
-        image_full_url = self.client.ex_get_image(image).extra['selfLink']
-        image_full_url = image_full_url[len('https://www.googleapis.com/compute/v1/'):]
-
         ex_metadata = {'items': []}
         if key:
             ex_metadata['items'].append({'value': f'ubuntu:{CLOUD_KEYS[key]}', 'key': 'sshKeys'})
@@ -108,65 +109,80 @@ class GCPComputeManager:
         if not ex_metadata['items']:
             ex_metadata = None
 
-        ex_disks_gce_struct = [
-            {
-                'boot': True,
-                'autoDelete': True,
-                'initializeParams': {
-                    'sourceImage': image_full_url,
-                    'diskType': f'/zones/{GCP_DFEAULT_ZONE}/diskTypes/pd-ssd',
+        with contextlib.ExitStack() as stack:
+            if base_instance:
+                node = self.client.ex_get_node(base_instance)
+                self.client.ex_stop_node(node)
+                storage_volume = self.client.ex_get_volume(base_instance)
+                image_gce_object = self.client.ex_create_image(base_instance + 'ts', storage_volume)
+                self.client.ex_start_node(node)
+                stack.push(lambda *_: self.client.ex_delete_image(image_gce_object))
+
+            else:
+                image_gce_object = self.client.ex_get_image(image)
+
+            image_full_url = image_gce_object.extra['selfLink']
+            image_full_url = image_full_url[len('https://www.googleapis.com/compute/v1/'):]
+
+            ex_disks_gce_struct = [
+                {
+                    'boot': True,
+                    'autoDelete': True,
+                    'initializeParams': {
+                        'sourceImage': image_full_url,
+                        'diskType': f'/zones/{GCP_DFEAULT_ZONE}/diskTypes/pd-ssd',
+                    }
                 }
-            }
-        ]
+            ]
 
-        if hard_disk_size_in_gb:
-            ex_disks_gce_struct[0]['initializeParams']['diskSizeGb'] = hard_disk_size_in_gb
+            if hard_disk_size_in_gb:
+                ex_disks_gce_struct[0]['initializeParams']['diskSizeGb'] = hard_disk_size_in_gb
 
-        raw = self.client.ex_create_multiple_nodes(
-            name,
-            instance_type,
-            '',
-            num,
-            location=GCP_DFEAULT_ZONE,
-            ex_tags=tags,
-            ex_network=network_id,
-            ex_subnetwork=subnetwork_id,
-            external_ip=external_ip,
-            ex_metadata=ex_metadata,
-            ex_service_accounts=[{'email': 'default', 'scopes': []}],
-            description=f'Created by builds.in.axonius.com',
-            ex_on_host_maintenance='MIGRATE',
-            ex_automatic_restart=True,
-            ex_labels=final_labels,
-            ex_disks_gce_struct=ex_disks_gce_struct
-        )
+            raw = self.client.ex_create_multiple_nodes(
+                name,
+                instance_type,
+                '',
+                num,
+                location=GCP_DFEAULT_ZONE,
+                ex_tags=tags,
+                ex_network=network_id,
+                ex_subnetwork=subnetwork_id,
+                external_ip=external_ip,
+                ex_metadata=ex_metadata,
+                ex_service_accounts=[{'email': 'default', 'scopes': []}],
+                description=f'Created by builds.in.axonius.com',
+                ex_on_host_maintenance='MIGRATE',
+                ex_automatic_restart=True,
+                ex_labels=final_labels,
+                ex_disks_gce_struct=ex_disks_gce_struct
+            )
 
-        try:
-            if tunnel:
-                instance_id = raw[0].name
-                private_ip = raw[0].private_ips[0]
-                ENDPOINT = "http://argo.axonius.lan/api"
-                argo_tunnel = 'https://' + tunnel + '.builds.in.axonius.com'
-                data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
-                try:
-                    requests.post(url=ENDPOINT, data=data)
-                except Exception:
-                    traceback.print_exc()
-                    print(f"Failed sending {data} to {ENDPOINT}")
+            try:
+                if tunnel:
+                    instance_id = raw[0].name
+                    private_ip = raw[0].private_ips[0]
+                    ENDPOINT = "http://argo.axonius.lan/api"
+                    argo_tunnel = 'https://' + tunnel + '.builds.in.axonius.com'
+                    data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
+                    try:
+                        requests.post(url=ENDPOINT, data=data)
+                    except Exception:
+                        traceback.print_exc()
+                        print(f"Failed sending {data} to {ENDPOINT}")
 
-        except Exception as e:
-            print(raw, e)
+            except Exception as e:
+                print(raw, e)
 
-        for instance in raw:
-            if not isinstance(instance, Node):
-                raise ValueError(f'Failed creating: {str(instance)}')
+            for instance in raw:
+                if not isinstance(instance, Node):
+                    raise ValueError(f'Failed creating: {str(instance)}')
 
-        generic = [{
-            'id': raw_item.name,
-            'name': raw_item.name,
-            'private_ip': raw_item.private_ips[0]
-        } for raw_item in raw]
-        return generic, raw
+            generic = [{
+                'id': raw_item.name,
+                'name': raw_item.name,
+                'private_ip': raw_item.private_ips[0]
+            } for raw_item in raw]
+            return generic, raw
 
     def get_nodes(self, node_id: str, vm_type: str):
         if node_id:
