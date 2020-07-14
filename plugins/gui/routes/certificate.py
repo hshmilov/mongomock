@@ -208,7 +208,7 @@ class Certificate:
         return True
 
     @gui_route_logged_in('certificate_settings', methods=['GET', 'POST'], enforce_trial=True)
-    # pylint: disable=too-many-return-statements
+    # pylint: disable=too-many-return-statements,too-many-branches
     def check_settings(self):
         if request.method == 'GET':
             return jsonify({
@@ -219,6 +219,20 @@ class Certificate:
             post_data = request.get_json()
             ssl_trust_settings = post_data.get('ssl_trust', None)
             if ssl_trust_settings:
+                for ca_file in ssl_trust_settings['ca_files']:
+                    try:
+                        OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+                                                        self._grab_file_contents(ca_file, stored_locally=False))
+                    except OpenSSL.crypto.Error:
+                        try:
+                            OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1,
+                                                            self._grab_file_contents(ca_file, stored_locally=False))
+                        except Exception:
+                            logger.error(f'Can not load ca certificate', exc_info=True)
+                            return return_error(f'The uploaded file is not a pem or asn1 format certificate', 400)
+                    except Exception:
+                        logger.error(f'Can not load ca certificate', exc_info=True)
+                        return return_error(f'The uploaded file is not a pem-format certificate', 400)
                 self.plugins.core.configurable_configs.update_config(
                     CORE_CONFIG_NAME,
                     {
