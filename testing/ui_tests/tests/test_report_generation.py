@@ -23,8 +23,8 @@ class TestReportGeneration(TestReportGenerationBase):
             downloaded_doc = self._download_report_pdf_doc(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
-            downloaded_texts = [page.extractText() for page in doc.pages]
-            downloaded_text = ' '.join(texts)
+            downloaded_texts = [page.extractText() for page in downloaded_doc.pages]
+            downloaded_text = ' '.join(downloaded_texts)
             assert text == downloaded_text
             assert 'Device Discovery' in text
             assert 'User Discovery' in text
@@ -47,6 +47,12 @@ class TestReportGeneration(TestReportGenerationBase):
             self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
             doc = self._extract_report_pdf_doc(report_name)
+            texts = [page.extractText() for page in doc.pages]
+            text = ' '.join(texts)
+            downloaded_doc = self._download_report_pdf_doc(report_name)
+            downloaded_texts = [page.extractText() for page in downloaded_doc.pages]
+            downloaded_text = ' '.join(downloaded_texts)
+            assert text == downloaded_text
 
             assert doc.pages[0].extractText().count(report_name) == 1
             assert doc.pages[0].extractText().count('Generated on') == 1

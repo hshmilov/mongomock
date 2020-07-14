@@ -17,7 +17,7 @@ class TestReportGenerationBase(TestBase):
 
     def _extract_report_pdf_doc(self, report_name):
         self.reports_page.switch_to_page()
-        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_table_to_be_responsive()
         report_id = self.reports_page.get_report_id(report_name)
         self.reports_page.wait_for_report_generation(report_name)
         self.reports_page.click_report(report_name)
@@ -27,15 +27,14 @@ class TestReportGenerationBase(TestBase):
         pdf_file = io.BytesIO(report_pdf.content)
         return PdfFileReader(pdf_file)
 
-    def _download_report_pdf_doc(self, report_name, go_to_report=True):
-        if go_to_report:
-            self.reports_page.switch_to_page()
-            self.reports_page.wait_for_table_to_load()
-            self.reports_page.wait_for_report_generation(report_name)
-            self.reports_page.click_report(report_name)
-            self.reports_page.wait_for_spinner_to_end()
+    def _download_report_pdf_doc(self, report_name):
+        self.reports_page.switch_to_page()
+        self.reports_page.wait_for_table_to_be_responsive()
+        self.reports_page.wait_for_report_generation(report_name)
+        self.reports_page.click_report(report_name)
+        self.reports_page.wait_for_spinner_to_end()
         self.reports_page.click_report_download()
 
-        report = self.get_downloaded_file_content(report_name, 'pdf')
+        report = self.get_downloaded_file_content(report_name.replace(' ', '_'), 'pdf')
         pdf_file = io.BytesIO(report)
         return PdfFileReader(pdf_file)
