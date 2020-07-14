@@ -6,6 +6,7 @@
     "git_hash_file": "axonius_{{user `build_name`}}_git_hash.txt",
     "password": "bringorder",
     "branch": "develop",
+    "github_readonly_token": "{{env `AXONIUS_GITHUB_READONLY_TOKEN`}}",
     "fork": "axonius",
     "build_mode": "",
     "zip_installer_path": "axonius_{{user `build_name`}}_installer.zip"
@@ -63,7 +64,7 @@
     {
       "type": "shell",
       "script": "./axonius_deploy.sh",
-      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}} {{user `build_mode`}}"
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `github_readonly_token`}} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}} {{user `build_mode`}}"
     },
     {
       "type": "shell",

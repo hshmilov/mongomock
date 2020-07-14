@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -e
-branch=$1
-fork=$2
-sudo_pass=$3
-build_name=$4
-build_mode=$5
+github_token=$1
+branch=$2
+fork=$3
+sudo_pass=$4
+build_name=$5
+build_mode=$6
 rm -rf cortex
-git clone https://b1654a5e47ffc47b5e945f0c3d34bdced6ec2ab6@github.com/$fork/cortex
+git clone https://$github_token@github.com/$fork/cortex
 cd cortex
 git checkout $branch
 # add go packages

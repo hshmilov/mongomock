@@ -1,8 +1,10 @@
 """A minimal http server for CI purpouses; Allows you to view and control your current machines and docker images."""
 import datetime
 import time
+import boto3
 import traceback
 import os
+import base64
 import json
 
 from functools import wraps
@@ -29,6 +31,29 @@ DEFAULT_CLOUD = 'gcp'
 SESSION_SECRET_KEY_PATH = os.path.join('..', 'secret.txt')
 TIME_TO_SLEEP_BEFORE_ASYNC_RESPONSE = 0    # we wait for async response that require real-time data
 
+# Use this code snippet in your app.
+# If you need more information about configurations or implementing the sample code, visit the AWS docs:
+# https://aws.amazon.com/developers/getting-started/python/
+
+
+def get_axonius_github_readonly_secret():
+    secret_name = "axonius-github-readonly-token"
+    region_name = "us-east-2"
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+    get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+    # Decrypts secret using the associated KMS CMK.
+    # Depending on whether the secret is a string or binary, one of these fields will be populated.
+    if 'SecretString' in get_secret_value_response:
+        return get_secret_value_response['SecretString']
+    else:
+        return base64.b64decode(get_secret_value_response['SecretBinary'])
+
 
 class BuildsSettings:
     def __init__(self):
@@ -49,12 +74,24 @@ class BuildsSettings:
                 self.bypass_token = token
                 break
 
+    @property
+    def github_token(self):
+        try:
+            return get_axonius_github_readonly_secret()
+        except Exception:
+            print('Failed getting from AWS Secrets Manager, fallbacks to using secrets file.')
+            traceback.print_exc()
+        return settings.credentials['github']['data']['token']
+
 
 class BuildsContext:
     def __init__(self):
         self.bm = BuildsManager()
         self.st = SlackNotifier()
-        self.github = Github(login_or_token=settings.credentials['github']['data']['token'])
+
+    @property
+    def github(self):
+        return Github(login_or_token=settings.github_token)
 
 
 def prepare_flask():
@@ -91,7 +128,7 @@ mkdir /home/ubuntu/cortex
 cd /home/ubuntu/cortex
 git init
 # Beware! do not save this token.
-git pull https://b1654a5e47ffc47b5e945f0c3d34bdced6ec2ab6@github.com/{fork}/cortex {branch}
+git pull https://{github_token}@github.com/{fork}/cortex {branch}
 ./devops/scripts/host_installation/init_host.sh
 cd /home/ubuntu/cortex/bandicoot
 sudo go mod vendor
@@ -478,7 +515,8 @@ def get_install_demo_script():
         branch = 'develop'
 
     return INSTALL_DEMO_SCRIPT.format(fork=fork, branch=branch, set_credentials=set_credentials,
-                                      install_params=opt_params, run_cycle=str(run_cycle))
+                                      install_params=opt_params, run_cycle=str(run_cycle),
+                                      github_token=settings.github_token)
 
 
 @app.route('/api/github')
