@@ -181,6 +181,7 @@ class Users:
                 'api_secret': secrets.token_urlsafe(),
                 'email': email,
                 'last_updated': datetime.now(),
+                'password_last_updated': datetime.utcnow(),
                 IGNORE_ROLE_ASSIGNMENT_RULES: False,
             }
             if role_id:
@@ -297,6 +298,7 @@ class Users:
             password = post_data.get('password')
             if password != UNCHANGED_MAGIC_FOR_GUI and self._check_password_validity(password):
                 new_user_info['password'] = bcrypt.hash(password)
+                new_user_info['password_last_updated'] = datetime.utcnow()
             elif password != UNCHANGED_MAGIC_FOR_GUI:
                 return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
         else:

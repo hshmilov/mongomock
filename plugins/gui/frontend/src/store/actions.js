@@ -59,8 +59,10 @@ export const requestApi = ({ commit }, payload) => {
       if (error && error.response) {
         errorMessage = error.response.data.message;
         if (error.response.status === 401) {
-          commit(INIT_USER, { fetching: false, error: errorMessage });
-          return;
+          if (errorMessage !== 'password expired') {
+            commit(INIT_USER, { fetching: false, error: errorMessage });
+            return;
+          }
         }
         if (error.response.status >= 500) {
           errorMessage = 'An error occurred. Please contact the Axonius support team.';

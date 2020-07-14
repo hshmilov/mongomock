@@ -1,6 +1,8 @@
 # pylint: disable=no-member
 
 import logging
+from datetime import datetime
+
 from passlib.hash import bcrypt
 from flask import jsonify
 
@@ -36,8 +38,14 @@ class Account:
         if not self._check_password_validity(post_data['new']):
             return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
 
-        self._users_collection.update_one({'_id': user['_id']},
-                                          {'$set': {'password': bcrypt.hash(post_data['new'])}})
+        self._users_collection.update_one(
+            {'_id': user['_id']},
+            {
+                '$set': {
+                    'password': bcrypt.hash(post_data['new']),
+                    'password_last_updated': datetime.utcnow()
+                }
+            })
         self._invalidate_sessions([str(user['_id'])])
         return '', 200
 

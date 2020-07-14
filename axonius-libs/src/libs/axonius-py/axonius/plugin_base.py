@@ -102,7 +102,7 @@ from axonius.consts.plugin_consts import (
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
-    NOTES_DATA_TAG)
+    NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS, PASSWORD_EXPIRATION_DAYS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
 from axonius.db.db_client import get_db_client
@@ -3639,6 +3639,26 @@ class PluginBase(Configurable, Feature, ABC):
                     ]
                 },
                 {
+                    'name': PASSWORD_EXPIRATION_SETTINGS,
+                    'title': 'Password Expiration Settings',
+                    'type': 'array',
+                    'required': ['enabled', PASSWORD_EXPIRATION_DAYS],
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable password expiration',
+                            'type': 'bool',
+                            'required': True
+                        },
+                        {
+                            'name': PASSWORD_EXPIRATION_DAYS,
+                            'title': 'Password expiration (days)',
+                            'type': 'integer',
+                            'min': 1
+                        }
+                    ]
+                },
+                {
                     'items': [
                         {
                             'name': 'enabled',
@@ -4307,6 +4327,10 @@ class PluginBase(Configurable, Feature, ABC):
                 PASSWORD_PROTECTION_ALLOWED_RETRIES: 20,
                 PASSWORD_PROTECTION_LOCKOUT_MIN: 5,
                 'conditional': PASSWORD_PROTECTION_BY_IP
+            },
+            PASSWORD_EXPIRATION_SETTINGS: {
+                'enabled': False,
+                PASSWORD_EXPIRATION_DAYS: 90
             },
             VAULT_SETTINGS: {
                 PASSWORD_MANGER_ENABLED: False,

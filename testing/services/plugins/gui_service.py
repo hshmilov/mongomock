@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 from collections import defaultdict
+from datetime import datetime
 from typing import List
 from funcy import chunks
 from bson import ObjectId
@@ -70,7 +71,9 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_under_30()
         if self.db_schema_version < 40:
             self._update_under_40()
-        if self.db_schema_version != 40:
+        if self.db_schema_version < 50:
+            self._update_under_50()
+        if self.db_schema_version != 41:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _update_under_10(self):
@@ -158,6 +161,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_39()
         if self.db_schema_version < 40:
             self._update_schema_version_40()
+
+    def _update_under_50(self):
+        if self.db_schema_version < 41:
+            self._update_schema_version_41()
 
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
@@ -1488,6 +1495,21 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading gui db to version 40. Details: {e}')
             raise
+
+    def _update_schema_version_41(self):
+        """
+        add last password change field to all users, for password expiration
+        :return:
+        """
+        print('Upgrade to schema 41')
+        try:
+            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
+                {},  # all users
+                {'$set': {'password_last_updated': datetime.utcnow()}}
+            )
+            self.db_schema_version = 41
+        except Exception as e:
+            print(f'Exception while upgrading gui db to version 41. Details: {e}')
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """

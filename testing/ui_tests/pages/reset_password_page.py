@@ -5,7 +5,8 @@ class ResetPasswordPage(Page):
     NEW_PASSWORD_ID = 'newPassword'
     CONFIRM_NEW_PASSWORD_ID = 'confirmNewPassword'
     SET_PASSWORD_BUTTON = 'Set Password'
-    RESET_PASSWORD_TOASTER_TEXT = 'Password reset successfully'
+    RESET_PASSWORD_TOASTER_TEXT = 'Password changed successfully'
+    DIFFERENT_PASSWORDS_WARNING_TEXT = 'Your new password must be different from your previous password.'
 
     @property
     def root_page_css(self):
@@ -40,3 +41,6 @@ class ResetPasswordPage(Page):
         self.wait_for_reset_password_page_to_load()
         self.set_new_password(password)
         self.wait_for_toaster(self.RESET_PASSWORD_TOASTER_TEXT)
+
+    def wait_for_password_differ_message(self):
+        return self.wait_for_element_present_by_text(self.DIFFERENT_PASSWORDS_WARNING_TEXT)

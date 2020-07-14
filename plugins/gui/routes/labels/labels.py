@@ -87,9 +87,11 @@ class Labels:
             'audit.session.logout.template': 'Logged out',
             'audit.session.failure': 'Login Failed',
             'audit.session.failure.template': 'Login failure attempt by {user_name}',
+            'audit.session.password_expiration': 'Password Expired',
+            'audit.session.password_expiration.template': 'Password expired for user \'{user_name}\'',
 
             'audit.session.changed_password': 'Set Password',
-            'audit.session.changed_password.template': 'Password set for user {user_name}',
+            'audit.session.changed_password.template': 'Password set for user \'{user_name}\'',
 
             'audit.settings.users': 'User Management',
             'audit.settings.users.put': 'Add User',

@@ -122,7 +122,8 @@ class GuiService(Triggerable,
                     'pic_name': DEFAULT_AVATAR_PIC,
                     'source': 'internal',
                     'api_key': secrets.token_urlsafe(),
-                    'api_secret': secrets.token_urlsafe()
+                    'api_secret': secrets.token_urlsafe(),
+                    'password_last_updated': datetime.utcnow()
                     }
 
     ALTERNATIVE_USER = {'user_name': AXONIUS_USER_NAME,

@@ -114,13 +114,21 @@ class UserToken:
 
         user_id = user_token.get('user_id')
 
+        user = self._users_collection.find_one({
+            '_id': ObjectId(user_id)
+        }, projection={'password': 1})
+
+        if bcrypt.verify(post_data['password'], user['password']):
+            return return_error('Your new password must be different from your previous password.', 400)
+
         user = self._users_collection.find_one_and_update({
             '_id': ObjectId(user_id)
         }, {
             '$set': {
-                'password': bcrypt.hash(post_data['password'])
+                'password': bcrypt.hash(post_data['password']),
+                'password_last_updated': datetime.utcnow()
             }
-        }, {USER_NAME: 1})
+        }, {USER_NAME: 1, 'password': 1})
 
         if not user:
             return return_error(f'error updating password for user id {user_id}', 400)

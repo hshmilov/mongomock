@@ -133,7 +133,8 @@ PASSWORD_PROTECTION_BY_IP = 'password_protection_by_ip'
 PASSWORD_PROTECTION_BY_USERNAME = 'password_protection_by_username'
 RESET_PASSWORD_SETTINGS = 'password_reset_password'
 RESET_PASSWORD_LINK_EXPIRATION = 'reset_password_link_expiration'
-
+PASSWORD_EXPIRATION_SETTINGS = 'password_expiration_settings'
+PASSWORD_EXPIRATION_DAYS = 'password_expiration_days'
 # TUNNEL #
 TUNNEL_SETTINGS = 'tunnel_settings'
 TUNNEL_EMAILS_RECIPIENTS = 'tunnel_email_recipients'

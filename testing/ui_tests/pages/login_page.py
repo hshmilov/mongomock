@@ -91,6 +91,9 @@ class LoginPage(Page):
     def wait_for_login_page_to_load(self):
         self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.LOGIN_BUTTON))
 
+    def wait_for_password_expired_warning(self):
+        self.wait_for_element_present_by_css(self.ANT_CONFIRM_MODAL_TITLE_CSS)
+
     def find_disabled_login_button(self):
         return self.driver.find_element_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.LOGIN_BUTTON))
 

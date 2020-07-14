@@ -31,6 +31,7 @@ class AuditAction(Enum):
     Trigger = 'trigger'
     Download = 'download'
     ChangedPassword = 'changed_password'
+    PasswordExpired = 'password_expiration'
     Connected = 'connected'
     Disconnected = 'disconnected'
     Skip = 'skip'

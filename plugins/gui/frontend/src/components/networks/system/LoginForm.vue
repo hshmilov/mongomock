@@ -26,6 +26,7 @@ import userErrorMixin from '../../../mixins/user_error';
 import { GettingStartedPubSub } from '../../App.vue';
 
 import { LOGIN } from '../../../store/modules/auth';
+import { Modal } from 'ant-design-vue'
 
 export default {
   name: 'XLoginForm',
@@ -78,6 +79,19 @@ export default {
         if (res.status === 200) {
           // Set getting started panel state to open=true
           GettingStartedPubSub.$emit('getting-started-login');
+        }
+      }).catch((error) => {
+        const errorMessage = error.response.data.message;
+        if (errorMessage && errorMessage === 'password expired') {
+          const token = error.response.data.additional_data.split('token=')[1];
+          Modal.confirm({
+            title: 'Password Expired',
+            content: 'Your password has expired and must be changed',
+            cancelButtonProps: { style: { display: 'none' } },
+            icon: 'exclamation-circle',
+            centered: true,
+            onOk: () => this.$router.push({ path: '/', query: { token } }),
+          });
         }
       });
     },

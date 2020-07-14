@@ -8,7 +8,7 @@
     />
     <div v-else-if="tokenStatus.valid">
       <h3 class="login-title">
-        Reset Password
+        Change Password
       </h3>
       <XForm
         v-model="credentials"
@@ -107,7 +107,7 @@ export default {
       if (!this.invalidForm) {
         try {
           await resetUserPasswordByToken(this.token, confirmPasswordValue);
-          this.showToastMessage({ message: 'Password reset successfully' });
+          this.showToastMessage({ message: 'Password changed successfully' });
           this.setUserError({ error: NOT_LOGGED_IN });
           this.$router.push('/');
         } catch (e) {

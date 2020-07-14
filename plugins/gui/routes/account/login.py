@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 import ldap3
 from flask import (jsonify,
@@ -18,6 +18,7 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED, IDENTITY_PROVIDERS_CONFIG, EMAIL_ADDRESS,
                                        EMAIL_DOMAIN, LDAP_GROUP, ASSIGNMENT_RULE_TYPE, ASSIGNMENT_RULE_VALUE,
@@ -26,10 +27,12 @@ from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH,
                                        DEFAULT_ROLE_ID, NEW_AND_EXISTING_USERS)
 from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
+from axonius.consts.plugin_consts import PASSWORD_EXPIRATION_DAYS, PASSWORD_EXPIRATION_SETTINGS
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
+from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.permissions_helper import deserialize_db_permissions, is_axonius_role
 from gui.logic.filter_utils import filter_archived
@@ -117,7 +120,15 @@ class Login:
             logger.info(f'User {user_name} tried logging in with wrong password')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
+
         role = self._roles_collection.find_one({'_id': user_from_db.get('role_id')})
+        if not is_axonius_role(role):
+            password_last_updated = user_from_db.get('password_last_updated')
+            if password_last_updated and self._password_expired(password_last_updated):
+                reset_link = self.generate_user_reset_password_link(manual_user_id=str(user_from_db['_id']))
+                self._log_activity_login_password_expiration(user_name)
+                return return_error('password expired', 401, reset_link)
+
         if request and request.referrer and 'localhost' not in request.referrer \
                 and '127.0.0.1' not in request.referrer \
                 and 'diag-l.axonius.com' not in request.referrer \
@@ -132,6 +143,15 @@ class Login:
         self._add_expiration_timeout_cookie(response)
         return response
 
+    def _password_expired(self, password_last_updated):
+        config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME]
+        password_expiration_settings = config.get(PASSWORD_EXPIRATION_SETTINGS, {})
+        if password_expiration_settings.get('enabled'):
+            password_expiration_days = password_expiration_settings.get(PASSWORD_EXPIRATION_DAYS)
+            expiration_day = parse_date(password_last_updated) + timedelta(days=password_expiration_days)
+            return expiration_day.date() <= datetime.utcnow().date()
+        return False
+
     def _log_activity_login_failure(self, user_name):
         if request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
                                              or 'diag-l.axonius.com' in request.referrer
@@ -145,6 +165,11 @@ class Login:
     def _log_activity_login(self):
         self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {
             'status': 'successful'
+        })
+
+    def _log_activity_login_password_expiration(self, user_name):
+        self.log_activity(AuditCategory.UserSession, AuditAction.PasswordExpired, {
+            'user_name': user_name
         })
 
     def _update_user_last_login(self, user):

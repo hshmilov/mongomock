@@ -50,6 +50,8 @@ class SettingsPage(Page):
     PROVISION_LABEL = 'Remote Support'
     USE_SYSLOG_LABEL = 'Use Syslog'
     ENFORCE_PASSWORD_POLICY = 'Enforce password complexity'
+    PASSWORD_EXPIRATION_LABEL = 'Enable password expiration'
+    PASSWORD_EXPIRATION_FIELD_ID = 'password_expiration_days'
     LDAP_LOGINS_LABEL = 'Allow LDAP logins'
     OKTA_LOGINS_LABEL = 'Allow Okta logins'
     EXACT_SEARCH_LABEL = 'Use exact match for assets search'
@@ -435,6 +437,13 @@ class SettingsPage(Page):
     def get_user_dialog_error(self):
         return self.driver.find_element_by_css_selector(self.ERROR_TEXT_CSS).text
 
+    def add_user(self, username, password, first_name=None, last_name=None, role_name=None,
+                 wait_for_toaster=True, generate_password=False):
+        self.switch_to_page()
+        self.click_manage_users_settings()
+        self.wait_for_table_to_be_responsive()
+        self.create_new_user(username, password, first_name, last_name, role_name, wait_for_toaster, generate_password)
+
     def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
                         wait_for_toaster=True, generate_password=False):
         self.wait_for_table_to_load()
@@ -806,12 +815,18 @@ class SettingsPage(Page):
     def find_password_policy_toggle(self):
         return self.find_checkbox_by_label(self.ENFORCE_PASSWORD_POLICY)
 
+    def find_password_expiration_toggle(self):
+        return self.find_checkbox_by_label(self.PASSWORD_EXPIRATION_LABEL)
+
     def fill_password_policy(self, password_length, min_lowercase, min_uppercase, min_numbers, min_special_chars):
         self.fill_text_field_by_element_id(self.MIN_PASSWORD_LENGTH_ID, password_length)
         self.fill_text_field_by_element_id(self.MIN_LOWERCASE_CHARS_ID, min_lowercase)
         self.fill_text_field_by_element_id(self.MIN_UPPERCASE_CHARS_ID, min_uppercase)
         self.fill_text_field_by_element_id(self.MIN_NUMBERS_CHARS_ID, min_numbers)
         self.fill_text_field_by_element_id(self.MIN_SPECIAL_CHARS_ID, min_special_chars)
+
+    def fill_password_expiration_days_field(self, days):
+        self.fill_text_field_by_element_id(self.PASSWORD_EXPIRATION_FIELD_ID, days)
 
     def set_syslog_toggle(self, make_yes=True):
         self.click_toggle_button(self.find_syslog_toggle(), make_yes=make_yes, window=TAB_BODY)
