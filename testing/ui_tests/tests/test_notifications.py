@@ -1,5 +1,5 @@
+import time
 from copy import copy
-
 
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
@@ -28,6 +28,8 @@ class TestNotifications(TestBase):
         for _ in range(15):
             self.enforcements_page.click_run_button()
             self.enforcements_page.wait_for_task_in_progress_toaster()
+            # we don't want to click too fast
+            time.sleep(1)
         # Wait for all tasks to complete..
         wait_until(lambda: self.notification_page.wait_for_count(150),
                    check_return_value=False,
@@ -58,6 +60,8 @@ class TestNotifications(TestBase):
         for _ in range(15):
             self.enforcements_page.click_run_button()
             self.enforcements_page.wait_for_task_in_progress_toaster()
+            # we don't want to click too fast
+            time.sleep(1)
         # Wait for all tasks to complete..
         wait_until(lambda: self.notification_page.wait_for_count(150),
                    check_return_value=False,

@@ -192,8 +192,8 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_element_present_by_css(self.ADAPTERS_SUCCESS_ICON_CLASS.format(position=position),
                                              retries=300, interval=1)
 
-    def wait_for_server_red(self):
-        self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)
+    def wait_for_server_red(self, retries=RETRY_WAIT_FOR_ELEMENT):
+        self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS, retries=retries)
 
     def wait_for_adapter_warning(self):
         self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)

@@ -24,7 +24,7 @@ class TestAdapterConnectionStatus(AdapterTestBase):
             self.adapters_page.create_new_adapter_connection(plugin_title=AWS_ADAPTER_NAME,
                                                              adapter_input=adapter_input)
             self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.wait_for_server_red()
+            self.adapters_page.wait_for_server_red(retries=60 * 5)
             self.adapters_page.wait_for_data_collection_toaster_absent()
 
             self.adapters_page.wait_for_spinner_to_end()
