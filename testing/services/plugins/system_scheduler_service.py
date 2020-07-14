@@ -211,16 +211,19 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
             current_config = config_collection.find_one(config_match)
             if not current_config:
                 print('No config present - continue')
+                self.db_schema_version = 4
                 return
 
             current_config = current_config.get('config')
             if not current_config:
                 print(f'Weird config - continue ({current_config})')
+                self.db_schema_version = 4
                 return
 
             current_config = current_config.get('discovery_settings')
             if not current_config:
                 print(f'Weird discovery_settings - continue ({current_config})')
+                self.db_schema_version = 4
                 return
 
             save_history = current_config.get('save_history')
