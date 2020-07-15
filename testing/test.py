@@ -201,7 +201,7 @@ class InstanceManager:
         # is just an image of bare ubuntu, used to control disk size and other future
         # possible optimizations.
         instances_one, group_name_from_builds = self.__builds.create_instances(
-            group_name + '-base',
+            'auto-test-base-' + group_name,
             self.instance_type,
             1,
             instance_cloud=cloud,

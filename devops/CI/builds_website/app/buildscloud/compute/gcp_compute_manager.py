@@ -116,7 +116,14 @@ class GCPComputeManager:
                 storage_volume = self.client.ex_get_volume(base_instance)
                 image_gce_object = self.client.ex_create_image(base_instance + 'ts', storage_volume)
                 self.client.ex_start_node(node)
-                stack.push(lambda *_: self.client.ex_delete_image(image_gce_object))
+
+                def destroy_no_exceptions(*_):
+                    try:
+                        self.client.ex_delete_image(image_gce_object)
+                    except Exception:
+                        print('Failed removing image')
+                        traceback.print_exc()
+                stack.push(destroy_no_exceptions)
 
             else:
                 image_gce_object = self.client.ex_get_image(image)
