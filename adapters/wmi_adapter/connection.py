@@ -96,7 +96,7 @@ class WmiConnection:
         :return: wmi exec response object
         Notes: each object of the iterator is another device response
         """
-        resolved_hosts = self.resolve_hosts(self._targets, self._dns_servers)
+        resolved_hosts = self.resolve_hosts(self._targets, self._dns_servers, self._hostname_for_validation)
         if not resolved_hosts:
             logger.error('No resolvable hosts')
             return
