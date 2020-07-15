@@ -110,7 +110,7 @@ class WmiAdapter(WmiExecutionMixIn, AdapterBase, Configurable):
                         logger.error(f'Error parsing plugin {subplugin.__class__.__name__}')
                 except Exception:
                     logger.exception(f'Error parsing plugin {subplugin.__class__.__name__}')
-            if not device.does_field_exist('bios_serial') or not device.bios_serial:
+            if not device.does_field_exist('bios_serial') and not device.does_field_exist('hostname'):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = f'{device.bios_serial}_{device.hostname}'.replace(' ', '_')
