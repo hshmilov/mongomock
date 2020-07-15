@@ -206,7 +206,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     ips_v4 = ListField(str, 'IPv4s', converter=format_ip, json_format=JsonStringFormat.ip)
     ips_v6 = ListField(str, 'IPv6s', converter=format_ip, json_format=JsonStringFormat.ip)
-    locations = ListField(str, 'Locations', description='Recognized Geo locations of the IPs')
+
     subnets = ListField(
         str,
         'Subnets',
@@ -243,6 +243,28 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
     gateway = Field(str, 'Gateway')
     port = Field(str, 'Port')
+    locations = ListField(str, 'Location Name', description='Recognized Geo locations of the IPs')
+    location_id = ListField(str, 'Location ID')
+    facility_name = ListField(str, 'Facility Name')
+    facility_id = ListField(str, 'Facility ID')
+    region = ListField(str, 'Region')
+    zone = ListField(str, 'Zone')
+    country = ListField(str, 'Country')
+    state = ListField(str, 'State')
+    city = ListField(str, 'City')
+    postal_code = ListField(str, 'Postal Code')
+    street_address = ListField(str, 'Street Address')
+    full_address = ListField(str, 'Full Address')
+    latitude = ListField(str, 'Latitude')
+    longitude = ListField(str, 'Longitude')
+    ad_sitename = ListField(str, 'AD SiteName')
+    ad_sitecode = ListField(str, 'AD SiteCode')
+    gsc_sitecode = ListField(str, 'GSC SiteCode')
+    talentlink_sitecode = ListField(str, 'Talentlink SiteCode')
+    site_criticality = ListField(str, 'Site Criticality')
+    site_function = ListField(str, 'Site Function')
+    security_level = ListField(str, 'Security Level')
+    comments = ListField(str, 'Comments')
 
 
 class ConnectionType(Enum):

@@ -789,7 +789,7 @@ class PluginBase(Configurable, Feature, ABC):
 
     @staticmethod
     def lower_and_strip_first_line(iterator):
-        return chain([next(iterator).strip().lower()], iterator)
+        return chain([next(iterator).strip().lower().replace(' ', '_')], iterator)
 
     def _delayed_initialization(self):
         """

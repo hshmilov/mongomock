@@ -4,6 +4,7 @@ import re
 import json
 
 import copy
+from codecs import BOM_UTF8
 from io import StringIO
 from ipaddress import ip_network
 
@@ -12,7 +13,7 @@ import requests
 from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
-from axonius.consts.adapter_consts import LAST_FETCH_TIME
+from axonius.consts.adapter_consts import LAST_FETCH_TIME, AVAILABLE_CSV_LOCATION_FIELDS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
@@ -184,14 +185,14 @@ class Plugins:
                         data_enrichment_settings.get(DEVICE_LOCATION_MAPPING).get(CSV_IP_LOCATION_FILE, None):
                     csv_file = self._grab_file_contents(
                         data_enrichment_settings.get(DEVICE_LOCATION_MAPPING).get(CSV_IP_LOCATION_FILE),
-                        stored_locally=False).decode('utf-8')
+                        stored_locally=False).replace(BOM_UTF8, b'').decode('utf-8')
                     reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
-                    if any(not row['location'] or not ip_network(row['subnet'], strict=False) for row in reader):
+                    if any(field not in AVAILABLE_CSV_LOCATION_FIELDS for field in reader.fieldnames):
+                        return return_error('Uploaded CSV with forbidden fields', 400)
+                    if any(not ip_network(row['subnet'], strict=False) for row in reader):
                         return return_error('Uploaded CSV file is not in the desired format', 400)
             except ValueError:
                 return return_error('Uploaded CSV file is not in the desired format', 400)
-            except KeyError:
-                return return_error('Uploaded CSV file does not have the required headers', 400)
             except Exception:
                 return return_error('Error while parsing the uploaded CSV file', 400)
 

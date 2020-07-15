@@ -14,7 +14,7 @@ class TestDataEnrichment(TestBase):
         self.settings_page.find_checkbox_by_label('Enable device location mapping').click()
 
         self._upload_and_check_msg(upload_data='10.0.0.0/8,Iceland\r\n192.168.0.0/16, Greenland',
-                                   msg='Uploaded CSV file does not have the required headers')
+                                   msg='Uploaded CSV with forbidden fields')
         self._upload_and_check_msg(upload_data='Subnet,Location\r\n10.0.a.0/8,Iceland\r\n192.168.0.0/16, Greenland',
                                    msg='Uploaded CSV file is not in the desired format')
         self._upload_and_check_msg(upload_data='Subnet,Location\r\n10.0.0.0/8,Iceland\r\n192.168.0.0/16, Greenland',
@@ -22,7 +22,7 @@ class TestDataEnrichment(TestBase):
 
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.devices_page.edit_columns(add_col_names=['Network Interfaces: Locations'])
+        self.devices_page.edit_columns(add_col_names=['Network Interfaces: Location Name'])
         devices_table = self.devices_page.get_all_data()
         assert any('Greenland' in device for device in devices_table)
 

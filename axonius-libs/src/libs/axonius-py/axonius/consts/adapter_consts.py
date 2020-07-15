@@ -29,3 +29,10 @@ DEFAULT_PARALLEL_COUNT = 5
 # Enterprise Password Mgr
 VAULT_PROVIDER = 'vault_provider'
 LEGACY_VAULT_PROVIDER = 'cyberark_vault'
+
+# CSV Location
+AVAILABLE_CSV_LOCATION_FIELDS = ['subnet', 'location', 'location_name', 'location_id', 'region', 'zone', 'country',
+                                 'street_address', 'facility_name', 'facility_id', 'city', 'state', 'postal_code',
+                                 'full_address', 'latitude', 'longitude', 'ad_sitename', 'ad_sitecode', 'comments',
+                                 'site_criticality', 'site_function', 'gsc_sitecode', 'talentlink_sitecode',
+                                 'security_level']

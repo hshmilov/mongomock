@@ -11,6 +11,7 @@ import logging
 import sys
 import os
 from abc import ABC, abstractmethod
+from codecs import BOM_UTF8
 from datetime import date, datetime, timedelta, timezone
 from io import StringIO
 from ipaddress import ip_network, ip_address
@@ -1570,21 +1571,43 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         if static_analysis_settings and static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get('enabled') and \
                 static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get(CSV_IP_LOCATION_FILE):
 
-            csv_file = self._grab_file_contents(static_analysis_settings.get(DEVICE_LOCATION_MAPPING)
-                                                [CSV_IP_LOCATION_FILE], stored_locally=False).decode('utf-8')
+            csv_file = self._grab_file_contents(
+                static_analysis_settings.get(
+                    DEVICE_LOCATION_MAPPING)[CSV_IP_LOCATION_FILE],
+                stored_locally=False).replace(BOM_UTF8, b'').decode('utf-8')
 
             reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
-            ip_location_map = [(ip_network(row['subnet'], strict=False), row['location']) for row in reader]
+            ip_location_map = [(ip_network(row['subnet'], strict=False), row) for row in reader]
 
             nics = device.network_interfaces
             for i, nic in enumerate(nics):
-                ip_location = self.get_geolocation_of_ip(ip_location_map, nic['ips'] if
-                                                         isinstance(nic, dict) and 'ips' in nic else nic.ips)
-                if ip_location:
-                    if isinstance(nic, dict):
-                        nic['locations'] = ip_location
-                    else:
-                        nic.locations = ip_location
+                ip_locations = self.get_geolocation_of_ip(ip_location_map, nic['ips'] if
+                                                          isinstance(nic, dict) and 'ips' in nic else nic.ips)
+                if ip_locations:
+                    for ip_location in ip_locations:
+                        # Handle basic fields
+                        del ip_location['subnet']
+                        locations = []
+                        if 'location' in ip_location and ip_location['location'].strip():
+                            locations.append(ip_location['location'].strip())
+                            del ip_location['location']
+                        if 'location_name' in ip_location and ip_location['location_name'].strip():
+                            locations.append(ip_location['location_name'].strip())
+                            del ip_location['location_name']
+                        if locations:
+                            if (isinstance(nic, dict) and 'locations' in nic) or hasattr(nic, 'locations'):
+                                nic['locations'] = list(set(nic['locations'] + locations))
+                            else:
+                                nic['locations'] = locations
+
+                        # Handle complex fields
+                        for detail in ip_location:
+                            if not ip_location[detail].strip():
+                                continue
+                            if (isinstance(nic, dict) and detail in nic) or hasattr(nic, detail):
+                                nic[detail] = list(set(nic[detail] + [ip_location[detail].strip()]))
+                            else:
+                                nic[detail] = [ip_location[detail].strip()]
         return device
 
     @staticmethod
@@ -1595,12 +1618,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param ips: IP addresses
         :return: Location or []
         """
-        locations = []
-        for subnet, location in ip_location_map:
+        all_details = []
+        for subnet, details in ip_location_map:
             for ip in ips:
                 if ip_address(ip) in subnet:
-                    locations.append(location.strip())
-        return locations
+                    all_details.append(details)
+        return all_details
 
     def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True, parse_after_fetch=False,
                                   thread_safe=False):
