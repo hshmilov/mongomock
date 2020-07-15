@@ -261,7 +261,11 @@ class TestEnforcementActions(TestBase):
 
     @flaky(max_runs=3)
     def test_tag_entities(self):
-        self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME)
+        # In case of retry the db might hold old devices.
+        # If it solves the problem, this should extract to another "handle_retries" method or something similar.
+        self._clean_db()
+
+        self.adapters_page.clean_adapter_servers(JSON_ADAPTER_NAME, delete_associated_entities=True)
 
         # This is here to see if this is really the issue: All tests should start with no devices
         assert self.axonius_system.get_devices_db().count_documents({}) == 0

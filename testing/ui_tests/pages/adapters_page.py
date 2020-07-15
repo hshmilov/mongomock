@@ -260,6 +260,9 @@ class AdaptersPage(EntitiesPage):
             self.click_toggle_button(self.driver.find_element_by_id(self.DELETE_ASSOCIATED_ENTITIES_CHECKBOX_ID),
                                      make_yes=True, scroll_to_toggle=False)
 
+        # Let's wait for the modal to be clickable properly
+        time.sleep(1)
+
         self.approve_remove_selected()
         self.wait_for_elements_delete(expected_left=expected_left)
 
