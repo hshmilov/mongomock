@@ -1016,6 +1016,8 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                         # AD overrides them all
                         if val_changed_by_ad:
                             last_seen = datetime.now()
+                            if preferred_field == 'specific_data.data.hostname_preferred' and val:
+                                val = val.upper().split('.')[0]
 
                 # Third priority is the latest seen Assets adapter
                 if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
@@ -1067,8 +1069,6 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
                 field_to_value[preferred_field] = val
             else:
                 field_to_value[preferred_field] = [val]
-            if preferred_field == 'specific_data.data.hostname_preferred' and field_to_value[preferred_field]:
-                field_to_value[preferred_field] = [x.upper().split('.')[0] for x in field_to_value[preferred_field]]
         except Exception as e:
             logger.exception(f'Problem in merging preferred fields: {e}')
             continue
