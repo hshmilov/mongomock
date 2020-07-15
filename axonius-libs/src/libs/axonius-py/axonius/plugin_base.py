@@ -854,10 +854,13 @@ class PluginBase(Configurable, Feature, ABC):
                 }
             }, upsert=True)
 
-    def _save_field_names_to_db(self, entity_type: EntityType):
+    def _save_field_names_to_db(self, entity_type: EntityType, plugin_unique_name=None):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """
         entity_fields = self._entity_adapter_fields[entity_type]
         my_entity = self._my_adapters_map[entity_type]
+
+        if not plugin_unique_name:
+            plugin_unique_name = self.plugin_unique_name
 
         if not my_entity:
             return
@@ -877,7 +880,7 @@ class PluginBase(Configurable, Feature, ABC):
                 fields_collection = self._all_fields_db_map[entity_type]
                 fields_collection.update({
                     'name': 'raw',
-                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                    PLUGIN_UNIQUE_NAME: plugin_unique_name
                 }, {
                     '$addToSet': {
                         'raw': {
@@ -898,7 +901,7 @@ class PluginBase(Configurable, Feature, ABC):
             # Search for an old dynamic schema and add whatever we don't already have
             dynamic_fields_collection_in_db = fields_collection.find_one({
                 'name': 'dynamic',
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                PLUGIN_UNIQUE_NAME: plugin_unique_name
             })
             if dynamic_fields_collection_in_db:
                 for old_dynamic_field in dynamic_fields_collection_in_db.get('schema', {}).get('items', []):
@@ -908,7 +911,7 @@ class PluginBase(Configurable, Feature, ABC):
             # Save the new dynamic schema
             fields_collection.update_one({
                 'name': 'dynamic',
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                PLUGIN_UNIQUE_NAME: plugin_unique_name
             }, {
                 '$set': {
                     'schema': current_dynamic_schema
@@ -920,9 +923,9 @@ class PluginBase(Configurable, Feature, ABC):
             current_schema['items'].extend(current_dynamic_schema['items'])
             fields_collection.update({
                 'name': 'parsed',
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                PLUGIN_UNIQUE_NAME: plugin_unique_name
             }, {
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                PLUGIN_UNIQUE_NAME: plugin_unique_name,
                 'name': 'parsed',
                 'schema': current_schema
             }, upsert=True)
@@ -931,7 +934,7 @@ class PluginBase(Configurable, Feature, ABC):
             if exist_fields:
                 fields_collection.update_one({
                     'name': 'exist',
-                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name
+                    PLUGIN_UNIQUE_NAME: plugin_unique_name
                 }, {
                     '$addToSet': {
                         'fields': {

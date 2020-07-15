@@ -628,6 +628,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         """
         logger.info('Associating users with devices')
 
+        associated_plugin_unique_names = set()
         # 1. Get all devices which have users associations, and map all these devices to one global users object.
         # Notice that we select by filter. we do this to include users that came both from adapters and plugins.
         devices_with_users_association = self.devices_db.find(
@@ -692,7 +693,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
                             creation_plugin_type, creation_plugin_name, creation_plugin_unique_name
                         )
                         users[current_username]['should_create_if_not_exists'] = True
-
+                        if creation_plugin_unique_name:
+                            associated_plugin_unique_names.add(creation_plugin_unique_name)
             # We also go over the last used user.
             sd_last_used_users_list = [
                 d['data']['last_used_users'] for d in all_device_data
@@ -846,7 +848,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
             except Exception:
                 logger.exception(f'Error saving data for internal axon id {internal_axon_id}!')
         self._save_field_names_to_db(EntityType.Users)
-
+        for unique_name in associated_plugin_unique_names:
+            self._save_field_names_to_db(EntityType.Users, unique_name)
         logger.info('Finished associating users with devices')
 
     # pylint: disable=invalid-name, too-many-nested-blocks
