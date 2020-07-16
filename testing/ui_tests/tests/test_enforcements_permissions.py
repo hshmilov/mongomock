@@ -76,6 +76,31 @@ class TestEnforcementsPermissions(PermissionsTestBase):
                                                      ui_consts.NEW_PASSWORD)
         self._test_enforcements_with_edit_permission()
 
+    def test_enforcements_deploy_action_permission(self):
+        # Create user with Restricted role and check permissions correct also after refresh
+        user_role = self.settings_page.add_user_with_duplicated_role(ui_consts.RESTRICTED_USERNAME,
+                                                                     ui_consts.NEW_PASSWORD,
+                                                                     ui_consts.FIRST_NAME,
+                                                                     ui_consts.LAST_NAME,
+                                                                     self.settings_page.RESTRICTED_ROLE)
+
+        settings_permissions = {
+            'enforcements': [
+                'View Enforcement Center',
+                'Add Enforcement',
+            ],
+            'devices_assets': [
+                'View devices'
+            ]
+        }
+        self.settings_page.update_role(user_role, settings_permissions, True)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.add_run_windows_command('test deploy')
+        self.login_page.assert_logged_in()
+
     def _test_enforcements_with_only_view_permission(self, settings_permissions, user_role, enforcement_name):
         self.settings_page.update_role(user_role, settings_permissions, True)
         self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)

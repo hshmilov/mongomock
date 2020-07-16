@@ -9,8 +9,11 @@ export const FETCH_ADAPTERS = 'FETCH_ADAPTERS';
 export const FETCH_ADAPTER_CONNECTIONS = 'FETCH_ADAPTER_CONNECTIONS';
 export const SET_ADAPTER_CONNECTIONS = 'SET_ADAPTER_CONNECTIONS';
 export const SET_ADAPTER_SCHEMA = 'SET_ADAPTER_SCHEMA';
+export const FETCH_SELECTABLE_INSTANCES = 'FETCH_SELECTABLE_INSTANCES';
+export const LAZY_FETCH_SELECTABLE_INSTANCES = 'LAZY_FETCH_SELECTABLE_INSTANCES'
 export const LAZY_FETCH_ADAPTERS = 'LAZY_FETCH_ADAPTERS';
 export const SET_ADAPTERS = 'SET_ADAPTERS';
+export const SET_SELECTABLE_INSTANCES = 'SET_SELECTABLE_INSTANCES';
 export const FETCH_ADAPTERS_CLIENT_LABELS = 'FETCH_ADAPTERS_CLIENT_LABELS';
 export const SET_ADAPTERS_CLIENT_LABELS = 'SET_ADAPTERS_CLIENT_LABELS';
 export const LAZY_FETCH_ADAPTERS_CLIENT_LABELS = 'LAZY_FETCH_ADAPTERS_CLIENT_LABELS';
@@ -31,7 +34,11 @@ export const adapters = {
       error: '',
     },
     adapterSchemas: {},
-    instances: [],
+    instances: {
+      fetching: false,
+      data: [],
+      error: '',
+    },
     clients: {},
     connectionLabels: [],
     tableFilter: {
@@ -113,7 +120,7 @@ export const adapters = {
 
         // It is essential to replace the data in the state here so it is not accumulated
         state.adapters.data = newStateAdapters;
-        state.instances = Array.from(newStateInstances.values());
+        state.instances.data = Array.from(newStateInstances.values());
 
         state.adapters.data.sort((first, second) => {
           // Sort by adapters plugin name (the one that is shown in the gui).
@@ -124,6 +131,15 @@ export const adapters = {
           return 0;
         });
       }
+    },
+    [SET_SELECTABLE_INSTANCES](state, payload) {
+      const { data, fetching, error } = payload;
+      state.instances.fetching = fetching;
+      if (error) {
+        state.instances.error = payload.error;
+        return;
+      }
+      state.instances.data = data;
     },
     [SET_ADAPTER_CONNECTIONS](state, payload) {
       const { connections, adapterName } = payload;
@@ -201,6 +217,12 @@ export const adapters = {
         type: SET_ADAPTERS,
       });
     },
+    [FETCH_SELECTABLE_INSTANCES]({ dispatch }) {
+      return dispatch(REQUEST_API, {
+        rule: 'instances/selectable_instances',
+        type: SET_SELECTABLE_INSTANCES,
+      });
+    },
     [FETCH_ADAPTER_CONNECTIONS]({ dispatch, commit }, adapterName) {
       return new Promise((resolve, reject) => {
         dispatch(REQUEST_API, {
@@ -214,6 +236,13 @@ export const adapters = {
           })
           .catch((ex) => reject(ex));
       });
+    },
+    [LAZY_FETCH_SELECTABLE_INSTANCES]({ dispatch, state }) {
+      const instancesData = _get(state, 'instances.data', []);
+      if (_size(instancesData)) {
+        return Promise.resolve();
+      }
+      return dispatch(FETCH_SELECTABLE_INSTANCES);
     },
     [LAZY_FETCH_ADAPTERS]({ dispatch, state }) {
       const adaptersData = _get(state, 'adapters.data', []);
@@ -365,7 +394,7 @@ export const adapters = {
 
       return byId;
     },
-    getInstancesMap: (state) => state.instances.reduce((map, instance) => {
+    getInstancesMap: (state) => state.instances.data.reduce((map, instance) => {
       map.set(instance.node_id, instance);
       return map;
     }, new Map()),

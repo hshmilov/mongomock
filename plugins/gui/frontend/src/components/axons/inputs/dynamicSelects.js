@@ -6,7 +6,7 @@ import _get from 'lodash/get';
 import _property from 'lodash/property';
 import { FETCH_DATA_LABELS } from '@store/actions';
 import { GET_ALL_ROLES } from '@store/modules/auth';
-import { LAZY_FETCH_ADAPTERS, FETCH_ADAPTERS_CLIENT_LABELS } from '@store/modules/adapters';
+import {FETCH_ADAPTERS_CLIENT_LABELS, LAZY_FETCH_SELECTABLE_INSTANCES} from '@store/modules/adapters';
 import XSelect from './select/Select.vue';
 
 // eslint-disable-next-line max-len
@@ -165,8 +165,8 @@ export const XTagSelect = withDynamicData({
 
 export const XInstancesSelect = withDynamicData({
   id: 'instanceSelect',
-  action: LAZY_FETCH_ADAPTERS,
-  modules: [{ name: 'adapters', dataPath: '' }],
+  action: LAZY_FETCH_SELECTABLE_INSTANCES,
+  modules: [{ name: 'adapters', dataPath: '.data' }],
   moduleAttributeName: 'instances',
   optionsNormalizer: (item) => ({ name: item.node_id, title: item.node_name }),
   propertyName: 'node_name',

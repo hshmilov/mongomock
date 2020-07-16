@@ -37,6 +37,10 @@ class Instances:
             }
         })
 
+    @gui_route_logged_in('selectable_instances', methods=['GET'], enforce_permissions=False)
+    def get_instances_list(self):
+        return jsonify([{NODE_ID: node[NODE_ID], NODE_NAME: node[NODE_NAME]} for node in self._get_nodes_table()])
+
     def update_instance(self, instance_data, attributes):
         for attribute in attributes:
             if instance_data.get(attribute, None) is not None:
