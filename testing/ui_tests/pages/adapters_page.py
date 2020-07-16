@@ -75,6 +75,9 @@ class AdaptersPage(EntitiesPage):
 
     LAST_SEEN_THRESHOLD_HOURS = '21600'
 
+    ADAPTER_INDICATOR_SUCCESS = 'success'
+    ADAPTER_INDICATOR_ERROR = 'error'
+
     @property
     def url(self):
         return f'{self.base_url}/adapters'
@@ -353,10 +356,22 @@ class AdaptersPage(EntitiesPage):
     def find_status_symbol(self, status_type):
         return self.wait_for_element_present_by_css(self.TYPE_ICON_CSS.format(status_type=status_type))
 
+    def find_status_symbol_success(self):
+        return self.find_status_symbol(self.ADAPTER_INDICATOR_SUCCESS)
+
+    def find_status_symbol_error(self):
+        return self.find_status_symbol(self.ADAPTER_INDICATOR_ERROR)
+
     def find_status_count(self, status_type):
         element = self.wait_for_element_present_by_css(
             f'{self.TYPE_ICON_CSS.format(status_type=status_type)} ~ .summary_count')
-        return element.text
+        return int(element.text)
+
+    def find_status_count_success(self):
+        return self.find_status_count(self.ADAPTER_INDICATOR_SUCCESS)
+
+    def find_status_count_error(self):
+        return self.find_status_count(self.ADAPTER_INDICATOR_ERROR)
 
     def find_server_error(self):
         element = self.driver.find_element_by_css_selector(self.SERVER_ERROR_TEXT_CLASS)
@@ -366,7 +381,7 @@ class AdaptersPage(EntitiesPage):
         adapters = self.get_adapter_list()
         return len(adapters)
 
-    def click_connected_adapters_filter_switch(self):
+    def click_configured_adapters_filter_switch(self):
         element = self.wait_for_element_present_by_css('.adapters-search .md-switch-thumb')
         element.click()
 
@@ -380,14 +395,19 @@ class AdaptersPage(EntitiesPage):
     def find_password_vault_button_status(self):
         return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS}__status')
 
-    def get_connected_adapters_number_form_switch_label(self):
+    def get_configured_adapters_count_from_switch_label(self):
         pattern = r'configured only \((\d)\)'
 
         element = self.wait_for_element_present_by_css('.adapters-search .md-switch-label')
         element_text = element.text
 
         match_object = re.match(pattern, element_text, re.I | re.M)
-        return match_object.group(1)
+        return int(match_object.group(1))
+
+    def verify_only_configured_adapters_visible(self):
+        adapters_count = self.get_adapters_table_length()
+        configured_adapters_count = self.get_configured_adapters_count_from_switch_label()
+        assert configured_adapters_count == adapters_count
 
     def create_new_adapter_connection(self, plugin_title: str, adapter_input: dict):
         self.wait_for_adapter(plugin_title)

@@ -102,7 +102,7 @@
 <script>
 import XIcon from '@axons/icons/Icon';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
-import { mapState, mapActions, mapGetters } from 'vuex';
+import { mapState, mapMutations, mapActions, mapGetters } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTitle from '../axons/layout/Title.vue';
 import XSearchInput from '../neurons/inputs/SearchInput.vue';
@@ -127,7 +127,10 @@ export default {
       },
       adaptersFetching(state) {
         return state.adapters.adapters.fetching;
-      }
+      },
+      tableFilter(state) {
+        return state.adapters.tableFilter;
+      },
     }),
     ...mapGetters({
       getConfiguredAdapters: 'getConfiguredAdapters',
@@ -146,14 +149,31 @@ export default {
     successfullyconfiguredAdapters() {
       return this.adaptersData.filter(getConnectedAdapters).length;
     },
-  },
-  data() {
-    return {
-      searchText: '',
-      showOnlyConfigured: false,
-    };
+    searchText: {
+      get() {
+        return this.tableFilter.searchText;
+      },
+      set(searchText) {
+        this.setAdaptersTableFilter({
+          searchText,
+        });
+      },
+    },
+    showOnlyConfigured: {
+      get () {
+        return this.tableFilter.showOnlyConfigured;
+      },
+      set(showOnlyConfigured) {
+        this.setAdaptersTableFilter({
+          showOnlyConfigured,
+        });
+      },
+    },
   },
   methods: {
+    ...mapMutations({
+      setAdaptersTableFilter: 'setAdaptersTableFilter'
+    }),
     ...mapActions({
       fetchAdapters: FETCH_ADAPTERS,
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION

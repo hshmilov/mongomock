@@ -31,12 +31,14 @@
               @mouseover="hoveredItem = { header: adapter.title, body: '' }"
               @mouseout="hoveredItem = null"
             >
-              <a :href="`/adapters/${adapter.id}`">
+              <RouterLink
+                :to="getAdapterRoute(adapter.id)"
+              >
                 <img
                   :src="require(`Logos/adapters/${adapter.id}.png`)"
                   width="30"
                 >
-              </a>
+              </RouterLink>
             </div>
 
 
@@ -185,6 +187,11 @@ export default {
   },
   methods: {
     ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
+    getAdapterRoute(adapterId) {
+      return {
+        path: `adapters/${adapterId}`,
+      };
+    },
   },
 };
 </script>

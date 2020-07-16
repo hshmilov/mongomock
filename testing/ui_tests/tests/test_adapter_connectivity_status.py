@@ -1,91 +1,70 @@
+from axonius.utils.wait import wait_until
 from ui_tests.tests.adapters_test_base import AdapterTestBase
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 
 from services.adapters.cisco_service import CiscoService
-
-ERROR = 'error'
-SUCCESS = 'success'
-
-AD_SECONDARY_DC_NAME = 'blah'
 
 
 class TestAdaptersConnectivityStatus(AdapterTestBase):
 
-    AD_DC_NAME = AdapterTestBase.AD_PRIMARY_DC_NAME
+    AD_SECONDARY_DC_NAME = 'blah'
 
-    def _go_to_adapters_and_search_ad(self):
+    def test_clients_indicators(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.search(AD_ADAPTER_NAME)
+        assert self.adapters_page.find_status_symbol_success()
+        assert self.adapters_page.find_status_count_success() == 1
 
-    def _insert_bad_client_to_ad(self, dc_name=AD_DC_NAME):
+        self.insert_bad_client_to_ad()
+        self.adapters_page.switch_to_page()
+        assert self.adapters_page.find_status_symbol_error()
+        assert self.adapters_page.find_status_symbol_success()
+        assert self.adapters_page.find_status_count_success() == 1
+        assert self.adapters_page.find_status_symbol_error()
+        assert self.adapters_page.find_status_count_error() == 1
+
+        self.insert_bad_client_to_ad(dc_name=self.AD_SECONDARY_DC_NAME)
+        self.adapters_page.switch_to_page()
+        assert self.adapters_page.find_status_symbol_error()
+        wait_until(lambda: self.adapters_page.find_status_count_error() == 2)
+
         self.adapters_page.click_adapter(AD_ADAPTER_NAME)
-        self.adapters_page.wait_for_spinner_to_end()
-        self.adapters_page.wait_for_table_to_load()
+        self.adapters_page.wait_for_table_to_be_responsive()
+        self.adapters_page.switch_to_page()
+        assert self.adapters_page.find_status_count_success() == 1
 
-        # add new client - should fail to connect
-        self.adapters_page.click_new_server()
-        self.fill_ad_creds_with_junk(dc_name=dc_name)
-        self.adapters_page.click_save()
-        self.adapters_page.wait_for_element_absent_by_css(self.adapters_page.MODAL_OVERLAY_CSS)
-        self.adapters_page.wait_for_element_present_by_text(dc_name)
-        self.adapters_page.wait_for_problem_connecting_try_again()
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.adapters_page.switch_to_page()
+        assert self.adapters_page.find_status_count_success() == 1
 
-    def test_clients_indicators(self):
-
-        try:
-            self._go_to_adapters_and_search_ad()
-            assert self.adapters_page.find_status_symbol(status_type=SUCCESS)
-            assert self.adapters_page.find_status_count(status_type=SUCCESS) == '1'
-
-            self._insert_bad_client_to_ad(dc_name=self.AD_DC_NAME)
-            assert self.adapters_page.find_status_symbol(status_type=ERROR)
-
-            self._go_to_adapters_and_search_ad()
-            assert self.adapters_page.find_status_symbol(status_type=SUCCESS)
-            assert self.adapters_page.find_status_count(status_type=SUCCESS) == '1'
-
-            assert self.adapters_page.find_status_symbol(status_type=ERROR)
-            assert self.adapters_page.find_status_count(status_type=ERROR) == '1'
-
-            self._insert_bad_client_to_ad(dc_name=AD_SECONDARY_DC_NAME)
-            assert self.adapters_page.find_status_symbol(status_type=ERROR)
-
-            self._go_to_adapters_and_search_ad()
-            assert self.adapters_page.find_status_count(status_type=ERROR) == '2'
-        finally:
-            # cleanup
-            self.adapters_page.remove_server(ad_client={'dc_name': AD_SECONDARY_DC_NAME}, expected_left=2)
-            self.adapters_page.wait_for_element_absent_by_text(AD_SECONDARY_DC_NAME)
-            self.adapters_page.remove_server(ad_client={'dc_name': self.AD_DC_NAME}, expected_left=1)
-            self.adapters_page.wait_for_element_absent_by_text(self.AD_DC_NAME)
+        # cleanup
+        self.adapters_page.remove_server(ad_client={'dc_name': self.AD_SECONDARY_DC_NAME}, expected_left=2)
+        self.adapters_page.remove_server(ad_client={'dc_name': self.AD_PRIMARY_DC_NAME}, expected_left=1)
 
     def test_adapters_filter_by_connection_status(self):
-
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()
-
-        table_len = self.adapters_page.get_adapters_table_length()
-        count_label = self.adapters_page.get_connected_adapters_number_form_switch_label()
-
-        assert int(count_label) <= table_len
+        self.adapters_page.verify_only_configured_adapters_visible()
 
         # spawn and kill Cisco adapter
-        try:
-            with CiscoService().contextmanager(take_ownership=True):
-                self.adapters_page.wait_for_adapter(self.CISCO_NAME)
-                self.adapters_page.switch_to_page()
-                self.adapters_page.wait_for_spinner_to_end()
-                table_len = self.adapters_page.get_adapters_table_length()
-                count_label = self.adapters_page.get_connected_adapters_number_form_switch_label()
+        with CiscoService().contextmanager(take_ownership=True):
+            self.adapters_page.wait_for_adapter(self.CISCO_NAME)
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_spinner_to_end()
+            adapters_count = self.adapters_page.get_adapters_table_length()
+            configured_adapters_count = self.adapters_page.get_configured_adapters_count_from_switch_label()
+            assert configured_adapters_count < adapters_count
 
-                assert int(count_label) < table_len
+            self.adapters_page.click_configured_adapters_filter_switch()
+            self.adapters_page.verify_only_configured_adapters_visible()
 
-                self.adapters_page.click_connected_adapters_filter_switch()
+            # Toggle state maintained after navigation
+            self.adapters_page.click_adapter(JSON_ADAPTER_NAME)
+            self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_be_responsive()
+            self.adapters_page.switch_to_page()
+            self.adapters_page.verify_only_configured_adapters_visible()
 
-                table_len = self.adapters_page.get_adapters_table_length()
-                count_label = self.adapters_page.get_connected_adapters_number_form_switch_label()
-
-                assert int(count_label) == table_len
-        finally:
-            self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)
+        self.wait_for_adapter_down(self.CISCO_PLUGIN_NAME)

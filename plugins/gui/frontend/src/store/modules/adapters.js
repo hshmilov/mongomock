@@ -16,14 +16,11 @@ export const SET_ADAPTERS_CLIENT_LABELS = 'SET_ADAPTERS_CLIENT_LABELS';
 export const LAZY_FETCH_ADAPTERS_CLIENT_LABELS = 'LAZY_FETCH_ADAPTERS_CLIENT_LABELS';
 export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT';
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER';
-export const UPDATE_ADAPTER_CLIENT = 'UPDATE_ADAPTER_CLIENT';
 export const ARCHIVE_CLIENT = 'ARCHIVE_CLIENT';
 export const REMOVE_CLIENT = 'REMOVE_CLIENT';
 
 export const UPDATE_EXISTING_CLIENT = 'UPDATE_EXISTING_CLIENT';
 export const ADD_NEW_CLIENT = 'ADD_NEW_CLIENT';
-
-export const CLEAR_ADAPTERS_STATE = 'CLEAR_ADAPTERS_STATE';
 
 
 export const adapters = {
@@ -37,6 +34,10 @@ export const adapters = {
     instances: [],
     clients: {},
     connectionLabels: [],
+    tableFilter: {
+      searchText: '',
+      showOnlyConfigured: false,
+    }
   },
   mutations: {
     [SET_ADAPTERS](state, payload) {
@@ -180,6 +181,12 @@ export const adapters = {
       if (data) {
         state.connectionLabels = data;
       }
+    },
+    setAdaptersTableFilter(state, payload) {
+      state.tableFilter = {
+        ...state.tableFilter,
+        ...payload,
+      };
     },
   },
   actions: {

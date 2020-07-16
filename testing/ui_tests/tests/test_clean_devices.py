@@ -45,12 +45,9 @@ class TestCleanDB(AdapterTestBase):
             # === Step 4 === #
             self.adapters_page.switch_to_page()
             self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
-            self.adapters_page.wait_for_table_to_load()
             self.adapters_page.click_new_server()
             self.fill_ad_creds_with_junk()
             self.adapters_page.click_save()
-            self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.wait_for_problem_connecting_try_again()
             self.adapters_page.wait_for_server_red()
             self.adapters_page.wait_for_data_collection_failed_toaster_absent()
             update_result = self.axonius_system.get_devices_db().update_many(
