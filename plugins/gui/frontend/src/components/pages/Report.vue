@@ -63,7 +63,6 @@
               v-model="report.spaces"
               :schema="spacesSchema"
               :read-only="cannotEditReport"
-              placeholder="Select spaces (or empty for all)"
             />
           </div>
           <XCheckbox
@@ -372,6 +371,7 @@ export default {
       return {
         name: 'spaces_config',
         title: 'Dashboard spaces:',
+        placeholder: 'Select spaces (or empty for all)',
         items: {
           title: '',
           name: 'uuid',

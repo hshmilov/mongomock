@@ -128,9 +128,6 @@ class SettingsPage(Page):
     CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab ' \
                                   'input[id=csv_ip_location_file]'
 
-    LOCKED_ACTION_OPTION_XPATH = '//div[contains(@class, \'v-select\')]' \
-                                 '//div[contains(@class, \'v-list-item\') and .//text()=\'{action_name}\']'
-
     TABS_BODY_CSS = '.x-tabs .body'
 
     SAVE_USER_BUTTON = 'Save'
@@ -281,6 +278,7 @@ class SettingsPage(Page):
     CLEAR_FEATURES_BUTTON_CSS = '.v-input__icon--clear'
     ENFORCEMENTS_FEATURE_TAG_TITLE = 'Enable Enforcement Center'
     ROLE_ASSIGNMENT_RULES_ROW = '.draggable > .item:nth-child({row_index})'
+    LOCKED_ACTIONS_SELECT_ID = '#locked_actions_select'
 
     @property
     def url(self):
@@ -1215,30 +1213,19 @@ class SettingsPage(Page):
         self.fill_text_field_by_element_id('remote-access-timer', timeout)
 
     def is_locked_action(self, action_name):
-        return action_name in self.get_multiple_select_values()
+        return action_name in self.get_locked_actions()
 
     def get_locked_actions(self):
-        return self.find_field_by_label('Actions Locked for Client').find_element_by_css_selector(
-            '.v-select__selections')
+        return self.get_multiple_select_selected_options_text(self.LOCKED_ACTIONS_SELECT_ID)
 
     def set_locked_actions(self, action_name):
-        locked_actions_el = self.get_locked_actions()
-        locked_actions_el.click()
-        self.driver.find_element_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(action_name=action_name)).click()
-        locked_actions_el.click()
+        self.select_multiple_option_without_search(self.LOCKED_ACTIONS_SELECT_ID,
+                                                   self.ANT_SELECT_MENU_ITEM_CSS,
+                                                   [action_name])
 
-    def set_locked_actions_with_scroll(self, action_name):
-        locked_actions_el = self.get_locked_actions()
-        locked_actions_el.click()
-        self.driver.find_element_by_css_selector(
-            self.LOCKED_FEATURES_INPUT_CSS).send_keys(action_name)
-        matching_elements = self.driver.find_elements_by_xpath(self.LOCKED_ACTION_OPTION_XPATH.format(
-            action_name=action_name))
-        matching_elements[len(matching_elements) - 1].click()  # Send Mail is the last one.
-        locked_actions_el.click()
-
-    def clear_locked_features(self):
-        self.driver.find_element_by_css_selector(self.CLEAR_FEATURES_BUTTON_CSS).click()
+    def unset_locked_actions(self, action_name):
+        self.unselect_multiple_option_without_search(self.LOCKED_ACTIONS_SELECT_ID,
+                                                     [action_name])
 
     def fill_trial_expiration_by_remainder(self, days_remaining=None):
         element = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))[0]

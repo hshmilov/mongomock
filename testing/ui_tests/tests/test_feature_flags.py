@@ -36,7 +36,7 @@ class TestFeatureFlags(TestBase):
         self.settings_page.click_feature_flags()
         wait_until(lambda: self.settings_page.is_locked_action(self.ACTION_TO_LOCK))
 
-        wait_until(lambda: self.settings_page.set_locked_actions(self.ACTION_TO_LOCK), check_return_value=False,
+        wait_until(lambda: self.settings_page.unset_locked_actions(self.ACTION_TO_LOCK), check_return_value=False,
                    tolerated_exceptions_list=[NoSuchElementException, ElementNotInteractableException])
         self.settings_page.save_and_wait_for_toaster()
 
@@ -62,11 +62,11 @@ class TestFeatureFlags(TestBase):
             self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
             self.settings_page.switch_to_page()
             self.settings_page.click_feature_flags()
-            ui_locked_actions = self.settings_page.get_multiple_select_values()
+            # return all selected from ui
+            ui_locked_actions = self.settings_page.get_locked_actions()
 
             assert len(ui_locked_actions) == len(db_locked_actions)
-            for action_name in db_locked_actions:
-                assert Action[action_name].value in ui_locked_actions
+
             self.settings_page.set_locked_actions(self.ACTION_TO_LOCK)
             self.settings_page.save_and_wait_for_toaster()
 

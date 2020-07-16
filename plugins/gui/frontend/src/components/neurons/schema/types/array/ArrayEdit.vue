@@ -74,27 +74,27 @@
       </Component>
     </template>
     <template v-else-if="isStringList && schema.items.enum">
-      <label>{{ schema.title }}</label>
-      <VCombobox
-        v-model="data"
-        :items="schema.items.enum"
-        :return-object="false"
-        :menu-props="{
-          closeOnClick: true
-        }"
-        :placeholder="placeholder"
-        item-text="title"
-        item-value="name"
-        multiple
-        dense
-        clearable
+      <AFormItem
+        :help="schema.placeholder ? schema.placeholder : null"
+        :label="schema.title"
       >
-        <template #selection="{ item }">
-          <VChip small>
-            {{ getItemTitle(item) }}
-          </VChip>
-        </template>
-      </VCombobox>
+        <ASelect
+          :id="`${schema.name}_select`"
+          v-model="data"
+          class="x-multiple-select"
+          mode="multiple"
+          option-filter-prop="children"
+          dropdown-class-name="x-multiple-select-dropdown"
+          :get-popup-container="getPopupContainer"
+        >
+          <ASelectOption
+            v-for="item in schema.items.enum"
+            :key="item.name"
+          >
+            {{ item.title }}
+          </ASelectOption>
+        </ASelect>
+      </AFormItem>
     </template>
     <template v-else>
       <label>{{ schema.title }}</label>
@@ -112,7 +112,7 @@
 </template>
 
 <script>
-import { Collapse } from 'ant-design-vue';
+import { Collapse, Form, Select } from 'ant-design-vue';
 import draggable from 'vuedraggable';
 import XTypeWrap from './TypeWrap.vue';
 import string from '../string/StringEdit.vue';
@@ -146,16 +146,15 @@ export default {
     XListInput,
     vault,
     draggable,
+    ASelect: Select,
+    ASelectOption: Select.Option,
+    AFormItem: Form.Item,
   },
   mixins: [arrayMixin],
   props: {
     readOnly: {
       type: Boolean,
       default: false,
-    },
-    placeholder: {
-      type: String,
-      default: 'Select...',
     },
     useVault: {
       type: Boolean,
@@ -396,15 +395,14 @@ export default {
         error: this.stringListValid ? '' : this.stringListError,
       });
     },
-    getItemTitle(name) {
-      const item = this.schema.items.enum.find((schemaItem) => schemaItem.name === name);
-      return item ? item.title : '';
-    },
     onStartDrag() {
       this.dragging = true;
     },
     onEndDrag() {
       this.dragging = false;
+    },
+    getPopupContainer() {
+      return document.querySelector('.x-array-edit');
     },
   },
 };
@@ -412,6 +410,7 @@ export default {
 
 <style lang="scss">
   .x-array-edit {
+    position: relative;
     .v-text-field > .v-input__control > .v-input__slot:before {
       border-style: none;
       border-width: thin 0 0;
@@ -511,6 +510,14 @@ export default {
     .v-select.v-autocomplete {
       input {
         border-style: none;
+      }
+    }
+
+    .ant-form-item {
+      grid-column: 1/-1;
+      margin-bottom: 0;
+      .x-multiple-select {
+        width: 100%;
       }
     }
   }

@@ -36,7 +36,7 @@ class TestReportGenerationMoreCases(TestReportGenerationBase):
 
             self.reports_page.click_report(self.TEST_REPORT_SPACES)
             self.reports_page.wait_for_spinner_to_end()
-            assert self.reports_page.get_multiple_select_values()[0] == self.TEST_DASHBOARD_SPACE
+            assert self.reports_page.get_space_select_selected_options()[0] == self.TEST_DASHBOARD_SPACE
 
             doc = self._extract_report_pdf_doc(self.TEST_REPORT_SPACES)
             texts = [page.extractText() for page in doc.pages]
@@ -128,4 +128,4 @@ class TestReportGenerationMoreCases(TestReportGenerationBase):
         self.reports_page.click_new_report()
 
         self.reports_page.click_include_dashboard()
-        assert self.reports_page.get_spaces_select_placeholder() == 'Select spaces (or empty for all)'
+        self.reports_page.wait_for_spaces_select_help_message()

@@ -209,6 +209,10 @@ class Page:
                              '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
 
+    # multi-select consts:
+    MULTI_SELECT_SELECTED_OPTIONS_CSS = '.ant-select-selection--multiple .ant-select-selection__choice'
+    MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS = '.ant-select-selection__choice__remove'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
@@ -749,12 +753,35 @@ class Page:
         if not parent:
             parent = self.driver
         parent.find_element_by_css_selector(dropdown_css_selector).click()
+        counter = 0
         for option in parent.find_elements_by_css_selector(selected_options_css_selector):
             ActionChains(parent).move_to_element(option).perform()
             if option.text in values:
                 option.click()
+                counter += 1
+                if counter >= len(values):
+                    break
         parent.find_element_by_css_selector(dropdown_css_selector).send_keys(Keys.ENTER)
         time.sleep(0.5)
+
+    def unselect_multiple_option_without_search(self, select_css_selector, values):
+        parent = self.driver.find_element_by_css_selector(select_css_selector)
+        options = parent.find_elements_by_css_selector(self.MULTI_SELECT_SELECTED_OPTIONS_CSS)
+        for option in options:
+            if option.text in values:
+                option.find_element_by_css_selector(self.MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS).click()
+
+    def get_multiple_select_selected_options_text(self, select_css_selector):
+        parent = self.driver.find_element_by_css_selector(select_css_selector)
+        return [x.text for x in parent.find_elements_by_css_selector(self.MULTI_SELECT_SELECTED_OPTIONS_CSS)]
+
+    def get_multiple_select_options_text(self, select_css_selector):
+        self.driver.find_element_by_css_selector(select_css_selector).click()
+        options_list = []
+        for option in self.driver.find_elements_by_css_selector(self.ANT_SELECT_MENU_ITEM_CSS):
+            ActionChains(self.driver).move_to_element(option).perform()
+            options_list.append(option.text)
+        return options_list
 
     def select_option_without_search_from_multiple(self,
                                                    index,
@@ -1137,10 +1164,6 @@ class Page:
     def get_body_element(self):
         return self.driver.find_element_by_css_selector('body')
 
-    def get_multiple_select_values(self):
-        chips = self.driver.find_elements_by_css_selector('.v-select .v-select__selections .v-chip')
-        return [chip.text for chip in chips]
-
     def get_table_data(self, table_css, list_of_columns):
         table_data = []
         table = self.driver.find_element_by_css_selector(table_css)
@@ -1154,11 +1177,6 @@ class Page:
             table_data.append(data)
 
         return table_data
-
-    def get_multiple_select_options(self):
-        self.driver.find_element_by_css_selector('.v-select .v-select__selections').click()
-        options = self.driver.find_elements_by_css_selector('.v-select-list .v-list-item .v-list-item__content')
-        return [option.text for option in options]
 
     def wait_for_table_to_be_responsive(self):
         self.wait_for_table_to_load()

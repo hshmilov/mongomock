@@ -62,6 +62,7 @@ class ReportsPage(EntitiesPage):
     BEFORE_SAVE_MESSAGE = 'Saving the report...'
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
+    SPACES_HELP_MESSAGE = 'Select spaces (or empty for all)'
     SEND_EMAIL_BUTTON_TEXT = 'Send Email'
     SELECT_PERIOD_TIME_CSS = '.send-hour .time-picker-text input'
     TIME_PERIOD_SELECTOR_CSS = '.v-time-picker-clock'
@@ -77,6 +78,7 @@ class ReportsPage(EntitiesPage):
     BUTTON_CONTAINER_CSS = '.x-btn-container'
     SELECT_DAY_CSS = '.send-day .x-select'
     RESTRICTED_REPORT_CONFIRM_TITLE = 'This report cannot be viewed.'
+    SPACE_SELECT_ID = '#spaces_config_select'
 
     @property
     def url(self):
@@ -338,8 +340,17 @@ class ReportsPage(EntitiesPage):
     def click_spaces_select(self):
         self.get_spaces_select().click()
 
-    def get_spaces_select_placeholder(self):
-        return self.get_spaces_select().find_element_by_tag_name('input').get_attribute('placeholder')
+    def wait_for_spaces_select_help_message(self):
+        self.wait_for_element_present_by_text(self.SPACES_HELP_MESSAGE)
+
+    def get_space_select_selected_options(self, check_to_open=False):
+        if check_to_open:
+            self.click_include_dashboard()
+        return self.get_multiple_select_selected_options_text(self.SPACE_SELECT_ID)
+
+    def get_space_select_options(self):
+        self.click_include_dashboard()
+        return self.get_multiple_select_options_text(self.SPACE_SELECT_ID)
 
     def create_report(self,
                       report_config: ReportConfig,

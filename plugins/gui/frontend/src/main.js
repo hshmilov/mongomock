@@ -17,6 +17,7 @@ import {
   MdContent,
 } from 'vue-material/dist/components';
 
+import antInputDirective from 'ant-design-vue/es/_util/antInputDirective';
 import { createVuetifyConfigObject } from './plugins/vuetify';
 import App from './components/App.vue';
 
@@ -26,6 +27,7 @@ import MessageModalPlugin from '@/plugins/message-modal';
 import router from './router/index';
 import store from './store/index';
 
+Vue.use(antInputDirective);
 Vue.use(Vuelidate);
 Vue.use(MdSwitch);
 Vue.use(MdDatepicker);

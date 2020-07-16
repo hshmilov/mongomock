@@ -685,6 +685,15 @@ input[type='text'], input[type='password'], input[type='number'] {
 .ant-btn > .anticon + span {
   margin-left: 3px;
 }
+.ant-select-dropdown {
+  .ant-select-dropdown-menu-item {
+    font-weight: 200;
+    &.ant-select-dropdown-menu-item-selected,
+    &.ant-select-dropdown-menu-item-selected:hover {
+      font-weight: 300;
+    }
+  }
+}
 
 .ant-popover {
   z-index: 200 !important;
@@ -694,7 +703,7 @@ input[type='text'], input[type='password'], input[type='number'] {
   .ant-popover-inner {
     max-width: 600px;
     max-height: 300px;
-    padding: 8px;  
+    padding: 8px;
     .ant-popover-inner-content {
       font-weight: 200;
       padding: 0;
@@ -702,7 +711,7 @@ input[type='text'], input[type='password'], input[type='number'] {
         overflow: auto;
         max-height: 240px;
         @include  x-scrollbar;
-        @include  y-scrollbar;  
+        @include  y-scrollbar;
       }
     }
   }
