@@ -604,7 +604,8 @@ class ReportsService(Triggerable, PluginBase):
 
         query_difference = query_result_diff(query_result, self.__get_internal_axon_ids(trigger.result))
         triggered_reason = self._get_triggered_reports(query_result, query_difference,
-                                                       trigger.conditions) if not manual else [TriggeredReason.manual]
+                                                       trigger.conditions) if not manual \
+            else [TriggeredReason.custom_selection] if manual_input else [TriggeredReason.manual]
 
         if not triggered_reason and trigger.result is None:
             # this means that this is the first run for a query that has specific conditions,

@@ -92,6 +92,7 @@ class TriggeredReason(Enum):
     """
 
     manual = 'Manual run'
+    custom_selection = 'Custom selection'
     every_discovery = 'Any results'
     new_entities = 'New entities were added'
     previous_entities = 'Previous entities were removed'
