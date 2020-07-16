@@ -38,9 +38,7 @@ class TestAdapters(TestBase):
     # Sometimes upload file to CSV adapter does not work
     def test_upload_csv_file(self):
         with CsvService().contextmanager(take_ownership=True):
-            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-            self.adapters_page.wait_for_data_collection_toaster_start()
-            self.adapters_page.wait_for_data_collection_toaster_absent()
+            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details, wait_for_toaster=True)
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
             self.devices_page.fill_filter(self.adapters_page.CSV_ADAPTER_QUERY)
@@ -70,9 +68,7 @@ class TestAdapters(TestBase):
                     f'\n{hostname},Serial2,Windows,{mac_address},Office,{str(datetime.now())}, {ip_address}'
                     f'\nJames,Serial3,Linux,11:22:22:33:11:33,Office,{str(datetime.now())}')
             }
-            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details)
-            self.adapters_page.wait_for_data_collection_toaster_start()
-            self.adapters_page.wait_for_data_collection_toaster_absent()
+            self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, client_details, wait_for_toaster=True)
 
             self.adapters_page.switch_to_page()
             # Activate discovery phase

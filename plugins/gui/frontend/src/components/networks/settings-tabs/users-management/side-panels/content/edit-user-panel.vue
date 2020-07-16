@@ -76,6 +76,7 @@
           placeholder="Enter Password"
           class="password__input"
           type="password"
+          @focusin="onFocusIn"
         >
         <p
           v-if="$v.password.$error"
@@ -205,6 +206,11 @@ export default {
     validate() {
       this.$v.$touch();
       return this.$v.$invalid;
+    },
+    onFocusIn(event) {
+      if (this.$v.password.$model[0] === 'unchanged') {
+        event.target.select();
+      }
     },
   },
 };

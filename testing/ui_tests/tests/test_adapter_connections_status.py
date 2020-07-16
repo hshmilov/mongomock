@@ -31,9 +31,8 @@ class TestAdapterConnectionStatus(AdapterTestBase):
             self.adapters_page.wait_for_data_collection_toaster_absent()
 
             with CsvService().contextmanager(take_ownership=True):
-                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-                self.adapters_page.wait_for_data_collection_toaster_start()
-                self.adapters_page.wait_for_data_collection_toaster_absent()
+                self.adapters_page.upload_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details,
+                                              wait_for_toaster=True)
 
                 # ad success
                 self.adapters_page.add_server(ad_client1_details)

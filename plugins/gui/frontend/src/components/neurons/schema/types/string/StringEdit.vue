@@ -165,9 +165,9 @@ export default {
     formatData() {
       return this.data;
     },
-    onFocusIn() {
+    onFocusIn(event) {
       if (this.isUnchangedPassword) {
-        this.data = '';
+        event.target.select();
       }
     },
     onValidate(validity) {

@@ -458,14 +458,26 @@ class AdaptersPage(EntitiesPage):
         self.fill_creds(connectionLabel=connection_label)
         self.click_save()
 
-    def upload_csv(self, csv_file_name, csv_data, is_user_file=False):
+    def upload_csv(self, csv_file_name, csv_data, is_user_file=False, wait_for_toaster=False):
         self.open_add_edit_server(CSV_NAME)
         self.fill_upload_csv_form_with_csv(csv_file_name, csv_data, is_user_file)
         self.click_save()
+        if wait_for_toaster:
+            self.wait_for_data_collection_toaster_start()
+            self.wait_for_data_collection_toaster_absent()
 
-    def fill_upload_csv_form_with_csv(self, csv_file_name, csv_data, is_user_file=False):
+    def fill_upload_csv_form_with_csv(self, csv_file_name, csv_data=None, is_user_file=False):
+        if csv_data is None:
+            csv_data = {}
         self.upload_file_by_id(self.CSV_INPUT_ID, csv_data[csv_file_name].file_contents)
-        self.fill_creds(user_id=csv_file_name, connectionLabel=csv_file_name)
+        credentials = {
+            **csv_data,
+            'user_id': csv_file_name,
+            'connectionLabel': csv_file_name,
+        }
+        if credentials.get(csv_file_name, None):
+            credentials.pop(csv_file_name)
+        self.fill_creds(**credentials)
         if is_user_file:
             self.find_checkbox_by_label('File contains users information').click()
 
