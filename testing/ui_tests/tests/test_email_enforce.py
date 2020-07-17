@@ -36,6 +36,7 @@ class TestEmailEnforce(TestBase):
 
             smtp_service.verify_email_send(recipient)
             self._test_csv(recipient, smtp_service, devices_count)
+            self.devices_page.reset_query()
         self.settings_page.remove_email_server()
 
     def test_email_enforce_with_filtered_columns(self):

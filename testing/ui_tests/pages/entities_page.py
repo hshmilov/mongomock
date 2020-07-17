@@ -1598,11 +1598,14 @@ class EntitiesPage(Page):
     def click_task_name(self, task_name):
         self.find_element_by_xpath(self.TASKS_TAB_TASK_NAME_XPATH.format(task_name=task_name)).click()
 
-    def create_saved_query(self, data_query, query_name, query_description=None):
+    def create_saved_query(self, data_query, query_name, query_description=None,
+                           add_col_names=None, remove_col_names=None):
         self.switch_to_page()
         self.reset_query()
         self.fill_filter(data_query)
         self.enter_search()
+        if add_col_names or remove_col_names:
+            self.edit_columns(add_col_names, remove_col_names)
         self.click_save_query()
         self.fill_query_name(query_name)
         if query_description:

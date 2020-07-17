@@ -22,7 +22,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
 
         report_name = self.EMPTY_REPORT_NAME
 
-        doc = self._extract_report_pdf_doc(report_name)
+        doc = self._enter_and_get_report_pdf_doc_from_endpoint(report_name)
         texts = [page.extractText() for page in doc.pages]
         text = ' '.join(texts)
         assert 'Device Discovery' not in text
@@ -48,7 +48,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
                                                              'name': self.TEST_REPORT_QUERY_NAME
                                                          }]))
 
-            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert 'Devices - Saved Queries' in text
@@ -71,7 +71,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             stress_scanner.add_client(device_dict)
             self.base_page.run_discovery()
             self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME + ' ', add_dashboard=True))
-            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert 'Device Discovery' in text
@@ -134,7 +134,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
                              emails=[recipient]
                              )
             )
-            doc = self._extract_report_pdf_doc(report_name)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(report_name)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert 'Device Discovery' in text
@@ -168,7 +168,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             report_name = 'report histogram test'
             self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
-            doc = self._extract_report_pdf_doc(report_name)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(report_name)
 
             assert doc.pages[0].extractText().count(report_name) == 1
             assert doc.pages[0].extractText().count('Generated on') == 1
@@ -213,7 +213,7 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
             self.reports_page.wait_for_spinner_to_end()
             self.reports_page.click_save()
 
-            doc = wait_until(self._extract_report_pdf_doc, check_return_value=False,
+            doc = wait_until(self._enter_and_get_report_pdf_doc_from_endpoint, check_return_value=False,
                              tolerated_exceptions_list=[StaleElementReferenceException],
                              report_name=report_name)
 

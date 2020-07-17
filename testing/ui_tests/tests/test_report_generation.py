@@ -19,7 +19,7 @@ class TestReportGeneration(TestReportGenerationBase):
             stress_scanner.add_client(device_dict)
             self.base_page.run_discovery()
             self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True))
-            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(self.REPORT_NAME)
             downloaded_doc = self._download_report_pdf_doc(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
@@ -46,7 +46,7 @@ class TestReportGeneration(TestReportGenerationBase):
             report_name = 'report cover test'
             self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True))
 
-            doc = self._extract_report_pdf_doc(report_name)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(report_name)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             downloaded_doc = self._download_report_pdf_doc(report_name)

@@ -78,7 +78,6 @@ class MaildiranasaurusService(SmtpService):
                 continue
             payload = message
             break
-        m.clear()
         return payload
 
     def get_email_subject(self, recipient):

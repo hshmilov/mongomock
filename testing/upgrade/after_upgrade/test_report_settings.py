@@ -32,7 +32,7 @@ class TestReportSettings(TestReportGenerationBase):
         self.reports_page.click_save()
         self.reports_page.wait_for_table_to_load()
         self.reports_page.wait_for_report_generation(Reports.test_report_with_email)
-        doc = self._extract_report_pdf_doc(Reports.test_report_with_email)
+        doc = self._enter_and_get_report_pdf_doc_from_endpoint(Reports.test_report_with_email)
         texts = [page.extractText() for page in doc.pages]
         text = ' '.join(texts)
         assert Reports.test_report_with_email in text

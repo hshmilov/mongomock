@@ -38,7 +38,7 @@ class TestReportGenerationMoreCases(TestReportGenerationBase):
             self.reports_page.wait_for_spinner_to_end()
             assert self.reports_page.get_space_select_selected_options()[0] == self.TEST_DASHBOARD_SPACE
 
-            doc = self._extract_report_pdf_doc(self.TEST_REPORT_SPACES)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(self.TEST_REPORT_SPACES)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert self.TEST_REPORT_SPACES in text
@@ -58,30 +58,40 @@ class TestReportGenerationMoreCases(TestReportGenerationBase):
 
             self.base_page.run_discovery()
 
-            data_query = self.DATA_QUERY
-            self.devices_page.create_saved_query(data_query, self.TEST_REPORT_QUERY_NAME)
-            self.devices_page.wait_for_table_to_load()
-            self.reports_page.create_report(ReportConfig(report_name=self.REPORT_NAME, add_dashboard=True,
-                                                         queries=[{
-                                                             'entity': 'Devices',
-                                                             'name': self.TEST_REPORT_QUERY_NAME}]))
-
-            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
-            annots = [page.get('/Annots', []) for page in doc.pages]
-            annots = reduce(lambda x, y: x + y, annots)
-            links = [note.get('/A', {}).get('/URI') for note in annots]
-            assert len(links) > 0
-
-            decoded_links = map(urllib.parse.unquote, links)
-            assert any(self.TEST_REPORT_QUERY_NAME in link for link in decoded_links)
-            for page in doc.pages:
-                if page.extractText().count('self.TEST_REPORT_QUERY_NAME') > 0:
-                    assert page.extractText().count('avigdor') == 10
+            self._test_report_pdf_with_query(self.REPORT_NAME, self.DATA_QUERY, self.TEST_REPORT_QUERY_NAME)
+            self._test_report_pdf_with_query(self.REPORT_NAME1, self.DATA_QUERY1, self.TEST_REPORT_QUERY_NAME1,
+                                             add_col_names=[self.devices_page.FIELD_FIRST_FETCH_TIME],
+                                             remove_col_names=[self.devices_page.FIELD_OS_TYPE,
+                                                               self.devices_page.FIELD_LAST_SEEN,
+                                                               self.devices_page.FIELD_TAGS])
 
             self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_ADAPTER_NAME)
             self.adapters_page.clean_adapter_servers(ui_consts.STRESSTEST_SCANNER_ADAPTER_NAME)
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(ui_consts.STRESSTEST_SCANNER_ADAPTER)
+
+    def _test_report_pdf_with_query(self, report_name, data_query, query_name,
+                                    add_col_names=None, remove_col_names=None):
+        self.devices_page.create_saved_query(data_query, query_name,
+                                             add_col_names=add_col_names, remove_col_names=remove_col_names)
+        self.devices_page.wait_for_table_to_be_responsive()
+        headers = ''.join(self.devices_page.get_columns_header_text()[:6]).replace(' ', '')
+        self.reports_page.create_report(ReportConfig(report_name=report_name, add_dashboard=True,
+                                                     queries=[{
+                                                         'entity': 'Devices',
+                                                         'name': query_name}]))
+        doc = self._enter_and_get_report_pdf_doc_from_endpoint(report_name)
+        annots = [page.get('/Annots', []) for page in doc.pages]
+        annots = reduce(lambda x, y: x + y, annots)
+        links = [note.get('/A', {}).get('/URI') for note in annots]
+        assert len(links) > 0
+        decoded_links = map(urllib.parse.unquote, links)
+        assert any(query_name in link for link in decoded_links)
+        for page in doc.pages:
+            page_text = page.extractText()
+            if query_name in page_text:
+                assert page_text.count('avigdor') == 10
+                assert headers in page_text.replace('\n', ' ').replace('\r', '').replace(' ', '')
 
     def test_multiple_saved_queries(self):
         stress = stresstest_service.StresstestService()
@@ -105,7 +115,7 @@ class TestReportGenerationMoreCases(TestReportGenerationBase):
                                                                  'name': self.TEST_REPORT_QUERY_NAME2
                                                              }]))
 
-            doc = self._extract_report_pdf_doc(self.REPORT_NAME)
+            doc = self._enter_and_get_report_pdf_doc_from_endpoint(self.REPORT_NAME)
             texts = [page.extractText() for page in doc.pages]
             text = ' '.join(texts)
             assert 'Devices - Saved Queries' in text
