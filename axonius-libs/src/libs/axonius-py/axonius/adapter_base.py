@@ -508,7 +508,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 # pylint: disable=W0631
                 logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
-    # pylint: disable=too-many-return-statements,too-many-branches
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         self.__has_a_reason_to_live = True
         # pylint: disable=too-many-nested-blocks
@@ -548,6 +548,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         res = {'devices_count': 0,
                                'users_count': 0
                                }
+                        fetch_start_time = datetime.utcnow()
                         for client, result in self._handle_insert_to_db_async(client_name, check_fetch_time,
                                                                               log_fetch=log_fetch):
                             if result != '':
@@ -555,6 +556,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                 res['devices_count'] += result['devices_count']
                                 res['users_count'] += result['users_count']
                             logger.info(f'Received from {client}: {result}')
+
+                        if log_fetch:
+                            self._log_activity_adapter_client_fetch_summary(self.plugin_unique_name,
+                                                                            fetch_start_time,
+                                                                            res['users_count'],
+                                                                            res['devices_count'])
                         res = to_json(res)
                     else:
                         res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
