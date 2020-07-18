@@ -67,7 +67,6 @@ class TestUserPermissions(PermissionsTestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.click_new_user()
-        self.settings_page.wait_for_new_user_panel()
         self.settings_page.click_create_user()
         self.settings_page.assert_create_user_disabled()
         self.settings_page.fill_new_user_details(ui_consts.RESTRICTED_USERNAME, '')
@@ -96,17 +95,17 @@ class TestUserPermissions(PermissionsTestBase):
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=ui_consts.NEW_PASSWORD)
 
-        self.my_account_page.switch_to_page()
-        self.my_account_page.change_password(
+        self.account_page.switch_to_page()
+        self.account_page.change_password(
             ui_consts.NEW_PASSWORD,
             self.password,
             self.password,
-            self.my_account_page.wait_for_password_changed_toaster)
+            self.account_page.wait_for_password_changed_toaster)
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=ui_consts.RESTRICTED_USERNAME, password=self.password)
-        self.my_account_page.switch_to_page()
+        self.account_page.switch_to_page()
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()

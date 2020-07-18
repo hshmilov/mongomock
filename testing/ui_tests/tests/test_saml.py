@@ -240,12 +240,12 @@ class TestSaml(PermissionsTestBase):
             self.login_page.login(username=saml_username, password=initial_internal_user_password,
                                   wait_for_getting_started=False)
 
-            self.my_account_page.switch_to_page()
-            self.my_account_page.change_password(
+            self.account_page.switch_to_page()
+            self.account_page.change_password(
                 initial_internal_user_password,
                 new_internal_user_password,
                 new_internal_user_password,
-                self.my_account_page.wait_for_password_changed_toaster)
+                self.account_page.wait_for_password_changed_toaster)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()

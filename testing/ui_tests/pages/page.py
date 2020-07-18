@@ -209,6 +209,9 @@ class Page:
                              '//div[@class=\'x-table\']//tr[@class=\'x-table-row\']'
     TABLE_HEADER_XPATH = '//div[@class=\'x-table\']/table/thead/tr'
 
+    PASSWORD_POLICY_REQUIREMENTS_CONTAINER_CSS = '.x-password-policy-requirements'
+    PASSWORD_POLICY_REQUIREMENTS_ITEM_CSS = '.list__item'
+
     # multi-select consts:
     MULTI_SELECT_SELECTED_OPTIONS_CSS = '.ant-select-selection--multiple .ant-select-selection__choice'
     MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS = '.ant-select-selection__choice__remove'
@@ -1290,3 +1293,14 @@ class Page:
 
     def assert_screen_is_restricted(self):
         assert self.is_switch_button_disabled()
+
+    def close_side_panel(self):
+        self.wait_for_element_present_by_css(self.CSS_SELECTOR_CLOSE_PANEL_ACTION).click()
+
+    def find_password_policy_requirements(self):
+        return self.driver.find_element_by_css_selector(self.PASSWORD_POLICY_REQUIREMENTS_CONTAINER_CSS)
+
+    def get_password_policy_requirements_list(self):
+        container = self.find_password_policy_requirements()
+        requirements_list = container.find_elements_by_css_selector(self.PASSWORD_POLICY_REQUIREMENTS_ITEM_CSS)
+        return [item.text for item in requirements_list]

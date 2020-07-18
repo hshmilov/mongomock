@@ -280,3 +280,15 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
             }
         )
         return self._jsonify_api_data(new_api_key, new_token)
+
+    @gui_route_logged_in('password_policy', methods=['GET'], enforce_session=False)
+    def get_password_policy_requirements(self):
+        """
+        Get the current complexity specifications for enforcing the Password Policy
+        :return:
+        """
+        if not self._password_policy_settings or not self._password_policy_settings['enabled']:
+            return jsonify({})
+        return jsonify({key: value
+                        for key, value in self._password_policy_settings.items()
+                        if key != 'enabled' and value})

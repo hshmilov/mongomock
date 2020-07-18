@@ -15,6 +15,7 @@ import {
   xActionsGroup as XActionsGroup,
 } from '@networks/side-panel/PanelActions';
 import XButton from '@axons/inputs/Button.vue';
+import XPasswordPolicyRequirements from '@neurons/alerts/PasswordPolicyRequirements.vue';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 const XNewUserForm = () => import(/* webpackChunkName: "XNewUserForm" */ './content/new-user-panel.vue');
@@ -31,6 +32,7 @@ export default {
     XNewUserForm,
     XEditUserInfoForm,
     XModalResetPassword,
+    XPasswordPolicyRequirements,
   },
   props: {
     visible: {
@@ -227,6 +229,7 @@ export default {
           {
             this.visible ? this.genPanelContent() : null
           }
+          <XPasswordPolicyRequirements />
         </div>
         <div slot="panelFooter">
           {

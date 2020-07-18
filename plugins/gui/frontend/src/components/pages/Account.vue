@@ -11,6 +11,7 @@
         <XForm
           v-model="passwordForm"
           :schema="passwordFormSchema"
+          :show-password-policy="true"
           @validate="updatePasswordValidity"
         />
         <div
@@ -261,44 +262,48 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-account {
-        .x-tabs {
-            max-width: 840px;
-        }
-
-        .password-account-tab {
-            .x-form .x-array-edit .list{
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .apikey-account-tab {
-            .x-button {
-                margin-top: 12px;
-            }
-
-            .x-grid {
-                margin-top: 24px;
-                grid-template-columns: 1fr 2fr;
-            }
-        }
-        .md-icon-button {
-            color: $theme-blue
-        }
-        .secret-key {
-            width: 360px;
-            border: none;
-            position: relative;
-            background: transparent
-        }
-
-        .ant-btn-icon-only {
-            margin: 0 3px;
-        }
-
-        .error-text {
-          font-size: 14px;
-          margin-top: -22px;
-        }
+  .x-account {
+    .x-tabs {
+      max-width: 840px;
     }
+
+    .password-account-tab {
+      width: 400px;
+
+      .x-form .x-array-edit .list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .apikey-account-tab {
+      .x-button {
+        margin-top: 12px;
+      }
+
+      .x-grid {
+        margin-top: 24px;
+        grid-template-columns: 1fr 2fr;
+      }
+    }
+
+    .md-icon-button {
+      color: $theme-blue
+    }
+
+    .secret-key {
+      width: 360px;
+      border: none;
+      position: relative;
+      background: transparent
+    }
+
+    .ant-btn-icon-only {
+      margin: 0 3px;
+    }
+
+    .error-text {
+      font-size: 14px;
+      margin-top: -22px;
+    }
+  }
 </style>

@@ -313,12 +313,7 @@ export default {
       // In other words, once the option sub fields is invisible again, we have to make them valid
       // since they are no longer relevant for validation.
 
-
-      // handle a case where enable checkbox follow by conditional
       if (Array.isArray(this.schema.items)
-                    && this.schema.items[0]
-                    && this.schema.items[1]
-                    && this.schema.items[0].name === 'enabled'
                     && this.schema.items.length > 1
                     && this.schema.items[0].name === 'enabled'
                     && this.schema.items[1].name === 'conditional') {
@@ -343,7 +338,6 @@ export default {
         }
       }
 
-
       if (checkHiddenFields
            && this.schema.items[0].name === 'enabled'
            && this.data[this.schema.items[0].name] === false
@@ -364,11 +358,10 @@ export default {
         this.data = [...this.data, null];
       } else {
         this.data = [...this.data,
-          this.schema.items.items.reduce((map, field) => {
-            // eslint-disable-next-line no-param-reassign
-            map[field.name] = field.default || null;
-            return map;
-          }, {}),
+          this.schema.items.items.reduce((map, field) => ({
+            ...map,
+            [field.name]: field.default || null,
+          }), {}),
         ];
       }
     },

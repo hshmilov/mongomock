@@ -127,7 +127,7 @@ import { mapActions } from 'vuex';
 import { Select } from 'ant-design-vue';
 import { required, email } from 'vuelidate/lib/validators';
 import { fetchAssignableRolesList } from '@api/roles';
-import { fetchUsernamesList } from '@api/system-users';
+import { fetchUsernamesList } from '@api/accounts';
 import {
   GET_ALL_ROLES,
 } from '@store/modules/auth';
@@ -236,7 +236,7 @@ export default {
 <style lang="scss">
 .user-panel {
   .new-user__form {
-    width: 390px;
+    width: 400px;
     h5 {
       display: inline;
       font-size: 16px;
@@ -260,7 +260,6 @@ export default {
       margin: 0 0 16px 0;
       &.form__password {
         > div {
-          height: 30px;
           input[type='radio'] {
             width: unset;
             height: 14px;

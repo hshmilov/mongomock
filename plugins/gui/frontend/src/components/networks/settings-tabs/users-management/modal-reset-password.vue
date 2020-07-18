@@ -81,7 +81,7 @@ import { mapMutations, mapState } from 'vuex';
 
 import XModal from '@axons/popover/Modal/index.vue';
 import XButton from '@axons/inputs/Button.vue';
-import { getUserResetPasswordLink, sendResetPasswordTokenEmail } from '@api/user-tokens';
+import { getUserResetPasswordLink, sendResetPasswordTokenEmail } from '@api/accounts-password';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export default {

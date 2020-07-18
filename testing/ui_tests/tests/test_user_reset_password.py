@@ -61,7 +61,7 @@ class TestUserResetPassword(TestBase):
                                                ui_consts.LAST_NAME,
                                                self.settings_page.ADMIN_ROLE)
             # edit the user to get the link
-            link = self.settings_page.get_user_reset_password_link(ui_consts.UPDATE_USERNAME)
+            link = self.settings_page.edit_user_and_get_reset_password_link(ui_consts.UPDATE_USERNAME)
             self.settings_page.fill_email_and_click_reset_password_link(recipient)
             self.settings_page.close_reset_password_modal()
             # validate email

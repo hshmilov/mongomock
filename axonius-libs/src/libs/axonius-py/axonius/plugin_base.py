@@ -3560,28 +3560,28 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': PASSWORD_LENGTH_SETTING,
                             'title': 'Minimum password length',
-                            'type': 'number',
+                            'type': 'integer',
                         },
                         {
                             'name': PASSWORD_MIN_LOWERCASE,
                             'title': 'Minimum lowercase letters required',
-                            'type': 'number',
+                            'type': 'integer',
                         },
                         {
                             'name': PASSWORD_MIN_UPPERCASE,
                             'title': 'Minimum uppercase letters required',
-                            'type': 'number',
+                            'type': 'integer',
                         },
                         {
                             'name': PASSWORD_MIN_NUMBERS,
                             'title': 'Minimum numbers required',
-                            'type': 'number',
+                            'type': 'integer',
                         },
                         {
                             'name': PASSWORD_MIN_SPECIAL_CHARS,
                             'title': 'Minimum special characters required',
                             'description': 'Special characters list: ~!@#$%^&*_-+=`|\\(){}[]:;"\'<>,.?/',
-                            'type': 'number',
+                            'type': 'integer',
                         }
                     ]
                 },

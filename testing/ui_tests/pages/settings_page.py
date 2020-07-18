@@ -325,12 +325,12 @@ class SettingsPage(Page):
 
     def click_new_user(self):
         self.get_enabled_button(self.ADD_USER_BUTTON_TEXT).click()
-        # wait for the panel animation
-        time.sleep(2)
+        self.wait_for_config_user_panel()
 
-    def wait_for_new_user_panel(self):
+    def wait_for_config_user_panel(self):
         self.wait_for_element_present_by_css('.x-side-panel.user-panel.ant-drawer-open',
                                              is_displayed=True)
+        time.sleep(0.6)  # wait for animation
 
     def click_new_role(self):
         # wait for the panel animation
@@ -352,8 +352,7 @@ class SettingsPage(Page):
 
     def click_edit_user(self, user_name):
         self.find_username_row_by_username(user_name).click()
-        # wait for the panel animation
-        time.sleep(0.5)
+        self.wait_for_config_user_panel()
 
     def fill_first_name(self, first_name):
         self.fill_text_field_by_css_selector('.first-name__input', first_name)
@@ -444,9 +443,8 @@ class SettingsPage(Page):
 
     def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
                         wait_for_toaster=True, generate_password=False):
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_new_user()
-        self.wait_for_new_user_panel()
         self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name,
                                    generate_password=generate_password)
         self.click_create_user()
@@ -590,14 +588,18 @@ class SettingsPage(Page):
             self.select_role(role_name)
         self.save_user_wait_done()
 
-    def get_user_reset_password_link(self, username):
-        self.click_edit_user(username)
+    def create_and_get_reset_password_link(self):
         self.click_reset_password_button()
         return self.get_reset_password_link()
+
+    def edit_user_and_get_reset_password_link(self, username):
+        self.click_edit_user(username)
+        return self.create_and_get_reset_password_link()
 
     def click_reset_password_button(self):
         self.driver.find_element_by_css_selector(self.RESET_PASSWORD_ACTION_ICON_CSS).click()
         self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        time.sleep(0.6)  # Modal animation
 
     def get_reset_password_link(self):
         self.driver.find_element_by_css_selector(self.RESET_PASSWORD_COPY_TO_CLIPBOARD_ICON_CSS).click()
@@ -653,7 +655,7 @@ class SettingsPage(Page):
 
     def remove_user_by_user_name_with_user_panel(self, user_name):
         self.click_edit_user(user_name)
-        self.wait_for_new_user_panel()
+        self.wait_for_config_user_panel()
         self.get_user_remove_panel_action().click()
         self.safeguard_click_confirm('Yes, Delete')
         self.wait_for_user_removed_toaster()
@@ -810,8 +812,16 @@ class SettingsPage(Page):
     def find_syslog_toggle(self):
         return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
 
-    def find_password_policy_toggle(self):
-        return self.find_checkbox_by_label(self.ENFORCE_PASSWORD_POLICY)
+    def set_password_policy_toggle(self, enable=True):
+        password_policy_checkbox = self.find_checkbox_by_label(self.ENFORCE_PASSWORD_POLICY)
+        self.click_toggle_button(password_policy_checkbox, make_yes=enable)
+
+    def restore_initial_password_policy(self):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.set_password_policy_toggle(False)
+        self.click_save_global_settings()
+        self.wait_for_saved_successfully_toaster()
 
     def find_password_expiration_toggle(self):
         return self.find_checkbox_by_label(self.PASSWORD_EXPIRATION_LABEL)
@@ -1485,9 +1495,12 @@ class SettingsPage(Page):
         self.driver.find_element_by_css_selector(self.CONNECTION_LABEL_REQUIRED_DIV_CSS).click()
 
     def close_role_panel(self):
-        close_btn = self.wait_for_element_present_by_css(self.CSS_SELECTOR_CLOSE_PANEL_ACTION)
-        close_btn.click()
+        self.close_side_panel()
         self.wait_for_role_panel_absent()
+
+    def close_user_panel(self):
+        self.close_side_panel()
+        self.wait_for_user_panel_closed()
 
     def save_system_interval_schedule_settings(self, interval_value):
         session = requests.Session()

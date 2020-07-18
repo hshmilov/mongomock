@@ -14,6 +14,7 @@
       @validate="onValidate"
       @remove-validate="onRemoveValidate"
     />
+    <XPasswordPolicyRequirements v-if="showPasswordPolicy" />
     <div
       v-if="!silent"
       class="form-error"
@@ -34,6 +35,7 @@
 <script>
 import _differenceBy from 'lodash/differenceBy';
 import XArrayEdit from './types/array/ArrayEdit.vue';
+import XPasswordPolicyRequirements from '@neurons/alerts/PasswordPolicyRequirements.vue';
 
 /*
   Dynamically built form, according to given schema.
@@ -46,7 +48,9 @@ import XArrayEdit from './types/array/ArrayEdit.vue';
 */
 export default {
   name: 'XForm',
-  components: { XArrayEdit },
+  components: {
+    XArrayEdit, XPasswordPolicyRequirements
+  },
   props: {
     value: {
       type: Object,
@@ -77,6 +81,10 @@ export default {
       default: false,
     },
     listCollapsible: {
+      type: Boolean,
+      default: false,
+    },
+    showPasswordPolicy: {
       type: Boolean,
       default: false,
     },
@@ -163,6 +171,7 @@ export default {
         grid-template-columns: 1fr 1fr;
         grid-gap: 12px 24px;
       }
+
       input, select, textarea {
 
         &.error-border {
@@ -173,6 +182,10 @@ export default {
       .error-border:not(.md-field) {
         border: 1px solid $indicator-error;
       }
+    }
+
+    .x-password-policy-requirements {
+      margin-top: 12px;
     }
 
     .form-error {

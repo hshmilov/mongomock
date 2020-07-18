@@ -44,7 +44,6 @@ from ui_tests.pages.users_queries_page import UsersQueriesPage
 from ui_tests.pages.enforcements_page import EnforcementsPage
 from ui_tests.pages.instances_page import InstancesPage
 from ui_tests.pages.login_page import LoginPage
-from ui_tests.pages.my_account_page import MyAccountPage
 from ui_tests.pages.notification_page import NotificationPage
 from ui_tests.pages.reports_page import ReportsPage
 from ui_tests.pages.settings_page import SettingsPage
@@ -419,7 +418,6 @@ class TestBase:
         self.login_page = LoginPage(**params)
         self.reset_password_page = ResetPasswordPage(**params)
         self.settings_page = SettingsPage(**params)
-        self.my_account_page = MyAccountPage(**params)
         self.devices_page = DevicesPage(**params)
         self.devices_queries_page = DevicesQueriesPage(**params)
         self.users_queries_page = UsersQueriesPage(**params)

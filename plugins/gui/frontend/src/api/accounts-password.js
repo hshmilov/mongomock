@@ -48,3 +48,10 @@ export const sendResetPasswordTokenEmail = async (userId, email, invite) => {
   const { data } = await request(requestOptions);
   return data;
 };
+
+export const fetchPasswordPolicyRequirements = async () => {
+  const uri = 'settings/password_policy';
+  const request = createRequest(uri);
+  const { data } = await request({});
+  return data;
+};

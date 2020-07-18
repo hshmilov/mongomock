@@ -14,6 +14,7 @@
         v-model="credentials"
         :schema="schema"
         :error="errorMsg"
+        :show-password-policy="true"
         @validate="onValidate"
         @submit="onSubmit"
       />
@@ -36,7 +37,7 @@
 </template>
 
 <script>
-import { validateResetPasswordToken, resetUserPasswordByToken } from '@api/user-tokens';
+import { validateResetPasswordToken, resetUserPasswordByToken } from '@api/accounts-password';
 import XForm from '../../neurons/schema/Form.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import { NOT_LOGGED_IN, SET_USER_ERROR } from '@store/modules/auth';

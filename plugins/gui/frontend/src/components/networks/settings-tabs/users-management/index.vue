@@ -234,5 +234,9 @@ export default {
    .table-header {
      background-color: $theme-white;
    }
+
+   .x-password-policy-requirements {
+     width: 400px;
+   }
  }
 </style>

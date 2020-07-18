@@ -33,7 +33,15 @@ export const vaultProviderEnum = {
   },
 };
 
-export const generateCSRAction = 'generateCSR'
-export const importCertAndKeyAction = 'importCertAndKey'
-export const importCSRAction = 'importCSR'
-export const resetSystemDefaultsAction = 'resetSystemDefaults'
+export const generateCSRAction = 'generateCSR';
+export const importCertAndKeyAction = 'importCertAndKey';
+export const importCSRAction = 'importCSR';
+export const resetSystemDefaultsAction = 'resetSystemDefaults';
+
+export const passwordPolicyFormatterEnum = {
+  password_length: (value) => `Minimum ${value} character`,
+  password_min_lowercase: (value) => `${value} lowercase letter`,
+  password_min_uppercase: (value) => `${value} uppercase letter`,
+  password_min_numbers: (value) => `${value} number`,
+  password_min_special_chars: (value) => `${value} special character`,
+};

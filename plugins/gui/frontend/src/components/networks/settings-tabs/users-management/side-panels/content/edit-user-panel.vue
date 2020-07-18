@@ -224,7 +224,7 @@ export default {
     justify-content: space-between;
 
     .edit-user__form {
-      width: 390px;
+      width: 400px;
 
       h5 {
         display: inline;

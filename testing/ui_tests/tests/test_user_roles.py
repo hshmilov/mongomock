@@ -73,7 +73,7 @@ class TestUserRoles(TestBase):
         self.settings_page.click_manage_users_settings()
         # Change to Read Only role, save the user and check permissions correct also after refresh
         self.settings_page.click_edit_user(ui_consts.RESTRICTED_USERNAME)
-        self.settings_page.wait_for_new_user_panel()
+        self.settings_page.wait_for_config_user_panel()
         self.settings_page.select_role(self.settings_page.VIEWER_ROLE)
         self.settings_page.save_user_wait_done()
         user_data = self.settings_page.get_user_data_by_user_name(ui_consts.RESTRICTED_USERNAME)
@@ -106,7 +106,7 @@ class TestUserRoles(TestBase):
 
         # Change to Read Only role, save the user and check permissions correct also after refresh
         self.settings_page.click_edit_user(ui_consts.READ_ONLY_USERNAME)
-        self.settings_page.wait_for_new_user_panel()
+        self.settings_page.wait_for_config_user_panel()
         self.settings_page.select_role(self.settings_page.RESTRICTED_ROLE)
         self.settings_page.save_user_wait_done()
         user_data = self.settings_page.get_user_data_by_user_name(ui_consts.READ_ONLY_USERNAME)

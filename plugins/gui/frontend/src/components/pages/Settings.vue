@@ -576,9 +576,6 @@ export default {
           max-width: 30%;
         }
       }
-      ul {
-        padding-left: 0;
-      }
 
       .tab-settings .x-form .x-array-edit .list{
         grid-template-columns: 1fr;

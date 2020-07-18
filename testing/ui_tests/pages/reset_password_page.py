@@ -36,9 +36,12 @@ class ResetPasswordPage(Page):
     def wait_for_reset_password_page_to_load(self):
         self.wait_for_element_present_by_xpath(self.DISABLED_BUTTON_XPATH.format(button_text=self.SET_PASSWORD_BUTTON))
 
-    def reset_password_via_link(self, link, password):
+    def load_reset_password_link(self, link):
         self.driver.get(link)
         self.wait_for_reset_password_page_to_load()
+
+    def reset_password_via_link(self, link, password):
+        self.load_reset_password_link(link)
         self.set_new_password(password)
         self.wait_for_toaster(self.RESET_PASSWORD_TOASTER_TEXT)
 
