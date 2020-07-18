@@ -9,11 +9,13 @@ import pytz
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
 from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
     MONGOALIVE_WATCHDOG_IN_PROGRESS, create_lock_file
+from scripts.instances.instances_modes import InstancesModes, get_instance_mode
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
 
 SLEEP_SECONDS = 5
 NODE_MSG = 'this watchdog will not run on node'
+REMOTE_MONGO_MSG = 'this watchdog will not run on master with remote mongo'
 MONGO_IS_DOWN = 'MONGO IS DOWN'
 
 GUI_IS_DEAD_THRESH = 3 * 60 * 60
@@ -35,9 +37,14 @@ class MongoAliveTask(WatchdogTask):
     def run(self):
         while True:
             time.sleep(SLEEP_SECONDS)
+            instance_mode = get_instance_mode()
             try:
-                if NODE_MARKER_PATH.is_file():
+                if NODE_MARKER_PATH.is_file() and instance_mode != InstancesModes.mongo_only.value:
                     self.report_info(NODE_MSG)
+                    continue
+
+                if instance_mode == InstancesModes.remote_mongo.value:
+                    self.report_info(REMOTE_MONGO_MSG)
                     continue
 
                 if check_installer_locks():

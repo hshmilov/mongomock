@@ -10,6 +10,7 @@ from datetime import datetime
 
 from pymongo.errors import PyMongoError
 
+from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from axonius.utils.build_modes import BuildModes
 from conf_tools import get_customer_conf_json
@@ -130,6 +131,7 @@ def system_entry_point(args):
 
     axonius_system = get_service()
     internal_services = [service.service_name for service in axonius_system.axonius_services]
+
     if args.all:
         assert len(args.services) == 0 and len(args.adapters) == 0
         args.services = [name for name, variable in axonius_system.get_all_plugins() if name != 'diagnostics']
@@ -173,6 +175,11 @@ def system_entry_point(args):
     system_config = get_customer_conf_json()
 
     if args.mode == 'up':
+        if get_instance_mode() == InstancesModes.mongo_only.value:
+            # we need to raise only mongo service and instance control
+            args.services = []
+            args.adapters = []
+
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
         if args.restart:

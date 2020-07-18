@@ -13,6 +13,7 @@ import pytest
 from axonius.consts.gui_consts import GUI_CONFIG_NAME
 from axonius.utils.json import from_json
 from conf_tools import TUNNELED_ADAPTERS
+from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import (get_encryption_key,
                                              restore_master_connection, get_weave_subnet_ip_range,
                                              get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
@@ -40,6 +41,7 @@ from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.plugins.master_proxy_service import MasterProxyService
+from services.standalone_services.remote_mongo_proxy_service import RemoteMongoProxyService
 from services.weave_service import is_weave_up, is_using_weave
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
@@ -70,6 +72,9 @@ class AxoniusService:
         self.instance_control = InstanceControlService()
         self.master_proxy = MasterProxyService()
         self.openvpn = OpenvpnService()
+        self.instance_mode = get_instance_mode()
+        self.remote_mongo = RemoteMongoProxyService() if \
+            self.instance_mode == InstancesModes.remote_mongo.value else None
 
         self.axonius_services = [self.db,
                                  self.core,
@@ -232,7 +237,7 @@ class AxoniusService:
             service_to_start.set_system_config(system_config)
             if skip and service_to_start.get_is_container_up():
                 return
-            if expose_db and service_to_start is self.db:
+            if expose_db and service_to_start in (self.db, self.remote_mongo):
                 service_to_start.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild,
                                        hard=hard, show_print=show_print, expose_port=True,
                                        docker_internal_env_vars=env_vars)
@@ -247,11 +252,20 @@ class AxoniusService:
                 service.remove_container()
 
         # Start in parallel
-        services_to_start = self._process_internal_service_white_list(internal_service_white_list)
+        if self.instance_mode == InstancesModes.mongo_only.value:
+            # we need to raise only mongo service
+            services_to_start = [self.db]
+        else:
+            services_to_start = self._process_internal_service_white_list(internal_service_white_list)
 
+        if self.remote_mongo is not None:
+            services_to_start = [self.remote_mongo if x.container_name == 'mongo' else x
+                                 for x in services_to_start]
         mongo_service = next((x for x in services_to_start if x.container_name == 'mongo'), None)
+
         if mongo_service:
             # if mongo is also restarted, we can't restart anything else before it finishes
+            mongo_service.take_process_ownership()
             _start_service(mongo_service)
             mongo_service.wait_for_service()
             services_to_start.remove(mongo_service)

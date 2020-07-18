@@ -25,6 +25,7 @@ from install import (TEMPORAL_PATH,
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
 from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME, NOLOGINER_USER_NAME
+from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import get_weave_subnet_ip_range
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
 from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes
@@ -53,7 +54,7 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
 def after_venv_activation(first_time, no_research, master_only, installer_path):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     node_instances = None
-
+    nodes_upgraded = False
     # If this is a master and it should upgrade the entire master
     if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Upgrading entire cluster')
@@ -63,6 +64,13 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
                               if instance['node_id'] != cluster_data['my_entity']['node_id']]
             print_state('Shutting down adapters on nodes')
             shutdown_adapters(node_instances)
+            # if we use remote mongo, upgrade the node before master
+            if get_instance_mode() == InstancesModes.remote_mongo.value:
+                print_state('Downloading upgrader on remote mongo node')
+                download_upgrader_on_nodes(node_instances, installer_path)
+                print_state('Upgrading remote mongo node')
+                upgrade_nodes(node_instances)
+                nodes_upgraded = True
 
     if not first_time:
         stop_old()
@@ -89,7 +97,7 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
-    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances:
+    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances and not nodes_upgraded:
         print_state('Downloading upgrader on nodes')
         download_upgrader_on_nodes(node_instances, installer_path)
         print_state('Upgrading nodes')

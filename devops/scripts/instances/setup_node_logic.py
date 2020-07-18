@@ -3,6 +3,7 @@ import shlex
 import subprocess
 import sys
 
+from scripts.instances.instances_modes import InstancesModes, get_instance_mode
 from scripts.instances.network_utils import connect_to_master, update_weave_connection_params, update_db_enc_key
 from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 PASSWORD_GET_URL,
@@ -79,8 +80,11 @@ def setup_node(connection_string):
     USING_WEAVE_PATH.touch()
     connect_to_master(master_ip, weave_pass)
     NODE_MARKER_PATH.touch()
-    db_pass = get_db_pass_from_core()
-    update_db_enc_key(db_pass)
+    # on a node with only mongo, we don't need the db pass,
+    # which is used today only as an env-variable for plugins that need to interact with mongo.
+    if get_instance_mode() != InstancesModes.mongo_only.value:
+        db_pass = get_db_pass_from_core()
+        update_db_enc_key(db_pass)
     restart_all_adapters(init_name)
     change_instance_setup_user_pass()
 
