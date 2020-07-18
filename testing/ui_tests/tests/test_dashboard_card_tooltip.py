@@ -55,9 +55,9 @@ class TestDashboardCardTooltip(TestBase):
         assert body_percentage != ''
         return body_percentage
 
-    def _test_pie_chart_tooltip(self, card_title, acceptable_results=None):
-        if not acceptable_results:
-            acceptable_results = (100,)
+    def _test_pie_chart_tooltip(self, card_title, range_tuple=None):
+        if not range_tuple:
+            range_tuple = (100, 100)
         card = self.dashboard_page.get_card(card_title)
         pie_chart = self.dashboard_page.get_pie_chart_from_card(card)
         pie_chart_slices = self.dashboard_page.get_pie_chart_slices(pie_chart)
@@ -67,7 +67,7 @@ class TestDashboardCardTooltip(TestBase):
             self.dashboard_page.hover_over_element(current_slice)
             total_percentage += self._verify_pie_chart_tooltip_and_get_percentage(card)
 
-        assert total_percentage in acceptable_results
+        assert range_tuple[0] <= total_percentage <= range_tuple[1]
 
     def test_comparison_pie_chart_tooltip(self):
         self.dashboard_page.switch_to_page()
@@ -84,7 +84,7 @@ class TestDashboardCardTooltip(TestBase):
             DEVICES_MODULE, 'Last Seen', self.TEST_SEGMENTATION_TITLE, 'pie',
             DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME)
         # we currently hae a minor bug, sometimes it's 99.9, sometimes 100
-        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE, (Decimal('100'), Decimal('99.9'), Decimal('99.7')))
+        self._test_pie_chart_tooltip(self.TEST_SEGMENTATION_TITLE, range_tuple=(Decimal('99.0'), Decimal('100')))
 
     def test_intersection_pie_chart_tooltip(self):
         def _verify_excluding_or_intersection_tooltip():
