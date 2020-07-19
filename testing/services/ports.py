@@ -69,6 +69,7 @@ DOCKER_PORTS = {
     'symantec-altiris-adapter':         5676,
     'qualys-adapter':                   5677,
     'sentinelone-adapter':              5678,
+    'git-lab-adapter':                  5679,
     'absolute-adapter':                 5680,
     'eset-adapter':                     5682,
     'desktop-central-adapter':          5683,

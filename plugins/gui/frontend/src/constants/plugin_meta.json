@@ -568,6 +568,11 @@
     "link": "https://docs.axonius.com/docs/censys",
     "description": "Censys monitors infrastructure and discovers unknown assets across the Internet."
   },
+  "git_lab_adapter": {
+    "title": "GitLab",
+    "link": "https://docs.axonius.com/docs/gitlab",
+    "description": "GitLab is an open-source DevOps lifecycle tool that provides a wiki, issue-tracking, and continuous integration and deployment pipeline features"
+  },
   "endgame_adapter": {
     "title": "Endgame",
     "link": "https://docs.axonius.com/docs/endgame",
