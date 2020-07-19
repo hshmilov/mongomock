@@ -25,7 +25,7 @@ class AwsUserType(Enum):
 
 # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-locals,
 # pylint: disable=too-many-statements, logging-format-interpolation, too-many-lines
-def query_users_by_client_for_all_sources(client_data):
+def query_users_by_client_for_all_sources(client_data, accessed_services: bool):
     iam_client = client_data.get('iam')
     if not iam_client:
         return None
@@ -78,17 +78,18 @@ def query_users_by_client_for_all_sources(client_data):
 
                                         for policy in attached_policy:
                                             if not isinstance(policy, dict):
-                                                raise ValueError(f'Malformed policy.'
+                                                raise ValueError(f'Malformed policy. '
                                                                  f'Expected dict, got '
                                                                  f'{type(policy)}: '
                                                                  f'{str(policy)}')
 
                                             policy_name = policy.get('PolicyName')
                                             if not isinstance(policy_name, str):
-                                                logger.warning(f'Malformed policy name. '
-                                                               f'Expected str, got '
-                                                               f'{type(policy_name)}: '
-                                                               f'{str(policy_name)}')
+                                                if policy_name is not None:
+                                                    logger.warning(f'Malformed policy name. '
+                                                                   f'Expected str, got '
+                                                                   f'{type(policy_name)}: '
+                                                                   f'{str(policy_name)}')
                                                 continue
 
                                             if policy_name == 'AdministratorAccess':
@@ -151,10 +152,11 @@ def query_users_by_client_for_all_sources(client_data):
                             if isinstance(policy, dict):
                                 policy_name = policy.get('PolicyName')
                                 if not isinstance(policy_name, str):
-                                    logger.warning(f'Malformed policy name, '
-                                                   f'expected str, got '
-                                                   f'{type(policy_name)}: '
-                                                   f'{str(policy_name)}')
+                                    if policy_name is not None:
+                                        logger.warning(f'Malformed policy name, '
+                                                       f'expected str, got '
+                                                       f'{type(policy_name)}: '
+                                                       f'{str(policy_name)}')
                                     continue
 
                                 if policy_name == 'AdministratorAccess':
@@ -226,14 +228,16 @@ def query_users_by_client_for_all_sources(client_data):
                                                    f'{str(inline_policy)}')
                                     continue
                         else:
-                            logger.warning(f'Malformed policy names. Expected a'
-                                           f'list, got {type(policy_names)}: '
-                                           f'{str(policy_names)}')
+                            if policy_names is not None:
+                                logger.warning(f'Malformed policy names. Expected a'
+                                               f'list, got {type(policy_names)}: '
+                                               f'{str(policy_names)}')
                             continue
                     else:
-                        logger.warning(f'Malformed inline policy page, '
-                                       f'expected a dict, got '
-                                       f'{type(page)}: {str(page)}')
+                        if page is not None:
+                            logger.warning(f'Malformed inline policy page, '
+                                           f'expected a dict, got '
+                                           f'{type(page)}: {str(page)}')
                         continue
 
             except Exception:
@@ -286,16 +290,17 @@ def query_users_by_client_for_all_sources(client_data):
                     error_logs_triggered.append('list_mfa_devices')
 
             if user.get('Arn'):
-                try:
-                    user['accessed_services'] = get_last_accessed_services(
-                        client=iam_client,
-                        arn=user['Arn'])
-                except Exception:
-                    if 'get_last_accessed_services' not in error_logs_triggered:
-                        logger.exception(f'Unable to fetch the last accessed '
-                                         f'services for {user}')
-                        error_logs_triggered.append('get_last_accessed_services')
-                    # fallthrough to continue discovery tasks, it's not critical data
+                if accessed_services:
+                    try:
+                        user['accessed_services'] = get_last_accessed_services(
+                            client=iam_client,
+                            arn=user['Arn'])
+                    except Exception:
+                        if 'get_last_accessed_services' not in error_logs_triggered:
+                            logger.exception(f'Unable to fetch the last accessed '
+                                             f'services for {user}')
+                            error_logs_triggered.append('get_last_accessed_services')
+                        # fallthrough to continue discovery tasks, it's not critical data
             else:
                 logger.warning(f'No Arn found for user: {user}')
 
@@ -570,7 +575,10 @@ def get_last_accessed_services(client: boto3.session.Session.client,
             boto_client=client,
             name='JobId',
             operation='GetServiceLastAccessedDetails',
-            argument='JobStatus')
+            argument='JobStatus',
+            delay=10,
+            max_attempts=12
+        )
         job_id_waiter.wait(JobId=job_id)
     except Exception as err:
         logger.exception(f'Waiter failed: {err}')
@@ -608,8 +616,9 @@ def parse_iam_policy(user: AWSUserAdapter, policies: list, policy_type: str):
         if isinstance(policy, dict):
             name = policy.get('name')
             if not isinstance(name, str):
-                logger.warning(f'Malformed policy name. Expected a str, got '
-                               f'{type(name)}: {str(name)}')
+                if name is not None:
+                    logger.warning(f'Malformed policy name. Expected a str, got '
+                                   f'{type(name)}: {str(name)}')
                 continue
 
             if name == 'AdministratorAccess':
@@ -629,36 +638,41 @@ def parse_iam_policy(user: AWSUserAdapter, policies: list, policy_type: str):
                             )
                             permissions.append(permission)
                         else:
-                            logger.warning(f'Malformed policy permission. '
-                                           f'Expected a dict, got '
-                                           f'{type(policy_permission)}: '
-                                           f'{str(policy_permission)}')
+                            if policy_permission is not None:
+                                logger.warning(f'Malformed policy permission. '
+                                               f'Expected a dict, got '
+                                               f'{type(policy_permission)}: '
+                                               f'{str(policy_permission)}')
                             continue
                 else:
-                    logger.warning(f'Malformed policy permissions. Expected a '
-                                   f'dict, got {type(policy_permissions)}:'
-                                   f'{str(policy_permissions)}')
+                    if policy_permissions is not None:
+                        logger.warning(f'Malformed policy permissions. Expected a '
+                                       f'dict, got {type(policy_permissions)}:'
+                                       f'{str(policy_permissions)}')
             except Exception:
                 logger.exception(f'Unable to set policy permissions')
                 # fallthrough
             try:
                 policy_count = policy.get('attachment_count')
                 if not isinstance(policy_count, int):
-                    logger.warning(f'Malformed policy count. Expected an int, got '
-                                   f'{type(policy_count)}: {str(policy_count)}')
+                    if policy_count is not None:
+                        logger.warning(f'Malformed policy count. Expected an int, got '
+                                       f'{type(policy_count)}: {str(policy_count)}')
                     policy_count = None
 
                 boundary_count = policy.get('permission_boundary_count')
                 if not isinstance(boundary_count, int):
-                    logger.warning(f'Malformed permission boundary count. Expected '
-                                   f'an int, got {type(boundary_count)}:'
-                                   f'{str(boundary_count)}')
+                    if boundary_count is not None:
+                        logger.warning(f'Malformed permission boundary count. Expected '
+                                       f'an int, got {type(boundary_count)}:'
+                                       f'{str(boundary_count)}')
                     boundary_count = None
 
                 attachable = policy.get('is_attachable')
                 if not isinstance(attachable, bool):
-                    logger.warning(f'Malformed attachable. Expected a bool, got '
-                                   f'{type(attachable)}: {str(attachable)}')
+                    if attachable is not None:
+                        logger.warning(f'Malformed attachable. Expected a bool, got '
+                                       f'{type(attachable)}: {str(attachable)}')
                     attachable = None
 
                 user.user_attached_policies.append(
@@ -683,8 +697,9 @@ def parse_iam_policy(user: AWSUserAdapter, policies: list, policy_type: str):
                     f'Problem adding user managed policies: {str(policies)}')
                 continue
         else:
-            logger.warning(f'Malformed policy. Expected a dict, got'
-                           f'{type(policy)}: {str(policy)}')
+            if policy is not None:
+                logger.warning(f'Malformed policy. Expected a dict, got'
+                               f'{type(policy)}: {str(policy)}')
 
     logger.debug(f'Finished parsing IAM {policy_type} policy')
 
@@ -946,40 +961,45 @@ def query_roles_by_client_for_all_sources(client_data):
                                                                                    f'{type(statement)}: '
                                                                                    f'{str(statement)}')
                                                         else:
-                                                            logger.warning(
-                                                                f'Malformed policy statements. '
-                                                                f'Expected list, got '
-                                                                f'{type(policy_statements)}: '
-                                                                f'{str(policy_statements)}')
-
+                                                            if policy_statements is not None:
+                                                                logger.warning(
+                                                                    f'Malformed policy statements. '
+                                                                    f'Expected list, got '
+                                                                    f'{type(policy_statements)}: '
+                                                                    f'{str(policy_statements)}')
                                                     else:
-                                                        logger.warning(
-                                                            f'Malformed inline policy. '
-                                                            f'Expected a dict, got'
-                                                            f'{type(inline_policy)}:'
-                                                            f'{str(inline_policy)}')
+                                                        if inline_policy is not None:
+                                                            logger.warning(
+                                                                f'Malformed inline policy. '
+                                                                f'Expected a dict, got'
+                                                                f'{type(inline_policy)}:'
+                                                                f'{str(inline_policy)}')
                                                 else:
-                                                    logger.warning(f'Malformed raw inline policy.'
-                                                                   f'Expected a dict, got '
-                                                                   f'{type(inline_policy_raw)}:'
-                                                                   f'{str(inline_policy_raw)}')
+                                                    if inline_policy_raw is not None:
+                                                        logger.warning(f'Malformed raw inline policy.'
+                                                                       f'Expected a dict, got '
+                                                                       f'{type(inline_policy_raw)}:'
+                                                                       f'{str(inline_policy_raw)}')
                                             else:
-                                                logger.warning(
-                                                    f'Malformed inline policy '
-                                                    f'name. Expected a str, '
-                                                    f'got {type(inline_policy_name)}:'
-                                                    f'{str(inline_policy_name)}')
+                                                if inline_policy_name is not None:
+                                                    logger.warning(
+                                                        f'Malformed inline policy '
+                                                        f'name. Expected a str, '
+                                                        f'got {type(inline_policy_name)}:'
+                                                        f'{str(inline_policy_name)}')
                                     else:
-                                        logger.warning(f'Malformed inline policies. '
-                                                       f'Expected a list, got '
-                                                       f'{type(inline_policy_names)}:'
-                                                       f'{str(inline_policy_names)}')
+                                        if inline_policy_names is not None:
+                                            logger.warning(f'Malformed inline policies. '
+                                                           f'Expected a list, got '
+                                                           f'{type(inline_policy_names)}:'
+                                                           f'{str(inline_policy_names)}')
                                 else:
-                                    logger.warning(
-                                        f'Malformed role inline policies '
-                                        f'page. Expected a dict, got '
-                                        f'{type(roles_inline_policies_page)}:'
-                                        f'{str(roles_inline_policies_page)}')
+                                    if roles_inline_policies_page is not None:
+                                        logger.warning(
+                                            f'Malformed role inline policies '
+                                            f'page. Expected a dict, got '
+                                            f'{type(roles_inline_policies_page)}:'
+                                            f'{str(roles_inline_policies_page)}')
                         except Exception:
                             if 'list_role_policies' not in error_logs_triggered:
                                 logger.exception(
@@ -989,11 +1009,13 @@ def query_roles_by_client_for_all_sources(client_data):
 
                         yield new_role, AwsUserType.Role
                 else:
-                    logger.warning(f'Malformed extracted roles. Expected a '
-                                   f'list, got {type(roles)}: {str(roles)}')
+                    if roles is not None:
+                        logger.warning(f'Malformed extracted roles. Expected a '
+                                       f'list, got {type(roles)}: {str(roles)}')
             else:
-                logger.warning(f'Malformed roles page. Expected a dict, got '
-                               f'{type(roles_page)}: {str(roles_page)}')
+                if roles_page is not None:
+                    logger.warning(f'Malformed roles page. Expected a dict, got '
+                                   f'{type(roles_page)}: {str(roles_page)}')
     except Exception:
         if 'list_roles' not in error_logs_triggered:
             logger.exception(
@@ -1037,9 +1059,10 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                 )
                                                 principals.append(principal_instance)
                                             except Exception:
-                                                logger.exception(f'Malformed policy '
-                                                                 f'principal: '
-                                                                 f'{str(principal)}')
+                                                if principal is not None:
+                                                    logger.exception(f'Malformed policy '
+                                                                     f'principal: '
+                                                                     f'{str(principal)}')
                                                 continue
                                         else:
                                             logger.warning(
@@ -1048,9 +1071,10 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                 f'{str(principal)}')
                                             continue
                                 else:
-                                    logger.warning(f'Malformed policy principal. Expected a '
-                                                   f'list, got {type(policy_principal)}: '
-                                                   f'{str(policy_principal)}')
+                                    if policy_principal is not None:
+                                        logger.warning(f'Malformed policy principal. Expected a '
+                                                       f'list, got {type(policy_principal)}: '
+                                                       f'{str(policy_principal)}')
 
                                 policy_condition = policy.get('condition')
                                 if isinstance(policy_condition, list):
@@ -1065,9 +1089,10 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                 )
                                                 conditions.append(condition_instance)
                                             except Exception:
-                                                logger.exception(f'Malformed policy '
-                                                                 f'condition: '
-                                                                 f'{str(condition)}')
+                                                if condition is not None:
+                                                    logger.exception(f'Malformed policy '
+                                                                     f'condition: '
+                                                                     f'{str(condition)}')
                                                 continue
                                         else:
                                             logger.warning(f'Malformed condition. '
@@ -1076,11 +1101,12 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                            f'{str(condition)}')
                                             continue
                                 else:
-                                    logger.warning(
-                                        f'Malformed policy condition. '
-                                        f'Expected a list, got '
-                                        f'{type(policy_condition)}: '
-                                        f'{str(policy_condition)}')
+                                    if policy_condition is not None:
+                                        logger.warning(
+                                            f'Malformed policy condition. '
+                                            f'Expected a list, got '
+                                            f'{type(policy_condition)}: '
+                                            f'{str(policy_condition)}')
 
                                 policy_permission = AWSIAMPolicyPermission(
                                     policy_action=policy.get('actions'),
@@ -1098,21 +1124,25 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                 role.role_assume_role_policy_document.append(
                                     role_assumed_policy)
                             else:
-                                logger.warning(f'Malformed policy. Expected a '
-                                               f'dict, got {type(policy)}: '
-                                               f'{str(policy)}')
+                                if policy is not None:
+                                    logger.warning(f'Malformed policy. Expected a '
+                                                   f'dict, got {type(policy)}: '
+                                                   f'{str(policy)}')
                     else:
-                        logger.warning(f'Malformed policies. Expected a '
-                                       f'list, got {type(policies)}: '
-                                       f'{str(policies)}')
+                        if policies is not None:
+                            logger.warning(f'Malformed policies. Expected a '
+                                           f'list, got {type(policies)}: '
+                                           f'{str(policies)}')
                 else:
-                    logger.warning(f'Malformed assume role policy. Expected a '
-                                   f'dict, got {type(assume_role_policy)}: '
-                                   f'{str(assume_role_policy)}')
+                    if assume_role_policy is not None:
+                        logger.warning(f'Malformed assume role policy. Expected a '
+                                       f'dict, got {type(assume_role_policy)}: '
+                                       f'{str(assume_role_policy)}')
         else:
-            logger.warning(f'Malformed assume role policies. Expected a '
-                           f'list, got {type(assume_role_policies)}: '
-                           f'{str(assume_role_policies)}')
+            if assume_role_policies is not None:
+                logger.warning(f'Malformed assume role policies. Expected a '
+                               f'list, got {type(assume_role_policies)}: '
+                               f'{str(assume_role_policies)}')
 
         # attached policies
         attached_policies = role_raw.get('role_attached_policies') or []

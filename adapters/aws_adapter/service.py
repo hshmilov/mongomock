@@ -391,7 +391,10 @@ class AwsAdapter(AdapterBase, Configurable):
                             account_metadata = get_account_metadata(client_data_by_region)
                             account_metadata['region'] = region_name
 
-                            for user_raw in query_users_by_client_for_all_sources(client_data_by_region):
+                            for user_raw in query_users_by_client_for_all_sources(
+                                    client_data_by_region,
+                                    self.__accessed_services
+                            ):
                                 yield source_name, account_metadata, user_raw, AwsRawDataTypes.Users
                             did_yield = True
                             break

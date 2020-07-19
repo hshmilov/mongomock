@@ -272,19 +272,21 @@ def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
     # get the policy name
     policy_name = attached_policy.get('PolicyName')
     if not isinstance(policy_name, str):
-        logger.warning(f'Malformed policy name. Expected a str, got '
-                       f'{type(policy_name)}: {str(policy_name)}')
+        if policy_name is not None:
+            logger.warning(f'Malformed policy name. Expected a str, got '
+                           f'{type(policy_name)}: {str(policy_name)}')
         policy_name = None
 
     new_attached_policy['name'] = policy_name
 
     # get the policy arn
     policy_arn = attached_policy.get('PolicyArn')
-    if isinstance(policy_arn, str):
+    if policy_arn and isinstance(policy_arn, str):
         new_attached_policy['arn'] = policy_arn
     else:
-        logger.warning(f'Malformed policy ARN. Expected a str, got '
-                       f'{type(policy_arn)}: {str(policy_arn)}')
+        if policy_arn is not None:
+            logger.warning(f'Malformed policy ARN. Expected a str, got '
+                           f'{type(policy_arn)}: {str(policy_arn)}')
 
     # pylint: disable=too-many-nested-blocks
     # fetch the policy details
@@ -330,10 +332,12 @@ def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
 
                                     for statement in policy_statements:
                                         if not isinstance(statement, dict):
-                                            logger.warning(f'Malformed statement. '
-                                                           f'Expected dict, got '
-                                                           f'{type(statement)}: '
-                                                           f'{str(statement)}')
+                                            if statement is not None:
+                                                logger.warning(
+                                                    f'Malformed statement. '
+                                                    f'Expected a dict, got '
+                                                    f'{type(statement)}: '
+                                                    f'{str(statement)}')
                                             break
 
                                         # can get a str or a list here
@@ -344,11 +348,12 @@ def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
                                             policy_actions = actions
                                         else:
                                             policy_actions = []
-                                            logger.warning(f'Malformed policy '
-                                                           f'actions. Expected '
-                                                           f'a list, got '
-                                                           f'{type(actions)}: '
-                                                           f'{str(actions)}')
+                                            if actions is not None:
+                                                logger.warning(
+                                                    f'Malformed policy actions. '
+                                                    f'Expected a list, got '
+                                                    f'{type(actions)}: '
+                                                    f'{str(actions)}')
 
                                         actions_dict = dict()
                                         actions_dict['effect'] = statement.get('Effect')
@@ -358,40 +363,48 @@ def process_attached_iam_policy(iam_client, attached_policy: dict) -> dict:
 
                                         new_attached_policy['permissions'].append(actions_dict)
                                 else:
-                                    logger.warning(f'Malformed policy statements. '
-                                                   f'Expected list, got '
-                                                   f'{type(policy_statements)}: '
-                                                   f'{str(policy_statements)}')
+                                    if policy_statements is not None:
+                                        logger.warning(
+                                            f'Malformed policy statements. '
+                                            f'Expected a list, got '
+                                            f'{type(policy_statements)}: '
+                                            f'{str(policy_statements)}')
                             else:
-                                logger.warning(f'Malformed policy version. '
-                                               f'Expected str, got '
-                                               f'{type(version)}: '
-                                               f'{str(version)}')
+                                if version is not None:
+                                    logger.warning(f'Malformed policy version. '
+                                                   f'Expected a str, got '
+                                                   f'{type(version)}: '
+                                                   f'{str(version)}')
                         else:
-                            logger.warning(f'Malformed policy document. '
-                                           f'Expected a dict, got '
-                                           f'{type(policy_document)}: '
-                                           f'{str(policy_document)}')
+                            if policy_document is not None:
+                                logger.warning(f'Malformed policy document. '
+                                               f'Expected a dict, got '
+                                               f'{type(policy_document)}: '
+                                               f'{str(policy_document)}')
                     else:
-                        logger.warning(f'Malformed policy version. '
-                                       f'Expected a dict, got '
-                                       f'{type(policy_version)}: '
-                                       f'{str(policy_version)}')
+                        if policy_version is not None:
+                            logger.warning(f'Malformed policy version. '
+                                           f'Expected a dict, got '
+                                           f'{type(policy_version)}: '
+                                           f'{str(policy_version)}')
                 else:
-                    logger.warning(f'Malformed policy version. '
-                                   f'Expected dict, got '
-                                   f'{type(version_policy)}: '
-                                   f'{str(version_policy)}')
+                    if version_policy is not None:
+                        logger.warning(f'Malformed policy version. Expected a '
+                                       f'dict, got {type(version_policy)}: '
+                                       f'{str(version_policy)}')
             else:
-                logger.warning(f'Malformed policy version ID. '
-                               f'Expected str, got '
-                               f'{type(version_id)}: {str(version_id)}')
+                if version_id is not None:
+                    logger.warning(f'Malformed policy version ID. Expected a '
+                                   f'str, got {type(version_id)}: '
+                                   f'{str(version_id)}')
         else:
-            logger.warning(f'Malformed policy declaration. Expected dict, got '
-                           f'{type(policy)}: {str(policy)}')
+            if policy is not None:
+                logger.warning(f'Malformed policy declaration. Expected a dict, '
+                               f'got {type(policy)}: {str(policy)}')
     else:
-        logger.warning(f'Malformed IAM policy. Expected dict, got '
-                       f'{type(iam_policy)}: {str(iam_policy)}')
+        if iam_policy is not None:
+            logger.warning(f'Malformed IAM policy. Expected a dict, got '
+                           f'{type(iam_policy)}: {str(iam_policy)}')
 
     return new_attached_policy
 
@@ -437,8 +450,9 @@ def process_inline_iam_policy(client, user_name: str, policy: str) -> dict:
         elif isinstance(actions, str):
             policy_actions = [actions]
         else:
-            logger.warning(f'Malformed policy actions. Expected a list, got '
-                           f'{type(policy_actions)}: {str(policy_actions)}')
+            if policy_actions is not None:
+                logger.warning(f'Malformed policy actions. Expected a list, got '
+                               f'{type(policy_actions)}: {str(policy_actions)}')
             policy_actions = []
 
         actions_dict = dict()
