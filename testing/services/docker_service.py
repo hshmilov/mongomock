@@ -118,6 +118,7 @@ class DockerService(AxonService):
         volumes_list = [
             f'{self.container_name}_data:/home/axonius',
             f'{self.libs_dir}/hacks:/home/axonius/hacks',
+            f'{self.libs_dir}/keys:/home/axonius/keys',
             f'{self.log_dir}:/home/axonius/logs',
             f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
             f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
