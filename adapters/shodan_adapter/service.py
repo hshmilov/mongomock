@@ -47,7 +47,10 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
         try:
             with ShodanConnection(apikey=client_config['apikey'],
                                   domain_prefered=client_config.get('domain'),
-                                  https_proxy=client_config.get('https_proxy')) as connection:
+                                  https_proxy=client_config.get('https_proxy'),
+                                  proxy_username=client_config.get('proxy_username'),
+                                  proxy_password=client_config.get('proxy_password'),
+                                  ) as connection:
                 if client_config.get('cidr'):
                     connection.get_cidr_info(client_config['cidr'].split(',')[0])
                     return connection, client_config['cidr'].split(','), CIDR_TYPE, client_config.get('user_id')
@@ -159,6 +162,17 @@ class ShodanAdapter(ShodanExecutionMixIn, ScannerAdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'user_id',

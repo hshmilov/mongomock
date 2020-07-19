@@ -258,12 +258,12 @@ class TestDashboardActions(TestBase):
                                                       title=self.TEST_EDIT_CARD_TITLE)
             self.dashboard_page.wait_for_spinner_to_end()
             card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
             self.toggle_card_search(card)
             self.fill_card_search(card, '10')
 
             # check search worked
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '16'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '17'])
             self.fill_card_search(card, 'avigdor')
 
             self.assert_current_page_and_total_items_histogram_chart(card, ['5', '600'])
@@ -274,7 +274,7 @@ class TestDashboardActions(TestBase):
             self.assert_current_page_and_total_items_histogram_chart(card, ['61-65', '600'], False)
             self.fill_card_search(card, '')
             # check if get back to page one
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
             self.fill_card_search(card, '100')
             self.assert_current_page_and_total_items_histogram_chart(card, ['1', '1'])
             self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
@@ -282,7 +282,7 @@ class TestDashboardActions(TestBase):
             # wait for animation to finish
             time.sleep(1)
             # check if filter reset
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '602'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
             assert self.dashboard_page.get_card_search_input_text(card) == ''
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
         self.wait_for_adapter_down(STRESSTEST_ADAPTER)

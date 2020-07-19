@@ -114,7 +114,6 @@ class Login:
             self.send_external_info_log(f'Unknown user {user_name} tried logging in')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
-
         if not bcrypt.verify(password, user_from_db['password']):
             self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
@@ -199,7 +198,8 @@ class Login:
         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
         self.get_session.permanent = remember_me
         self._update_user_last_login(user)
-        self._log_activity_login()
+        if not is_axonius_role(role_from_db):
+            self._log_activity_login()
 
     def __exteranl_login_successful(self, source: str,
                                     username: str,

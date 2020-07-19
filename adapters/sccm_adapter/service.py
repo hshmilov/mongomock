@@ -650,10 +650,11 @@ class SccmAdapter(AdapterBase, Configurable):
                     if isinstance(device_raw['asset_software_data'], list):
                         for asset_data in device_raw['asset_software_data']:
                             try:
-                                device.add_installed_software(
-                                    name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0'),
-                                    source='SCCM INSTALLED_SOFTWARE Table'
-                                )
+                                if asset_data.get('ProductName0'):
+                                    device.add_installed_software(
+                                        name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0'),
+                                        source='SCCM INSTALLED_SOFTWARE Table'
+                                    )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
                 except Exception:
@@ -663,10 +664,11 @@ class SccmAdapter(AdapterBase, Configurable):
                     if isinstance(device_raw['asset_program_data'], list):
                         for asset_data in device_raw['asset_program_data']:
                             try:
-                                device.add_installed_software(
-                                    name=asset_data.get('DisplayName0'), version=asset_data.get('Version0'),
-                                    source='SCCM ADD_REMOVE_PROGRAMS Table'
-                                )
+                                if asset_data.get('DisplayName0'):
+                                    device.add_installed_software(
+                                        name=asset_data.get('DisplayName0'), version=asset_data.get('Version0'),
+                                        source='SCCM ADD_REMOVE_PROGRAMS Table'
+                                    )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
                 except Exception:

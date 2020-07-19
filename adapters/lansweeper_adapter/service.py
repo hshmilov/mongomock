@@ -332,7 +332,7 @@ class LansweeperAdapter(AdapterBase, Configurable):
                 if not device_id:
                     logger.error(f'Found a device with no id: {device_raw}, skipping')
                     continue
-                device.id = device_id + '_' + (device_raw.get('FQDN') or '')
+                device.id = device_id + '_' + (device_raw.get('FQDN') or '') + '_' + (device_raw.get('AssetName') or '')
                 try:
                     custom_data = custom_data_dict.get(device_raw.get('AssetID'))
                     if isinstance(custom_data, dict):

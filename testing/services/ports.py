@@ -217,6 +217,7 @@ DOCKER_PORTS = {
     'master-proxy':                     8888,  # reserved
     'httpd-service':                    8889,  # reserved
     'bandicoot':                        9090,
+    'g-naapi-adapter':                  9912,
     'avamar-adapter':                   9930,
     'riskiq-csv-adapter':               9931,
     'ivanti-sm-adapter':                9940,
@@ -229,6 +230,8 @@ DOCKER_PORTS = {
     'digital-shadows-adapter':          9947,
     'knowbe4-adapter':                  9948,
     'infinipoint-adapter':              9949,
+    'auvik-adapter':                    9950,
+    'microsoft-kms-adapter':            9951,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,
@@ -266,7 +269,6 @@ DOCKER_PORTS = {
     'fresh-service-adapter':            9991,
     'bigfix-inventory-adapter':         9992,
     'ca-spectrum-adapter':              9993,
-    'g-naapi-adapter':                  9912,
     'symantec-ccs-adapter':             9994,
     'pkware-adapter':                   9995,
     'snow-adapter':                     9996,

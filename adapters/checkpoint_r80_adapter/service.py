@@ -6,9 +6,10 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from checkpoint_r80_adapter.connection import CheckpointR80Connection
 from checkpoint_r80_adapter.client_id import get_client_id
+from checkpoint_r80_adapter.consts import GATEWAY_DEVICE, HOST_DEVICE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -17,6 +18,9 @@ class CheckpointR80Adapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         cp_type = Field(str, 'CheckPoint Device Type')
         cp_domain = Field(str, 'CheckPoint Domain')
+        version = Field(str, 'Version')
+        groups = ListField(str, 'Groups')
+        comments = Field(str, 'Comments')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -109,39 +113,88 @@ class CheckpointR80Adapter(AdapterBase):
             'type': 'array'
         }
 
-    def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+    def _create_host_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('uid')
+            if not device_id:
+                logger.warning(f'Bad device with not ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.name = device_raw.get('name')
+            device.cp_type = device_raw.get('type')
             try:
-                device = self._new_device_adapter()
-                device_id = device_raw.get('uid')
-                if not device_id:
-                    logger.warning(f'Bad device with not ID {device_raw}')
-                    continue
-                device.id = device_id + '_' + (device_raw.get('name') or '')
-                device.name = device_raw.get('name')
-                device.cp_type = device_raw.get('type')
-                try:
-                    ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None
-                    ips6 = [device_raw.get('ipv6-address')] if device_raw.get('ipv6-address') else None
+                ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None
+                ips6 = [device_raw.get('ipv6-address')] if device_raw.get('ipv6-address') else None
 
-                    if ips and ips6:
-                        ips.extend(ips6)
-                    elif ips or ips6:
-                        ips = ips or ips6
-                    if ips:
-                        device.add_nic(None, ips)
-                except Exception:
-                    logger.exception(f'Problem adding nic to {device_raw}')
-                try:
-                    domain = device_raw.get('domain')
-                    if domain and isinstance(domain, dict):
-                        device.cp_domain = domain.get('name')
-                except Exception:
-                    logger.exception(f'Problem getting domain to {device_raw}')
-                device.set_raw(device_raw)
-                yield device
+                if ips and ips6:
+                    ips.extend(ips6)
+                elif ips or ips6:
+                    ips = ips or ips6
+                if ips:
+                    device.add_nic(None, ips)
             except Exception:
-                logger.exception(f'Problem with fetching CheckpointR80 Device for {device_raw}')
+                logger.exception(f'Problem adding nic to {device_raw}')
+            try:
+                domain = device_raw.get('domain')
+                if domain and isinstance(domain, dict):
+                    device.cp_domain = domain.get('name')
+            except Exception:
+                logger.exception(f'Problem getting domain to {device_raw}')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching CheckpointR80 Device for {device_raw}')
+            return None
+
+    def _create_gateway_device(self, device_raw):
+        try:
+            device = self._new_device_adapter()
+            device_id = device_raw.get('uid')
+            if not device_id:
+                logger.warning(f'Bad device with not ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.name = device_raw.get('name')
+            device.cp_type = device_raw.get('type')
+            try:
+                ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None
+                ips6 = [device_raw.get('ipv6-address')] if device_raw.get('ipv6-address') else None
+
+                if ips and ips6:
+                    ips.extend(ips6)
+                elif ips or ips6:
+                    ips = ips or ips6
+                if ips:
+                    device.add_nic(None, ips)
+            except Exception:
+                logger.exception(f'Problem adding nic to {device_raw}')
+            try:
+                domain = device_raw.get('domain')
+                if domain and isinstance(domain, dict):
+                    device.cp_domain = domain.get('name')
+            except Exception:
+                logger.exception(f'Problem getting domain to {device_raw}')
+            device.figure_os(device_raw.get('CheckPoint' + ' ' + ('operating-system') or ''))
+            device.version = device_raw.get('version')
+            if isinstance(device_raw.get('groups'), list):
+                device.groups = device_raw.get('groups')
+            device.comments = device_raw.get('comments')
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching CheckpointR80 Gateway for {device_raw}')
+            return None
+
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw, device_type in devices_raw_data:
+            device = None
+            if device_type == HOST_DEVICE:
+                device = self._create_host_device(device_raw)
+            elif device_type == GATEWAY_DEVICE:
+                device = self._create_gateway_device(device_raw)
+            if device:
+                yield device
 
     @classmethod
     def adapter_properties(cls):

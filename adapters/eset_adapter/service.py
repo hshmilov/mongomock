@@ -1,6 +1,7 @@
 import os
 import shutil
 import threading
+import time
 import ctypes
 import logging
 from urllib3.util.url import parse_url
@@ -159,6 +160,10 @@ class EsetAdapter(AdapterBase):
                                                 port=client_config.get(ESET_PORT))
 
     def _connect_client(self, client_config):
+        try:
+            self.eset_connection_library
+        except Exception:
+            time.sleep(5)
         eset_host = parse_url(client_config[ESET_HOST]).host
         return EsetClient(self.eset_session_lock, self.eset_connection_library,
                           host=eset_host, username=client_config[USER],

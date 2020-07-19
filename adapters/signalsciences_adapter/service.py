@@ -40,8 +40,11 @@ class SignalsciencesAdapter(AdapterBase):
         connection = SignalsciencesConnection(domain=client_config['domain'],
                                               verify_ssl=client_config['verify_ssl'],
                                               https_proxy=client_config.get('https_proxy'),
+                                              proxy_username=client_config.get('proxy_username'),
+                                              proxy_password=client_config.get('proxy_password'),
                                               username=client_config['email'],
-                                              password=client_config['password'])
+                                              password=client_config.get('password'),
+                                              apikey=client_config.get('apikey'))
         with connection:
             pass
         return connection
@@ -94,6 +97,12 @@ class SignalsciencesAdapter(AdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'apikey',
+                    'type': 'string',
+                    'format': 'password',
+                    'title': 'API Token'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -102,12 +111,22 @@ class SignalsciencesAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             'required': [
                 'domain',
                 'email',
-                'password',
                 'verify_ssl'
             ],
             'type': 'array'

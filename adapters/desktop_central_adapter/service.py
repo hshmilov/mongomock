@@ -6,13 +6,25 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from desktop_central_adapter import consts
 from desktop_central_adapter.connection import DesktopCentralConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class BitlockerData(SmartJsonClass):
+    encryption_method = Field(str, 'Encryption Method')
+    encryption_status = Field(str, 'Encryption Status')
+    last_updated_time = Field(datetime.date, 'Last Updated Time')
+    lock_status = Field(str, 'Lock Status')
+    logical_drive_name = Field(str, 'Logical Drive Name')
+    logical_disk_type = Field(str, 'Logical Disk Type')
+    protection_status = Field(str, 'Protection Status')
+    recovery_key_status = Field(str, 'Recovery Key Status')
 
 
 class DesktopCentralAdapter(AdapterBase):
@@ -22,6 +34,7 @@ class DesktopCentralAdapter(AdapterBase):
         device_type = Field(str, 'Device Type')
         warranty_expiry_date = Field(datetime.datetime, 'Warranty Expiry Date')
         shipping_date = Field(datetime.datetime, 'Shipping Date')
+        disks_info = ListField(BitlockerData, 'Bitlocker Data')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -41,8 +54,6 @@ class DesktopCentralAdapter(AdapterBase):
                                                   verify_ssl=client_config['verify_ssl'],
                                                   username=client_config['username'],
                                                   password=client_config['password'],
-                                                  url_base_prefix='api/1.0',
-                                                  headers={'Content-Type': 'application/json'},
                                                   https_proxy=client_config.get('https_proxy'),
                                                   http_proxy=client_config.get('http_proxy'),
                                                   port=client_config.get('port', consts.DEFAULT_PORT),
@@ -225,6 +236,29 @@ class DesktopCentralAdapter(AdapterBase):
                                                   29: 'installation failure'}.get(installation_status)
                 if device_raw.get('agent_logged_on_users'):
                     device.last_used_users = device_raw.get('agent_logged_on_users').split(',')
+                bitlocker = device_raw.get('bitlocker')
+                if not isinstance(bitlocker, dict):
+                    bitlocker = {}
+                bitlocker_details = bitlocker.get('bitLockerDetails')
+                if not isinstance(bitlocker_details, list):
+                    bitlocker_details = []
+                for disk in bitlocker_details:
+                    try:
+                        bitlocker_obj = BitlockerData()
+                        bitlocker_obj.encryption_method = disk.get('encryptionMethod')
+                        bitlocker_obj.encryption_status = disk.get('encryptionStatus')
+                        bitlocker_obj.last_updated_time = parse_date(disk.get('lastUpdatedTime'))
+                        bitlocker_obj.lock_status = disk.get('lockStatus')
+                        bitlocker_obj.logical_drive_name = disk.get('logicalDriveName')
+                        bitlocker_obj.logical_disk_type = disk.get('logiclDiskType')
+                        bitlocker_obj.protection_status = disk.get('protectionStatus')
+                        bitlocker_obj.recovery_key_status = disk.get('recoveryKeyStatus')
+                        device.disks_info.append(bitlocker_obj)
+                        is_encrypted = disk.get('encryptionStatus') == 'Fully Encrypted'
+                        device.add_hd(path=disk.get('logicalDriveName'), is_encrypted=is_encrypted)
+                    except Exception:
+                        logger.exception(f'Problem with disk {disk}')
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -173,7 +173,7 @@ def test_arp(client):
                     'ips_v4': ['192.168.20.18'],
                     'ips_v4_raw': [3_232_240_658],
                     'mac': '00:50:56:91:A6:6B',
-                    'manufacturer': 'VMware (VMware, Inc.)',
+                    'manufacturer': '(VMware, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -198,7 +198,7 @@ def test_arp(client):
                     'ips_v4': ['192.168.20.1'],
                     'ips_v4_raw': [3_232_240_641],
                     'mac': '90:6C:AC:FE:5B:CB',
-                    'manufacturer': 'Fortinet (Fortinet, Inc.)',
+                    'manufacturer': '(Fortinet, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -456,7 +456,7 @@ def test_instance_parser(client):
             'network_interfaces': [
                 {
                     'mac': '00:50:56:91:A6:6B',
-                    'manufacturer': 'VMware (VMware, Inc.)',
+                    'manufacturer': '(VMware, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},
@@ -478,7 +478,7 @@ def test_instance_parser(client):
             'network_interfaces': [
                 {
                     'mac': '90:6C:AC:FE:5B:CB',
-                    'manufacturer': 'Fortinet (Fortinet, Inc.)',
+                    'manufacturer': '(Fortinet, Inc.)',
                 }
             ],
             'os': {'os_str': 'none'},

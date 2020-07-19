@@ -64,6 +64,25 @@ def get_ad_display_name(adapter_data):
     return None
 
 
+def get_employee_id(adapter_data):
+    employee_id = adapter_data['data'].get('employee_id')
+    if employee_id and employee_id.lower().strip() not in ['unknown']:
+        return employee_id.lower().strip()
+    return None
+
+
+def compare_employee_id(adapter_data1, adapter_data2):
+    employee_id_1 = get_employee_id(adapter_data1)
+    employee_id_2 = get_employee_id(adapter_data2)
+    if not employee_id_1 or not employee_id_2:
+        return True
+    return employee_id_1 == employee_id_2
+
+
+def is_cherwell(adapter_data):
+    return adapter_data['plugin_name'] == 'cherwell_adapter'
+
+
 def get_ad_display_name_username(adapter_data):
     ad_display_name = get_ad_display_name(adapter_data)
     if ad_display_name and ad_display_name not in ['admin']:
@@ -197,7 +216,6 @@ def normalize_mail(adapter_data):
             return None
     # Checking mail format validity
     if not re.match(r'[^@]+@[^@]+\.[^@]+', mail):
-        logger.debug(f'Unrecognized email format found: {mail}')
         return None
     if mail.startswith('badgeonly@'):
         return None
@@ -365,20 +383,36 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same AD display name- username'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_employee_id(self, entities):
+        """
+        Correlate Employee ID
+        """
+        logger.info('Starting to correlate on Emloyee ID')
+        filtered_adapters_list = filter(get_employee_id, entities)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_employee_id],
+                                      [compare_employee_id],
+                                      [is_cherwell],
+                                      [],
+                                      {'Reason': 'They have the same Employee ID'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
+        normalized_entities = list(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('correlate_only_on_username_domain') is True:
-            yield from self._correlate_username_domain(normalize_adapter_users(entities))
+            yield from self._correlate_username_domain(normalized_entities)
             return
-        yield from self._correlate_mail(normalize_adapter_users(entities))
-        yield from self._correlate_ad_upn(normalize_adapter_users(entities))
-        yield from self._correlate_ad_upn_mail(normalize_adapter_users(entities))
+        yield from self._correlate_mail(normalized_entities)
+        yield from self._correlate_ad_upn(normalized_entities)
+        yield from self._correlate_ad_upn_mail(normalized_entities)
         if self._correlation_config and self._correlation_config.get('ad_display_name_correlation') is True:
-            yield from self._correlate_ad_display_name(normalize_adapter_users(entities))
-            yield from self._correlate_ad_display_name_username(normalize_adapter_users(entities))
-        yield from self._correlate_aws_username_mail(normalize_adapter_users(entities))
+            yield from self._correlate_ad_display_name(normalized_entities)
+            yield from self._correlate_ad_display_name_username(normalized_entities)
+        yield from self._correlate_aws_username_mail(normalized_entities)
         if self._correlation_config and self._correlation_config.get('username_aws_correlation') is True:
-            yield from self._correlate_username_aws(normalize_adapter_users(entities))
-        yield from self._correlate_username_domain(normalize_adapter_users(entities))
-        yield from self._correlate_username_due_no_mail(normalize_adapter_users(entities))
+            yield from self._correlate_username_aws(normalized_entities)
+        yield from self._correlate_username_domain(normalized_entities)
+        yield from self._correlate_employee_id(normalized_entities)
+        yield from self._correlate_username_due_no_mail(normalized_entities)
         if self._correlation_config and self._correlation_config.get('email_prefix_correlation') is True:
-            yield from self._correlate_email_prefix(normalize_adapter_users(entities))
+            yield from self._correlate_email_prefix(normalized_entities)

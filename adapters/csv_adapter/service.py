@@ -318,6 +318,19 @@ class CsvAdapter(AdapterBase):
                                 device.add_installed_software(name=package)
                 except Exception:
                     logger.exception(f'Problem with packages')
+                try:
+                    software = vals.get('software')
+                    if software:
+                        for sw_item in software.split(','):
+                            software_name = sw_item.split(':')[0]
+                            software_version = None
+                            if ':' in sw_item:
+                                software_version = sw_item.split(':')[1]
+                            device.add_installed_software(name=software_name,
+                                                          version=software_version)
+
+                except Exception:
+                    logger.exception(f'Problem with SW')
 
                 # pylint: disable=anomalous-backslash-in-string
                 try:

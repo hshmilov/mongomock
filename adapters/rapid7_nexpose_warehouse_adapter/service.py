@@ -256,11 +256,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                             vulnerability.get('cvss_v3_exploit_score'))
 
                         rapid_vulnerabilities.append(rapid_vulnerability)
-
-                        # Duplicate data for Aggregated Data
-                        device.add_vulnerable_software(cvss=vulnerability.get('cvss_score'),
-                                                       cve_id=vulnerability.get('vulnerability_id'))
-
+            device.software_cves = []
             device.rapid_vulnerabilities = rapid_vulnerabilities
         except Exception:
             logger.warning(f'Failed to fill vulnerabilities fields')

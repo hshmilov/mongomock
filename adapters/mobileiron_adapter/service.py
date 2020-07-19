@@ -249,6 +249,11 @@ class MobileironAdapter(AdapterBase, Configurable):
             device.figure_os((device_raw.get('prettyModel') or '') + ' ' +
                              (device_raw.get('platformType') or '') + ' ' +
                              (device_raw.get('platformVersion') or ''))
+            try:
+                if device.os.type in ['Windows', 'OS X']:
+                    device.hostname = device_raw.get('deviceName')
+            except Exception:
+                pass
             device.device_serial = device_raw.get('serialNumber')
             device.add_nic(mac=device_raw.get('wifiMacAddress'))
             device.imsi = device_raw.get('imsi')

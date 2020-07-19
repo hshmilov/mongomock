@@ -397,7 +397,10 @@ class OrcaAdapter(AdapterBase):
                 for tag_list_raw in device_raw.get('tags_list'):
                     if isinstance(tag_list_raw, dict) and tag_list_raw.get('key'):
                         device.add_key_value_tag(key=tag_list_raw.get('key'), value=tag_list_raw.get('value'))
-            device.asset_type = device_raw.get('asset_type')
+            asset_type = device_raw.get('asset_type')
+            if asset_type and 'user' in asset_type.lower():
+                return None
+            device.asset_type = asset_type
             if isinstance(device_raw.get('private_ips'), list):
                 device.add_nic(ips=device_raw.get('private_ips'))
             if isinstance(device_raw.get('public_ips'), list):

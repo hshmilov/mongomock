@@ -194,6 +194,12 @@ class RedcanaryAdapter(AdapterBase):
                 domain = '.'.join(hostname.split('.')[1:])
                 if is_domain_valid(domain):
                     device.domain = domain
+            try:
+                if '\\' in hostname:
+                    device.hostname = hostname.split('\\')[1]
+                    device.domain = hostname.split('\\')[0]
+            except Exception:
+                logger.exception(f'Problem with domain parsing')
             device.monitoring_status = device_attributes.get('monitoring_status')
             try:
                 device.figure_os((device_attributes.get('platform') or '') + ' ' +

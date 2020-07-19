@@ -55,7 +55,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapter', 'quest_kace_adapter']
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
-                      'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter']
+                      'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter',
+                      'airwatch_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter',
                       'solarwinds_orion_adapter', 'mssql_adapter', 'symantec_adapter']
@@ -215,6 +216,12 @@ def get_agent_uuid(adapter_device):
     return None
 
 
+def get_customer(adapter_device):
+    if not adapter_device.get('plugin_name') == 'chef_adapter':
+        return None
+    return adapter_device['data'].get('customer')
+
+
 def compare_agent_uuids(adapter_device1, adapter_device2):
     if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
         return False
@@ -225,6 +232,12 @@ def agent_uuid_do_not_contradict(adapter_device1, adapter_device2):
     if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
         return True
     return get_agent_uuid(adapter_device1) == get_agent_uuid(adapter_device2)
+
+
+def customer_do_not_contradict(adapter_device1, adapter_device2):
+    if not get_customer(adapter_device1) or not get_customer(adapter_device2):
+        return True
+    return get_customer(adapter_device1) == get_customer(adapter_device2)
 
 
 def get_asset_or_host_full(adapter_device):
@@ -380,8 +393,10 @@ def is_aws_or_chef_adapter(adapter_device):
 
 
 def is_asset_ok_hostname_no_adapters(adapter_device):
+    if is_service_now_and_no_other(adapter_device):
+        return True
     return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter',
-                                                 'epo_adapter', 'esx_adapter']
+                                                 'epo_adapter', 'esx_adapter', 'active_directory_adapter']
 
 
 def if_csv_compare_full_path(adapter_device1, adapter_device2):
@@ -456,6 +471,21 @@ def is_force_hostname_when_no_mac_device(adapter_device):
     if adapter_device.get('plugin_name') in ['carbonblack_defense_adapter'] and not adapter_device.get(NORMALIZED_MACS):
         return True
     return False
+
+
+def cb_defense_basic_id_condradict(adapter_device1, adapter_device2):
+    if adapter_device1.get('plugin_name') not in ['carbonblack_defense_adapter'] \
+            or adapter_device2.get('plugin_name') not in ['carbonblack_defense_adapter']:
+        return False
+    basic_device_id_1 = adapter_device1['data'].get('basic_device_id')
+    basic_device_id_2 = adapter_device2['data'].get('basic_device_id')
+    if not basic_device_id_1 or not basic_device_id_2:
+        return False
+    if basic_device_id_1 != basic_device_id_2:
+        return False
+    if hostnames_do_not_contradict(adapter_device1, adapter_device2):
+        return False
+    return True
 
 
 def force_mac_adapters(adapter_device):
@@ -879,6 +909,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                 or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and compare_domain_for_correlation(x, y)) \
                                 or x.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or y.get('plugin_name') in DANGEROUS_ADAPTERS \
+                                or cb_defense_basic_id_condradict(x, y) \
                                 or 'vmware' in mac_manufacturer.lower() \
                                 or not cloud_id_do_not_contradict(x, y):
                             logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
@@ -939,7 +970,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_fqdn_or_hostname],
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
-                                       not_wifi_adapters, agent_uuid_do_not_contradict,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict, customer_do_not_contradict,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname_fqdn and IPs or MACs'},
                                       CorrelationReason.StaticAnalysis)
@@ -953,7 +984,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [compare_device_normalized_hostname],
                                       [],
                                       [macs_do_not_contradict, ips_do_not_contradict_or_mac_intersection,
-                                       not_wifi_adapters, agent_uuid_do_not_contradict,
+                                       not_wifi_adapters, agent_uuid_do_not_contradict, customer_do_not_contradict,
                                        cloud_id_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs or MACs'},
                                       CorrelationReason.StaticAnalysis)

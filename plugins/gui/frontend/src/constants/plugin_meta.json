@@ -1178,6 +1178,11 @@
     "link": "https://docs.axonius.com/docs/mobileiron-emm",
     "description": "MobileIron EMM enables enterprises to secure and manage modern operating systems on mobile devices and desktops."
   },
+  "microsoft_kms_adapter": {
+    "title": "Microsoft Key Management Service (KMS)",
+    "link": "https://docs.axonius.com/docs/microsoft-kms",
+    "description": "Microsoft Key Management Service (KMS) is an activation service that allows organizations to activate systems within their own network, eliminating the need for individual computers to connect to Microsoft for product activation."
+  },
   "minerva_adapter": {
     "title": "Minerva Labs Endpoint Malware Vaccination",
     "link": "",
@@ -1272,6 +1277,11 @@
     "title": "Cisco Prime",
     "link": "https://docs.axonius.com/docs/cisco-prime",
     "description": "Cisco Prime offers a suite of tools to automate the management of wired and wireless Cisco networks."
+  },
+  "auvik_adapter": {
+    "title": "Auvik",
+    "description": "Auvik is an IT asset and network monitoring solution for managing the entire network infrastructures, including physical servers, data centers, workstations and more.",
+    "link": "https://docs.axonius.com/docs/auvik"
   },
   "observeit_adapter": {
     "title": "ObserveIT",

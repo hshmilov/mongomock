@@ -624,6 +624,10 @@ def parse_raw_data_inner_regular(
                         (device_raw['DescribedImage'] or {}).get(
                             'Description', '') + ' ' + device_raw.get('Platform', '')
                     )
+                    try:
+                        device.os.type
+                    except Exception:
+                        device.figure_os((device_raw['DescribedImage'] or {}).get('Name'))
                 except Exception:
                     logger.exception(f'Problem parsing OS type')
                 try:

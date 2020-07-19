@@ -42,7 +42,10 @@ class ArmisAdapter(AdapterBase):
             with ArmisConnection(domain=client_config['domain'],
                                  verify_ssl=client_config['verify_ssl'],
                                  apikey=client_config['apikey'],
-                                 https_proxy=client_config.get('https_proxy')) as connection:
+                                 https_proxy=client_config.get('https_proxy'),
+                                 proxy_username=client_config.get('proxy_username'),
+                                 proxy_password=client_config.get('proxy_password'),
+                                 ) as connection:
                 return connection
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
@@ -92,6 +95,17 @@ class ArmisAdapter(AdapterBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             'required': [

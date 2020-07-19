@@ -36,6 +36,10 @@ class OktaAdapter(AdapterBase, Configurable):
         # pylint: disable=R0902
         manager_id = Field(str, 'Manager ID')
         user_clients = ListField(ClientData, 'User Clients')
+        worker_status = Field(str, 'Worker Status')
+        worker_type = Field(str, 'Worker Type')
+        worker_sub_type = Field(str, 'Worker Sub Type')
+        user_type = Field(str, 'User Type')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -152,6 +156,10 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.user_department = profile.get('department')
                 user.user_country = profile.get('countryCode')
                 user.manager_id = profile.get('managerId')
+                user.worker_status = profile.get('workerStatus')
+                user.worker_type = profile.get('workerType')
+                user.worker_sub_type = profile.get('workerSubType')
+                user.user_type = profile.get('userType')
                 try:
                     for app in user_raw.get('apps_data') or []:
                         if app.get('status') != 'ACTIVE':

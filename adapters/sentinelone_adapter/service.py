@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.fields import Field, ListField
+from axonius.utils.parsing import get_manufacturer_from_mac
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -183,7 +184,10 @@ class SentineloneAdapter(AdapterBase):
                 interfaces = []
             for interface in interfaces:
                 try:
-                    device.add_nic(interface.get('physical'),
+                    mac = interface.get('physical')
+                    if get_manufacturer_from_mac(mac) == 'Private':
+                        mac = None
+                    device.add_nic(mac,
                                    (interface.get('inet6') or []) + (interface.get('inet') or []),
                                    name=interface.get('name'))
                 except Exception:
@@ -270,7 +274,10 @@ class SentineloneAdapter(AdapterBase):
                 interfaces = []
             for interface in interfaces:
                 try:
-                    device.add_nic(interface.get('physical'),
+                    mac = interface.get('physical')
+                    if get_manufacturer_from_mac(mac) == 'Private':
+                        mac = None
+                    device.add_nic(mac,
                                    interface.get('inet6', []) + interface.get('inet', []),
                                    name=interface.get('name'))
                 except Exception:

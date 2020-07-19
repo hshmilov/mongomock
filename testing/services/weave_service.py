@@ -201,7 +201,7 @@ class WeaveService(DockerService):
         # https://github.com/enowars/enochecker/pull/22
         if self.image != 'axonius/axonius-libs':
             return
-        print('Signaling uwsgi to wakeup!!!')
+        print('Signaling uwsgi to wakeup')
         super().run_command_in_container(f'python3 {UWSGI_RECOVER_SCRIPT_PATH}')
 
     def add_weave_dns_entry(self):

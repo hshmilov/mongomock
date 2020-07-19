@@ -188,7 +188,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                 name_raw = None
                 asset_name_raw = None
                 mac_address_raw = None
-                ip_address_raw = None
+                ip_address_raw = set()
                 manufacturer_raw = None
                 serial_number_raw = None
                 os_raw = None
@@ -214,8 +214,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                     if nics and isinstance(nics, list):
                         for nic in nics:
                             ips = nic.get('ips')
-                            if ip_address_raw is None and ips and isinstance(ips, list):
-                                ip_address_raw = '/'.join(ips)
+                            if ips and isinstance(ips, list):
+                                ip_address_raw.union(ips)
                             mac = nic.get('mac')
                             if mac_address_raw is None and mac and isinstance(mac, str):
                                 mac_address_raw = mac
@@ -241,6 +241,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     except Exception:
                         logger.exception(f'Problem with translating dict')
                 # Make sure that we have name
+                if not ip_address_raw:
+                    ip_address_raw = None
+                else:
+                    ip_address_raw = list(ip_address_raw)
+                    ip_address_raw = '/'.join(ip_address_raw)
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                     continue

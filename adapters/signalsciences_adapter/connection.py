@@ -15,17 +15,22 @@ class SignalsciencesConnection(RESTConnection):
                          **kwargs)
 
     def _connect(self):
-        if not self._username or not self._password:
-            raise RESTException('No username or password')
-        response = self._post('auth',
-                              extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                              use_json_in_body=False,
-                              body_params={'email': self._username,
-                                           'password': self._password})
-        if not response.get('token'):
-            raise RESTException(f'Bad Token Response: {response}')
-        self._token = response['token']
-        self._session_headers['Authorization'] = f'Bearer {self._token}'
+        if self._username and self._password:
+            response = self._post('auth',
+                                  extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                                  use_json_in_body=False,
+                                  body_params={'email': self._username,
+                                               'password': self._password})
+            if not response.get('token'):
+                raise RESTException(f'Bad Token Response: {response}')
+            self._token = response['token']
+            self._session_headers['Authorization'] = f'Bearer {self._token}'
+        elif self._username and self._apikey:
+            self._session_headers['x-api-user'] = self._username
+            self._session_headers['x-api-token'] = self._apikey
+        else:
+            raise RESTException(f'Missing API key or Password')
+
         corps_raw = self._get('corps')
         if 'data' not in corps_raw or not corps_raw.get('data'):
             raise RESTException(f'Bad Corps Response: {corps_raw}')

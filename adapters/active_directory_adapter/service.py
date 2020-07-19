@@ -138,6 +138,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         se_guid_manager = Field(str, 'SE guid_manager')
         se_department_role_title = Field(str, 'SE Department Role Title')
         se_sub_functional_area = Field(str, 'SE Sub Functional Area')
+        director_two = Field(str, 'Director Two')
+        location = Field(str, 'Location')
+        vice_president = Field(str, 'Vice President')
 
     def __init__(self):
 
@@ -878,6 +881,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     user.user_department = user_raw.get('sEdepartment')
                     user.se_department_role_title = user_raw.get('sEdepartmentRoleTitle')
                     user.se_sub_functional_area = user_raw.get('sEsubFunctionalArea')
+                    user.director_two = user_raw.get('cwDirectorTwo')
+                    user.location = user_raw.get('cwLocation')
+                    user.vice_president = user_raw.get('cwVicePresident')
                 except Exception:
                     logger.exception(f'Problem adding extra fields')
                 user.set_raw(user_raw)
@@ -1244,6 +1250,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                                                      f"{device_raw.get('name', '')}.{str(device_domain)}")
                 else:
                     device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
+                device.name = device_raw.get('name')
                 alternative_dns_suffix = device_raw.get('alternative_dns_suffix')
                 resolvable_hostnames = []
                 if alternative_dns_suffix:

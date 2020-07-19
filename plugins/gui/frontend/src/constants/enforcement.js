@@ -266,6 +266,6 @@ export const postCondition = 'post'
 
 export const actionCategories = [
     'notify', 'create_incident', 'axonius',
-    'enrich_device_or_user_data', 'scan_va', 'run_command', 'isolate_edr',
-    'create_cmdb_computer', 'manage_directory', 'aws_operations', 'azure_operations'
+    'enrich_device_or_user_data', 'create_cmdb_computer', 'scan_va', 'run_command', 'isolate_edr',
+    'manage_directory', 'aws_operations', 'azure_operations'
 ]

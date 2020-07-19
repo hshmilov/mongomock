@@ -1,12 +1,15 @@
+import datetime
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
+from axonius.utils.datetime import parse_date
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
+from axonius.utils.parsing import format_mac
 from axonius.plugin_base import add_rule, return_error
 from axonius.utils.parsing import normalize_var_name
 from axonius.clients.sysaid.connection import SysaidConnection
@@ -16,8 +19,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class SysaidAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         group = Field(str, 'Group')
+        update_time = Field(datetime.datetime, 'Update Time')
+        last_access = Field(datetime.datetime, 'Last Access')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -122,6 +128,7 @@ class SysaidAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def _parse_raw_data(self, devices_raw_data):
         # pylint: disable=R1702
         for device_raw in devices_raw_data:
@@ -135,14 +142,47 @@ class SysaidAdapter(AdapterBase):
                 device.hostname = device_raw.get('name')
                 device.group = device_raw.get('group')
                 device_info = device_raw.get('info')
+                last_access = None
+                update_time = None
                 if not device_info:
                     device_info = []
                 for key_info in device_info:
                     try:
                         if key_info.get('key') == 'serial':
                             device.device_serial = key_info.get('value')
+                        elif key_info.get('key') == 'os':
+                            device.figure_os(key_info.get('value'))
+                        elif key_info.get('key') == 'agent_version':
+                            device.add_agent_version(version=key_info.get('value'),
+                                                     agent=AGENT_NAMES.sysaid)
+                        elif key_info.get('key') == 'last_boot':
+                            device.boot_time = parse_date(key_info.get('value'))
+                        elif key_info.get('key') == 'username':
+                            device.owner = key_info.get('value')
+                        elif key_info.get('key') == 'last_access':
+                            last_access = parse_date(key_info.get('value'))
+                            device.last_access = last_access
+                        elif key_info.get('key') == 'update_time':
+                            update_time = parse_date(key_info.get('value'))
+                            device.update_time = update_time
+                        elif key_info.get('key') == 'model':
+                            device.device_model = key_info.get('value')
+                        elif key_info.get('key') == 'manufacturer':
+                            device.device_manufacturer = key_info.get('value')
                         elif key_info.get('key') == 'ip_address' and key_info.get('value'):
                             device.add_nic(None, [key_info.get('value')])
+                        elif key_info.get('key') == 'mac_address':
+                            macs_raw = key_info.get('value')
+                            if macs_raw:
+                                macs = macs_raw.split(',')
+                                for mac_first in macs:
+                                    for mac_inner in mac_first.split(' '):
+                                        mac_inner = mac_inner.strip()
+                                        try:
+                                            mac = format_mac(mac_inner)
+                                            device.add_nic(mac=mac)
+                                        except Exception:
+                                            pass
                         elif key_info.get('key'):
                             normalized_column_name = 'sysaid_' + normalize_var_name(key_info.get('key'))
                             if not device.does_field_exist(normalized_column_name):
@@ -152,6 +192,7 @@ class SysaidAdapter(AdapterBase):
                             device[normalized_column_name] = key_info.get('value')
                     except Exception:
                         logger.exception(f'Problem with key info {key_info}')
+                device.last_seen = last_access or update_time
                 device.set_raw(device_raw)
                 yield device
             except Exception:

@@ -131,7 +131,10 @@ class EsxAdapter(AdapterBase, Configurable):
 
         device.name = node.get('Name', '')
         device.vm_path_name = config.get('vmPathName')
-        device.figure_os(config.get('guestFullName', ''))
+        if guest.get('guestFullName'):
+            device.figure_os(guest.get('guestFullName'))
+        else:
+            device.figure_os(config.get('guestFullName', ''))
 
         # set device uuid according to http://www.virtu-al.net/2015/12/04/a-quick-reference-of-vsphere-ids/
         device_uuid = None

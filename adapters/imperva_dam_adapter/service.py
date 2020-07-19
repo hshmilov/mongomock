@@ -151,11 +151,12 @@ class ImpervaDamAdapter(AdapterBase):
                 last_status_update = parse_date(device_status.get('last-status-update'))
                 device.last_status_update = last_status_update
                 last_activity = parse_date(device_status.get('last-activity'))
-                last_seen = None
-                if last_activity and last_status_update:
+                last_seen = last_activity or last_status_update
+                try:
                     last_seen = max(last_status_update, last_activity)
-                elif last_activity or last_status_update:
-                    last_seen = last_activity or last_status_update
+                except Exception:
+                    pass
+                device.last_activity = last_activity
                 try:
                     device.connections_per_sec = int(device_status.get('connections-per-sec'))
                 except Exception:

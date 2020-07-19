@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from checkpoint_r80_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from checkpoint_r80_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES, GATEWAY_DEVICE, HOST_DEVICE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -11,7 +11,7 @@ class CheckpointR80Connection(RESTConnection):
     """ rest client for CheckpointR80 adapter """
 
     def __init__(self, *args, cp_domain: str = None, **kwargs):
-        super().__init__(*args, url_base_prefix='web_api',
+        super().__init__(*args, url_base_prefix='web_api/v1',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
         self._cp_domain = cp_domain
@@ -34,9 +34,9 @@ class CheckpointR80Connection(RESTConnection):
             logger.exception(f'Got invalid response: {raw_response.content}')
             raise RESTException(f'Got invalid response: {raw_response.content}')
 
-    def get_device_list(self):
+    def _get_api_object(self, api_endpoint):
         offset = 0
-        response = self._post('show-hosts',
+        response = self._post(api_endpoint,
                               body_params={'limit': DEVICE_PER_PAGE,
                                            'offset': offset})
         yield from response['objects']
@@ -44,7 +44,7 @@ class CheckpointR80Connection(RESTConnection):
         offset = DEVICE_PER_PAGE
         while offset < min(total, MAX_NUMBER_OF_DEVICES):
             try:
-                response = self._post('show-hosts',
+                response = self._post(api_endpoint,
                                       body_params={'limit': DEVICE_PER_PAGE,
                                                    'offset': offset})
                 yield from response['objects']
@@ -52,3 +52,12 @@ class CheckpointR80Connection(RESTConnection):
             except Exception:
                 logger.exception(f'Got exception at offset {offset}')
                 break
+
+    def get_device_list(self):
+        for device_raw in self._get_api_object('show-hosts'):
+            yield device_raw, HOST_DEVICE
+        try:
+            for device_raw in self._get_api_object('show-gateways-and-servers'):
+                yield device_raw, GATEWAY_DEVICE
+        except Exception:
+            logger.exception(f'Problem with gateways')

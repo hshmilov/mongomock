@@ -61,6 +61,8 @@ class AirwatchAdapter(AdapterBase, Configurable):
             connection = AirwatchConnection(domain=client_config['domain'],
                                             apikey=client_config['apikey'], verify_ssl=client_config['verify_ssl'],
                                             https_proxy=client_config.get('https_proxy'),
+                                            proxy_username=client_config.get('proxy_username'),
+                                            proxy_password=client_config.get('proxy_password'),
                                             username=client_config['username'],
                                             password=client_config['password'], url_base_prefix='/api/',
                                             headers={'User-Agent': 'Fiddler',
@@ -129,6 +131,17 @@ class AirwatchAdapter(AdapterBase, Configurable):
                     'name': 'https_proxy',
                     'title': 'Https Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             'required': [

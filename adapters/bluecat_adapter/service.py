@@ -42,6 +42,7 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         tag_near = Field(str, 'Tag Near')
         network_id = Field(int, 'Network ID')
         network_name = Field(str, 'Network Name')
+        network_cidr = Field(str, 'Network CIDR')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -250,7 +251,7 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
 
         return None
 
-    # pylint: disable=R1702,R0912, too-many-statements, inconsistent-return-statements, invalid-name
+    # pylint: disable=R1702,R0912, too-many-statements, inconsistent-return-statements, invalid-name, too-many-locals
     def _parse_api_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -265,6 +266,7 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                 hostname = device_raw.get('dns_name')
                 device.hostname = hostname
                 device_properties = device_raw.get('properties')
+                lease_time = None
                 mac = None
                 ips = None
                 expire_time = None
@@ -290,7 +292,8 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                                 expire_time = parse_date(property_raw[1])
                                 device.expiry_time = expire_time
                             elif property_raw[0] == 'leaseTime':
-                                device.lease_time = parse_date(property_raw[1])
+                                lease_time = parse_date(property_raw[1])
+                                device.lease_time = lease_time
                     if mac or ips:
                         device.add_nic(mac, ips)
                 except Exception:
@@ -320,11 +323,28 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
 
                 try:
                     network_raw = device_raw.get('network') or {}
+                    try:
+                        network_properties = network_raw.get('properties')
+                        if isinstance(network_properties, str) and network_properties:
+                            for property_raw in \
+                                    [network_property.split('=')
+                                     for network_property in network_properties.split('|')[:-1] if
+                                     '=' in network_property]:
+                                if property_raw[0] == 'CIDR':
+                                    device.network_cidr = property_raw[1]
+                    except Exception:
+                        logger.exception(f'Problem getting properties for {device_raw}')
                     device.network_id = network_raw.get('id')
                     device.network_name = network_raw.get('name')
                 except Exception:
                     logger.exception(f'Could not parse network information')
-
+                try:
+                    if expire_time:
+                        device.last_seen = expire_time
+                    else:
+                        device.last_seen = lease_time
+                except Exception:
+                    logger.exception(f'Problwm with last seen')
                 try:
                     if expire_time:
                         expire_time = expire_time.replace(tzinfo=None)

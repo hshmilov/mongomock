@@ -72,7 +72,7 @@ class ArubaAPI:
         }
         resp = self.session.post('{}/screens/wms/wms.login'.format(self._uri()),
                                  data=form_data, verify=self.verify, timeout=(5, 30))
-        logger.debug('Login: status %s; cookies %s', resp.status_code, resp.cookies)
+        logger.debug('Login: status %s; cookies %s', resp.status_code, list(resp.cookies))
         logger.info('logged in to %s', self.device)
 
     def _logout(self):
@@ -95,7 +95,7 @@ class ArubaAPI:
         :returns: URL-encoded parameter string
         """
         return '{}@@{}&UIDARUBA={}'.format(urlquote(command), self._ms_time(),
-                                           self.session.cookies[self._SESSION_COOKIE]).encode()
+                                           self.session.cookies.get(self._SESSION_COOKIE) or '').encode()
 
     def cli(self, command, debug=False):
         """Performs CLI command on ArubaOS device

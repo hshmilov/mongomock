@@ -91,8 +91,6 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                                      extra_fields=None, ax_snow_values_map_dict=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
-        if not name:
-            return None
         connection_dict['name'] = name
         connection_dict['sys_class_name'] = class_name
         connection_dict['sys_id'] = sys_id
@@ -128,8 +126,7 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                                                           verify_ssl=self._config.get('verify_ssl'),
                                                           username=self._config.get('username'),
                                                           password=self._config.get('password'),
-                                                          https_proxy=self._config.get('https_proxy'),
-                                                          extra_fields=self._config.get('extra_fields'))
+                                                          https_proxy=self._config.get('https_proxy'))
             with service_now_connection:
                 service_now_connection.update_service_now_computer(connection_dict)
                 return ''
@@ -267,6 +264,7 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                                                             ip_address=ip_address_raw,
                                                             manufacturer=manufacturer_raw,
                                                             os_type=os_raw,
+                                                            extra_fields=self._config.get('extra_fields'),
                                                             serial_number=serial_number_raw,
                                                             ax_snow_values_map_dict=ax_snow_values_map_dict
                                                             )

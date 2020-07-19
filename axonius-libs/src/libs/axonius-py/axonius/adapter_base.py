@@ -754,7 +754,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         timeout = self.__fetching_timeout
         timeout = timeout.total_seconds() if timeout else None
-
+        devices_count = 0
+        users_count = 0
         try:
             devices = {
                 'raw': [],
@@ -1102,8 +1103,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             self._clients[client_id] = None
             error_msg = str(e)
             id_for_log = client_id if client_id else str(object_id or '')
-            logger.exception(f'Got error while handling client {id_for_log} - '
-                             f'possibly compliance problem with schema.')
+            logger.error(f'Got error while handling client {id_for_log} - '
+                         f'possibly compliance problem with schema.')
 
         result = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=False)
         if result is None and object_id is not None:

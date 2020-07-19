@@ -468,7 +468,8 @@ class NexposeV3Client(NexposeClient):
                 if cloud_type is not None:
                     device.cloud_provider = cloud_type
                     device.cloud_id = id_element.get('id')
-                    break
+                if id_element.get('source') == 'R7 Agent':
+                    device.r7_agent_id = id_element.get('id')
 
         except Exception:
             logger.exception(f'Error getting ids array from Rapid7 Nexpose: {device_raw.get("ids")}')

@@ -25,6 +25,7 @@ class NexposeAdapter(ScannerAdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         nexpose_id = Field(str, 'Nexpose ID')
+        r7_agent_id = Field(str, 'Rapid7 Agent ID')
         nexpose_hostname = Field(str, 'Nexpose Hostname')
         risk_score = Field(float, 'Risk score')
         vulnerabilities_critical = Field(int, "Critical Vulnerabilities")

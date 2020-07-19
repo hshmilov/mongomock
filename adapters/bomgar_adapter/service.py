@@ -39,7 +39,11 @@ class BomgarAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = BomgarConnection(client_config['domain'], client_config['client_id'],
-                                          client_config['client_secret'])
+                                          client_config['client_secret'],
+                                          https_proxy=client_config.get('https_proxy'),
+                                          proxy_username=client_config.get('proxy_username'),
+                                          proxy_password=client_config.get('proxy_password'),
+                                          )
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -69,6 +73,22 @@ class BomgarAdapter(AdapterBase):
                 {
                     'name': 'client_secret',
                     'title': 'Client Secret',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy Username',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
                     'type': 'string',
                     'format': 'password'
                 }

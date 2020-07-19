@@ -77,6 +77,8 @@ class CybereasonConnection(RESTConnection):
                       'batchId': None
                       }
         response = self._post('rest/sensors/query', body_params=query_dict)
+        if not response.get('sensors'):
+            return None
         return response['sensors'][0]
 
     def update_isolate_status(self, pylum_id, do_isolate):

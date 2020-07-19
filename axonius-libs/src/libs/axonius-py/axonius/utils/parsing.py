@@ -147,7 +147,7 @@ def get_manufacturer_from_mac(mac: str) -> Optional[str]:
                 manufacturer = mac_manufacturer_details.get(formatted_mac[:index])
                 if manufacturer:
                     if len(manufacturer) > 2:
-                        return f'{manufacturer[1]} ({manufacturer[2]})'
+                        return f'({manufacturer[2]})'
                     else:
                         return f'{manufacturer[1]}'
             return None
@@ -917,8 +917,11 @@ def hostname_not_problematic(adapter_device):
              and 'dev' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'test' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'wix-mbp' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'playtikas-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'wixs-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'unknown' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'spare' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-pro' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower())):
         return True
     return False
@@ -940,6 +943,8 @@ def is_from_deeps_tenable_io_or_aws(adapter_device):
 
 
 def get_cloud_id_or_hostname(adapter_device):
+    if adapter_device.get('has_bad_cloud_mac'):
+        return None
     cloud_id = adapter_device['data'].get('cloud_id')
     if cloud_id:
         return cloud_id.lower()
@@ -1617,6 +1622,9 @@ def normalize_adapter_devices(devices):
                 yield normalize_adapter_device(tag)
 
 
+BAD_CLOUD_MANUFATURER_STRINGS = ['apple']
+
+
 def normalize_adapter_device(adapter_device):
     """
     See normalize_adapter_devices
@@ -1631,6 +1639,17 @@ def normalize_adapter_device(adapter_device):
             adapter_device[NORMALIZED_IPS_4] = set([ip for ip in ips if is_valid_ipv4(ip)])
             adapter_device[NORMALIZED_IPS_6] = set([ip for ip in ips if is_valid_ipv6(ip)])
         adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
+        try:
+            macs = adapter_device.get(NORMALIZED_MACS)
+            if macs:
+                for mac in macs:
+                    manufaccturer = get_manufacturer_from_mac(mac)
+                    if manufaccturer:
+                        for bad_manufacturer_str in BAD_CLOUD_MANUFATURER_STRINGS:
+                            if bad_manufacturer_str in manufaccturer.lower():
+                                adapter_device['has_bad_cloud_mac'] = True
+        except Exception:
+            pass
     # Save the normalized hostname so we can later easily compare.
     # See further doc near definition of NORMALIZED_HOSTNAME.
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)

@@ -110,6 +110,8 @@ class SendEmailToEntities(ActionTypeBase):
                 if aws_account_alias:
                     mail_content = mail_content.replace(AWS_ACCOUNT_ALIAS, str(aws_account_alias))
                 mail_list = list(mail_list)
+                if len(mail_list) == 0:
+                    results.append(EntityResult(entry['internal_axon_id'], False, f'Email list is empty'))
                 if len(mail_list) > 2:
                     results.append(EntityResult(entry['internal_axon_id'], False, f'Email list is too big'))
                 email = mail_sender.new_email(self._config['mail_subject'], mail_list)

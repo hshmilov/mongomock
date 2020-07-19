@@ -20,8 +20,6 @@ class AirwatchConnection(RESTConnection):
         # Note that the following self._get will have the application/xml Accept type,
         # but only afterwards we will update session headers to application/json.
         # when having both 'Accept' in permanent and session headers, session wins.
-        self._get('system/info', do_basic_auth=True, use_json_in_response=False)
-        self._session_headers['Accept'] = 'application/json'
 
         try:
             self._get('mdm/devices/search', url_params={'pagesize': 1, 'page': 0}, do_basic_auth=True)

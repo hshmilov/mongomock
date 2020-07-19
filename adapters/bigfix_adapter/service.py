@@ -72,7 +72,7 @@ class BigfixAdapter(AdapterBase, Configurable):
                 mac_dict = dict()
                 logger.exception(f'Failed getting mac unix, continuing')
             try:
-                aix_installed_software_dict = client_data.get_query_data_per_device_list('Producs in Object Repository'
+                aix_installed_software_dict = client_data.get_query_data_per_device_list('Products in Object Repository'
                                                                                          ' - AIX')
             except Exception:
                 aix_installed_software_dict = dict()

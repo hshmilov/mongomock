@@ -46,7 +46,8 @@ class RESTConnection(ABC):
                  verify_ssl=False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
                  session_timeout: Tuple[int, int] = None,
-                 port: int = None, headers: dict = None, use_domain_path: bool = False, client_id: str = None):
+                 port: int = None, headers: dict = None, use_domain_path: bool = False, client_id: str = None,
+                 proxy_username: str = None, proxy_password: str = None):
         """
         An abstract class that implements backbone logic for accessing RESTful APIs in the manner
         needed by adapters to facilitate device acquiring logic
@@ -87,11 +88,23 @@ class RESTConnection(ABC):
         self._port = port
         self._proxies = {}
         if http_proxy is not None:
-            self._proxies['http'] = http_proxy.strip()
-            self._http_proxy = http_proxy.strip()
+            http_proxy = http_proxy.strip()
+            try:
+                if proxy_username and proxy_password:
+                    http_proxy = f'{proxy_username}:{proxy_password}@{http_proxy}'
+            except Exception:
+                logger.exception(f'Problem with username password for proxy')
+            self._proxies['http'] = http_proxy
+            self._http_proxy = http_proxy
         if https_proxy is not None:
-            self._proxies['https'] = https_proxy.strip()
-            self._https_proxy = https_proxy.strip()
+            https_proxy = https_proxy.strip()
+            try:
+                if proxy_username and proxy_password:
+                    https_proxy = f'{proxy_username}:{proxy_password}@{https_proxy}'
+            except Exception:
+                logger.exception(f'Problem with username password for proxy')
+            self._proxies['https'] = https_proxy
+            self._https_proxy = https_proxy
         logger.debug(f'Proxies: {self._proxies}')
         self.__client_id = client_id
 

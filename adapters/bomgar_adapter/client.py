@@ -22,7 +22,7 @@ MAX_ASYNC_REQUESTS_IN_PARALLEL = 100
 class BomgarConnection(object):
     """ for details see https://axonius.atlassian.net/wiki/spaces/AX/pages/509706241/Bomgar """
 
-    def __init__(self, domain, client_id, client_secret):
+    def __init__(self, domain, client_id, client_secret, https_proxy=None, proxy_username=None, proxy_password=None):
         self.domain = domain
         self.client_id = client_id
         self.client_secret = client_secret
@@ -39,6 +39,17 @@ class BomgarConnection(object):
         self.token = None
         self.session = None
         self.headers = None
+        self.proxies = None
+        if https_proxy is not None:
+            https_proxy = https_proxy.strip()
+            try:
+                if proxy_username and proxy_password:
+                    https_proxy = f'{proxy_username}:{proxy_password}@{https_proxy}'
+            except Exception:
+                logger.exception(f'Problem with username password for proxy')
+            self.proxies = dict()
+            self.proxies['https'] = https_proxy
+            self._https_proxy = https_proxy
 
     def set_token(self, token, token_type='Bearer'):
         if token_type is None:
@@ -96,7 +107,8 @@ class BomgarConnection(object):
             raise BomgarNotConnected()
         params = params or {}
         url = self._get_url_command(action) if command else self.report_url
-        response = self.session.get(url, params=params, headers=self.headers, stream=True, timeout=(5, 30))
+        response = self.session.get(url, params=params, headers=self.headers, stream=True, timeout=(5, 30),
+                                    proxies=self.proxies)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

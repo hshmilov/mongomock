@@ -110,7 +110,9 @@ class RedsealAdapter(AdapterBase, Configurable):
         kind, raw_device_data = tuple(*raw_device_data.items())
 
         device = self._new_device_adapter()
-        device.id = raw_device_data['TreeId']
+        if not raw_device_data.get('TreeId'):
+            return None
+        device.id = raw_device_data['TreeId'] + '_' + raw_device_data.get('Name')
         name = raw_device_data.get('Name')
         if name is not None and not is_ipaddr(name):
             device.hostname = name
@@ -211,7 +213,8 @@ class RedsealAdapter(AdapterBase, Configurable):
         for raw_device_data in iter(raw_data):
             try:
                 device = self.create_device(raw_device_data)
-                yield device
+                if device:
+                    yield device
             except Exception:
                 logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
 

@@ -37,6 +37,7 @@ class StaticUsersCorrelatorService(CorrelatorBase):
                 }
             }
         fields_to_get = ('id', 'ad_user_principal_name', 'username', 'ad_display_name', 'mail', 'domain',
+                         'employee_id',
                          'associated_adapter_plugin_name', 'value', 'type', 'name')
         projection = {
             f'adapters.data.{field}': True for field in fields_to_get
