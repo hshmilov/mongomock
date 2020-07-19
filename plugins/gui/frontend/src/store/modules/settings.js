@@ -253,7 +253,7 @@ export const settings = {
     [RESET_CERTIFICATE_SETTINGS]({ state, dispatch }, payload) {
       return dispatch(REQUEST_API, {
         rule: `certificate/reset_to_defaults`,
-        method: 'GET',
+        method: 'POST',
       });
     },
   },

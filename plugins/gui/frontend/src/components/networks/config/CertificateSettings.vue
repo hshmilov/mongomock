@@ -327,7 +327,7 @@ export default {
     },
     resetToDefaults() {
       this.resetCertificateSettings().then(() => {
-        this.toasterMessage = 'Certificate settings resetted successfully';
+        this.toasterMessage = 'Certificate settings reset successfully';
         this.refreshSettings();
         this.actionToggle(resetSystemDefaultsAction);
       }).catch((error) => {

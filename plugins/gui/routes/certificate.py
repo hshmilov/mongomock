@@ -51,7 +51,7 @@ class Certificate:
             'expires_on': datetime.datetime.strptime(parsed_cert.get_notAfter().decode('utf-8'), '%Y%m%d%H%M%SZ')
         })
 
-    @gui_route_logged_in('reset_to_defaults', methods=['GET'], enforce_trial=True)
+    @gui_route_logged_in('reset_to_defaults', methods=['POST'], enforce_trial=True)
     def reset_to_defaults(self):
         try:
             self.plugins.core.configurable_configs.update_config(

@@ -93,7 +93,7 @@ class TestGlobalSSL(TestBase):
             self.settings_page.click_certificate_settings()
             self.settings_page.click_reset_to_defaults()
             self.settings_page.wait_for_saved_successfully_toaster(
-                toaster_message='Certificate settings resetted successfully')
+                toaster_message='Certificate settings reset successfully')
 
     @staticmethod
     def read_ca_cert_file(ca_filename: str):

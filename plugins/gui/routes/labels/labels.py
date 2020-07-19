@@ -370,6 +370,8 @@ class Labels:
             'audit.certificate.import_cert': 'Import CSR',
             'audit.certificate.import_cert.template': 'CSR was imported',
             'audit.certificate.cancel_csr': 'Cancel CSR',
-            'audit.certificate.cancel_csr.template': 'CSR was canceled'
+            'audit.certificate.cancel_csr.template': 'CSR was canceled',
+            'audit.certificate.reset_to_defaults': 'Restore Default',
+            'audit.certificate.reset_to_defaults.template': 'Restored certificate to system default'
 
         }
