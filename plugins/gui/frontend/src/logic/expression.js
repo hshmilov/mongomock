@@ -1,7 +1,7 @@
 import _matches from 'lodash/matches';
 
 import { getExcludedAdaptersFilter } from '../constants/utils';
-import { filterOutExpression, expression as emptyExpression } from '../constants/filter';
+import { filterOutExpression, sizeLtGtFields, expression as emptyExpression } from '../constants/filter';
 
 /**
  * Calculator of a single expression with a single condition or with nested conditions
@@ -75,6 +75,28 @@ const Expression = function (expression, condition, isFirst) {
       } else if (expression.context !== 'CMP') {
         const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`;
         filterStack.push(getMatchExpression('specific_data', adapterChildExpression));
+      }
+    } else if (sizeLtGtFields.includes(expression.field) && expression.compOp == 'sizegt') {
+      if (expression.value >= 0 && expression.value <= 10) {
+        filterStack.push(`(((${expression.field} == ({"$exists":true,"$ne":[]})) and ${expression.field} != []) and `);
+        for (let i = 0; i <= expression.value; i++) {
+          if (i > 0) filterStack.push(' and ');
+          filterStack.push(`not ${expression.field} == size(${i})`);
+        }
+        filterStack.push(')');
+      } else {
+        return { error: 'Value must be between 0 to 10' };
+      }
+    } else if (sizeLtGtFields.includes(expression.field) && expression.compOp == 'sizelt') {
+      if (expression.value > 0 && expression.value <= 10) {
+        filterStack.push(`(not ((${expression.field} == ({"$exists":true,"$ne":[]})) and ${expression.field} != []) or `);
+        for (let i = 0; i < expression.value; i++) {
+          if (i > 0) filterStack.push(' or ');
+          filterStack.push(`${expression.field} == size(${i})`);
+        }
+        filterStack.push(')');
+      } else {
+        return { error: 'Value must be between 1 to 10' };
       }
     } else {
       filterStack.push(condition);

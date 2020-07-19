@@ -1,6 +1,6 @@
 <template>
   <div class="x-condition-function">
-    <x-select
+    <XSelect
       v-if="opsList.length"
       :value="operatorProxy"
       :options="opsList"
@@ -9,7 +9,7 @@
       :read-only="readOnly"
       @input="onInputOperator"
     />
-    <component
+    <Component
       :is="valueType"
       v-if="showArgument"
       :value="argumentProxy"
@@ -30,7 +30,7 @@ import _isEmpty from 'lodash/isEmpty';
 import _isEqual from 'lodash/isEqual';
 import _get from 'lodash/get';
 import _isPlainObject from 'lodash/isPlainObject';
-import xSelect from '../../../axons/inputs/select/Select.vue';
+import XSelect from '../../../axons/inputs/select/Select.vue';
 import string from '../types/string/StringEdit.vue';
 import number from '../types/numerical/NumberEdit.vue';
 import bool from '../types/boolean/BooleanEdit.vue';
@@ -41,14 +41,14 @@ import array from '../types/numerical/IntegerEdit.vue';
 import { SIZE_OPERATOR } from '../../../../constants/filter';
 
 import {
-  checkShowValue, getOpsList, getOpsMap, schemaEnumFind, getValueSchema
+  checkShowValue, getOpsList, getOpsMap, schemaEnumFind, getValueSchema,
 } from '../../../../logic/condition';
 
 
 export default {
   name: 'XConditionFunction',
   components: {
-    xSelect, string, number, integer, bool, array,
+    XSelect, string, number, integer, bool, array,
   },
   props: {
     schema: {

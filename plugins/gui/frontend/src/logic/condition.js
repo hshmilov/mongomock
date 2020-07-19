@@ -3,7 +3,7 @@ import _isEqual from 'lodash/isEqual';
 import IP from 'ip';
 
 import { getExcludedAdaptersFilter } from '../constants/utils';
-import { compOps, opTitleTranslation } from '../constants/filter';
+import { compOps, opTitleTranslation, sizeLtGtFields } from '../constants/filter';
 import { pluginTitlesToNames } from '../constants/plugin_meta';
 
 const convertSubnetToRaw = (val) => {
@@ -118,8 +118,7 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       const op = val < 0 ? '+' : '-';
       val = Math.abs(val);
       cond = cond.replace(/{op}/g, op);
-    }
-    else if (compOp === 'next_days' || compOp === 'next_hours') {
+    } else if (compOp === 'next_days' || compOp === 'next_hours') {
       const op = val < 0 ? '-' : '+';
       val = Math.abs(val);
       cond = cond.replace(/{op}/g, op);
@@ -280,6 +279,10 @@ export const getOpsMap = (schema) => {
   const parentSchema = schema;
   if (schema.type === 'array') {
     ops = compOps[`array_${schema.format}`] || compOps.array;
+    if (sizeLtGtFields.includes(schema.name)) {
+      ops.sizegt = '{val}';
+      ops.sizelt = '{val}';
+    }
     schema = schema.items;
   }
   if (schema.enum && schema.format !== 'predefined' && schema.format !== 'tag') {

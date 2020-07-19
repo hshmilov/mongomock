@@ -159,4 +159,10 @@ export const opTitleTranslation = {
   next_days: 'next days',
   hours: 'last hours',
   next_hours: 'next hours',
+  sizegt: 'size >',
+  sizelt: 'size <',
 };
+
+export const sizeLtGtFields = [
+  'specific_data.data.associated_devices',
+];
