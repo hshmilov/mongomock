@@ -30,6 +30,7 @@ curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POS
         <property name=\"env.startedBy\" value=\"build was triggering from $TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID\"/>
         <property name=\"name\" value=\"$NAME\"/>
         <property name=\"s3bucket\" value=\"$S3_BUCKET\"/>
+        <property name=\"disk_size\" value=\"$DISK_SIZE\"/>
         <property name=\"teamcity.build.triggeredBy.username\" value=\"$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME\"/>
         <property name=\"branch\" value=\"$BRANCH\"/>
         <property name=\"fork\" value=\"$FORK\"/>
@@ -50,6 +51,7 @@ curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POS
         <property name=\"env.startedBy\" value=\"build was triggering from $TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID\"/>
         <property name=\"name\" value=\"${NAME}-unencrypted\"/>
         <property name=\"s3bucket\" value=\"$S3_BUCKET\"/>
+        <property name=\"disk_size\" value=\"$DISK_SIZE\"/>
         <property name=\"teamcity.build.triggeredBy.username\" value=\"$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME\"/>
         <property name=\"branch\" value=\"$BRANCH\"/>
         <property name=\"fork\" value=\"$FORK\"/>

@@ -228,6 +228,7 @@ def exports():
             owner=(session['builds_user_full_name'], session['builds_user_id']),
             fork=request.form['fork'],
             branch=request.form['branch'],
+            disk_size=int(request.form['disk_size']),
             client_name=request.form.get('client_name', ''),
             comments=request.form['comments']))
 

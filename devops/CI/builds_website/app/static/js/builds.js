@@ -528,6 +528,8 @@
             ["Installer Download Link", export_data_or_empty('installer_download_link')],
             ["AMI ID", export_data_or_empty('ami_id')],
             ["GCE Name", export_data_or_empty('gce_name')],
+            ["vhdx", export_data_or_empty('s3_vhdx')],
+            ["qcow", export_data_or_empty('s3_qcow3')],
             ["Installer Log", export_data_or_empty('installer_log')],
             ["Cloud Log", export_data_or_empty('cloud_log')],
             ["OVA Log", export_data_or_empty('ova_log')],
@@ -693,7 +695,8 @@
         data["fork"] = fields[1].value;
         data["branch"] = fields[2].value;
         data["client_name"] = fields[3].value;
-        data["comments"] = fields[4].value;
+        data["disk_size"] = fields[4].value;
+        data["comments"] = fields[5].value;
 
         $.ajax({url: "/api/exports", type: "POST", data: data})
             .done(function(data) {
@@ -730,6 +733,7 @@
                 {"name": "Fork", "value": "axonius"},
                 {"name": "Branch", "value": "develop"},
                 {"name": "Client Name"},
+                {"name": "Disk Size (in GB)", "value": "500"},
                 {"name": "Comments"}
             ], true, "Please fill in the following details:")
     }

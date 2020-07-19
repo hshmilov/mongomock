@@ -199,7 +199,7 @@ def cloud(args, notify):
 
 
 def ova_vhd(args, notify):
-    notify({'name': args.name, 'subcommand': 'ova_vhd', 'step': 'start'})
+    notify({'name': args.name, 'subcommand': 'ova', 'step': 'start'})
     with local_vmdk_path(args) as vmdk:
         if args.output:
             with tempfile.TemporaryDirectory() as vmx_directory:
@@ -209,7 +209,7 @@ def ova_vhd(args, notify):
 
         if args.vhdx_output:
             subprocess.run(['qemu-img', 'convert', '-f', 'vmdk', '-O', 'vhdx', vmdk, args.vhdx_output])
-    notify({'name': args.name, 'subcommand': 'ova_vhd', 'step': 'finish'})
+    notify({'name': args.name, 'subcommand': 'ova', 'step': 'finish'})
 
 
 def s3_upload(args, notify):

@@ -225,7 +225,7 @@ class BuildsManager(object):
 
         return list(exports)
 
-    def _teamcity_export_ova(self, name, owner, fork, branch, client_name, comments):
+    def _teamcity_export_ova(self, name, owner, fork, branch, client_name, disk_size, comments):
         tc_user = self.__teamcity_credentials['username']
         tc_pass = self.__teamcity_credentials['password']
 
@@ -237,6 +237,7 @@ class BuildsManager(object):
                                                         {"name": "client_name", "value": client_name},
                                                         {"name": "teamcity.build.triggeredBy.username", "value": owner},
                                                         {"name": "fork", "value": fork},
+                                                        {"name": "disk_size", "value": disk_size},
                                                         {"name": "comments", "value": comments},
                                                         {"name": "name", "value": name}
                                                         ]}},
@@ -245,10 +246,10 @@ class BuildsManager(object):
                                  verify=False)
         response.raise_for_status()
 
-    def export_ova(self, version, owner, fork, branch, client_name, comments):
+    def export_ova(self, version, owner, fork, branch, client_name, comments, disk_size):
         owner_full_name, owner_slack_id = owner
 
-        self._teamcity_export_ova(version, owner_full_name, fork, branch, client_name, comments)
+        self._teamcity_export_ova(version, owner_full_name, fork, branch, client_name, disk_size, comments)
 
         db_json = dict()
         db_json['version'] = version
@@ -273,6 +274,7 @@ class BuildsManager(object):
     def update_export_from_teamcity_hook(self, request_params):
         translation = {'name': 'version', 'owner': 'owner', 'fork': 'fork', 'branch': 'branch', 'comments': 'comments',
                        'installer_git_hash': 'git_hash', 'artifact.amazon-ebs': 'ami_id', 'artifact.googlecompute': 'gce_name',
+                       's3_qemu': 's3_qcow3', 's3_vhdx': 's3_vhdx',
                        'ami_log': 'ami_log', 'ova_log': 'ova_log', 'ova_test_log': 'ova_test_log', 'installer_log': 'installer_log',
                        's3_installer': 'installer_download_link', 'ami_test_log': 'ami_test_log', 'ami_test_return_code': 'ami_test_return_code',
                        'ova_test_return_code': 'ova_test_return_code', 'cloud_log': 'cloud_log',
