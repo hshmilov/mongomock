@@ -18,7 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, WEEKDAYS
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
 from axonius.consts.adapter_consts import LAST_FETCH_TIME
@@ -64,6 +64,7 @@ class SystemSchedulerResearchMode(Enum):
     """
     rate = 'system_research_rate'
     date = 'system_research_date'
+    weekdays = 'system_research_weekdays'
 
 
 # pylint: disable=invalid-name, too-many-instance-attributes, too-many-branches, too-many-statements, no-member
@@ -254,6 +255,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         system_research_date = config['discovery_settings']['system_research_date']
         self.__system_research_date_time = system_research_date['system_research_date_time']
         self.__system_research_date_recurrence = system_research_date['system_research_date_recurrence']
+        self.__system_research_weekdays = config['discovery_settings']['system_research_weekdays']
         self.__system_research_mode = config['discovery_settings']['conditional']
 
         history_settings = config['discovery_settings']['history_settings']
@@ -290,7 +292,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                minute=minute,
                                second='0',
                                day=f'*/{recurrence}')
-        raise Exception(f' {self.__system_research_mode} is invalid research mode ')
+        if self.__system_research_mode == SystemSchedulerResearchMode.weekdays.value:
+            hour, minute = self.__system_research_weekdays.get(DISCOVERY_RESEARCH_DATE_TIME).split(':')
+            # Create a string of weekdays in cron syntax (sun,mon,tue,wed...)
+            weekdays_for_cron = ','.join([day[:3].lower() for day in
+                                          self.__system_research_weekdays.get(DISCOVERY_REPEAT_ON)])
+            return CronTrigger(hour=hour,
+                               minute=minute,
+                               second='0',
+                               day_of_week=weekdays_for_cron)
+
+        raise Exception(f'{self.__system_research_mode} is invalid research mode ')
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -304,18 +316,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'enum': [
                                 {
                                     'name': 'system_research_rate',
-                                    'title': 'Interval'
+                                    'title': 'Every x hours'
                                 },
                                 {
                                     'name': 'system_research_date',
-                                    'title': 'Scheduled'
+                                    'title': 'Every x days'
+                                },
+                                {
+                                    'name': 'system_research_weekdays',
+                                    'title': 'Days of week'
                                 }
                             ],
                             'type': 'string'
                         },
                         {
                             'name': 'system_research_rate',
-                            'title': 'Hours between discovery cycles',
+                            'title': 'Repeat scheduled discovery every (hours)',
                             'type': 'number',
                             'max': 24 * 365  # Up to a year
                         },
@@ -324,18 +340,40 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'type': 'array',
                             'items': [
                                 {
+                                    'name': 'system_research_date_recurrence',
+                                    'title': 'Repeat scheduled discovery every (days)',
+                                    'type': 'number'
+                                },
+                                {
                                     'name': 'system_research_date_time',
                                     'title': 'Scheduled discovery time',
                                     'type': 'string',
                                     'format': 'time'
-                                },
-                                {
-                                    'name': 'system_research_date_recurrence',
-                                    'title': 'Repeat scheduled discovery every (days)',
-                                    'type': 'number'
                                 }
                             ],
                             'required': ['system_research_date_time', 'system_research_date_recurrence']
+                        },
+                        {
+                            'name': 'system_research_weekdays',
+                            'type': 'array',
+                            'required': [DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_ON],
+                            'items': [
+                                {
+                                    'name': DISCOVERY_REPEAT_ON,
+                                    'title': 'Repeat scheduled discovery on',
+                                    'type': 'array',
+                                    'items': {
+                                        'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
+                                        'type': 'string'
+                                    }
+                                },
+                                {
+                                    'name': DISCOVERY_RESEARCH_DATE_TIME,
+                                    'title': 'Scheduled discovery time',
+                                    'type': 'string',
+                                    'format': 'time'
+                                }
+                            ]
                         },
                         {
                             'name': 'constant_alerts',
@@ -393,6 +431,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 'system_research_date': {
                     'system_research_date_time': '13:00',
                     'system_research_date_recurrence': 1
+                },
+                'system_research_weekdays': {
+                    DISCOVERY_RESEARCH_DATE_TIME: '13:00',
+                    DISCOVERY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
                 },
                 'history_settings': {
                     'enabled': True,
@@ -758,7 +800,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         # Check for weekday
         if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_ON:
             today = datetime.today().strftime('%A').lower()
-            if (discovery_config.get(DISCOVERY_REPEAT_ON, {}) or {}).get(today):
+            if today in discovery_config.get(DISCOVERY_REPEAT_ON, []):
                 if not last_discovery:
                     return True
                 if (datetime.now() - last_discovery).days > 0:

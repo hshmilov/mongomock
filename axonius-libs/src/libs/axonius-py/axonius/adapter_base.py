@@ -2015,12 +2015,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'type': 'bool'
                 },
                 {
-                    'name': DISCOVERY_RESEARCH_DATE_TIME,
-                    'title': 'Scheduled discovery time',
-                    'type': 'string',
-                    'format': 'time'
-                },
-                {
                     'name': DISCOVERY_REPEAT_TYPE,
                     'title': 'Repeat scheduled discovery',
                     'enum': [
@@ -2044,8 +2038,16 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'name': DISCOVERY_REPEAT_ON,
                     'title': 'Repeat scheduled discovery on',
                     'type': 'array',
-                    'items': [{'name': day.lower(), 'title': day, 'type': 'bool'} for day in WEEKDAYS],
-                    'required': [day.lower() for day in WEEKDAYS]
+                    'items': {
+                        'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
+                        'type': 'string'
+                    }
+                },
+                {
+                    'name': DISCOVERY_RESEARCH_DATE_TIME,
+                    'title': 'Scheduled discovery time',
+                    'type': 'string',
+                    'format': 'time'
                 }
             ],
             'pretty_name': 'Discovery Configuration',
@@ -2061,9 +2063,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             DISCOVERY_RESEARCH_DATE_TIME: '13:00',
             DISCOVERY_REPEAT_TYPE: DISCOVERY_REPEAT_EVERY,
             DISCOVERY_REPEAT_EVERY: 1,
-            DISCOVERY_REPEAT_ON: {
-                day.lower(): True for day in WEEKDAYS
-            }
+            DISCOVERY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
         }
 
     def _update_discovery_schema(self):

@@ -181,6 +181,7 @@ class Page:
     SEARCH_INPUT_CSS = '.x-search-input .input-value'
     ANT_CONFIRM_MODAL_TITLE_CSS = '.ant-modal-confirm-title'
     ANT_SELECT_MENU_ITEM_CSS = '.ant-select-dropdown-menu-item'
+    ANT_SELECTED_MENU_ITEM_CSS = '.ant-select-dropdown-menu-item-selected'
     CUSTOM_DATA_SEARCH_INPUT = '.body .x-tabs.vertical .body .x-tab.active .x-search-input input'
     TABLE_PAGE_SIZE_ACTIVE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']' \
                                    '/div[@class=\'x-link active\']'
@@ -772,7 +773,10 @@ class Page:
         options = parent.find_elements_by_css_selector(self.MULTI_SELECT_SELECTED_OPTIONS_CSS)
         for option in options:
             if option.text in values:
-                option.find_element_by_css_selector(self.MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS).click()
+                # pylint: disable=cell-var-from-loop
+                wait_until(lambda: option.find_element_by_css_selector(self.MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS).
+                           click() is None,
+                           tolerated_exceptions_list=[StaleElementReferenceException, ElementClickInterceptedException])
 
     def get_multiple_select_selected_options_text(self, select_css_selector):
         parent = self.driver.find_element_by_css_selector(select_css_selector)

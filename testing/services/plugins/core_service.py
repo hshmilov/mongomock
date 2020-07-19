@@ -19,7 +19,7 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     PASSWORD_MANGER_ENUM, CYBERARK_DOMAIN, CYBERARK_CERT_KEY, PASSWORD_MANGER_THYCOTIC_SS_VAULT, THYCOTIC_SS_HOST, \
     THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID, \
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
-    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION
+    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON
 
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
     CLIENT_ID, LEGACY_VAULT_PROVIDER
@@ -85,7 +85,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 23:
             self._update_schema_version_23()
 
-        if self.db_schema_version != 23:
+        if self.db_schema_version < 24:
+            self._update_schema_version_24()
+
+        if self.db_schema_version != 24:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def _migrate_db_10(self):
@@ -1176,6 +1179,29 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             self.db_schema_version = 23
         except Exception as e:
             print(f'Exception while upgrading core db to version 23. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_24(self):
+        print(f'Updating to schema version 24 - Update adapters discovery schema')
+        try:
+            adapters = self.db.client[CORE_UNIQUE_NAME]['configs'].find({'plugin_type': ADAPTER_PLUGIN_TYPE})
+            for adapter in adapters:
+                adapter_name = adapter[PLUGIN_NAME]
+                plugin_settings = self.db.plugins.get_plugin_settings(adapter_name)
+                adapter_config = plugin_settings.configurable_configs
+                schedule_settings = adapter_config.discovery_configuration.get(DISCOVERY_REPEAT_ON)
+                if schedule_settings:
+                    self.db.plugins.get_plugin_settings(adapter_name).configurable_configs.update_config(
+                        'DiscoverySchema',
+                        {
+                            DISCOVERY_REPEAT_ON: [day[0] for day in schedule_settings.items() if day[1]]
+                        }
+                    )
+
+            self.db_schema_version = 24
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 24. Details: {e}')
             traceback.print_exc()
             raise
 

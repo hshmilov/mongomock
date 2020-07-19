@@ -134,3 +134,17 @@ class TestDiscoverySchedule(TestBase):
         options = self.settings_page.find_discovery_mode_options()
         for option in options:
             assert option.text == option.get_attribute('title')
+
+    def test_discovery_weekdays(self):
+        self.settings_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.settings_page.set_discovery__to_weekdays(time_of_day=self.set_discovery_time(minutes=2),
+                                                      weekdays=[datetime.now().strftime('%A')])
+        self.check_next_cycle_start_in_min(time_in_min=1)
+        self.settings_page.set_discovery__to_weekdays(time_of_day=self.set_discovery_time(minutes=2),
+                                                      weekdays=[(datetime.now() + timedelta(days=1)).strftime('%A'),
+                                                                (datetime.now() + timedelta(days=2)).strftime('%A')])
+        self.check_next_cycle_start_in(time_unit='days', time_value=1)
+        self.settings_page.set_discovery__to_weekdays(time_of_day=self.set_discovery_time(minutes=2),
+                                                      weekdays=[(datetime.now() + timedelta(days=2)).strftime('%A')])
+        self.check_next_cycle_start_in(time_unit='days', time_value=2)
