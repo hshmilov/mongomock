@@ -30,7 +30,7 @@ def _get_vulnerabilities_by_asset_id(connection):
             f'Fetching from vulnerabilities table completed successfully, total of {vulnerabilities_counter}')
         return asset_vulnerabilities
     except Exception:
-        logger.warning(f'Failed getting vulnerabilities')
+        logger.warning(f'Failed getting vulnerabilities', exc_info=True)
         return {}
 
 
@@ -54,7 +54,7 @@ def _get_tags(connection):
         logger.debug(f'Fetching from tags table completed successfully, total of {tags_counter}')
         return asset_tags
     except Exception:
-        logger.warning(f'Failed getting tags')
+        logger.warning(f'Failed getting tags', exc_info=True)
         return {}
 
 
@@ -70,7 +70,7 @@ def _get_users(connection):
         logger.debug(f'Fetching from users table completed successfully, total of {users_counter}')
         return users
     except Exception:
-        logger.warning(f'Failed getting users')
+        logger.warning(f'Failed getting users', exc_info=True)
         return {}
 
 
@@ -86,11 +86,10 @@ def _get_groups(connection):
         logger.debug(f'Fetching from groups table completed successfully, total of {groups_counter}')
         return groups
     except Exception:
-        logger.warning(f'Failed getting groups')
+        logger.warning(f'Failed getting groups', exc_info=True)
         return {}
 
 
-@staticmethod
 def _get_ports(connection):
     try:
         services_counter = 0
@@ -103,7 +102,7 @@ def _get_ports(connection):
         logger.debug(f'Fetching from services table completed successfully, total of {services_counter}')
         return services
     except Exception:
-        logger.warning(f'Failed getting assets')
+        logger.warning(f'Failed getting assets', exc_info=True)
         return {}
 
 
@@ -119,7 +118,7 @@ def _get_installed_software(connection):
         logger.debug(f'Fetching from softwares table completed successfully, total of {softwares_counter}')
         return softwares
     except Exception as e:
-        logger.warning(f'Failed getting softwares. {str(e)}')
+        logger.warning(f'Failed getting softwares. {str(e)}', exc_info=True)
         return {}
 
 
@@ -145,11 +144,10 @@ def _get_policies(connection):
         logger.debug(f'Fetching from policies table completed successfully, total of {policies_counter}')
         return asset_policies
     except Exception:
-        logger.warning(f'Failed getting policies')
+        logger.warning(f'Failed getting policies', exc_info=True)
         return {}
 
 
-@staticmethod
 def _get_devices(connection):
     try:
         asset_counter = 0
@@ -162,7 +160,7 @@ def _get_devices(connection):
         logger.debug(f'Fetching from assets table completed successfully, total of {asset_counter}')
         return devices
     except Exception:
-        logger.warning(f'Failed getting assets')
+        logger.warning(f'Failed getting assets', exc_info=True)
         return {}
 
 
@@ -181,7 +179,7 @@ def _get_devices_info(client_data):
         logger.debug(f'Finished collecting and combining devices information')
         return devices_info
     except Exception:
-        logger.warning('Failed getting device info')
+        logger.warning('Failed getting device info', exc_info=True)
         return {}
 
 
