@@ -3,6 +3,7 @@ import logging
 # pylint: disable=import-error
 import zeep
 import zeep.helpers
+import zeep.exceptions
 
 from axonius.clients.rest.connection import RESTConnection
 from igar_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
@@ -42,7 +43,8 @@ class IgarConnection(RESTConnection):
         try:
             return int(response)
         except Exception:
-            logger.exception(f'Failed to get server list count. Assuming max ({MAX_NUMBER_OF_DEVICES})')
+            logger.exception(f'Failed to get server list count. '
+                             f'Assuming max ({MAX_NUMBER_OF_DEVICES})')
         return MAX_NUMBER_OF_DEVICES
 
     def _paginated_get_servers(self):
@@ -50,61 +52,118 @@ class IgarConnection(RESTConnection):
             'startIndex': 0,
             'itemsCount': DEVICE_PER_PAGE
         }
+        skipped = 0
         max_results = min(self._get_server_count(), MAX_NUMBER_OF_DEVICES)
-        # response = self._client.service.GetServerListFull(**dict_params)
-        # result = response.GetServerListFullResult.ServerFullInfo
-        result = self._client.service.GetServerListFull(**dict_params)
+        result = True
         while result and dict_params['startIndex'] < max_results:
-            logger.info(f'Yielding servers from {dict_params["startIndex"]}')
-            if isinstance(result, list):
-                yield from zeep.helpers.serialize_object(result, dict)
+            index = dict_params['startIndex']
+            logger.debug(f'Fetching servers from {index}')
+            try:
+                result = self._client.service.GetServerListFull(**dict_params)
+            except zeep.exceptions.Fault:
+                logger.debug(f'Exception trying to fetch devices after {index}', exc_info=True)
+                if dict_params['itemsCount'] == 1:
+                    logger.debug(f'Skipping device at index {index}')
+                    dict_params = {
+                        'startIndex': index + 1,
+                        'itemsCount': DEVICE_PER_PAGE
+                    }
+                    skipped += 1
+                else:
+                    dict_params['itemsCount'] = int(dict_params['itemsCount'] / 2) or 1
+                continue
             else:
-                logger.error(f'Result is not a list: {result}')
-                raise TypeError(result)
-            dict_params['startIndex'] += DEVICE_PER_PAGE
-            # response = self._client.service.GetServerListFull(**dict_params)
-            # result = response.GetServerListFullResult.ServerFullInfo
-            result = self._client.service.GetServerListFull(**dict_params)
+                if not result:
+                    break
+                if isinstance(result, list):
+                    logger.info(f'Yielding next {len(result)} devices from {index}')
+                    yield from zeep.helpers.serialize_object(result, dict)
+                else:
+                    logger.error(f'Result is not a list: {result}')
+                    raise TypeError(result)
+                dict_params['startIndex'] += dict_params['itemsCount']
+                dict_params['itemsCount'] = DEVICE_PER_PAGE
+        logger.warning(f'Skipped {skipped} items due to server errors! '
+                       f'See debug log for more information')
 
     def _paginated_get_equipment(self):
         dict_params = {
             'startIndex': 0,
             'itemsCount': DEVICE_PER_PAGE
         }
+        skipped = 0
         max_results = MAX_NUMBER_OF_DEVICES
-        result = self._client.service.GetNetworkEquipmentList(**dict_params)
+        result = True
         while result and dict_params['startIndex'] < max_results:
-            logger.info(f'Yielding Network Equipment from {dict_params["startIndex"]}')
-            if isinstance(result, list):
-                yield from zeep.helpers.serialize_object(result, dict)
+            index = dict_params['startIndex']
+            logger.debug(f'Fetching network equipment from {index}')
+            try:
+                result = self._client.service.GetNetworkEquipmentList(**dict_params)
+            except zeep.exceptions.Fault:
+                logger.debug(f'Exception trying to fetch network equipment after {index}',
+                             exc_info=True)
+                if dict_params['itemsCount'] == 1:
+                    logger.warning(f'Skipping network equipment at index {index}')
+                    dict_params = {
+                        'startIndex': index + 1,
+                        'itemsCount': DEVICE_PER_PAGE
+                    }
+                    skipped += 1
+                else:
+                    dict_params['itemsCount'] = int(dict_params['itemsCount'] / 2) or 1
+                continue
             else:
-                logger.error(f'Result is not a list: {result}')
-                raise TypeError(result)
-            dict_params['startIndex'] += DEVICE_PER_PAGE
-            # response = self._client.service.GetServerListFull(**dict_params)
-            # result = response.GetServerListFullResult.ServerFullInfo
-            result = self._client.service.GetNetworkEquipmentList(**dict_params)
+                if not result:
+                    break
+                if isinstance(result, list):
+                    logger.info(f'Yielding next {len(result)} net eq from {index}')
+                    yield from zeep.helpers.serialize_object(result, dict)
+                else:
+                    logger.error(f'Result is not a list: {result}')
+                    raise TypeError(result)
+                dict_params['startIndex'] += dict_params['itemsCount']
+                dict_params['itemsCount'] = DEVICE_PER_PAGE
+        logger.warning(f'Skipped {skipped} items due to server errors! '
+                       f'See debug log for more information')
 
-    def _paginated_get_apps(self):
+    def _paginated_get_apps(self, per_page=DEVICE_PER_PAGE):
         dict_params = {
             'startIndex': 0,
-            'itemsCount': DEVICE_PER_PAGE
+            'itemsCount': per_page
         }
+        skipped = 0
         max_results = MAX_NUMBER_OF_DEVICES
-        # response = self._client.service.GetApplicationListFull(**dict_params)
-        # result = response.GetApplicationListFullResult.ApplicationFullInfo
-        result = self._client.service.GetApplicationListFull(**dict_params)
+        result = True
         while result and dict_params['startIndex'] < max_results:
-            logger.info(f'Yielding apps from {dict_params["startIndex"]}')
-            if isinstance(result, list):
-                yield from zeep.helpers.serialize_object(result, dict)
+            index = dict_params['startIndex']
+            logger.debug(f'Fetching apps from {index}')
+            try:
+                result = self._client.service.GetApplicationListFull(**dict_params)
+            except zeep.exceptions.Fault:
+                logger.debug(f'Exception trying to fetch apps after {index}', exc_info=True)
+                if dict_params['itemsCount'] == 1:
+                    logger.warning(f'Skipping app at index {index}')
+                    dict_params = {
+                        'startIndex': index + 1,
+                        'itemsCount': per_page
+                    }
+                    skipped += 1
+                else:
+                    dict_params['itemsCount'] = int(dict_params['itemsCount'] / 2) or 1
+                continue
             else:
-                logger.error(f'Result is not a list: {result}')
-                raise TypeError(result)
-            dict_params['startIndex'] += DEVICE_PER_PAGE
-            # response = self._client.service.GetApplicationListFull(**dict_params)
-            # result = response.GetApplicationListFullResult.ApplicationFullInfo
-            result = self._client.service.GetApplicationListFull(**dict_params)
+                if not result:
+                    break
+                if isinstance(result, list):
+                    logger.info(f'Yielding next {len(result)} apps from {index}')
+                    yield from zeep.helpers.serialize_object(result, dict)
+                else:
+                    logger.error(f'Result is not a list: {result}')
+                    raise TypeError(result)
+                dict_params['startIndex'] += dict_params['itemsCount']
+                dict_params['itemsCount'] = per_page
+        logger.warning(f'Skipped {skipped} items due to server errors! '
+                       f'See debug log for more information')
 
     def _get_servers_to_apps_mapping(self):
         # response = self._client.service.GetApplicationOnServerFull
@@ -118,12 +177,14 @@ class IgarConnection(RESTConnection):
         return (
             self._paginated_get_servers(),
             self._get_servers_to_apps_mapping(),
-            self._paginated_get_apps(),
+            self._paginated_get_apps(4096),
             self._paginated_get_equipment()
         )
 
     def get_users_list(self):
-        return self._paginated_get_servers(), self._get_servers_to_apps_mapping(), self._paginated_get_apps()
+        return (self._paginated_get_servers(),
+                self._get_servers_to_apps_mapping(),
+                self._paginated_get_apps(4096))
 
     def get_device_list(self):
         return self.get_all_data()

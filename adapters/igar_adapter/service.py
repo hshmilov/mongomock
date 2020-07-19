@@ -1,6 +1,8 @@
 import datetime
 import ipaddress
 import logging
+from collections import defaultdict
+
 import chardet
 from axonius.adapter_exceptions import ClientConnectionException
 
@@ -234,9 +236,11 @@ class IgarAdapter(AdapterBase):
     # pylint: disable=arguments-differ, too-many-locals
     def _parse_users_raw_data(self, raw_data):
         servers_data, servers_applications_data, applications_data = raw_data
-        users_data_dict = dict()
-
-        for application_raw in applications_data:
+        users_data_dict = defaultdict(list)
+        # converting to list because fetch times increase exponentially due to processing time,
+        # so running the entire fetch becomes faster than breaking it up
+        # relevant to APPS only!
+        for application_raw in list(applications_data):
             try:
                 # modified for compatibility with web service data
                 application_owner = application_raw.get('Application_Owner') or application_raw.get('ApplicationOwner')
@@ -267,8 +271,6 @@ class IgarAdapter(AdapterBase):
                     application_url=application_raw.get('ApplicationUrl'),
                     description=application_raw.get('Application_description'))
                 application_owner = application_owner.lower()
-                if application_owner not in users_data_dict:
-                    users_data_dict[application_owner] = []
                 users_data_dict[application_owner].append(('app', application_data))
             except Exception:
                 logger.exception(f'Problem with application raw {application_raw}')
@@ -394,7 +396,10 @@ class IgarAdapter(AdapterBase):
     def _create_servers_devices(self, applications_data, servers_applications_data, servers_data):
         application_data_dict = dict()
         server_applications_dict = dict()
-        for application_raw in applications_data:
+        # converting to list because fetch times increase exponentially due to processing time,
+        # so running the entire fetch becomes faster than breaking it up
+        # relevant to APPS only!
+        for application_raw in list(applications_data):
             try:
                 application_id = application_raw.get('InstallationID')
                 if isinstance(application_id, dict):
