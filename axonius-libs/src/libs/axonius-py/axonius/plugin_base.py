@@ -104,7 +104,8 @@ from axonius.consts.plugin_consts import (
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
     NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS, PASSWORD_EXPIRATION_DAYS)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
+from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
+    SSL_CIPHERS_HIGHER_SECURITY
 from axonius.db.db_client import get_db_client
 from axonius.db.files import DBFileHelper
 from axonius.devices import deep_merge_only_dict
@@ -138,7 +139,7 @@ from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
 from axonius.utils.parsing import get_exception_string, remove_large_ints
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase, \
-    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS
+    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS, SSL_CIPHERS_CONFIG_FILE, SSL_ECDH_CERT_PATH_LIBS, SSL_ECDH_KEY_PATH_LIBS
 from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
                                      run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 from axonius.utils.mongo_indices import (
@@ -662,6 +663,8 @@ class PluginBase(Configurable, Feature, ABC):
             EntityType.Users: self.users,
             EntityType.Devices: self.devices
         }
+
+        self.update_ssl_ciphers()
 
         # An executor dedicated to inserting devices to the DB
         # the number of threads should be in a proportion to the number of actual core that can run them
@@ -2894,6 +2897,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.renew_config_from_db()
         self.__renew_global_settings_from_db()
         self.update_fips_status()
+        self.update_ssl_ciphers()
         self._global_config_updated()
         return ''
 
@@ -3258,13 +3262,21 @@ class PluginBase(Configurable, Feature, ABC):
 
         else:
             current_cert = open(SSL_CERT_PATH, 'rb').read()
-            axonius_cert = open(SSL_CERT_PATH_LIBS, 'rb').read()
+            if self.feature_flags_config() and self.feature_flags_config().get(FeatureFlagsNames.DisableRSA, False):
+                with open(SSL_ECDH_CERT_PATH_LIBS, 'rb') as fh:
+                    axonius_cert = fh.read()
+                with open(SSL_ECDH_KEY_PATH_LIBS, 'rb') as fh:
+                    axonius_key = fh.read()
+            else:
+                with open(SSL_CERT_PATH_LIBS, 'rb') as fh:
+                    axonius_cert = fh.read()
+                with open(SSL_KEY_PATH_LIBS, 'rb') as fh:
+                    axonius_key = fh.read()
             if current_cert != axonius_cert:
                 with open(SSL_CERT_PATH, 'wb') as fh:
                     fh.write(axonius_cert)
                 with open(SSL_KEY_PATH, 'wb') as fh:
-                    with open(SSL_KEY_PATH_LIBS, 'rb') as fhr:
-                        fh.write(fhr.read())
+                    fh.write(axonius_key)
 
                 # Restart Openresty (NGINX)
                 subprocess.check_call(['openresty', '-s', 'reload'])
@@ -3310,6 +3322,38 @@ class PluginBase(Configurable, Feature, ABC):
             syslog_logger.addHandler(syslog_handler)
         except Exception:
             logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
+
+    def update_ssl_ciphers(self):
+        # Generate ECDH self signed certificate
+        # https://www.guyrutenberg.com/2013/12/28/creating-self-signed-ecdsa-ssl-certificate-using-openssl/
+        try:
+            feature_flags_config = self.feature_flags_config()
+            if not feature_flags_config:
+                return
+            current_file_size = 0
+            if os.path.exists(SSL_CIPHERS_CONFIG_FILE):
+                current_file_size = os.path.getsize(SSL_CIPHERS_CONFIG_FILE)
+            if feature_flags_config.get(FeatureFlagsNames.HigherCiphers, False) and \
+                    len(SSL_CIPHERS_HIGHER_SECURITY) != current_file_size:
+                self.write_cipher_file_and_reload_openresty(SSL_CIPHERS_HIGHER_SECURITY)
+            elif feature_flags_config.get(FeatureFlagsNames.HigherCiphers, False) and \
+                    len(SSL_CIPHERS_HIGHER_SECURITY) == current_file_size:
+                return
+            if feature_flags_config.get(FeatureFlagsNames.DisableRSA, False) and \
+                    len(NO_RSA_SSL_CIPHERS) != current_file_size:
+                self.write_cipher_file_and_reload_openresty(NO_RSA_SSL_CIPHERS)
+            elif not feature_flags_config.get(FeatureFlagsNames.DisableRSA, False) and \
+                    len(DEFAULT_SSL_CIPHERS) != current_file_size:
+                self.write_cipher_file_and_reload_openresty(DEFAULT_SSL_CIPHERS)
+        except Exception:
+            logger.error('Error while updating ssl ciphers', exc_info=True)
+
+    @staticmethod
+    def write_cipher_file_and_reload_openresty(conf):
+        with open(SSL_CIPHERS_CONFIG_FILE, 'w') as fh:
+            fh.write(conf)
+        # Restart Openresty (NGINX)
+        subprocess.check_call(['openresty', '-s', 'reload'])
 
     def update_fips_status(self):
         try:

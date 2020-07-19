@@ -252,6 +252,8 @@ class FeatureFlagsNames:
     RefetchAssetEntityAction = 'refetch_action'
     EnableFIPS = 'enable_fips'
     EnableSaaS = 'enable_saas'
+    DisableRSA = 'disable_rsa'
+    HigherCiphers = 'higher_ciphers'
     DoNotUseSoftwareNameAndVersionField = 'do_not_use_software_name_and_version_field'
     QueryTimelineRange = 'query_timeline_range'
     EnforcementCenter = 'enforcement_center'

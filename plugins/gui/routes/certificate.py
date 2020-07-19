@@ -5,12 +5,17 @@ import urllib.parse
 from pathlib import Path
 
 import OpenSSL
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.backends import default_backend
 from bson import ObjectId
 from flask import request, Response
 from flask.json import jsonify
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import GUI_CONFIG_NAME
+from axonius.consts.gui_consts import GUI_CONFIG_NAME, FeatureFlagsNames
 from axonius.consts.plugin_consts import CORE_UNIQUE_NAME
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory
@@ -135,42 +140,78 @@ class Certificate:
         try:
             csr_request = request.get_json()
             if csr_request:
-                # Generate Private key
-                key = OpenSSL.crypto.PKey()
-                key.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
-                key_pem = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
-
-                # Generate CSR
-                csr = OpenSSL.crypto.X509Req()
-                csr.get_subject().CN = csr_request['hostname']
-                if csr_request['country']:
-                    try:
-                        csr.get_subject().C = csr_request['country']
-                    except OpenSSL.crypto.Error:
+                if self.feature_flags_config().get(FeatureFlagsNames.DisableRSA, False):
+                    # Generate Private key
+                    key = ec.generate_private_key(ec.SECP384R1(), default_backend())
+                    key_pem = key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                    x509attributes = [x509.NameAttribute(NameOID.COMMON_NAME, csr_request['hostname'])]
+                    if csr_request['country'] and len(csr_request['country']) != 2:
                         return return_error('Country must be only 2 letters', 400)
-                if csr_request['state']:
-                    csr.get_subject().ST = csr_request['state']
-                if csr_request['location']:
-                    csr.get_subject().L = csr_request['location']
-                if csr_request['organization']:
-                    csr.get_subject().O = csr_request['organization']
-                if csr_request['OU']:
-                    csr.get_subject().OU = csr_request['OU']
-                if csr_request['email']:
-                    csr.get_subject().emailAddress = csr_request['email']
-                alt_names = [f'DNS: {alt_name.strip()}' for alt_name in csr_request['alt_names'].split(';')]
-                base_constraints = ([
-                    OpenSSL.crypto.X509Extension(b'keyUsage', False,
-                                                 b'Digital Signature, Non Repudiation, Key Encipherment'),
-                    OpenSSL.crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
-                ])
-                if alt_names != ['DNS: ']:
-                    base_constraints.append(
-                        OpenSSL.crypto.X509Extension(b'subjectAltName', False, ', '.join(alt_names).encode('utf-8')))
-                csr.add_extensions(base_constraints)
-                csr.set_pubkey(key)
-                csr.sign(key, 'sha256')
-                csr_pem = OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csr)
+                    if csr_request['country']:
+                        x509attributes.append(x509.NameAttribute(NameOID.COUNTRY_NAME, csr_request['country']))
+                    if csr_request['state']:
+                        x509attributes.append(x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, csr_request['state']))
+                    if csr_request['location']:
+                        x509attributes.append(x509.NameAttribute(NameOID.LOCALITY_NAME, csr_request['location']))
+                    if csr_request['organization']:
+                        x509attributes.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME,
+                                                                 csr_request['organization']))
+                    if csr_request['OU']:
+                        x509attributes.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, csr_request['OU']))
+                    if csr_request['email']:
+                        x509attributes.append(x509.NameAttribute(NameOID.EMAIL_ADDRESS, csr_request['email']))
+
+                    x509altnames = [x509.DNSName(csr_request['hostname'])]
+                    # pylint: disable=expression-not-assigned
+                    [x509altnames.append(x509.DNSName(alt_name)) for alt_name in csr_request['alt_names'].split(';')]
+
+                    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name(x509attributes)).add_extension(
+                        x509.SubjectAlternativeName(x509altnames),
+                        critical=False,
+                        # Sign the CSR with our private key.
+                    ).sign(key, hashes.SHA256(), default_backend())
+                    csr_pem = csr.public_bytes(serialization.Encoding.PEM)
+                else:
+                    key = OpenSSL.crypto.PKey()
+                    key.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
+                    key_pem = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+
+                    # Generate CSR
+                    csr = OpenSSL.crypto.X509Req()
+                    csr.get_subject().CN = csr_request['hostname']
+                    if csr_request['country']:
+                        try:
+                            csr.get_subject().C = csr_request['country']
+                        except OpenSSL.crypto.Error:
+                            return return_error('Country must be only 2 letters', 400)
+                    if csr_request['state']:
+                        csr.get_subject().ST = csr_request['state']
+                    if csr_request['location']:
+                        csr.get_subject().L = csr_request['location']
+                    if csr_request['organization']:
+                        csr.get_subject().O = csr_request['organization']
+                    if csr_request['OU']:
+                        csr.get_subject().OU = csr_request['OU']
+                    if csr_request['email']:
+                        csr.get_subject().emailAddress = csr_request['email']
+                    alt_names = [f'DNS: {alt_name.strip()}' for alt_name in csr_request['alt_names'].split(';')]
+                    base_constraints = ([
+                        OpenSSL.crypto.X509Extension(b'keyUsage', False,
+                                                     b'Digital Signature, Non Repudiation, Key Encipherment'),
+                        OpenSSL.crypto.X509Extension(b'basicConstraints', False, b'CA:FALSE'),
+                    ])
+                    if alt_names != ['DNS: ']:
+                        base_constraints.append(
+                            OpenSSL.crypto.X509Extension(b'subjectAltName', False, ', '.join(alt_names).
+                                                         encode('utf-8')))
+                    csr.add_extensions(base_constraints)
+                    csr.set_pubkey(key)
+                    csr.sign(key, 'sha256')
+                    csr_pem = OpenSSL.crypto.dump_certificate_request(OpenSSL.crypto.FILETYPE_PEM, csr)
 
                 csr_uuid = self.db_files.upload_file(csr_pem, filename='cert.csr')
                 key_uuid = self.db_files.upload_file(key_pem, filename='cert.key')

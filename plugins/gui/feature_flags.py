@@ -111,6 +111,18 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.DisableRSA,
+                    'title': 'Disable RSA key exchange in the system',
+                    'type': 'bool'
+                },
+                {
+                    'name': FeatureFlagsNames.HigherCiphers,
+                    'title': 'Use only higher security SSL ciphers',
+                    'description': 'Only TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 and '
+                                   'TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 are supported',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.EnableSaaS,
                     'title': 'Enable Tunnel',
                     'type': 'bool'
@@ -285,6 +297,8 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.ReenterCredentials: False,
             FeatureFlagsNames.RefetchAssetEntityAction: False,
             FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
+            FeatureFlagsNames.DisableRSA: get_build_mode() == BuildModes.fed.value,
+            FeatureFlagsNames.HigherCiphers: False,
             FeatureFlagsNames.EnableSaaS: False,
             FeatureFlagsNames.QueryTimelineRange: False,
             FeatureFlagsNames.EnforcementCenter: True,

@@ -7,6 +7,7 @@ ENV HOME /home/axonius
 
 # The following changes a lot, we want less build-time so its a different RUN command.
 RUN mkdir /home/axonius/logs
+RUN mkdir -p /home/axonius/config/nginx_conf.d/
 
 # At this point we have openresty, python3, and axonius-libs installed.
 # Lets set up configuration files to have our final https server running.
@@ -16,6 +17,7 @@ COPY src/config/uwsgi.ini /etc/uwsgi.ini
 COPY src/config/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY src/config/nginx_generic.conf /usr/local/openresty/nginx/conf/nginx_generic.conf
 COPY src/config/nginx_api.conf /usr/local/openresty/nginx/conf/nginx_api.conf
+COPY src/config/ciphers.conf /home/axonius/config/nginx_conf.d/ciphers.conf
 COPY src/keys/nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
 RUN cp /etc/ssl/certs/nginx-selfsigned.crt /usr/local/share/ca-certificates/nginx-selfsigned.crt
 RUN update-ca-certificates

@@ -228,7 +228,14 @@ class TestGlobalSSL(TestBase):
         # Check all details are correct
         assert self.settings_page.find_element_by_text(
             'US/New York/New York City/Axonius, Inc/axonius/contact@axonius.com')
-        assert self.settings_page.find_element_by_text('CF:3B:18:67:81:1F:20:64:CB:65:A6:23:A2:0C:B1:1A:2C:43:E4:89')
+        try:
+            # RSA Key exchange fingerprint
+            assert self.settings_page.find_element_by_text(
+                'CF:3B:18:67:81:1F:20:64:CB:65:A6:23:A2:0C:B1:1A:2C:43:E4:89')
+        except NoSuchElementException:
+            # ECDH key exchange fingerprint
+            assert self.settings_page.find_element_by_text(
+                '45:36:76:EF:48:63:7C:C9:6B:44:9C:C2:70:38:44:04:8F:68:1C:12')
         assert self.settings_page.find_element_by_text('shukka.com')
 
         # Check cancel works
