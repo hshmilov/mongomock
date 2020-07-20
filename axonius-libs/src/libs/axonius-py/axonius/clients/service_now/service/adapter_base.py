@@ -8,7 +8,7 @@ import chardet
 from axonius.adapter_base import AdapterProperty, AdapterBase
 from axonius.clients.service_now import consts
 from axonius.clients.service_now.service.structures import RelativeInformationNode1, RelativeInformationLeaf, \
-    MaintenanceSchedule, CiIpData
+    MaintenanceSchedule, CiIpData, SnowComplianceException
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import make_dict_from_csv
 
@@ -113,7 +113,12 @@ class ServiceNowAdapterBase(AdapterBase):
             'name': 'when_no_hostname_fallback_to_name',
             'type': 'bool',
             'title': 'When hostname does not exit, use asset name as hostname'
-        }
+        },
+        {
+            'name': 'fetch_compliance_exceptions',
+            'type': 'bool',
+            'title': 'Fetch active compliance policy exceptions'
+        },
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
@@ -127,6 +132,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_operational_status',
         'fetch_ci_relations',
         'when_no_hostname_fallback_to_name'
+        'fetch_compliance_exceptions',
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
@@ -143,6 +149,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_operational_status': True,
         'fetch_ci_relations': False,
         'when_no_hostname_fallback_to_name': False
+        'fetch_compliance_exceptions': False,
     }
 
     @abstractmethod
@@ -201,7 +208,9 @@ class ServiceNowAdapterBase(AdapterBase):
                            snow_maintenance_sched_dict=None,
                            snow_model_dict=None,
                            snow_logicalci_dict=None,
-                           operational_status_dict=None):
+                           operational_status_dict=None,
+                           snow_compliance_exception_ids_dict=None,
+                           snow_compliance_exception_data_dict=None):
         got_nic = False
         got_serial = False
         if not install_status_dict:
@@ -242,6 +251,10 @@ class ServiceNowAdapterBase(AdapterBase):
             snow_model_dict = dict()
         if snow_logicalci_dict is None:
             snow_logicalci_dict = dict()
+        if snow_compliance_exception_ids_dict is None:
+            snow_compliance_exception_ids_dict = dict()
+        if snow_compliance_exception_data_dict is None:
+            snow_compliance_exception_data_dict = dict()
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('sys_id')
@@ -666,11 +679,10 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with device_raw u_business_unit')
             try:
-                # https://localhost/devices/09dcfcde1f42fc78203276403beda5a2
                 device.device_managed_by = (self._parse_optional_reference_value(device_raw, 'managed_by',
                                                                                  users_table_dict, 'name'))
             except Exception:
-                logger.exception(f'Problem with device_raw u_business_unit')
+                logger.exception(f'Problem with device_raw device_managed_by')
             try:
                 try:
                     device.vendor = self._parse_optional_reference_value(device_raw, 'vendor',
@@ -870,6 +882,41 @@ class ServiceNowAdapterBase(AdapterBase):
 
             device.u_management_access_type = device_raw.get('u_management_access_type')
             device.u_network_zone = device_raw.get('u_network_zone')
+
+            device_compliance_exception_ids = snow_compliance_exception_ids_dict.get(device_id)
+            if isinstance(device_compliance_exception_ids, list):
+                device_compliance_exceptions = []
+                for compliance_exception_id in device_compliance_exception_ids:
+                    compliance_exception_data: dict = snow_compliance_exception_data_dict.get(compliance_exception_id)
+                    try:
+                        if not (isinstance(compliance_exception_data, dict) and
+                                isinstance(compliance_exception_data.get('active'), str)):
+                            logger.warning(f'Failed to locate or Invalid compliance exception dict:'
+                                           f' {compliance_exception_data}')
+                            continue
+
+                        # we only parse active exceptions
+                        if compliance_exception_data.get('active') != 'true':
+                            logger.debug(f'Skipping inactive compliance exception: {compliance_exception_data}')
+                            continue
+
+                        device_compliance_exceptions.append(SnowComplianceException(
+                            exception_id=compliance_exception_data.get('number'),
+                            policy_name=compliance_exception_data.get('policy.name'),
+                            policy_statement=compliance_exception_data.get('policy_statement.name'),
+                            issue=compliance_exception_data.get('issue'),
+                            opened_by=compliance_exception_data.get('opened_by.name'),
+                            short_description=compliance_exception_data.get('short_description'),
+                            state=compliance_exception_data.get('state'),
+                            substate=compliance_exception_data.get('substate'),
+                            valid_to=parse_date(compliance_exception_data.get('valid_to')),
+                            assignment_group=compliance_exception_data.get('assignment_group.name'),
+                        ))
+                    except Exception:
+                        logger.warning(f'Failed parsing compliance exception: {compliance_exception_data}')
+
+                device.compliance_exceptions = device_compliance_exceptions
+
             device.set_raw(device_raw)
             if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
                 return None
@@ -912,7 +959,9 @@ class ServiceNowAdapterBase(AdapterBase):
         with connection:
             for device_raw in connection.get_device_list(
                     fetch_users_info_for_devices=self.__fetch_users_info_for_devices,
-                    fetch_ci_relations=self.__fetch_ci_relations, parallel_requests=self.__parallel_requests):
+                    fetch_ci_relations=self.__fetch_ci_relations,
+                    fetch_compliance_exceptions=self._fetch_compliance_exceptions,
+                    parallel_requests=self.__parallel_requests):
                 yield device_raw, install_status_dict, operational_status_dict
 
     def _query_users_by_client(self, key, data):
@@ -937,7 +986,7 @@ class ServiceNowAdapterBase(AdapterBase):
                     continue
                 user.id = sys_id
                 found_whitelist = False
-                mail = user_raw.get('email')
+                mail = user_raw.get('email') or user_raw.get('u_pg_email_address')
                 if self.__email_whitelist:
                     for whielist_mail in self.__email_whitelist:
                         if whielist_mail in mail:
@@ -992,6 +1041,12 @@ class ServiceNowAdapterBase(AdapterBase):
                                                                           snow_department_table_dict, 'name'))
                 if user_raw.get('vip'):
                     user.u_vip = (user_raw.get('vip') == 'true')
+                user.u_business_unit = user_raw.get('u_business_unit')
+                user.u_division = user_raw.get('u_division')
+                user.u_level1_mgmt_org_code = user_raw.get('u_level1_mgmt_org_code')
+                user.u_level2_mgmt_org_code = user_raw.get('u_level2_mgmt_org_code')
+                user.u_level3_mgmt_org_code = user_raw.get('u_level3_mgmt_org_code')
+                user.u_pg_email_address = user_raw.get('u_pg_email_address')
                 user.set_raw(user_raw)
                 yield user
             except Exception:
@@ -1130,6 +1185,8 @@ class ServiceNowAdapterBase(AdapterBase):
         return True
 
     def _on_config_update(self, config):
+        # config.get('parallel_requests') must be injected to config BEFORE this call for parallel restriction
+
         logger.info(f'Loading Snow config: {config}')
         self.__fetch_users = config['fetch_users']
         self.__fetch_ips = config['fetch_ips']
@@ -1146,6 +1203,6 @@ class ServiceNowAdapterBase(AdapterBase):
             if config.get('install_status_exclude_list') else None
         self.__fetch_ci_relations = config['fetch_ci_relations']
         self.__when_no_hostname_fallback_to_name = config.get('when_no_hostname_fallback_to_name') or False
+        self._fetch_compliance_exceptions = config['fetch_compliance_exceptions']
 
-        # This must be set in method override
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

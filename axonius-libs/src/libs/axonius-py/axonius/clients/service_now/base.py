@@ -40,7 +40,7 @@ class ServiceNowConnectionMixin(ABC):
                 for k, v in relation_dict.items()
                 if (isinstance(k, str) and k.startswith(f'{relation}.'))}
 
-    # pylint: disable=too-many-return-statements,too-many-branches
+    # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
     def _handle_table_result(self, table_result: dict, table_key: str, result_tables_by_key: dict):
 
         curr_table = result_tables_by_key.setdefault(table_key, dict())
@@ -49,10 +49,7 @@ class ServiceNowConnectionMixin(ABC):
             return
 
         # General subtable cases - table = {'sys_id': general subtable dict}
-        if table_key in [consts.USERS_TABLE_KEY, consts.LOCATION_TABLE_KEY,
-                         consts.USER_GROUPS_TABLE_KEY, consts.DEPARTMENT_TABLE_KEY,
-                         consts.ALM_ASSET_TABLE, consts.COMPANY_TABLE, consts.U_SUPPLIER_TABLE,
-                         consts.MAINTENANCE_SCHED_TABLE, consts.SOFTWARE_PRODUCT_TABLE, consts.MODEL_TABLE]:
+        if table_key in consts.GENERIC_PARSED_SUBTABLE_KEYS:
             sys_id = table_result.get('sys_id')
             if not sys_id:
                 return
@@ -122,6 +119,20 @@ class ServiceNowConnectionMixin(ABC):
                 relations_details[child_sys_id] = self._prepare_relative_dict(
                     table_result, consts.RELATIONS_TABLE_CHILD_KEY)
 
+        # Compliance Exception connections -
+        #   curr_table = {'control.profile.applies_to.value': [policy_exception.value, ...]}
+        # Note: policy_exception objects are handled in the generic initial if
+        elif table_key == consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE:
+            applies_to = table_result.get('control.profile.applies_to')
+            if not (isinstance(applies_to, dict) and isinstance(applies_to.get('value'), str)):
+                logger.debug(f'Compliance exception missing target asset: {table_result}')
+                return
+            policy_exception = table_result.get('policy_exception')
+            if not (isinstance(policy_exception, dict) and isinstance(policy_exception.get('value'), str)):
+                logger.debug(f'Compliance exception missing policy_exception: {table_result}')
+                return
+            curr_table.setdefault(applies_to.get('value'), list()).append(policy_exception.get('value'))
+
         else:
             logger.error('Invalid sub_table_key encountered {sub_table_key}')
             return
@@ -182,20 +193,34 @@ class ServiceNowConnectionMixin(ABC):
             yield (device_type, table_name_by_device_type[device_type], table_result)
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_users_info_for_devices=False, fetch_ci_relations=False,
+    def get_device_list(self,
+                        fetch_users_info_for_devices=False,
+                        fetch_ci_relations=False,
+                        fetch_compliance_exceptions=False,
                         parallel_requests=consts.DEFAULT_ASYNC_CHUNK_SIZE):
-        sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
-        # if users were not requested, dont fetch them
-        if not fetch_users_info_for_devices:
-            del sub_tables_to_request_by_key[consts.USERS_TABLE_KEY]
-
         additional_params_by_table_key = {}
-        if fetch_ci_relations:
-            additional_params_by_table_key = {
-                consts.RELATIONS_TABLE: {'sysparm_fields': self._prepare_relations_fields()},
+        sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
+
+        if fetch_users_info_for_devices:
+            sub_tables_to_request_by_key[consts.USERS_TABLE_KEY] = consts.USERS_TABLE
+
+        if fetch_compliance_exceptions:
+            sub_tables_to_request_by_key[consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE] = \
+                consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE
+            additional_params_by_table_key[consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE] = {
+                'sysparm_fields': ','.join(consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE_FIELDS)
             }
-        else:
-            del sub_tables_to_request_by_key[consts.RELATIONS_TABLE]
+            sub_tables_to_request_by_key[consts.COMPLIANCE_EXCEPTION_DATA_TABLE] = \
+                consts.COMPLIANCE_EXCEPTION_DATA_TABLE
+            additional_params_by_table_key[consts.COMPLIANCE_EXCEPTION_DATA_TABLE] = {
+                'sysparm_fields': ','.join(consts.COMPLIANCE_EXCEPTION_DATA_TABLE_FIELDS)
+            }
+
+        if fetch_ci_relations:
+            sub_tables_to_request_by_key[consts.RELATIONS_TABLE] = consts.RELATIONS_TABLE
+            additional_params_by_table_key[consts.RELATIONS_TABLE] = {
+                'sysparm_fields': self._prepare_relations_fields()
+            }
 
         subtables_by_key = self._get_subtables_by_key(sub_tables_to_request_by_key,
                                                       additional_params_by_table_key=additional_params_by_table_key,

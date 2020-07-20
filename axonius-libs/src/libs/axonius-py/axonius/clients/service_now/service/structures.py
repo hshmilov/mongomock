@@ -51,6 +51,25 @@ class SnowUserAdapter(UserAdapter):
     u_company = Field(str, 'Company')
     u_department = Field(str, 'Department')
     u_vip = Field(bool, 'VIP')
+    u_business_unit = Field(str, 'Business Unit')
+    u_division = Field(str, 'Division')
+    u_level1_mgmt_org_code = Field(str, 'Level 1 Management Org. Code')
+    u_level2_mgmt_org_code = Field(str, 'Level 2 Management Org. Code')
+    u_level3_mgmt_org_code = Field(str, 'Level 3 Management Org. Code')
+    u_pg_email_address = Field(str, 'PG Email Address')
+
+
+class SnowComplianceException(SmartJsonClass):
+    exception_id = Field(str, 'ID')
+    policy_name = Field(str, 'Policy Name')
+    policy_statement = Field(str, 'Policy Statement')
+    issue = Field(str, 'Issue')
+    opened_by = Field(str, 'Opened By')
+    short_description = Field(str, 'Short Description')
+    state = Field(str, 'State')
+    substate = Field(str, 'Substate')
+    valid_to = Field(datetime.datetime, 'Valid To')
+    assignment_group = Field(str, 'Assignment Group')
 
 
 class SnowDeviceAdapter(DeviceAdapter):
@@ -206,6 +225,7 @@ class SnowDeviceAdapter(DeviceAdapter):
     u_work_notes = Field(str, 'Work Notes')
     phone_number = Field(str, 'Phone Number')
     ci_comm_type = Field(str, 'Type')
+    compliance_exceptions = ListField(SnowComplianceException, 'Compliance Exceptions')
     # you should keep these last
     upstream = ListField(RelativeInformationNode1, 'Upstream')
     downstream = ListField(RelativeInformationNode1, 'Downstream')

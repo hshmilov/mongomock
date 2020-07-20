@@ -34,6 +34,17 @@ MAINTENANCE_SCHED_TABLE = 'cmn_schedule'
 SOFTWARE_PRODUCT_TABLE = 'cmdb_software_product_model'
 MODEL_TABLE = 'cmdb_model'
 LOGICALCI_TABLE = 'u_cmdb_ci_logicalci'
+COMPLIANCE_EXCEPTION_TO_ASSET_TABLE = 'sn_compliance_m2m_policy_exception_control'
+COMPLIANCE_EXCEPTION_TO_ASSET_TABLE_FIELDS = [
+    # Note on how we connect between compliance_policy_exception with cmdb_ci asset:
+    # consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE -control->
+    #  'sn_compliance_control' -profile>
+    #  'sn_grc_profile' -applies_to> (cmdb_ci reference)
+    'control.profile.applies_to', 'policy_exception']
+COMPLIANCE_EXCEPTION_DATA_TABLE = 'sn_compliance_policy_exception'
+COMPLIANCE_EXCEPTION_DATA_TABLE_FIELDS = ['sys_id', 'number', 'policy.name', 'policy_statement.name',
+                                          'opened_by.name', 'short_description', 'state', 'substate',
+                                          'assignment_group.name', 'active']
 # Note: Relations Details are performed as part of cmdb_rel_ci, they are not queried from snow separately!
 RELATIONS_DETAILS_TABLE_KEY = 'RELATION_DETAILS'
 # pylint: disable=C0103
@@ -98,9 +109,11 @@ RELATIONS_KEY_TO_FIELD = {
     RELATIONS_TABLE_PARENT_KEY: RELATIONS_FIELD_PARENT,
 }
 
+# Note: The commented sections below represent optional subtables added dynamically
+#       on get_device_list according to configuration.
 DEVICE_SUB_TABLES_KEY_TO_NAME = {
     LOGICALCI_TABLE: LOGICALCI_TABLE,
-    USERS_TABLE_KEY: USERS_TABLE,
+    # if fetch_users_info_for_devices: USERS_TABLE_KEY: USERS_TABLE,
     LOCATION_TABLE_KEY: LOCATIONS_TABLE,
     USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
     NIC_TABLE_KEY: NIC_TABLE_KEY,
@@ -110,10 +123,12 @@ DEVICE_SUB_TABLES_KEY_TO_NAME = {
     IPS_TABLE: IPS_TABLE,
     CI_IPS_TABLE: CI_IPS_TABLE,
     U_SUPPLIER_TABLE: U_SUPPLIER_TABLE,
-    RELATIONS_TABLE: RELATIONS_TABLE,
+    # if fetch_ci_relations: RELATIONS_TABLE: RELATIONS_TABLE,
     MAINTENANCE_SCHED_TABLE: MAINTENANCE_SCHED_TABLE,
     SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,
     MODEL_TABLE: MODEL_TABLE,
+    # if fetch_compliance_exceptions: COMPLIANCE_EXCEPTION_TO_ASSET_TABLE: COMPLIANCE_EXCEPTION_TO_ASSET_TABLE,
+    #                                 COMPLIANCE_EXCEPTION_DATA_TABLE: COMPLIANCE_EXCEPTION_DATA_TABLE,
 }
 USER_SUB_TABLES = {
     DEPARTMENT_TABLE_KEY: DEPARTMENTS_TABLE,
@@ -122,6 +137,12 @@ USER_SUB_TABLES = {
 SUBTABLES_KEY = '_SUBTABLES'
 
 DEFAULT_ASYNC_CHUNK_SIZE = 50
+
+# General subtable parsing cases - table = {'sys_id': general subtable dict}
+GENERIC_PARSED_SUBTABLE_KEYS = [
+    USERS_TABLE_KEY, LOCATION_TABLE_KEY, USER_GROUPS_TABLE_KEY, DEPARTMENT_TABLE_KEY, ALM_ASSET_TABLE,
+    COMPANY_TABLE, U_SUPPLIER_TABLE, MAINTENANCE_SCHED_TABLE, SOFTWARE_PRODUCT_TABLE, MODEL_TABLE,
+    COMPLIANCE_EXCEPTION_DATA_TABLE]
 
 MODEL_U_CLASSIFICATION_DICT = {
     1: 'App Server',
