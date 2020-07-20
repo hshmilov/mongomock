@@ -1058,6 +1058,11 @@
     "link": "https://docs.axonius.com/docs/cylanceprotect",
     "description": "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, advanced threats, fileless malware, and malicious documents."
   },
+  "free_ipa_adapter": {
+    "title": "FreeIPA",
+    "link": "https://docs.axonius.com/docs/freeipa",
+    "description": "FreeIPA is a free and open source identity management system for Linux environments."
+  },
   "kaseya_adapter": {
     "title": "Kaseya VSA",
     "link": "https://docs.axonius.com/docs/kaseya-vsa",

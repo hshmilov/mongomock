@@ -91,6 +91,7 @@ DOCKER_PORTS = {
     'deep-security-adapter':            5799,
     'quest-kace-adapter':               5840,
     'skybox-adapter':                   5841,
+    'free-ipa-adapter':                 5869,
     'mssql-adapter':                    5870,
     'cloudflare-adapter':               5880,
     'flexera-adapter':                  5883,
