@@ -1,2 +1,56 @@
 DEVICE_PER_PAGE = 200
 MAX_NUMBER_OF_DEVICES = 2000000
+RESPONSE_GROUP_FILTER = {
+    # INCLUDE
+    'Include_Employment_Information': True,
+    'Include_Organizations': True,
+    'Include_Roles': True,
+    'Include_Personal_Information': True,
+    'Include_User_Account': True,
+    # EXCLUDE
+    'Include_Compensation': False,
+    'Exclude_Company_Hierarchies': True,
+    'Exclude_Matrix_Organizations': True,
+    'Exclude_Funds': True,
+    'Exclude_Fund_Hierarchies': True,
+    'Exclude_Grants': True,
+    'Exclude_Grant_Hierarchies': True,
+    'Exclude_Gifts': True,
+    'Exclude_Gift_Hierarchies': True,
+    'Exclude_Pay_Groups': True,
+    'Exclude_Cost_Centers': True,
+    'Exclude_Cost_Center_Hierarchies': True,
+    'Exclude_Region_Hierarchies': True,
+    'Exclude_Supervisory_Organizations': True,
+    'Exclude_Custom_Organizations': True,
+    'Exclude_Business_Unit_Hierarchies': True,
+    'Exclude_Program_Hierarchies': True,
+    'Exclude_Location_Hierarchies': True,
+}
+
+# Purge sensitive personal information from raw json
+WORKER_PURGE_FIELDS = [
+    'Personal_Data',
+    'Employment_Data',
+    'Compensation_Data',
+    'Benefit_Enrollment_Data',
+    'Benefit_Eligibility_Data',
+    'Related_Person_Data',
+    'Qualification_Data',
+    'Employee_Review_Data',
+    'Worker_Document_Data',
+    'Integration_Field_Override_Data',
+    'Transaction_Log_Entry_Data',
+    'Transaction_Log_Corrected_And_Rescinded_Data',
+    'Succession_Profile_Data',
+    'Talent_Assessment_Data',
+    'Worker_Goal_Data',
+    'Development_Item_Data',
+    'Skill_Data',
+    'Extended_Employee_Contracts_Data',
+    'Feedback_Received_Data',
+    'Career_Data',
+    'Account_Provisioning_Data',
+    'Background_Check_Data',
+    'Contingent_Worker_Tax_Authority_Form_Type_Data',
+]

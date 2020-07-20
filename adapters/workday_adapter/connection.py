@@ -9,7 +9,7 @@ from zeep.wsse.username import UsernameToken
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from workday_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
+from workday_adapter.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES, RESPONSE_GROUP_FILTER
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -96,21 +96,7 @@ class WorkdayConnection(RESTConnection):
                 'Count': count,
                 'As_Of_Entry_DateTime': datetime.datetime.utcnow()
             },
-            'Response_Group': {
-                'Include_Compensation': False,
-                'Include_Organizations': True,
-                'Exclude_Company_Hierarchies': True,
-                'Exclude_Matrix_Organizations': True,
-                'Exclude_Funds': True,
-                'Exclude_Fund_Hierarchies': True,
-                'Exclude_Grants': True,
-                'Exclude_Grant_Hierarchies': True,
-                'Exclude_Gifts': True,
-                'Exclude_Gift_Hierarchies': True,
-                'Exclude_Pay_Groups': True,
-                'Include_User_Account': True,
-
-            }
+            'Response_Group': RESPONSE_GROUP_FILTER,
         }
         return request_crit
 
