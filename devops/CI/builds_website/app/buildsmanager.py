@@ -274,7 +274,7 @@ class BuildsManager(object):
     def update_export_from_teamcity_hook(self, request_params):
         translation = {'name': 'version', 'owner': 'owner', 'fork': 'fork', 'branch': 'branch', 'comments': 'comments',
                        'installer_git_hash': 'git_hash', 'artifact.amazon-ebs': 'ami_id', 'artifact.googlecompute': 'gce_name',
-                       's3_qemu': 's3_qcow3', 's3_vhdx': 's3_vhdx',
+                       's3_qcow3': 's3_qemu', 's3_vhdx': 's3_vhdx',
                        'ami_log': 'ami_log', 'ova_log': 'ova_log', 'ova_test_log': 'ova_test_log', 'installer_log': 'installer_log',
                        's3_installer': 'installer_download_link', 'ami_test_log': 'ami_test_log', 'ami_test_return_code': 'ami_test_return_code',
                        'ova_test_return_code': 'ova_test_return_code', 'cloud_log': 'cloud_log',
