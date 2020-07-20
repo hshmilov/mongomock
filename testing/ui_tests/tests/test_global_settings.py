@@ -16,8 +16,8 @@ from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_service import SmtpService
-from test_credentials.test_aws_credentials import (EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
-                                                   EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+from test_credentials.test_aws_credentials import (AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID,
+                                                   AWS_DEV_3_TESTING_BUCKET_RW_SECRET_ACCESS_KEY)
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.json_file_credentials import client_details as json_file_creds
@@ -29,7 +29,7 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 INVALID_EMAIL_HOST = 'dada...$#@'
-AXONIUS_CI_TESTS_BUCKET = 'axonius-ci-tests'
+AXONIUS_CI_TESTS_BUCKET = 'axonius-testing'
 AXONIUS_BACKUP_FILENAME = 'axonius_backup.tar.gz'
 S3_BACKUP_FILE_PATTERN = 'Completed S3 backup file name: (.*)\\.gpg'
 S3_FILES_LOCAL_DIRECTORY = 'tmp_backup_files'
@@ -236,8 +236,8 @@ class TestGlobalSettings(TestBase):
 
         self.settings_page.set_s3_integration_settings_enabled()
         self.settings_page.fill_s3_bucket_name(AXONIUS_CI_TESTS_BUCKET)
-        self.settings_page.fill_s3_access_key(EC2_ECS_EKS_READONLY_ACCESS_KEY_ID)
-        self.settings_page.fill_s3_secret_key(EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+        self.settings_page.fill_s3_access_key(AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID)
+        self.settings_page.fill_s3_secret_key(AWS_DEV_3_TESTING_BUCKET_RW_SECRET_ACCESS_KEY)
         self.settings_page.set_s3_backup_settings_enabled()
         self.settings_page.fill_s3_preshared_key(passphrase)
         self.settings_page.save_and_wait_for_toaster()
@@ -411,8 +411,8 @@ def _get_s3_backup_file_content(file_name, backup_local_directory, passphrase):
 
     client = boto3.client(
         's3',
-        aws_access_key_id=EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
-        aws_secret_access_key=EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
+        aws_access_key_id=AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_DEV_3_TESTING_BUCKET_RW_SECRET_ACCESS_KEY
     )
 
     print(file_name)
@@ -443,8 +443,8 @@ def _get_s3_backup_file_content(file_name, backup_local_directory, passphrase):
 def remove_s3_backup_file(file_name):
     client = boto3.client(
         's3',
-        aws_access_key_id=EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
-        aws_secret_access_key=EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY
+        aws_access_key_id=AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_DEV_3_TESTING_BUCKET_RW_SECRET_ACCESS_KEY
     )
 
     try:
