@@ -13,7 +13,6 @@ from distutils.version import StrictVersion
 from multiprocessing.pool import ThreadPool
 from typing import (List, Dict)
 from pathlib import Path
-from passlib.hash import bcrypt
 from bson import ObjectId
 from bson.json_util import dumps
 import requests
@@ -97,7 +96,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
 DEFAULT_AWS_TEST_USER = 'admin2'
-DEFAULT_AWS_TEST_PASSWORD = 'kjhsjdhbfnlkih43598sdfnsdfjkh'
+DEFAULT_AWS_TEST_PASSWORD = '$2b$12$GE1DJiMkTLh.5VW6iICUr.oR5yVIXgA5vFK1FF2dkHzoNYMYyKecO'
 
 
 class GuiService(Triggerable,
@@ -432,7 +431,7 @@ class GuiService(Triggerable,
                 email='test_axonius@axonius.com',
                 picname=None,
                 source='internal',
-                password=bcrypt.hash(DEFAULT_AWS_TEST_PASSWORD),
+                password=DEFAULT_AWS_TEST_PASSWORD,
                 role_id=self._roles_collection.find_one({'name': 'Admin'}, projection=['_id'])['_id']
             )
         logger.info('Done configuring self-serve settings')
