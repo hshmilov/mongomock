@@ -1,9 +1,10 @@
+import os
 import sys
 
 import requests
 from retrying import retry
 
-from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION, AXONIUS_SETTINGS_DIR_NAME
 from axonius.consts.scheduler_consts import (Phases, SchedulerState,
                                              SCHEDULER_SAVE_HISTORY_CONFIG_NAME, SCHEDULER_CONFIG_NAME)
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR
@@ -97,6 +98,10 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         volumes = []
         if 'linux' in sys.platform.lower():
             volumes = [f'{PYTHON_LOCKS_DIR}:{PYTHON_LOCKS_DIR}']
+        settings_path = os.path.abspath(os.path.join(self.cortex_root_dir, AXONIUS_SETTINGS_DIR_NAME))
+        os.makedirs(settings_path, exist_ok=True)
+        container_settings_dir_path = os.path.join('/home/axonius/', AXONIUS_SETTINGS_DIR_NAME)
+        volumes += [f'{settings_path}:{container_settings_dir_path}']
         volumes.extend(super().volumes_override)
         return volumes
 

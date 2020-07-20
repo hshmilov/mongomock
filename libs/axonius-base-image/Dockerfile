@@ -80,6 +80,13 @@ RUN mkdir -p /opt/oracle && cd /opt/oracle && unzip /home/axonius/temp/instantcl
 
 RUN rm -rf temp
 
+# instal MongoDB Database Tool (standalone)
+# https://docs.mongodb.com/database-tools/installation/#standalone-installation
+RUN wget -nv https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu1604-x86_64-100.0.2.tgz\
+    && tar --strip=2 --show-transformed --wildcards -zxvf\
+    mongodb-database-tools-ubuntu1604-x86_64-100.0.2.tgz -C /usr/local/bin */mongodump */mongorestore\
+    && rm -f mongodb-database-tools-ubuntu1604-x86_64-100.0.2.tgz
+
 # Install specific adapters dependencies
 # 1. Juniper
 COPY ./libs/py-space-platform /home/axonius-base-image/adapters-libs/py-space-platform
