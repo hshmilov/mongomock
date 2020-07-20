@@ -15,7 +15,7 @@ from axonius.utils.parsing import make_dict_from_csv
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=invalid-name,too-many-nested-blocks,too-many-arguments,too-many-instance-attributes
-# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-return-statements, too-many-lines
 
 
 class ServiceNowAdapterBase(AdapterBase):
@@ -148,7 +148,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_only_virtual_devices': False,
         'fetch_operational_status': True,
         'fetch_ci_relations': False,
-        'when_no_hostname_fallback_to_name': False
+        'when_no_hostname_fallback_to_name': False,
         'fetch_compliance_exceptions': False,
     }
 
