@@ -3,7 +3,7 @@ import _isEqual from 'lodash/isEqual';
 import IP from 'ip';
 
 import { getExcludedAdaptersFilter } from '../constants/utils';
-import { compOps, opTitleTranslation, sizeLtGtFields } from '../constants/filter';
+import { compOps, opTitleTranslation, sizeLtGtFields, regexSpecialCharacters } from '../constants/filter';
 import { pluginTitlesToNames } from '../constants/plugin_meta';
 
 const convertSubnetToRaw = (val) => {
@@ -122,6 +122,10 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       const op = val < 0 ? '-' : '+';
       val = Math.abs(val);
       cond = cond.replace(/{op}/g, op);
+    }
+    else if (compOp === 'contains') {
+      // escape regex special characters.
+      val = val.replace(regexSpecialCharacters, '\\$&');
     }
     return cond.replace(/{val}/g, () => {
       if (iVal === undefined) return val;

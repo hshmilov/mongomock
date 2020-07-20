@@ -166,3 +166,5 @@ export const opTitleTranslation = {
 export const sizeLtGtFields = [
   'specific_data.data.associated_devices',
 ];
+
+export const regexSpecialCharacters = /[-[\]{}()*+?.,\\^$|#]/g;

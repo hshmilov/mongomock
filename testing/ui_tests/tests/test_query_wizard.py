@@ -43,3 +43,37 @@ class TestQueryWizard(TestBase):
         self.devices_page.select_query_value(WINDOWS_QUERY_NAME, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.is_query_error()
+
+    # pylint: disable=anomalous-backslash-in-string
+    def test_query_wizard_escape_characters(self):
+        self.adapters_page.add_json_server(cisco_json_file_mock_credentials)
+
+        self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_query_wizard()
+        expressions = self.devices_page.find_expressions()
+        assert len(expressions) == 1
+
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.fill_query_string_value('test', parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        query_search_value = self.devices_page.find_search_value()
+        assert query_search_value == '(specific_data.data.hostname == regex("test", "i"))'
+
+        self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        query_search_value = self.devices_page.find_search_value()
+        assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
+
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, parent=expressions[0])
+        self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        query_search_value = self.devices_page.find_search_value()
+        assert query_search_value == '(specific_data.data.hostname == "test+special-characters")'
+
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
+        self.devices_page.wait_for_table_to_be_responsive()
+        query_search_value = self.devices_page.find_search_value()
+        assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
