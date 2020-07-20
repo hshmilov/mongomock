@@ -92,7 +92,7 @@ class GuiAliveTask(WatchdogTask):
                         self.report_info(f'Stopped {container.name}')
 
                     self.report_info(f'restarting docker service')
-                    subprocess.check_call('service docker restart'.split())
+                    subprocess.check_call('/bin/systemctl restart docker'.split())
                     self.report_info(f'restarted docker service')
 
                     # fork the process so we won't get killed when the service is restarted
