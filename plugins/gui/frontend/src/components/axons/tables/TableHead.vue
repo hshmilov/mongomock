@@ -66,9 +66,9 @@ export default {
       type: Boolean,
       default: true,
     },
-    filters: {
-      type: Array,
-      default: () => [],
+    hasFilter: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -112,9 +112,6 @@ export default {
     },
     filterDisabled() {
       return !this.filterableType || !this.filterable || this.filter === undefined;
-    },
-    hasFilter() {
-      return this.filters.some((filter) => !(filter.term.trim() === '' && filter.include));
     },
   },
   methods: {

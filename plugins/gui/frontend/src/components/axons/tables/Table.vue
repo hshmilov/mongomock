@@ -25,7 +25,7 @@
             :field="field"
             :sort="sort"
             :sortable="sortable(field)"
-            :filters="getFilters(field.name)"
+            :has-filter="hasFilter(field.name)"
             :filterable="filterable"
             :filter-column-name="filterColumnName"
             @click="clickCol"
@@ -42,6 +42,7 @@
           :fields="fields"
           :sort="sort"
           :filters="colFilters"
+          :exclude-adapters="colExcludedAdapters"
           :selected="value && value.includes(row[idField])"
           :expandable="expandable"
           :clickable="onClickRow !== undefined"
@@ -85,6 +86,8 @@
       v-if="filterColumnActive"
       :filter-column-name="filterColumnName"
       :saved-filters="getFilters(filterColumnName)"
+      :saved-exclude-adapters="getExcludeAdapters(filterColumnName)"
+      :enable-exclude-adapters-filter="enableExcludeAdaptersFilter"
       @updateColFilters="data => $emit('updateColFilters', data)"
       @toggleColumnFilter="toggleColumnFilter"
     />
@@ -123,6 +126,10 @@ export default {
     colFilters: {
       type: Object,
       default: undefined,
+    },
+    colExcludedAdapters: {
+      type: Object,
+      default: () => ({}),
     },
     idField: {
       type: String,
@@ -173,6 +180,7 @@ export default {
     return {
       filterColumnActive: false,
       filterColumnName: '',
+      enableExcludeAdaptersFilter: true,
     };
   },
   computed: {
@@ -217,9 +225,20 @@ export default {
     },
     getFilters(fieldName) {
       if (!this.colFilters) {
-        return undefined;
+        return [];
       }
       return this.colFilters[fieldName] || [];
+    },
+    getExcludeAdapters(fieldName) {
+      if (!this.colExcludedAdapters) {
+        return [];
+      }
+      return this.colExcludedAdapters[fieldName] || [];
+    },
+    hasFilter(fieldName) {
+      return Boolean(this.getFilters(fieldName)
+        .some((filter) => !(filter.term.trim() === '' && filter.include))
+        || this.getExcludeAdapters(fieldName).length);
     },
     sortable(field) {
       return (this.onClickCol !== undefined) && field.name !== 'adapters';
@@ -227,6 +246,8 @@ export default {
     toggleColumnFilter(fieldName) {
       this.filterColumnName = fieldName;
       this.filterColumnActive = !this.filterColumnActive;
+      this.enableExcludeAdaptersFilter = fieldName && !fieldName.startsWith('adapters_data.')
+        && !fieldName.endsWith('_preferred');
     },
   },
 };

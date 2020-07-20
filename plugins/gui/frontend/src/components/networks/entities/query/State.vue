@@ -201,7 +201,8 @@ export default {
       return this.view.query.filter === ''
                 && _isEqual(this.view.fields, this.userFieldsGroups.default)
                 && this.view.sort.field === ''
-                && !this.hasColFilters();
+                && !this.hasColFilters()
+                && !this.hasColExcludedAdapters();
     },
     isEdited() {
       if (!this.selectedView || !this.selectedView.view) {
@@ -209,14 +210,17 @@ export default {
       }
       const { view } = this.selectedView;
       const {
-        query, fields, sort, colFilters,
+        query, fields, sort, colFilters, colExcludedAdapters,
       } = this.view;
       const filterDiff = query.filter !== view.query.filter;
       const fieldsDiff = !_isEqual(fields, view.fields);
       const sortDiff = sort.field !== view.sort.field || sort.desc !== view.sort.desc;
       const colFiltersDiff = colFilters
         && view.colFilters && !_isEqual(colFilters, view.colFilters);
-      return view && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff);
+      const colExcludedAdaptersDiff = colExcludedAdapters
+        && view.colExcludedAdapters && !_isEqual(colExcludedAdapters, view.colExcludedAdapters);
+      return view
+      && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff || colExcludedAdaptersDiff);
     },
     status() {
       if (this.enforcement) return '';
@@ -277,6 +281,9 @@ export default {
     },
     hasColFilters() {
       return Object.values(this.view.colFilters).some((cf) => cf.some((f) => !f.include || f.term.trim() !== ''));
+    },
+    hasColExcludedAdapters() {
+      return Object.values(this.view.colExcludedAdapters).length;
     },
     onSaveClicked() {
       this.$safeguard.show({

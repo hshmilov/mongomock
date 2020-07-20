@@ -51,6 +51,7 @@
         :page-size="pageSize"
         :sort="view.sort"
         :col-filters="view.colFilters"
+        :col-excluded-adapters="view.colExcludedAdapters"
         :id-field="idField"
         :expandable="expandable"
         :filterable="filterable"
@@ -559,7 +560,8 @@ export default {
       this.enableSelectAll = selected;
     },
     updateColFilters(colFilters) {
-      this.updateViewFilter({ module: this.module, colFilters });
+      this.updateViewFilter({ module: this.module, ...colFilters });
+      this.fetchContentPages(false, false);
     },
     resetScrollPosition() {
       this.$refs.table.$el.scrollTop = 0;

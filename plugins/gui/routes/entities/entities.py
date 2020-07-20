@@ -348,10 +348,11 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         if self.is_axonius_user():
             return
 
-        view_filter = request.args.get('filter')
-        if request.args.get('is_refresh') != '1':
+        request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+        view_filter = request_data.get('filter')
+        if request_data.get('is_refresh') != '1':
             log_metric(logger, Query.QUERY_GUI, view_filter)
-            history = request.args.get('history')
+            history = request_data.get('history')
             if history:
                 log_metric(logger, Query.QUERY_HISTORY, str(history))
 
@@ -370,7 +371,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                         'coloumnSizes': [],
                         'query': {
                             'filter': view_filter,
-                            'expressions': json.loads(request.args.get('expressions', '[]'))
+                            'expressions': json.loads(request_data.get('expressions', '[]'))
                         },
                         'sort': mongo_sort
                     },

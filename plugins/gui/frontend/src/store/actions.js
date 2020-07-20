@@ -192,12 +192,19 @@ const createPostContentRequest = (state, payload) => {
       params.search = view.query.search;
     }
   }
-  if (view && view.historical) {
-    params.history = view.historical;
+
+  if (view) {
+    if (view.historical) {
+      params.history = view.historical;
+    }
+    if (view.colFilters) {
+      params.field_filters = view.colFilters;
+    }
+    if (view.colExcludedAdapters) {
+      params.excluded_adapters = view.colExcludedAdapters;
+    }
   }
-  if (view && view.colFilters) {
-    params.field_filters = view.colFilters;
-  }
+
   if (payload.isExperimentalAPI) {
     params.experimental = payload.isExperimentalAPI;
   }
@@ -274,21 +281,22 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
     });
   }
 
-  if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {
+  if (['users', 'devices'].includes(path)) {
     return await dispatch(REQUEST_API, {
       rule: path,
-      type: UPDATE_DATA_CONTENT,
       method: 'POST',
       data: createPostContentRequest(state, payload),
+      type: UPDATE_DATA_CONTENT,
+      payload,
+    });
+  } else {
+    return await dispatch(REQUEST_API, {
+      rule: `${path}?${createContentRequest(state, payload)}`,
+      type: UPDATE_DATA_CONTENT,
       payload,
     });
   }
 
-  return await dispatch(REQUEST_API, {
-    rule: `${path}?${createContentRequest(state, payload)}`,
-    type: UPDATE_DATA_CONTENT,
-    payload,
-  });
 };
 
 export const downloadFile = (fileType, response, objName, objSource) => {
@@ -367,6 +375,7 @@ export const saveView = ({ dispatch, commit }, payload) => {
       fields: view.fields,
       sort: view.sort,
       colFilters: view.colFilters,
+      colExcludedAdapters: view.colExcludedAdapters,
     },
   };
   if (predefined) {

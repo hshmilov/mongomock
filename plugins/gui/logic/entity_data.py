@@ -274,7 +274,8 @@ def fix_raw_data(specific: dict, entity_type: EntityType, history_date: datetime
 
 
 def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_sort=None,
-                          history_date: datetime = None, field_filters: dict = None, search_term: str = None):
+                          history_date: datetime = None, field_filters: dict = None, excluded_adapters: dict = None,
+                          search_term: str = None):
     """
     Generate a csv file from the data of given field, with fields' pretty titles as coloumn headers
 
@@ -299,8 +300,8 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         if field.get('type') != 'array' or field.get('items').get('type') != 'array'
     }
     entity_field_data = merge_entities_fields(
-        parse_entity_fields(entity, [field_name_full], field_filters=field_filters).get(field_name_full, []),
-        field_by_name.keys())
+        parse_entity_fields(entity, [field_name_full], field_filters=field_filters,
+                            excluded_adapters=excluded_adapters).get(field_name_full, []), field_by_name.keys())
 
     if search_term:
         def search_term_in_row_value(field_value):

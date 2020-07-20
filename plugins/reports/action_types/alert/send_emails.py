@@ -143,6 +143,7 @@ class SendEmailsAction(ActionTypeAlert):
                                       self._config['emailList'],
                                       cc_recipients=self._config.get('emailListCC', []))
         field_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         try:
             # all the trigger result
             if self._config.get('sendDeviceCSV', False):
@@ -155,7 +156,8 @@ class SendEmailsAction(ActionTypeAlert):
                                                  sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
-                                                 field_filters=field_filters)
+                                                 field_filters=field_filters,
+                                                 excluded_adapters=excluded_adapters)
 
                 email.add_attachment('Axonius Entity Data.csv', csv_string.getvalue().encode('utf-8'), 'text/csv')
         except Exception:
@@ -223,17 +225,20 @@ class SendEmailsAction(ActionTypeAlert):
             results = perform_saved_view_converted(self._entity_type, self.trigger_view_from_db, projection, limit=10)
         else:
             results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters)
+                                   projection, self._entity_type, field_filters=field_filters,
+                                   excluded_adapters=excluded_adapters)
 
         self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
         if added_result_count > 0:
             results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters)
+                                   projection, self._entity_type, field_filters=field_filters,
+                                   excluded_adapters=excluded_adapters)
             self.__create_table_in_email(email, results, html_sections, images_cid,
                                          f'Top 5 new {self._entity_type} in query')
         if removed_result_count > 0:
             results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters)
+                                   projection, self._entity_type, field_filters=field_filters,
+                                   excluded_adapters=excluded_adapters)
 
             self.__create_table_in_email(email, results, html_sections, images_cid,
                                          f'Top 5 {self._entity_type} removed from query')
@@ -337,10 +342,12 @@ class SendEmailsAction(ActionTypeAlert):
         ])
         sort = gui_helpers.get_sort(self.trigger_view_config)
         field_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         csv_string = gui_helpers.get_csv(parsed_query_filter, sort,
                                          {field: 1 for field in field_list},
                                          self._entity_type,
-                                         field_filters=field_filters)
+                                         field_filters=field_filters,
+                                         excluded_adapters=excluded_adapters)
 
         email.add_attachment(f'Axonius {data_action} entity data.csv', csv_string.getvalue().encode('utf-8'),
                              'text/csv')

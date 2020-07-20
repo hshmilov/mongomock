@@ -60,6 +60,7 @@ class SlackSendMessageAction(ActionTypeAlert):
         ])
         sort = gui_helpers.get_sort(self.trigger_view_config)
         col_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         all_gui_entities = db_querying_helper.get_entities(None,
                                                            None,
                                                            self.trigger_view_parsed_filter,
@@ -69,7 +70,8 @@ class SlackSendMessageAction(ActionTypeAlert):
                                                                in field_list
                                                            },
                                                            self._entity_type,
-                                                           field_filters=col_filters)
+                                                           field_filters=col_filters,
+                                                           excluded_adapters=excluded_adapters)
 
         entities_str = ''
         for i, entity in enumerate(all_gui_entities):

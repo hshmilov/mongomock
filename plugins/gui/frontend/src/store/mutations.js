@@ -141,13 +141,25 @@ export const updateDataViewFilter = (state, payload) => {
 
   const colFilters = { ...module.view.colFilters };
 
-  if (_isEmpty(payload.colFilters.filters)) {
-    delete colFilters[payload.colFilters.fieldName];
+  if (_isEmpty(payload.filters)) {
+    delete colFilters[payload.fieldName];
   } else {
-    colFilters[payload.colFilters.fieldName] = payload.colFilters.filters;
+    colFilters[payload.fieldName] = payload.filters;
   }
 
   module.view.colFilters = colFilters;
+
+
+  const colExcludedAdapters = { ...module.view.colExcludedAdapters };
+
+  if (_isEmpty(payload.excludeAdapters)) {
+    delete colExcludedAdapters[payload.fieldName];
+  } else {
+    colExcludedAdapters[payload.fieldName] = payload.excludeAdapters;
+  }
+
+  module.view.colExcludedAdapters = colExcludedAdapters;
+
 };
 
 export const CLEAR_DATA_VIEW_FILTERS = 'CLEAR_DATA_VIEW_FILTERS';
@@ -155,6 +167,7 @@ export const clearDataViewFilter = (state, payload) => {
   const module = getModule(state, payload);
   if (!module) return;
   module.view.colFilters = {};
+  module.view.colExcludedAdapters = {};
 };
 
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW';

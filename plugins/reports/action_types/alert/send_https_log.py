@@ -77,13 +77,15 @@ class SendHttpsLogAction(ActionTypeAlert):
         ])
         sort = gui_helpers.get_sort(self.trigger_view_config)
         field_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         try:
             if self._config.get('send_csv_data'):
                 csv_string = gui_helpers.get_csv(self.trigger_view_parsed_filter,
                                                  sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
-                                                 field_filters=field_filters)
+                                                 field_filters=field_filters,
+                                                 excluded_adapters=excluded_adapters)
                 csv_bytes = io.BytesIO(csv_string.getvalue().encode('utf-8'))
                 self._plugin_base.send_https_log_message(
                     '', authorization_header,
@@ -111,6 +113,7 @@ class SendHttpsLogAction(ActionTypeAlert):
             self._plugin_base.send_https_log_message(log_message_full, authorization_header)
             return AlertActionResult(True, 'Sent Https message')
         col_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         all_gui_entities = db_querying_helper.get_entities(None,
                                                            None,
                                                            self.trigger_view_parsed_filter,
@@ -120,7 +123,8 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                                in field_list
                                                            },
                                                            self._entity_type,
-                                                           field_filters=col_filters)
+                                                           field_filters=col_filters,
+                                                           excluded_adapters=excluded_adapters)
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']

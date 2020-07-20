@@ -14,7 +14,7 @@
       class="filters"
     >
       <div
-        v-for="(filter, index) in unsavedFilters"
+        v-for="(filter, index) in unsavedValueFilters"
         :key="index"
         class="filter"
       >
@@ -46,6 +46,42 @@
       +
     </XButton>
 
+    <div v-if="enableExcludeAdaptersFilter">
+
+      <div class="exclude-adapter__title">
+        Exclude adapter connections:
+      </div>
+
+      <ASelect
+        v-model="unsavedExcludeAdapters"
+        mode="multiple"
+        class="exclude-adapter__select"
+        placeholder="Select adapters to exclude"
+        option-label-prop="label"
+        :filter-option="filterOption"
+      >
+        <ASelectOption
+          v-for="a in getConfiguredAdapters"
+          :key="a.id"
+          :value="a.id"
+          :label="a.title"
+        >
+          <span
+            role="img"
+            :aria-label="a.title"
+            class="exclude-adapter__logo"
+          >
+            <img
+              :src="require(`Logos/adapters/${a.id}.png`)"
+              width="24"
+            >
+          </span>
+          {{ a.title }}
+        </ASelectOption>
+      </ASelect>
+
+    </div>
+
 
     <template slot="footer">
       <XButton
@@ -72,10 +108,10 @@
 </template>
 
 <script>
-import { mapMutations } from 'vuex';
-import { Modal, Input } from 'ant-design-vue';
+import { mapActions, mapGetters } from 'vuex';
+import { Modal, Input, Select } from 'ant-design-vue';
 import XButton from '@axons/inputs/Button.vue';
-import { UPDATE_DATA_VIEW_FILTER } from '@store/mutations';
+import { FETCH_ADAPTERS } from '@store/modules/adapters';
 import _cloneDeep from 'lodash/cloneDeep';
 
 export default {
@@ -84,13 +120,23 @@ export default {
     XButton,
     AInput: Input,
     AModal: Modal,
+    ASelect: Select,
+    ASelectOption: Select.Option,
   },
   props: {
     filterColumnName: {
       type: String,
       default: '',
     },
+    enableExcludeAdaptersFilter: {
+      type: Boolean,
+      default: true,
+    },
     savedFilters: {
+      type: Array,
+      default: () => [],
+    },
+    savedExcludeAdapters: {
       type: Array,
       default: () => [],
     },
@@ -98,26 +144,33 @@ export default {
   data() {
     return {
       defaultFilter: { include: true, term: '' },
-      unsavedFilters: [],
+      unsavedValueFilters: [],
       visible: false,
+      unsavedExcludeAdapters: [],
     };
+  },
+  computed: {
+    ...mapGetters({
+      getConfiguredAdapters: 'getConfiguredAdapters',
+    }),
   },
   mounted() {
     this.resetFilters();
     this.focusLastFilter();
   },
+  created() {
+    this.fetchAdapters();
+  },
   methods: {
-    ...mapMutations({
-      updateViewFilter: UPDATE_DATA_VIEW_FILTER,
-    }),
+    ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
     toggleInclude(index) {
-      this.unsavedFilters[index].include = !this.unsavedFilters[index].include;
+      this.unsavedValueFilters[index].include = !this.unsavedValueFilters[index].include;
     },
     getDefaultFilter() {
       return { ...this.defaultFilter };
     },
     addFilter() {
-      this.unsavedFilters.push(this.getDefaultFilter());
+      this.unsavedValueFilters.push(this.getDefaultFilter());
       this.$nextTick(() => {
         const ref = this.$refs.rows;
         ref.scrollTop = ref.scrollHeight;
@@ -125,25 +178,37 @@ export default {
       this.focusLastFilter();
     },
     resetFilters() {
-      this.unsavedFilters = _cloneDeep(this.savedFilters);
-      if (this.unsavedFilters.length === 0) {
-        this.clearFilters();
+      this.unsavedValueFilters = _cloneDeep(this.savedFilters);
+      if (this.unsavedValueFilters.length === 0) {
+        this.clearValueFilters();
+      }
+      this.unsavedExcludeAdapters = _cloneDeep(this.savedExcludeAdapters);
+      if (this.unsavedExcludeAdapters.length === 0) {
+        this.clearExcludedAdapters();
       }
     },
     clearFilters() {
-      this.unsavedFilters = [this.getDefaultFilter()];
+      this.clearValueFilters();
+      this.clearExcludedAdapters();
+    },
+    clearValueFilters() {
+      this.unsavedValueFilters = [this.getDefaultFilter()];
+    },
+    clearExcludedAdapters() {
+      this.unsavedExcludeAdapters = [];
     },
     removeFilter(index) {
-      this.unsavedFilters.splice(index, 1);
-      if (this.unsavedFilters.length === 0) {
-        this.clearFilters();
+      this.unsavedValueFilters.splice(index, 1);
+      if (this.unsavedValueFilters.length === 0) {
+        this.clearValueFilters();
       }
     },
     handleApprove() {
-      const filters = this.unsavedFilters.filter((f) => f.term.trim() !== '' || !f.include);
+      const filters = this.unsavedValueFilters.filter((f) => f.term.trim() !== '' || !f.include);
       this.$emit('updateColFilters',
         {
           filters,
+          excludeAdapters: this.unsavedExcludeAdapters,
           fieldName: this.filterColumnName,
         });
       this.handleDismiss();
@@ -157,6 +222,11 @@ export default {
         ref.querySelector('.filter:last-child input').focus();
       });
     },
+    filterOption(input, option) {
+      return (
+        option.componentOptions.propsData.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
+      );
+    },
   },
 };
 </script>
@@ -164,6 +234,19 @@ export default {
 <style lang="scss">
   #column_filter {
     --filter-row-height: 40px;
+
+    .exclude-adapter {
+      &__title {
+        padding: 12px 0;
+      }
+      &__select {
+        width: 100%
+      }
+      &__logo {
+        padding-right: 14px;
+      }
+    }
+
     > div {
       padding: 12px;
     }

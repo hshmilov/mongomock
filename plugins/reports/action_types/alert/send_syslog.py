@@ -71,6 +71,7 @@ class NotifySyslogAction(ActionTypeAlert):
             'specific_data.data.last_used_users', 'labels'
         ])
         col_filters = self.trigger_view_config.get('colFilters', {})
+        excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
         all_gui_entities = get_entities(None,
                                         None,
                                         self.trigger_view_parsed_filter,
@@ -80,7 +81,8 @@ class NotifySyslogAction(ActionTypeAlert):
                                             in field_list
                                         },
                                         self._entity_type,
-                                        field_filters=col_filters)
+                                        field_filters=col_filters,
+                                        excluded_adapters=excluded_adapters)
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']

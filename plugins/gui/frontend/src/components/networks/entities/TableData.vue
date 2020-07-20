@@ -146,6 +146,9 @@ export default {
       adaptersSchema(state) {
         return state[this.module].fields.data.generic[0];
       },
+      colExcludedAdapters(state) {
+        return state[this.module].view.colExcludedAdapters[this.fieldName];
+      },
     }),
     ...mapGetters({
       getConnectionLabel: GET_CONNECTION_LABEL,
@@ -159,18 +162,25 @@ export default {
     isAdaptersField() {
       return this.fieldName === this.adaptersFieldName;
     },
+    getAdapters() {
+      let adapters = this.data[this.adaptersFieldName];
+      if (this.colExcludedAdapters) {
+        adapters = adapters.filter((adapter) => !this.colExcludedAdapters.includes(adapter));
+      }
+      return adapters;
+    },
     adaptersLength() {
-      return this.data[this.adaptersFieldName].length;
+      return this.getAdapters.length;
     },
     showExpand() {
       return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
       && !this.fieldName.includes('_preferred') && !_isEmpty(this.data[this.fieldName]);
     },
     adaptersList() {
-      return this.data[this.adaptersFieldName].concat().map((adapter) => [adapter]).sort();
+      return this.getAdapters.concat().map((adapter) => [adapter]).sort();
     },
     adaptersDetailsWithClientIdList() {
-      return this.data[this.adaptersFieldName].concat().map((adapter, index) => ({
+      return this.getAdapters.concat().map((adapter, index) => ({
         pluginName: [adapter],
         clientId: this.data['meta_data.client_used'][index],
       })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));

@@ -697,6 +697,7 @@ class ReportGenerator:
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
                         field_filters = view.get('colFilters', {})
+                        excluded_adapters = view.get('colExcludedAdapters', {})
                         count = self.report_params['saved_view_count_func'](
                             entity, parse_filter(filter_query), None, False)
                         projection = {field: 1 for field in view.get('fields', []) if field_to_title.get(field)
@@ -714,7 +715,8 @@ class ReportGenerator:
                                                       projection=projection,
                                                       entity_type=entity,
                                                       default_sort=self.report_params['default_sort'],
-                                                      field_filters=field_filters)),
+                                                      field_filters=field_filters,
+                                                      excluded_adapters=excluded_adapters)),
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),
@@ -724,7 +726,8 @@ class ReportGenerator:
                                                                        None,
                                                                        entity,
                                                                        self.report_params['default_sort'],
-                                                                       field_filters)
+                                                                       field_filters,
+                                                                       excluded_adapters)
                                 if attach_views_csvs else None
                         })
                 except Exception:

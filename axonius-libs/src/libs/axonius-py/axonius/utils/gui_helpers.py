@@ -388,8 +388,10 @@ def filtered_fields():
     def wrap(func):
         @functools.wraps(func)
         def actual_wrapper(self, *args, **kwargs):
-            field_filters = self.get_request_data_as_object().get('field_filters', {})
-            return func(self, field_filters=field_filters, *args, **kwargs)
+            data = self.get_request_data_as_object()
+            field_filters = data.get('field_filters', {})
+            excluded_adapters = data.get('excluded_adapters', {})
+            return func(self, field_filters=field_filters, excluded_adapters=excluded_adapters, *args, **kwargs)
 
         return actual_wrapper
 
@@ -844,15 +846,17 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
 
 
 # pylint: disable=too-many-locals
-def parse_entity_fields(entity_data, fields, include_details=False, field_filters: dict = None):
+def parse_entity_fields(entity_datas, fields, include_details=False, field_filters: dict = None,
+                        excluded_adapters: dict = None):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
     also check for metadata
-    :param entity_data:     A nested dict representing parsed values of an entity
+    :param entity_datas:    A nested dict representing parsed values of an entity
     :param fields:          List of paths to values in the entity_data dict
     :param include_details: For each requested field, add also <field>_details,
                             containing a list of values for the field per adapter that composes the entity
-    :param field_filters: Filter fields' values to those that are have a string including their matching filter
+    :param field_filters: Filter fields' values to those that have a string including their matching filter
+    :param excluded_adapters: Filter fields' values to those that are from specific adapters
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
 
@@ -878,13 +882,21 @@ def parse_entity_fields(entity_data, fields, include_details=False, field_filter
     specific_adapters_values = []
     specific_adapter_name = ''
 
-    if include_details:
-        adapter_datas = {f'{value}_{i}': item for value in sorted(set(entity_data['adapters']))
-                         for i, item in enumerate(entity_data['adapters_data'][value])}
-
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
             continue
+
+        entity_data = dict(entity_datas) if isinstance(entity_datas, dict) else entity_datas
+
+        if include_details:
+            adapter_datas = {f'{value}_{i}': item for value in sorted(set(entity_data['adapters']))
+                             for i, item in enumerate(entity_data['adapters_data'][value])
+                             if value not in excluded_adapters.get(field_path, [])}
+
+        if excluded_adapters and field_path in excluded_adapters:
+            entity_data['specific_data'] = [item for item in entity_data['specific_data']
+                                            if item['plugin_name'] not in excluded_adapters[field_path]]
+
         if field_path == CORRELATION_REASONS_FIELD:
             val = find_entity_field(entity_data, CORRELATION_REASONS)
         elif field_path == HAS_NOTES:
@@ -1478,19 +1490,21 @@ def entity_fields(entity_type: EntityType):
 
 
 def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
-            default_sort=True, history: datetime = None, field_filters: dict = None, cell_joiner=None) -> io.StringIO:
+            default_sort=True, history: datetime = None, field_filters: dict = None, excluded_adapters: dict = None,
+            cell_joiner=None) -> io.StringIO:
     """
     See '_get_csv' docs.
     Returns a StringIO object - not iterable
     """
     s = io.StringIO()
-    list(_get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters))
+    list(_get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters,
+                  excluded_adapters))
     return s
 
 
 def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
                      default_sort=True, history: datetime = None, field_filters: dict = None,
-                     cell_joiner=None, max_rows=None) -> Iterable[str]:
+                     excluded_adapters: dict = None, cell_joiner=None, max_rows=None) -> Iterable[str]:
     """
     See '_get_csv' docs.
     Returns an iterator of string lines
@@ -1507,7 +1521,7 @@ def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: En
 
     s = MyStringIo()
     return _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type, s, default_sort, history, field_filters,
-                    cell_joiner=cell_joiner, max_rows=max_rows)
+                    excluded_adapters, cell_joiner=cell_joiner, max_rows=max_rows)
 
 
 def get_csv_canonized_value(value: Union[str, list, int, datetime, float, bool]) -> Union[List[str], str]:
@@ -1523,9 +1537,10 @@ def get_csv_canonized_value(value: Union[str, list, int, datetime, float, bool])
     return _process_item(value)
 
 
+# pylint: disable=too-many-arguments
 def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType, file_obj,
              default_sort=True, history: datetime = None, field_filters: dict = None,
-             cell_joiner=None, max_rows=None) -> Iterable[None]:
+             excluded_adapters: dict = None, cell_joiner=None, max_rows=None) -> Iterable[None]:
     """
     Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
     The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
@@ -1543,7 +1558,8 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                             run_over_projection=False,
                             history_date=history,
                             ignore_errors=True,
-                            field_filters=field_filters)
+                            field_filters=field_filters,
+                            excluded_adapters=excluded_adapters)
 
     current_entity_fields = entity_fields(entity_type)
 

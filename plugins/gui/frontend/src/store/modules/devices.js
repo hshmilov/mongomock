@@ -20,6 +20,7 @@ const getDefaultState = () => ({
       field: '', desc: true,
     },
     colFilters: {},
+    colExcludedAdapters: {},
     filterColumnActive: false,
     historical: null,
   },

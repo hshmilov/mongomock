@@ -137,7 +137,7 @@ export default {
 
       if (!addResponse && !removeResponse) return;
       this.taggedCount = addResponse ? addResponse.data : removeResponse.data;
-      this.milestoneCompleted({ milestoneName: TAG_DEVICE });
+      await this.milestoneCompleted({ milestoneName: TAG_DEVICE });
       this.$emit('done');
     },
     removeEntitiesLabels(labels) {

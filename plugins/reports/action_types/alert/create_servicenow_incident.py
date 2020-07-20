@@ -233,11 +233,13 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 ])
                 sort = gui_helpers.get_sort(self.trigger_view_config)
                 field_filters = self.trigger_view_config.get('colFilters', {})
+                excluded_adapters = self.trigger_view_config.get('colExcludedAdapters', {})
                 csv_string = gui_helpers.get_csv(self.trigger_view_parsed_filter,
                                                  sort,
                                                  {field: 1 for field in field_list},
                                                  self._entity_type,
-                                                 field_filters=field_filters).getvalue()
+                                                 field_filters=field_filters,
+                                                 excluded_adapters=excluded_adapters).getvalue()
             except Exception:
                 logger.exception(f'Failed getting csv')
 

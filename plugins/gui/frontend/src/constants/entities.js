@@ -81,6 +81,7 @@ export const defaultViewForReset = (module, fields) => ({
     },
     fields,
     colFilters: {},
+    colExcludedAdapters: {},
     page: 0,
   },
   selectedView: null,

@@ -46,10 +46,11 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @sorted_endpoint()
         @projected()
+        @filtered_fields()
         @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category), skip_activity=True)
         def get(self, limit, skip, mongo_filter, mongo_sort,
-                mongo_projection, history: datetime):
+                mongo_projection, history: datetime, field_filters, excluded_adapters):
             # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
             mongo_sort = {x.replace('_preferred', ''): mongo_sort[x] for x in mongo_sort}
             self._save_query_to_history(
@@ -65,7 +66,11 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                     default_sort=self._system_settings.get(
                                         'defaultSort'),
                                     history_date=history,
-                                    include_details=True)
+                                    include_details=True,
+                                    field_filters=field_filters,
+                                    excluded_adapters=excluded_adapters,
+                                    )
+
             # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
             if self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
                     and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
@@ -93,7 +98,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in('csv', methods=['POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category))
         def get_csv(self, mongo_filter, mongo_sort,
-                    mongo_projection, history: datetime, field_filters):
+                    mongo_projection, history: datetime, field_filters, excluded_adapters):
 
             if 'specific_data.data.image' in mongo_projection:
                 del mongo_projection['specific_data.data.image']
@@ -111,6 +116,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                                      self._system_settings.get(
                                                          'defaultSort'),
                                                      field_filters,
+                                                     excluded_adapters,
                                                      delimiter,
                                                      max_rows)
 

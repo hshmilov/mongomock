@@ -257,6 +257,7 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
                                           ignore_errors: bool = False,
                                           include_details: bool = False,
                                           field_filters: dict = None,
+                                          excluded_adapters: dict = None,
                                           ) -> Iterable[dict]:
     """
     Converts db like entities to frontend accepted entities.
@@ -267,8 +268,9 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
         if not projection:
             yield nongui_beautify_db_entry(entity)
         else:
+
             yield parse_entity_fields(entity, projection.keys(), include_details=include_details,
-                                      field_filters=field_filters)
+                                      field_filters=field_filters, excluded_adapters=excluded_adapters)
 
 
 # pylint: disable=R0913
@@ -286,6 +288,7 @@ def get_entities(limit: int,
                  ignore_errors: bool = False,
                  include_details: bool = False,
                  field_filters: dict = None,
+                 excluded_adapters: dict = None,
                  cursor_id: str = None,
                  use_cursor: bool = False,
                  ) -> Tuple[Iterable[dict], str]:
@@ -302,6 +305,7 @@ def get_entities(limit: int,
     :param history_date: the date for which to fetch, or None for latest
     :param ignore_errors: Passed to convert_db_entity_to_view_entity
     :param field_filters: Filter fields' values to those that are have a string including their matching filter
+    :param excluded_adapters: Filter fields' values to those that are from specific adapters
     :param use_cursor: whether to use cursor based pagination
     :param cursor_id: cursor_id for getting next results set
     :return:
@@ -339,6 +343,7 @@ def get_entities(limit: int,
             ignore_errors=ignore_errors,
             include_details=include_details,
             field_filters=field_filters,
+            excluded_adapters=excluded_adapters,
         )
         return entities, cursor_obj
 
@@ -359,6 +364,7 @@ def get_entities(limit: int,
         ignore_errors=ignore_errors,
         include_details=include_details,
         field_filters=field_filters,
+        excluded_adapters=excluded_adapters,
     )
 
 
@@ -431,6 +437,7 @@ def perform_saved_view_converted(entity: EntityType,
     :return: an iterator for all the devices as they would been seen in the DB
     """
     field_filters = saved_view['view'].get('colFilters', {})
+    excluded_adapters = saved_view['view'].get('colExcludedAdapters', {})
     res = perform_saved_view(entity, saved_view, **kwargs)
     if projection and run_over_projection:
         for field in FIELDS_TO_PROJECT_FOR_GUI:
@@ -442,7 +449,8 @@ def perform_saved_view_converted(entity: EntityType,
             for k
             in saved_view['view']['fields']
         }
-    return convert_entities_to_frontend_entities(res, projection, True, field_filters=field_filters)
+    return convert_entities_to_frontend_entities(res, projection, True, field_filters=field_filters,
+                                                 excluded_adapters=excluded_adapters)
 
 
 def perform_saved_view_by_id(entity: EntityType,
