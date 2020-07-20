@@ -34,47 +34,31 @@
 import _flatten from 'lodash/flatten';
 import _uniq from 'lodash/uniq';
 import _intersection from 'lodash/intersection';
-
 import { mapState, mapActions } from 'vuex';
+import actionModal from '@mixins/action_modal';
 import XIcon from '@axons/icons/Icon';
-import XCombobox from '../../axons/inputs/combobox/index.vue';
-import XFeedbackModal from './FeedbackModal.vue';
+import XCombobox from '@axons/inputs/combobox/index.vue';
 import {
   FETCH_DATA_LABELS,
   ADD_DATA_LABELS,
   REMOVE_DATA_LABELS,
-} from '../../../store/actions';
-import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules/onboarding';
-import { TAG_DEVICE } from '../../../constants/getting-started';
+} from '@store/actions';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
+import { TAG_DEVICE } from '@constants/getting-started';
+import XFeedbackModal from './FeedbackModal.vue';
 
 export default {
   name: 'XTagModal',
   components: { XFeedbackModal, XCombobox, XIcon },
+  mixins: [actionModal],
   props: {
-    module: {
-      type: String,
-      required: true,
-    },
-    entities: {
-      type: Object,
-      required: true,
-    },
-    entitiesMeta: {
-      type: Object,
-      default: () => {},
-    },
     value: {
       type: Array,
       default: undefined,
     },
-    title: {
-      type: String,
-      default: '',
-    },
   },
   data() {
     return {
-      isActive: false,
       selected: [],
       taggedCount: 0,
       newItems: [],
@@ -138,7 +122,7 @@ export default {
       if (!addResponse && !removeResponse) return;
       this.taggedCount = addResponse ? addResponse.data : removeResponse.data;
       await this.milestoneCompleted({ milestoneName: TAG_DEVICE });
-      this.$emit('done');
+      this.$emit('done', false);
     },
     removeEntitiesLabels(labels) {
       this.removeLabels({

@@ -2,8 +2,8 @@
   <div class="x-action-config">
     <div class="name">
       <label
-          for="action-name"
-          class="name__label"
+        for="action-name"
+        class="name__label"
       >Action name:</label>
       <input
         id="action-name"
@@ -12,6 +12,7 @@
         type="text"
         :disabled="disableName"
         :class="{disabled: disableName}"
+        @focusout.stop="$emit('action-name-focused-out')"
       >
     </div>
     <div class="config">
@@ -30,13 +31,16 @@
         />
       </template>
     </div>
-    <div class="actions">
+    <div
+      v-if="!hideSaveButton"
+      class="actions"
+    >
       <div class="error-text">
         {{ nameError || formError }}
       </div>
       <XButton
-        type="primary"
         v-if="!readOnly"
+        type="primary"
         :disabled="disableConfirm"
         @click="confirmAction"
       >Save</XButton>
@@ -73,6 +77,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    hideSaveButton: {
+      type: Boolean,
+      default: false,
+    },
+    focusOnActionName: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -85,7 +97,7 @@ export default {
       return (!this.formValid || !this.nameValid);
     },
     disableName() {
-      return this.value.uuid;
+      return this.value && this.value.uuid;
     },
     name: {
       get() {
@@ -150,9 +162,19 @@ export default {
   watch: {
     nameError(newVal) {
       this.nameValid = !newVal;
+      this.$emit('action-name-error', newVal);
+    },
+    disableConfirm(isError) {
+      this.$emit('action-validity-changed', !isError);
     },
   },
   mounted() {
+    if (this.focusOnActionName) {
+      this.$refs.name.focus();
+    }
+    if (this.hideSaveButton && this.nameError) {
+      this.$emit('action-name-error', this.nameError);
+    }
     this.nameValid = !this.nameError;
     if (!this.$refs.form) {
       this.formValid = true;
@@ -161,6 +183,9 @@ export default {
   methods: {
     validateForm(valid) {
       this.formValid = valid;
+      if (this.hideSaveButton) {
+        this.$emit('action-form-error', this.formError);
+      }
     },
     confirmAction() {
       this.$emit('confirm');
@@ -189,6 +214,7 @@ export default {
             }
         }
         .config {
+            @include  y-scrollbar;
             overflow: auto;
             height: 100%;
             .config__title {

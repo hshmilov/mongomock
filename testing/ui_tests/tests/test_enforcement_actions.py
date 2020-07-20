@@ -575,13 +575,16 @@ class TestEnforcementActions(TestBase):
 
         # go to devices page, run discovery and run all 3 enforcements on a device
         self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.click_row_checkbox()
-
         self.devices_page.run_enforcement_on_selected_device(
             enforcement_name=enforcement_label_like['enforcement_name'])
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_row_checkbox()
         self.devices_page.run_enforcement_on_selected_device(
             enforcement_name=enforcement_unique_field['enforcement_name'])
+        self.devices_page.wait_for_table_to_be_responsive()
+        self.devices_page.click_row_checkbox()
         self.devices_page.run_enforcement_on_selected_device(enforcement_name=enforcement_db_like['enforcement_name'])
 
         # check in enforcements tasks that all running enforcements were completed

@@ -124,13 +124,15 @@ class EntitiesPage(Page):
     TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
 
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
-    TABLE_ACTIONS_DELETE = 'Delete'
-    TABLE_ACTIONS_LINK_DEVICES = 'Link devices'
-    TABLE_ACTIONS_UNLINK_DEVICES = 'Unlink devices'
-    TABLE_ACTIONS_CUSTOM_DATA = 'Add custom data'
-    TABLE_ACTIONS_TAG = 'Tag'
-    TABLE_ACTIONS_ENFORCE = 'Enforce'
-    TABLE_ACTIONS_FILTER_OUT = 'Filter out from query results'
+    TABLE_ACTIONS_DELETE = 'delete'
+    TABLE_ACTIONS_LINK_DEVICES = 'link'
+    TABLE_ACTIONS_UNLINK_DEVICES = 'unlink'
+    TABLE_ACTIONS_CUSTOM_DATA = 'add_custom_data'
+    TABLE_ACTIONS_TAG = 'tag'
+    TABLE_ACTIONS_ENFORCE_SUB_MENU = 'enforce_options'
+    TABLE_ACTIONS_RUN_ENFORCE = 'run_enforce'
+    TABLE_ACTIONS_ADD_ENFORCE = 'create_enforce'
+    TABLE_ACTIONS_FILTER_OUT = 'filter_out'
     TABLE_ACTION_ITEM_XPATH = \
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
     TABLE_EDIT_COLUMN_MODAL = 'div.x-modal.x-field-config'
@@ -981,11 +983,15 @@ class EntitiesPage(Page):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_TAG).click()
 
     def click_actions_enforce_button(self):
-        self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE).click()
+        actions = ActionChains(self.driver)
+        actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
+        self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE).click()
 
     def is_enforce_button_disabled(self):
+        actions = ActionChains(self.driver)
+        actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
         return self.is_element_has_disabled_class(
-            self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE))
+            self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE))
 
     def open_edit_tags(self):
         self.click_button(self.EDIT_TAGS_BUTTON_TEXT)

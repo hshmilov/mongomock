@@ -130,6 +130,7 @@ export default {
   .x-action-library {
     height: 100%;
     .actions-container {
+      @include  y-scrollbar;
       overflow: auto;
       height: calc(100% - 36px);
 

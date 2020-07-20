@@ -51,7 +51,6 @@ class TestEnforcementActions(TestBase):
             self.devices_page.switch_to_page()
             self.devices_page.enforce_action_on_query(QUERY, ENFORCEMENT_NAME)
 
-            self.devices_page.click_row_checkbox()
             self.devices_page.click_row()
 
             wait_until(self._does_shodan_exist,

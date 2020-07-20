@@ -1,6 +1,6 @@
 <template>
   <ADrawer
-    :destroyOnClose="true"
+    :destroy-on-close="true"
     :wrap-class-name="wrapClass"
     :visible="visible"
     :wrap-style="wrapStyle"
@@ -53,7 +53,7 @@ export default {
   name: 'XSidePanel',
   components: {
     ADrawer: Drawer,
-    XIcon
+    XIcon,
   },
   props: {
     panelContainer: {
@@ -168,7 +168,7 @@ export default {
               &__content {
                 position: relative;
                 padding: 5px 28px 110px 5px;
-                height: calc(100% - 50px);
+                height: calc(100% - 32px);
                 overflow-y: auto;
               }
               &__footer {

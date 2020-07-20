@@ -79,7 +79,6 @@ class TestEnforcementNoQuery(TestBase):
         self.enforcements_page.remove_selected_enforcements(confirm=True)
         self.enforcements_page.create_basic_enforcement(duplicate_name, MANAGED_DEVICES_QUERY_NAME)
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.click_save_button()
 
     def test_above_threshold(self):
         self.enforcements_page.create_notifying_enforcement_above('above 1',

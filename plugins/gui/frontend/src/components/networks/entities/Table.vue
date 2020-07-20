@@ -28,7 +28,7 @@
             slot="actions"
             name="actions"
           >
-            <XActionMenu
+            <XEntitiesActionMenu
               :disabled="!canUpdate"
               :module="module"
               :entities="selection"
@@ -66,7 +66,7 @@ import _get from 'lodash/get';
 import XQuery from './query/Query.vue';
 import XTable from '../../neurons/data/Table.vue';
 import XTableData from './TableData.vue';
-import XActionMenu from './ActionMenu.vue';
+import XEntitiesActionMenu from './ActionMenu.vue';
 import XTableOptionMenu from './TableOptionMenu.vue';
 
 import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
@@ -79,7 +79,7 @@ import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '../../../store/modules/adapte
 export default {
   name: 'XEntityTable',
   components: {
-    XQuery, XTable, XTableData, XActionMenu, XTableOptionMenu,
+    XQuery, XTable, XTableData, XEntitiesActionMenu, XTableOptionMenu,
   },
   props: {
     module: {

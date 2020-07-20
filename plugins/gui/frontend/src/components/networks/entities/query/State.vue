@@ -248,7 +248,7 @@ export default {
       this.$emit('reset-search');
     }, 400, { leading: true, trailing: false }),
     navigateFilteredTask() {
-      this.$router.push({ path: `/enforcements/tasks/${this.enforcement.id}` });
+      this.$router.push({ path: `/tasks/${this.enforcement.id}` });
     },
     openSaveView() {
       this.viewNameModal.view = null;

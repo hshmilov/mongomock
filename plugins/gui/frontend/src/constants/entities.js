@@ -86,3 +86,23 @@ export const defaultViewForReset = (module, fields) => ({
   },
   selectedView: null,
 });
+
+export const ModalActionsEnum = {
+  tag: 'tag',
+  delete: 'delete',
+  link: 'link',
+  unlink: 'unlink',
+  enforce: 'enforce',
+  filter_out_from_query_result: 'filter_out',
+  add_custom_data: 'add_custom_data',
+};
+
+export const ActionModalComponentByNameEnum = {
+  [ModalActionsEnum.tag]: 'XTagModal',
+  [ModalActionsEnum.delete]: 'XDeleteModal',
+  [ModalActionsEnum.link]: 'XLinkModal',
+  [ModalActionsEnum.unlink]: 'XUnlinkModal',
+  [ModalActionsEnum.enforce]: 'XEnforceModal',
+  [ModalActionsEnum.filter_out_from_query_result]: 'XFilterOutModal',
+  [ModalActionsEnum.add_custom_data]: 'XAddCustomDataModal',
+};

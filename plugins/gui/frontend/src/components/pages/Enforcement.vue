@@ -111,6 +111,7 @@
         :title="actionConfTitle"
         :logo="actionConfLogo"
         :reversible="currentActionReversible"
+        back-title="Action Library"
         @back="restartAction"
       >
         <XActionConfig
@@ -126,7 +127,6 @@
         slot="details"
         key="actionLib"
         title="Action Library"
-        logo="adapters/axonius"
       >
         <XActionLibrary
           :categories="actionCategories"
@@ -288,7 +288,7 @@ export default {
     },
     actionConfTitle() {
       if (!this.currentActionName) return '';
-      return `Action Library / ${actionsMeta[this.currentActionName].title}`;
+      return actionsMeta[this.currentActionName].title;
     },
     actionConfLogo() {
       if (!this.currentActionName) return '';

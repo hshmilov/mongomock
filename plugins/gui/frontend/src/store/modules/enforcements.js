@@ -166,8 +166,8 @@ export const enforcements = {
        */
       const handleSuccess = (id) => {
         dispatch(FETCH_DATA_CONTENT, { module: 'enforcements', skip: 0 });
-        dispatch(FETCH_DATA_CONTENT, { module: 'tasks', endpoint: 'enforcements/tasks', skip: 0 });
         dispatch(FETCH_ENFORCEMENT, id);
+        dispatch(FETCH_SAVED_ENFORCEMENTS);
       };
 
       if (enforcement.uuid) {

@@ -123,6 +123,7 @@ class DevicesPage(EntitiesPage):
     def open_enforce_dialog(self):
         self.open_actions_menu()
         self.click_actions_enforce_button()
+        time.sleep(0.5)
 
     def enforce_action_on_query(self, query, action, filter_column_data: dict = None,
                                 add_col_names: list = None, remove_col_names: list = None):
@@ -139,8 +140,8 @@ class DevicesPage(EntitiesPage):
             self.DROPDOWN_SELECTED_OPTION_CSS, action
         )
         self.click_button('Run')
+        self.click_button('Close')
         self.wait_for_modal_close()
-        time.sleep(1.5)  # wait for run to fade away
         return selected_count
 
     def query_hostname_contains(self, string):
@@ -210,7 +211,8 @@ class DevicesPage(EntitiesPage):
                                           selected_options_css_selector=self.DROPDOWN_SELECTED_OPTION_CSS,
                                           text=enforcement_name)
         self.click_button('Run')
-        time.sleep(1.5)  # wait for run to fade away
+        self.click_button('Close')
+        self.wait_for_modal_close()
 
     def find_general_data_table_link(self, table_title):
         self.click_row()

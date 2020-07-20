@@ -1,111 +1,190 @@
 <template>
-  <XActionMenu
-    :module="module"
-    :entities="entities"
-    :entities-meta="entitiesMeta"
-    :disabled="disabled"
-    @done="onDone"
-  >
-    <XActionMenuItem
-      :title="`Link ${module}`"
-      :handle-save="linkEntities"
-      :message="`${module} were linked`"
-      action-text="Save"
-      :disabled="selectionCount > 10"
+  <div>
+    <ADropdown
+      :trigger="disabled?['']:['click']"
+      placement="bottomRight"
+      @visibleChange="openCloseMenu"
     >
-      <div
-        v-if="selectionCount > 10"
-        class="table-error"
-      >Maximal amount of {{ module }} to link is 10</div>
-      <div
-        v-else
-        class="warn-delete"
-      >You are about to link {{ selectionCount }} {{ module }}.</div>
-    </XActionMenuItem>
-    <XActionMenuItem
-      :title="`Unlink ${module}`"
-      :handle-save="unlinkEntities"
-      :message="`${module} were unlinked`"
-      action-text="Save"
-    >
-      <div class="warn-delete">
-        You are about to unlink {{ selectionCount }} {{ module }}.
-        This means that each of the adapter {{ module }}
-        inside will become a standalone axonius entity.
-      </div>
-    </XActionMenuItem>
-    <XActionMenuItem
-      title="Enforce"
-      :disabled="enforcementRestricted"
-      :disable-link="enforcementRestricted"
-      :handle-save="enforceEntities"
-      :message="`Enforcement is running. View in Enforcements -> Tasks`"
-      action-text="Run"
-      disabled-description="You don't have permission to run enforcements"
-      :itemActiveHandler="enforceHandler"
-    >
-      <div class="mb-8">
-        There are {{ selectionCount }} {{ module }} selected. Select the Enforcement Set:
-      </div>
-      <XSelect
-        v-model="selectedEnforcement"
-        :options="enforcementOptions"
-      />
-    </XActionMenuItem>
-    <XActionMenuItem
-      title="Filter out from query results"
-      :handle-save="filterSelectedEntitiesOutOfQueryResult"
-      :message="`${module} were filtered out`"
-      :disable-link="isAllSelected"
-      :disabled="totalSelectedCharactersForFilterOut >= 10000"
-      disabled-description="Select all is not applicable
-      . Please use the query wizard to filter the query"
-      action-text="Yes"
-    >
-      <div
-        v-if="totalSelectedCharactersForFilterOut >= 10000"
-        class="table-error"
-      >Maximum filtered out assets has been reached.
-        Please use the query wizard to filter the query</div>
-      <div
-        v-else
+      <XButton
+        class="action"
+        :class="actionButtonClass"
+        type="link"
       >
-        <h5>Do you wish to continue?</h5>
-        <div>The {{ selectionCount }} selected assets will be filtered from this query</div>
-      </div>
-    </XActionMenuItem>
+        <XIcon
+          type="thunderbolt"
+        />Actions</XButton>
+      <AMenu
+        v-if="selectionCount"
+        slot="overlay"
+      >
+        <AMenuItem
+          id="tag"
+          key="tag_entities"
+          @click="handleModalClick(MODAL_ACTIONS.tag)"
+        >
+          Tag
+        </AMenuItem>
+        <AMenuItem
+          id="delete"
+          key="delete_entities"
+          @click="handleModalClick(MODAL_ACTIONS.delete)"
+        >
+          Delete
+        </AMenuItem>
+        <AMenuItem
+          id="link"
+          key="link_entities"
+          @click="handleModalClick(MODAL_ACTIONS.link)"
+        >
+          Link {{ module }}
+        </AMenuItem>
+        <AMenuItem
+          id="unlink"
+          key="unlink_entities"
+          @click="handleModalClick(MODAL_ACTIONS.unlink)"
+        >
+          Unlink {{ module }}
+        </AMenuItem>
+        <ASubMenu
+          id="enforce_options"
+          title="Enforce"
+        >
+          <AMenuItem
+            id="create_enforce"
+            key="create_enforce_entities"
+            :disabled="createNewEnforcementRestricted"
+            @click="openEnforcementPanel"
+          >
+            Create New Enforcement
+            <ATooltip
+              v-if="createNewEnforcementRestricted"
+              title="You don't have permission to create enforcements"
+              placement="bottom"
+            >
+              <AIcon
+                type="info-circle"
+                theme="twoTone"
+              />
+            </ATooltip>
+          </AMenuItem>
+          <AMenuItem
+            id="run_enforce"
+            key="run_enforce_entities"
+            :disabled="runExistingEnforcementRestricted"
+            @click="handleModalClick(MODAL_ACTIONS.enforce)"
+          >
+            Use Existing Enforcement
+            <ATooltip
+              v-if="runExistingEnforcementRestricted"
+              title="You don't have permission to run enforcements"
+              placement="bottom"
+            >
+              <AIcon
+                type="info-circle"
+                theme="twoTone"
+              />
+            </ATooltip>
+          </AMenuItem>
+        </ASubMenu>
+        <AMenuItem
+          id="filter_out"
+          key="filter_out_from_query_results"
+          :disabled="isAllSelected"
+          @click="handleModalClick(MODAL_ACTIONS.filter_out_from_query_result)"
+        >
+          Filter out from query results
+          <ATooltip
+            v-if="isAllSelected"
+            title="Select all is not applicable. Please use the query wizard to filter the query"
+            placement="bottom"
+          >
+            <AIcon
+              type="info-circle"
+              theme="twoTone"
+            />
+          </ATooltip>
+        </AMenuItem>
+        <AMenuItem
+          id="add_custom_data"
+          key="add_custom_data"
+          @click="handleModalClick(MODAL_ACTIONS.add_custom_data)"
+        >
+          Add custom data
+        </AMenuItem>
+      </AMenu>
+      <AMenu
+        v-else
+        slot="overlay"
+      >
+        <AMenuItem
+          class="disabled-menu-item"
+          disabled
+        >
+          {{ disabledMenuItemDescription }}
+        </AMenuItem>
+      </AMenu>
+    </ADropdown>
+    <Component
+      :is="actionModalComponent"
+      ref="modalComponent"
+      v-bind="actionModalProps"
+      @done="onDone"
+    />
+    <XEnforcementPanel
+      v-if="!createNewEnforcementRestricted"
+      :visible="isEnforcementPanelOpen"
+      :entities="entities"
+      :module="module"
+      :selection-count="selectionCount"
+      @close="closeEnforcementPanel"
+      @done="onDone"
+    />
     <XEnforcementsFeatureLockTip
       :enabled="showEnforcementsLockTip"
-      @close-lock-tip="closeEnforceLockTip"
+      @close-lock-tip="closeEnforcementsLockTip"
     />
-  </XActionMenu>
+  </div>
 </template>
 
 <script>
-import {
-  mapState, mapActions, mapGetters, mapMutations,
-} from 'vuex';
+import { mapState } from 'vuex';
 import _get from 'lodash/get';
-import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
-import XActionMenu from '../../neurons/data/ActionMenu.vue';
-import XActionMenuItem from '../../neurons/data/ActionMenuItem.vue';
-import XSelect from '../../axons/inputs/select/Select.vue';
-
 import {
-  ADD_DATA_LABELS, LINK_DATA, UNLINK_DATA, ENFORCE_DATA, FETCH_DATA_CONTENT,
-} from '../../../store/actions';
-
-import { filterOutExpression } from '../../../constants/filter';
-import { GET_MODULE_SCHEMA } from '../../../store/getters';
-
-import { UPDATE_DATA_VIEW, SHOW_TOASTER_MESSAGE } from '../../../store/mutations';
-import QueryBuilder from '../../../logic/query_builder';
-
+  Icon, Tooltip, Dropdown, Menu,
+} from 'ant-design-vue';
+import XIcon from '@axons/icons/Icon';
+import XEnforcementPanel from './panels/EnforcementPanel.vue';
+import XEnforcementsFeatureLockTip from '../enforcement/EnforcementsFeatureLockTip.vue';
+import XButton from '../../axons/inputs/Button.vue';
+import XLinkModal from '../../neurons/popover/LinkModal.vue';
+import XUnlinkModal from '../../neurons/popover/UnlinkModal.vue';
+import XEnforceModal from '../../neurons/popover/EnforceModal.vue';
+import XFilterOutModal from '../../neurons/popover/FilterOutModal.vue';
+import XTagModal from '../../neurons/popover/TagModal.vue';
+import XDeleteModal from '../../neurons/popover/DeleteModal.vue';
+import XAddCustomDataModal from '../../neurons/popover/AddCustomDataModal.vue';
+import { ModalActionsEnum, ActionModalComponentByNameEnum } from '../../../constants/entities';
 
 export default {
   name: 'XEntitiesActionMenu',
   components: {
-    XActionMenu, XActionMenuItem, XSelect, XEnforcementsFeatureLockTip,
+    XButton,
+    AIcon: Icon,
+    ATooltip: Tooltip,
+    ADropdown: Dropdown,
+    AMenu: Menu,
+    AMenuItem: Menu.Item,
+    ASubMenu: Menu.SubMenu,
+    XIcon,
+    XLinkModal,
+    XUnlinkModal,
+    XEnforceModal,
+    XFilterOutModal,
+    XTagModal,
+    XDeleteModal,
+    XAddCustomDataModal,
+    XEnforcementPanel,
+    XEnforcementsFeatureLockTip,
   },
   props: {
     module: {
@@ -127,8 +206,11 @@ export default {
   },
   data() {
     return {
-      selectedEnforcement: '',
+      isEnforcementPanelOpen: false,
       showEnforcementsLockTip: false,
+      dropDownOpened: false,
+      actionModalComponent: '',
+      actionModalProps: {},
     };
   },
   computed: {
@@ -136,27 +218,29 @@ export default {
       dataCount(state) {
         return state[this.module].count.data;
       },
-      enforcementOptions(state) {
-        return state.enforcements.content.data.map((enforcement) => ({
-          name: enforcement.name, title: enforcement.name,
-        }));
-      },
-      enforcementRestricted() {
+      runExistingEnforcementRestricted() {
         return this.$cannot(this.$permissionConsts.categories.Enforcements,
           this.$permissionConsts.actions.View)
-        || this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.Run);
+                || this.$cannot(this.$permissionConsts.categories.Enforcements,
+                  this.$permissionConsts.actions.Run);
       },
-      view(state) {
-        return state[this.module].view;
+      createNewEnforcementRestricted() {
+        return this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.Add)
+                || this.$cannot(this.$permissionConsts.categories.Enforcements,
+                  this.$permissionConsts.actions.Run);
       },
       enforcementsLocked(state) {
         return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
     }),
-    ...mapGetters({
-      getModuleSchema: GET_MODULE_SCHEMA,
-    }),
+    actionButtonClass() {
+      return {
+        entityMenuInactive: this.disabled,
+        entityMenu: !this.disabled,
+        menuOpened: this.dropDownOpened,
+      };
+    },
     isAllSelected() {
       return this.entities.include !== undefined && !this.entities.include;
     },
@@ -166,112 +250,52 @@ export default {
       }
       return this.dataCount - this.entities.ids.length;
     },
-    totalSelectedCharactersForFilterOut() {
-      return this.getFilterOutExpressionValue().length;
-    },
-    schema() {
-      return this.getModuleSchema(this.module);
+    disabledMenuItemDescription() {
+      return `Select ${this.module} to see more actions`;
     },
   },
-  mounted() {
-    if (!this.enforcementRestricted && !this.enforcementOptions.length && !this.enforcementsLocked) {
-      this.fetchContent({
-        module: 'enforcements',
-        getCount: false,
-      });
-    }
+  created() {
+    this.MODAL_ACTIONS = ModalActionsEnum;
   },
   methods: {
-    ...mapActions(
-      {
-        addLabels: ADD_DATA_LABELS,
-        linkData: LINK_DATA,
-        unlinkData: UNLINK_DATA,
-        enforceData: ENFORCE_DATA,
-        fetchContent: FETCH_DATA_CONTENT,
-      },
-    ),
-    ...mapMutations({
-      updateView: UPDATE_DATA_VIEW,
-      showToasterMessage: SHOW_TOASTER_MESSAGE,
-    }),
-    linkEntities() {
-      return this.linkData({
-        module: this.module, data: this.entities,
-      }).then(() => this.$emit('done'));
-    },
-    unlinkEntities() {
-      return this.unlinkData({
-        module: this.module, data: this.entities,
-      }).then(() => this.$emit('done'));
-    },
-    enforceEntities() {
-      const { fields, sort, colFilters } = this.view;
-      return this.enforceData({
-        module: this.module,
-        data: {
-          name: this.selectedEnforcement,
-          view: { fields, sort, colFilters },
-          selection: { ...this.entities },
-        },
-      });
+    openCloseMenu(visible) {
+      this.dropDownOpened = visible;
     },
     onDone(reset) {
       this.$emit('done', reset);
     },
-    getFilterOutExpressionValue() {
-      let entitiesIdsToExclude = this.entities.ids.join(',');
-      const prevFilterOutExpression = _get(this.view, 'query.meta.filterOutExpression');
-      if (prevFilterOutExpression && !prevFilterOutExpression.showIds) {
-        entitiesIdsToExclude = `${entitiesIdsToExclude},${prevFilterOutExpression.value}`;
+    handleModalClick(modalName) {
+      this.dropDownOpened = false;
+      if (modalName === ModalActionsEnum.enforce && this.enforcementsLocked) {
+        this.openEnforcementsLockTip();
+        return;
       }
-      return entitiesIdsToExclude;
-    },
-    getFilterOutExpression() {
-      return Object.assign(filterOutExpression, { value: this.getFilterOutExpressionValue() });
-    },
-    filterSelectedEntitiesOutOfQueryResult() {
-      return new Promise((resolve) => {
-        try {
-          const meta = {
-            ...this.view.query.meta,
-            filterOutExpression: this.getFilterOutExpression(),
-          };
-          const expressions = [...this.view.query.expressions];
-          const queryBuilder = QueryBuilder(this.schema,
-            expressions,
-            meta,
-            this.view.query.onlyExpressionsFilter);
-          const recompile = false;
-          const resultFilters = queryBuilder.compileQuery(recompile);
-          this.updateView({
-            module: this.module,
-            view: {
-              query: {
-                filter: resultFilters.resultFilter,
-                onlyExpressionsFilter: resultFilters.onlyExpressionsFilter,
-                expressions,
-                meta,
-              },
-              page: 0,
-            },
-          });
-          // When the view state is updated fetch the new date using 'done' event
-        } catch (error) {
-          this.showToasterMessage(error);
-        }
-        this.$emit('done');
-        resolve();
+      this.actionModalProps = {
+        entities: this.entities,
+        module: this.module,
+        selectionCount: this.selectionCount,
+        entitiesMeta: this.entitiesMeta,
+      };
+      this.actionModalComponent = ActionModalComponentByNameEnum[modalName];
+      this.$nextTick(() => {
+        this.$refs.modalComponent.activate();
       });
     },
-    enforceHandler() {
+    openEnforcementPanel() {
+      this.dropDownOpened = false;
       if (this.enforcementsLocked) {
-        this.showEnforcementsLockTip = true;
-        return false;
+        this.openEnforcementsLockTip();
+      } else {
+        this.isEnforcementPanelOpen = true;
       }
-      return true;
     },
-    closeEnforceLockTip() {
+    closeEnforcementPanel() {
+      this.isEnforcementPanelOpen = false;
+    },
+    openEnforcementsLockTip() {
+      this.showEnforcementsLockTip = true;
+    },
+    closeEnforcementsLockTip() {
       this.showEnforcementsLockTip = false;
     },
   },
@@ -284,6 +308,26 @@ export default {
 
     .object {
       width: 100%;
+    }
+  }
+  /* If the ant menu item is disabled,
+   We still want to make it appear in the same color as a regular ant menu item.
+   So basically we are overriding the "disabled" behavior with the normal menu item color.
+ */
+  $ant-menu-item-color: #000000a6;
+
+  .disabled-menu-item {
+    color: $ant-menu-item-color;
+  }
+  .disabled-menu-item:hover {
+    color: $ant-menu-item-color;
+  }
+  .ant-tooltip-inner {
+    font-weight: bolder;
+  }
+  .ant-dropdown-menu-item {
+    svg {
+      margin-left: 4px;
     }
   }
 </style>

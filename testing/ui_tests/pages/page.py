@@ -120,7 +120,8 @@ class Page:
     MODAL_OVERLAY_CSS = '.modal-overlay'
     ANTD_MODAL_OVERLAY_CSS = '.ant-drawer-mask'
     DIALOG_OVERLAY_CSS = '.v-dialog'
-    FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
+    FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\')' \
+                                   ' and .//text()[normalize-space()=\'{message}\']]'
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'

@@ -557,10 +557,6 @@ export const enforceData = ({ state, dispatch }, payload) => {
     rule: `${payload.module}/enforce`,
     method: 'POST',
     data: payload.data,
-  }).then(() => {
-    dispatch(FETCH_DATA_CONTENT, {
-      module: 'tasks', skip: 0,
-    });
   });
 };
 

@@ -25,7 +25,9 @@
             family="symbol"
             type="success"
           />
-          <div class="mt-12">{{ message }}</div>
+          <div class="mt-12">
+            {{ message }}
+          </div>
         </div>
       </template>
       <template v-else-if="status.error">
@@ -35,7 +37,9 @@
             family="symbol"
             type="error"
           />
-          <div class="mt-12">{{ status.error }}</div>
+          <div class="mt-12">
+            {{ status.error }}
+          </div>
         </div>
       </template>
       <template v-else>
@@ -80,7 +84,12 @@ import XModal from '../../axons/popover/Modal/index.vue';
 
 export default {
   name: 'XFeedbackModal',
-  components: { XButton, XModal, PulseLoader, XIcon },
+  components: {
+    XButton,
+    XModal,
+    PulseLoader,
+    XIcon,
+  },
   model: {
     prop: 'launch',
     event: 'change',
@@ -138,7 +147,9 @@ export default {
         &__success-icon, &__error-icon {
           font-size: 48px;
         }
-
+        .v-spinner {
+          position: static;
+        }
     }
     .modal-footer {
         .text {
