@@ -36,6 +36,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.check_correct_hostname_is_shown_in_table()
         self.check_change_node_name()
         self.update_hostname_form_gui_and_check_slave_node()
+        self.check_node_metrics(NEW_NODE_NAME)
         self.check_deactivate_node()
         self.check_ssh_tunnel()
         self.check_node_restart()
@@ -295,3 +296,19 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         assert self.instances_page.verify_footer_element_text(MASTER_NODE_NAME)
+
+    def check_node_metrics(self, node_name):
+        self.instances_page.switch_to_page()
+        self.instances_page.click_query_row_by_name(node_name)
+
+        assert self.instances_page.find_instance_name_textbox().is_enabled()
+        assert self.instances_page.find_instance_hostname_textbox().is_enabled()
+        assert self.instances_page.get_save_button().is_enabled()
+
+        items = self.instances_page.get_instance_metrics_items()
+        for [key, value] in items:
+            assert value and value != '0'
+            if 'Last Historical Snapshot' in key:
+                # before cycle, there should be no data at all.
+                raise AssertionError(f'Non master node should not have historical info.')
+        self.instances_page.close_instance_side_panel()

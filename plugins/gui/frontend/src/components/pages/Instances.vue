@@ -36,21 +36,16 @@
         :multiple-row-selection="canEditInstances"
       />
     </XTableWrapper>
-    <XModal
-      v-if="instanceDetails.nodeIds"
-      approve-text="Save"
+    <XInstanceSidePanel
+      v-if="isSidePanelVisible"
+      :instance.sync="sidePanelInstance"
+      :visible="isSidePanelVisible"
       :disabled="!canEditInstances"
-      @close="closeNameChange"
-      @confirm="instanceNameChange"
-    >
-      <div slot="body">
-        <XForm
-          v-model="instanceDetails"
-          :schema="instanceDetailsSchema"
-          :read-only="!canEditInstances"
-        />
-      </div>
-    </XModal>
+      @close="closeSidePanel"
+      @deactivate="deactivateServers"
+      @reactivate="reactivateServers"
+      @save="instanceNameChange"
+    />
     <XModal
       v-if="connecting && canEditInstances"
       @close="connecting= !connecting"
@@ -77,35 +72,32 @@
 
 <script>
 import { mapMutations, mapActions } from 'vuex';
+import XInstanceSidePanel from '@networks/instances/InstanceSidePanel.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTableWrapper from '../axons/tables/TableWrapper.vue';
 import XTable from '../axons/tables/Table.vue';
 import XButton from '../axons/inputs/Button.vue';
 import XModal from '../axons/popover/Modal/index.vue';
-import XForm from '../neurons/schema/Form.vue';
 
 import { REQUEST_API } from '../../store/actions';
 import { SHOW_TOASTER_MESSAGE, UPDATE_FOOTER_MESSAGE } from '../../store/mutations';
 
-const NODE_DETAILS_SCHEMA = [{
-  type: 'string',
-  name: 'node_name',
-  title: 'Instance name',
-}, {
-  type: 'string',
-  name: 'hostname',
-  title: 'Hostname',
-}];
-const MASTER_DETAILS_SCHEMA = [...NODE_DETAILS_SCHEMA, {
-  type: 'bool',
-  name: 'use_as_environment_name',
-  title: 'Instance indication',
-}];
-
 export default {
   name: 'XInstances',
   components: {
-    XPage, XTableWrapper, XTable, XButton, XModal, XForm,
+    XPage, XTableWrapper, XTable, XButton, XModal, XInstanceSidePanel,
+  },
+  data() {
+    return {
+      loading: true,
+      selectedInstance: [],
+      instances: null,
+      connecting: false,
+      machineIP: '',
+      connectionKey: '',
+      isSidePanelVisible: false,
+      sidePanelInstance: null,
+    };
   },
   computed: {
     canEditInstances() {
@@ -138,68 +130,43 @@ export default {
         .find((instance) => instance.node_id === this.selectedInstance[0]);
       return selectedInstance.status;
     },
-    instanceDetailsSchema() {
-      const items = this.instanceDetails.isMaster ? MASTER_DETAILS_SCHEMA : NODE_DETAILS_SCHEMA;
-      return {
-        type: 'array',
-        items,
-        required: items.map((item) => item.name),
-      };
-    },
-  },
-  data() {
-    return {
-      loading: true,
-      selectedInstance: [],
-      instances: null,
-      connecting: false,
-      instanceDetails: {
-        nodeIds: null,
-        node_name: '',
-        hostname: '',
-      },
-      machineIP: '',
-      connectionKey: '',
-    };
+
   },
   methods: {
     ...mapMutations({
       showToasterMessage: SHOW_TOASTER_MESSAGE,
       updateFooterMessage: UPDATE_FOOTER_MESSAGE,
     }),
-    ...mapActions({ fetchData: REQUEST_API }),
+    ...mapActions({
+      fetchData: REQUEST_API,
+    }),
     instanceNameChange() {
       this.fetchData({
         rule: 'instances',
         method: 'POST',
-        data: { ...this.instanceDetails },
+        data: {
+          nodeIds: this.sidePanelInstance.nodeIds,
+          node_name: this.sidePanelInstance.node_name,
+          hostname: this.sidePanelInstance.hostname,
+          use_as_environment_name: this.sidePanelInstance.use_as_environment_name,
+        },
       }).then(() => {
         this.loading = true;
         this.loadData();
-        this.updateFooterMessage(this.instanceDetails.use_as_environment_name
-          ? this.instanceDetails.node_name : '');
-        this.initInstanceDetails();
+        this.updateFooterMessage(this.sidePanelInstance.use_as_environment_name
+          ? this.sidePanelInstance.node_name : '');
+        this.closeSidePanel();
       }).catch((errorResponse) => {
         this.showToasterMessage({ message: errorResponse.response.data.message });
-        this.closeNameChange();
+        this.closeSidePanel();
       });
-    },
-    instanceHostNameValidity(valid) {
-      this.validHostName = valid;
-    },
-
-    initInstanceDetails() {
-      this.instanceDetails.nodeIds = null;
-      this.instanceDetails.node_name = '';
-      this.instanceDetails.hostname = '';
     },
     showNameChangeModal(instanceId) {
       const currentInstance = this.instances.find((instance) => instance.node_id === instanceId);
-      this.instanceDetails.nodeIds = instanceId;
-      this.instanceDetails.node_name = currentInstance.node_name;
-      this.instanceDetails.hostname = currentInstance.hostname;
-      this.instanceDetails.use_as_environment_name = currentInstance.use_as_environment_name;
-      this.instanceDetails.isMaster = currentInstance.is_master;
+      this.sidePanelInstance = { ...currentInstance };
+      this.sidePanelInstance.nodeIds = instanceId;
+      this.selectedInstance = [instanceId];
+      this.isSidePanelVisible = true;
     },
     deactivateServers() {
       if (!this.canEditInstances) return;
@@ -210,6 +177,7 @@ export default {
                   `,
         confirmText: 'Deactivate',
         onConfirm: () => {
+          this.closeSidePanel();
           this.doDeactivateServers();
         },
       });
@@ -222,6 +190,7 @@ export default {
                   `,
         confirmText: 'Reactivate',
         onConfirm: () => {
+          this.closeSidePanel();
           this.doReactivateServers();
         },
       });
@@ -244,9 +213,6 @@ export default {
         this.showToasterMessage({ message: errorResponse.response.data.message });
       });
     },
-    closeNameChange() {
-      this.initInstanceDetails();
-    },
     loadData() {
       this.fetchData({
         rule: 'instances',
@@ -260,18 +226,21 @@ export default {
         }
       });
     },
+    closeSidePanel() {
+      this.isSidePanelVisible = false;
+    },
   },
-  created() {
+  async created() {
     this.loadData();
   },
 };
 </script>
 
 <style lang="scss">
-    .x-instances {
-        .x-modal .modal-container {
-            position: relative;
-            width: auto;
-        }
+  .x-instances {
+    .x-modal .modal-container {
+      position: relative;
+      width: auto;
     }
+  }
 </style>

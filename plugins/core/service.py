@@ -55,7 +55,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           NODE_HOSTNAME,
                                           NODE_USE_AS_ENV_NAME,
                                           NODE_IP_LIST, AXONIUS_SETTINGS_DIR_NAME,
-                                          CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME)
+                                          CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME, NODE_METRICS)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error)
@@ -247,7 +247,8 @@ class CoreService(Triggerable, PluginBase, Configurable):
                 node.pop(NODE_USER_PASSWORD, None)
                 parse = parser()
                 last_seen_obj = parse.parse(node['last_seen'])
-                node_ip_list = ','.join(node.get(NODE_IP_LIST)) if node.get(NODE_IP_LIST) else ''
+                ip_list = node.get(NODE_METRICS, {}).get(NODE_IP_LIST)
+                node_ip_list = ','.join(ip_list) if ip_list else ''
                 diff = (now_obj - last_seen_obj).total_seconds()
 
                 if diff > BROKEN_NODES_DIFF_IN_SECONDS:
@@ -415,7 +416,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         data = self.get_request_data_as_object()
         if request.method == 'POST':
             key = data.get('key', NODE_NAME)
-            assert key in [NODE_HOSTNAME, NODE_STATUS, NODE_NAME, NODE_USE_AS_ENV_NAME, NODE_IP_LIST]
+            assert key in [NODE_HOSTNAME, NODE_STATUS, NODE_NAME, NODE_USE_AS_ENV_NAME, NODE_METRICS]
             self._set_node_metadata(node_id, key, data['value'])
             return ''
         else:

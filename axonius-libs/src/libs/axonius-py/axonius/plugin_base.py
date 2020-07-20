@@ -106,6 +106,7 @@ from axonius.consts.plugin_consts import (
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
+from axonius.consts.instance_control_consts import MetricsFields
 from axonius.db.db_client import get_db_client
 from axonius.db.files import DBFileHelper
 from axonius.devices import deep_merge_only_dict
@@ -2075,10 +2076,29 @@ class PluginBase(Configurable, Feature, ABC):
                 node['tags'] = node_metadata.get('tags', {})
                 node[NODE_USER_PASSWORD] = node_metadata.get(NODE_USER_PASSWORD, '')
                 node['hostname'] = node_metadata.get('hostname', '')
-                node['ips'] = node_metadata.get('ips', '')
                 node['status'] = node_metadata.get('status', ACTIVATED_NODE_STATUS)
                 node['is_master'] = is_master
                 node['use_as_environment_name'] = False
+
+                metrics = node_metadata.get('metrics', {})
+                node[MetricsFields.Ips] = metrics.get(MetricsFields.Ips, [])
+                node[MetricsFields.CpuUsage] = metrics.get(MetricsFields.CpuUsage)
+                node[MetricsFields.MemoryFreeSpace] = metrics.get(MetricsFields.MemoryFreeSpace)
+                node[MetricsFields.MemorySize] = metrics.get(MetricsFields.MemorySize)
+                node[MetricsFields.SwapSize] = metrics.get(MetricsFields.SwapSize)
+                node[MetricsFields.SwapFreeSpace] = metrics.get(MetricsFields.SwapFreeSpace)
+                node[MetricsFields.SwapCacheSize] = metrics.get(MetricsFields.SwapCacheSize)
+                node[MetricsFields.DataDiskFreeSpace] = metrics.get(MetricsFields.DataDiskFreeSpace)
+                node[MetricsFields.DataDiskSize] = metrics.get(MetricsFields.DataDiskSize)
+                node[MetricsFields.OsDiskFreeSpace] = metrics.get(MetricsFields.OsDiskFreeSpace)
+                node[MetricsFields.OsDiskSize] = metrics.get(MetricsFields.OsDiskSize)
+                node[MetricsFields.PhysicalCpu] = metrics.get(MetricsFields.PhysicalCpu)
+                node[MetricsFields.CpuCores] = metrics.get(MetricsFields.CpuCores)
+                node[MetricsFields.CpuCoreThreads] = metrics.get(MetricsFields.CpuCoreThreads)
+                node[MetricsFields.LastSnapshotSize] = metrics.get(MetricsFields.LastSnapshotSize)
+                node[MetricsFields.MaxSnapshots] = metrics.get(MetricsFields.MaxSnapshots)
+                node[MetricsFields.RemainingSnapshotDays] = metrics.get(MetricsFields.RemainingSnapshotDays)
+                node[MetricsFields.LastUpdated] = metrics.get(MetricsFields.LastUpdated)
 
                 if is_master:
                     node['use_as_environment_name'] = node_metadata.get('use_as_environment_name', False)

@@ -318,6 +318,8 @@ def is_valid_node_hostname(hostname):
     """
     verify hostname is a valid lnx hostname pattern .
     """
+    if not hostname:
+        return False
     if len(hostname) > 255:
         return False
     if hostname[-1] == '.':

@@ -19,7 +19,12 @@ class InstancesPage(EntitiesPage):
     BUTTON_LINK_CLASS = 'x-button link'
     TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION = 'Illegal hostname value entered'
     FOOTER_CONTENT_CSS = '.footer-content'
-    INSTANCE_INDICATION_CHECKBOX_CXX = '#use_as_environment_name .checkbox-container input'
+    INSTANCE_INDICATION_CHECKBOX_CSS = '#use_as_environment_name .checkbox-container input'
+    INSTANCE_METRICS_CSS = '.ant-drawer-body .ant-drawer-body__content .instance-metrics' \
+                           '.instance-metric-field .field-container'
+    INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS = '.ant-drawer-wrapper-body .ant-drawer-header .actions .action-close'
+    INSTANCE_METRIC_TITLE = 'label.field-title'
+    INSTANCE_METRIC_VALUE = 'p.field-value'
 
     INSTANCE_NAME_TEXTBOX_ID = 'node_name'
     INSTANCE_HOSTNAME_TEXTBOX_ID = 'hostname'
@@ -152,12 +157,24 @@ class InstancesPage(EntitiesPage):
         self.assert_element_absent_by_css_selector(self.FOOTER_CONTENT_CSS)
 
     def assert_instance_indication_element_absent(self):
-        self.assert_element_absent_by_css_selector(self.INSTANCE_INDICATION_CHECKBOX_CXX)
+        self.assert_element_absent_by_css_selector(self.INSTANCE_INDICATION_CHECKBOX_CSS)
 
     def find_instance_name_textbox(self):
-        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_present_by_css(self.ANTD_MODAL_OVERLAY_CSS)
         return self.driver.find_element_by_id(self.INSTANCE_NAME_TEXTBOX_ID)
 
     def find_instance_hostname_textbox(self):
-        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_present_by_css(self.ANTD_MODAL_OVERLAY_CSS)
         return self.driver.find_element_by_id(self.INSTANCE_HOSTNAME_TEXTBOX_ID)
+
+    def get_instance_metrics_items(self):
+        metrics_fields = self.driver.find_elements_by_css_selector(self.INSTANCE_METRICS_CSS)
+        items = []
+        for field in metrics_fields:
+            title = field.find_element_by_css_selector(self.INSTANCE_METRIC_TITLE).text
+            value = field.find_element_by_css_selector(self.INSTANCE_METRIC_VALUE).text
+            items.append([title, value])
+        return items
+
+    def close_instance_side_panel(self):
+        self.driver.find_element_by_css_selector(self.INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS).click()

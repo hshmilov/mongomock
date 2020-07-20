@@ -29,7 +29,7 @@ class TestInstancesPermissions(PermissionsTestBase):
         assert not self.instances_page.find_instance_name_textbox().is_enabled()
         assert not self.instances_page.find_instance_hostname_textbox().is_enabled()
         assert not self.instances_page.get_save_button().is_enabled()
-        self.instances_page.get_cancel_button().click()
+        self.instances_page.close_instance_side_panel()
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'instances',
                                                      'Edit instance',

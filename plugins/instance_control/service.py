@@ -6,6 +6,7 @@ import struct
 import time
 from pathlib import Path
 from typing import Dict, Iterable
+import json
 
 import requests
 import paramiko
@@ -18,15 +19,19 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import instance_control_consts
 from axonius.consts.gui_consts import Signup
 from axonius.consts.instance_control_consts import (InstanceControlConsts,
-                                                    UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
+                                                    UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
+                                                    METRICS_INTERVAL_MINUTES, METRICS_SCRIPT_PATH,
+                                                    METRICS_ENV_FILE_PATH, MetricsFields)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
-                                          NODE_ID, GUI_PLUGIN_NAME)
+                                          NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import LazyMultiLocker
+from instance_control.snapshots_stats import calculate_snapshot
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -123,8 +128,8 @@ class InstanceControlService(Triggerable, PluginBase):
         # Create plugin cleaner thread
         executors = {'default': ThreadPoolExecutor(1)}
         self.send_instance_data_thread = LoggedBackgroundScheduler(executors=executors)
-        self.send_instance_data_thread.add_job(func=self.__get_hostname_and_ips,
-                                               trigger=IntervalTrigger(hours=1),
+        self.send_instance_data_thread.add_job(func=self.__get_node_metadata,
+                                               trigger=IntervalTrigger(minutes=METRICS_INTERVAL_MINUTES),
                                                next_run_time=datetime.datetime.now(),
                                                name='send_instance_data',
                                                id='send_instance_data',
@@ -297,12 +302,11 @@ class InstanceControlService(Triggerable, PluginBase):
         self.__exec_command_verbose(cmd)
         return f'file executed successfully'
 
-    def __get_hostname_and_ips(self):
+    def __get_node_metadata(self):
         logger.info('Starting Thread: Sending instance data to core.')
         return_val = 'Success'
 
         hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
-        ips = []
 
         result = self.request_remote_plugin(f'node/{self.node_id}', method='post', json={'key': 'hostname',
                                                                                          'value': hostname})
@@ -311,22 +315,56 @@ class InstanceControlService(Triggerable, PluginBase):
             logger.error(
                 f'Something went wrong while updating the node\'s hostname: {result.status_code}, {result.content}')
 
-        ip_lines = self.__exec_command('ip a | grep -w "inet"').read().decode('utf-8').strip()
-        # parsing the private ips.
-        for ip_line in ip_lines.splitlines():
-            specific_ip = ip_line.split()[1].split('/')[0]
-            if specific_ip.startswith('127.0') or 'docker' in ip_line or 'vpnnet' in ip_line:
-                continue
+        node_metrics = self._get_node_metrics()
 
-            ips.append(specific_ip)
-
-        result = self.request_remote_plugin(f'node/{self.node_id}', method='post', json={'key': 'ips',
-                                                                                         'value': ips})
+        result = self.request_remote_plugin(f'node/{self.node_id}', method='post', json={'key': 'metrics',
+                                                                                         'value': node_metrics})
         if result.status_code != 200:
             logger.error(
-                f'Something went wrong while updating the node\'s ips: {result.status_code}, {result.content}')
+                f'Something went wrong while updating the node\'s metrics: {result.status_code}, {result.content}')
             return_val = 'Failure'
         return return_val
+
+    def _get_node_metrics(self):
+        try:
+            logger.info('Getting node metrics')
+
+            res = self.__exec_command(f'source {METRICS_ENV_FILE_PATH} && python3 {METRICS_SCRIPT_PATH}')\
+                .read().decode('utf-8').strip()
+
+            if res:
+                metrics_result = json.loads(res)
+            else:
+                logger.error('Unable to get node metrics data')
+                return {}
+
+            if self._is_running_on_master():
+                logger.info('Getting master snapshots stats')
+                retention_days = None
+                config = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
+                history_settings = config['discovery_settings']['history_settings']
+                if history_settings.get('enabled') and history_settings.get('max_days_to_save') > 0:
+                    retention_days = history_settings.get('max_days_to_save')
+
+                max_snapshot_days, snapshot_days_left, last_snapshot_size = \
+                    calculate_snapshot(metrics_result['metrics'].get(MetricsFields.DataDiskSize, 0),
+                                       metrics_result['metrics'].get(MetricsFields.DataDiskFreeSpace, 0),
+                                       retention_days)
+                metrics_result['metrics'][MetricsFields.LastSnapshotSize] = last_snapshot_size
+                metrics_result['metrics'][MetricsFields.RemainingSnapshotDays] = snapshot_days_left
+                metrics_result['metrics'][MetricsFields.MaxSnapshots] = max_snapshot_days
+
+            logger.debug(f'metrics result: {metrics_result}')
+
+            errors = metrics_result.get('errors')
+            if errors and len(errors) > 0:
+                logger.error(f'Metrics errors: {errors}')
+
+            metrics_result['metrics']['last_updated'] = datetime.datetime.now()
+            return metrics_result['metrics']
+        except Exception:
+            logger.exception('fatal error during node metrics calculation')
+            return {'last_updated': datetime.datetime.now()}
 
     def __exec_system_command(self, cmd: str) -> paramiko.ChannelFile:
         """
@@ -400,3 +438,6 @@ class InstanceControlService(Triggerable, PluginBase):
     @property
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.NotRunning
+
+    def _is_running_on_master(self) -> bool:
+        return self.node_id == self.core_configs_collection.find_one({'plugin_name': CORE_UNIQUE_NAME})['node_id']

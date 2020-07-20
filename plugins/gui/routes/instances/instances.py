@@ -1,9 +1,12 @@
 import logging
 
+from typing import List, Dict
 from flask import (jsonify)
 
 from axonius.consts import adapter_consts
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
+from axonius.consts.instance_control_consts import MetricsFields
 from axonius.consts.plugin_consts import (NODE_ID, NODE_NAME, NODE_HOSTNAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_DATA_INSTANCE_ID, NODE_STATUS,
                                           NODE_USE_AS_ENV_NAME)
@@ -23,7 +26,7 @@ class Instances:
     @gui_route_logged_in(methods=['GET'])
     def get_instances(self):
         db_connection = self._get_db_connection()
-        nodes = self._get_nodes_table()
+        nodes = self._filter_nodes_retention_data(self._get_nodes_table())
         system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
         connection_key = None
         user_instances_permission = self.get_user_permissions().get(PermissionCategory.Instances)
@@ -206,3 +209,19 @@ class Instances:
 
         except Exception:
             logger.exception(f'error during instances auditing')
+
+    def _filter_nodes_retention_data(self, nodes) -> List[Dict]:
+        """
+        Filtering our remaining_snapshot_days if doesn't need to be shown in the UI.
+        :param nodes: list of nodes metadata.
+        :return: list of nodes, with or without remaining_snapshot_days field.
+        """
+        config = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
+        history_settings = config['discovery_settings']['history_settings']
+        max_days_configured = history_settings.get('max_days_to_save')
+        if history_settings.get('enabled') and max_days_configured >= 0:
+            for node in nodes:
+                remaining_snapshots = node[MetricsFields.RemainingSnapshotDays]
+                if remaining_snapshots and max_days_configured <= remaining_snapshots:
+                    del node[MetricsFields.RemainingSnapshotDays]
+        return nodes

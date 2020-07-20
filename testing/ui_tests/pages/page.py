@@ -118,7 +118,7 @@ class Page:
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
-    ANTD_MODAL_OVERLAY_CSS = '.ant-modal-mask'
+    ANTD_MODAL_OVERLAY_CSS = '.ant-drawer-mask'
     DIALOG_OVERLAY_CSS = '.v-dialog'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\') and .//text()=\'{message}\']'
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
