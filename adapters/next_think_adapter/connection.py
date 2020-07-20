@@ -30,8 +30,7 @@ class NextThinkConnection(RESTConnection):
         try:
             url_params = {
                 'query': f'(select (name) (from {DEVICE_TABLE}) (limit 1))',
-                'format': 'json',
-                'hr': False
+                'format': 'json'
             }
             self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
         except Exception as e:
@@ -49,8 +48,7 @@ class NextThinkConnection(RESTConnection):
                     f'(from ({DEVICE_TABLE} {object_name}) (between midnight-1d now)))'
             url_params = {
                 'query': query,
-                'format': 'json',
-                'hr': False
+                'format': 'json'
             }
             response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
             if not isinstance(response, list):
@@ -71,8 +69,7 @@ class NextThinkConnection(RESTConnection):
                         f'(between midnight-{day_number + 1}d midnight-{day_number}d)))'
                 url_params = {
                     'query': query,
-                    'format': 'json',
-                    'hr': False
+                    'format': 'json'
                 }
                 response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
                 if not isinstance(response, list):
@@ -99,8 +96,7 @@ class NextThinkConnection(RESTConnection):
 
             url_params = {
                 'query': f'(select (*) (from {object_name} (between midnight-1d now)))',
-                'format': 'json',
-                'hr': False
+                'format': 'json'
             }
             response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
             if not isinstance(response, list):
@@ -119,8 +115,7 @@ class NextThinkConnection(RESTConnection):
                 query = f'(select (*) (from {object_name} (between midnight-{day_number + 1}d midnight-{day_number}d)))'
                 url_params = {
                     'query': query,
-                    'format': 'json',
-                    'hr': False
+                    'format': 'json'
                 }
                 response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
                 if not isinstance(response, list):
@@ -148,8 +143,7 @@ class NextThinkConnection(RESTConnection):
             total_fetched_devices = 0
             url_params = {
                 'query': f'(select (*) (from {DEVICE_TABLE} (between midnight-1d now)))',
-                'format': 'json',
-                'hr': False
+                'format': 'json'
             }
             response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
             if not isinstance(response, list):
@@ -170,8 +164,7 @@ class NextThinkConnection(RESTConnection):
                 url_params = {
                     'query': f'(select (*) (from {DEVICE_TABLE} '
                              f'(between midnight-{day_number + 1}d midnight-{day_number}d)))',
-                    'format': 'json',
-                    'hr': False
+                    'format': 'json'
                 }
                 response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
                 if not isinstance(response, list):
@@ -205,8 +198,7 @@ class NextThinkConnection(RESTConnection):
 
             url_params = {
                 'query': f'(select (*) (from {USER_TABLE} (between midnight-1d now)))',
-                'format': 'json',
-                'hr': False
+                'format': 'json'
             }
             response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
             if not isinstance(response, list):
@@ -224,8 +216,7 @@ class NextThinkConnection(RESTConnection):
                 url_params = {
                     'query': f'(select (*) (from {USER_TABLE} '
                              f'(between midnight-{day_number + 1}d midnight-{day_number}d)))',
-                    'format': 'json',
-                    'hr': False
+                    'format': 'json'
                 }
                 response = self._get(QUERY_API_PREFIX, url_params=url_params, do_basic_auth=True)
                 if not isinstance(response, list):
