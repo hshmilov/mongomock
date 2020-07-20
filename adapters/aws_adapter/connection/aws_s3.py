@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Optional
 
+from botocore.exceptions import ClientError
+
 from aws_adapter.connection.aws_cloudfront import fetch_cloudfront
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWSS3BucketACL, AWSS3BucketPolicy, \
     AWSS3PublicAccessBlockConfiguration
@@ -80,6 +82,31 @@ def query_devices_by_client_by_source_s3(client_data: dict, cloudfront_data: dic
                 except Exception:
                     pass
 
+                # s3 tag query
+                try:
+                    s3_tag_response = s3_client.get_bucket_tagging(
+                        Bucket=bucket_name)
+                    if isinstance(s3_tag_response, dict):
+                        s3_tags = s3_tag_response.get('TagSet')
+                        if isinstance(s3_tags, list):
+                            bucket_raw['tags'] = s3_tags
+                        else:
+                            logger.warning(
+                                f'Malformed s3 tags. Expected a list, got '
+                                f'{type(s3_tags)}: {str(s3_tags)}')
+                    else:
+                        logger.warning(
+                            f'Malformed S3 bucket tag response. Expected a '
+                            f'dict, got {type(s3_tag_response)}: '
+                            f'{str(s3_tag_response)}')
+                except ClientError:
+                    # a ClientError.NoSuchTagSet error is thrown if none found
+                    # no need to handle it, just move along
+                    pass
+                except Exception as err:
+                    logger.warning(f'Unable to fetch s3 bucket tags for '
+                                   f'{bucket_name}: {err}')
+
                 try:
                     if cloudfront_data:
                         bucket_raw['cloudfront'] = cloudfront_data
@@ -87,6 +114,7 @@ def query_devices_by_client_by_source_s3(client_data: dict, cloudfront_data: dic
                     pass
 
                 yield bucket_raw
+
         except Exception:
             logger.exception(f'Problem fetching information about S3')
 
@@ -178,6 +206,25 @@ def parse_raw_data_inner_s3(
                 device.s3_bucket_used_for_cloudtrail = s3_bucket_raw.get('s3_bucket_used_for_cloudtrail')
         except Exception:
             logger.exception(f'Problem setting s3 cloudtrail status')
+
+        try:
+            tags = s3_bucket_raw.get('tags')
+            if tags and isinstance(tags, list):
+                for tag in tags:
+                    if isinstance(tag, dict):
+                        device.add_aws_s3_tag(key=tag.get('Key'),
+                                              value=tag.get('Value')
+                                              )
+                    else:
+                        logger.warning(f'Malformed s3 tag. Expected a dict, '
+                                       f'got {type(tag)}: {str(tag)}')
+            else:
+                if tags is not None:
+                    logger.warning(f'Malformed s3 tags. Expected a list, got '
+                                   f'{type(tags)}: {str(tags)}')
+        except Exception:
+            logger.exception(f'Unable to parse s3 tags: '
+                             f'{str(s3_bucket_raw.get("tags"))}')
 
         # cloudfront
         try:

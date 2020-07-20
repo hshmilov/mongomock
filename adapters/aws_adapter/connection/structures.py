@@ -55,6 +55,27 @@ AWS_POWER_STATE_MAP = {
 }
 
 
+class AWSCipher(SmartJsonClass):
+    """
+    This class is used by ELBs, ALBs and NLBs, but only ALBs and NLBs will use
+    priority (priority is not discoverable for ELBs).
+    """
+    cipher = Field(str, 'Cipher')
+    active = Field(bool, 'Active')
+    priority = Field(int, 'Priority')
+
+
+class AWSCipherSupport(SmartJsonClass):
+    security_policy_name = Field(str, 'Policy Name')
+    ciphers = ListField(AWSCipher, 'Cipher Suites')
+    supports_sslv3 = Field(bool, 'Supports SSLv3')
+    supports_tlsv1 = Field(bool, 'Supports TLSv1.0')
+    supports_tlsv11 = Field(bool, 'Supports TLSv1.1')
+    supports_tlsv12 = Field(bool, 'Supports TLSv1.2')
+    supports_tlsv13 = Field(bool, 'Supports TLSv1.3')
+    server_defined_order = Field(bool, 'Server-Defined Order')
+
+
 class AWSCloudfrontCookie(SmartJsonClass):
     forward = Field(str, 'Forwarded Cookies', enum=FORWARDED_COOKIES)
     allowed_names = ListField(str, 'Allowed Names')
@@ -799,6 +820,7 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     s3_public_access_block_policy = Field(AWSS3PublicAccessBlockConfiguration, 'S3 Public Access Block Configuration')
     s3_bucket_logging_target = Field(str, 'S3 Bucket Logging Target')
     s3_bucket_used_for_cloudtrail = Field(bool, 'S3 Bucket Used for CloudTrail')
+    s3_tags = ListField(AWSTagKeyValue, 'S3 Tags')
 
     # internet gateway fields
     igw_id = Field(str, 'Internet Gateway ID')
@@ -844,6 +866,9 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
                                          'Domain Advanced Security Options')
     es_configured_as_public = Field(bool, 'Configured as Public')
 
+    # load balancer fields
+    cipher_support = ListField(AWSCipherSupport, 'Cipher Support')
+
     # cloudfront (ELB / S3)
     cloudfront_distribution = ListField(AWSCloudfrontDistribution, 'Cloudfront Distribution')
 
@@ -852,6 +877,9 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
 
     def add_aws_vpc_tag(self, **kwargs):
         self.vpc_tags.append(AWSTagKeyValue(**kwargs))
+
+    def add_aws_s3_tag(self, **kwargs):
+        self.s3_tags.append(AWSTagKeyValue(**kwargs))
 
     def add_aws_security_group(self, **kwargs):
         self.security_groups.append(AWSSecurityGroup(**kwargs))

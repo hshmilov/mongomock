@@ -14,7 +14,7 @@ import kubernetes
 from aws_adapter.connection.aws_cloudfront import fetch_cloudfront
 from aws_adapter.connection.aws_route_table import populate_route_tables
 from aws_adapter.connection.structures import AWSDeviceAdapter, AWS_POWER_STATE_MAP, AWSRole, AWSEBSVolumeAttachment, \
-    AWSTagKeyValue, AWSEBSVolume
+    AWSTagKeyValue, AWSEBSVolume, AWSCipher, AWSCipherSupport
 from aws_adapter.connection.utils import make_ip_rules_list, add_generic_firewall_rules, \
     describe_images_from_client_by_id, get_paginated_next_token_api, get_paginated_marker_api
 from axonius.clients.shodan.connection import ShodanConnection
@@ -368,6 +368,8 @@ def query_devices_by_client_by_source(
     raw_data['elb_by_iid'] = {}
     raw_data['elb_by_ip'] = {}
     raw_data['all_elbs'] = []
+    raw_data['security_policies'] = dict()
+
     if client_data.get('elbv1') is not None and options.get('fetch_load_balancers') is True:
         try:
             elbv1_client_data = client_data.get('elbv1')
@@ -433,6 +435,37 @@ def query_devices_by_client_by_source(
                             elb_final_dict = elb_dict.copy()
                             elb_final_dict.update(lr_data)
                             raw_data['elb_by_iid'][iid].append(elb_final_dict)
+
+                    logger.debug(f'Started fetching load balancer (v1) policies')
+                    if isinstance(elb_raw, dict):
+                        elb_name = elb_raw.get('LoadBalancerName')
+                        if isinstance(elb_name, str):
+                            raw_data['security_policies']['classic'] = list()
+                            for elb_policies in get_paginated_marker_api(
+                                    functools.partial(
+                                        elbv1_client_data.describe_load_balancer_policies,
+                                        LoadBalancerName=elb_name)):
+
+                                if isinstance(elb_policies, dict):
+                                    raw_data['security_policies']['classic'].extend(
+                                        query_elb_tls_policies(elb_policies))
+                                else:
+                                    logger.warning(
+                                        f'Malformed load balancer policies. '
+                                        f'Expected a dict, got '
+                                        f'{type(elb_policies)}: '
+                                        f'{str(elb_policies)}')
+                                    continue
+                        else:
+                            logger.warning(
+                                f'Malformed load balancer name. Expected '
+                                f'a str, got {type(elb_name)}: '
+                                f'{str(elb_name)}')
+                    else:
+                        logger.warning(f'Malformed raw ELB data. Expected a dict'
+                                       f' got {type(elb_raw)}: '
+                                       f'{str(elb_raw)}')
+                    logger.debug(f'Finished fetching load balancer (v1) policies')
             logger.debug(f'ELBV1: Parsed {elb_num} elbs.')
         except Exception:
             # We do not raise an exception here since this could be a networking exception or a programming
@@ -485,7 +518,77 @@ def query_devices_by_client_by_source(
                     all_elbv2_lbs_by_arn[elbv2_arn] = elbv2_data
                     raw_data['all_elbs'].append(elbv2_data)
 
+                    logger.debug(f'Started fetching load balancer (v2) policies')
+                    if elbv2_raw_data and isinstance(elbv2_raw_data, dict):
+                        elb_arn = elbv2_raw_data.get('LoadBalancerArn')
+                        if isinstance(elb_arn, str):
+                            for listener_response in get_paginated_marker_api(
+                                    functools.partial(
+                                        elbv2_client_data.describe_listeners,
+                                        LoadBalancerArn=elb_arn)):
+
+                                if isinstance(listener_response, dict):
+                                    listeners = listener_response.get('Listeners')
+                                    if isinstance(listeners, list):
+                                        tls_policies = list()
+                                        for listener in listeners:
+                                            if isinstance(listener, dict):
+                                                tls_policies.append(listener.get('SslPolicy'))
+                                            else:
+                                                logger.warning(
+                                                    f'Malformed listener. Expected a dict, '
+                                                    f'got {type(listener)}: {str(listener)}')
+                                        if isinstance(tls_policies, list):
+                                            raw_data['security_policies']['application'] = list()
+                                            for policies in get_paginated_marker_api(
+                                                    functools.partial(
+                                                        elbv2_client_data.describe_ssl_policies,
+                                                        Names=tls_policies)):
+
+                                                if isinstance(policies, dict):
+                                                    discovered_policies = policies.get('SslPolicies')
+                                                    if isinstance(discovered_policies, list):
+                                                        raw_data['security_policies']['application'].extend(
+                                                            query_elbv2_tls_policies(discovered_policies))
+                                                    else:
+                                                        logger.warning(
+                                                            f'Malformed discovered policies. '
+                                                            f'Expected a list, got '
+                                                            f'{type(discovered_policies)}: '
+                                                            f'{str(discovered_policies)}')
+                                                else:
+                                                    logger.warning(
+                                                        f'Malformed policies. Expected a '
+                                                        f'dict, got {type(policies)}: '
+                                                        f'{str(policies)}')
+                                        else:
+                                            logger.warning(
+                                                f'Malformed TLS policies. Expected '
+                                                f'a list, got {type(tls_policies)}: '
+                                                f'{str(tls_policies)}')
+                                    else:
+                                        logger.warning(
+                                            f'Malformed listeners. Expected a '
+                                            f'list, got {type(listeners)}: '
+                                            f'{str(listeners)}')
+                                else:
+                                    logger.warning(
+                                        f'Malformed listener response. Expected '
+                                        f'a dict, got {type(listener_response)}: '
+                                        f'{str(listener_response)}')
+                        else:
+                            logger.warning(
+                                f'Malformed ELBv2 ARN. Expected a str, '
+                                f'got {type(elb_arn)}: {str(elb_arn)}')
+                    else:
+                        logger.warning(
+                            f'Malformed ELBv2 data. Expected a dict, got '
+                            f'{type(elbv2_raw_data)}: '
+                            f'{str(elbv2_raw_data)}')
+                    logger.debug(f'Finished fetching load balancer (v2) policies')
+
             logger.debug(f'ELBV2: Found {len(all_elbv2_lbs_by_arn)} elbs. Moving to target groups')
+
             tg_count = 0
             for elbv2_target_groups_answer in get_paginated_marker_api(elbv2_client_data.describe_target_groups):
                 for elbv2_target_group_raw_data in (elbv2_target_groups_answer.get('TargetGroups') or []):
@@ -581,6 +684,8 @@ def parse_raw_data_inner_regular(
     all_elbs = devices_raw_data.get('all_elbs') or []
     volumes_by_iid = devices_raw_data.get('volumes') or {}
     cloudfront_distributions = devices_raw_data.get('cloudfront') or {}
+
+    security_policies = devices_raw_data.get('security_policies') or {}
 
     ec2_id_to_ips = dict()
     private_ips_to_ec2 = dict()
@@ -1340,7 +1445,7 @@ def parse_raw_data_inner_regular(
             if options.get('fetch_route_table_for_devices'):
                 try:
                     if not isinstance(route_tables, list):
-                        raise ValueError(f'Malformed route tables, expected '
+                        raise ValueError(f'Malformed route tables, expected a '
                                          f'list, got {type(route_tables)}')
 
                     populate_route_tables(device, route_tables)
@@ -1348,6 +1453,82 @@ def parse_raw_data_inner_regular(
                     logger.exception(f'Unable to populate route tables: '
                                      f'{str(route_tables)} for '
                                      f'{str(device.id)}')
+
+            # load balancer security policy
+            logger.debug(f'Started parsing ELB security policy for '
+                         f'{elb_raw.get("name")}')
+            try:
+                elb_type = elb_raw.get('type')
+                if isinstance(security_policies, dict):
+                    if elb_type == 'classic':
+                        policies = security_policies['classic']
+                    elif elb_type == 'application':
+                        policies = security_policies['application']
+                    else:
+                        policies = list()
+
+                    if policies and isinstance(policies, list):
+                        for security_policy in policies:
+                            if isinstance(security_policy, dict):
+                                cipher_set = set()
+                                ciphers = security_policy.get('ciphers')
+                                if ciphers and isinstance(ciphers, dict):
+                                    for key, value in ciphers.items():
+                                        # these 2 isinstance tests are because the API does
+                                        # not have parity between ELBv1 and ELBv2.
+                                        if isinstance(value, bool):
+                                            # ELBv1 do not report on priority, only active/inactive
+                                            active = value
+                                            priority = None
+                                        elif isinstance(value, int):
+                                            # ELBv2 only report priority. If priority exists, then
+                                            # active must be true
+                                            active = True
+                                            priority = value
+                                        else:
+                                            active = None
+                                            priority = None
+
+                                        aws_cipher = AWSCipher(
+                                            cipher=key,
+                                            active=active,
+                                            priority=priority
+                                        )
+                                        cipher_set.add(aws_cipher)
+                                else:
+                                    if ciphers is not None:
+                                        logger.warning(f'Malformed ciphers. Expected a '
+                                                       f'dict, got {type(ciphers)}: '
+                                                       f'{str(ciphers)}')
+                                    # fallthrough
+
+                                policy = AWSCipherSupport(
+                                    security_policy_name=security_policy.get('name'),
+                                    ciphers=list(cipher_set),
+                                    supports_sslv3=security_policy.get('supports_sslv3'),
+                                    supports_tlsv1=security_policy.get('supports_tlsv1'),
+                                    supports_tlsv11=security_policy.get('supports_tlsv11'),
+                                    supports_tlsv12=security_policy.get('supports_tlsv12'),
+                                    supports_tlsv13=security_policy.get('supports_tlsv13'),
+                                    server_defined_order=security_policy.get('server_defined')
+                                )
+                                device.cipher_support.append(policy)
+                            else:
+                                logger.warning(
+                                    f'Malformed security policy. Expected a dict, '
+                                    f'got {type(security_policy)}: '
+                                    f'{str(security_policy)}')
+                                continue
+                    else:
+                        if policies is not None:
+                            logger.warning(f'Malformed policies. Expected a list, got a '
+                                           f'{type(policies)}: {str(policies)}')
+                else:
+                    logger.warning(f'Malformed security policies. Expected a dict, '
+                                   f'got {type(security_policies)}:'
+                                   f'{str(security_policies)}')
+            except Exception:
+                logger.exception(f'Unable to parse security policy.')
 
             # cloudfront
             if options.get('fetch_cloudfront'):
@@ -1373,3 +1554,177 @@ def parse_raw_data_inner_regular(
             yield device
     except Exception:
         logger.exception(f'Failure adding ELBs')
+
+
+def query_elb_tls_policies(tls_policies: dict) -> list:
+    """
+    This function will take the passed *tls_policies and parse it to pull
+    the policy name, all cipher suites and protocols (TLSv1.2, etc.). The
+    use of str('true') vs bool(True) pops up in this API, so it is handled
+    in a mildly-hacky way.
+
+    It is important to note that ELBs can have custom, user-generated
+    security policies, unlike ALBs and NLBs.
+
+    :param tls_policies: A dictionary describing AWS security policies
+    :return policy_list: A list of dictionaries of all discovered security policies
+    """
+    if not isinstance(tls_policies, dict):
+        raise ValueError(f'Malformed TLS policies. Expected a dict, got '
+                         f'{type(tls_policies)}: {str(tls_policies)}')
+
+    policy_descriptions = tls_policies.get('PolicyDescriptions')
+
+    policy_list = list()
+    if isinstance(policy_descriptions, list):
+        for policy in policy_descriptions:
+            process_policy = True
+            if isinstance(policy, dict):
+                policy_name = policy.get('PolicyName')
+                if isinstance(policy_name, str):
+                    policy_info = dict()
+                    cipher_suites = dict()
+                    protocols = set()
+
+                    policy_attributes = policy.get('PolicyAttributeDescriptions')
+                    if isinstance(policy_attributes, list):
+                        for attribute in policy_attributes:
+                            if isinstance(attribute, dict):
+                                name = attribute.get('AttributeName')
+                                if isinstance(name, str):
+                                    value = attribute.get('AttributeValue')
+
+                                    if name.startswith('Reference-'):
+                                        # this will skip a Reference-Security-Policy
+                                        # that is on the backend only and not
+                                        # configurable by a user
+                                        process_policy = False
+                                        break
+                                    elif name.startswith('Protocol'):
+                                        # extract the protocol type and version
+                                        # (i.e. TLSv1, SSLv3), but do not add to
+                                        # cipher_suites. The raw data looks like
+                                        # Protocol-TLSv1.1, or Protocol-SSLv3
+                                        name = name.split('-')[-1]
+                                        # convert true/false to True/False
+                                        if value == 'true':
+                                            protocols.add(name)
+                                    elif name.startswith('Server-Defined'):
+                                        # extract this flag, but do not add it
+                                        # as a cipher suite
+                                        policy_info['server_defined'] = bool(value == 'true')
+                                    else:
+                                        cipher_suites[name] = bool(value == 'true')
+
+                                    policy_info['name'] = policy_name
+                                    policy_info['protocols'] = list(protocols)
+                                    policy_info['ciphers'] = cipher_suites
+
+                                else:
+                                    logger.warning(
+                                        f'Malformed security policy name. Expected '
+                                        f'a str, got {type(name)}: {str(name)}')
+                            else:
+                                logger.warning(
+                                    f'Malformed security policy attribute. '
+                                    f'Expected a dict, got {type(attribute)}: '
+                                    f'{str(attribute)}')
+                    else:
+                        logger.warning(f'Malformed security policy attributes. '
+                                       f'Expected a list, got '
+                                       f'{type(policy_attributes)}: '
+                                       f'{str(policy_attributes)}')
+                    if process_policy:
+                        processed_policy = query_security_protocols(policy_info,
+                                                                    list(protocols))
+                        policy_list.append(processed_policy)
+                    else:
+                        logger.debug(f'Skipping ELB security policy for {policy_name}')
+                else:
+                    logger.warning(f'Malformed security policy name. Expected a '
+                                   f'string, got {type(policy_name)}: '
+                                   f'{str(policy_name)}')
+            else:
+                logger.warning(f'Malformed security policy. Expected a dict, '
+                               f'got {type(policy)}: {str(policy)}')
+    else:
+        logger.warning(f'Malformed security policy descriptions. Expected a '
+                       f'list, got {type(policy_descriptions)}: '
+                       f'{str(policy_descriptions)}')
+
+    return policy_list
+
+
+def query_elbv2_tls_policies(tls_policies: list) -> list:
+    """
+    Take the passed *tls_polices list and parse it to pull out the policy
+    names, priority listing and cipher suite information. That data is
+    additionally parsed to provide an easy way to see if a particular ALB
+    or NLB support SSL/TLS and the version. This data is returned to the
+    caller as a dict. This function ONLY works with ALBs and NLBs. It
+    does NOT work with ELBs (Classic). It is important to note that ALBs
+    and NLBs do not support custom policies so must use AWS-generated
+    policies.
+
+    :param tls_policies: A list of dicts that contains SSL/TLS policy info
+    :return policy_info: A dict of policy information to later be parsed
+    """
+    policy_list = list()
+    policy_info = dict()
+    for policy in tls_policies:
+        if not isinstance(policy, dict):
+            raise ValueError(f'Malformed security policy. Expected a dict, '
+                             f'got {type(policy)}: {str(policy)}')
+
+        policy_name = policy.get('Name')
+        if isinstance(policy_name, str):
+            policy_info['name'] = policy_name
+
+            ciphers = policy.get('Ciphers')
+            if isinstance(ciphers, list):
+                cipher_suite = dict()
+                for cipher in ciphers:
+                    if isinstance(cipher, dict):
+                        cipher_suite[cipher.get('Name')] = cipher.get('Priority')
+                    else:
+                        logger.warning(f'Malformed cipher. Expected a dict, got'
+                                       f' {type(cipher)}: {str(cipher)}')
+
+                policy_info['ciphers'] = cipher_suite
+            else:
+                logger.warning(f'Malformed ciphers. Expected a list, got '
+                               f'{type(ciphers)}: {str(ciphers)}')
+
+            protocols = policy.get('SslProtocols')
+            if isinstance(protocols, list):
+                policy_info['protocols'] = protocols
+
+                processed_protocols = query_security_protocols(policy_info, protocols)
+                policy_list.append(processed_protocols)
+            else:
+                logger.warning(f'Malformed protocols. Expected a list, got '
+                               f'{type(protocols)}: {str(protocols)}')
+        else:
+            logger.warning(f'Malformed security policy name. Expected a str, '
+                           f'got {type(policy_name)}: {str(policy_name)}')
+
+    return policy_list
+
+
+def query_security_protocols(policy_info: dict, protocols: list) -> dict:
+    """
+    This function does nothing more than populate a dictionary item if a
+    particular security protocol is supported.
+
+    :param policy_info: A dictionary of security policies for a load balancer
+    :param protocols: A list of security protocols (TLSv1, TLSv1.3, etc.)
+    :returns policy_info: A dictionary of security protocols and their
+    support status
+    """
+    policy_info['supports_sslv3'] = bool('SSLv3' in protocols)
+    policy_info['supports_tlsv1'] = bool('TLSv1' in protocols)
+    policy_info['supports_tlsv11'] = bool('TLSv1.1' in protocols)
+    policy_info['supports_tlsv12'] = bool('TLSv1.2' in protocols)
+    policy_info['supports_tlsv13'] = bool('TLSv1.3' in protocols)
+
+    return policy_info
