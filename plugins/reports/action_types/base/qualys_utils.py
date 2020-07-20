@@ -9,27 +9,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 ADAPTER_NAME = 'qualys_scans_adapter'
 ACTION_CONFIG_TAGS = 'tags_list'
+ACTION_CONFIG_PARENT_TAG = 'parent_tag'
+ACTION_CONFIG_USE_ADAPTER = 'use_adapter'
 
 
 class QualysActionUtils:
-
-    GENERAL_CONFIG_SCHEMA = {
-        'items': [
-            {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Cloud Platform domain', 'type': 'string'},
-            {'name': consts.USERNAME, 'title': 'User name', 'type': 'string'},
-            {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
-            {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
-            {'name': consts.HTTPS_PROXY, 'title': 'HTTPS proxy', 'type': 'string'},
-            {'name': ACTION_CONFIG_TAGS, 'title': 'Tags', 'type': 'array', 'items': {'type': 'string'}},
-        ],
-        'required': [consts.QUALYS_SCANS_DOMAIN,
-                     consts.USERNAME,
-                     consts.PASSWORD,
-                     consts.VERIFY_SSL,
-                     ACTION_CONFIG_TAGS,
-                     ],
-        'type': 'array',
-    }
 
     GENERAL_DEFAULT_CONFIG = {
         consts.QUALYS_SCANS_DOMAIN: '',

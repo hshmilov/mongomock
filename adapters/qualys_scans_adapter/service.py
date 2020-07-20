@@ -12,6 +12,7 @@ from axonius.clients.qualys.consts import INVENTORY_TYPE, UNSCANNED_IP_TYPE
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln, DeviceOpenPort
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
+from axonius.plugin_base import return_error, add_rule
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
@@ -165,34 +166,37 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     # pylint: disable=too-many-function-args
 
+    def get_connection(self, client_config):
+        date_filter = None
+        if self._last_seen_timedelta:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            date_filter = (now - self._last_seen_timedelta).replace(microsecond=0).isoformat()
+            date_filter = date_filter.replace('+00:00', '') + 'Z'
+
+        connection = QualysScansConnection(
+            domain=client_config[consts.QUALYS_SCANS_DOMAIN],
+            username=client_config[consts.USERNAME],
+            password=client_config[consts.PASSWORD],
+            verify_ssl=client_config.get('verify_ssl') or False,
+            date_filter=date_filter,
+            request_timeout=self.__request_timeout,
+            chunk_size=self.__async_chunk_size,
+            max_retries=self.__max_retries,
+            retry_sleep_time=self.__retry_sleep_time,
+            devices_per_page=self.__devices_per_page,
+            https_proxy=client_config.get('https_proxy'),
+            fetch_from_inventory=self.__fetch_from_inventory,
+            fetch_report=self.__fetch_report,
+            fetch_tickets=self.__fetch_tickets,
+            fetch_unscanned_ips=self.__fetch_unscanned_ips
+        )
+        with connection:
+            pass
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            date_filter = None
-            if self._last_seen_timedelta:
-                now = datetime.datetime.now(datetime.timezone.utc)
-                date_filter = (now - self._last_seen_timedelta).replace(microsecond=0).isoformat()
-                date_filter = date_filter.replace('+00:00', '') + 'Z'
-
-            connection = QualysScansConnection(
-                domain=client_config[consts.QUALYS_SCANS_DOMAIN],
-                username=client_config[consts.USERNAME],
-                password=client_config[consts.PASSWORD],
-                verify_ssl=client_config.get('verify_ssl') or False,
-                date_filter=date_filter,
-                request_timeout=self.__request_timeout,
-                chunk_size=self.__async_chunk_size,
-                max_retries=self.__max_retries,
-                retry_sleep_time=self.__retry_sleep_time,
-                devices_per_page=self.__devices_per_page,
-                https_proxy=client_config.get('https_proxy'),
-                fetch_from_inventory=self.__fetch_from_inventory,
-                fetch_report=self.__fetch_report,
-                fetch_tickets=self.__fetch_tickets,
-                fetch_unscanned_ips=self.__fetch_unscanned_ips
-            )
-            with connection:
-                pass
-            return connection
+            return self.get_connection(client_config)
         except Exception as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config[consts.QUALYS_SCANS_DOMAIN], str(e)
@@ -882,6 +886,26 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'fetch_report': False,
             'fetch_tickets': False
         }
+
+    @add_rule('add_tag_to_ids', methods=['POST'])
+    def add_tag_to_ids(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tag_action_dict = self.get_request_data_as_object()
+        success = False
+        error_message = 'Failure'
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, error_message = conn.add_tags_to_qualys_ids(tag_action_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+                    logger.warning(f'client_id "{client_id}" failed adding tags. error: {error_message}')
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return error_message, 400
 
     def _on_config_update(self, config):
         self.__request_timeout = config['request_timeout']

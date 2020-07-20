@@ -1,10 +1,12 @@
+import contextlib
+import functools
 import logging
 import io
 import csv
 import datetime
 import ipaddress
 from collections import defaultdict
-from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple
+from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple, Set
 from urllib.parse import urljoin
 
 from axonius.clients.qualys import consts, xmltodict
@@ -953,3 +955,117 @@ class QualysScansConnection(RESTConnection):
             raise RESTException(f'failed with code {response_code},'
                                 f' message: {(service_response.get("responseErrorDetails") or {}).get("errorMessage")}')
         return service_response
+
+    # pylint: disable=too-many-locals,too-many-statements,too-many-return-statements
+    def add_tags_to_qualys_ids(self, qualys_dict: dict) -> Tuple[bool, Optional[str]]:
+        """
+        :param qualys_dict: {
+            'qualys_ids': List[str],
+            'tags_to_add': List[str],
+            'parent_tag_name': Optional[str]
+        }
+        returns: Either:
+            (False, message) for generic_fail
+            (True, None) for generic_success
+        """
+        try:
+
+            qualys_ids: List[str] = qualys_dict.get('qualys_ids')
+            if not (isinstance(qualys_ids, list) and qualys_ids):
+                raise ValueError(f'Invalid or No Qualys IDs given: {qualys_ids}')
+
+            tags_to_add: List[str] = qualys_dict.get('tags_to_add')
+            if not (isinstance(tags_to_add, list) and tags_to_add):
+                raise ValueError(f'Invalid or No tags given: {tags_to_add}')
+            requested_tags_set = set(tags_to_add)
+            logger.debug(f'Unique requested tags: {requested_tags_set}')
+
+            parent_tag_name: Optional[str] = qualys_dict.get('parent_tag_name')
+            if not (isinstance(parent_tag_name, str) or parent_tag_name is None):
+                raise ValueError(f'Invalid parent tag name given: {parent_tag_name}')
+
+            with contextlib.ExitStack() as revert_stack:  # type: contextlib.ExitStack
+
+                tag_ids_by_name = self.list_tag_ids_by_name()
+                logger.debug(f'Located tags: {tag_ids_by_name}')
+                if not (isinstance(tag_ids_by_name, dict) and tag_ids_by_name):
+                    message = 'Failed retrieving existing tags'
+                    logger.error(message)
+                    return False, message
+
+                # create missing tags
+                created_tag_ids = set()  # type: Set[str]
+                tag_names_to_create = requested_tags_set - set(tag_ids_by_name.keys())
+                if tag_names_to_create:
+
+                    # if parent given and doesnt exist - fail all devices
+                    if parent_tag_name and parent_tag_name not in tag_ids_by_name:
+                        message = f'Failed locating parent tag "{parent_tag_name}"'
+                        logger.error(message)
+                        return False, message
+
+                    # create the tags and push a revert removal operation
+                    parent_tag_id = tag_ids_by_name.get(parent_tag_name)
+                    created_tag_ids_by_name, failed_tag_name = self.create_tags(tag_names_to_create,
+                                                                                parent_tag_id=parent_tag_id)
+                    # Note - delete_tags would also remove the tags from any
+                    #        hostasset they've been successfully assigned to
+                    # pylint: disable=no-member
+                    revert_stack.callback(functools.partial(self.delete_tags, created_tag_ids_by_name.values()))
+                    if failed_tag_name:
+                        logger.error(f'The following tag failed to create: {failed_tag_name}')
+                        return False, f'Failed Creating tag "{failed_tag_name}"'
+                    tag_ids_by_name.update(created_tag_ids_by_name)
+                    created_tag_ids.update(created_tag_ids_by_name.values())
+
+                # add tags to hosts and push a revert tags restore operation
+                preoperation_tags_by_host = dict(self.iter_tags_by_host_id(qualys_ids))
+                missing_tags_post_creation = [tag_name for tag_name in requested_tags_set
+                                              if tag_name not in tag_ids_by_name]
+                if len(missing_tags_post_creation) > 0:
+                    logger.error(f'The following tags was not found post-creation: {missing_tags_post_creation}')
+                    return False, f'Failed locating tags "{",".join(missing_tags_post_creation)}" post-creation.'
+
+                requested_tag_ids = {tag_ids_by_name[tag_name] for tag_name in requested_tags_set}
+                _ = self.add_host_existing_tags(qualys_ids, requested_tag_ids)
+                for host_id in qualys_ids:
+                    # we push separate revert operation per host due to their potential different state
+                    preop_tag_dicts = preoperation_tags_by_host.get(host_id)
+                    if not preop_tag_dicts:
+                        logger.debug(f'failed to locate host {host_id} in existing tags, ditching revert operation.')
+                        continue
+                    # compute revertible tags for removal - any requested tag that wasn't created and didn't pre-exist.
+                    revertible_tags = (requested_tag_ids - created_tag_ids
+                                       - {tag_dict['id'] for tag_dict in preop_tag_dicts})
+                    if revertible_tags:
+                        logger.debug(f'Appending revert tag removal operation for host {host_id}'
+                                     f' for revertible tags {revertible_tags}')
+                        # pylint: disable=no-member
+                        revert_stack.callback(functools.partial(self.remove_host_tags,
+                                                                [host_id], revertible_tags))
+
+                # re-list tags to make sure they were added
+                missing_tag_names_by_host_id = {
+                    host_id: (requested_tags_set - {tag_dict['name'] for tag_dict in tags_dicts})
+                    for host_id, tags_dicts in self.iter_tags_by_host_id(qualys_ids)
+                }  # type: Dict[str, Set[str]]
+                logger.debug(f'Missing tags by host: {missing_tag_names_by_host_id}')
+
+                # if any of the hosts has a missing tag, fail everything
+                hosts_missing_tags = {host_id: missing_tags for
+                                      host_id, missing_tags in missing_tag_names_by_host_id.items()
+                                      if len(missing_tags) > 0}
+                if len(hosts_missing_tags) > 0:
+                    logger.warning(f'Tag addition verification failed: {hosts_missing_tags}')
+                    return False, 'Failed tag addition verification'
+                    # Note - Revert happens here in LIFO order #
+
+                # everything went well - cancel revert stack
+                logger.info('Operation Succeeded, flushing revert stack')
+                # pylint: disable=no-member
+                _ = revert_stack.pop_all()
+
+            return True, None
+        except Exception:
+            logger.exception(f'Problem with action add tag')
+            return False, 'Unexpected error'

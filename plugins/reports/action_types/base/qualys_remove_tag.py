@@ -15,9 +15,54 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class QualysRemoveTag(ActionTypeBase):
+
     @staticmethod
     def config_schema() -> dict:
-        return QualysActionUtils.GENERAL_CONFIG_SCHEMA
+        schema = {
+            'items': [
+                {
+                    'name': consts.QUALYS_SCANS_DOMAIN,
+                    'title': 'Qualys Cloud Platform domain',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.USERNAME,
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': consts.PASSWORD,
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': consts.VERIFY_SSL,
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': consts.HTTPS_PROXY,
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                },
+                {
+                    'name': ACTION_CONFIG_TAGS,
+                    'title': 'Tags',
+                    'type': 'array',
+                    'items': {'type': 'string'}
+                },
+            ],
+            'required': [
+                consts.QUALYS_SCANS_DOMAIN,
+                consts.USERNAME,
+                consts.PASSWORD,
+                consts.VERIFY_SSL,
+                ACTION_CONFIG_TAGS,
+            ],
+            'type': 'array',
+        }
+        return schema
 
     @staticmethod
     def default_config() -> dict:
