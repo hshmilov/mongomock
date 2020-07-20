@@ -838,7 +838,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 logger.info(f'Already saved {num_of_users} users.')
             try:
                 user_internal_axon_id, adapterdata_user = internal_axon_id_data
-                user = list(self.users.get(internal_axon_id=user_internal_axon_id))[0]
+                user = next(self.users.get(internal_axon_id=user_internal_axon_id), None)
+                if not user:
+                    continue
                 user.add_adapterdata(
                     adapterdata_user.to_dict(),
                     additional_data={
@@ -928,7 +930,9 @@ class StaticAnalysisService(Triggerable, PluginBase):
                         for associcated_field in ASSOCIATED_FIELD:
                             field_candidate = None
                             for one_user_id in user:
-                                one_user = list(self.users.get(internal_axon_id=one_user_id))[0]
+                                one_user = next(self.users.get(internal_axon_id=one_user_id), None)
+                                if not one_user:
+                                    continue
                                 field_candidate = one_user.get_first_data(associcated_field)
                                 if field_candidate:
                                     field_candidate = str(field_candidate)
