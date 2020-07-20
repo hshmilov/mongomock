@@ -4,17 +4,16 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.azure.utils import SubscriptionConnection
+from axonius.clients.azure.client import AzureCloudConnection
 from axonius.clients.azure.consts import AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, \
     AZURE_CLOUD_ENVIRONMENT, AZURE_VERIFY_SSL, AZURE_STACK_HUB_PROXY_SETTINGS, AzureStackHubProxySettings, \
-    AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_URL, AZURE_ACCOUNT_TAG, AZURE_HTTPS_PROXY
+    AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_URL, AZURE_ACCOUNT_TAG, AZURE_HTTPS_PROXY, AzureClouds
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from azure_adapter.client import AzureClient
-from azure_adapter.consts import POWER_STATE_MAP, AZURE_BASE_SUBSCRIPTION_URL, \
-    SUBSCRIPTION_API_VERSION
+from azure_adapter.consts import POWER_STATE_MAP
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -57,6 +56,7 @@ class AzureAdapter(AdapterBase):
         resources_group = Field(str, 'Resource Group')
         custom_image_name = Field(str, 'Custom Image Name')
         subscription_id = Field(str, 'Azure Subscription ID')
+        subscription_name = Field(str, 'Azure Subscription Name')
         virtual_networks = ListField(str, 'Virtual Networks')
 
     def __init__(self, *args, **kwargs):
@@ -70,19 +70,7 @@ class AzureAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         raise NotImplementedError
 
-    @staticmethod
-    def get_subscription_connection(client_config):
-        connection = SubscriptionConnection(domain=f'{AZURE_BASE_SUBSCRIPTION_URL}={SUBSCRIPTION_API_VERSION}',
-                                            client_id=client_config.get(AZURE_CLIENT_ID),
-                                            client_secret=client_config.get(AZURE_CLIENT_SECRET),
-                                            directory_id=client_config.get(AZURE_TENANT_ID),
-                                            cloud_name=client_config.get(AZURE_CLOUD_ENVIRONMENT),
-                                            https_proxy=client_config.get('https_proxy'),
-                                            verify_ssl=client_config.get(AZURE_VERIFY_SSL))
-        with connection:
-            pass
-        return connection
-
+    # pylint: disable=too-many-branches
     def _connect_client(self, client_config):
         """ If fetch_all_subscriptions is checked, pull all associated
         Subscriptions and create a client for each of them. If an error
@@ -93,35 +81,71 @@ class AzureAdapter(AdapterBase):
         then returning those at the end of the function. I'd then need to pick
         those up in _query_devices_by_client and iterate through them
         """
-        if client_config.get('fetch_all_subscriptions'):
-            subs_connection = self.get_subscription_connection(client_config)
-            with subs_connection:
-                subs_connection.populate_subscriptions()
-                subscriptions = subs_connection.subscriptions
-        else:
-            subscriptions = [client_config.get(AZURE_SUBSCRIPTION_ID)] if \
-                client_config.get(AZURE_SUBSCRIPTION_ID) else []
+        azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
+        azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
+        try:
+            if azure_stack_hub_proxy_settings_value:
+                azure_stack_hub_proxy_settings = [
+                    x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
+        except Exception:
+            logger.warning(f'Failed getting azure stack hub proxy settings. '
+                           f'Original value is {str(azure_stack_hub_proxy_settings_value)}', exc_info=True)
+            # fallthrough
+
+        # Try to get all subscriptions anyway because it is always available
+        try:
+            cloud = {
+                'Global': AzureClouds.Public,
+                'China': AzureClouds.China,
+                'Azure Public Cloud': AzureClouds.Public,
+                'Azure China Cloud': AzureClouds.China,
+                'Azure German Cloud': AzureClouds.Germany,
+                'Azure US Gov Cloud': AzureClouds.Gov
+            }.get(AZURE_CLOUD_ENVIRONMENT)
+
+            management_url = None
+            resource = None
+            azure_stack_hub_proxy_settings_for_rest_client = None
+
+            if client_config.get(AZURE_STACK_HUB_URL) and client_config.get(AZURE_STACK_HUB_RESOURCE):
+                management_url = client_config[AZURE_STACK_HUB_URL]
+                resource = client_config[AZURE_STACK_HUB_RESOURCE]
+                azure_stack_hub_proxy_settings_for_rest_client = azure_stack_hub_proxy_settings
+
+            with AzureCloudConnection(
+                    app_client_id=client_config[AZURE_CLIENT_ID],
+                    app_client_secret=client_config[AZURE_CLIENT_SECRET],
+                    tenant_id=client_config[AZURE_TENANT_ID],
+                    cloud=cloud,
+                    management_url=management_url,
+                    resource=resource,
+                    azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings_for_rest_client,
+                    https_proxy=client_config.get(AZURE_HTTPS_PROXY),
+                    verify_ssl=client_config.get(AZURE_VERIFY_SSL)
+            ) as azure_rest_client:
+                subscriptions = azure_rest_client.all_subscriptions.copy()
+        except Exception:
+            subscriptions = {}
+            logger.warning(f'Failed fetching subscriptions', exc_info=True)
+            if client_config.get('fetch_all_subscriptions'):
+                raise
+
+        if not client_config.get('fetch_all_subscriptions'):
+            c_subs_id = client_config.get(AZURE_SUBSCRIPTION_ID)
+            if c_subs_id:
+                subscriptions = {c_subs_id: subscriptions.get(c_subs_id) or {}}
+            else:
+                subscriptions = {}
 
         if not subscriptions:
             raise ClientConnectionException(f'Unable to find a subscription')
 
         connections = list()
-        for subscription_idx, subscription in enumerate(subscriptions):
-            logger.info(f'Working with subscription {subscription}: '
+        for subscription_idx, (subscription_id, subscription_data) in enumerate(subscriptions.items()):
+            logger.info(f'Working with subscription {subscription_id}: '
                         f'({subscription_idx+1}/{len(subscriptions)})')
             try:
-                azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
-                azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
-                try:
-                    if azure_stack_hub_proxy_settings_value:
-                        azure_stack_hub_proxy_settings = [
-                            x for x in AzureStackHubProxySettings if x.value == azure_stack_hub_proxy_settings_value][0]
-                except Exception:
-                    logger.warning(f'Failed getting azure stack hub proxy settings. '
-                                   f'Original value is {str(azure_stack_hub_proxy_settings_value)}', exc_info=True)
-                    # fallthrough
-
-                connection = AzureClient(subscription_id=subscription,
+                connection = AzureClient(subscription_id=subscription_id,
                                          client_id=client_config[AZURE_CLIENT_ID],
                                          client_secret=client_config[AZURE_CLIENT_SECRET],
                                          tenant_id=client_config[AZURE_TENANT_ID],
@@ -138,7 +162,9 @@ class AzureAdapter(AdapterBase):
                 if client_config.get(AZURE_ACCOUNT_TAG):
                     metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
 
-                metadata_dict['subscription'] = subscription
+                metadata_dict['subscription'] = subscription_id
+                if subscription_data and subscription_data.get('displayName'):
+                    metadata_dict['subscription_name'] = subscription_data.get('displayName')
 
                 connections.append((connection, metadata_dict))
 
@@ -440,6 +466,7 @@ class AzureAdapter(AdapterBase):
                 self._fill_power_state(device, device_raw)
 
                 device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
+                device.subscription_name = metadata.get('subscription_name')
 
                 device.subscription_id = metadata.get('subscription')
 

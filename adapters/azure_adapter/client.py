@@ -15,7 +15,8 @@ from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROU
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-# This adapters needs https://login.microsoftonline.com and https://management.azure.com
+# This adapters needs https://login.microsoftonline.com and https://management.azure.com for the regular cloud.
+# For other clouds, look at azure\client.py
 
 
 class AzureClient:

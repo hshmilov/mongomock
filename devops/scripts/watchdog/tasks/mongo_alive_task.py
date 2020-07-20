@@ -105,7 +105,7 @@ class MongoAliveTask(WatchdogTask):
                     with open('/home/ubuntu/helper.log', 'a') as helper:
                         subprocess.check_call('./se.sh re mongo'.split(),
                                               cwd=CORTEX_PATH,
-                                              timeout=300,
+                                              timeout=60 * 15,  # useful for restores
                                               stderr=helper,
                                               stdout=helper)
                         subprocess.check_call('./se.sh re gui'.split(),

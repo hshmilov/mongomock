@@ -278,6 +278,8 @@ def setup_host():
 
             with open(f'/home/{user}/.bash_aliases', 'wt') as f:
                 f.write('\n'.join(content))
+
+            shutil.chown(f'/home/{user}/.bash_aliases', user=user, group=user)
         except Exception as e:
             print(f'Could not install bash_aliases for user {user}: {str(e)}')
 

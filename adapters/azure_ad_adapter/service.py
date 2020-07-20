@@ -21,6 +21,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AZURE_AD_DEVICE_TYPE = 'Azure AD'
 INUTE_DEVICE_TYPE = 'Intune'
 
+INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS = 90
+DAYS_TO_WARN_BEFORE_INTUNE_EXPIRY = 14
+
 
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
 class AzureAdAdapter(AdapterBase, Configurable):
@@ -67,11 +70,13 @@ class AzureAdAdapter(AdapterBase, Configurable):
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(AUTHORITY_HOST_URL)
 
+    # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
     def _connect_client(self, client_config):
         try:
+            tenant_id = client_config[AZURE_TENANT_ID]
             connection = AzureAdClient(client_id=client_config[AZURE_CLIENT_ID],
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
-                                       tenant_id=client_config[AZURE_TENANT_ID],
+                                       tenant_id=tenant_id,
                                        https_proxy=client_config.get(AZURE_HTTPS_PROXY),
                                        verify_ssl=client_config.get(AZURE_VERIFY_SSL),
                                        is_azure_ad_b2c=client_config.get(AZURE_IS_AZURE_AD_B2C),
@@ -91,24 +96,65 @@ class AzureAdAdapter(AdapterBase, Configurable):
                         refresh_token = auth_code[len('refresh-'):]
                     elif rt_doc:
                         refresh_token = rt_doc['refresh_token']
+                        generation_time = rt_doc.get('generation_time')
+                        if generation_time and isinstance(generation_time, datetime.datetime):
+                            try:
+                                expire_time = generation_time + datetime.timedelta(
+                                    days=INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS
+                                )
+                                warn_time = expire_time - datetime.timedelta(days=DAYS_TO_WARN_BEFORE_INTUNE_EXPIRY)
+
+                                if warn_time < datetime.datetime.utcnow() < expire_time:
+                                    days_until_expire = (expire_time - datetime.datetime.utcnow()).days
+                                    logger.warning(f'Intune token is about to expire in {days_until_expire} days')
+                                    self.create_notification(
+                                        title='Azure AD Adapter: Intune token is about to expire',
+                                        content=f'The Azure AD Intune token for tenant {tenant_id!r} '
+                                        f'has been generated on {generation_time}, and is '
+                                        f'by default valid for {INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS} '
+                                        f'days. It is about to expire in {days_until_expire} days',
+                                        threshold_settings=(f'azure-ad-intune-token-{tenant_id}', 60 * 24)
+                                    )
+                            except Exception:
+                                logger.exception(f'Problem checking generation time of azure refresh token to warn user'
+                                                 f' from upcoming expired tokens.')
                     else:
                         refresh_token = connection.get_refresh_token_from_authorization_code(auth_code)
                         # client_config[AZURE_AUTHORIZATION_CODE] = 'refresh-' + refresh_token  # override refresh token
                         refresh_tokens_db.update_one(
                             {'auth_code': auth_code},
                             {
-                                '$set': {'refresh_token': refresh_token}
+                                '$set': {'refresh_token': refresh_token, 'generation_time': datetime.datetime.utcnow()}
                             },
                             upsert=True
                         )
 
                     connection.set_refresh_token(refresh_token)
-
-                connection.test_connection()
-            except Exception as e:
-                if 'expired' in str(e).lower():
-                    raise ClientConnectionException(f'Token has expired. Please follow the documentation to '
-                                                    f're-set the token. Full message: {str(e)}')
+                    try:
+                        connection.test_connection()
+                    except Exception as e:
+                        if 'expired' in str(e).lower():
+                            if self.__do_not_fail_on_intune:
+                                notification_content = f'Intune token for tenant {tenant_id!r} has expired, ' \
+                                    f'Azure AD adapter is not fetching Intune data'
+                                self.create_notification(
+                                    f'Azure AD Adapter: Intune token expired',
+                                    content=notification_content,
+                                    severity_type='error',
+                                    threshold_settings=(f'azure-ad-intune-token-{tenant_id}', 60 * 24)
+                                )
+                                # Revert to regular Azure AD
+                                connection.set_refresh_token(None)
+                                connection.test_connection()
+                            else:
+                                raise ClientConnectionException(
+                                    f'Token has expired. Please follow the documentation to '
+                                    f're-set the token. Full message: {str(e)}'
+                                )
+                else:
+                    connection.test_connection()
+            except Exception:
+                logger.exception(f'Failed connecting to Azure AD')
                 raise
             metadata_dict = dict()
             if client_config.get(AZURE_ACCOUNT_TAG):
@@ -509,6 +555,12 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'description': 'Currently requires use of BETA API, as well as Reports.Read.All permissions.'
                 },
                 {
+                    'name': 'do_not_fail_on_intune',
+                    'title': 'Do not fail if Intune token has expired',
+                    'type': 'bool',
+                    'description': 'If selected the adapter will not fail if Intune token is configured and has expired'
+                },
+                {
                     'name': 'parallel_count',
                     'title': 'Number of parallel requests',
                     'type': 'integer'
@@ -541,6 +593,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
             'parallel_count': 10,
             'retry_max': 3,
             'async_error_sleep_time': 3,
+            'do_not_fail_on_intune': False
         }
 
     def _on_config_update(self, config):
@@ -554,3 +607,4 @@ class AzureAdAdapter(AdapterBase, Configurable):
         self.__async_retries_max = config['retry_max']
         self.__parallel_count = config['parallel_count']
         self.__async_retry_time = config['async_error_sleep_time']
+        self.__do_not_fail_on_intune = config.get('do_not_fail_on_intune') or False

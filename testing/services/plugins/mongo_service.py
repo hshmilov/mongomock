@@ -16,6 +16,7 @@ from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_
 from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
                                        USERS_PREFERENCES_COLLECTION)
+from axonius.utils.debug import magentaprint
 from axonius.utils.mongo_administration import set_mongo_parameter
 from conf_tools import get_customer_conf_json
 from services.ports import DOCKER_PORTS
@@ -146,7 +147,16 @@ class MongoService(SystemService, WeaveService):
     def set_db_config(self):
         # Set cursor timeout to 30 minutes. Too many operations do not end up in the default 10 minutes,
         # especially API
+        customer_conf = get_customer_conf_json()
+        mongo_wiredtiger_cache_size_in_gb = customer_conf.get('mongo_wiredtiger_cache_size_in_gb')
         set_mongo_parameter(self.client, 'cursorTimeoutMillis', 1000 * 60 * 30)
+        if mongo_wiredtiger_cache_size_in_gb:
+            magentaprint(f'Setting Mongo WiredTiger cache size to {mongo_wiredtiger_cache_size_in_gb}G')
+            set_mongo_parameter(
+                self.client,
+                'wiredTigerEngineRuntimeConfig',
+                f'cache_size={mongo_wiredtiger_cache_size_in_gb}G'
+            )
 
     def wait_for_service(self, timeout=60 * 45):
         # We wait much longer for mongo, because in some customers, a hard restart can cause a corruption in the db

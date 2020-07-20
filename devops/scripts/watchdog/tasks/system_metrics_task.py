@@ -101,6 +101,7 @@ class SystemMetricsTask(WatchdogTask):
                 self.report_metric(metric_name + '.indexes', bytes_to_gb(storage['totalIndexSize']))
                 self.report_metric(metric_name + '.total',
                                    bytes_to_gb(storage['storageSize'] + storage['totalIndexSize']))
+                self.report_metric(metric_name + '.in-memory', bytes_to_gb(storage['size']))
 
         except Exception as e:
             self.report_error(f'Failed reporting collection stats - {e}')

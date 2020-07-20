@@ -20,3 +20,15 @@ def check_if_tcp_port_is_open(address: str, port: int) -> bool:
             sock.close()
         except Exception:
             pass
+
+
+def check_if_tcp_port_is_open_with_raise_exception(address: str, port: int):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.settimeout(10)
+        sock.connect((address, int(port)))
+    finally:
+        try:
+            sock.close()
+        except Exception:
+            pass

@@ -1433,24 +1433,45 @@ class PluginBase(Configurable, Feature, ABC):
         logger.debug('Done requesting clear dashboard cache')
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic',
-                            hooks: Dict[str, str] = None):
+                            hooks: Dict[str, str] = None, threshold_settings: Tuple[str, int] = None):
         """
         :param string title:
         :param string content:
         :param string severity_type:
         :param string notification_type:
         :param array hooks: includes all hooks to be replaced within the notification content.
+        :param threshold_settings: takes (str, int). if specified, will not pop up this notification if it was
+                                   pop'd up in the last [int] minutes. The ID for checking is [str].
         :return:
         """
-        db = self._get_db_connection()
-        return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
-                                                                     plugin_name=self.plugin_name,
-                                                                     severity=severity_type,
-                                                                     type=notification_type,
-                                                                     title=title,
-                                                                     content=content,
-                                                                     seen=False,
-                                                                     hooks=hooks)).inserted_id
+        core_db = self._get_db_connection()[CORE_UNIQUE_NAME]
+        if threshold_settings:
+            try:
+                notification_id, minutes = threshold_settings
+                last_push = core_db['notifications_last_push'].find_one(
+                    {'notification_id': notification_id}
+                )
+
+                if last_push and last_push.get('date'):
+                    if last_push.get('date') + timedelta(minutes=minutes) > datetime.utcnow():
+                        return None
+
+                core_db['notifications_last_push'].replace_one(
+                    {'notification_id': notification_id},
+                    {'notification_id': notification_id, 'date': datetime.utcnow(), 'plugin_name': self.plugin_name},
+                    upsert=True
+                )
+            except Exception:
+                logger.exception(f'Problem checking if notification was already inserted, not continuing')
+                return None
+        return core_db['notifications'].insert_one(dict(who=self.plugin_unique_name,
+                                                        plugin_name=self.plugin_name,
+                                                        severity=severity_type,
+                                                        type=notification_type,
+                                                        title=title,
+                                                        content=content,
+                                                        seen=False,
+                                                        hooks=hooks)).inserted_id
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=100, ttl=20), lock=threading.Lock())

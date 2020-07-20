@@ -48,6 +48,11 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                     'name': 'alternative_suffix',
                     'title': 'Alternative email suffix',
                     'type': 'string'
+                },
+                {
+                    'name': 'domain_whitelist',
+                    'title': 'Domain Whitelist',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -64,6 +69,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                                  'https_proxy': None,
                                  'alternative_suffix': None,
                                  'apikey': None,
+                                 'domain_whitelist': None,
                                  'domain_preferred': HAVEIBEENPWNED_DOMAIN})
 
     def _trigger_haveibeenpwned_adapter(self):

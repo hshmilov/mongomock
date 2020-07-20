@@ -70,7 +70,7 @@ class HaveibeenpwnedConnection(RESTConnection):
             raise message
 
     def get_breach_account_info(self, email):
-        time.sleep(2)
+        time.sleep(1.5)
         url = f'api/v3/breachedaccount/{email}?truncateResponse=false'
         if self._internal_haveibeenpwned:
             self._refresh_token()
@@ -85,8 +85,16 @@ class HaveibeenpwnedConnection(RESTConnection):
                                  use_json_in_response=False
                                  )
             if response.status_code == 429:
-                # Sleeping 2 seconds to be on the safe side
-                time.sleep(2)
+                try:
+                    retry_after = response.headers.get('Retry-After') or response.headers.get('retry-after')
+                    if retry_after:
+                        logger.info(f'Got 429, sleeping for {retry_after}')
+                    else:
+                        logger.info(f'Got 429 with no retry-after header, sleeping for 3')
+                        retry_after = 2
+                    time.sleep(int(retry_after) + 1)
+                except Exception:
+                    time.sleep(6)
                 continue
             break
         else:

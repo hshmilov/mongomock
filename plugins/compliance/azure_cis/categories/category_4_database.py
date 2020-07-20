@@ -1,9 +1,6 @@
 # pylint: disable=too-many-branches, too-many-nested-blocks
 import logging
-import threading
 from collections import defaultdict
-
-import cachetools
 
 from axonius.clients.azure.client import AzureCloudConnection
 from compliance.utils.AzureAccountReport import AzureAccountReport
@@ -563,7 +560,6 @@ class CISAzureCategory4:
                 ''
             )
 
-    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=300), lock=threading.Lock())
     def check_sql_server_ad_administrators(self, rule_section):
         error = get_api_error(self._sql_servers)
         if error:

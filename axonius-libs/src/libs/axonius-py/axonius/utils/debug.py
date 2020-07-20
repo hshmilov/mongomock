@@ -12,7 +12,6 @@ COLOR = {
     'magenta': '\033[35m',
     'cyan': '\033[36m',
     'light_grey': '\033[37m',
-
     'dark_grey': '\033[90m',
     'light_red': '\033[91m',
     'light_green': '\033[92m',
@@ -43,6 +42,10 @@ def redprint(s):
 
 def yellowprint(s):
     debugprint(s, 'light_yellow')
+
+
+def magentaprint(s):
+    debugprint(s, 'light_magenta')
 
 
 def is_debug_attached():

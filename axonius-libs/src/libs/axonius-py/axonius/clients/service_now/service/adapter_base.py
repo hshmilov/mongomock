@@ -109,6 +109,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'type': 'bool',
             'title': 'Fetch device relations'
         },
+        {
+            'name': 'when_no_hostname_fallback_to_name',
+            'type': 'bool',
+            'title': 'When hostname does not exit, use asset name as hostname'
+        }
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
@@ -121,6 +126,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_only_virtual_devices',
         'fetch_operational_status',
         'fetch_ci_relations',
+        'when_no_hostname_fallback_to_name'
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
@@ -136,6 +142,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_only_virtual_devices': False,
         'fetch_operational_status': True,
         'fetch_ci_relations': False,
+        'when_no_hostname_fallback_to_name': False
     }
 
     @abstractmethod
@@ -475,7 +482,9 @@ class ServiceNowAdapterBase(AdapterBase):
                 if host_name and name and name.lower() in host_name.lower():
                     device.hostname = host_name.split('.')[0].strip()
                 else:
-                    if alias and ',' in alias and '|' in name:
+                    if self.__when_no_hostname_fallback_to_name and not host_name and name:
+                        device.hostname = name.split('.')[0].strip()
+                    elif alias and ',' in alias and '|' in name:
                         alias_list = alias.split(',')
                         for alias_raw in alias_list:
                             alias_raw = alias_raw.strip().lower()
@@ -1136,6 +1145,7 @@ class ServiceNowAdapterBase(AdapterBase):
         self.__install_status_exclude_list = config.get('install_status_exclude_list').split(',') \
             if config.get('install_status_exclude_list') else None
         self.__fetch_ci_relations = config['fetch_ci_relations']
+        self.__when_no_hostname_fallback_to_name = config.get('when_no_hostname_fallback_to_name') or False
 
         # This must be set in method override
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

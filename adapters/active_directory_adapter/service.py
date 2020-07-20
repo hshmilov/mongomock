@@ -336,16 +336,20 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
 
                 if not success_domains:
                     if len(failure_domains) > 0:
-                        raise ClientConnectionException(f'Can not connect: {list(failure_domains.values())[0]}')
+                        raise ClientConnectionException(
+                            f'can not connect in GC mode: {list(failure_domains.values())[0]}'
+                        )
                     else:
-                        raise ClientConnectionException(f'Did not find any server in the GC.')
+                        raise ClientConnectionException(f'did not find any server in the GC.')
 
             else:
                 # This is the normal path where a user simply puts a domain.
                 all_domains[dc_details['dc_name'].lower()] = dc_details
             return all_domains
         except LdapException as e:
-            if "socket connection error while opening: timed out" in str(e).lower():
+            if 'certificate verify failed' in str(e).lower():
+                additional_msg = 'Certificate Verification Failed'
+            elif "socket connection error while opening: timed out" in str(e).lower():
                 additional_msg = "connection timed out"
             elif "saslprep error:" in str(e).lower():
                 additional_msg = "Invalid credentials - credentials contain invalid characters"
@@ -390,6 +394,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 additional_msg = f'connection error, please check the settings - {str(e)}'
             message = f'Error: {additional_msg}.'
             logger.exception(message)
+        except ClientConnectionException as e:
+            raise ClientConnectionException(f'Error: {str(e)}')
         except Exception:
             ex_str = get_exception_string(force_show_traceback=True)
             message = f'Error - please check your credentials: {ex_str}'

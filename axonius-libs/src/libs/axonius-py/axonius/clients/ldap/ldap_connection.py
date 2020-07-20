@@ -1,15 +1,17 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
-
+import socket
 import time
 import logging
 
 from retrying import retry
 
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
 from axonius.clients.ldap.ldap_group_cache import get_ldap_groups
 from axonius.profiling.memory import asizeof
 from axonius.utils.datetime import parse_date
+from axonius.utils.networking import check_if_tcp_port_is_open_with_raise_exception
 from axonius.utils.retrying import retry_generator
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -93,13 +95,36 @@ def connect_to_server(
             raise_exceptions=True, receive_timeout=ldap_recieve_timeout)
         ldap_connection.bind()
     except Exception as e:
-        if 'socket ssl wrapping error' in str(e):
+        if 'socket ssl wrapping error' in str(e).lower():
             raise
         # Try NTLM authentication as well. Username must be in the format of domain\username
         ldap_connection = ldap3.Connection(
             ldap_server, user=user_name, password=user_password,
             raise_exceptions=True, receive_timeout=ldap_recieve_timeout, authentication=ldap3.NTLM)
-        ldap_connection.bind()
+        try:
+            ldap_connection.bind()
+        except Exception as e2:
+            if 'invalid server address' in str(e2).lower():
+                # This is a super non-indicative error message that says dns error / connection error / routing error
+                try:
+                    socket.gethostbyname(server_address)
+                except Exception as e3:
+                    if 'name or service not known' not in str(e3).lower():
+                        raise
+                    raise ClientConnectionException(f'can not resolve DNS for address {server_address!r}')
+                if port:
+                    port_to_connect = port
+                elif use_ssl in [None, SSLState.Unencrypted]:
+                    port_to_connect = AD_LDAP_PORT
+                else:
+                    port_to_connect = AD_LDAPS_PORT
+                try:
+                    check_if_tcp_port_is_open_with_raise_exception(server_address, port_to_connect)
+                except Exception as e4:
+                    raise ClientConnectionException(
+                        f'can not connect to {server_address!r} on port {port_to_connect}: {str(e4)}'
+                    )
+            raise
     return ldap_connection
 
 

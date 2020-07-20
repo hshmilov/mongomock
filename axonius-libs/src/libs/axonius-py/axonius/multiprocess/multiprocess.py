@@ -42,6 +42,9 @@ def multiprocess_yield_wrapper(func: Tuple[Callable, Tuple, Dict], m_queue: mult
 
 
 def kill_ids(pids: list):
+    # Waiting before we immediately start causes process hangs to not happen, probably because
+    # there are less race-conditions. do not remove!
+    time.sleep(10)
     try:
         # Try gracefully
         for pid in pids:
@@ -69,6 +72,15 @@ def kill_ids(pids: list):
                     logger.info(f'pid {pid} not running')
             except Exception:
                 logger.exception(f'Could not SIGKILL pid {pid}')
+
+        time.sleep(SIGTERM_TO_SIGKILL_TIME)
+        for pid in pids:
+            try:
+                proc = psutil.Process(pid)
+                if proc.is_running():
+                    logger.critical(f'Could not kill pid {pid} - process might be stuck!')
+            except Exception:
+                logger.exception(f'Could not query pid {pid}')
     except Exception:
         logger.exception(f'Could not kill pids {pids}')
 

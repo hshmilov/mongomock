@@ -116,8 +116,16 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_41()
         if self.db_schema_version < 42:
             self._update_schema_version_42()
+        if self.db_schema_version < 43:
+            self._update_schema_version_43()
+        if self.db_schema_version < 44:
+            self._update_schema_version_44()
+        if self.db_schema_version < 45:
+            self._update_schema_version_45()
+        if self.db_schema_version < 46:
+            self._update_schema_version_46()
 
-        if self.db_schema_version != 42:
+        if self.db_schema_version != 46:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     def __create_capped_collections(self):
@@ -1897,6 +1905,124 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             print(f'Exception while upgrading aggregator to version 42. Details: {e}')
             traceback.print_exc()
             raise
+
+    def _update_schema_version_43(self):
+        print('Update to schema 43 - Convert Lansweeper adapter client id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            lansweeper_name = data.get('name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{lansweeper_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{lansweeper_name}'
+
+        try:
+            print(f'Migrating to new Lansweeper ID format')
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'lansweeper_adapter',
+                {
+                    'adapters.data.name': 1,
+                },
+                new_id_func
+            )
+            print(f'Migrate complete')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 43. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        self.db_schema_version = 43
+
+    def _update_schema_version_44(self):
+        print('Update to schema 44 - Convert Symantec Altiris adapter client id to a new format')
+        try:
+            def symantec_altiris_new_client_id(client_config):
+                return client_config['server'] + '_' + client_config.get('database')
+
+            self._upgrade_adapter_client_id('symantec_altiris_adapter', symantec_altiris_new_client_id)
+            self.db_schema_version = 44
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 44. Details: {e}')
+            traceback.print_exc()
+            raise
+
+    def _update_schema_version_45(self):
+        print('Update to schema 45 - Convert Redseal adapter client id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            redseal_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{redseal_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{redseal_hostname}'
+
+        try:
+            print(f'Migrating to new Redseal ID format')
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'redseal_adapter',
+                {
+                    'adapters.data.hostname': 1,
+                },
+                new_id_func
+            )
+            print(f'Migrate complete')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 45. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        self.db_schema_version = 45
+
+    def _update_schema_version_46(self):
+        print('Update to schema 46 - Convert Tenable Security Center adapter client id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            repository_name = data.get('repository_name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{repository_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{repository_name}'
+
+        try:
+            print(f'Migrating to new Tenable Security Center ID format')
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'tenable_security_center_adapter',
+                {
+                    'adapters.data.repository_name': 1,
+                },
+                new_id_func
+            )
+            print(f'Migrate complete')
+        except Exception as e:
+            print(f'Exception while upgrading core db to version 46. Details: {e}')
+            traceback.print_exc()
+            raise
+
+        self.db_schema_version = 46
 
     def _migrate_entity_id_generic(
             self,

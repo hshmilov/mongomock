@@ -313,11 +313,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         device.hostname = hostname
         uuid = raw_device_data.get('uuid')
         if uuid:
-            device.id = uuid + '_' + (hostname or '') + '_'
-            try:
-                device.id = device.id + ((raw_device_data.get('repository') or {}).get('name') or '')
-            except Exception:
-                pass
+            device.id = uuid + (hostname or '')
+
         last_scan = raw_device_data.get('lastScan')
         if last_scan is not None and last_scan != '':
             try:
@@ -454,6 +451,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             test = device.id
         except Exception:
             device.id = (hostname or '') + '_' + (raw_device_data.get('macAddress') or '') + '_' + (str(ips))
+
+        device.id = device.id + '_' + ((raw_device_data.get('repository') or {}).get('name') or '')
         device.set_raw(raw_device_data)
         return device
 
