@@ -16,15 +16,14 @@
       :chart="chart"
       :draggable="true"
       :current-space="currentSpace"
+      :ignore-permissions="ignorePermissions"
       @remove="() => verifyRemovePanel(chart.uuid)"
       @edit="() => editPanel(chart)"
     />
     <slot name="pre" />
     <slot name="post" />
     <div
-      v-if="$can($permissionConsts.categories.Dashboard,
-                 $permissionConsts.actions.Add,
-                 $permissionConsts.categories.Charts)"
+      v-if="allowAddCard"
       :key="9999"
       class="x-card chart-new print-exclude"
     >
@@ -102,6 +101,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    ignorePermissions: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -153,6 +156,14 @@ export default {
         && !chart.is_linked_dashboard
         && ![0, 1].includes(chart.data[0].portion)) || !chart.hide_empty);
     },
+    allowAddCard() {
+      if (this.ignorePermissions) {
+        return true;
+      }
+      return this.$can(this.$permissionConsts.categories.Dashboard,
+        this.$permissionConsts.actions.Add,
+        this.$permissionConsts.categories.Charts);
+    },
   },
   methods: {
     ...mapMutations({
@@ -181,6 +192,7 @@ export default {
       this.removePanel({
         panelId: this.removed,
         spaceId: this.currentSpace,
+        private: this.ignorePermissions ? true : null,
       });
       this.removed = null;
     },

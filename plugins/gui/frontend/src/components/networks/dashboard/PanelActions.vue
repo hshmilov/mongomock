@@ -32,7 +32,7 @@
           </span>
           <AMenu slot="overlay">
             <AMenuItem
-              v-if="canUpdate && chart.user_id !== '*'"
+              v-if="ignorePermissions || (canUpdate && chart.user_id !== '*')"
               id="edit_chart"
               key="0"
               @click="handleClick('edit')"
@@ -40,7 +40,7 @@
               Edit
             </AMenuItem>
             <AMenuItem
-              v-if="canDelete"
+              v-if="ignorePermissions || canDelete"
               id="remove_chart"
               key="1"
               @click="handleClick('remove')"
@@ -245,6 +245,10 @@ export default {
       default: false,
     },
     sortable: {
+      type: Boolean,
+      default: false,
+    },
+    ignorePermissions: {
       type: Boolean,
       default: false,
     },

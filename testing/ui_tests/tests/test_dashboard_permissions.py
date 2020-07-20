@@ -9,6 +9,7 @@ from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
 # pylint: disable=no-member
+from ui_tests.tests.ui_consts import OS_TYPE_OPTION_NAME, OS_SERVICE_PACK_OPTION_NAME
 
 
 class TestDashboardPermissions(PermissionsTestBase):
@@ -22,6 +23,7 @@ class TestDashboardPermissions(PermissionsTestBase):
     TEST_RENAME_SPACE_NAME = 'rename space'
     TEST_REPORT_NAME = 'testonius'
     NOTE_TEXT = 'note text'
+    MY_DASHBOARD_TITLE = 'My Dashboard'
 
     def test_dashboard_permissions(self):
         self.settings_page.disable_getting_started_feature()
@@ -56,7 +58,6 @@ class TestDashboardPermissions(PermissionsTestBase):
         }
 
         self.dashboard_page.switch_to_page()
-        assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_new_chart_card_missing()
         with pytest.raises(NoSuchElementException):
             self.dashboard_page.find_search_insights()
@@ -130,7 +131,7 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                   field=ui_consts.OS_TYPE_OPTION_NAME,
                                                   title=self.TEST_EMPTY_TITLE,
                                                   view_name=self.OSX_OPERATING_SYSTEM_NAME)
-        assert not self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
+        assert self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
                                                      'Delete chart',
@@ -236,3 +237,29 @@ class TestDashboardPermissions(PermissionsTestBase):
         self.reports_page.click_restricted_report_modal_confirm()
         self.reports_page.wait_for_table_to_be_responsive()
         self.login_page.logout_and_login_with_admin()
+
+    def test_private_dashboard_with_user_no_permissions(self):
+        self.base_page.run_discovery()
+        user_role = self.settings_page.add_user_with_duplicated_role(ui_consts.RESTRICTED_USERNAME,
+                                                                     ui_consts.NEW_PASSWORD,
+                                                                     ui_consts.FIRST_NAME,
+                                                                     ui_consts.LAST_NAME,
+                                                                     self.settings_page.RESTRICTED_ROLE)
+        self.settings_page.wait_for_table_to_load()
+        settings_permissions = {
+            'dashboard': [
+                'View dashboard'
+            ],
+            'devices_assets': 'all'
+        }
+        self.settings_page.update_role(user_role, settings_permissions, True)
+        self.login_page.switch_user(ui_consts.RESTRICTED_USERNAME, ui_consts.NEW_PASSWORD)
+        self.dashboard_page.wait_for_spinner_to_end()
+        self.dashboard_page.move_to_space_and_assert_title(2, self.MY_DASHBOARD_TITLE)
+        self.dashboard_page.add_segmentation_card(
+            'Devices', OS_TYPE_OPTION_NAME, self.TEST_REPORT_NAME)
+        card = self.dashboard_page.find_dashboard_card(self.TEST_REPORT_NAME)
+        self.dashboard_page.open_edit_card(card)
+        self.dashboard_page.select_chart_wizard_field(OS_SERVICE_PACK_OPTION_NAME)
+        self.dashboard_page.click_card_save()
+        self.dashboard_page.remove_card(self.TEST_REPORT_NAME)

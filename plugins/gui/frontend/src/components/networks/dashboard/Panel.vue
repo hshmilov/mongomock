@@ -44,6 +44,7 @@
             :chart="chart"
             :sortable="isSortable(chart)"
             :is-chart-filterable="isChartFilterable"
+            :ignore-permissions="ignorePermissions"
             v-on="$listeners"
             @edit="editPanel"
             @toggleShowSearch="toggleShowSearch"
@@ -216,6 +217,10 @@ export default {
     currentSpace: {
       type: String,
       default: null,
+    },
+    ignorePermissions: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

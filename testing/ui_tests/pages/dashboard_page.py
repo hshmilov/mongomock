@@ -1374,3 +1374,7 @@ class DashboardPage(Page):
 
     def get_pie_chart_footer_total_value(self, pie):
         return int(pie.find_element_by_css_selector(self.PIE_TOTAL_ITEMS_CSS).text.lstrip('Total '))
+
+    def move_to_space_and_assert_title(self, space_index, title):
+        self.select_space(space_index)
+        assert self.find_space_header_title(space_index) == title

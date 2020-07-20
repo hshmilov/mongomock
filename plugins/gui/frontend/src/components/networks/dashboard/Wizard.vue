@@ -88,8 +88,7 @@
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
 import XIcon from '@axons/icons/Icon';
-import { formatDate } from '@constants/utils';
-import { getTimeZoneDiff } from '@constants/utils';
+import { formatDate, getTimeZoneDiff } from '@constants/utils';
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
 
@@ -219,6 +218,11 @@ export default {
     chartComponent() {
       return ChartWizardComponentByMetricEnum[this.dashboard.metric];
     },
+    dashboardData() {
+      return this.isPersonalDashboardSpaceId
+        ? { ...this.dashboard, private: true }
+        : this.dashboard;
+    },
   },
   async created() {
     this.entityOptions.forEach((entity) => this.fetchDataFields({ module: entity.name }));
@@ -251,11 +255,11 @@ export default {
         return this.changeDashboard({
           panelId: this.panel.uuid,
           spaceId: this.space,
-          data: this.dashboard,
+          data: this.dashboardData,
         });
       }
       return this.saveDashboard({
-        data: this.dashboard,
+        data: this.dashboardData,
         space: this.space,
       }).then((res) => {
         // complete milestone here

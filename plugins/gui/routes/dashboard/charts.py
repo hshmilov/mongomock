@@ -47,6 +47,8 @@ SOURCE_SPACE_NAME = 'source_space_name'
 TARGET_SPACE_ID = 'target_space_id'
 TARGET_SPACE_NAME = 'target_space_name'
 
+NO_ACCESS_ERROR_MESSAGE = 'You are lacking some permissions for this request'
+
 
 class ChartTitle(Enum):
 
@@ -81,15 +83,20 @@ class Charts:
         return jsonify(self._get_dashboard(skip, limit))
 
     @gui_route_logged_in('<space_id>', methods=['PUT'], enforce_trial=False,
-                         activity_params=[CHART_TYPE, SPACE_NAME, CHART_NAME])
-    def add_dashboard_space_panel(self, space_id):
+                         activity_params=[CHART_TYPE, SPACE_NAME, CHART_NAME], proceed_and_set_access=True)
+    def add_dashboard_space_panel(self, space_id, no_access):
         """
         POST a new Dashboard Panel configuration, attached to requested space
 
         :param space_id: The ObjectId of the space for adding the panel to
+        :param no_access: this endpoint called by user with no permissions if true
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
+        if no_access and not request.get_json().get('private'):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         dashboard_data = dict(self.get_request_data_as_object())
+        dashboard_data.pop('private', None)
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
@@ -196,17 +203,25 @@ class Charts:
             'count': len(dashboard_data)
         })
 
-    @gui_route_logged_in('<panel_id>', methods=['POST'], activity_params=[SPACE_NAME, CHART_NAME])
-    def update_dashboard_panel(self, panel_id):
+    @gui_route_logged_in('<panel_id>', methods=['POST'], activity_params=[SPACE_NAME, CHART_NAME],
+                         proceed_and_set_access=True)
+    def update_dashboard_panel(self, panel_id, no_access):
         """
         POST an update of the configuration for an existing Dashboard Panel
         :param panel_id: The mongo id of the panel to handle
+        :param no_access: this endpoint called by user with no permissions if true
         :return: chart name / dashboard name
         """
+        if no_access and not request.get_json().get('private'):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         panel_id = ObjectId(panel_id)
 
+        dashboard_data = dict(self.get_request_data_as_object())
+        dashboard_data.pop('private', None)
+
         update_data = {
-            **self.get_request_data_as_object(),
+            **dashboard_data,
             'user_id': get_connected_user_id(),
             'last_updated': datetime.now()
         }
@@ -225,7 +240,7 @@ class Charts:
         old_linked_dashboard = new_chart.get('linked_dashboard', None)
         if old_linked_dashboard:
             # delete linked dashboard
-            self.delete_dashboard_panel(old_linked_dashboard)
+            self.delete_dashboard_panel(old_linked_dashboard, no_access=False)
             generate_dashboard.clean_cache([old_linked_dashboard, None, None])
             generate_dashboard_historical.clean_cache([old_linked_dashboard, WILDCARD_ARG, WILDCARD_ARG])
             # if no new linked dashboard, clear link field
@@ -250,15 +265,19 @@ class Charts:
                          required_permission=PermissionValue.get(None,
                                                                  PermissionCategory.Dashboard,
                                                                  PermissionCategory.Charts),
-                         activity_params=[SPACE_NAME, CHART_NAME])
-    def delete_dashboard_panel(self, panel_id):
+                         activity_params=[SPACE_NAME, CHART_NAME], proceed_and_set_access=True)
+    def delete_dashboard_panel(self, panel_id, no_access):
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the
         "panels_order" in the "dashboard_space" collection
 
         :param panel_id: The mongo id of the panel to handle
+        :param no_access: this endpoint called by user with no permissions if true
         :return: ObjectId of the Panel to delete
         """
+        if no_access and not request.get_json().get('private'):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         panel_id = ObjectId(panel_id)
 
         update_data = {
@@ -292,7 +311,7 @@ class Charts:
         generate_dashboard_historical.remove_from_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
 
         if chart.get('linked_dashboard'):
-            self.delete_dashboard_panel(chart['linked_dashboard'])
+            self.delete_dashboard_panel(chart['linked_dashboard'], no_access=False)
 
         return jsonify({
             SPACE_NAME: space.get('name', ''),

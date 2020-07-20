@@ -32,8 +32,7 @@
           </XTab>
           <XTab
             v-if="$can($permissionConsts.categories.Dashboard,
-                       $permissionConsts.actions.Add,
-                       $permissionConsts.categories.Charts)"
+                       $permissionConsts.actions.View)"
             :id="personalSpace.uuid"
             :title="personalSpace.name"
             :selected="currentSpace === personalSpace.uuid"
@@ -43,6 +42,7 @@
                 v-if="active"
                 :panels="personalSpace.panels"
                 :panels-order="personalSpace.panels_order"
+                :ignore-permissions="true"
                 @add="() => addNewPanel(personalSpace.uuid)"
                 @edit="editPanel"
               />

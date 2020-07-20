@@ -108,7 +108,6 @@ class TestDashboardCharts(TestBase):
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login(username=READ_ONLY_USERNAME, password=NEW_PASSWORD)
         self.dashboard_page.switch_to_page()
-        assert self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_missing_add_space()
         self._test_read_only_user_with_dashboard_read_write()
 
