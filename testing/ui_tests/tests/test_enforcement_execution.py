@@ -77,7 +77,7 @@ class TestEnforcementExecution(TestBase):
             assert any(RUN_CMD_ACTION_NAME.lower().replace(' ', '_') in name for name in vertical_tabs), \
                 'Different vertical tabs than excepted'
             custom_execution_data = self.devices_page.get_all_custom_data()
-            assert len(custom_execution_data) == 4
+            assert len(custom_execution_data) == 5
 
             # Check file existence
             dir_contents, after_dir = custom_execution_data[0].split(

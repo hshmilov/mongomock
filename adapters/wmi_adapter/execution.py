@@ -2,6 +2,7 @@ import ipaddress
 import logging
 import os
 import shutil
+import subprocess
 from datetime import datetime
 from multiprocessing.dummy import Pool
 from typing import List, Tuple
@@ -15,6 +16,7 @@ from axonius.clients.wmi_query.consts import (ACTION_TYPES, CMD_ACTION_SCHEMA,
                                               PARAMS_NAME, PASSWORD,
                                               SCAN_ACTION_SCHEMA, USERNAME, REGISTRY_EXISTS, USE_AD_CREDS)
 from axonius.clients.wmi_query.query import WmiResults, WmiStatus
+from axonius.clients.wmi_query.consts import WMI_SCAN_PORTS
 from axonius.consts.plugin_consts import ACTIVE_DIRECTORY_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.entities import EntityType
@@ -225,13 +227,18 @@ class WmiExecutionMixIn(Triggerable):
 
         field_name = client_config[COMMAND_NAME]
         field_name = field_name.strip().lower().replace(' ', '_').replace('-', '_')
+        field_name_date = f'{field_name}_last_successful_wmi_execution'
         # create a new device for parsing he data
         new_device = self._new_device_adapter()
         new_device.id = f'{client_id}_{field_name}'
         if not new_device.does_field_exist(field_name):
             field = Field(str, f'Windows {field_name}')
             new_device.declare_new_field(field_name, field)
+        if not new_device.does_field_exist(field_name_date):
+            field = Field(datetime, f'Windows {field_name}: Last successful WMI execution')
+            new_device.declare_new_field(field_name_date, field)
         new_device[field_name] = command_output
+        new_device[field_name_date] = datetime.now()
         return new_device
 
     @staticmethod
@@ -408,15 +415,23 @@ class WmiExecutionMixIn(Triggerable):
             # find the best ip for running the job on it
             reachable_hostname_adapter, reachable_hostname, reachable_ip = \
                 self.get_reachable_hostname(adapters_hostnames, dns_servers=client_config.get(DNS_SERVERS) or None)
+
+            client_config[HOSTNAMES] = reachable_ip
+            try:
+                if adapters_hostnames[0]:
+                    self._handle_device_create_device_general(client_config, adapters_hostnames[0].meta)
+            except Exception:
+                logger.exception(f'Could not run create device general')
+
             if not reachable_hostname and not reachable_ip:
+                wmi_scan_ports_str = ', '.join([str(x) for x in WMI_SCAN_PORTS])
                 json = {
                     'success': False,
-                    'value': f'{job_title} Error: Unable to connect'
+                    'value': f'{job_title} Error: Unable to connect to ports {wmi_scan_ports_str}'
                 }
                 return device['internal_axon_id'], json
 
             # Running the given job
-            client_config[HOSTNAMES] = reachable_ip
             self._handle_device_create_device(client_config, job_name, reachable_hostname_adapter, reachable_hostname)
             return device['internal_axon_id'], {
                 'success': True,
@@ -428,6 +443,50 @@ class WmiExecutionMixIn(Triggerable):
                 'success': False,
                 'value': f'{job_title} Error: {str(e)}'
             }
+
+    @staticmethod
+    def does_answer_to_ping(hostnames) -> bool:
+        try:
+            hostnames = hostnames.split(',') if isinstance(hostnames, str) else hostnames
+            for hostname in hostnames:
+                res = subprocess.call(['ping', '-c', '1', hostname])
+                if res == 0:
+                    return True
+        except Exception:
+            logger.exception(f'Failed checking ping for {hostnames}')
+        return False
+
+    def set_last_ping_status(self, device, hostnames):
+        try:
+            if self.does_answer_to_ping(hostnames):
+                device.wmi_adapter_does_answer_to_ping = True
+                device.wmi_adapter_last_time_answered_to_ping = datetime.now()
+            else:
+                device.wmi_adapter_does_answer_to_ping = False
+        except Exception:
+            logger.exception(f'Could not set last ping fields')
+
+    def _handle_device_create_device_general(self, client_config: dict, adapter_meta: dict):
+        """
+        Running the action job using the given details
+        :param client_config: action config
+        :param adapter_meta: adapter for tagging the new adapter data to it
+        :return: None
+        """
+        # Create a new device
+        new_device = self._new_device_adapter()
+        self.set_last_ping_status(new_device, client_config[HOSTNAMES])
+
+        new_data = new_device.to_dict()
+
+        self.devices.add_adapterdata(
+            [(adapter_meta['plugin_unique_name'], adapter_meta['adapter_unique_id'])], new_data,
+            action_if_exists='update',  # If the tag exists, we update it using deep merge (and not replace it).
+            client_used=adapter_meta['client_used']
+        )
+
+        logger.info(f'saved {new_data}')
+        self._save_field_names_to_db(EntityType.Devices)
 
     def _handle_device_create_device(self, client_config: dict, job_name: str, adapter_meta: dict,
                                      hostname_for_validation: str):

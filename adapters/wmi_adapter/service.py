@@ -21,6 +21,8 @@ class WmiAdapter(WmiExecutionMixIn, AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         wmi_adapter_last_success_execution = Field(datetime, 'Last WMI Success')
+        wmi_adapter_does_answer_to_ping = Field(bool, 'Did answer to ping')
+        wmi_adapter_last_time_answered_to_ping = Field(datetime, 'Last time answered to ping')
         pm_last_execution_success = Field(datetime, 'Last PM Info Success')
 
         ad_bad_config_no_lm_hash = Field(int, 'Bad Config - No LMHash')
