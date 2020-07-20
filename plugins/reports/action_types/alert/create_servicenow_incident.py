@@ -4,6 +4,7 @@ from axonius.consts import report_consts
 from axonius.types.enforcement_classes import AlertActionResult
 from axonius.utils import gui_helpers
 from axonius.clients.service_now.connection import ServiceNowConnection
+from axonius.clients.service_now.consts import LINK_TEMPLATE
 from reports.action_types.action_type_alert import ActionTypeAlert
 from reports.action_types.action_type_base import add_node_selection, add_node_default
 
@@ -126,6 +127,17 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'name': 'send_csv_as_attachment',
                     'title': 'Send CSV as attachment',
                     'type': 'bool'
+                },
+                {
+                    'name': 'created_incident_webhook_url',
+                    'title': 'Send created incident link to webhook URL',
+                    'type': 'string'
+                },
+                {
+                    'name': 'created_incident_webhook_content',
+                    'title': 'Webhook content',
+                    'type': 'string',
+                    'default': '{"text": "Created incident link is:' + LINK_TEMPLATE + '"}'
                 }
             ],
             'required': [
@@ -164,7 +176,9 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'category': None,
             'add_link_to_title': False,
             'subcategory': None,
-            'send_csv_as_attachment': False
+            'send_csv_as_attachment': False,
+            'created_incident_webhook_url': None,
+            'created_incident_webhook_content': None
         })
 
     # pylint: disable=too-many-arguments
@@ -184,7 +198,9 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             'category': category,
                             'subcategory': subcategory,
                             'extra_fields': extra_fields,
-                            'csv_string': csv_string
+                            'csv_string': csv_string,
+                            'created_incident_webhook_url': self._config.get('created_incident_webhook_url'),
+                            'created_incident_webhook_content': self._config.get('created_incident_webhook_content')
                             }
         try:
             if self._config['use_adapter'] is True:

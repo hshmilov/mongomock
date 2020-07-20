@@ -95,12 +95,19 @@ def non_historic_indexes(db: Collection):
     create_index_safe(db, [('internal_axon_id', pymongo.ASCENDING)], unique=True, background=True)
     create_index_safe(db, [(f'adapters.quick_id', pymongo.ASCENDING)], background=True, unique=True)
     # Search index
-    create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
-                           ('adapters.data.last_used_users', pymongo.TEXT),
-                           ('adapters.data.username', pymongo.TEXT),
-                           ('adapters.data.mail', pymongo.TEXT),
-                           ('adapters.data.network_interfaces.mac', pymongo.TEXT)],
-                      background=True)
+    try:
+        create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
+                               ('adapters.data.last_used_users', pymongo.TEXT),
+                               ('adapters.data.username', pymongo.TEXT),
+                               ('adapters.data.mail', pymongo.TEXT),
+                               ('adapters.data.network_interfaces.mac', pymongo.TEXT)],
+                          background=True)
+    except Exception:
+        create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),
+                               ('adapters.data.last_used_users', pymongo.TEXT),
+                               ('adapters.data.username', pymongo.TEXT),
+                               ('adapters.data.mail', pymongo.TEXT)],
+                          background=True)
 
 
 def historic_indexes(db: Collection):

@@ -56,11 +56,17 @@ class CherwellCreateComputerAction(ActionTypeBase):
                     'name': 'https_proxy',
                     'title': 'HTTPS proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'bus_ob_id',
+                    'title': 'Business Object ID',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'use_adapter',
                 'verify_ssl',
+                'bus_ob_id'
             ],
             'type': 'array'
         }
@@ -76,6 +82,7 @@ class CherwellCreateComputerAction(ActionTypeBase):
             'https_proxy': None,
             'verify_ssl': False,
             'client_id': None,
+            'bus_ob_id': IT_ASSET_BUS_OB_ID
         })
 
     # pylint: disable=too-many-arguments
@@ -202,7 +209,7 @@ class CherwellCreateComputerAction(ActionTypeBase):
                     continue
                 bus_ob_rec_id = ''
                 bus_ob_public_id = ''
-                bus_ob_id = IT_ASSET_BUS_OB_ID
+                bus_ob_id = self._config.get('bus_ob_id') or IT_ASSET_BUS_OB_ID
                 # If we don't have hostname we use asset name
                 name_raw = name_raw if name_raw else asset_name_raw
 

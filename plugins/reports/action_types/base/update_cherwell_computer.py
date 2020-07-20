@@ -84,8 +84,6 @@ class CherwellUpdateComputerAction(ActionTypeBase):
                                   os_build=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         connection_dict = dict()
-        if not name:
-            return None
         connection_dict['name'] = name
         connection_dict['bus_ob_id'] = bus_ob_id
         connection_dict['bus_ob_rec_id'] = bus_ob_rec_id

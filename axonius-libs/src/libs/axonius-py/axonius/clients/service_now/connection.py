@@ -4,6 +4,7 @@ import logging
 from math import ceil
 from typing import Generator, Tuple, List, Optional, Dict
 from aiohttp import ClientResponse
+import requests
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -185,8 +186,10 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         self._patch(f'table/{table_name}/{sys_id}', body_params=dict_data)
         return self._get(f'table/{table_name}/{sys_id}')
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def create_service_now_incident(self, service_now_dict):
+        created_incident_webhook_url = service_now_dict.get('created_incident_webhook_url')
+        created_incident_webhook_content = service_now_dict.get('created_incident_webhook_content')
         impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
         short_description = service_now_dict.get('short_description', '')
         description = service_now_dict.get('description', '')
@@ -232,6 +235,20 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             except Exception:
                 logger.exception(f'Problem getting additional fields')
             incident_value = self.__add_dict_to_table('incident', final_dict)
+            try:
+                if created_incident_webhook_content and created_incident_webhook_url:
+                    incident_sys_id = incident_value['result']['sys_id']
+                    permalink = self._url[:-len('api/now/')] + f'task.do?sys_id={incident_sys_id}'
+                    created_incident_webhook_content = created_incident_webhook_content.replace(consts.LINK_TEMPLATE,
+                                                                                                permalink)
+                    response = requests.post(url=created_incident_webhook_url,
+                                             json=json.loads(created_incident_webhook_content),
+                                             headers={'Content-Type': 'application/json',
+                                                      'Accept': 'application/json'},
+                                             verify=False)
+                    response.raise_for_status()
+            except Exception:
+                logger.exception(f'Problem with webhook')
             if csv_string and (incident_value.get('result') or {}).get('sys_id'):
                 self._upload_csv_to_table(table_name='incident', table_sys_id=incident_value['result']['sys_id'],
                                           csv_string=csv_string)

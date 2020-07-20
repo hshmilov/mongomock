@@ -7,20 +7,24 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def get_export_asset_plus_vulns(access_key, secret_key, proxies):
-    tio = TenableIO(access_key, secret_key, proxies=proxies,
-                    vendor='Axonius', product='Axonius', build='1.0.0')
-    assets = tio.exports.assets()
-    assets_list_dict = dict()
-    for asset in assets:
-        try:
-            asset_id = asset.get('id')
-            if not asset_id:
-                logger.warning(f'Got asset with no id. Asset raw data: {asset}')
-                continue
-            assets_list_dict[asset_id] = asset
-            assets_list_dict[asset_id]['vulns_info'] = []
-        except Exception:
-            logger.exception(f'Problem with asset {asset}')
+    try:
+        tio = TenableIO(access_key, secret_key, proxies=proxies,
+                        vendor='Axonius', product='Axonius', build='1.0.0')
+        assets = tio.exports.assets()
+        assets_list_dict = dict()
+        for asset in assets:
+            try:
+                asset_id = asset.get('id')
+                if not asset_id:
+                    logger.warning(f'Got asset with no id. Asset raw data: {asset}')
+                    continue
+                assets_list_dict[asset_id] = asset
+                assets_list_dict[asset_id]['vulns_info'] = []
+            except Exception:
+                logger.exception(f'Problem with asset {asset}')
+    except Exception as e:
+        logger.exception(f'exception in getting export')
+        return str(e)
     try:
         vulns_list = tio.exports.vulns()
     except Exception:
@@ -40,3 +44,4 @@ def get_export_asset_plus_vulns(access_key, secret_key, proxies):
     except Exception:
         logger.exception('General error while getting vulnerabilities fetch')
     yield from assets_list_dict.items()
+    return None

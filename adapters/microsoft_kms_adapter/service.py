@@ -4,6 +4,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.adapter_exceptions import ClientConnectionException
@@ -14,7 +15,7 @@ from microsoft_kms_adapter.structures import MicrosoftKmsDeviceInstance
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class MicrosoftKmsAdapter(AdapterBase):
+class MicrosoftKmsAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(MicrosoftKmsDeviceInstance):
         pass

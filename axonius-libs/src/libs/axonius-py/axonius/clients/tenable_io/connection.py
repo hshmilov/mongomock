@@ -192,9 +192,9 @@ class TenableIoConnection(RESTConnection):
             raise RESTException(f'Insufficient permissions found.'
                                 f' Did you grant the user an Administrator Role?')
 
-    # pylint: disable=W0221
+    # pylint: disable=W0221, too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_device_list(self):
-        _ = (yield from concurrent_multiprocess_yield(
+        result = (yield from concurrent_multiprocess_yield(
             [
                 (
                     get_export_asset_plus_vulns,
@@ -208,8 +208,8 @@ class TenableIoConnection(RESTConnection):
             ],
             1
         ))
+        return result
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_plugin_info(self, plugin_id):
         try:
             if self.plugins_dict.get(plugin_id):

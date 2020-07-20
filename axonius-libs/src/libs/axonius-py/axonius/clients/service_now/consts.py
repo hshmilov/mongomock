@@ -1,3 +1,4 @@
+LINK_TEMPLATE = '<<ISSUE_LINK>>'
 TABLE_NAME_KEY = 'table_name'
 DEVICE_TYPE_NAME_KEY = 'device_type_name'
 DEVICES_KEY = 'devices'

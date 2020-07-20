@@ -404,6 +404,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
 
         return device
 
+    def yield_assets(self, assets_raw):
+        result = (yield from assets_raw)
+        if isinstance(result, str):
+            self.create_notification(f'Tenable.io Export Error', result, severity_type='error')
+
     def _parse_raw_data(self, devices_raw_data_all):
         agent_ids = set()
         for device_raw, device_type, client_data, uuid_to_id_scans_dict in devices_raw_data_all:
@@ -416,7 +421,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     if device:
                         yield device
                 elif ASSET_TYPE == device_type:
-                    for device_id, device_asset_raw in device_raw:
+                    for device_id, device_asset_raw in self.yield_assets(device_raw):
                         try:
                             device = self._parse_export_device(device_id, device_asset_raw, client_data,
                                                                uuid_to_id_scans_dict)

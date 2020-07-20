@@ -208,6 +208,21 @@ class CherwellConnection(RESTConnection):
             bus_ob_rec_id = cherwell_connection['bus_ob_rec_id']
             bus_ob_public_id = cherwell_connection['bus_ob_public_id']
             fields_raw = list()
+            if cherwell_connection.get('name'):
+                fields_raw.append({'dirty': True,
+                                   'displayName': 'Host Name',
+                                   'name': 'HostName',
+                                   'fieldId': 'BO:9343f882f2b2ae64b1990c41c9bb68410bdbc23528,'
+                                              'FI:937905400191ae67dd03ab4b79968fcbaa264b1a75',
+                                   'value': cherwell_connection.get('name')
+                                   })
+                fields_raw.append({'dirty': True,
+                                   'displayName': 'Friendly Name',
+                                   'name': 'FriendlyName',
+                                   'fieldId': 'BO:9343f882f2b2ae64b1990c41c9bb68410bdbc23528,'
+                                              'FI:93db94f556e932fd3239504767babd1bfb6c013bb6',
+                                   'value': cherwell_connection.get('name')
+                                   })
             if cherwell_connection.get('ip_address'):
                 fields_raw.append({'dirty': True,
                                    'displayName': 'IP Address',

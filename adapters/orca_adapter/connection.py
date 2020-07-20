@@ -46,15 +46,18 @@ class OrcaConnection(RESTConnection):
         devices_compliance_dict = self._get_extra_api_dict('query/compliance')
         devices_alerts_dict = self._get_extra_api_dict('query/alerts')
         device_inventory_dict = self._get_extra_api_dict('query/inventory')
-        for device_raw in self._get_api_endpoint('query/assets'):
+        for device_raw in self._get_api_endpoint('query/assets', url_params={'all_levels': 'true'}):
             yield device_raw, devices_alerts_dict, device_inventory_dict, devices_logs_dict, devices_compliance_dict
 
-    def _get_api_endpoint(self, endpoint):
-        response = self._get(endpoint)
+    def _get_api_endpoint(self, endpoint, url_params=None):
+        response = self._get(endpoint, url_params=url_params)
         yield from response['data']
+        if not url_params:
+            url_params = {}
         while response.get('next_page_token'):
             try:
-                response = self._get(endpoint, url_params={'next_page_token': response.get('next_page_token')})
+                url_params.update({'next_page_token': response.get('next_page_token')})
+                response = self._get(endpoint, url_params=url_params)
                 yield from response['data']
                 if not response['data']:
                     break
