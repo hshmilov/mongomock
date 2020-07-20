@@ -222,10 +222,6 @@ class InstanceManager:
         with TC.block(f'content of {base_instance.id}:/home/ubuntu'):
             print(ret)
 
-        print('Making sure our git repository is self-contained')
-        execute('git repack -a -d', stream_output=True)
-        execute('rm .git/objects/info/alternates', stream_output=True)
-
         # Create a copy of the source code and copy it to there.
         print(f'Creating source code tar and copying it..')
         execute('rm -rf cortex.tar')
