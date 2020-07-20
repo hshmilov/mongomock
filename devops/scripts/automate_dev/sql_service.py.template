@@ -4,6 +4,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.clients.rest.connection import RESTConnection
+from axonius.mixins.configurable import Configurable
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.adapter_exceptions import ClientConnectionException
 from {adapter_name}_adapter import consts
@@ -13,7 +14,7 @@ from {adapter_name}_adapter.structures import {capital_adapter_name}DeviceInstan
 logger = logging.getLogger(f'axonius.{{__name__}}')
 
 
-class {capital_adapter_name}Adapter(AdapterBase):
+class {capital_adapter_name}Adapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter({capital_adapter_name}DeviceInstance):
         pass
