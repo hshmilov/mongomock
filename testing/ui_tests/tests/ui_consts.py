@@ -64,6 +64,8 @@ WMI_INFO_ADAPTER = 'wmi_adapter'
 
 AWS_ADAPTER = 'aws_adapter'
 AWS_ADAPTER_NAME = 'Amazon Web Services (AWS)'
+AZURE_ADAPTER = 'azure_adapter'
+AZURE_ADAPTER_NAME = 'Microsoft Azure'
 
 CROWD_STRIKE_ADAPTER = 'crowd_strike_adapter'
 CROWD_STRIKE_ADAPTER_NAME = 'CrowdStrike Falcon'

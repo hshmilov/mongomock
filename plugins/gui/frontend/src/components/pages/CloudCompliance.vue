@@ -282,6 +282,7 @@ export default {
     ...mapMutations({ updateFilters: UPDATE_COMPLIANCE_FILTERS }),
     async fetchAllData() {
       this.loading = true;
+      await this.fetchComplianceFilters();
       await this.fetchComplianceRows();
       this.loading = false;
     },

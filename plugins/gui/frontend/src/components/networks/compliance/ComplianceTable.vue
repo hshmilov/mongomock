@@ -10,7 +10,7 @@
       :row-class="getRowClass"
       :pagination="true"
       :on-click-row="openSidePanel"
-      :fields="getTableFields()"
+      :fields="tableFields"
       :static-sort="false"
       :format-title="formatTitle"
       :multiple-row-selection="false"
@@ -53,7 +53,6 @@
 </template>
 <script>
 import { mapActions, mapState, mapGetters } from 'vuex';
-import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import XTable from '@components/neurons/data/Table.vue';
@@ -87,7 +86,6 @@ export default {
     XCompliancePanel,
     XTable,
     XButton,
-    PulseLoader,
     XEnforcementMenu,
   },
   props: {
@@ -176,6 +174,12 @@ export default {
     modulePath() {
       return `${this.module}/cis/${this.cisName}/report`;
     },
+    tableFields() {
+      if (this.cisName === 'azure') {
+        return tableFields.filter((field) => field.name !== 'affected');
+      }
+      return tableFields;
+    },
   },
   watch: {
     $route(to) {
@@ -192,9 +196,6 @@ export default {
     ...mapActions({
       fetchContentCSV: FETCH_DATA_CONTENT_CSV,
     }),
-    getTableFields() {
-      return tableFields;
-    },
     getRowClass(rowData) {
       return rowData.status.toLowerCase().replace(' ', '-');
     },

@@ -195,7 +195,7 @@ def get_initial_cis_selection():
     azure_adapter_found = False
 
     for adapter in active_adapters:
-        adapter_name = adapter.get('name', '')
+        adapter_name = adapter.get('plugin_name', '')
         if 'aws' in adapter_name:
             aws_adapter_found = True
         elif 'azure' in adapter_name:
@@ -238,10 +238,10 @@ def aggregate_reports(accounts_reports):
 
         report_rules = report['report'].get('rules')
         for rule in report_rules:
-            rule_name = rule.get('rule_name')
-            existing_rule_object = rules_dict.get(rule_name)
+            rule_key = f'{rule.get("section")} {rule.get("rule_name")}'
+            existing_rule_object = rules_dict.get(rule_key)
             if not existing_rule_object:
-                rules_dict[rule_name] = rule
+                rules_dict[rule_key] = rule
                 continue
             _concat_rules_results(existing_rule_object, rule)
 

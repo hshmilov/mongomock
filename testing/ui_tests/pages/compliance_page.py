@@ -32,10 +32,13 @@ class CompliancePage(Page):
     SCORE_RULES_EDIT_BUTTON_CSS = '#edit_score_settings'
     SCORE_RULES_ROWS_CSS = '.rules-selection .v-list-item'
     SCORE_RULES_SAVE_BUTTON_CSS = '.ant-modal-footer .ant-btn-primary'
+    CIS_SELECT_CSS = '.cis-select .dropdown-input .x-select-trigger'
+    CIS_OPTION_XPATH = '//div[contains(@class, \'x-select-options\')]//div[contains(@title,\'{cis_title}\')]'
 
     COMPLIANCE_TABLE_TOTAL_RULE_COUNT_CSS = '.table-title .count'
     ACCOUNT_FIELD = 'Results (Failed/Checked)'
     AWS_DEFAULT_RULES_NUMBER = 43
+    AZURE_DEFAULT_RULES_NUMBER = 76
 
     @property
     def url(self):
@@ -157,3 +160,12 @@ class CompliancePage(Page):
     def assert_default_number_of_rules(self):
         #  asserts the count, to the default number of rules currently defined in cac.
         return self.get_total_rules_count() == self.AWS_DEFAULT_RULES_NUMBER
+
+    def assert_azure_default_number_of_rules(self):
+        #  asserts the count, to the default number of rules currently defined in cac.
+        return self.get_total_rules_count() == self.AZURE_DEFAULT_RULES_NUMBER
+
+    def select_cis_by_title(self, title):
+        self.driver.find_element_by_css_selector(self.CIS_SELECT_CSS).click()
+        self.driver.find_element_by_xpath(self.CIS_OPTION_XPATH.format(cis_title=title)).click()
+        self.wait_for_table_to_be_responsive()
