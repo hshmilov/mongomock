@@ -1,11 +1,10 @@
 from axonius.entities import EntityType
-from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.dashboard_helper import assert_desc_sort_by_value
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME, DEVICES_MODULE
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.test_dashboard_chart_base import TestDashboardChartBase
 
 
-class TestDashboardTimeline(TestBase):
+class TestDashboardTimeline(TestDashboardChartBase):
 
     TIMELINE_CARD_TITLE = 'Timeline'
 
@@ -39,11 +38,7 @@ class TestDashboardTimeline(TestBase):
         self._init_timeline_card_test()
 
         card = self.dashboard_page.get_card(self.TIMELINE_CARD_TITLE)
-        card_id = card.get_property('id')
-        self.axonius_system.gui.login_user(DEFAULT_USER)
-        csv_data = self.axonius_system.gui.get_chart_csv(card_id)
-        all_csv_rows = csv_data.content.decode('utf-8').split('\r\n')
-        csv_data_rows = [x.split(',') for x in all_csv_rows[1:-1]]
+        csv_data_rows = self._download_and_get_csv(self.TIMELINE_CARD_TITLE)
         csv_dates = [x[0] for x in csv_data_rows]
         assert_desc_sort_by_value(csv_dates)
         chart_ui_data = self.dashboard_page.get_data_from_timeline_card(card)

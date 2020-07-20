@@ -2,7 +2,6 @@ import time
 from math import ceil
 
 import pytest
-import requests
 from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.wait import wait_until
@@ -52,11 +51,12 @@ class TestDashboard(TestBase):
         """
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        self._create_get_paginator_segmentation_card(run_discovery=False,
-                                                     module='Devices',
-                                                     field='Host Name',
-                                                     title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
-                                                     view_name='')
+        self.dashboard_page.create_and_get_paginator_segmentation_card(
+            run_discovery=False,
+            module='Devices',
+            field='Host Name',
+            title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
+            view_name='')
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(READ_WRITE_USERNAME, NEW_PASSWORD,
@@ -99,7 +99,7 @@ class TestDashboard(TestBase):
         """
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        histograms_chart = self._create_get_paginator_segmentation_card(
+        histograms_chart = self.dashboard_page.create_and_get_paginator_segmentation_card(
             run_discovery=False,
             module='Devices',
             field='Host Name',
@@ -190,21 +190,6 @@ class TestDashboard(TestBase):
         assert quantities[0][0] + quantities[1][0] == quantities[2][0]
         assert quantities[2][0] >= quantities[3][0]
 
-    def _create_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name, sort=None):
-        self.dashboard_page.switch_to_page()
-        if run_discovery:
-            self.base_page.run_discovery()
-        self.dashboard_page.add_segmentation_card(module=module,
-                                                  field=field,
-                                                  title=title,
-                                                  view_name=view_name,
-                                                  partial_text=False,
-                                                  sort_config=sort)
-        # create reference to the segmentation card with title
-        segmentation_card = self.dashboard_page.get_card(title)
-        # create reference to the histogram within the card
-        return self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
-
     def _test_paginator_state_first_page(self, histograms_chart, page_number, to_val):
         assert not self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
         assert self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
@@ -267,60 +252,10 @@ class TestDashboard(TestBase):
         self.devices_page.wait_for_table_to_load()
         return self.devices_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE)
 
-    @staticmethod
-    def assert_data_devices_fit_pagination_data(histogram_items_title, host_names_list):
-        # Checking the lists are equal by one sided containment + equal length
-        assert len(histogram_items_title) == len(host_names_list)
-        assert all(item in host_names_list for item in histogram_items_title)
-
-    def generate_csv_from_segmentation_graph(self, panel_id):
-        session = requests.Session()
-        cookies = self.driver.get_cookies()
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        return session.get(f'https://127.0.0.1/api/dashboard/charts/{panel_id}/csv')
-
-    def grab_all_host_names_from_csv(self, panel_id):
-        result = self.generate_csv_from_segmentation_graph(panel_id)
-        all_csv_rows = result.content.decode('utf-8').split('\r\n')
-        csv_data_rows = all_csv_rows[1:-1]
-        return [str.split(',')[0] for str in csv_data_rows]
-
     def get_segmentation_card_id(self):
         segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
         card_id = segmentation_card.get_property('id')
         return card_id
-
-    def test_check_segmentation_csv(self):
-        histogram_items_title = []
-        histograms_chart = \
-            self._create_get_paginator_segmentation_card(run_discovery=True,
-                                                         module='Devices',
-                                                         field='Host Name',
-                                                         title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
-                                                         view_name='')
-        panel_id = self.get_segmentation_card_id()
-        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
-        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
-        # calculate the total number of pages in Paginator
-        # by this wat we ensure to have the exact num of pages and cover all the cases even if the
-        # total_num_of_items % limit has a remainder (round up the result)
-        num_of_pages = ceil(total_num_of_items / limit)
-        # iterate incrementaly on all the pages (next)
-        for page_number in range(1, num_of_pages + 1):
-            histogram_items_title.append(self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart))
-            if page_number == 1:
-                self.dashboard_page.click_to_next_page(histograms_chart)
-            elif page_number == num_of_pages:
-                break
-            else:
-                self.dashboard_page.click_to_next_page(histograms_chart)
-        # flatten list
-        histogram_titles_list = [item for sublist in histogram_items_title for item in sublist]
-        host_names_list = self.grab_all_host_names_from_csv(panel_id)
-        # compare histograms_item_titles of pagination with data grabbed from devices table
-        self.assert_data_devices_fit_pagination_data(histogram_titles_list, host_names_list)
-        self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
 
     def test_paginator_paginator_update_after_discovery(self):
         self.users_page.switch_to_page()
@@ -346,11 +281,12 @@ class TestDashboard(TestBase):
         second_result_count = self.users_page.count_entities()
         assert second_result_count == first_result_count - 3
         histograms_chart = \
-            self._create_get_paginator_segmentation_card(run_discovery=False,
-                                                         module='Users',
-                                                         field='User Name',
-                                                         title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
-                                                         view_name=self.SEGMENTATION_QUERY_USER_AD)
+            self.dashboard_page.create_and_get_paginator_segmentation_card(
+                run_discovery=False,
+                module='Users',
+                field='User Name',
+                title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
+                view_name=self.SEGMENTATION_QUERY_USER_AD)
         # verify reset chart
         self.dashboard_page.verify_card_config_reset_segmentation_chart(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
 
@@ -364,11 +300,12 @@ class TestDashboard(TestBase):
 
     def test_multi_page_histogram_linked_to_correct_filter(self):
         histograms_chart = \
-            self._create_get_paginator_segmentation_card(run_discovery=True,
-                                                         module='Devices',
-                                                         field='Host Name',
-                                                         title=self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER,
-                                                         view_name='')
+            self.dashboard_page.create_and_get_paginator_segmentation_card(
+                run_discovery=True,
+                module='Devices',
+                field='Host Name',
+                title=self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER,
+                view_name='')
         # on First Page
         selected_item_bart_title = self.dashboard_page.get_histogram_bar_item_title(histograms_chart, 1)
         self.dashboard_page.click_on_histogram_item(histograms_chart, 1)
@@ -392,7 +329,7 @@ class TestDashboard(TestBase):
 
     def test_paginator_on_segmentation_chart(self):
         histogram_items_title = []
-        histograms_chart = self._create_get_paginator_segmentation_card(
+        histograms_chart = self.dashboard_page.create_and_get_paginator_segmentation_card(
             run_discovery=True,
             module='Devices',
             field='Host Name',
@@ -447,7 +384,7 @@ class TestDashboard(TestBase):
         # flatten list
         histogram_titles_list = [item for sublist in histogram_items_title for item in sublist]
         devices_tiles_list = self.grab_all_host_names_from_devices()
-        self.assert_data_devices_fit_pagination_data(histogram_titles_list, devices_tiles_list)
+        self.dashboard_page.assert_data_devices_fit_pagination_data(histogram_titles_list, devices_tiles_list)
         self.dashboard_page.switch_to_page()
         # create reference to the histogram within the card
         segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM)
@@ -663,7 +600,7 @@ class TestDashboard(TestBase):
             'sort_by': sort_by,
             'sort_order': sort_order
         }
-        return self._create_get_paginator_segmentation_card(
+        return self.dashboard_page.create_and_get_paginator_segmentation_card(
             run_discovery=False,
             module='Devices',
             field='Host Name',

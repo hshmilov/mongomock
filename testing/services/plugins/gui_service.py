@@ -1778,9 +1778,6 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def get_report_pdf(self, report_id, *vargs, **kwargs):
         return self.get(f'reports/{report_id}/pdf', session=self._session, *vargs, **kwargs)
 
-    def get_chart_csv(self, chart_id, *vargs, **kwargs):
-        return self.get(f'dashboard/charts/{chart_id}/csv', session=self._session, *vargs, **kwargs)
-
     def get_saved_views(self):
 
         user_view = self.db.get_collection('gui', USER_VIEWS)

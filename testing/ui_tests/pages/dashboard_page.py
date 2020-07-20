@@ -12,12 +12,12 @@ from selenium.webdriver.support.color import Color
 
 from axonius.utils.wait import wait_until
 from services.axon_service import TimeoutException
-from ui_tests.pages.page import Page
+from ui_tests.pages.base_page import BasePage
 
 # pylint: disable=too-many-lines
 
 
-class DashboardPage(Page):
+class DashboardPage(BasePage):
     SHOW_ME_HOW = 'SHOW ME HOW'
     CONGRATULATIONS = 'Congratulations! You are one step closer to'
     MANAGED_DEVICE_COVERAGE = 'Managed Device Coverage'
@@ -609,6 +609,21 @@ class DashboardPage(Page):
             return False
         return True
 
+    def create_and_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name, sort=None):
+        self.switch_to_page()
+        if run_discovery:
+            self.run_discovery()
+        self.add_segmentation_card(module=module,
+                                   field=field,
+                                   title=title,
+                                   view_name=view_name,
+                                   partial_text=False,
+                                   sort_config=sort)
+        # create reference to the segmentation card with title
+        segmentation_card = self.get_card(title)
+        # create reference to the histogram within the card
+        return self.get_histogram_chart_from_card(segmentation_card)
+
     def get_summary_card_text(self, card_title):
         return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS,
                                                     element=self.driver.find_element_by_xpath(
@@ -768,6 +783,12 @@ class DashboardPage(Page):
     def assert_timeline_svg_exist(self, card):
         time.sleep(2)
         assert card.find_element_by_css_selector(self.TEST_TIMELINE_SVG_CSS)
+
+    @staticmethod
+    def assert_data_devices_fit_pagination_data(histogram_items_title, host_names_list):
+        # Checking the lists are equal by one sided containment + equal length
+        assert len(histogram_items_title) == len(host_names_list)
+        assert all(item in host_names_list for item in histogram_items_title)
 
     def get_uncovered_from_pie(self, pie):
         return int(pie.find_element_by_css_selector(self.UNCOVERED_PIE_SLICE_CSS).text.rstrip('%'))
