@@ -177,7 +177,7 @@ class MicrosoftKmsAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': ['devices_fetched_at_a_time'],
-            'pretty_name': 'MicrosoftKms Configuration',
+            'pretty_name': 'Microsoft KMS Configuration',
             'type': 'array'
         }
 

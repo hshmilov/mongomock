@@ -761,7 +761,7 @@
   "checkpoint_r80_adapter": {
     "title": "Check Point Infinity",
     "link": "https://docs.axonius.com/docs/checkpoint-infinity",
-    "description": "Check Point Infinity protects against cyber threats across networks, endpoint, cloud and mobile devices."
+    "description": "Check Point Infinity protects against cyber threats across networks, endpoint, cloud and mobile devices. This adapter supports the entire Infinity platform, including Check Point firewalls."
   },
   "sysaid_adapter": {
     "title": "SysAid",
@@ -1345,7 +1345,7 @@
   },
   "next_think_adapter": {
     "title": "Nexthink - BETA",
-    "link": "https://docs.axonius.com/docs/nextthink",
+    "link": "https://docs.axonius.com/docs/nexthink",
     "description": "Nexthink is an IT solution that provides insights into activity across devices, operating systems, and workplace locations to improve IT experiences for employees."
   },
   "stresstest_scanner_adapter": {

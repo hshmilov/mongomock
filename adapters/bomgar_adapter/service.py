@@ -83,7 +83,7 @@ class BomgarAdapter(AdapterBase):
                 },
                 {
                     'name': 'proxy_username',
-                    'title': 'HTTPS Proxy Username',
+                    'title': 'HTTPS Proxy User Name',
                     'type': 'string'
                 },
                 {
