@@ -81,7 +81,7 @@
         <ASelect
           :id="`${schema.name}_select`"
           v-model="data"
-          class="x-multiple-select"
+          :class="`x-multiple-select ${schema.name}_select`"
           mode="multiple"
           option-filter-prop="children"
           dropdown-class-name="x-multiple-select-dropdown"
@@ -509,6 +509,9 @@ export default {
     .ant-form-item {
       grid-column: 1/-1;
       margin-bottom: 0;
+      .ant-form-item-label {
+        line-height: initial;
+      }
       .x-multiple-select {
         width: 100%;
       }

@@ -750,6 +750,16 @@ class Page:
                 return option
         return None
 
+    def verify_multiple_select_dropdown_close(self, select_css_selector):
+        wait_until(lambda: self.close_multiple_select_dropdown(select_css_selector))
+
+    def close_multiple_select_dropdown(self, select_css_selector):
+        select = self.driver.find_element_by_css_selector(select_css_selector)
+        if 'ant-select-focused' in select.get_attribute('class'):
+            select.click()
+            return False
+        return True
+
     def select_multiple_option_without_search(self,
                                               dropdown_css_selector,
                                               selected_options_css_selector,
@@ -772,7 +782,7 @@ class Page:
     def unselect_multiple_option_without_search(self, select_css_selector, values):
         parent = self.driver.find_element_by_css_selector(select_css_selector)
         options = parent.find_elements_by_css_selector(self.MULTI_SELECT_SELECTED_OPTIONS_CSS)
-        for option in options:
+        for option in reversed(options):
             if option.text in values:
                 # pylint: disable=cell-var-from-loop
                 wait_until(lambda: option.find_element_by_css_selector(self.MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS).

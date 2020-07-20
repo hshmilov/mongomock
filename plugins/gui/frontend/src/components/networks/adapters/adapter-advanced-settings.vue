@@ -113,6 +113,9 @@ export default {
       .v-text-field {
         padding-top: 0;
       }
+      .ant-form-item .repeat_on_select {
+        width: 400px;
+      }
     }
    .v-text-field__details, .v-messages {
       min-height: 0;

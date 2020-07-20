@@ -1502,6 +1502,7 @@ class SettingsPage(Page):
             except AssertionError:
                 # Sometimes its too fast for selenium
                 self.clear_lifecycle_weekdays()
+            self.verify_multiple_select_dropdown_close(self.LIFECYCLE_WEEKDAYS_SELECT_ID)
 
             self.select_multiple_option_without_search(self.LIFECYCLE_WEEKDAYS_SELECT_ID,
                                                        self.ANT_SELECT_MENU_ITEM_CSS,

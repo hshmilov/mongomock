@@ -622,7 +622,7 @@ export default {
           display: block;
         }
 
-        .time-picker-text, .x-dropdown, input {
+        .time-picker-text, .x-dropdown, input:not(.ant-select-search__field) {
           display: inline-block;
           width: 200px;
         }
@@ -633,6 +633,10 @@ export default {
 
         .v-text-field__details, .v-messages {
           min-height: 0;
+        }
+
+        .ant-form-item .repeat_on_select {
+          width: 400px;
         }
       }
     }
