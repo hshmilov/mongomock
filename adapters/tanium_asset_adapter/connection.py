@@ -21,7 +21,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
         return 'asset'
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, client_name, client_config):
+    def get_device_list(self, client_name, client_config, page_size: int = PAGE_SIZE):
         server_version = self._get_version()
         workbenches = self._get_workbenches_meta()
 
@@ -31,7 +31,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
             'server_version': server_version,
             'workbenches': workbenches,
         }
-        for asset in self._get_assets():
+        for asset in self._get_assets(page_size=page_size):
             yield asset, metadata
 
     def _get_assets_page(self, next_id, limit):
@@ -45,11 +45,11 @@ class TaniumAssetConnection(connection.TaniumConnection):
         logger.debug(f'fetched asset counts: {response}')
         return response
 
-    def _get_assets(self):
+    def _get_assets(self, page_size: int = PAGE_SIZE):
         next_id = 1
         fetched = 0
         page = 1
-        page_size = PAGE_SIZE
+        page_size = page_size or PAGE_SIZE
 
         asset_counts = self._get_asset_counts()
         total = asset_counts['deviceCount']

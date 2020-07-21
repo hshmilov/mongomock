@@ -9,9 +9,11 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_os
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from axonius.clients import tanium
 
 from tanium_asset_adapter.connection import TaniumAssetConnection
+from tanium_asset_adapter.consts import PAGE_SIZE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -30,7 +32,7 @@ class SqlServer(SmartJsonClass):
     product_version = Field(field_type=str, title='Product Version', json_format=JsonStringFormat.version)
 
 
-class TaniumAssetAdapter(AdapterBase):
+class TaniumAssetAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(field_type=str, title='Tanium Server')
@@ -95,7 +97,9 @@ class TaniumAssetAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
         with connection:
-            yield from connection.get_device_list(client_name=client_name, client_config=client_config)
+            yield from connection.get_device_list(
+                client_name=client_name, client_config=client_config, page_size=self.__page_size,
+            )
 
     @staticmethod
     def _add_last_used_user(device, device_raw, key, attr):
@@ -546,3 +550,31 @@ class TaniumAssetAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'page_size',
+                    'title': 'Number of assets to fetch per page',
+                    'type': 'integer',
+                    'default': PAGE_SIZE,
+
+                },
+            ],
+            'required': [
+                'page_size',
+            ],
+            'pretty_name': 'Tanium Asset Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'page_size': PAGE_SIZE,
+        }
+
+    def _on_config_update(self, config):
+        self.__page_size = config.get('page_size') or PAGE_SIZE
