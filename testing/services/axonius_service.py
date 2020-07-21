@@ -25,6 +25,7 @@ from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           CUSTOMER_CONF_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
+from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugin_service import AdapterService, PluginService
@@ -42,11 +43,14 @@ from services.plugins.static_users_correlator_service import StaticUsersCorrelat
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.plugins.master_proxy_service import MasterProxyService
 from services.standalone_services.remote_mongo_proxy_service import RemoteMongoProxyService
+from services.standalone_services.tunneler_service import TunnelerService
 from services.weave_service import is_weave_up, is_using_weave
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
 DNS_REGISTER_POOL_SIZE = 5
+CORE_ADDRESS = 'https://core.axonius.local'
+REMOTE_CORE_WAIT_TIMEOUT = 20 * 60
 
 
 def get_service():
@@ -254,7 +258,7 @@ class AxoniusService:
         # Start in parallel
         if self.instance_mode == InstancesModes.mongo_only.value:
             # we need to raise only mongo service
-            services_to_start = [self.db]
+            services_to_start = [self.db, self.instance_control]
         else:
             services_to_start = self._process_internal_service_white_list(internal_service_white_list)
 
@@ -276,6 +280,12 @@ class AxoniusService:
             _start_service(core_service)
             core_service.wait_for_service()
             services_to_start.remove(core_service)
+
+        if self.instance_mode == InstancesModes.mongo_only.value and NODE_MARKER_PATH.is_file():
+            # when running a mongo only instance, we want to wait for the master instance to be up
+            # and then start up the rest of the services (for now, instance control)
+            print(f'Waiting for {INSTANCE_CONTROL_PLUGIN_NAME} to be registered on core')
+            self.wait_for_master_instance_control()
 
         for service in services_to_start:
             _start_service(service)
@@ -423,6 +433,24 @@ class AxoniusService:
         plugin.start_and_wait()
 
         assert plugin.is_plugin_registered(self.core)
+
+    @staticmethod
+    def wait_for_master_instance_control(timeout=REMOTE_CORE_WAIT_TIMEOUT):
+        tunnel = TunnelerService()
+        tunnel.take_process_ownership()
+        tunnel.start(mode='prod', allow_restart=True, show_print=False)
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                output, err, _ = tunnel.run_command_in_container(
+                    f'wget -O- --no-check-certificate {CORE_ADDRESS}/api/register',
+                    shell='sh')
+                if INSTANCE_CONTROL_PLUGIN_NAME in output.decode('ascii'):
+                    break
+            except Exception as e:
+                print(f'{INSTANCE_CONTROL_PLUGIN_NAME} is not registered')
+            time.sleep(5)
+        return True
 
     def restart_core(self):
         self.core.stop()

@@ -509,14 +509,15 @@ class DockerService(AxonService):
 
         return out, err, p.returncode
 
-    def run_command_in_container(self, command):
+    def run_command_in_container(self, command, shell='bash'):
         """
         Gets any bash command to execute in this service's docker
 
         :param command:
+        :param shell: shell for running docker exec command
         :return:
         """
-        p = subprocess.Popen(['docker', 'exec', self.container_name, 'bash', '-c', command],
+        p = subprocess.Popen(['docker', 'exec', self.container_name, shell, '-c', command],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = p.communicate(timeout=60)
 

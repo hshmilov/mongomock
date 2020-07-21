@@ -12,6 +12,7 @@ from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
                                                 CORTEX_PATH)
 from services.axonius_service import get_service
 from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL, USING_WEAVE_PATH
+from services.plugins.instance_control_service import InstanceControlService
 
 
 def shut_down_system():
@@ -30,7 +31,10 @@ def restart_all_adapters(init_name):
 def change_instance_setup_user_pass():
     axonius_service = get_service()
     node_id = ''
-    for plugin_name, plugin in axonius_service.get_all_plugins():
+    all_plugins = axonius_service.get_all_plugins()
+    # add instance control plugin for nodes running mongo only
+    all_plugins.append((axonius_service.instance_control.plugin_name, InstanceControlService))
+    for plugin_name, plugin in all_plugins:
         try:
             plugin_service = plugin()
             node_id = plugin_service.vol_conf.node_id
