@@ -555,13 +555,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                 result = json.loads(result)
                                 res['devices_count'] += result['devices_count']
                                 res['users_count'] += result['users_count']
+                                if log_fetch:
+                                    self._log_activity_adapter_client_fetch_summary(client,
+                                                                                    fetch_start_time,
+                                                                                    result['users_count'],
+                                                                                    result['devices_count'])
                             logger.info(f'Received from {client}: {result}')
 
-                        if log_fetch:
-                            self._log_activity_adapter_client_fetch_summary(self.plugin_unique_name,
-                                                                            fetch_start_time,
-                                                                            res['users_count'],
-                                                                            res['devices_count'])
                         res = to_json(res)
                     else:
                         res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
