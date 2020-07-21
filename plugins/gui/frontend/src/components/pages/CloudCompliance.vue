@@ -124,7 +124,7 @@ import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import { mapState, mapGetters, mapMutations } from 'vuex';
 
-import { UPDATE_COMPLIANCE_FILTERS } from '@store/modules/compliance';
+import { UPDATE_COMPLIANCE_FILTERS, UPDATE_COMPLIANCE_VIEW } from '@store/modules/compliance';
 
 import XPage from '@axons/layout/Page.vue';
 import XButton from '@axons/inputs/Button.vue';
@@ -279,7 +279,10 @@ export default {
     this.fetchInitData();
   },
   methods: {
-    ...mapMutations({ updateFilters: UPDATE_COMPLIANCE_FILTERS }),
+    ...mapMutations({
+      updateFilters: UPDATE_COMPLIANCE_FILTERS,
+      updateComplianceView: UPDATE_COMPLIANCE_VIEW,
+    }),
     async fetchAllData() {
       this.loading = true;
       await this.fetchComplianceFilters();
@@ -306,6 +309,7 @@ export default {
         );
         this.allCloudComplianceRules = data.rules;
         this.score = data.score;
+        this.updateComplianceView({ cisName: this.cisName });
       } catch (ex) {
         this.error = 'Internal Server Error';
         this.loading = false;
@@ -315,7 +319,6 @@ export default {
       try {
         const reportsInfo = await fetchComplianceInitialCis();
         this.cisName = _get(reportsInfo, 'cis', 'aws');
-        await this.fetchComplianceFilters();
         await this.fetchAllData();
       } catch (ex) {
         this.error = 'Internal Server Error';
@@ -326,8 +329,9 @@ export default {
       this.filteredAccounts = [];
       this.filteredRules = [];
       this.filteredCategories = [];
-      this.updateCurrentView();
       this.failedOnly = false;
+      this.aggregatedView = true;
+      this.updateCurrentView();
     },
     async updateCurrentView() {
       this.loading = true;

@@ -1,5 +1,7 @@
 // eslint-disable-next-line import/prefer-default-export
 export const UPDATE_COMPLIANCE_FILTERS = 'UPDATE_COMPLIANCE_FILTERS';
+export const UPDATE_COMPLIANCE_VIEW = 'UPDATE_COMPLIANCE_VIEW';
+
 const getComplianceReportState = () => {
   return {
     content: { data: [], fetching: false, error: '' },
@@ -77,6 +79,13 @@ export const compliance = {
       state.cis[cisName].report.view.filters = {
         ...state.cis[cisName].report.view.filters,
         [filterName]: value,
+      };
+    },
+    [UPDATE_COMPLIANCE_VIEW](state, payload) {
+      const { cisName } = payload;
+      state.cis[cisName].report.view = {
+        ...state.cis[cisName].report.view,
+        page: 0,
       };
     },
   },
