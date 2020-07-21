@@ -1,0 +1,9 @@
+USER_PER_PAGE = 100
+TEAM_ID_PER_PAGE = 100
+MAX_NUMBER_OF_USERS = 2000000
+MAX_NUMBER_OF_TEAM_IDS = 2000000
+API_PREFIX = 'api'
+URL_ADMIN_USER_LIST = 'admin.users.list'
+URL_ADMIN_TEAM_LIST = 'admin.teams.list'
+URL_USER_INFO = 'users.info'
+URL_USER_LIST = 'users.list'

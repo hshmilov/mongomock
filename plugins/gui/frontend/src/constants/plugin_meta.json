@@ -1163,6 +1163,11 @@
     "link": "",
     "description": "ManageEngine Desktop Central is a desktop management and mobile device management software for managing desktops in LAN and across WAN and mobile devices from a central location."
   },
+  "slack_adapter": {
+    "title": "Slack",
+    "link": "https://docs.axonius.com/docs/slack",
+    "description": "Slack is a chat and collaboration hub used to connect people, information, tools, and services."
+  },
   "forcepoint_adapter": {
     "title": "Forcepoint Web Security Endpoint",
     "link": "https://docs.axonius.com/docs/forcepoint-web-security-endpoint-sql",

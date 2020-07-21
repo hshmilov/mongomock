@@ -113,6 +113,7 @@ DOCKER_PORTS = {
     'samange-adapter':                  5960,
     'bamboohr-adapter':                 5965,
     'sysaid-adapter':                   5990,
+    'slack-adapter':                    6000,
     'cisco-adapter':                    6001,
     'scep-adapter':                     6003,
     'observium-adapter':                6004,
