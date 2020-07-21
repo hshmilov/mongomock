@@ -1,0 +1,250 @@
+import logging
+
+from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
+from axonius.utils.files import get_local_config_file
+from privx_adapter.connection import PrivxConnection
+from privx_adapter.client_id import get_client_id
+from privx_adapter.structures import PrivxDeviceInstance, PrivxUserInstance
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class PrivxAdapter(AdapterBase):
+
+    class MyDeviceAdapter(PrivxDeviceInstance):
+        pass
+
+    class MyUserAdapter(PrivxUserInstance):
+        pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @staticmethod
+    def _get_client_id(client_config):
+        return get_client_id(client_config)
+
+    @staticmethod
+    def _test_reachability(client_config):
+        return RESTConnection.test_reachability(client_config.get('domain'),
+                                                https_proxy=client_config.get('https_proxy'))
+
+    @staticmethod
+    def get_connection(client_config):
+        connection = PrivxConnection(
+            oauth_client_id=client_config.get('oauth_client_id'),
+            oauth_client_secret=client_config.get('oauth_client_secret'),
+            domain=client_config.get('domain'),
+            verify_ssl=client_config.get('verify_ssl'),
+            https_proxy=client_config.get('https_proxy'),
+            username=client_config.get('api_client_id'),
+            password=client_config.get('api_client_secret')
+        )
+        with connection:
+            pass  # check that the connection credentials are valid
+        return connection
+
+    def _connect_client(self, client_config):
+        try:
+            return self.get_connection(client_config)
+        except RESTException as exception:
+            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
+                client_config.get('domain'), str(exception))
+            logger.exception(message)
+            raise ClientConnectionException(message)
+
+    @staticmethod
+    def _query_devices_by_client(client_name, client_data):
+        """
+        Get all devices from a specific domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        with client_data:
+            yield from client_data.get_device_list()
+
+    @staticmethod
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(client_name, client_data):
+        """
+        Get all users from a specific domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        with client_data:
+            yield from client_data.get_user_list()
+
+    @staticmethod
+    def _clients_schema():
+        """
+        The schema PrivxAdapter expects from configs
+
+        :return: JSON scheme
+        """
+        return {
+            'items': [
+                {
+                    'name': 'domain',
+                    'title': 'Host Name or IP Address',
+                    'type': 'string'
+                },
+                {
+                    'name': 'oauth_client_id',
+                    'title': 'OAuth Client ID',
+                    'type': 'string'
+                },
+                {
+                    'name': 'oauth_client_secret',
+                    'title': 'OAuth Client Secret',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'api_client_id',
+                    'title': 'API Client ID',
+                    'type': 'string'
+                },
+                {
+                    'name': 'api_client_secret',
+                    'title': 'API Client Secret',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': 'verify_ssl',
+                    'title': 'Verify SSL',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+                'domain',
+                'api_client_id',
+                'api_client_secret',
+                'oauth_client_id',
+                'oauth_client_secret',
+                'verify_ssl'
+            ],
+            'type': 'array'
+        }
+
+    @staticmethod
+    def _fill_privx_device_fields(device_raw: dict, device: PrivxDeviceInstance):
+        try:
+            if isinstance(device_raw.get('addresses'), list):
+                device.addresses = device_raw.get('addresses')
+        except Exception:
+            logger.exception(f'Failed creating instance for device {device_raw}')
+
+    def _create_device(self, device_raw: dict, device: PrivxDeviceInstance):
+        try:
+            device_id = device_raw.get('id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = device_id + '_' + (device_raw.get('hostname') or '')
+            device.hostname = device_raw.get('common_name')
+            device.description = device_raw.get('comment')
+            addresses = device_raw.get('addresses')
+            if isinstance(device_raw.get('addresses'), list):
+                try:
+                    device.add_ips_and_macs(ips=addresses)
+                except Exception as e:
+                    logger.warning(f'Failed to add ips information for device {device_raw}: {str(e)}')
+            self._fill_privx_device_fields(device_raw, device)
+            device.set_raw(device_raw)
+
+            return device
+
+        except Exception as exception:
+            logger.exception(f'Problem with fetching PrivX Device for {device_raw}, '
+                             f'Exception: {exception}')
+            return None
+
+    def _parse_raw_data(self, devices_raw_data):
+        """
+        Gets raw data and yields Device objects.
+        :param devices_raw_data: the raw data we get.
+        :return:
+        """
+        for device_raw in devices_raw_data:
+            if not device_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                device = self._create_device(device_raw, self._new_device_adapter())
+                if device:
+                    yield device
+            except Exception:
+                logger.exception(f'Problem with fetching Privx Device for {device_raw}')
+
+    @staticmethod
+    def _parse_bool(value):
+        if isinstance(value, (bool, int)):
+            return bool(value)
+        if isinstance(value, str):
+            return value.lower() in ['yes', 'true']
+        return None
+
+    @staticmethod
+    def _fill_privx_user_fields(user_raw: dict, user: PrivxUserInstance):
+        user.password_change_required = PrivxAdapter._parse_bool(user_raw.get('password_change_required'))
+        user.user_update_time = parse_date(user_raw.get('updated'))
+        user.windows_account = user_raw.get('windows_account')
+        user.unix_account = user_raw.get('unix_account')
+
+    def _create_user(self, user_raw: dict, user: PrivxUserInstance):
+        try:
+            user_id = user_raw.get('id')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = user_id + '_' + (user_raw.get('email') or '')
+            user.username = user_raw.get('username')
+            user.display_name = user_raw.get('display_name')
+            user.mail = user_raw.get('email')
+            user.user_created = parse_date(user_raw.get('created'))
+            self._fill_privx_user_fields(user_raw, user)
+
+            user.set_raw(user_raw)
+
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching Privx User for {user_raw}')
+            return None
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        """
+        Gets raw data and yields User objects.
+        :param users_raw_data: the raw data we get.
+        :return:
+        """
+        for user_raw in users_raw_data:
+            if not user_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                user = self._create_user(user_raw, self._new_user_adapter())
+                if user:
+                    yield user
+            except Exception:
+                logger.exception(f'Problem with fetching Privx User for {user_raw}')
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets, AdapterProperty.UserManagement]

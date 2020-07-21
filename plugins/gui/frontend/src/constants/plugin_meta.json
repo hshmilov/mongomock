@@ -1388,6 +1388,11 @@
     "link": "https://docs.axonius.com/docs/microsoft-azure-and-azure-active-directory-ad",
     "description": "Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers."
   },
+    "privx_adapter": {
+    "title": "PrivX",
+    "link": "https://docs.axonius.com/docs/privx",
+    "description": "PrivX provides privileged access to on-prem and cloud environments, including control access to servers, network devices and other critical infrastructure according to user roles and privileges."
+  },
   "okta_adapter": {
     "title": "Okta",
     "link": "https://docs.axonius.com/docs/okta",

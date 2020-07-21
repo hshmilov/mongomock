@@ -321,6 +321,7 @@ DOCKER_PORTS = {
     'sumo-logic-adapter':               14286,
     'wmi-adapter':                      14287,
     'rancher-adapter':                  14297,
+    'privx-adapter':                    14333,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
