@@ -19,6 +19,8 @@ VIEW_TASKS_CSS = '#view_tasks'
 
 
 class TestEnforcementSanity(TestBase):
+    RECURRENCE_OPTIONS = ['Every discovery cycle', 'Every x days', 'Days of week', 'Days of month']
+
     def _create_enforcement_change_query(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
@@ -240,7 +242,7 @@ class TestEnforcementSanity(TestBase):
         self.enforcements_page.select_trigger()
         self.enforcements_page.check_scheduling()
         labels = self.enforcements_page.get_all_periods_sorted()
-        assert labels == ['Every Discovery Cycle', 'Daily', 'Weekly', 'Monthly']
+        assert labels == self.RECURRENCE_OPTIONS
 
     def test_enforcement_from_saved_query(self):
         self._create_enforcement_change_query()

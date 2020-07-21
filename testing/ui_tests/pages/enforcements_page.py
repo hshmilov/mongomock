@@ -105,10 +105,9 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     ENFORCEMENTS_CHECKBOX = '.x-checkbox .checkbox-container'
-    TRIGGER_SECTION_CHECKBOX_XPATH = '//div[@class=\'header\' and child::*[@class=\'scheduling-title\' and ' \
-                                     'text()=\'{section_name}\']]//div[@class=\'checkbox-container\']'
-    ABOVE_INPUT_CSS = '.config .config-item .above'
-    BELOW_INPUT_CSS = '.config .config-item .below'
+    SECTION_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
+    ABOVE_INPUT_CSS = '.config-conditions .config-item .above'
+    BELOW_INPUT_CSS = '.config-conditions .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
     DISABLED_ACTION_XPATH = (
@@ -123,6 +122,9 @@ class EnforcementsPage(EntitiesPage):
     TASK_RESULT_CSS = '.x-action-result .x-summary div:nth-child({child_count})'
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
+
+    RECURRENCE_DROPDOWN_BUTTON_CSS = '.item_conditional .x-select-trigger'
+    RECURRENCE_DROPDOWN_OPTIONS_CSS = '.item_conditional .x-select-option'
 
     FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'first-seperator'
     SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
@@ -368,14 +370,14 @@ class EnforcementsPage(EntitiesPage):
     def check_enforcement_checkbox(self, text):
         self.find_element_by_text(text).click()
 
-    def check_config_section(self, section_name):
-        self.driver.find_element_by_xpath(self.TRIGGER_SECTION_CHECKBOX_XPATH.format(section_name=section_name)).click()
+    def check_config_section(self, switch_label):
+        self.driver.find_element_by_css_selector(self.SECTION_SWITCH_CSS.format(switch_label=switch_label)).click()
 
     def check_scheduling(self):
-        self.check_config_section('Add Scheduling')
+        self.check_config_section('Enable custom scheduling')
 
     def check_conditions(self):
-        self.check_config_section('Add Conditions')
+        self.check_config_section('Trigger on changes in the query results')
 
     def check_condition_added(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
@@ -626,7 +628,8 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_id(period).click()
 
     def get_all_periods_sorted(self):
-        return [x.text for x in self.driver.find_elements_by_css_selector('div.list-item > label.radio-label')]
+        self.driver.find_element_by_css_selector(self.RECURRENCE_DROPDOWN_BUTTON_CSS).click()
+        return [x.text.strip() for x in self.driver.find_elements_by_css_selector(self.RECURRENCE_DROPDOWN_OPTIONS_CSS)]
 
     def fill_above_value(self, value):
         self.fill_text_field_by_css_selector(self.ABOVE_INPUT_CSS, value)

@@ -36,7 +36,8 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, \
-    TUNNEL_STATUS_CHECK_INTERVAL, CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD
+    TUNNEL_STATUS_CHECK_INTERVAL, CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD, \
+    CUSTOM_ENFORCEMENT_CHECK_INTERVAL
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -112,6 +113,16 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                                   next_run_time=datetime.now(),
                                                   max_instances=1)
         self.__custom_discovery_scheduler.start()
+
+        self.__custom_schedule_enforcement_scheduler = LoggedBackgroundScheduler(executors={
+            'default': ThreadPoolExecutorApscheduler(1)
+        })
+        self.__custom_schedule_enforcement_scheduler.add_job(
+            func=self.__run_custom_schedule_enforcements,
+            trigger=IntervalTrigger(seconds=CUSTOM_ENFORCEMENT_CHECK_INTERVAL),
+            next_run_time=datetime.now(),
+            max_instances=1)
+        self.__custom_schedule_enforcement_scheduler.start()
 
         self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
@@ -958,6 +969,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         except Exception:
             logger.exception('Error triggering custom discovery adapters')
         logger.info('Finished Custom Discovery cycle')
+
+    def __run_custom_schedule_enforcements(self):
+        post_correlation_plugins = [plugin for plugin in self._get_plugins(PluginSubtype.PostCorrelation)
+                                    if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
+        if post_correlation_plugins:
+            self._trigger_remote_plugin(post_correlation_plugins[0][plugin_consts.PLUGIN_UNIQUE_NAME],
+                                        job_name='custom_execute',
+                                        blocking=False,
+                                        timeout=24 * 3600, stop_on_timeout=True)
 
     def _get_plugins(self, plugin_subtype: PluginSubtype) -> list:
         """

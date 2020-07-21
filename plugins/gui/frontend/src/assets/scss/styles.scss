@@ -571,6 +571,10 @@ table {
   }
 }
 
+.v-menu__content[role="menu"] {
+  min-width: auto !important;
+}
+
 /* Common Animations */
 
 .rotating {

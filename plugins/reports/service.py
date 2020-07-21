@@ -22,6 +22,7 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_id
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import time_diff
 from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
@@ -68,6 +69,8 @@ class ReportsService(Triggerable, PluginBase):
     # The amount of internal_axon_ids that are saved in a single document in self.__internal_axon_ids_lists
     # Should be lower than document size, while not too low so pagination is common
     INTERNAL_AXON_IDS_PER_DOCUMENT = 100 * 1000
+
+    REPORT_TRIGGER_RUN_THRESHOLD = 180
 
     def __init__(self, *args, **kwargs):
         """ This service is responsible for alerting users in several ways and cases when a
@@ -151,7 +154,7 @@ class ReportsService(Triggerable, PluginBase):
                       )
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if job_name == 'execute':
+        if job_name in ['execute', 'custom_execute']:
             with ThreadPool(10) as pool:
                 def run_specific_configuration(report_name, configuration_name):
                     try:
@@ -164,7 +167,10 @@ class ReportsService(Triggerable, PluginBase):
                     except Exception:
                         logger.exception(f'Exception when running {report_name} {configuration_name}')
 
-                reports = self.__reports_collection.find(projection={
+                period_filter = '$eq' if job_name == 'execute' else '$ne'
+                reports = self.__reports_collection.find({
+                    f'{TRIGGERS_FIELD}.period': {period_filter: 'all'}
+                }, projection={
                     'name': 1,
                     f'{TRIGGERS_FIELD}.name': 1
                 })
@@ -198,7 +204,9 @@ class ReportsService(Triggerable, PluginBase):
                     result=None,
                     result_count=0,
                     times_triggered=0,
-                    run_on=RunOnEntities.AllEntities
+                    run_on=RunOnEntities.AllEntities,
+                    period_recurrence=None,
+                    period_time=None,
                 ), run_identifier, manual=True, manual_input=post_json['input'])
             else:
                 result = None
@@ -282,6 +290,8 @@ class ReportsService(Triggerable, PluginBase):
                             f'triggers.$.conditions': trigger['conditions'],
                             f'triggers.$.run_on': trigger['run_on'],
                             f'triggers.$.period': trigger['period'],
+                            f'triggers.$.period_time': trigger.get('period_time', None),
+                            f'triggers.$.period_recurrence': trigger.get('period_recurrence', None)
                         }
                     })
                     if trigger_result.matched_count == 0:
@@ -586,15 +596,8 @@ class ReportsService(Triggerable, PluginBase):
             return result
 
         if trigger.last_triggered and trigger.period != TriggerPeriod.all and not manual:
-            now = datetime.datetime.utcnow()
-            if trigger.period == TriggerPeriod.daily:
-                max_date = now - datetime.timedelta(days=1)
-            if trigger.period == TriggerPeriod.weekly:
-                max_date = now - datetime.timedelta(days=7)
-            if trigger.period == TriggerPeriod.monthly:
-                max_date = now - datetime.timedelta(days=31)
-            if trigger.last_triggered > max_date:
-                return result
+            if not self._has_trigger_time_arrived(trigger):
+                return False
 
         if manual_input:
             query_result = self.get_selected_entities(
@@ -656,6 +659,43 @@ class ReportsService(Triggerable, PluginBase):
             })
             _log_activity_trigger(AuditAction.Complete)
         return result
+
+    # pylint: disable=R0911
+    def _has_trigger_time_arrived(self, trigger):
+        current_date = datetime.datetime.now()
+        current_time = current_date.time()
+        scheduled_run_time = datetime.datetime.strptime(trigger.period_time, '%H:%M').time()
+
+        # check if time matches the scheduled time
+        if current_time < scheduled_run_time or \
+           time_diff(current_time, scheduled_run_time).seconds > self.REPORT_TRIGGER_RUN_THRESHOLD:
+            return False
+
+        # check if already ran today
+        if time_diff(current_date, trigger.last_triggered).seconds < self.REPORT_TRIGGER_RUN_THRESHOLD:
+            return False
+
+        if trigger.period == TriggerPeriod.daily:
+            # check if X days have passed since last run
+            return (current_date - trigger.last_triggered).days == trigger.period_recurrence
+        if trigger.period == TriggerPeriod.weekly:
+            # check if weekdays match
+            current_weekday = str(current_date.weekday())
+            return current_weekday in trigger.period_recurrence
+        if trigger.period == TriggerPeriod.monthly:
+            current_day = str(current_date.day)
+            for day in trigger.period_recurrence:
+                # check if days of month match
+                if day != '29':
+                    if day == current_day:
+                        return True
+                else:
+                    # check if current day is last day of the month
+                    tomorrow = current_date + datetime.timedelta(days=1)
+                    if tomorrow.month != current_date.month:
+                        return True
+
+        return False
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

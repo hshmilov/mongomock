@@ -64,11 +64,16 @@ export default {
 </script>
 
 <style lang="scss">
-    .object {
-        display: inline-block;
-        width: auto;
-        &.expand {
-            width: 100%;
-        }
+  .object {
+    display: inline-block;
+    width: auto;
+
+    &.expand {
+      width: 100%;
     }
+
+    label {
+      display: block;
+    }
+  }
 </style>

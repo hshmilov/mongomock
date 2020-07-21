@@ -62,6 +62,7 @@
         <x-time-picker
           v-model="value.period_config.send_time"
           label="Send email at:"
+          :schema="{required: true}"
           :read-only="readOnly"
           @validate="validateSendTime"
         />
@@ -161,7 +162,6 @@
         margin-top: 10px;
 
         .server-time {
-          margin-left: 10px;
           line-height: 40px;
         }
       }

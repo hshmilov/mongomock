@@ -2,12 +2,11 @@
   <div class="x-trigger-config">
     <div class="main">
       <h4 class="trigger-title">
-        Input
+        Saved Query
       </h4>
       <div>Select the Saved Query for the Enforcement Set to act on:</div>
       <div class="config">
         <div class="config-base">
-          <label>Saved Query:</label>
           <div class="base-query">
             <XSelectSymbol
               v-model="viewEntity"
@@ -29,106 +28,80 @@
         </div>
         <XCheckbox
           v-model="runOn"
+          class="added-entities"
           value="AddedEntities"
           :read-only="readOnly"
           label="Run on added entities only"
         />
       </div>
-      <div class="section">
-        <div class="header">
+      <h4 class="trigger-title">Custom Scheduling</h4>
+      <XSwitch
+        :checked="showScheduling"
+        label="Enable custom scheduling"
+        :read-only="readOnly"
+        @change="showScheduling = !showScheduling"
+      />
+      <template v-if="showScheduling">
+        <h5 class="trigger-subtitle">Custom Schedule Settings</h5>
+        <XForm
+          v-model="periodData"
+          :schema="periodSchema"
+          :read-only="readOnly"
+          @validate="onPeriodValidate"
+        />
+        <h5 class="trigger-subtitle">Additional Conditions</h5>
+        <XSwitch
+          :checked="showConditions"
+          label="Trigger on changes in the query results"
+          :read-only="readOnly"
+          @change="toggleConditions"
+        />
+        <div
+          v-if="showConditions"
+          class="config-conditions"
+        >
           <XCheckbox
-            v-model="showScheduling"
+            v-model="conditions.new_entities"
+            label="New entities were added to results"
             :read-only="readOnly"
           />
-          <h4
-            class="scheduling-title"
-            @click="toggleScheduling"
-          >Add Scheduling</h4>
-        </div>
-        <div
-          v-if="showScheduling"
-          class="main"
-        >
-          <h5 class="trigger-title">
-            Recurrence
-          </h5>
-          <div class="config">
-            <div
-              v-for="period in periodOptions"
-              :key="period.name"
-              class="list-item"
+          <XCheckbox
+            v-model="conditions.previous_entities"
+            label="Previous entities were subtracted from results"
+            :read-only="readOnly"
+          />
+          <div class="config-item">
+            <XCheckbox
+              v-model="showAbove"
+              label="The number of results is above..."
+              :read-only="readOnly"
+            />
+            <input
+              v-if="showAbove"
+              v-model="above"
+              type="number"
+              :disabled="readOnly"
+              class="above"
+              @keypress="validateInteger"
             >
-              <input
-                :id="period.id"
-                v-model="config.period"
-                type="radio"
-                :value="period.name"
-                :disabled="readOnly"
-              >
-              <label
-                :for="period.id"
-                class="radio-label"
-              >{{ period.title }}</label>
-            </div>
           </div>
-          <div class="header">
+          <div class="config-item">
             <XCheckbox
-              v-model="showConditions"
+              v-model="showBelow"
+              label="The number of results is below..."
               :read-only="readOnly"
             />
-            <h5
-              class="scheduling-title"
-              @click="toggleConditions"
-            >Add Conditions</h5>
-          </div>
-          <div>Detect changes in the query results and trigger upon</div>
-          <div
-            v-if="showConditions"
-            class="config"
-          >
-            <XCheckbox
-              v-model="conditions.new_entities"
-              label="New entities were added to results"
-              :read-only="readOnly"
-            />
-            <XCheckbox
-              v-model="conditions.previous_entities"
-              label="Previous entities were subtracted from results"
-              :read-only="readOnly"
-            />
-            <div class="config-item">
-              <XCheckbox
-                v-model="showAbove"
-                label="The number of results is above..."
-                :read-only="readOnly"
-              />
-              <input
-                v-if="showAbove"
-                v-model="above"
-                type="number"
-                :disabled="readOnly"
-                class="above"
-                @keypress="validateInteger"
-              >
-            </div>
-            <div class="config-item">
-              <XCheckbox
-                v-model="showBelow"
-                label="The number of results is below..."
-                :read-only="readOnly"
-              />
-              <input
-                v-if="showBelow"
-                v-model="below"
-                type="number"
-                :disabled="readOnly"
-                class="below"
-                @keypress="validateInteger"
-              >
-            </div>
+            <input
+              v-if="showBelow"
+              v-model="below"
+              type="number"
+              :disabled="readOnly"
+              class="below"
+              @keypress="validateInteger"
+            >
           </div>
         </div>
-      </div>
+      </template>
     </div>
     <div class="footer">
       <XButton
@@ -143,18 +116,21 @@
 
 <script>
 import { mapState } from 'vuex';
-import XSelect from '../../axons/inputs/select/Select.vue';
-import XButton from '../../axons/inputs/Button.vue';
-import XCheckbox from '../../axons/inputs/Checkbox.vue';
-import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
+import XSwitch from '@axons/inputs/Switch.vue';
+import XSelect from '@axons/inputs/select/Select.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XCheckbox from '@axons/inputs/Checkbox.vue';
+import XSelectSymbol from '@neurons/inputs/SelectSymbol.vue';
+import XForm from '@neurons/schema/Form.vue';
 
 import viewsMixin from '../../../mixins/views';
 import { validateInteger } from '../../../constants/validations';
+import { weekDays, monthDays } from '../../../constants/utils';
 
 export default {
   name: 'XTriggerConfig',
   components: {
-    XSelect, XButton, XCheckbox, XSelectSymbol,
+    XSelect, XButton, XCheckbox, XSelectSymbol, XSwitch, XForm,
   },
   mixins: [viewsMixin],
   props: {
@@ -167,6 +143,17 @@ export default {
   data() {
     return {
       showConditions: false,
+      weekDays: weekDays.map(this.getDayObject),
+      monthDays: monthDays.map(this.getDayObject),
+      defaultRecurrence: {
+        daily: 1,
+        weekly: ['0'],
+        monthly: ['1'],
+      },
+      defaultTime: {
+        period_time: '13:00',
+      },
+      periodValid: true,
     };
   },
   computed: {
@@ -209,11 +196,74 @@ export default {
     periodOptions() {
       return this.triggerPeriods.map((x) => Object.entries(x).map(([name, title]) => ({ name, title, id: `${name}_period` }))).map((x) => x[0]);
     },
+    timeSchema() {
+      return {
+        name: 'period_time',
+        type: 'string',
+        format: 'time',
+        title: 'Scheduled run time',
+      };
+    },
+    periodSchema() {
+      return {
+        type: 'array',
+        items: [{
+          name: 'conditional',
+          type: 'string',
+          title: 'Repeat scheduled run',
+          enum: this.periodOptions,
+        }, {
+          name: 'daily',
+          type: 'array',
+          title: '',
+          required: ['period_recurrence', 'period_time'],
+          items: [{
+            name: 'period_recurrence',
+            type: 'number',
+            title: 'Scheduled run every (days)',
+            min: 1,
+          }, this.timeSchema],
+        }, {
+          name: 'weekly',
+          type: 'array',
+          title: '',
+          required: ['period_recurrence', 'period_time'],
+          items: [{
+            name: 'period_recurrence',
+            type: 'array',
+            title: 'Scheduled run day(s)',
+            items: {
+              title: '',
+              name: 'recurrence',
+              type: 'string',
+              enum: this.weekDays,
+            },
+          }, this.timeSchema],
+        }, {
+          name: 'monthly',
+          type: 'array',
+          title: '',
+          required: ['period_recurrence', 'period_time'],
+          items: [{
+            name: 'period_recurrence',
+            type: 'array',
+            title: 'Scheduled run day(s)',
+            items: {
+              title: '',
+              name: 'recurrence',
+              type: 'string',
+              enum: this.monthDays,
+            },
+          }, this.timeSchema],
+        }],
+        required: ['conditional'],
+      };
+    },
     conditions() {
       return this.config.conditions;
     },
     disableConfirm() {
-      return Boolean(!(this.config.view.id && this.config.view.entity));
+      return Boolean(!(this.config.view.id && this.config.view.entity && this.periodValid));
     },
     currentViewOptions() {
       return this.viewSelectOptionsGetter(true)(this.viewEntity, this.viewId);
@@ -266,6 +316,33 @@ export default {
         this.conditions.below = parseInt(value, 10) > 0 ? parseInt(value, 10) : 0;
       },
     },
+    periodData: {
+      get() {
+        const { period, period_recurrence, period_time } = this.config;
+        const periodSettings = {
+          conditional: period,
+        };
+        if (period !== 'all') {
+          periodSettings[period] = {
+            period_recurrence,
+            period_time,
+          };
+        }
+        return periodSettings;
+      },
+      set({ conditional, ...periodSettings }) {
+        this.config.period = conditional;
+        if (periodSettings[conditional]) {
+          this.config = { ...this.config, ...periodSettings[conditional] };
+        } else {
+          this.config = {
+            ...this.config,
+            period_recurrence: this.defaultRecurrence[conditional],
+            ...this.defaultTime,
+          };
+        }
+      },
+    },
   },
   mounted() {
     this.showConditions = this.anyConditions;
@@ -289,80 +366,107 @@ export default {
         };
       }
     },
+    onPeriodValidate(isValid) {
+      this.periodValid = isValid;
+    },
+    getDayObject(day) {
+      return { title: day.title, name: String(day.name) };
+    },
   },
 };
 </script>
 
 <style lang="scss">
-    .x-trigger-config {
-        display: grid;
-        grid-template-rows: calc(100% - 30px) 30px;
-        align-items: flex-start;
-        height: 100%;
-        .main {
-            overflow: auto;
-            height: 100%;
-            .trigger-title {
-                margin: 24px 0 8px;
-            }
-            .config {
-                margin: 8px 0 8px 12px;
-                .config-base {
-                    display: flex;
-                    align-items: center;
-                    .base-query {
-                        flex: 1 0 auto;
-                        margin-left: 24px;
-                        display: flex;
-                        .x-select-symbol {
-                            width: 60px;
-                        }
-                        .query-name {
-                            flex: 1 0 auto;
-                        }
-                    }
-                    .md-switch {
-                        margin: 4px 0;
-                    }
-                }
-                .radio-label {
-                    margin-left: 8px;
-                }
-                .x-checkbox {
-                    line-height: 24px;
-                }
-                .config-item {
-                    display: flex;
-                    align-items: center;
-                    line-height: 24px;
-                    .x-checkbox {
-                        margin-right: 12px;
-                    }
-                    .above, .below {
-                        flex: 1 0 auto;
-                    }
-                }
-            }
-            .section {
-                .header {
-                    display: flex;
-                    align-items: center;
-                    margin-top: 24px;
-                    .x-checkbox {
-                        margin-bottom: 4px;
-                    }
-                    .scheduling-title {
-                        margin: 0 0 0 8px;
-                        cursor: pointer;
-                    }
-                }
-                .main {
-                    margin-left: 24px;
-                }
-            }
+  .x-trigger-config {
+    display: grid;
+    grid-template-rows: calc(100% - 30px) 30px;
+    align-items: flex-start;
+    height: 100%;
+
+    .main {
+      overflow: auto;
+      height: calc(100% - 20px);
+
+      .trigger-title {
+        margin: 24px 0 4px 0;
+      }
+
+      .trigger-subtitle {
+        margin: 16px 0 4px 0;
+      }
+
+      .config {
+        margin: 8px 0;
+
+        .added-entities {
+          margin-top: 8px;
         }
-        .footer {
-            text-align: right;
+
+        .config-base {
+          display: flex;
+          align-items: center;
+
+          .base-query {
+            flex: 1 0 auto;
+            display: flex;
+
+            .x-select-symbol {
+              width: 60px;
+            }
+
+            .query-name {
+              flex: 1 0 auto;
+            }
+          }
         }
+
+        .x-checkbox {
+          line-height: 24px;
+        }
+
+        .config-item {
+          display: flex;
+          align-items: center;
+          line-height: 24px;
+
+          .x-checkbox {
+            margin-right: 12px;
+          }
+
+          .above, .below {
+            flex: 1 0 auto;
+          }
+        }
+      }
+
+      .x-form {
+        > .x-array-edit .list {
+          grid-template-columns: 1fr;
+
+          .item_period_recurrence input {
+            width: 200px;
+          }
+
+          .item_period_time {
+            margin-top: 12px;
+          }
+
+          .ant-form-item .period_recurrence_select {
+            width: 400px;
+          }
+        }
+        .form-error {
+          margin-top: 0;
+        }
+      }
+
+      .config-conditions {
+        margin-top: 8px;
+      }
     }
+
+    .footer {
+      text-align: right;
+    }
+  }
 </style>

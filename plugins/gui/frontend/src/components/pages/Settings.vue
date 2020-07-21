@@ -559,10 +559,6 @@ export default {
 </script>
 <style lang="scss">
 
-  div[role="menu"] {
-    min-width: auto !important;
-  }
-
   .x-settings {
     .x-tabs {
       height: calc(100% - 12px);
@@ -599,45 +595,11 @@ export default {
       }
     }
 
-    .time-picker-text input {
-      alignment: top;
-      font-size: 14px;
-      padding-left: 1px;
-    }
-
-    .time-picker-text label {
-      alignment: top;
-      font-size: 14px;
-      padding-left: 1px;
-    }
-
-    span.server-time {
-      padding-left: 15px;
-    }
-
-    .research-settings-tab .x-form .x-array-edit .list{
+    .research-settings-tab .x-form .x-array-edit .list {
       grid-template-columns: 1fr;
-      .item .object.expand {
-        label {
-          display: block;
-        }
 
-        .time-picker-text, .x-dropdown, input:not(.ant-select-search__field) {
-          display: inline-block;
-          width: 200px;
-        }
-
-        .v-text-field {
-          padding-top: 0;
-        }
-
-        .v-text-field__details, .v-messages {
-          min-height: 0;
-        }
-
-        .ant-form-item .repeat_on_select {
-          width: 400px;
-        }
+      .item_system_research_date_recurrence input {
+        width: 200px;
       }
     }
 

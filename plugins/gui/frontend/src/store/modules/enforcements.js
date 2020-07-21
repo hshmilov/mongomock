@@ -35,6 +35,7 @@ export const initTrigger = {
   },
   run_on: 'AllEntities',
   period: 'never',
+  period_time: '13:00',
   conditions: {
     new_entities: false,
     previous_entities: false,

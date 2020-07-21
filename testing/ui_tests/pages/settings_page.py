@@ -728,7 +728,7 @@ class SettingsPage(Page):
         return self.find_element_by_text('\'Repeat scheduled discovery every (hours)\' has an illegal value')
 
     def find_schedule_date_error(self):
-        return self.find_element_by_text('\'Daily discovery time\' has an illegal value')
+        return self.find_element_by_text('\'Scheduled discovery time\' has an illegal value')
 
     def find_correlation_hours_error(self):
         return self.find_element_by_text(self.CORRELATION_HOUR_ERROR)

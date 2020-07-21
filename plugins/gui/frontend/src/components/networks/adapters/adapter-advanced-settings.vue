@@ -104,30 +104,14 @@ export default {
   .DiscoverySchema {
     .configuration > .x-form > .x-array-edit .list {
       grid-template-columns: 1fr;
-    }
-    .x-array-edit {
-      .time-picker-text, .x-dropdown, input {
-        display: inline-block;
+
+      .item_repeat_every input {
         width: 200px;
       }
-      .v-text-field {
-        padding-top: 0;
-      }
+      
       .ant-form-item .repeat_on_select {
         width: 400px;
       }
-    }
-   .v-text-field__details, .v-messages {
-      min-height: 0;
-    }
-    #repeat_on {
-      display: none;
-    }
-    span.server-time {
-      padding-left: 15px;
-    }
-    label {
-      display: block;
     }
   }
 

@@ -130,10 +130,10 @@ class TriggerPeriod(Enum):
         return name
 
     # every cycle
-    all = 'Every Discovery Cycle'
-    daily = 'Daily'
-    weekly = 'Weekly'
-    monthly = 'Monthly'
+    all = 'Every discovery cycle'
+    daily = 'Every x days'
+    weekly = 'Days of week'
+    monthly = 'Days of month'
     never = 'Manually only'
 
 
@@ -151,6 +151,7 @@ class RunOnEntities(Enum):
     AddedEntities = auto()
 
 
+# pylint: disable=R0902
 @dataclass
 class Trigger(DataClassJsonMixin):
     # The name of the trigger (unique per enforcement)
@@ -171,6 +172,10 @@ class Trigger(DataClassJsonMixin):
     times_triggered: int
     # Which entities to run upon
     run_on: RunOnEntities
+    # Trigger recurrence - according to selected period can be either number of days or indexes of week / month days
+    period_recurrence: int
+    # Trigger recurrence - Time
+    period_time: str
 
     @staticmethod
     def from_dict(to_parse) -> 'Trigger':
@@ -183,7 +188,9 @@ class Trigger(DataClassJsonMixin):
             result=to_parse.get('result'),
             result_count=to_parse.get('result_count'),
             times_triggered=to_parse.get('times_triggered', 0),
-            run_on=RunOnEntities(to_parse['run_on'])
+            run_on=RunOnEntities(to_parse['run_on']),
+            period_recurrence=to_parse.get('period_recurrence', 1),
+            period_time=to_parse.get('period_time', '13:00')
         )
 
 

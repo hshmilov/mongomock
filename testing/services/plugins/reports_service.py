@@ -3,6 +3,7 @@ from datetime import datetime
 
 import dateutil
 from bson import ObjectId
+from pymongo import UpdateOne
 from pymongo.database import Database
 
 from axonius.clients.wmi_query.consts import (COMMAND_NAME, EXTRA_FILES_NAME,
@@ -16,7 +17,6 @@ from axonius.consts.report_consts import (
     ACTIONS_FAILURE_FIELD, ACTIONS_FIELD, ACTIONS_MAIN_FIELD,
     ACTIONS_POST_FIELD, ACTIONS_SUCCESS_FIELD, LAST_TRIGGERED_FIELD,
     LAST_UPDATE_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD)
-
 from reports.action_types.action_type_base import DEFAULT_INSTANCE
 from services.plugin_service import PluginService
 from services.system_service import SystemService
@@ -55,7 +55,10 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
         if self.db_schema_version < 8:
             self._update_schema_version_8()
 
-        if self.db_schema_version != 8:
+        if self.db_schema_version < 9:
+            self._update_schema_version_9()
+
+        if self.db_schema_version != 9:
             print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
 
     @staticmethod
@@ -372,7 +375,6 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             raise
 
     def _update_schema_version_8(self):
-        print('Upgrade to schema 8')
         try:
             enforcement_tasks_collection = self.db.client[REPORTS_PLUGIN_NAME]['triggerable_history']
             for result_type in ['main', 'failure', 'success', 'post']:
@@ -390,6 +392,65 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
         except Exception as e:
             print(f'Exception while upgrading reports db to version 8. Details: {e}')
             traceback.print_exc()
+
+    def _update_schema_version_9(self):
+        print('Upgrade to schema 9')
+        try:
+            collection = self.db.client[REPORTS_PLUGIN_NAME][REPORTS_PLUGIN_NAME]
+            reports = collection.find({
+                f'{TRIGGERS_FIELD}.period': {'$in': ['daily', 'weekly', 'monthly']}
+            }, projection={
+                'name': 1,
+                'last_updated': 1,
+                f'{TRIGGERS_FIELD}.name': 1,
+                f'{TRIGGERS_FIELD}.period': 1,
+                f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': 1
+            })
+
+            bulk_updates = []
+            for report in reports:
+                triggers = report[TRIGGERS_FIELD]
+                trigger = triggers[0]
+                period = trigger['period']
+
+                last_updated = report['last_updated']
+                last_triggered = trigger.get(LAST_TRIGGERED_FIELD, None)
+
+                if period == 'daily':
+                    period_recurrence = 1
+                elif period == 'weekly':
+                    period_recurrence = last_triggered.weekday() if last_triggered else last_updated.weekday()
+                    period_recurrence = [str(period_recurrence)]
+                elif period == 'monthly':
+                    period_recurrence = last_triggered.day if last_triggered else last_updated.day
+                    if period_recurrence in [29, 30, 31]:
+                        period_recurrence = 29
+                    period_recurrence = [str(period_recurrence)]
+                else:
+                    continue
+
+                period_time = last_triggered.strftime('%H:%M') if last_triggered else '13:00'
+                bulk_updates.append(UpdateOne(
+                    {
+                        '_id': report['_id'],
+                        f'{TRIGGERS_FIELD}.name': trigger['name']
+                    },
+                    {
+                        '$set': {
+                            f'{TRIGGERS_FIELD}.$.period_recurrence': period_recurrence,
+                            f'{TRIGGERS_FIELD}.$.period_time': period_time
+                        }
+                    }
+                ))
+
+            if len(bulk_updates) > 0:
+                collection.bulk_write(bulk_updates)
+            self.db_schema_version = 9
+
+        except Exception as e:
+            print(f'Exception while upgrading reports db to version 9. Details: {e}')
+            traceback.print_exc()
+            raise
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)

@@ -509,11 +509,28 @@ export default {
     .ant-form-item {
       grid-column: 1/-1;
       margin-bottom: 0;
-      .ant-form-item-label {
+
+      &-label {
         line-height: initial;
+        label::after {
+          content: '';
+        }
       }
+
       .x-multiple-select {
         width: 100%;
+      }
+    }
+
+    .time-picker-text, .x-dropdown {
+      display: inline-block;
+      width: 200px;
+    }
+
+    .v-text-field {
+      padding-top: 0;
+      .v-text-field__details, .v-messages {
+        min-height: 0;
       }
     }
   }

@@ -64,10 +64,6 @@ export default {
       type: String,
       default: '',
     },
-    schema: {
-      type: Object,
-      default: () => ({}),
-    },
   },
   data() {
     return {
@@ -91,19 +87,29 @@ export default {
         this.$emit('input', value);
         this.emitValidity();
       },
-
+    },
+    title() {
+      return this.label || this.schema.title;
+    },
+    required() {
+      return this.schema.required || false;
     },
   },
   methods: {
     onInput(selectedTime) {
-      const time = dayjs(selectedTime, 'h:mma');
-      if (!time.isValid()) {
-        this.error = '\'Daily discovery time\' has an illegal value';
-        this.valid = false;
+      if (!selectedTime) {
+        this.error = this.required ? `'${this.title}' is required` : '';
+        this.valid = !this.required;
       } else {
-        this.error = '';
-        this.valid = true;
-        this.$emit('input', time.format('HH:mm'));
+        const time = dayjs(selectedTime, 'h:mma');
+        if (!time.isValid()) {
+          this.error = `'${this.title}' has an illegal value`;
+          this.valid = false;
+        } else {
+          this.error = '';
+          this.valid = true;
+          this.$emit('input', time.format('HH:mm'));
+        }
       }
       this.emitValidity();
     },
@@ -112,13 +118,19 @@ export default {
 </script>
 
 <style lang="scss">
-  .time-picker-text {
-    input {
-      font-size: 14px;
-      padding-left: 3px;
+  .time-picker-wrapper {
+    .time-picker-text {
+      input {
+        font-size: 14px;
+        padding-left: 4px;
+        alignment: top;
+      }
     }
-    .x-icon {
-      font-size: 16px;
+    .server-time {
+      padding-left: 12px;
+      .x-icon {
+        font-size: 16px;
+      }
     }
   }
 </style>
