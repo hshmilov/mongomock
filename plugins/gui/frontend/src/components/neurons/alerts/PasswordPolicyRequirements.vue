@@ -49,7 +49,6 @@ export default {
     border-radius: 8px;
 
     .list {
-      padding-left: 16px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-gap: 2px 8px;

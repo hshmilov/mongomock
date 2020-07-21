@@ -282,20 +282,5 @@ export default {
       display: none !important;
     }
   }
-  .ant-drawer-body__footer {
-    > div {
-      display: flex;
-      flex-direction: column;
-      .indicator-error--text {
-        display: flex;
-        justify-content: flex-end;
-      }
-      .buttons {
-        display: flex;
-        flex: 50%;
-        justify-content: flex-end;
-      }
-    }
-  }
 }
 </style>

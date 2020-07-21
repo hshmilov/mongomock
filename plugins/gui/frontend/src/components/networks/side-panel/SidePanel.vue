@@ -173,7 +173,7 @@ export default {
               }
               &__footer {
                 position: absolute;
-                padding: 5px 30px 0px 30px;
+                padding: 5px 30px 0 30px;
                 bottom: 0;
                 left: 0;
                 width: 100%;

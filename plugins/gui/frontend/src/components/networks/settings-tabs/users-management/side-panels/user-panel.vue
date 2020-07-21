@@ -249,3 +249,35 @@ export default {
 };
 
 </script>
+
+<style lang="scss">
+.user-panel {
+
+    .ant-drawer-content-wrapper .ant-drawer-wrapper-body .ant-drawer-body {
+        display: flex;
+        flex-direction: column;
+
+        &__content {
+            flex: 1;
+            padding: 0 24px 24px 0;
+        }
+
+        &__footer {
+            position: relative;
+            padding: 0 24px 0 0;
+            height: 60px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-end;
+
+            .indicator-error--text {
+                margin-bottom: 4px;
+            }
+
+            .buttons {
+                text-align: right;
+            }
+        }
+    }
+}
+</style>
