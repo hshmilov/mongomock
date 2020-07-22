@@ -134,9 +134,6 @@ export default {
           },
         });
         this.filterValid = filter !== '';
-        if (prevFilter !== filter) {
-          this.$emit('done');
-        }
       },
     },
     schema() {

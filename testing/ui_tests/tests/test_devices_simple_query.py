@@ -82,6 +82,7 @@ class TestDevicesSimpleQuery(TestBase):
         assert self.devices_page.count_entities() == 0
 
     def _check_search_text_result(self, text):
+        self.devices_page.enter_search()
         self.devices_page.wait_for_table_to_load()
         all_data = self.devices_page.get_all_data()
         assert len(all_data)
