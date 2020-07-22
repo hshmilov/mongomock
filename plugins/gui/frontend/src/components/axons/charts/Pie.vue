@@ -71,8 +71,9 @@
 </template>
 
 <script>
+import _sumBy from 'lodash/sumBy';
+import { formatPercentage } from '@constants/utils';
 import XChartTooltip from './ChartTooltip.vue';
-import { formatPercentage } from '../../../constants/utils';
 
 export default {
   name: 'XPie',
@@ -154,11 +155,7 @@ export default {
       return tooltip;
     },
     totalValue() {
-      if (!this.data.length) {
-        return 0;
-      }
-      const [{ value, portion }] = this.data;
-      return portion === 1 ? value : Math.round(1 / (portion / value));
+      return _sumBy(this.data, (slice) => slice.value) || 0;
     },
   },
   methods: {
