@@ -195,6 +195,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
     def _fill_rapid7_nexpose_warehouse_vulnerabilities_fields(device_raw: list, device: MyDeviceAdapter):
         try:
             rapid_vulnerabilities = []
+            device.software_cves = []
 
             if isinstance(device_raw, list):
                 for vulnerability in device_raw:
@@ -256,7 +257,6 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                             vulnerability.get('cvss_v3_exploit_score'))
 
                         rapid_vulnerabilities.append(rapid_vulnerability)
-            device.software_cves = []
             device.rapid_vulnerabilities = rapid_vulnerabilities
         except Exception:
             logger.warning(f'Failed to fill vulnerabilities fields')

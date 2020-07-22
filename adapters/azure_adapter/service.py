@@ -101,7 +101,7 @@ class AzureAdapter(AdapterBase):
                 'Azure China Cloud': AzureClouds.China,
                 'Azure German Cloud': AzureClouds.Germany,
                 'Azure US Gov Cloud': AzureClouds.Gov
-            }.get(AZURE_CLOUD_ENVIRONMENT)
+            }.get(client_config.get(AZURE_CLOUD_ENVIRONMENT))
 
             management_url = None
             resource = None

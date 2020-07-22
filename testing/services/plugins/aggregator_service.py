@@ -118,8 +118,6 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             self._update_schema_version_42()
         if self.db_schema_version < 43:
             self._update_schema_version_43()
-        if self.db_schema_version < 44:
-            self._update_schema_version_44()
         if self.db_schema_version < 45:
             self._update_schema_version_45()
         if self.db_schema_version < 46:
@@ -1940,19 +1938,6 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             raise
 
         self.db_schema_version = 43
-
-    def _update_schema_version_44(self):
-        print('Update to schema 44 - Convert Symantec Altiris adapter client id to a new format')
-        try:
-            def symantec_altiris_new_client_id(client_config):
-                return client_config['server'] + '_' + client_config.get('database')
-
-            self._upgrade_adapter_client_id('symantec_altiris_adapter', symantec_altiris_new_client_id)
-            self.db_schema_version = 44
-        except Exception as e:
-            print(f'Exception while upgrading core db to version 44. Details: {e}')
-            traceback.print_exc()
-            raise
 
     def _update_schema_version_45(self):
         print('Update to schema 45 - Convert Redseal adapter client id to a new format')

@@ -108,11 +108,12 @@ class MongoAliveTask(WatchdogTask):
                                               timeout=60 * 15,  # useful for restores
                                               stderr=helper,
                                               stdout=helper)
-                        subprocess.check_call('./se.sh re gui'.split(),
-                                              cwd=CORTEX_PATH,
-                                              timeout=60,
-                                              stderr=helper,
-                                              stdout=helper)
+                        if instance_mode != InstancesModes.mongo_only.value:
+                            subprocess.check_call('./se.sh re gui'.split(),
+                                                  cwd=CORTEX_PATH,
+                                                  timeout=60,
+                                                  stderr=helper,
+                                                  stdout=helper)
                     self.report_info('Done restarting mongo and gui')
                     time.sleep(60 * 10)     # Avoid infinite loop of restarting
             except Exception as e:

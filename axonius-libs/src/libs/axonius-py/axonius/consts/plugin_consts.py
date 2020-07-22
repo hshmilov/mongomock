@@ -166,8 +166,8 @@ PREDEFINED_USER_NAMES = [ADMIN_USER_NAME, AXONIUS_USER_NAME, AXONIUS_RO_USER_NAM
 X_UI_USER = 'x-ui-user'
 X_UI_USER_SOURCE = 'x-ui-user-source'
 
-PARALLEL_ADAPTERS = ['cisco_adapter', 'esx_adapter', 'rapid7_nexpose_warehouse_adapter']
-THREAD_SAFE_ADAPTERS = ['esx_adapter', 'rapid7_nexpose_warehouse_adapter']
+PARALLEL_ADAPTERS = ['cisco_adapter', 'esx_adapter']
+THREAD_SAFE_ADAPTERS = ['esx_adapter']
 
 # Defaults
 DEFAULT_SOCKET_READ_TIMEOUT = 5

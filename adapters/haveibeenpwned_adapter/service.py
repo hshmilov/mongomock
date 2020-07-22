@@ -41,6 +41,8 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
     class MyUserAdapter(UserAdapter):
         breaches_data = ListField(BreachData, 'Breaches Data')
         max_breach_date = Field(datetime.datetime, 'Max Breach Date')
+        max_added_date = Field(datetime.datetime, 'Max Added Date')
+        max_modified_date = Field(datetime.datetime, 'Max Modified Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -131,11 +133,22 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
             user.id = email
             user.mail = email
             max_breach_date = None
+            max_added_date = None
+            max_modified_date = None
             for breach_data in user_data:
                 try:
                     breach_date = parse_date(breach_data.get('BreachDate'))
                     if not max_breach_date or (breach_date and breach_date > max_breach_date):
                         max_breach_date = breach_date
+
+                    added_date = parse_date(breach_data.get('AddedDate'))
+                    if not max_added_date or (added_date and added_date > max_added_date):
+                        max_added_date = added_date
+
+                    modified_date = parse_date(breach_data.get('ModifiedDate'))
+                    if not max_modified_date or (modified_date and modified_date > max_modified_date):
+                        max_modified_date = modified_date
+
                     pwn_count = None
                     if isinstance(breach_data.get('PwnCount'), int):
                         pwn_count = breach_data.get('PwnCount')
@@ -162,6 +175,8 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
                 except Exception:
                     logger.exception(f'Problem with breach data {breach_data}')
             user.max_breach_date = max_breach_date
+            user.max_added_date = max_added_date
+            user.max_modified_date = max_modified_date
             user.set_raw({'data': user_data})
             return user
         except Exception:

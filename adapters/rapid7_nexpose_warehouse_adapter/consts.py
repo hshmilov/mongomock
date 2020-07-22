@@ -1,4 +1,4 @@
-DEVICE_PAGINATION = 200
+DEVICE_PAGINATION = 50
 
 ASSET_QUERY = 'Select * from public.dim_asset'
 VULNERABILITIES_QUERY = 'Select * from public.dim_vulnerability '
