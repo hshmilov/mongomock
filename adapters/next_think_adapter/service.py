@@ -9,11 +9,9 @@ from axonius.utils.datetime import parse_date
 from next_think_adapter.connection import NextThinkConnection
 from next_think_adapter.client_id import get_client_id
 from next_think_adapter.structures import NextThinkDeviceInstance, NextThinkUserInstance
-from next_think_adapter.consts import DEFAULT_WEB_API_PORT, DEFAULT_FETCH_DAYS, EXTRA_APPLICATIONS, EXTRA_SERVICES, \
-    MAXIMUM_LAST_FETCH
+from next_think_adapter.consts import DEFAULT_WEB_API_PORT, DEFAULT_FETCH_DAYS, MAXIMUM_LAST_FETCH
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 # pylint: disable=logging-format-interpolation
 
@@ -190,18 +188,6 @@ class NextThinkAdapter(AdapterBase):
 
             device.sid = device_raw.get('sid')
 
-            if device_raw.get(EXTRA_APPLICATIONS):
-                for application in device_raw.get(EXTRA_APPLICATIONS):
-                    if isinstance(application, dict):
-                        device.add_installed_software(name=application.get('name'),
-                                                      description=application.get('description'))
-
-            if device_raw.get(EXTRA_SERVICES):
-                for service in device_raw.get(EXTRA_SERVICES):
-                    if isinstance(service, dict):
-                        device.add_service(name=service.get('name'),
-                                           status=service.get('status'))
-
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -211,7 +197,7 @@ class NextThinkAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.bios_serial = device_raw.get('bios_serial_number')
             device.device_manufacturer = device_raw.get('device_manufacturer')
             device.device_model = device_raw.get('device_model')
@@ -241,12 +227,12 @@ class NextThinkAdapter(AdapterBase):
                 device.local_admins = [local_administrators]
 
             device.last_seen = parse_date(device_raw.get('last_seen'))
-            device.name = device_raw.get('name')
+            device.hostname = device_raw.get('name')
             device.total_number_of_cores = self._parse_int(device_raw.get('number_of_cores'))
             device.total_number_of_physical_processors = self._parse_int(device_raw.get('number_of_cpus'))
 
-            os_string = f'{device_raw.get("os_architecture") or ""} {device_raw.geT("os_build") or ""} ' \
-                        f'{device_raw.get("os_version_and_architecture") or ""}'
+            os_string = f'{device_raw.get("os_version_and_architecture") or ""} ' \
+                        f'{device_raw.get("os_architecture") or ""} {device_raw.get("os_build") or ""}'
             device.figure_os(os_string=os_string)
 
             total_ram = self._parse_int(device_raw.get('total_ram'))  # Bytes
@@ -305,7 +291,7 @@ class NextThinkAdapter(AdapterBase):
             if user_id is None:
                 logger.warning(f'Bad user with no ID {user_raw}')
                 return None
-            user.id = user_id + '_' + (user_raw.get('name') or '')
+            user.id = str(user_id) + '_' + (user_raw.get('name') or '')
 
             user.username = user_raw.get('name')
             user.user_sid = user_raw.get('sid')
