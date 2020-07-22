@@ -975,7 +975,8 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
 
                 # First priority is the latest seen Agent adapter
                 if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
-                        in _adapter and _adapter['last_seen'] > last_seen:
+                        in _adapter and isinstance(_adapter['last_seen'], datetime)\
+                        and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
                         try:
                             sub_property_val = _adapter[specific_property][sub_property] if \
