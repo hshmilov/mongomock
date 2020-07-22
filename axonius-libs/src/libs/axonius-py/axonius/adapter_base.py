@@ -1827,12 +1827,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        clients = self._clients_collection.find()
-        for client in clients:
-            client_config = client.get('client_config')
-            if client_config:
-                self._decrypt_client_config(client_config)
-            yield client
+        clients = list(self._clients_collection.find())
+        with concurrent.futures.ThreadPoolExecutor(10) as executor:
+            futures = []
+            for client in clients:
+                client_config = client.get('client_config')
+                if client_config:
+                    futures.append(executor.submit(self._decrypt_client_config, client_config))
+
+            for i, future in enumerate(concurrent.futures.as_completed(futures)):
+                if i and i % 10 == 0:
+                    logger.debug(f'Decrypted {i} / {len(futures)} clients')
+                future.result()  # propagate error up
+        yield from clients
 
     def _get_client_config_by_client_id(self, client_id: str):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
