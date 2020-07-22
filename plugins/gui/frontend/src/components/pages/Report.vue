@@ -188,7 +188,7 @@
             :loading="downloading"
             @click="startDownload"
           >
-            {{ downloading ? 'Download Report' : 'Downloading' }}
+            {{ downloading ? 'Downloading': 'Download Report'}}
           </XButton>
           <XButton
             id="report_save"

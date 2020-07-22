@@ -56,6 +56,7 @@ class ReportsPage(EntitiesPage):
     REPORT_TITLE_CSS = '.report-title'
     SEND_MAIL_BUTTON_ID = 'test-report'
     REPORT_DOWNLOAD_ID = 'reports_download'
+    REPORT_DOWNLOAD_TEXT = 'Download Report'
     REPORT_DOWNLOADING_TEXT = 'Downloading'
     REPORT_IS_SAVED_TOASTER = 'Report is saved and being generated in the background'
     ERROR_TEXT_CSS = '.error-text'
@@ -319,17 +320,14 @@ class ReportsPage(EntitiesPage):
     def is_report_download_shown(self):
         try:
             self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID)
+            self.find_element_by_text(self.REPORT_DOWNLOAD_TEXT)
         except NoSuchElementException:
             return False
         return True
 
     def click_report_download(self):
         self.driver.find_element_by_id(self.REPORT_DOWNLOAD_ID).click()
-        self.wait_for_report_downloading_present()
         self.wait_for_report_downloading_absent()
-
-    def wait_for_report_downloading_present(self):
-        self.wait_for_element_present_by_text(self.REPORT_DOWNLOADING_TEXT)
 
     def wait_for_report_downloading_absent(self):
         self.wait_for_element_absent_by_text(self.REPORT_DOWNLOADING_TEXT)
