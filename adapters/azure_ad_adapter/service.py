@@ -255,6 +255,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
 
             try:
                 device.last_sign_in = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
+                device.last_seen = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
             except Exception:
                 logger.exception(f'Can not parse last seen')
 

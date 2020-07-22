@@ -67,7 +67,7 @@ class RedhatSatelliteConnection(RESTConnection):
         try:
             while count_so_far <= min(total_count, limit or consts.MAX_NUMBER_OF_DEVICES):
                 pagination_params['page'] = curr_page
-                response = self._do_request(*args, **kwargs)
+                response = self._get(*args, **kwargs)
 
                 results = response.get('results')
                 if not isinstance(results, (list, dict)):
