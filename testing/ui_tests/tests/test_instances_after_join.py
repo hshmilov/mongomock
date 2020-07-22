@@ -206,7 +206,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
     def check_deactivate_node(self):
         # Deactivate node.
         self.instances_page.switch_to_page()
-        self.instances_page.find_query_row_by_name(NEW_NODE_NAME).find_elements_by_class_name('x-checkbox')[0].click()
+        self.instances_page.click_query_row_by_name(NEW_NODE_NAME)
         self.instances_page.deactivate_instances()
 
         # Check that it's status changed.
@@ -217,7 +217,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         # Reactivate node
         self.instances_page.switch_to_page()
-        self.instances_page.find_query_row_by_name(NEW_NODE_NAME).find_elements_by_class_name('x-checkbox')[0].click()
+        self.instances_page.click_query_row_by_name(NEW_NODE_NAME)
         self.instances_page.reactivate_instances()
 
         # Check that it's status changed.
@@ -270,7 +270,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         # verify no checkbox on non-master instance
         self.instances_page.click_query_row_by_name('node_1')
         self.instances_page.assert_instance_indication_element_absent()
-        self.instances_page.click_button('Cancel')
+        self.instances_page.close_instance_side_panel()
 
         # change name
         self.instances_page.change_instance_name(MASTER_NODE_NAME, self.MASTER_REPLACE_NAME)

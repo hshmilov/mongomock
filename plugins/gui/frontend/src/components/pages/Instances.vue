@@ -14,16 +14,6 @@
           :disabled="!canEditInstances"
           @click="connecting= !connecting"
         >Connect Node</XButton>
-        <XButton
-          v-if="showActivationOption === 'Activated'"
-          type="link"
-          @click="deactivateServers"
-        >Deactivate</XButton>
-        <XButton
-          v-if="showActivationOption === 'Deactivated'"
-          type="link"
-          @click="reactivateServers"
-        >Reactivate</XButton>
       </template>
       <XTable
         v-if="instances"

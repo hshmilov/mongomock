@@ -22,12 +22,15 @@
             />
           </div>
           <div class="editable-input__instance-field">
-            <h5>Show Indication</h5>
-            <ACheckbox
-              v-model="instance.use_as_environment_name"
-              :disabled="disabled"
-              @change="$emit('update:instance', instance)"
-            />
+            <div v-if="instance.is_master">
+              <h5>Show Indication</h5>
+              <ACheckbox
+                      id="use_as_environment_name"
+                      v-model="instance.use_as_environment_name"
+                      :disabled="disabled"
+                      @change="$emit('update:instance', instance)"
+              />
+            </div>
           </div>
           <div class="editable-input__instance-field">
             <h5>Host Name</h5>

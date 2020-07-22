@@ -1,7 +1,11 @@
 import re
+import time
 
 from selenium.common.exceptions import (NoSuchElementException,
                                         StaleElementReferenceException)
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from axonius.utils.wait import wait_until
 from ui_tests.pages.entities_page import EntitiesPage
@@ -19,15 +23,17 @@ class InstancesPage(EntitiesPage):
     BUTTON_LINK_CLASS = 'x-button link'
     TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION = 'Illegal hostname value entered'
     FOOTER_CONTENT_CSS = '.footer-content'
-    INSTANCE_INDICATION_CHECKBOX_CSS = '#use_as_environment_name .checkbox-container input'
+    INSTANCE_INDICATION_CHECKBOX_CSS = '#use_as_environment_name'
     INSTANCE_METRICS_CSS = '.ant-drawer-body .ant-drawer-body__content .instance-metrics' \
                            '.instance-metric-field .field-container'
-    INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS = '.ant-drawer-wrapper-body .ant-drawer-header .actions .action-close'
+    INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS = '.ant-drawer-wrapper-body .ant-drawer-header .actions .action-close .anticon'
     INSTANCE_METRIC_TITLE = 'label.field-title'
     INSTANCE_METRIC_VALUE = 'p.field-value'
+    INSTANCE_SIDE_PANEL = '.x-side-panel.x-instance-side-panel'
 
     INSTANCE_NAME_TEXTBOX_ID = 'node_name'
     INSTANCE_HOSTNAME_TEXTBOX_ID = 'hostname'
+    INSTANCE_INDICATION_CHECKBOX_ID = 'use_as_environment_name'
 
     @property
     def url(self):
@@ -101,7 +107,7 @@ class InstancesPage(EntitiesPage):
         instances_row.click()
         self.fill_text_field_by_element_id(self.INSTANCE_NAME_TEXTBOX_ID, new_node_name)
         self.click_button('Save')
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def change_instance_hostname(self, current_node_name, new_hostname, negative_test=False):
         self.switch_to_page()
@@ -113,7 +119,7 @@ class InstancesPage(EntitiesPage):
         self.click_button('Save')
         if negative_test:
             self.wait_for_toaster(text=self.TOASTER_FOR_FAILED_NODE_HOSTNAME_VALIDATION)
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def toggle_instance_indication(self, current_node_name):
         self.switch_to_page()
@@ -121,15 +127,17 @@ class InstancesPage(EntitiesPage):
         self.wait_for_table_to_load()
         instances_row = self.find_query_row_by_name(current_node_name)
         instances_row.click()
-        self.driver.find_element_by_css_selector('#use_as_environment_name').click()
+        time.sleep(1)
+        self.toggle_instance_indication_checkbox()
         self.click_button('Save')
-        self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def find_query_row_by_name(self, instance_name):
         return self.driver.find_element_by_xpath(self.INSTANCES_ROW_BY_NAME_XPATH.format(instance_name=instance_name))
 
     def click_query_row_by_name(self, instance_name):
         self.find_query_row_by_name(instance_name=instance_name).click()
+        time.sleep(1)
 
     def click_row_checkbox_by_name(self, instance_name):
         return self.find_query_row_by_name(instance_name)
@@ -177,4 +185,11 @@ class InstancesPage(EntitiesPage):
         return items
 
     def close_instance_side_panel(self):
-        self.driver.find_element_by_css_selector(self.INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS).click()
+        WebDriverWait(self.driver, 2).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, self.INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS))
+        ).click()
+
+    def toggle_instance_indication_checkbox(self):
+        self.wait_for_element_present_by_css(self.INSTANCE_SIDE_PANEL,
+                                             is_displayed=True)
+        self.driver.find_element_by_id(self.INSTANCE_INDICATION_CHECKBOX_ID).click()
