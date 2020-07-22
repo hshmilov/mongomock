@@ -29,11 +29,11 @@
           <div class="mt-12 navigate-task-link">
             <a
               v-if="!userCannotViewEnforcementsTasks"
-              @click="onNavigateToNewTask"
+              @click="onNavigateToEnforcementTasks"
             >
-              {{ newTaskName }}
+              {{ newTaskMessage }}
             </a>
-            <span v-else>Task has been created successfully</span>
+            <span v-else>{{ newTaskMessage }}</span>
           </div>
           <XIcon
             class="enforcement-action-body__success-icon"
@@ -67,12 +67,8 @@
 </template>
 
 <script>
-import { mapMutations, mapState, mapActions } from 'vuex';
-import _get from 'lodash/get';
 import { Modal, Spin, Icon } from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
-import { SET_ENFORCEMENT } from '@store/modules/enforcements';
-import { FETCH_ALL_TASKS } from '@store/modules/tasks';
 import XButton from '@axons/inputs/Button.vue';
 
 export default {
@@ -90,11 +86,6 @@ export default {
       default: () => () => {},
       required: true,
     },
-    enforcementName: {
-      type: String,
-      default: '',
-      required: true,
-    },
   },
   data() {
     return {
@@ -103,42 +94,26 @@ export default {
         success: false,
         error: '',
       },
+      currentEnforcementId: '',
     };
   },
   computed: {
-    ...mapState({
-      allTasks(state) {
-        return _get(state, 'tasks.content.data', []);
-      },
-      userCannotViewEnforcementsTasks() {
-        return this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.View, this.$permissionConsts.categories.Tasks);
-      },
-      newTaskId() {
-        const newTask = this.allTasks.filter((task) => task && task['post_json.report_name']
-           && task['post_json.report_name'].startsWith(this.enforcementName))
-          .sort((a, b) => (new Date(b.date_fetched) - new Date(a.date_fetched)))[0];
-        return newTask ? newTask.uuid : '';
-      },
-      newTaskName() {
-        return `${this.enforcementName} - Task ${this.allTasks.length} has been created successfully`;
-      },
-      isDataLoading() {
-        return (this.status.processing
-          || (!this.newTaskId && !this.userCannotViewEnforcementsTasks)) && !this.status.error;
-      },
-    }),
+    userCannotViewEnforcementsTasks() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.View, this.$permissionConsts.categories.Tasks);
+    },
+    newTaskMessage() {
+      return 'Enforcement task has been created successfully';
+    },
+    isDataLoading() {
+      return this.status.processing && !this.status.error;
+    },
   },
   mounted() {
     this.$refs.wrapper_div.focus();
     this.status.processing = true;
-    this.enforcementActionToRun().then(() => {
-      // Fetching tasks to calculate new task value only if user can view tasks
-      if (!this.userCannotViewEnforcementsTasks) {
-        this.fetchAllTasks();
-      }
-      // Reset the current enforcement data (it might be used later so must clean it)
-      this.setEnforcement();
+    this.enforcementActionToRun().then((currentEnforcementId) => {
+      this.currentEnforcementId = currentEnforcementId;
       this.status.processing = false;
       this.status.success = true;
     }).catch((error) => {
@@ -147,17 +122,11 @@ export default {
     });
   },
   methods: {
-    ...mapActions({
-      fetchAllTasks: FETCH_ALL_TASKS,
-    }),
-    ...mapMutations({
-      setEnforcement: SET_ENFORCEMENT,
-    }),
     onClose() {
       this.$emit('close-result');
     },
-    onNavigateToNewTask() {
-      this.$router.push({ path: `/tasks/${this.newTaskId}` });
+    onNavigateToEnforcementTasks() {
+      this.$router.push({ path: `/enforcements/${this.currentEnforcementId}/tasks` });
     },
   },
 };

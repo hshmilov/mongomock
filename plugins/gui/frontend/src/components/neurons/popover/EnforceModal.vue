@@ -68,7 +68,7 @@ export default {
     ...mapState({
       enforcementOptions(state) {
         return state.enforcements.content.data.map((enforcement) => ({
-          name: enforcement.name, title: enforcement.name,
+          name: enforcement.name, title: enforcement.name, id: enforcement.uuid,
         }));
       },
       view(state) {
@@ -91,9 +91,9 @@ export default {
         fetchContent: FETCH_DATA_CONTENT,
       },
     ),
-    enforceEntities() {
+    async enforceEntities() {
       const { fields, sort, colFilters } = this.view;
-      return this.enforceData({
+      await this.enforceData({
         module: this.module,
         data: {
           name: this.selectedEnforcement,
@@ -101,6 +101,8 @@ export default {
           selection: { ...this.entities },
         },
       });
+      return this.enforcementOptions
+        .find((enforcement) => enforcement.name === this.selectedEnforcement).id;
     },
     runEnforcement() {
       this.closeEnforceModal();

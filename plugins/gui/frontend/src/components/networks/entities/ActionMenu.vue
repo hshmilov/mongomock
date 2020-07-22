@@ -147,23 +147,24 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapMutations, mapState } from 'vuex';
 import _get from 'lodash/get';
+import { SET_ENFORCEMENT } from '@store/modules/enforcements';
 import {
   Icon, Tooltip, Dropdown, Menu,
 } from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
-import XEnforcementPanel from './panels/EnforcementPanel.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XLinkModal from '@neurons/popover/LinkModal.vue';
+import XUnlinkModal from '@neurons/popover/UnlinkModal.vue';
+import XEnforceModal from '@neurons/popover/EnforceModal.vue';
+import XFilterOutModal from '@neurons/popover/FilterOutModal.vue';
+import XTagModal from '@neurons/popover/TagModal.vue';
+import XDeleteModal from '@neurons/popover/DeleteModal.vue';
+import XAddCustomDataModal from '@neurons/popover/AddCustomDataModal.vue';
+import { ModalActionsEnum, ActionModalComponentByNameEnum } from '@constants/entities';
 import XEnforcementsFeatureLockTip from '../enforcement/EnforcementsFeatureLockTip.vue';
-import XButton from '../../axons/inputs/Button.vue';
-import XLinkModal from '../../neurons/popover/LinkModal.vue';
-import XUnlinkModal from '../../neurons/popover/UnlinkModal.vue';
-import XEnforceModal from '../../neurons/popover/EnforceModal.vue';
-import XFilterOutModal from '../../neurons/popover/FilterOutModal.vue';
-import XTagModal from '../../neurons/popover/TagModal.vue';
-import XDeleteModal from '../../neurons/popover/DeleteModal.vue';
-import XAddCustomDataModal from '../../neurons/popover/AddCustomDataModal.vue';
-import { ModalActionsEnum, ActionModalComponentByNameEnum } from '../../../constants/entities';
+import XEnforcementPanel from './panels/EnforcementPanel.vue';
 
 export default {
   name: 'XEntitiesActionMenu',
@@ -258,6 +259,9 @@ export default {
     this.MODAL_ACTIONS = ModalActionsEnum;
   },
   methods: {
+    ...mapMutations({
+      setEnforcement: SET_ENFORCEMENT,
+    }),
     openCloseMenu(visible) {
       this.dropDownOpened = visible;
     },
@@ -286,6 +290,9 @@ export default {
       if (this.enforcementsLocked) {
         this.openEnforcementsLockTip();
       } else {
+        // Reset the current enforcement data
+        // (it is used in the panel as a template for creating a new one)
+        this.setEnforcement();
         this.isEnforcementPanelOpen = true;
       }
     },

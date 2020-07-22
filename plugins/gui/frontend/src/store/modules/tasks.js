@@ -1,7 +1,6 @@
-import { FETCH_DATA_CONTENT, REQUEST_API } from '../actions';
+import { REQUEST_API } from '../actions';
 
 export const FETCH_TASK = 'FETCH_TASK';
-export const FETCH_ALL_TASKS = 'FETCH_ALL_TASKS';
 export const UPDATE_TASK = 'UPDATE_TASK';
 
 export const tasks = {
@@ -44,16 +43,6 @@ export const tasks = {
       return dispatch(REQUEST_API, {
         rule: `enforcements/tasks/${taskId}`,
         type: UPDATE_TASK,
-      });
-    },
-    [FETCH_ALL_TASKS]({ dispatch }) {
-      /*
-        Ask server for all complete tasks, with all details of the run
-      */
-      return dispatch(FETCH_DATA_CONTENT, {
-        module: 'tasks',
-        endpoint: 'enforcements/tasks',
-        skip: 0,
       });
     },
   },

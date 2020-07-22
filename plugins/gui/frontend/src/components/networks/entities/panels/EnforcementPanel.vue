@@ -69,7 +69,6 @@
     <XEnforcementActionResult
       v-if="showEnforcementActionResult"
       :enforcement-action-to-run="saveAndRunEnforcement"
-      :enforcement-name="enforcement.name"
       @close-result="closeEnforcementActionResult"
     />
   </div>
@@ -190,13 +189,19 @@ export default {
       },
     },
   },
+  watch: {
+    visible(isVisible) {
+      if (isVisible) {
+        this.resetEnforcementData('');
+      }
+    },
+  },
   updated() {
     this.$nextTick().then(() => {
       this.$refs.enforcement_name_input.focus();
     });
   },
   created() {
-    this.resetEnforcementData('');
     if (!this.enforcementNames || !this.enforcementNames.length) {
       this.fetchSavedEnforcements();
     }
@@ -256,9 +261,10 @@ export default {
       });
     },
     async saveAndRunEnforcement() {
-      await this.saveEnforcement(this.enforcement);
+      const newEnforcementId = await this.saveEnforcement(this.enforcement);
       await this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
       await this.enforceEntities();
+      return newEnforcementId;
     },
     openEnforcementActionResult() {
       this.closePanel(true);
