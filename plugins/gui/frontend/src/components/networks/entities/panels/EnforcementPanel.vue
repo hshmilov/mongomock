@@ -178,7 +178,8 @@ export default {
       ])();
     },
     disableRun() {
-      return Boolean(this.error) || !this.enforcementNameFocusedOut || !this.actionNameFocusedOut;
+      return Boolean(this.error) || !this.enforcementNameFocusedOut
+              || (!this.actionNameFocusedOut && !this.actionValidation.isValid);
     },
     selectedActionName: {
       get() {
