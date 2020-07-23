@@ -929,15 +929,18 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
 
         field_details = []
         for adapter_name in adapter_datas:
+            field_detail = None
             if generic_field:
-                field_details.append(find_entity_field(adapter_datas[adapter_name], generic_field))
+                field_detail = find_entity_field(adapter_datas[adapter_name], generic_field)
             elif specific_adapters_values and specific_adapter_name and \
                     adapter_name.startswith(specific_adapter_name):
                 adapter_num = int(adapter_name[len(specific_adapter_name) + 1:])
-                field_details.append(specific_adapters_values[adapter_num][0])
-            else:
-                field_details.append(None)
+                field_detail = specific_adapters_values[adapter_num][0]
 
+            if field_filters and field_filters.get(field_path):
+                if not is_filter_in_value(field_detail, field_filters[field_path]):
+                    field_detail = None
+            field_details.append(field_detail)
         field_to_value[f'{field_path}_details'] = field_details
 
     # The next block handles columns with _preferred suffix

@@ -161,6 +161,9 @@ export default {
     fieldName() {
       return this.schema.name;
     },
+    fieldDetails() {
+      return this.data[`${this.fieldName}_details`];
+    },
     adaptersFieldName() {
       return this.adaptersSchema.name;
     },
@@ -168,24 +171,26 @@ export default {
       return this.fieldName === this.adaptersFieldName;
     },
     getAdapters() {
-      let adapters = this.data[this.adaptersFieldName];
+      return this.data[this.adaptersFieldName].slice().sort();
+    },
+    getFilteredAdapters() {
       if (this.colExcludedAdapters) {
-        adapters = adapters.filter((adapter) => !this.colExcludedAdapters.includes(adapter));
+        return this.getAdapters.filter((adapter) => !this.colExcludedAdapters.includes(adapter));
       }
-      return adapters;
+      return this.getAdapters;
     },
     adaptersLength() {
-      return this.getAdapters.length;
+      return this.getFilteredAdapters.length;
     },
     showExpand() {
       return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
       && !this.fieldName.includes('_preferred') && !_isEmpty(this.data[this.fieldName]);
     },
     adaptersList() {
-      return this.getAdapters.concat().map((adapter) => [adapter]).sort();
+      return this.getFilteredAdapters.map((adapter) => [adapter]);
     },
     adaptersDetailsWithClientIdList() {
-      return this.getAdapters.concat().map((adapter, index) => ({
+      return this.getFilteredAdapters.concat().map((adapter, index) => ({
         pluginName: [adapter],
         clientId: this.data['meta_data.client_used'][index],
       })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));
@@ -213,19 +218,27 @@ export default {
         return _map(this.adaptersDetailsData, (item) => _extend({}, item, { formatTitle: () => `${item.name}` }));
       }
       // auto generated fields that are not saved in the db (Like _preferred fields) dont have _details
-      if (this.data[`${this.fieldName}_details`] !== undefined) {
-        return this.data[`${this.fieldName}_details`];
+      if (this.fieldDetails !== undefined) {
+        const details = this.fieldDetails.slice();
+        if (this.colExcludedAdapters) {
+          return this.getAdapters.map((adapter) => {
+            if (this.colExcludedAdapters.includes(adapter)) return '';
+            return details.shift();
+          });
+        }
+        return details;
       }
       // If you just want the aggregated value to be on top when expanding, return a list with '' the size of adapters list
       return this.data.adapter_list_length_details;
     },
     detailsTable() {
+      const details = this.fieldDetails !== undefined ? this.fieldDetails : this.data.adapter_list_length_details;
       const baseTable = {
         fields: [
           this.adaptersSchema,
           this.schema,
         ],
-        data: this.details.map((detail, i) => ({
+        data: details.map((detail, i) => ({
           [this.adaptersFieldName]: this.adaptersList[i],
           [this.fieldName]: detail,
           formatTitle: () => `${this.adaptersDetailsData[i].name}`,
