@@ -7,7 +7,7 @@ import axios from 'axios';
 */
 
 let host = '';
-const excludedUrls = ['login', 'signup', 'login/ldap', 'login/saml', 'settings/users/tokens/reset'];
+const excludedUrls = ['login', 'signup', 'login/ldap', 'login/saml', 'settings/users/tokens/reset', 'users', 'devices'];
 if (process.env.NODE_ENV === 'development') {
   // as defined in ports.py for gui service
   host = 'https://127.0.0.1:4433';
