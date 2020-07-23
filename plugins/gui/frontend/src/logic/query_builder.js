@@ -2,6 +2,7 @@ import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
 import _get from 'lodash/get';
 
+import { getTypeFromField } from '@constants/utils'
 import { INCLUDE_OUDATED_MAGIC } from '../constants/filter';
 import Expression from './expression';
 import Condition from './condition';
@@ -85,8 +86,7 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
     const bracketWeights = [];
     expressions.forEach((expression, index) => {
       if (recompile) {
-        if (!expression.fieldType
-          || !expression.field
+        if (!expression.field
           || (!expression.compOp && !expression.context && expression.field !== 'saved_query')) {
           return;
         }
@@ -94,6 +94,9 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
         if (expression.error) {
           errors.push((expression.error));
           return;
+        }
+        if (!expression.fieldType) {
+          expression.fieldType = getTypeFromField(expression.field);
         }
         const { fields } = _find(schema, _matchesProperty('name', expression.fieldType));
         const fieldSchema = _find(fields, _matchesProperty('name', expression.field));
