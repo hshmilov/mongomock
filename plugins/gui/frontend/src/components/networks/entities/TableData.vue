@@ -2,13 +2,11 @@
   <div>
     <div
       class="x-data"
-      @mouseover="onHoverData"
-      @mouseleave="onLeaveData"
     >
       <div class="data-table-container">
         <APopover
+          v-if="isAdaptersField"
           placement="rightTop"
-          :visible="hoverData"
           :get-popup-container="getPopupContainerAdapter"
           :destroy-tooltip-on-hide="true"
         >
@@ -26,14 +24,22 @@
           />
 
         </APopover>
+        <XTableData
+          v-else
+          :schema="schema"
+          :data="data"
+          :sort="sort"
+          :filter="filter"
+        />
       </div>
 
       <div class="details-table-container">
         <APopover
+          v-if="showExpand"
           placement="bottom"
-          :visible="expandData"
           :get-popup-container="getPopupContainer"
           :destroy-tooltip-on-hide="true"
+          :visible="expandData"
         >
           <template slot="content">
             <div
@@ -50,7 +56,6 @@
             </div>
           </template>
           <XIcon
-            v-if="showExpand"
             :class="{active: expandData}"
             :style="{padding: '0 4px'}"
             :type="expandData ? 'left-circle' : 'right-circle'"
@@ -269,15 +274,6 @@ export default {
   methods: {
     toggleCell() {
       this.expandData = !this.expandData;
-    },
-    onHoverData() {
-      if (!this.isAdaptersField) {
-        return;
-      }
-      this.hoverData = true;
-    },
-    onLeaveData() {
-      this.hoverData = false;
     },
     getPopupContainer() {
       return this.$el.closest('.table');
