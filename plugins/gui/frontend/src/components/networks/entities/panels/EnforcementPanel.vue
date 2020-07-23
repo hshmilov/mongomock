@@ -292,10 +292,8 @@ export default {
       &__content {
         overflow-x: hidden;
         overflow-y: hidden !important;
-        display: flex;
-        flex-direction: column;
         .x-card {
-          min-height: 100%;
+          height: 100%;
           > .header {
             padding-bottom: 12px;
             border-bottom: 1px solid $grey-2;
