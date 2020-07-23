@@ -25,9 +25,9 @@ ACTION_WMI_REGISTRY_KEY_REMOVE_BUTTON = ACTION_WMI_REGISTRY_KEY__SELECTOR.format
 
 
 class Period:
-    EveryDiscovery = 'all_period'
-    Daily = 'daily_period'
-    Weekly = 'weekly_period'
+    EveryDiscovery = 'Every discovery cycle'
+    Daily = 'Every x days'
+    Weekly = 'Days of week'
 
 
 class Trigger:
@@ -125,6 +125,7 @@ class EnforcementsPage(EntitiesPage):
 
     RECURRENCE_DROPDOWN_BUTTON_CSS = '.item_conditional .x-select-trigger'
     RECURRENCE_DROPDOWN_OPTIONS_CSS = '.item_conditional .x-select-option'
+    RECURRENCE_DROPDOWN_OPTION_TITLE_CSS = '.item_conditional .x-select-option[title=\'{option_title}\']'
 
     FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'first-seperator'
     SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR = 'second-seperator'
@@ -625,7 +626,9 @@ class EnforcementsPage(EntitiesPage):
             self.remove_selected_with_safeguard()
 
     def choose_period(self, period):
-        self.wait_for_element_present_by_id(period).click()
+        self.driver.find_element_by_css_selector(self.RECURRENCE_DROPDOWN_BUTTON_CSS).click()
+        self.driver.find_element_by_css_selector(
+            self.RECURRENCE_DROPDOWN_OPTION_TITLE_CSS.format(option_title=period)).click()
 
     def get_all_periods_sorted(self):
         self.driver.find_element_by_css_selector(self.RECURRENCE_DROPDOWN_BUTTON_CSS).click()
@@ -785,7 +788,7 @@ class EnforcementsPage(EntitiesPage):
         return self.driver.find_element_by_css_selector(severity).is_selected()
 
     def is_period_selected(self, period):
-        return self.driver.find_element_by_id(period).is_selected()
+        return self.driver.find_element_by_css_selector(self.RECURRENCE_DROPDOWN_BUTTON_CSS).text == period
 
     def is_action_selected(self, action):
         return self.find_element_by_text(action) is not None
