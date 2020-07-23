@@ -1051,11 +1051,15 @@ class GuiService(Triggerable,
     def get_session(self):
         return session
 
+    @property
+    def get_user(self):
+        return self.get_session.get('user', {}) or {}
+
     def is_admin_user(self):
-        return is_role_admin(self.get_session.get('user', {}))
+        return is_role_admin(self.get_user)
 
     def is_axonius_user(self):
-        return is_axonius_role(self.get_session.get('user', {}))
+        return is_axonius_role(self.get_user)
 
     def get_user_permissions(self):
         permissions = self.get_session.get('user', {}).get('permissions', {})
