@@ -6,6 +6,9 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class PermissionsTestBase(TestBase):
+    TEST_SPACE_NAME = 'test space'
+    TEST_REPORT_NAME = 'testonius'
+    MY_DASHBOARD_TITLE = 'My Dashboard'
 
     def _add_action_to_role_and_login_with_user(self,
                                                 permissions,
