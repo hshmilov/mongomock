@@ -35,7 +35,11 @@ class EsentireJsonAdapter(ScannerAdapterBase):
         try:
             file_name, file_data = load_remote_data(client_config)
 
-            return file_name, from_json(file_data)
+            json_data = from_json(file_data)
+            if not isinstance(json_data, dict):
+                raise ValueError(f'Invalid response found: {json_data}')
+
+            return file_name, json_data
         except Exception as e:
             message = f'Error connecting to esentire json: {str(e)}'
             logger.exception(message)
