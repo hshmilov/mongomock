@@ -65,15 +65,10 @@ export default {
 
 <style lang="scss">
   .object {
-    display: inline-block;
-    width: auto;
-
-    &.expand {
-      width: 100%;
-    }
 
     label {
       display: block;
+      margin-bottom: 4px;
     }
   }
 </style>

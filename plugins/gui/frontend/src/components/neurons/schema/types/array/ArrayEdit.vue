@@ -437,6 +437,9 @@ export default {
         .ant-collapse-content > .ant-collapse-content-box {
           padding: 0;
         }
+        .object {
+          margin-top: 0;
+        }
       }
 
       .list.draggable {
@@ -490,13 +493,16 @@ export default {
     }
 
     .object {
+      display: inline-block;
+      width: auto;
+      margin-top: 8px;
 
-      input, select, textarea {
+      &.expand {
         width: 100%;
       }
 
-      .upload-file {
-        margin-top: 8px;
+      input, select, textarea {
+        width: 100%;
       }
     }
 
@@ -522,16 +528,16 @@ export default {
       }
     }
 
-    .time-picker-text, .x-dropdown {
-      display: inline-block;
-      width: 200px;
-    }
-
     .v-text-field {
       padding-top: 0;
+      margin-top: 0;
       .v-text-field__details, .v-messages {
         min-height: 0;
       }
+    }
+
+    .item_conditional .x-dropdown {
+      width: 200px;
     }
   }
 </style>

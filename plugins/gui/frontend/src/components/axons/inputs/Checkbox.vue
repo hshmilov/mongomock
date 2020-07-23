@@ -105,6 +105,8 @@
 <style lang="scss">
     .x-checkbox {
         cursor: pointer;
+        display: flex;
+        align-items: center;
 
         &.disabled {
             cursor: default;

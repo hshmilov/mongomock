@@ -161,6 +161,10 @@ export default {
 
       &.top {
         vertical-align: top;
+
+        .x-checkbox {
+          height: 24px;
+        }
       }
     }
 

@@ -3525,7 +3525,7 @@ class PluginBase(Configurable, Feature, ABC):
                 {
                     'required': ['status', 'csr_file', 'subject_name', 'submission_date', 'key_file'],
                     'name': 'csr_settings',
-                    'format': 'hidden',
+                    'hidden': True,
                     'type': 'array',
                     'items': [
                         {
@@ -3595,7 +3595,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': TUNNEL_SETTINGS,
                     'type': 'array',
                     'required': [TUNNEL_EMAILS_RECIPIENTS],
-                    'format': 'hidden',
+                    'hidden': True,
                     'items': [
                         {
                             'name': TUNNEL_EMAILS_RECIPIENTS,

@@ -58,7 +58,7 @@
         />
         <div
           v-if="showConditions"
-          class="config-conditions"
+          class="config"
         >
           <XCheckbox
             v-model="conditions.new_entities"
@@ -447,10 +447,6 @@ export default {
             width: 200px;
           }
 
-          .item_period_time {
-            margin-top: 12px;
-          }
-
           .ant-form-item .period_recurrence_select {
             width: 400px;
           }
@@ -458,10 +454,6 @@ export default {
         .form-error {
           margin-top: 0;
         }
-      }
-
-      .config-conditions {
-        margin-top: 8px;
       }
     }
 

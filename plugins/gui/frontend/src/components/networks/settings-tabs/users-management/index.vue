@@ -231,7 +231,7 @@ export default {
 <style lang="scss">
  .x-users-management {
    height: 100%;
-   .table-header {
+   .x-table-wrapper .table-header {
      background-color: $theme-white;
    }
 

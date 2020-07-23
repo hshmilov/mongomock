@@ -598,8 +598,10 @@ export default {
     .research-settings-tab .x-form .x-array-edit .list {
       grid-template-columns: 1fr;
 
-      .item_system_research_date_recurrence input {
-        width: 200px;
+      .item_system_research_date_recurrence, .item_system_research_rate {
+        input {
+          width: 200px;
+        }
       }
     }
 

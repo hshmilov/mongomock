@@ -106,8 +106,8 @@ class EnforcementsPage(EntitiesPage):
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     ENFORCEMENTS_CHECKBOX = '.x-checkbox .checkbox-container'
     SECTION_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
-    ABOVE_INPUT_CSS = '.config-conditions .config-item .above'
-    BELOW_INPUT_CSS = '.config-conditions .config-item .below'
+    ABOVE_INPUT_CSS = '.config .config-item .above'
+    BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
     DISABLED_ACTION_XPATH = (

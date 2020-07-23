@@ -25,7 +25,7 @@
         class="send-day"
       >
         <label>on:</label>
-        <x-select
+        <XSelect
           id="weekly-day"
           v-model="value.period_config.week_day"
           class="weekly-day"
@@ -48,7 +48,7 @@
         class="send-day"
       >
         <label>on day:</label>
-        <x-select
+        <XSelect
           id="monthly-day"
           v-model="value.period_config.monthly_day"
           class="monthly-day"
@@ -59,7 +59,7 @@
     </div>
     <div class="grid-row send-hour-row">
       <div class="send-hour">
-        <x-time-picker
+        <XTimePicker
           v-model="value.period_config.send_time"
           label="Send email at:"
           :schema="{required: true}"
@@ -72,47 +72,45 @@
 </template>
 
 <script>
-    import xSelect from './select/Select.vue'
-    import xTimePicker from './TimePicker.vue'
-    import {weekDays, monthDays} from '../../../constants/utils'
+import XSelect from './select/Select.vue';
+import XTimePicker from './TimePicker.vue';
+import { weekDays, monthDays } from '../../../constants/utils';
 
-    export default {
-        name: "XRecurrence",
-        components: {xSelect, xTimePicker },
-        props: {
-            value: {
-                type: Object,
-                default: () => {
-                    return {
-                        period: 'daily',
-                        period_config: {
-                            week_day: 0,
-                            monthly_day: 1,
-                            send_time: '13:00',
-                        }
-                    }
-                },
-            },
-            readOnly: {
-                type: Boolean, default: false
-            }
+export default {
+  name: 'XRecurrence',
+  components: { XSelect, XTimePicker },
+  props: {
+    value: {
+      type: Object,
+      default: () => ({
+        period: 'daily',
+        period_config: {
+          week_day: 0,
+          monthly_day: 1,
+          send_time: '13:00',
         },
-        data()  {
-            return {
-                weekDays: weekDays,
-                monthDays: monthDays
-            }
-        },
-        methods: {
-            validateSendTime(valid){
-                this.$emit('validate', valid)
-            }
-        }
-    }
+      }),
+    },
+    readOnly: {
+      type: Boolean, default: false,
+    },
+  },
+  data() {
+    return {
+      weekDays,
+      monthDays,
+    };
+  },
+  methods: {
+    validateSendTime(valid) {
+      this.$emit('validate', valid);
+    },
+  },
+};
 </script>
 
-<style>
-  .recurrence-grid{
+<style lang="scss">
+  .recurrence-grid {
     display: flex;
     flex-direction: column;
     grid-template-columns: 20px auto;
@@ -135,7 +133,7 @@
         margin: 9px 6px;
       }
 
-      .send-day{
+      .send-day {
         flex: 1;
         display: inline-flex;
         text-align: right;
@@ -165,10 +163,12 @@
           line-height: 40px;
         }
       }
+
       .send-hour {
-          .time-picker-wrapper {
-            display: inline-flex;
-          }
+        .time-picker-wrapper {
+          display: inline-flex;
+        }
+
         .time-picker-text {
           display: flex;
           flex-direction: row;
@@ -179,10 +179,12 @@
             text-align: right;
             margin-right: 15px;
           }
-          .v-input  {
+
+          .v-input {
             width: 125px;
             flex: unset;
           }
+
           .v-text-field {
             padding-top: 0;
           }
@@ -191,6 +193,7 @@
             .v-input__slot:before {
               border-color: $indicator-error
             }
+
             input[type="text"] {
               border-color: $indicator-error;
               border-width: 1px;

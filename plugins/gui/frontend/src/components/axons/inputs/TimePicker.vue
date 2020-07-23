@@ -120,6 +120,9 @@ export default {
 <style lang="scss">
   .time-picker-wrapper {
     .time-picker-text {
+      display: inline-block;
+      width: 200px;
+
       input {
         font-size: 14px;
         padding-left: 4px;
