@@ -72,6 +72,6 @@ class RancherDeviceInstance(DeviceAdapter):
     owner_references = ListField(OwnerReference, 'Owner References')
     pod_cidrs = ListField(str, 'Pod CIDR')
     provider_id = Field(str, 'Provider ID')
-    requested = Field(RancherKV, 'Requested')
+    requested = ListField(RancherKV, 'Requested')
     ssh_user = Field(str, 'sshUser')
     taints = ListField(NodeTaint, 'Taints')
