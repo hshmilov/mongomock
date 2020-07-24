@@ -158,6 +158,8 @@ class NexposeV3Client(NexposeClient):
                 )
             aio_req['auth'] = (self.username, self.password)
             headers = None
+            if self._proxies:
+                aio_req['proxy'] = self._proxies['https']
             if self._token:
                 headers = {'Token': self._token}
             if headers:
@@ -328,6 +330,7 @@ class NexposeV3Client(NexposeClient):
                 headers = {'Token': self._token}
             vuln_details = requests.get(f'https://{self.host}:{self.port}/api/3/vulnerabilities/{vuln_id}',
                                         auth=(self.username, self.password),
+                                        proxies=self._proxies,
                                         verify=self.verify_ssl,
                                         timeout=(30, 300),
                                         headers=headers)
@@ -347,6 +350,7 @@ class NexposeV3Client(NexposeClient):
                                            params={'size': VULNERABILITIES_PAGINATION},
                                            auth=(self.username, self.password),
                                            verify=self.verify_ssl,
+                                           proxies=self._proxies,
                                            timeout=(30, 300),
                                            headers=headers)
             vulnerabilities = vulnerabilities.json()
@@ -377,6 +381,7 @@ class NexposeV3Client(NexposeClient):
             if self._token:
                 headers = {'Token': self._token}
             response = requests.get(_parse_dedicated_url(resource), params=params,
+                                    proxies=self._proxies,
                                     auth=(self.username, self.password), verify=self.verify_ssl,
                                     timeout=(10, 300), headers=headers)
             response.raise_for_status()

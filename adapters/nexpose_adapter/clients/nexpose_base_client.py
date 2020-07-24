@@ -1,12 +1,20 @@
 import abc
+import logging
 import dateutil.parser
 
 from axonius.adapter_exceptions import ClientConnectionException, ParseDevicesError
 
 
+logger = logging.getLogger(f'axonius.{__name__}')
+
+
 class NexposeClient(abc.ABC):
 
-    def __init__(self, num_of_simultaneous_devices, host, port, username, password, verify_ssl, token=None):
+    def __init__(self, num_of_simultaneous_devices, host, port, username, password, verify_ssl, token=None,
+                 https_proxy=None,
+                 proxy_username=None,
+                 proxy_password=None,
+                 ):
         self.host = host
         self.port = port
         self.username = username
@@ -14,13 +22,24 @@ class NexposeClient(abc.ABC):
         self.num_of_simultaneous_devices = num_of_simultaneous_devices
         self.verify_ssl = verify_ssl
         self._token = token
+        self._proxies = None
+        if https_proxy is not None:
+            self._proxies = {}
+            https_proxy = https_proxy.strip()
+            try:
+                if proxy_username and proxy_password:
+                    https_proxy = f'{proxy_username}:{proxy_password}@{https_proxy}'
+            except Exception:
+                logger.exception(f'Problem with username password for proxy')
+            self._proxies['https'] = https_proxy
         if not self._does_api_exist():
             raise ClientConnectionException("API Does not Exist.")
         super().__init__()
 
     @abc.abstractmethod
     def get_all_devices(self, fetch_tags=False, fetch_vulnerabilities=False,
-                        fetch_policies=False, fetch_ports=False, fetch_sw=False):
+                        fetch_policies=False, fetch_ports=False, fetch_sw=False,
+                        ):
         """ Get all the raw devices from the client.
 
         :return: dict containing the api version and the devices.

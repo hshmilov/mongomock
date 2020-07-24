@@ -118,6 +118,22 @@ class NexposeAdapter(ScannerAdapterBase):
                     "name": VERIFY_SSL,
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS Proxy',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             "required": [
@@ -184,14 +200,22 @@ class NexposeAdapter(ScannerAdapterBase):
                                                    port=client_config['port'], username=client_config['username'],
                                                    password=client_config['password'],
                                                    verify_ssl=client_config['verify_ssl'],
-                                                   token=client_config.get('token')),\
+                                                   token=client_config.get('token'),
+                                                   https_proxy=client_config.get('https_proxy'),
+                                                   proxy_username=client_config.get('proxy_username'),
+                                                   proxy_password=client_config.get('proxy_password'),
+                                                   ),\
                 client_config[NEXPOSE_HOST]
         except ClientConnectionException:
             return nexpose_clients.NexposeV2Client(num_of_simultaneous_devices, host=client_config['host'],
                                                    port=client_config['port'], username=client_config['username'],
                                                    password=client_config['password'],
                                                    verify_ssl=client_config['verify_ssl'],
-                                                   token=client_config.get('token')),\
+                                                   token=client_config.get('token'),
+                                                   https_proxy=client_config.get('https_proxy'),
+                                                   proxy_username=client_config.get('proxy_username'),
+                                                   proxy_password=client_config.get('proxy_password'),
+                                                   ),\
                 client_config[NEXPOSE_HOST]
 
     def _test_reachability(self, client_config):
