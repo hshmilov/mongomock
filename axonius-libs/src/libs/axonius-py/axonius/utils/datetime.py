@@ -96,3 +96,13 @@ def time_diff(time1: datetime.time, time2: datetime.time) -> timedelta:
     datetime1 = datetime.combine(now, time1)
     datetime2 = datetime.combine(now, time2)
     return datetime1 - datetime2
+
+
+def days_diff(datetime1: datetime, datetime2: datetime) -> int:
+    """
+    Calculate difference of days between given dates
+    :param datetime1: first date object
+    :param datetime2: second date object
+    :return: amount of days
+    """
+    return (datetime1 - datetime2).days
