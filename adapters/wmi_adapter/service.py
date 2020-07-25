@@ -115,7 +115,9 @@ class WmiAdapter(WmiExecutionMixIn, AdapterBase, Configurable):
             if not device.does_field_exist('bios_serial') and not device.does_field_exist('hostname'):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'{device.bios_serial}_{device.hostname}'.replace(' ', '_')
+            bios_serial = device.bios_serial if device.does_field_exist('bios_serial') else ''
+            device_hostname = device.hostname if device.does_field_exist('hostname') else ''
+            device.id = f'{bios_serial}_{device_hostname}'.replace(' ', '_')
             device.set_raw({'product': dev_response})
             return device
         except Exception:
