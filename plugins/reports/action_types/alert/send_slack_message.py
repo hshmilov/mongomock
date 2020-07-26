@@ -189,8 +189,8 @@ class SlackSendMessageAction(ActionTypeAlert):
         alert_name = self._report_data['name']
         log_message_full = self._config['incident_description']
         proxies = {}
-        if self._config['https_proxy'] is not None and isinstance(self._config['https_proxy'], str):
-            proxies['https'] = self._config['https_proxy'].strip()
+        if self._config.get('https_proxy') is not None and isinstance(self._config.get('https_proxy'), str):
+            proxies['https'] = self._config.get('https_proxy').strip()
         proxy_message = f'HTTPS Proxy: {proxies.get("https")}\n' if proxies.get('https') else ''
         success = False
         try:
