@@ -95,7 +95,8 @@ class MongoEncrypt:
             encrypted = client_encrypt.encrypt(data, key_alt_name=key_alt_name,
                                                algorithm=Algorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Random)
         except EncryptionError as e:
-            if 'did not provide all keys' in str(e):
+            # https://github.com/mongodb/mongo-python-driver/commit/efb89583f33abd208b3e0bc1d27b93af49d7cbb5
+            if 'did not provide all keys' in str(e) or 'not all keys requested were satisfied' in str(e):
                 logger.info(f'Creating a new encryption key, alt name: {key_alt_name}')
                 client_encrypt.create_data_key('local', key_alt_names=[key_alt_name])
             encrypted = client_encrypt.encrypt(data, key_alt_name=key_alt_name,
