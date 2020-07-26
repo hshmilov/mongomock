@@ -125,8 +125,8 @@ def system_entry_point(args):
             f.write(get_metadata('none').encode())
 
     if not os.path.exists(os.path.join(AXONIUS_VPN_DATA_PATH, 'openvpn.conf')) \
-            and read_saas_input_params() and not NODE_MARKER_PATH.is_file() or \
-            not args.prod and 'linux' in sys.platform.lower():
+            and read_saas_input_params() and not NODE_MARKER_PATH.is_file() and \
+            not os.environ.get('NODE_INIT_NAME', None) and 'linux' in sys.platform.lower():
         setup_openvpn()
 
     axonius_system = get_service()
