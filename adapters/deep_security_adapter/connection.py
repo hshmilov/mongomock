@@ -19,8 +19,16 @@ class DeepSecurityConnection(RESTConnection):
 
     # pylint: disable=arguments-differ
     def _do_request(self, *args, **kwargs):
+        kwargs.pop('raise_for_status', None)
+        kwargs.pop('use_json_in_response', None)
         kwargs.pop('return_response_raw', None)
-        resp_raw = super()._do_request(*args, return_response_raw=True, **kwargs)
+        resp_raw = super()._do_request(
+            *args,
+            raise_for_status=False,
+            use_json_in_response=False,
+            return_response_raw=True,
+            **kwargs
+        )
         if resp_raw.status_code == 429:
             try:
                 retry_after = resp_raw.headers.get('Retry-After') or resp_raw.headers.get('retry-after')
