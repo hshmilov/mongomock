@@ -241,6 +241,8 @@ class TestGlobalSSL(TestBase):
         # Check cancel works
         self.settings_page.click_cancel_csr()
         self.settings_page.wait_for_toaster('CSR deleted successfully')
+        self.settings_page.safe_refresh()
+        self.settings_page.click_certificate_settings()
         with pytest.raises(NoSuchElementException):
             self.settings_page.click_cancel_csr()
         assert self.settings_page.find_element_parent_by_text('None')
@@ -281,6 +283,8 @@ class TestGlobalSSL(TestBase):
         self.settings_page.click_modal_approve()
         self.settings_page.wait_for_toaster('Certificate was added successfully')
 
+        # Give openresty reload the certificates
+        time.sleep(5)
         self.settings_page.refresh()
         self.settings_page.click_certificate_settings()
         assert self.settings_page.find_element_parent_by_text('None')
