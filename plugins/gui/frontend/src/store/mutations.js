@@ -1,6 +1,7 @@
 import _pickBy from 'lodash/pickBy';
 import _isEmpty from 'lodash/isEmpty';
 import _toString from 'lodash/toString';
+import _get from 'lodash/get';
 import { getModule } from './actions';
 import { pluginMeta } from '../constants/plugin_meta';
 import { initCustomData } from '../constants/entities';
@@ -497,4 +498,16 @@ export const removeToaster = (state) => {
 export const UPDATE_FOOTER_MESSAGE = 'UPDATE_FOOTER_MESSAGE';
 export const updateFooterMessage = (state, payload) => {
   state.footer.message = payload;
+};
+
+export const UPDATE_SYSTEM_DEFAULT_COLUMNS = 'UPDATE_SYSTEM_DEFAULT_COLUMNS';
+export const updateSystemDefaultColumns = (state, payload) => {
+  if (_get(state, `configuration.data.defaults.system_columns.${payload.module}`, undefined)) {
+    state.configuration.data.defaults.system_columns[payload.module]
+      .table_columns[payload.columnsGroupName] = payload.fields;
+  } else {
+    state.configuration.data.defaults.system_columns[payload.module] = {
+      table_columns: { [payload.columnsGroupName]: payload.fields },
+    };
+  }
 };

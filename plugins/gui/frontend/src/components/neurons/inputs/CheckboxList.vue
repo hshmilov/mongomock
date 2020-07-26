@@ -100,6 +100,7 @@
         margin-top: 8px;
         overflow: auto;
         height: 360px;
+        line-height: 22px;
 
         .list {
             display: grid;
@@ -111,6 +112,9 @@
                 background: $theme-white;
                 display: flex;
                 padding-right: 16px;
+                border-color: transparent;
+                border-width: 1px 0px;
+                border-style: solid;
 
                 .x-icon {
                   visibility: hidden;
@@ -129,7 +133,7 @@
 
             &.draggable {
               .list__item:not(.dragging):hover {
-                border: 1px solid $grey-2;
+                border-color: $grey-2;
 
                 .x-icon {
                   visibility: visible;

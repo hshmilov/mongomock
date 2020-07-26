@@ -135,7 +135,7 @@ class EntitiesPage(Page):
     TABLE_ACTIONS_FILTER_OUT = 'filter_out'
     TABLE_ACTION_ITEM_XPATH = \
         '//div[@class=\'actions\']//div[@class=\'item-content\' and contains(text(),\'{action}\')]'
-    TABLE_EDIT_COLUMN_MODAL = 'div.x-modal.x-field-config'
+    TABLE_EDIT_COLUMN_MODAL = 'div.x-edit-columns-modal'
 
     TABLE_OPTIONS_ITEM_XPATH = '//div[@class=\'v-list-item__title\' and text()=\'{option_title}\']'
 
@@ -222,7 +222,7 @@ class EntitiesPage(Page):
 
     QUERY_MODAL_OVERLAY = '.v-overlay'
 
-    EDIT_COLUMN_BUTTON_ID = 'edit_columns'
+    EDIT_USER_COLUMN_BUTTON_ID = 'edit_user_columns'
     RESET_COLS_SYSTEM_BUTTON_ID = 'reset_system_default'
     RESET_COLS_USER_BUTTON_ID = 'reset_user_default'
     EDIT_COLUMNS_TEXT = 'Edit Columns'
@@ -889,8 +889,8 @@ class EntitiesPage(Page):
 
     def open_edit_columns(self):
         self.open_columns_menu()
-        self.driver.find_element_by_id(self.EDIT_COLUMN_BUTTON_ID).click()
-        self.wait_for_element_present_by_css('.x-field-config')
+        self.driver.find_element_by_id(self.EDIT_USER_COLUMN_BUTTON_ID).click()
+        self.wait_for_element_present_by_css('.x-edit-columns-modal')
 
     def select_column_adapter(self, adapter_title):
         self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,

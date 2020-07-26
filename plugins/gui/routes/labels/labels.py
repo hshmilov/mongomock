@@ -150,6 +150,9 @@ class Labels:
             'audit.self.preferences': 'Edit Default Columns',
             'audit.self.preferences.template': 'Edited default columns',
 
+            'audit.settings.system_default_columns': 'Edit System Default',
+            'audit.settings.system_default_columns.template': 'Edited system default view',
+
             'audit.discovery': 'Discovery',
             'audit.discovery.start': 'Discovery Started',
             'audit.discovery.start.template': 'Discovery cycle started',

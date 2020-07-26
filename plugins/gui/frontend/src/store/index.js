@@ -36,6 +36,7 @@ import {
   GET_TUNNEL_EMAILS_LIST, getTunnelEmailsList,
   GET_TUNNEL_PROXY_SETTINGS, getTunnelProxySettings,
   SAVE_TUNNEL_PROXY_SETTINGS, saveTunnelProxySettings,
+  SAVE_SYSTEM_DEFAULT_COLUMNS, saveSystemDefaultColumns,
 } from './actions';
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
@@ -66,6 +67,7 @@ import {
   SHOW_TOASTER_MESSAGE, showToasterMessage,
   UPDATE_FOOTER_MESSAGE, updateFooterMessage,
   REMOVE_TOASTER, removeToaster,
+  UPDATE_SYSTEM_DEFAULT_COLUMNS, updateSystemDefaultColumns,
 } from './mutations';
 import {
   GET_MODULE_SCHEMA, getModuleSchema,
@@ -83,6 +85,7 @@ import {
   configuredAdaptersFields,
   GET_FOOTER_MESSAGE, getFooterMessage,
   FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES, fillUserFieldsGroupsFromTemplates,
+  GET_SYSTEM_COLUMNS, getSystemColumns,
 } from './getters';
 
 import { adapters } from './modules/adapters';
@@ -113,7 +116,15 @@ export default new Vuex.Store({
       collapseSidebar: true,
       windowWidth: 0,
     },
-    configuration: { fetching: false, data: null, error: '' },
+    configuration: {
+      fetching: false,
+      data: {
+        defaults: {
+          system_columns: { },
+        },
+      },
+      error: '',
+    },
     expired: { fetching: false, data: false, error: '' },
     toast: { message: '', timeout: 3000 },
     footer: { message: '' },
@@ -135,6 +146,7 @@ export default new Vuex.Store({
     configuredAdaptersFields,
     [GET_FOOTER_MESSAGE]: getFooterMessage,
     [FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES]: fillUserFieldsGroupsFromTemplates,
+    [GET_SYSTEM_COLUMNS]: getSystemColumns,
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
@@ -165,6 +177,7 @@ export default new Vuex.Store({
     [SHOW_TOASTER_MESSAGE]: showToasterMessage,
     [REMOVE_TOASTER]: removeToaster,
     [UPDATE_FOOTER_MESSAGE]: updateFooterMessage,
+    [UPDATE_SYSTEM_DEFAULT_COLUMNS]: updateSystemDefaultColumns,
   },
   actions: {
     [REQUEST_API]: requestApi,
@@ -201,6 +214,7 @@ export default new Vuex.Store({
     [GET_TUNNEL_EMAILS_LIST]: getTunnelEmailsList,
     [GET_TUNNEL_PROXY_SETTINGS]: getTunnelProxySettings,
     [SAVE_TUNNEL_PROXY_SETTINGS]: saveTunnelProxySettings,
+    [SAVE_SYSTEM_DEFAULT_COLUMNS]: saveSystemDefaultColumns,
   },
   modules: {
     /*

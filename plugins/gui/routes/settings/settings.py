@@ -6,7 +6,8 @@ from flask import (jsonify,
                    request)
 
 from axonius.consts.gui_consts import (TEMP_MAINTENANCE_THREAD_ID)
-from axonius.consts.plugin_consts import (SYSTEM_SCHEDULER_PLUGIN_NAME)
+from axonius.consts.plugin_consts import (SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                          SYSTEM_COLUMNS_TYPE)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.datetime import time_from_now
@@ -15,6 +16,7 @@ from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.routes.account.account import Account
 from gui.routes.settings.audit.audit import Audit
 from gui.routes.settings.getting_started.getting_started import GettingStarted
 from gui.routes.settings.plugins.plugins import Plugins
@@ -43,6 +45,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         """
         history_setting = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
         return jsonify({
+            'defaults': {
+                'system_columns': self._get_system_columns_defaults(),
+            },
             'system': self._system_settings,
             'global': {
                 'mail': self._email_settings['enabled'] if self._email_settings else False,
@@ -57,6 +62,12 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
                                    if history_setting else False)
             }
         })
+
+    def _get_system_columns_defaults(self):
+        system_columns = self.system_collection.find_one({'type': SYSTEM_COLUMNS_TYPE}) or {}
+        system_columns.pop('_id', None)
+        system_columns.pop('type', None)
+        return system_columns
 
     def _stop_temp_maintenance(self):
         logger.info('Stopping Support Access')
@@ -280,6 +291,23 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
             }
         )
         return self._jsonify_api_data(new_api_key, new_token)
+
+    @gui_route_logged_in('system_default_columns', methods=['POST'],
+                         required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Settings))
+    def set_system_default_columns(self):
+        """
+        Save the system default columns of entities table
+        """
+        post_data = self.get_request_data_as_object()
+        self.system_collection.update_one(
+            {
+                'type': SYSTEM_COLUMNS_TYPE
+            }, {
+                '$set': Account.prepare_column_preferences(post_data)
+            },
+            upsert=True
+        )
+        return '', 200
 
     @gui_route_logged_in('password_policy', methods=['GET'], enforce_session=False)
     def get_password_policy_requirements(self):

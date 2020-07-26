@@ -69,7 +69,7 @@ import XTableData from './TableData.vue';
 import XEntitiesActionMenu from './ActionMenu.vue';
 import XTableOptionMenu from './TableOptionMenu.vue';
 
-import { GET_DATA_SCHEMA_BY_NAME } from '../../../store/getters';
+import { GET_DATA_SCHEMA_BY_NAME, GET_SYSTEM_COLUMNS } from '../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
   FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
@@ -99,7 +99,7 @@ export default {
     return {
       selection: { ids: [], include: true },
       selectionLabels: {},
-      userFieldsGroups: { default: defaultFields[this.module] },
+      userFieldsGroups: {},
     };
   },
   computed: {
@@ -132,6 +132,7 @@ export default {
     },
     ...mapGetters({
       getFieldSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      getSystemColumns: GET_SYSTEM_COLUMNS,
     }),
     schemaFieldsByName() {
       return this.getFieldSchemaByName(this.module);
@@ -150,9 +151,10 @@ export default {
     await this.fetchConnectionLabels();
     // get all saved user defined columns group
     const userDefaultTableColumns = await getUserTableColumnGroups(this.module);
+    const systemDefaultTableColumns = this.getSystemColumns(this.module);
     if (userDefaultTableColumns) {
       this.userFieldsGroups = {
-        ...this.userFieldsGroups,
+        default: systemDefaultTableColumns,
         ...userDefaultTableColumns,
       };
     }

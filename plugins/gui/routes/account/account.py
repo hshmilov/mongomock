@@ -61,7 +61,13 @@ class Account:
         """
         Save the default view of devices table, for current user
         """
-        return self._system_users_preferences_post()
+        post_data = self.get_request_data_as_object()
+        self._users_preferences_collection.update_one({
+            'user_id': get_connected_user_id()
+        }, {
+            '$set': self.prepare_column_preferences(post_data)
+        }, upsert=True)
+        return '', 200
 
     def _system_users_preferences_get(self):
         """
@@ -76,13 +82,8 @@ class Account:
             return jsonify({}), 200
         return jsonify(user_preferences), 200
 
-    def _system_users_preferences_post(self):
-        """
-        Save a default view for given entity_type, in current user's preferences
-        :param entity_type: devices | users
-        :return: Error if could not save
-        """
-        post_data = self.get_request_data_as_object()
+    @staticmethod
+    def prepare_column_preferences(post_data):
         set_object = {}
         for entity_type in EntityType:
             entity_value = entity_type.value
@@ -90,9 +91,4 @@ class Account:
                 table_columns_preferences = post_data[entity_value].get(USERS_PREFERENCES_COLUMNS_FIELD, {})
                 for (view_type, columns) in table_columns_preferences.items():
                     set_object[f'{entity_value}.{USERS_PREFERENCES_COLUMNS_FIELD}.{view_type}'] = columns
-        self._users_preferences_collection.update_one({
-            'user_id': get_connected_user_id()
-        }, {
-            '$set': set_object
-        }, upsert=True)
-        return '', 200
+        return set_object

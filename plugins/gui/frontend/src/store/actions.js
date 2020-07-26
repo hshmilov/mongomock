@@ -11,7 +11,7 @@ import {
   SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
   UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
   UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA,
-  UPDATE_DATA_VIEW,
+  UPDATE_DATA_VIEW, UPDATE_SYSTEM_DEFAULT_COLUMNS
 } from './mutations';
 
 
@@ -723,5 +723,23 @@ export const saveTunnelProxySettings = ({ state, dispatch }, payload) => {
     rule: `tunnel/proxy_settings`,
     method: 'POST',
     data: payload,
+  });
+};
+
+export const SAVE_SYSTEM_DEFAULT_COLUMNS = 'SAVE_SYSTEM_DEFAULT_COLUMNS';
+export const saveSystemDefaultColumns = ({ dispatch, commit }, payload) => {
+  const data = {
+    [payload.module]: {
+      table_columns: {
+        [payload.columnsGroupName]: payload.fields,
+      },
+    },
+  };
+  return dispatch(REQUEST_API, {
+    rule: 'settings/system_default_columns',
+    method: 'POST',
+    data,
+  }).then(() => {
+    commit(UPDATE_SYSTEM_DEFAULT_COLUMNS, payload);
   });
 };

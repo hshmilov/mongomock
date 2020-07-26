@@ -119,7 +119,7 @@ import XSearchInput from '@neurons/inputs/SearchInput.vue';
 import XMenu from '@axons/menus/Menu.vue';
 import XMenuItem from '@axons/menus/MenuItem.vue';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
-import { EXACT_SEARCH } from '@store/getters';
+import { EXACT_SEARCH, GET_SYSTEM_COLUMNS } from '@store/getters';
 import { mdiClose } from '@mdi/js';
 import { defaultViewForReset, entities } from '@constants/entities';
 import viewsMixin from '../../../../mixins/views';
@@ -189,6 +189,7 @@ export default {
     }),
     ...mapGetters({
       exactSearch: EXACT_SEARCH,
+      getSystemColumns: GET_SYSTEM_COLUMNS,
     }),
     userCanRunSavedQueries() {
       const { permissionCategory } = _find(entities, _matchesProperty('name', this.module));
@@ -333,8 +334,9 @@ export default {
       const viewToUpdateSearchTemplate = _get(view, 'query.meta.searchTemplate', false);
       const columnsGroupName = viewToUpdateSearchTemplate ? viewToUpdateSearchTemplate.name : false;
       if (columnsGroupName) {
-        if (this.userFieldsGroups[_snakeCase(columnsGroupName)]) {
-          userDefinedFields = this.userFieldsGroups[_snakeCase(columnsGroupName)];
+        userDefinedFields = this.userFieldsGroups[_snakeCase(columnsGroupName)]
+        if (!userDefinedFields) {
+          userDefinedFields = this.getSystemColumns(this.module, _snakeCase(columnsGroupName));
         }
         this.searchValue = '';
       }

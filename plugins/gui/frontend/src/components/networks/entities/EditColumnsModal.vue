@@ -1,13 +1,18 @@
 <template>
-  <XModal
-    class="x-field-config"
-    @close="closeModal"
+  <AModal
+    :visible="true"
+    :closable="false"
+    width="770px"
+    :centered="true"
+    :title="title"
+    class="x-edit-columns-modal"
+    @cancel="closeModal"
   >
-    <template slot="body">
+    <div class="modal-body">
       <div class="field-list stock">
-        <h4 class="field-list__title">
+        <div class="field-list__title">
           Available Columns
-        </h4>
+        </div>
         <div class="field-list__filter">
           <XSelectSymbol
             v-model="fieldType"
@@ -23,7 +28,7 @@
           :items="stockFieldsSchema"
         />
       </div>
-      <div class="x-field-config__actions">
+      <div class="modal-body__actions">
         <XButton
           type="primary"
           :disabled="!isStockSelected"
@@ -42,9 +47,9 @@
         >Reset</XButton>
       </div>
       <div class="field-list view">
-        <h4 class="field-list__title">
+        <div class="field-list__title">
           Displayed Columns
-        </h4>
+        </div>
         <div class="field-list__filter">
           <XSearchInput v-model="search.view" />
         </div>
@@ -62,14 +67,11 @@
           >{{ item.title }}</XTitle>
         </XCheckboxList>
       </div>
-    </template>
-    <template slot="footer">
-      <div class="modal-footer__save-default">
-        <XButton
-          type="link"
-          :disabled="isViewFieldsEmpty"
-          @click="saveUserDefault"
-        >{{ saveButtonText }}</XButton>
+    </div>
+
+    <template #footer>
+      <div class="ant-modal-footer__save-default">
+        <slot name="extraActions" />
       </div>
       <XButton
         type="link"
@@ -77,20 +79,19 @@
       >Cancel</XButton>
       <XButton
         type="primary"
-        @click="onClickDone"
-      >Done</XButton>
+        @click="$emit('approve')"
+      >{{ approveText }}</XButton>
     </template>
-  </XModal>
+  </AModal>
 </template>
 
 <script>
-import { mapState, mapGetters, mapMutations } from 'vuex';
-import { saveUserTableColumnGroup } from '@api/user-preferences';
+import { mapGetters } from 'vuex';
 import _get from 'lodash/get';
 import _isEqual from 'lodash/isEqual';
 import _isEmpty from 'lodash/isEmpty';
 import _snakeCase from 'lodash/snakeCase';
-import XModal from '../../axons/popover/Modal/index.vue';
+import { Modal } from 'ant-design-vue';
 import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XCheckboxList from '../../neurons/inputs/CheckboxList.vue';
@@ -101,15 +102,31 @@ import {
   GET_DATA_SCHEMA_BY_NAME,
   FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
 } from '../../../store/getters';
-import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '../../../store/mutations';
 import { getTypeFromField } from '../../../constants/utils';
 
 export default {
-  name: 'XFieldConfig',
+  name: 'XEditColumnsModal',
   components: {
-    XModal, XSelectSymbol, XSearchInput, XCheckboxList, XTitle, XButton,
+    AModal: Modal,
+    XSelectSymbol,
+    XSearchInput,
+    XCheckboxList,
+    XTitle,
+    XButton,
   },
   props: {
+    title: {
+      type: String,
+      required: true,
+    },
+    currentFields: {
+      type: Array,
+      required: true,
+    },
+    approveText: {
+      type: String,
+      required: true,
+    },
     module: {
       type: String,
       required: true,
@@ -120,11 +137,6 @@ export default {
     },
   },
   computed: {
-    ...mapState({
-      view(state) {
-        return state[this.module].view;
-      },
-    }),
     ...mapGetters({
       getModuleSchema: GET_MODULE_SCHEMA,
       getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
@@ -167,9 +179,6 @@ export default {
     querySearchTemplate() {
       return _get(this.view, 'query.meta.searchTemplate', false);
     },
-    columnsGroupName() {
-      return !this.querySearchTemplate ? 'default' : _snakeCase(this.querySearchTemplate.name);
-    },
     isStockSelected() {
       return !_isEmpty(this.select.stock);
     },
@@ -183,14 +192,6 @@ export default {
         defaultFields = allFieldsGroup[_snakeCase(this.querySearchTemplate.name)];
       }
       return _isEqual(this.viewFields, defaultFields);
-    },
-    isViewFieldsEmpty() {
-      return _isEmpty(this.viewFields);
-    },
-    saveButtonText() {
-      return !this.querySearchTemplate
-        ? 'Save as User Default'
-        : `Save as User Search Default (${this.querySearchTemplate.name})`;
     },
   },
   data() {
@@ -209,30 +210,16 @@ export default {
     };
   },
   created() {
-    this.viewFields = this.view.fields;
+    this.viewFields = this.currentFields;
     this.fieldType = this.firstType;
   },
   methods: {
-    ...mapMutations({
-      updateView: UPDATE_DATA_VIEW,
-      showToasterMessage: SHOW_TOASTER_MESSAGE,
-    }),
     clearSelections() {
       this.select.view = [];
       this.select.stock = [];
     },
     closeModal() {
       this.$emit('close');
-    },
-    onClickDone() {
-      this.updateView({
-        module: this.module,
-        view: {
-          fields: this.viewFields,
-        },
-      });
-      this.$emit('done');
-      this.closeModal();
     },
     addFields() {
       this.viewFields = this.viewFields.concat(this.select.stock);
@@ -241,18 +228,21 @@ export default {
         const list = this.$refs.checklist.$el;
         list.scrollTop = list.scrollHeight;
       });
+      this.$emit('update-unsaved-fields', this.viewFields);
     },
     removeFields() {
       this.viewFields = this.viewFields.filter((field) => !this.select.view.includes(field));
       this.select.view = [];
+      this.$emit('update-unsaved-fields', this.viewFields);
     },
     reset() {
       this.$emit('reset-user-fields');
-      this.viewFields = [...this.view.fields];
+      this.viewFields = [...this.currentFields];
       this.clearSelections();
     },
     updateViewFields(viewFieldsSchema) {
       this.viewFields = viewFieldsSchema.map((schema) => schema.name);
+      this.$emit('update-unsaved-fields', this.viewFields);
     },
     isFieldInSearch(field, searchValue) {
       return field.title.toLowerCase().includes(searchValue.toLowerCase());
@@ -260,36 +250,14 @@ export default {
     resetSelectStock() {
       this.select.stock = [];
     },
-    async saveUserDefault() {
-      let message = 'Successfully saved user default view';
-      if (this.querySearchTemplate) {
-        message = `Successfully saved user search default view (${this.querySearchTemplate.name})`;
-      }
-      try {
-        await saveUserTableColumnGroup(this.module, this.viewFields, this.columnsGroupName);
-        const updatedFieldsGroups = {
-          ...this.userFieldsGroups,
-          [this.columnsGroupName]: this.viewFields,
-        };
-        this.$emit('update:user-fields-groups', updatedFieldsGroups);
-        this.onClickDone();
-      } catch (error) {
-        message = 'Error saving as default view';
-      }
-      this.showToasterMessage({
-        message,
-      });
-    },
   },
 };
 </script>
 
 <style lang="scss">
-  .x-field-config {
+  .x-edit-columns-modal {
 
-    .modal-container {
       .modal-body {
-        height: calc(100% - 40px);
         display: flex;
         align-items: center;
 
@@ -297,12 +265,19 @@ export default {
           width: 40%;
 
           &__title {
-            margin: 8px 0;
+            font-weight: 300;
+            font-size: 16px;
+            margin-bottom: 8px;
           }
 
           &__filter {
             display: flex;
             height: 32px;
+
+            .x-select {
+              border-right: 0;
+              border-radius: 0;
+            }
 
             .x-search-input {
               width: 100%;
@@ -336,7 +311,7 @@ export default {
           }
         }
 
-        .x-field-config__actions {
+        &__actions {
           display: flex;
           flex-direction: column;
           margin: 0 8px;
@@ -352,32 +327,29 @@ export default {
         }
       }
 
-      .modal-footer {
+      .ant-modal-footer {
+        margin-top: 26px;
         display: flex;
         width: 100%;
 
         &__save-default {
           flex: 1 0 auto;
           text-align: left;
-
-          .x-button {
-            padding-left: 0;
-          }
         }
+
       }
-    }
   }
   /* This is an ad-hoc solution for ticket AX-7879 and the regression it casused*/
   @media (max-height: 700px) {
-      .x-field-config > .modal-container {
+      .x-edit-columns-modal > .modal-container {
         .modal-body {
           height: unset;
           align-items: unset;
+          &__actions {
+            justify-content: center;
+            align-items: unset;
+          }
         }
-        .x-field-config__actions {
-        justify-content: center;
-        align-items: unset;
-      }
       }
     }
 </style>

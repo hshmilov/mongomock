@@ -1,6 +1,7 @@
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import _snakeCase from 'lodash/snakeCase';
+import { defaultFields } from '@constants/entities';
 import { pluginMeta } from '../constants/plugin_meta';
 import { isObjectListField } from '../constants/utils';
 import { DEFAULT_DATE_FORMAT } from './modules/constants';
@@ -179,4 +180,14 @@ export const fillUserFieldsGroupsFromTemplates = (state) => (module, userFieldsG
     ...fieldGroups,
     ...userFieldsGroups,
   };
+};
+
+export const GET_SYSTEM_COLUMNS = 'GET_SYSTEM_COLUMNS';
+export const getSystemColumns = (state, getters) => (module, columnsGroupName = 'default') => {
+  // get db saved system default group
+  const fromDb = _get(state, `configuration.data.defaults.system_columns.${module}.table_columns`, {});
+  return fromDb[columnsGroupName]
+  || (module === 'devices' && getters.FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES(module)[columnsGroupName])
+  // get hardcoded system default group
+  || defaultFields[module];
 };

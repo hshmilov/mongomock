@@ -16,12 +16,13 @@
         >$vuetify.icons.entityColumn</VIcon>
         Edit Columns</XButton>
       <AMenu
+        v-if="dropDownOpened"
         slot="overlay"
       >
         <AMenuItem
-          id="edit_columns"
+          id="edit_user_columns"
           key="0"
-          @click="openColumnEditor"
+          @click="() => openColumnEditor('user')"
         >
           Edit Columns
         </AMenuItem>
@@ -38,6 +39,13 @@
           @click="resetColumnsToSystemDefault"
         >
           {{ resetToSystemDefaultMenuTitle }}
+        </AMenuItem>
+        <AMenuItem
+          v-if="canUpdateSettings"
+          key="3"
+          @click="() => openColumnEditor('system')"
+        >
+          {{ editSystemDefaultMenuTitle }}
         </AMenuItem>
       </AMenu>
     </ADropdown>
@@ -63,13 +71,19 @@
         >$vuetify.icons.entityExport</VIcon>
         Export CSV</div>
     </XButton>
-    <XFieldConfig
-      v-if="showColumnEditor"
+    <XEditUserColumnsModal
+      v-if="columnEditor.user"
       :module="module"
       :user-fields-groups.sync="userFieldsGroupsSync"
       @done="done"
       @close="closeColumnEditor"
       @reset-user-fields="resetColumnsToUserDefault"
+    />
+    <XEditSystemColumnsModal
+      v-if="columnEditor.system"
+      :module="module"
+      @done="done"
+      @close="closeColumnEditor"
     />
     <XCsvExportConfig
       v-if="showCsvExportConfig"
@@ -88,16 +102,20 @@ import _get from 'lodash/get';
 import _snakeCase from 'lodash/snakeCase';
 import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW, CLEAR_DATA_VIEW_FILTERS } from '@store/mutations';
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
-import { defaultFields } from '@constants/entities';
-import { FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES } from '@store/getters';
-import XFieldConfig from './FieldConfig.vue';
+import {
+  FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
+  GET_SYSTEM_COLUMNS,
+} from '@store/getters';
+import XEditUserColumnsModal from './EditUserColumnsModal.vue';
+import XEditSystemColumnsModal from './EditSystemColumnsModal.vue';
 import XCsvExportConfig from './CsvExportConfig.vue';
 import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XOptionMenu',
   components: {
-    XFieldConfig,
+    XEditUserColumnsModal,
+    XEditSystemColumnsModal,
     XCsvExportConfig,
     XButton,
     ADropdown: Dropdown,
@@ -111,7 +129,7 @@ export default {
     },
     userFieldsGroups: {
       type: Object,
-      default: () => ({ default: defaultFields[this.module] }),
+      default: () => ({}),
     },
     disableExportCsv: {
       type: Boolean,
@@ -121,7 +139,10 @@ export default {
   data() {
     return {
       exportInProgress: false,
-      showColumnEditor: false,
+      columnEditor: {
+        user: false,
+        system: false,
+      },
       dropDownOpened: false,
       showCsvExportConfig: false,
     };
@@ -137,6 +158,7 @@ export default {
     }),
     ...mapGetters({
       fillUserFieldGroups: FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES,
+      getSystemColumns: GET_SYSTEM_COLUMNS,
     }),
     userFieldsGroupsSync: {
       get() {
@@ -152,10 +174,22 @@ export default {
     resetToSystemDefaultMenuTitle() {
       return this.querySearchTemplate ? 'Reset Columns to System Search Default' : 'Reset Columns to System Default';
     },
+    editSystemDefaultMenuTitle() {
+      return !this.querySearchTemplate
+        ? 'Edit System Default'
+        : 'Edit System Search Default';
+    },
     columnButtonClass() {
       return {
         menuOpened: this.dropDownOpened,
       };
+    },
+    canUpdateSettings() {
+      return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.Update);
+    },
+    columnsGroupName() {
+      return !this.querySearchTemplate ? 'default' : _snakeCase(this.querySearchTemplate.name);
     },
   },
   methods: {
@@ -167,29 +201,26 @@ export default {
     ...mapActions({
       fetchContentCSV: FETCH_DATA_CONTENT_CSV,
     }),
-    openColumnEditor() {
+    openColumnEditor(type) {
       this.dropDownOpened = false;
-      this.showColumnEditor = true;
+      this.columnEditor[type] = true;
     },
     closeColumnEditor() {
-      this.showColumnEditor = false;
+      this.columnEditor = { user: false, system: false };
     },
     resetColumnsToUserDefault() {
       let fieldsForReset = this.userFieldsGroups.default;
       if (this.querySearchTemplate) {
-        const allFieldsGroup = this.fillUserFieldGroups(this.module, this.userFieldsGroups);
-        fieldsForReset = allFieldsGroup[_snakeCase(this.querySearchTemplate.name)];
+        fieldsForReset = this.userFieldsGroups[_snakeCase(this.querySearchTemplate.name)];
+        if (!fieldsForReset) {
+          fieldsForReset = this.getSystemColumns(this.module, _snakeCase(this.querySearchTemplate.name));
+        }
       }
       this.updateTableColumns(fieldsForReset);
       this.clearViewFilters({ module: this.module });
     },
     resetColumnsToSystemDefault() {
-      let fieldsForReset = defaultFields[this.module];
-      if (this.querySearchTemplate) {
-        const template = this.templateViews
-          .find((item) => item.name === this.querySearchTemplate.name);
-        fieldsForReset = _get(template, 'view.fields', []);
-      }
+      const fieldsForReset = this.getSystemColumns(this.module, this.columnsGroupName);
       this.updateTableColumns(fieldsForReset);
       this.clearViewFilters({ module: this.module });
     },
