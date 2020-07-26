@@ -1879,6 +1879,14 @@ class PluginBase(Configurable, Feature, ABC):
                             # for scanner adapters this is case B - see 'scanner_adapter_base.py'
                             # we need to add this device to the list of adapters in another device
                             correlate_plugin_unique_name, correlated_id = correlates
+                            calculated_adapters_list_length = len(set(
+                                [self.plugin_name] +
+                                [x[PLUGIN_NAME] for x in db_to_use.find_one(
+                                    {
+                                        'adapters.quick_id':
+                                            get_preferred_quick_adapter_id(correlate_plugin_unique_name, correlated_id)
+                                    }).get('adapters', [])]))
+
                             update_result = db_to_use.update_one({
                                 'adapters.quick_id': get_preferred_quick_adapter_id(correlate_plugin_unique_name,
                                                                                     correlated_id)
@@ -1886,8 +1894,8 @@ class PluginBase(Configurable, Feature, ABC):
                                 '$addToSet': {
                                     'adapters': parsed_to_insert
                                 },
-                                '$inc': {
-                                    ADAPTERS_LIST_LENGTH: 1
+                                '$set': {
+                                    ADAPTERS_LIST_LENGTH: calculated_adapters_list_length
                                 }
                             })
                             if update_result.modified_count == 0:
