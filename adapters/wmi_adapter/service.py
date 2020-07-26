@@ -95,6 +95,8 @@ class WmiAdapter(WmiExecutionMixIn, AdapterBase, Configurable):
         :param device_raw: subplugins results
         :return: a new DeviceAdapter
         """
+        bios_serial = ''
+        device_hostname = ''
         try:
             device = self._new_device_adapter()
             subplugins_objects, dev_response = device_raw
@@ -112,11 +114,18 @@ class WmiAdapter(WmiExecutionMixIn, AdapterBase, Configurable):
                         logger.error(f'Error parsing plugin {subplugin.__class__.__name__}')
                 except Exception:
                     logger.exception(f'Error parsing plugin {subplugin.__class__.__name__}')
-            if not device.does_field_exist('bios_serial') and not device.does_field_exist('hostname'):
+            try:
+                bios_serial = device.bios_serial
+            except Exception:
+                logger.warning('bios serial does not exists')
+            try:
+                device_hostname = device.hostname
+            except Exception:
+                logger.warning('device hostname does not exists')
+
+            if not bios_serial and not device_hostname:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            bios_serial = device.bios_serial if device.does_field_exist('bios_serial') else ''
-            device_hostname = device.hostname if device.does_field_exist('hostname') else ''
             device.id = f'{bios_serial}_{device_hostname}'.replace(' ', '_')
             device.set_raw({'product': dev_response})
             return device

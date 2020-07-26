@@ -246,6 +246,8 @@ def execute_wmi_smb(python_27_path: str, wmi_smb_path: str,
     # validate hostname
     if hostname_to_validate and hostname_validation:
         try:
+            hostname_to_validate = hostname_to_validate[0] if isinstance(hostname_to_validate, list) else\
+                hostname_to_validate
             if not validate_hostname(python_27_path, wmi_smb_path, username, password,
                                      ip, hostname_to_validate, timeout):
                 raise WmiHostnameValidationException(f'Hostname Validation Error! {hostname_to_validate} is not {ip}')
