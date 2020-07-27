@@ -91,7 +91,7 @@ class Tunnel:
         :return: A sh file (bash script) for installing the tunnel.
         """
         headers = {
-            'Content-Disposition': f'attachment; filename=axonius_agent_launcher.sh',
+            'Content-Disposition': f'attachment; filename=axonius_tunnel_launcher.sh',
             'Content-Type': 'text/plain'
         }
         if (Path(VPN_DATA_DIR_FROM_GUI) / 'user.ovpn').exists():
