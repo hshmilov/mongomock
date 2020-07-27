@@ -1,8 +1,10 @@
 import logging
 import pytest
+
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
 from services.updatable_service import UpdatablePluginMixin
+from axonius.db_migrations import db_migration
 from axonius.consts.compliance_consts import (COMPLIANCE_AWS_RULES_COLLECTION, COMPLIANCE_AZURE_RULES_COLLECTION)
 from axonius.compliance.compliance import get_compliance_default_rules
 
@@ -15,20 +17,13 @@ class ComplianceService(PluginService, UpdatablePluginMixin):
 
     def _migrate_db(self):
         super()._migrate_db()
-        if self.db_schema_version < 1:
-            self._update_schema_version_1()
-        if self.db_schema_version != 1:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+        self._run_all_migrations()
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
-        try:
-            self._update_aws_rules()
-            self._update_azure_rules()
-
-            self.db_schema_version = 1
-        except Exception as e:
-            print(f'Could not upgrade gui db to version 1. Details: {e}')
+        self._update_aws_rules()
+        self._update_azure_rules()
 
     @staticmethod
     def _create_cis_rule(rule):

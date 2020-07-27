@@ -107,16 +107,10 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
 
     def _migrate_db(self):
         super()._migrate_db()
-        # Do not change this to 1.
-        if self.db_schema_version < 2:
-            self._update_schema_version_2()
-        if self.db_schema_version < 3:
-            self._update_schema_version_3()
-        if self.db_schema_version < 4:
-            self._update_schema_version_4()
+        self._run_all_migrations()
 
-        if self.db_schema_version != 4:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+    def _update_schema_version_1(self):
+        return
 
     def _update_schema_version_2(self):
         print('upgrade to schema 2')
@@ -208,45 +202,36 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
 
     def _update_schema_version_4(self):
         print(f'Upgrade to schema 4 - Save history')
-        try:
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
-            config_match = {
-                'config_name': SCHEDULER_CONFIG_NAME
-            }
-            current_config = config_collection.find_one(config_match)
-            if not current_config:
-                print('No config present - continue')
-                self.db_schema_version = 4
-                return
+        config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+        config_match = {
+            'config_name': SCHEDULER_CONFIG_NAME
+        }
+        current_config = config_collection.find_one(config_match)
+        if not current_config:
+            print('No config present - continue')
+            return
 
-            current_config = current_config.get('config')
-            if not current_config:
-                print(f'Weird config - continue ({current_config})')
-                self.db_schema_version = 4
-                return
+        current_config = current_config.get('config')
+        if not current_config:
+            print(f'Weird config - continue ({current_config})')
+            return
 
-            current_config = current_config.get('discovery_settings')
-            if not current_config:
-                print(f'Weird discovery_settings - continue ({current_config})')
-                self.db_schema_version = 4
-                return
+        current_config = current_config.get('discovery_settings')
+        if not current_config:
+            print(f'Weird discovery_settings - continue ({current_config})')
+            return
 
-            save_history = current_config.get('save_history')
-            if save_history is not None:
-                # This means it's not a plain first deployment. In that case we need to not set
-                # the default values
-                config_collection.update_one(config_match,
-                                             {
-                                                 '$set': {
-                                                     f'config.discovery_settings.history_settings': {
-                                                         'enabled': False,
-                                                         'max_days_to_save': 180
-                                                     }
+        save_history = current_config.get('save_history')
+        if save_history is not None:
+            # This means it's not a plain first deployment. In that case we need to not set
+            # the default values
+            config_collection.update_one(config_match,
+                                         {
+                                             '$set': {
+                                                 f'config.discovery_settings.history_settings': {
+                                                     'enabled': False,
+                                                     'max_days_to_save': 180
                                                  }
                                              }
-                                             )
-            self.db_schema_version = 4
-            print(f'Upgraded system scheduler to version 4')
-        except Exception as e:
-            print(f'Could not upgrade system scheduler to version 4: {e}')
-            raise
+                                         }
+                                         )

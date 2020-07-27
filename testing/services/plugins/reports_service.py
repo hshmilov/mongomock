@@ -17,6 +17,7 @@ from axonius.consts.report_consts import (
     ACTIONS_FAILURE_FIELD, ACTIONS_FIELD, ACTIONS_MAIN_FIELD,
     ACTIONS_POST_FIELD, ACTIONS_SUCCESS_FIELD, LAST_TRIGGERED_FIELD,
     LAST_UPDATE_FIELD, TIMES_TRIGGERED_FIELD, TRIGGERS_FIELD)
+from axonius.db_migrations import db_migration
 from reports.action_types.action_type_base import DEFAULT_INSTANCE
 from services.plugin_service import PluginService
 from services.system_service import SystemService
@@ -31,38 +32,11 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
 
     def _migrate_db(self):
         super()._migrate_db()
-        if self.db_schema_version < 1:
-            self._update_nonsingleton_to_schema(1, self.__update_schema_version_1)
-
-        if self.db_schema_version < 2:
-            self._update_nonsingleton_to_schema(2, self.__update_schema_version_2)
-
-        if self.db_schema_version < 3:
-            self._update_nonsingleton_to_schema(3, self.__update_schema_version_3)
-
-        if self.db_schema_version < 4:
-            self._update_nonsingleton_to_schema(4, self.__update_schema_version_4)
-
-        if self.db_schema_version < 5:
-            self._update_nonsingleton_to_schema(5, self.__update_schema_version_5)
-
-        if self.db_schema_version < 6:
-            self.__update_schema_version_6()
-
-        if self.db_schema_version < 7:
-            self._update_schema_version_7()
-
-        if self.db_schema_version < 8:
-            self._update_schema_version_8()
-
-        if self.db_schema_version < 9:
-            self._update_schema_version_9()
-
-        if self.db_schema_version != 9:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+        self._run_all_migrations(nonsingleton=True)
 
     @staticmethod
-    def __update_schema_version_1(db):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_1(db):
         collection = db['reports']
         for report_data in collection.find():
             triggers = report_data['triggers']
@@ -76,7 +50,8 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             report_data['triggers'] = new_triggers
             collection.replace_one({'_id': report_data['_id']}, report_data)
 
-    def __update_schema_version_2(self, db):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_2(self, db):
         reports_collection = db['reports']
         saved_actions_collection = db['saved_actions']
 
@@ -193,7 +168,8 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             reports_collection.replace_one({'_id': report_data['_id']}, new_report)
 
     @staticmethod
-    def __update_schema_version_3(db):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_3(db):
         # Search for duplicate names in the reports collection
         reports_collection = db['reports']
         dup_names = reports_collection.aggregate([{
@@ -227,7 +203,8 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
                 })
 
     @staticmethod
-    def __update_schema_version_4(db):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_4(db):
         # https://axonius.atlassian.net/browse/AX-3832
         # Fixes LAST_TRIGGERED_FIELD that are strings in the DB to be datettimes
         collection = db['reports']
@@ -250,7 +227,8 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
                         }
                     })
 
-    def __update_schema_version_5(self, specific_reports_db: Database):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_5(self, specific_reports_db: Database):
         # Change reports to be a single instance, so we rename all collections over
         admin_db = self.db.client['admin']
         for collection_name in specific_reports_db.list_collection_names():
@@ -259,7 +237,8 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
                 'to': f'{plugin_consts.REPORTS_PLUGIN_NAME}.{collection_name}'
             })
 
-    def __update_schema_version_6(self):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_6(self):
         # Encrypt client details
         try:
             client = self.db.client['reports']
@@ -301,6 +280,7 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
         })
         return config.get(PLUGIN_UNIQUE_NAME)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_7(self):
         print('Upgrade to schema 7')
         try:
@@ -374,25 +354,22 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
             traceback.print_exc()
             raise
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_8(self):
-        try:
-            enforcement_tasks_collection = self.db.client[REPORTS_PLUGIN_NAME]['triggerable_history']
-            for result_type in ['main', 'failure', 'success', 'post']:
-                enforcement_tasks_collection.update_many(
-                    filter={
-                        f'result.{result_type}.action.action_name': 'run_executable_windows',
-                    },
-                    update={
-                        '$set': {
-                            f'result.{result_type}.action.action_name': 'run_command_windows'
-                        }
+        enforcement_tasks_collection = self.db.client[REPORTS_PLUGIN_NAME]['triggerable_history']
+        for result_type in ['main', 'failure', 'success', 'post']:
+            enforcement_tasks_collection.update_many(
+                filter={
+                    f'result.{result_type}.action.action_name': 'run_executable_windows',
+                },
+                update={
+                    '$set': {
+                        f'result.{result_type}.action.action_name': 'run_command_windows'
                     }
-                )
-            self.db_schema_version = 8
-        except Exception as e:
-            print(f'Exception while upgrading reports db to version 8. Details: {e}')
-            traceback.print_exc()
+                }
+            )
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_9(self):
         print('Upgrade to schema 9')
         try:

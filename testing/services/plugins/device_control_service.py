@@ -21,11 +21,9 @@ class DeviceControlService(PluginService, TriggerableServiceMixin, UpdatablePlug
 
     def _migrate_db(self):
         super()._migrate_db()
+        self._run_all_migrations(nonsingleton=True)
 
-        if self.db_schema_version < 1:
-            self._update_nonsingleton_to_schema(1, self.__update_schema_version_1)
-
-    def __update_schema_version_1(self, specific_device_control_db: Database):
+    def _update_schema_version_1(self, specific_device_control_db: Database):
         # Change execution to be a single instance, so we rename all collections over
         admin_db = self.db.client['admin']
         for collection_name in specific_device_control_db.list_collection_names():

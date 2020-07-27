@@ -12,6 +12,7 @@ from pymongo.errors import CollectionInvalid, BulkWriteError
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
+from axonius.db_migrations import db_migration
 from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
@@ -54,15 +55,6 @@ class AggregatorService(Triggerable, PluginBase):
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
         self.local_db_schema_version = self.aggregator_db_connection['version']
 
-    def _migrate_async_db(self):
-        if self.db_async_schema_version < 1:
-            self._update_async_schema_version_1()
-        if self.db_async_schema_version < 2:
-            self._update_async_schema_version_2()
-
-        if self.db_async_schema_version != 2:
-            logger.error(f'Upgrade failed, db_async_schema_version is {self.db_async_schema_version}')
-
     def _delayed_initialization(self):
         """
         See parent docs
@@ -76,7 +68,7 @@ class AggregatorService(Triggerable, PluginBase):
         create_retrospective_historic_collections(self.aggregator_db_connection, self._historical_entity_views_db_map)
 
         try:
-            self._migrate_async_db()
+            self.run_all_migrations()
         except Exception:
             logger.exception('There was an error while migrating data asynchronicity')
 
@@ -593,25 +585,7 @@ class AggregatorService(Triggerable, PluginBase):
     def plugin_subtype(self) -> PluginSubtype:
         return PluginSubtype.Core
 
-    @property
-    def db_async_schema_version(self):
-        version = self.local_db_schema_version.find_one({'name': 'async_schema'})
-        if version:
-            return version.get('version', 0)
-        return 0
-
-    @db_async_schema_version.setter
-    def db_async_schema_version(self, val):
-        self.local_db_schema_version.update_one(
-            {'name': 'async_schema'},
-            {
-                '$set': {
-                    'version': val
-                }
-            },
-            upsert=True
-        )
-
+    @db_migration(raise_on_failure=False, logger=logger)
     def _update_async_schema_version_1(self):
         logger.info(f'Upgrading to schema version 1 - migrate historic labels from tags')
         try:
@@ -658,14 +632,11 @@ class AggregatorService(Triggerable, PluginBase):
                     entities_db.bulk_write(to_fix, ordered=False)
                     to_fix.clear()
 
-            self.db_async_schema_version = 1
         except BulkWriteError as e:
             logger.error(f'BulkWriteError: {e.details}')
             raise
-        except Exception as e:
-            logger.exception(f'Exception while upgrading aggregator db to async version 1. Details: {e}')
-            raise
 
+    @db_migration(raise_on_failure=False, logger=logger)
     def _update_async_schema_version_2(self):
         logger.info(f'Upgrading to schema version 2 - fix adapter_list_length variable')
         try:
@@ -689,10 +660,6 @@ class AggregatorService(Triggerable, PluginBase):
                 logger.info(f'Finished updating {count * 2500 + len(to_fix)} entities')
                 self.devices_db.bulk_write(to_fix, ordered=False)
                 to_fix.clear()
-            self.db_async_schema_version = 2
         except BulkWriteError as e:
             logger.error(f'BulkWriteError: {e.details}')
-            raise
-        except Exception as e:
-            logger.exception(f'Exception while upgrading aggregator db to async version 2. Details: {e}')
             raise
