@@ -7,9 +7,9 @@ from bson import ObjectId
 from flask import jsonify
 
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
-                                       DASHBOARD_SPACE_PERSONAL,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT)
+                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT,
+                                       DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
                                              SchedulerState)
@@ -128,8 +128,14 @@ class Dashboard(Charts, Notifications):
         :param space_id: The ObjectId of the existing space
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
-
-        space_data = dict(self.get_request_data_as_object())
+        space_data = self.get_request_data_as_object()
+        space_to_update = self._dashboard_spaces_collection.find_one({
+            '_id': ObjectId(space_id)
+        }, {
+            'type': 1
+        })
+        if not space_to_update or space_to_update.get('type') == DASHBOARD_SPACE_TYPE_PERSONAL:
+            return return_error(f'Requested Dashboard Space not found ({space_id})', 400)
         before_space_data = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(space_id)
         }, {
@@ -279,7 +285,14 @@ class Dashboard(Charts, Notifications):
         :return:
         """
         logger.debug('Getting dashboard')
-        personal_id = self._dashboard_spaces_collection.find_one({'name': DASHBOARD_SPACE_PERSONAL}, {'_id': 1})['_id']
+        personal_space = self._dashboard_spaces_collection.find_one({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL
+        }, {'_id': 1})
+        if not personal_space:
+            logger.critical('Missing personal space')
+            return return_error('Missing personal space', 400)
+
+        personal_id = personal_space['_id']
         filter_spaces = {
             'space': {
                 '$in': [ObjectId(space_id) for space_id in space_ids]

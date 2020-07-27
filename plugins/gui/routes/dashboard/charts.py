@@ -340,8 +340,7 @@ class Charts:
         personal_space = self._dashboard_spaces_collection.find_one({'type': DASHBOARD_SPACE_TYPE_PERSONAL},
                                                                     {'_id': 1})
         if personal_space.get('_id') == destination_space_id:
-            return return_error(f'Can not move panels to {personal_space.get("name")}',
-                                400)
+            return return_error(f'Can not move panels to {personal_space.get("name")}', 400)
 
         target_space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(destination_space_id)
