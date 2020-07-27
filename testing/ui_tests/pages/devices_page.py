@@ -4,7 +4,7 @@ import pytest
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
-from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
+from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD, ActionCategory, Action
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
@@ -88,6 +88,11 @@ class DevicesPage(EntitiesPage):
     SPECIFIC_SEARCH_CLOSE_BUTTON_CSS = '.search-input-badge__remove'
     SPECIFIC_SEARCH_DROPDOWN_CONTENT_CSS = '#specific_search_select .menu-content .x-menu-item'
     HOST_NAME_AGGREGATED_FIELD_CSS = '.x-list .item-container .label[for="specific_data.data.hostname"] ~ div .item'
+    ENFORCEMENT_PANEL_CONTENT_CSS = '.enforcement-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
+    SAVE_AND_RUN_ENFORCEMENT_BUTTON = 'Save and Run'
+    RESULT_TASK_LINK_ID = 'task_link'
+    BACK_TO_ACTION_LIBRARY_BUTTON_CSS = '.back-button'
+    ENFORCEMENT_PANEL_FOOTER_ERROR_CSS = '.error-text'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -122,8 +127,52 @@ class DevicesPage(EntitiesPage):
 
     def open_enforce_dialog(self):
         self.open_actions_menu()
-        self.click_actions_enforce_button()
+        self.click_actions_enforce_button(self.TABLE_ACTIONS_RUN_ENFORCE)
         time.sleep(0.5)
+
+    def open_enforcement_panel(self):
+        self.open_actions_menu()
+        self.click_actions_enforce_button(self.TABLE_ACTIONS_ADD_ENFORCE)
+        self.wait_for_element_present_by_css(self.ENFORCEMENT_PANEL_CONTENT_CSS, is_displayed=True)
+
+    def open_action_tag_config(self):
+        self.find_element_by_text(ActionCategory.Utils).click()
+        self.find_element_by_text(Action.tag.value).click()
+
+    def go_back_to_action_library(self):
+        self.driver.find_element_by_css_selector(self.BACK_TO_ACTION_LIBRARY_BUTTON_CSS).click()
+
+    def get_enforcement_result_link(self):
+        return self.driver.find_element_by_id(self.RESULT_TASK_LINK_ID)
+
+    def get_save_and_run_enforcement_button(self):
+        return self.get_button(self.SAVE_AND_RUN_ENFORCEMENT_BUTTON)
+
+    def is_enforcement_panel_save_button_disabled(self):
+        return self.is_element_disabled(self.get_save_and_run_enforcement_button())
+
+    def fill_enforcement_action_name(self, action_name):
+        self.fill_text_field_by_element_id(self.ACTION_NAME_ID, action_name)
+
+    def get_enforcement_name(self):
+        return self.driver.find_element_by_id(self.ENFORCEMENT_NAME_ID).text
+
+    def get_enforcement_panel_error(self):
+        return self.driver.find_element_by_css_selector(self.ENFORCEMENT_PANEL_FOOTER_ERROR_CSS).text
+
+    def create_and_run_tag_enforcement(self, enforcement_name, action_name, tag, close_result_modal=True):
+        self.open_enforcement_panel()
+        self.fill_enforcement_name(enforcement_name)
+        self.open_action_tag_config()
+        self.fill_enforcement_action_name(action_name)
+        self.select_option(
+            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_NEW_OPTION_CSS, tag
+        )
+        self.click_button(self.SAVE_AND_RUN_ENFORCEMENT_BUTTON)
+        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
+        if close_result_modal:
+            self.click_button('Close')
+            self.wait_for_modal_close()
 
     def enforce_action_on_query(self, query, action, filter_column_data: dict = None,
                                 add_col_names: list = None, remove_col_names: list = None):
@@ -140,6 +189,7 @@ class DevicesPage(EntitiesPage):
             self.DROPDOWN_SELECTED_OPTION_CSS, action
         )
         self.click_button('Run')
+        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
         self.click_button('Close')
         self.wait_for_modal_close()
         return selected_count
@@ -205,14 +255,16 @@ class DevicesPage(EntitiesPage):
     def add_query_last_seen_next_day(self):
         self._add_query_last_seen(self.QUERY_COMP_NEXT_DAYS)
 
-    def run_enforcement_on_selected_device(self, enforcement_name):
+    def run_enforcement_on_selected_device(self, enforcement_name, close_result_modal=True):
         self.open_enforce_dialog()
         self.select_option_without_search(dropdown_css_selector=self.ENFORCEMENT_DIALOG_DROPDOWN_CSS,
                                           selected_options_css_selector=self.DROPDOWN_SELECTED_OPTION_CSS,
                                           text=enforcement_name)
         self.click_button('Run')
-        self.click_button('Close')
-        self.wait_for_modal_close()
+        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
+        if close_result_modal:
+            self.click_button('Close')
+            self.wait_for_modal_close()
 
     def find_general_data_table_link(self, table_title):
         self.click_row()

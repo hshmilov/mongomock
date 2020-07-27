@@ -982,16 +982,16 @@ class EntitiesPage(Page):
     def click_actions_tag_button(self):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_TAG).click()
 
-    def click_actions_enforce_button(self):
+    def click_actions_enforce_button(self, enforcement_button_id):
         actions = ActionChains(self.driver)
         actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
-        self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE).click()
+        self.driver.find_element_by_id(enforcement_button_id).click()
 
-    def is_enforce_button_disabled(self):
+    def is_enforce_button_disabled(self, enforcement_button_id):
         actions = ActionChains(self.driver)
         actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
         return self.is_element_has_disabled_class(
-            self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE))
+            self.driver.find_element_by_id(enforcement_button_id))
 
     def open_edit_tags(self):
         self.click_button(self.EDIT_TAGS_BUTTON_TEXT)

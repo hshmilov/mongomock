@@ -460,7 +460,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.wait_for_table_to_load()
         entities_page.click_row_checkbox(make_yes=True)
         entities_page.open_actions_menu()
-        assert self.devices_page.is_enforce_button_disabled()
+        assert self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_RUN_ENFORCE)
+        assert self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_ADD_ENFORCE)
         entities_page.close_actions_dropdown()
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'enforcements',
@@ -472,4 +473,16 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.wait_for_table_to_load()
         entities_page.click_row_checkbox(make_yes=True)
         entities_page.open_actions_menu()
-        assert not entities_page.is_enforce_button_disabled()
+        assert not entities_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_RUN_ENFORCE)
+        assert self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_ADD_ENFORCE)
+        self._add_action_to_role_and_login_with_user(settings_permissions,
+                                                     'enforcements',
+                                                     'Add Enforcement',
+                                                     user_role,
+                                                     ui_consts.RESTRICTED_USERNAME,
+                                                     ui_consts.NEW_PASSWORD)
+        entities_page.switch_to_page()
+        entities_page.wait_for_table_to_load()
+        entities_page.click_row_checkbox(make_yes=True)
+        entities_page.open_actions_menu()
+        assert not self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_ADD_ENFORCE)
