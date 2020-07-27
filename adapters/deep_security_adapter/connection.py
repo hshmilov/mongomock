@@ -35,11 +35,11 @@ class DeepSecurityConnection(RESTConnection):
                 if retry_after:
                     logger.info(f'Got 429, sleeping for {retry_after}')
                 else:
-                    logger.info(f'Got 429 with no retry-after header, sleeping for 3')
-                    retry_after = 2
+                    logger.info(f'Got 429 with no retry-after header, sleeping for 15')
+                    retry_after = 15
                 time.sleep(int(retry_after) + 1)
             except Exception:
-                time.sleep(6)
+                time.sleep(15)
             return super()._do_request(*args, **kwargs)
 
         return self._handle_response(resp_raw)
@@ -54,12 +54,14 @@ class DeepSecurityConnection(RESTConnection):
     def get_device_list(self):
         id_base = 0
         while True:
+            logger.info(f'sending with id-base = {id_base}')
             body_params = {'maxItems': 5000, 'searchCriteria': [{'idValue': id_base, 'idTest': 'greater-than'}]}
             url_params = {'expand': 'computerStatus'}
             try:
-                for device_raw in self._post('computers/search',
-                                             url_params=url_params,
-                                             body_params=body_params)['computers']:
+                computers = self._post('computers/search', url_params=url_params, body_params=body_params)['computers']
+                if not computers:
+                    break
+                for device_raw in computers:
                     if device_raw.get('ID') is None:
                         continue
                     if int(device_raw.get('ID')) > id_base:

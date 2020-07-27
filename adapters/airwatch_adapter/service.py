@@ -67,7 +67,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
                                             password=client_config['password'], url_base_prefix='/api/',
                                             headers={'User-Agent': 'Fiddler',
                                                      'aw-tenant-code': client_config['apikey'],
-                                                     'Accept': 'application/xml'})
+                                                     'Accept': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
