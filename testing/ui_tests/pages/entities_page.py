@@ -1220,12 +1220,12 @@ class EntitiesPage(Page):
         self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
         time.sleep(0.1)  # wait for modal to open
 
-    def wait_for_csv_loading_absent(self):
-        self.wait_for_element_absent_by_text(self.EXPORT_CSV_LOADING_TEXT, retries=450)
+    def wait_for_export_csv_button_visible(self):
+        self.wait_for_element_present_by_text(self.EXPORT_CSV_BUTTON_TEXT)
 
     def click_device_enforcement_task_export_csv(self):
         self.click_export_csv(False)
-        self.wait_for_csv_loading_absent()
+        self.wait_for_export_csv_button_visible()
 
     def get_csrf_token(self) -> str:
         session = requests.Session()
