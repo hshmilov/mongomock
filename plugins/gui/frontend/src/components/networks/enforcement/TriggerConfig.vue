@@ -52,7 +52,7 @@
         <h5 class="trigger-subtitle">Additional Conditions</h5>
         <XSwitch
           :checked="showConditions"
-          label="Trigger on changes in the query results"
+          label="Apply additional enforcement execution conditions"
           :read-only="readOnly"
           @change="toggleConditions"
         />
@@ -62,18 +62,18 @@
         >
           <XCheckbox
             v-model="conditions.new_entities"
-            label="New entities were added to results"
+            label="Only when assets have been added since the last execution"
             :read-only="readOnly"
           />
           <XCheckbox
             v-model="conditions.previous_entities"
-            label="Previous entities were subtracted from results"
+            label="Only when assets have been removed since the last execution"
             :read-only="readOnly"
           />
           <div class="config-item">
             <XCheckbox
               v-model="showAbove"
-              label="The number of results is above..."
+              label="Only when the number of assets is above N"
               :read-only="readOnly"
             />
             <input
@@ -88,7 +88,7 @@
           <div class="config-item">
             <XCheckbox
               v-model="showBelow"
-              label="The number of results is below..."
+              label="Only when the number of assets is below N"
               :read-only="readOnly"
             />
             <input

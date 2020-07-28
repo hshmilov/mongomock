@@ -198,7 +198,8 @@ class TestEnforcementNoQuery(TestBase):
 
     def test_added_entities_trigger(self):
         """
-        Verify that an enforcement using the Trigger condition 'New entities were added to results' will not be
+        Verify that an enforcement using the Trigger condition 'Only when assets have been added since the last
+        execution' will not be
         triggered again if no new results
         """
         self.enforcements_page.switch_to_page()

@@ -485,12 +485,12 @@ export default {
                         // conditionally render action button in footer
                         this.editingMode
                           ? [
-                                <x-button type="link" onClick={this.discardChanges}>Discard Changes</x-button>,
+                                <x-button type="link" onClick={this.discardChanges}>Cancel</x-button>,
                                 <x-button
                                   type="primary"
                                   onClick={this.saveChanges}
                                   disabled={this.$v.$error
-                                  || this.userCannotEditSavedQueries}>Save Changes</x-button>,
+                                  || this.userCannotEditSavedQueries}>Save</x-button>,
                           ]
                           : <x-button onClick={this.runQuery}
                                       type="primary"
