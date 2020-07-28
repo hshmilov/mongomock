@@ -129,6 +129,11 @@ class BitsightAdapter(ScannerAdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': 'cidr_csv',
+                    'title': 'CIDR Data CSV File',
+                    'type': 'file'
+                },
+                {
                     'name': 'verify_ssl',
                     'title': 'Verify SSL',
                     'type': 'bool'
@@ -148,11 +153,6 @@ class BitsightAdapter(ScannerAdapterBase):
                     'title': 'HTTPS Proxy Password',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': 'cidr_csv',
-                    'title': 'CIDR Data CSV File',
-                    'type': 'file'
                 }
             ],
             'required': [

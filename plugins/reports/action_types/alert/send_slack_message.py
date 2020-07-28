@@ -35,15 +35,15 @@ class SlackSendMessageAction(ActionTypeAlert):
                     'type': 'bool'
                 },
                 {
+                    'name': 'https_proxy',
+                    'title': 'HTTPS proxy',
+                    'type': 'string'
+                },
+                {
                     'name': 'incident_description',
                     'title': 'Incident description',
                     'type': 'string',
                     'format': 'text'
-                },
-                {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
                 }
             ],
             'required': [

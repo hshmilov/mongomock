@@ -102,7 +102,7 @@ class DesktopCentralAdapter(AdapterBase):
                 },
                 {
                     'name': 'username_domain',
-                    'title': 'Username Domain',
+                    'title': 'User Name Domain',
                     'type': 'string'
                 },
                 {
