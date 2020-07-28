@@ -30,6 +30,9 @@ class WorkdayAdapter(AdapterBase):
         hire_date = Field(datetime.datetime, 'Hire Date')
         is_terminated = Field(bool, 'Is Terminated')
         terminated_date = Field(datetime.datetime, 'Termination Date')
+        is_rehire = Field(bool, 'Rehire')
+        original_hire_date = Field(datetime.datetime, 'Original Hire Date')
+        reporting_name = Field(str, 'Reporting Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -185,6 +188,7 @@ class WorkdayAdapter(AdapterBase):
                 user.display_name = user_name
                 user.first_name = name_data.Legal_Name_Data.Name_Detail_Data.First_Name
                 user.last_name = name_data.Legal_Name_Data.Name_Detail_Data.Last_Name
+                user.reporting_name = name_data.Legal_Name_Data.Name_Detail_Data.Reporting_Name
             except Exception as e:
                 logger.warning(f'Failed to process name for {user_id}: {str(e)}')
 
@@ -208,6 +212,10 @@ class WorkdayAdapter(AdapterBase):
                 user.hire_date = self._parse_date(work_status_data.Hire_Date)
                 user.is_terminated = work_status_data.Terminated
                 user.terminated_date = self._parse_date(work_status_data.Termination_Date)
+                user.is_rehire = work_status_data.Rehire
+                user.original_hire_date = self._parse_date(work_status_data.Original_Hire_Date)
+                if not getattr(user, 'end_date', None):
+                    user.end_date = self._parse_date(work_status_data.End_Employment_Date)
             except Exception as e:
                 logger.warning(f'Failed to parse employment status information for {user_id}: {str(e)}')
 
