@@ -114,7 +114,22 @@ class CiscoUcmAdapter(AdapterBase):
 
             device = self._new_device_adapter()
             device.id = device_raw.attrib.get('uuid')
-            device.hostname = device_raw[0].text
+            hostname = device_raw[0].text
+            device.hostname = hostname
+            try:
+                if hostname.startswith('SEP'):
+                    # This would either take the form of `SEPMACADDRESS123` OR `SEPSOMEHOSTNAME`
+                    # In some cases the SEP tag won't be there
+                    # And in some cases it won't be a valid MAC at all
+                    # So try to find a mac in there, and if not log the error
+                    mac = hostname[3:]
+                else:
+                    mac = hostname
+                # Try to add the MAC. If the mac is invalid, the following method would fail with an exception,
+                # Which is good.
+                device.add_nic(mac=mac)
+            except Exception as e:
+                logger.warning(f'Failed to add nic for {str(device_raw)}: {str(e)}')
 
             device.set_raw({})
             return device
