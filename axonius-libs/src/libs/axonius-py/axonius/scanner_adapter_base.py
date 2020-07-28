@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.consts.plugin_subtype import PluginSubtype
@@ -43,7 +44,8 @@ SCANNERS_TO_KEEP_ORINGAL_ID = ['nmap_adapter', 'edfs_csv_adapter', 'riskiq_csv_a
 
 
 class ScannerCorrelatorBase(object):
-    def __init__(self, all_devices, plugin_name, allow_service_now_by_name_only, *args, **kwargs):
+    def __init__(self, all_devices, plugin_name, allow_service_now_by_name_only,
+                 ips_correlation_only_on_public, *args, **kwargs):
         """
         Base scanner correlator; base behavior is correlating with hostname
         :param all_devices: all axonius devices from DB
@@ -51,6 +53,7 @@ class ScannerCorrelatorBase(object):
         super().__init__(*args, **kwargs)
         self._plugin_name = plugin_name
         self._allow_service_now_by_name_only = allow_service_now_by_name_only
+        self._ips_correlation_only_on_public = ips_correlation_only_on_public
         try:
             self._all_devices = list(all_devices)
         except Exception:
@@ -125,6 +128,11 @@ class ScannerCorrelatorBase(object):
             return None
         devices_to_search = []
         for ip in ips:
+            try:
+                if ipaddress.ip_address(ip).is_private and self._ips_correlation_only_on_public:
+                    continue
+            except Exception:
+                pass
             devices_per_ip = self._all_adapters_by_ips.get(ip)
             if devices_per_ip:
                 devices_to_search += devices_per_ip
@@ -256,7 +264,8 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             'adapters.data.os.type': 1,
         })
         scanner = self._get_scanner_correlator(devices, self.plugin_name,
-                                               allow_service_now_by_name_only=self._allow_service_now_by_name_only)
+                                               allow_service_now_by_name_only=self._allow_service_now_by_name_only,
+                                               ips_correlation_only_on_public=self._ips_correlation_only_on_public)
         device_count = 0
 
         for device in parsed_data:

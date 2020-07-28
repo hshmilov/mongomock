@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.types.enforcement_classes import EntitiesResult, EntityResult
@@ -61,6 +62,16 @@ class CherwellCreateComputerAction(ActionTypeBase):
                     'name': 'bus_ob_id',
                     'title': 'Business Object ID',
                     'type': 'string'
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Additional fields',
+                    'type': 'string'
+                },
+                {
+                    'name': 'ax_cherwell_fields_map',
+                    'type': 'string',
+                    'title': 'Axonius to Cherwell field mapping'
                 }
             ],
             'required': [
@@ -80,14 +91,18 @@ class CherwellCreateComputerAction(ActionTypeBase):
             'username': None,
             'password': None,
             'https_proxy': None,
+            'extra_fields': None,
+            'ax_cherwell_fields_map': None,
             'verify_ssl': False,
             'client_id': None,
             'bus_ob_id': IT_ASSET_BUS_OB_ID
         })
 
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def _create_cherwell_computer(self, bus_ob_id, bus_ob_rec_id, bus_ob_public_id,
-                                  name, mac_address=None, ip_address=None,
+                                  name, mac_address=None, ip_address=None, extra_fields=None,
+                                  ax_cherwell_values_map_dict=None,
                                   to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
                                   manufacturer=None, os_type=None, serial_number=None,
                                   os_build=None):
@@ -99,6 +114,16 @@ class CherwellCreateComputerAction(ActionTypeBase):
         connection_dict['bus_ob_id'] = bus_ob_id
         connection_dict['bus_ob_rec_id'] = bus_ob_rec_id
         connection_dict['bus_ob_public_id'] = bus_ob_public_id
+        connection_dict['extra_fields'] = {}
+        try:
+            if extra_fields:
+                extra_fields_dict = json.loads(extra_fields)
+                if isinstance(extra_fields_dict, dict):
+                    connection_dict['extra_fields'].update(extra_fields_dict)
+            if ax_cherwell_values_map_dict:
+                connection_dict['extra_fields'].update(ax_cherwell_values_map_dict)
+        except Exception:
+            logger.exception(f'Problem parsing extra fields')
         if mac_address:
             connection_dict['mac_address'] = mac_address
         if ip_address:
@@ -137,6 +162,15 @@ class CherwellCreateComputerAction(ActionTypeBase):
 
     # pylint: disable=R0912,R0914,R0915,R1702
     def _run(self) -> EntitiesResult:
+        ax_cherwell_fields_map_dict = dict()
+        try:
+            ax_cherwell_fields_map = self._config.get('ax_cherwell_fields_map')
+            if ax_cherwell_fields_map:
+                ax_cherwell_fields_map_dict = json.loads(ax_cherwell_fields_map)
+                if not isinstance(ax_cherwell_fields_map_dict, dict):
+                    ax_cherwell_fields_map_dict = {}
+        except Exception:
+            logger.exception(f'Problem parsing ax_snow_fields_map')
         cherwell_projection = {
             'internal_axon_id': 1,
             'adapters.plugin_unique_name': 1,
@@ -153,6 +187,9 @@ class CherwellCreateComputerAction(ActionTypeBase):
             'adapters.data.network_interfaces.mac': 1,
             'adapters.data.network_interfaces.ips': 1
         }
+        for ax_field in ax_cherwell_fields_map_dict.keys():
+            ax_field_projection = ax_field.split(':')[-1]
+            cherwell_projection[f'adapters.data.{ax_field_projection}'] = 1
         current_result = self._get_entities_from_view(cherwell_projection)
         results = []
 
@@ -169,6 +206,7 @@ class CherwellCreateComputerAction(ActionTypeBase):
                 os_raw = None
                 os_build = None
                 found_cherwell = False
+                ax_cherwell_values_map_dict = dict()
                 for from_adapter in entry['adapters']:
                     data_from_adapter = from_adapter['data']
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
@@ -199,6 +237,23 @@ class CherwellCreateComputerAction(ActionTypeBase):
                             'device_serial') or data_from_adapter.get('bios_serial')
                     if manufacturer_raw is None:
                         manufacturer_raw = data_from_adapter.get('device_manufacturer')
+                    try:
+                        for ax_field in ax_cherwell_fields_map_dict:
+                            ax_field_adapter = None
+                            ax_field_project = ax_field
+                            if ':' in ax_field:
+                                ax_field_adapter = ax_field.split(':')[0]
+                                ax_field_project = ax_field.split(':')[-1]
+                            cherwell_field = ax_cherwell_fields_map_dict[ax_field]
+                            if not ax_cherwell_values_map_dict.get(cherwell_field) \
+                                    and data_from_adapter.get(ax_field_project) \
+                                    and (from_adapter.get('plugin_name') == ax_field_adapter or not ax_field_adapter):
+                                cherwell_value = data_from_adapter[ax_field_project]
+                                if cherwell_value and not isinstance(cherwell_value, str):
+                                    cherwell_value = str(cherwell_value)
+                                ax_cherwell_values_map_dict[cherwell_field] = cherwell_value
+                    except Exception:
+                        logger.exception(f'Problem with translating dict')
                 # Make sure that we have name
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
@@ -223,7 +278,9 @@ class CherwellCreateComputerAction(ActionTypeBase):
                                                          to_correlate_device_id=to_correlate_device_id,
                                                          manufacturer=manufacturer_raw,
                                                          os_type=os_raw,
+                                                         extra_fields=self._config.get('extra_fields'),
                                                          serial_number=serial_number_raw,
+                                                         ax_cherwell_values_map_dict=ax_cherwell_values_map_dict,
                                                          os_build=os_build
                                                          )
 
