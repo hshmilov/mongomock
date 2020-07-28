@@ -27,7 +27,7 @@ class QualysRemoveTag(ActionTypeBase):
                 },
                 {
                     'name': consts.USERNAME,
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -43,7 +43,7 @@ class QualysRemoveTag(ActionTypeBase):
                 },
                 {
                     'name': consts.HTTPS_PROXY,
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {

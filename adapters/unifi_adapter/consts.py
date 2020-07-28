@@ -17,7 +17,7 @@ SCHEMA_FIELDS = (
 ClientConfig = namedtuple('ClientConfig', SCHEMA_FIELDS)
 CLIENT_CONFIG_FIELDS = ClientConfig(*SCHEMA_FIELDS)
 
-CLIENT_CONFIG_TITLES = ClientConfig(domain='UniFi Contoller domain',
+CLIENT_CONFIG_TITLES = ClientConfig(domain='UniFi Controller Domain',
                                     username='User Name',
                                     password='Password',
                                     site='Site',

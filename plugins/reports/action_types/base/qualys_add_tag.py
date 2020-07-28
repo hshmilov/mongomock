@@ -29,7 +29,7 @@ class QualysAddTag(ActionTypeBase):
                 },
                 {
                     'name': consts.USERNAME,
-                    'title': 'User Name',
+                    'title': 'User name',
                     'type': 'string'
                 },
                 {
@@ -45,7 +45,7 @@ class QualysAddTag(ActionTypeBase):
                 },
                 {
                     'name': consts.HTTPS_PROXY,
-                    'title': 'HTTPS Proxy',
+                    'title': 'HTTPS proxy',
                     'type': 'string'
                 },
                 {

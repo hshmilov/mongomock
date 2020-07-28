@@ -72,7 +72,7 @@ from axonius.consts.gui_consts import (CORRELATION_REASONS,
                                        FeatureFlagsNames)
 from axonius.consts.plugin_consts import (
     ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
-    ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME,
+    ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME, IPS_CORRELATION_ON_PUBLIC_ONLY,
     ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION,
     CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM, CORRELATE_AWS_USERNAME,
     CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
@@ -3221,6 +3221,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._correlate_snow_no_dash = config[CORRELATION_SETTINGS].get(CORRELATE_SNOW_NO_DASH, False)
         self._correlate_public_ip_only = config[CORRELATION_SETTINGS].get(CORRELATE_PUBLIC_IP_ONLY, False)
         self._allow_service_now_by_name_only = config[CORRELATION_SETTINGS].get(ALLOW_SERVICE_NOW_BY_NAME_ONLY, False)
+        self._ips_correlation_only_on_public = config[CORRELATION_SETTINGS].get(IPS_CORRELATION_ON_PUBLIC_ONLY, False)
         self._global_hostname_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_GLOBALY_ON_HOSTNAME, False)
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
@@ -4099,6 +4100,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Correlate ServiceNow by name only'
                         },
                         {
+                            'name': IPS_CORRELATION_ON_PUBLIC_ONLY,
+                            'type': 'bool',
+                            'title': 'Do not use private IPs for IPs only correlation'
+                        },
+                        {
                             'name': CORRELATE_GLOBALY_ON_HOSTNAME,
                             'type': 'bool',
                             'title': 'Correlate Globally based on Hostname only'
@@ -4109,7 +4115,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [CORRELATE_BY_EMAIL_PREFIX, CORRELATE_AD_DISPLAY_NAME, CORRELATE_PUBLIC_IP_ONLY,
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
-                                 CORRELATE_SNOW_NO_DASH, CORRELATE_AWS_USERNAME,
+                                 CORRELATE_SNOW_NO_DASH, CORRELATE_AWS_USERNAME, IPS_CORRELATION_ON_PUBLIC_ONLY,
                                  CORRELATE_GLOBALY_ON_HOSTNAME, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
@@ -4470,6 +4476,7 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_SNOW_NO_DASH: False,
                 CORRELATE_PUBLIC_IP_ONLY: False,
                 ALLOW_SERVICE_NOW_BY_NAME_ONLY: False,
+                IPS_CORRELATION_ON_PUBLIC_ONLY: False,
                 CORRELATE_GLOBALY_ON_HOSTNAME: False
             },
             CORRELATION_SCHEDULE: {

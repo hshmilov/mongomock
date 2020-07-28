@@ -559,7 +559,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'name': 'do_not_fail_on_intune',
                     'title': 'Do not fail if Intune token has expired',
                     'type': 'bool',
-                    'description': 'If selected the adapter will not fail if Intune token is configured and has expired'
+                    'description': 'If enabled the adapter will not fail if Intune token is configured and has expired'
                 },
                 {
                     'name': 'parallel_count',
@@ -579,7 +579,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
             ],
             'required': [
                 'allow_beta_api',
-                'allow_fetch_mfa'
+                'allow_fetch_mfa',
+                'do_not_fail_on_intune'
             ],
             'pretty_name': 'Azure AD Configuration',
             'type': 'array'

@@ -1160,7 +1160,7 @@
   },
   "desktop_central_adapter": {
     "title": "ManageEngine Desktop Central",
-    "link": "",
+    "link": "https://docs.axonius.com/docs/manageengine-desktop-central",
     "description": "ManageEngine Desktop Central is a desktop management and mobile device management software for managing desktops in LAN and across WAN and mobile devices from a central location."
   },
   "slack_adapter": {
@@ -1290,7 +1290,7 @@
   },
   "auvik_adapter": {
     "title": "Auvik",
-    "description": "Auvik is an IT asset and network monitoring solution for managing the entire network infrastructures, including physical servers, data centers, workstations and more.",
+    "description": "Auvik is an IT asset and network monitoring solution for managing entire network infrastructures, including physical servers, data centers, workstations and more.",
     "link": "https://docs.axonius.com/docs/auvik"
   },
   "observeit_adapter": {

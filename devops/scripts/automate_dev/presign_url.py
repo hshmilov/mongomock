@@ -32,6 +32,30 @@ def main():
                                                     ExpiresIn=expires_in)
         print(f'Your presigned url is: {response}')
 
+        print(f'\n\n=======================================')
+        print(f'Additional links')
+        print(f'=======================================\n\n')
+        print(f'Generating more links')
+        disk_path = f'{version_name}/{version_name}'
+
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': 'axonius-releases',
+                                                            'Key': f'{disk_path}/{version_name}_export.ova'},
+                                                    ExpiresIn=expires_in)
+        print(f'OVA link: {response}')
+
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': 'axonius-releases',
+                                                            'Key': f'{disk_path}/{version_name}_disk.qcow3'},
+                                                    ExpiresIn=expires_in)
+        print(f'QCOW3 link: {response}')
+
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': 'axonius-releases',
+                                                            'Key': f'{disk_path}/{version_name}_export.vhdx'},
+                                                    ExpiresIn=expires_in)
+        print(f'VHDX link: {response}')
+
     except Exception as e:
         print(f'Failed to set data {e}')
 

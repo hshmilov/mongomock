@@ -23,7 +23,7 @@ class QueriesPage(EntitiesPage):
     QUERY_EXPRESSION_VALUE_CSS = '.x-side-panel .ant-drawer-body .body .expression span'
     NO_EXPRESSIONS_DEFINED_MSG = 'No query defined'
     EXPRESSION_UNSUPPORTED_MSG = 'Query not supported for the existing data'
-    SAVE_CHANGES_BUTTON_TEXT = 'Save Changes'
+    SAVE_CHANGES_BUTTON_TEXT = 'Save'
     PANEL_ACTION_SET_PUBLIC = 'set-public'
     SELECT_VIEW_ENTITY_CSS = '.x-select-symbol .x-select-trigger'
     SELECT_QUERY_NAME_CSS = '.query-name .x-select-trigger'

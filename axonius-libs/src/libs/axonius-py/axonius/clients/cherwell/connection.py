@@ -200,6 +200,7 @@ class CherwellConnection(RESTConnection):
                              f'num {self.__number_of_new_computers} with connection dict {cherwell_connection}')
             return False, None
 
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def update_cherwell_computer(self, cherwell_connection):
         self.__number_of_new_computers += 1
         logger.info(f'Updating Cherwell computer num {self.__number_of_new_computers}')
@@ -263,6 +264,30 @@ class CherwellConnection(RESTConnection):
                                               'FI:937905992a654f534d3a794e72bd89ba330c0790f8',
                                    'value': cherwell_connection.get('os_build')
                                    })
+            if cherwell_connection.get('extra_fields'):
+                try:
+                    extended_fields_dict = dict()
+                    extra_fields = cherwell_connection.get('extra_fields')
+                    template = self._get_bus_object_template(bus_ob_id)
+                    for field_data in template['fields']:
+                        if not field_data.get('name'):
+                            continue
+                        extended_fields_dict[field_data['name']] = (field_data.get('fieldId'),
+                                                                    field_data.get('displayName'))
+                    for key, value in extra_fields.items():
+                        try:
+                            if not extended_fields_dict.get(key):
+                                continue
+                            field_id, display_name = extended_fields_dict.get(key)
+                            fields_raw.append({'value': value,
+                                               'name': key,
+                                               'displayName': display_name,
+                                               'dirty': True,
+                                               'fieldId': field_id})
+                        except Exception:
+                            logging.exception(f'Problem with key {key}')
+                except Exception:
+                    logging.exception(f'Problem with extra fields')
             body_params = {'busObId': bus_ob_id,
                            'busObRecId': bus_ob_rec_id,
                            'busObPublicId': bus_ob_public_id,

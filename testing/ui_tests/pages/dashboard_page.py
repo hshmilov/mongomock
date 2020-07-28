@@ -879,7 +879,7 @@ class DashboardPage(BasePage):
 
     @staticmethod
     def get_pie_chart_slices(pie_chart):
-        return pie_chart.find_elements_by_css_selector('.wrapper svg g')
+        return pie_chart.find_elements_by_css_selector('.wrapper svg g text')
 
     @staticmethod
     def get_pie_chart_legend_rows_data(pie_chart):

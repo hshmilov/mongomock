@@ -31,10 +31,10 @@ class Period:
 
 
 class Trigger:
-    NewEntities = 'New entities were added to results'
-    PreviousEntities = 'Previous entities were subtracted from results'
-    Above = 'The number of results is above...'
-    Below = 'The number of results is below...'
+    NewEntities = 'Only when assets have been added since the last execution'
+    PreviousEntities = 'Only when assets have been removed since the last execution'
+    Above = 'Only when the number of assets is above N'
+    Below = 'Only when the number of assets is below N'
 
 
 class EnforcementsPage(EntitiesPage):
@@ -331,7 +331,7 @@ class EnforcementsPage(EntitiesPage):
         self.check_config_section('Enable custom scheduling')
 
     def check_conditions(self):
-        self.check_config_section('Trigger on changes in the query results')
+        self.check_config_section('Apply additional enforcement execution conditions')
 
     def check_condition_added(self):
         self.check_enforcement_checkbox(Trigger.NewEntities)
