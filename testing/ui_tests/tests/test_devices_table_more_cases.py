@@ -85,7 +85,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
     def _check_csv_config_after_export(self):
         self.devices_page.confirm_csv_config_dialog()
-        self.devices_page.wait_for_csv_loading_absent()
+        self.devices_page.wait_for_export_csv_button_visible()
         self.devices_page.open_export_csv()
         assert self.devices_page.is_csv_config_matching_default_fields()
 

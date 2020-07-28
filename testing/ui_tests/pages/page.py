@@ -218,6 +218,10 @@ class Page:
     MULTI_SELECT_SELECTED_OPTIONS_CSS = '.ant-select-selection--multiple .ant-select-selection__choice'
     MULTI_SELECT_OPTIONS_REMOVE_BUTTON_CSS = '.ant-select-selection__choice__remove'
 
+    # enforcement consts:
+    ENFORCEMENT_NAME_ID = 'enforcement_name'
+    ACTION_NAME_ID = 'action-name'
+
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
         self.base_url = base_url
@@ -1319,3 +1323,6 @@ class Page:
         container = self.find_password_policy_requirements()
         requirements_list = container.find_elements_by_css_selector(self.PASSWORD_POLICY_REQUIREMENTS_ITEM_CSS)
         return [item.text for item in requirements_list]
+
+    def fill_enforcement_name(self, name):
+        self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)

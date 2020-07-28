@@ -504,6 +504,9 @@ export default {
             display: grid;
             grid-template-rows: min-content;
             grid-gap: 24px 0;
+            .x-action, .x-trigger {
+              width: fit-content;
+            }
           }
         }
 

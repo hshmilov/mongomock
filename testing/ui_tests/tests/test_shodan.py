@@ -1,5 +1,3 @@
-import time
-
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 
 from ui_tests.tests.ui_test_base import TestBase
@@ -27,22 +25,7 @@ class TestEnforcementActions(TestBase):
         self.settings_page.switch_to_page()
 
         with AwsService().contextmanager(take_ownership=True), ShodanService().contextmanager(take_ownership=True):
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
-            self.adapters_page.wait_for_spinner_to_end()
-            self.adapters_page.wait_for_server_green()
-            self.adapters_page.wait_for_data_collection_toaster_absent()
-
-            self.base_page.run_discovery()
-
-            # restart gui service for master instance to be available at node selection.
-            # should be deleted when AX-4451 is done
-            gui_service = self.axonius_system.gui
-            gui_service.take_process_ownership()
-            gui_service.stop(should_delete=False)
-            gui_service.start_and_wait()
-            time.sleep(5)
-            self.login()
-            self.settings_page.switch_to_page()
+            self.adapters_page.connect_adapter(AWS_ADAPTER_NAME, aws_client_details[0][0])
             self.base_page.run_discovery()
 
             self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, trigger=False)

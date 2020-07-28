@@ -982,16 +982,16 @@ class EntitiesPage(Page):
     def click_actions_tag_button(self):
         self.driver.find_element_by_id(self.TABLE_ACTIONS_TAG).click()
 
-    def click_actions_enforce_button(self):
+    def click_actions_enforce_button(self, enforcement_button_id):
         actions = ActionChains(self.driver)
         actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
-        self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE).click()
+        self.driver.find_element_by_id(enforcement_button_id).click()
 
-    def is_enforce_button_disabled(self):
+    def is_enforce_button_disabled(self, enforcement_button_id):
         actions = ActionChains(self.driver)
         actions.move_to_element(self.driver.find_element_by_id(self.TABLE_ACTIONS_ENFORCE_SUB_MENU)).perform()
         return self.is_element_has_disabled_class(
-            self.driver.find_element_by_id(self.TABLE_ACTIONS_RUN_ENFORCE))
+            self.driver.find_element_by_id(enforcement_button_id))
 
     def open_edit_tags(self):
         self.click_button(self.EDIT_TAGS_BUTTON_TEXT)
@@ -1220,12 +1220,12 @@ class EntitiesPage(Page):
         self.wait_for_element_present_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)
         time.sleep(0.1)  # wait for modal to open
 
-    def wait_for_csv_loading_absent(self):
-        self.wait_for_element_absent_by_text(self.EXPORT_CSV_LOADING_TEXT, retries=450)
+    def wait_for_export_csv_button_visible(self):
+        self.wait_for_element_present_by_text(self.EXPORT_CSV_BUTTON_TEXT)
 
     def click_device_enforcement_task_export_csv(self):
         self.click_export_csv(False)
-        self.wait_for_csv_loading_absent()
+        self.wait_for_export_csv_button_visible()
 
     def get_csrf_token(self) -> str:
         session = requests.Session()

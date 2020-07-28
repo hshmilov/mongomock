@@ -11,6 +11,7 @@ from multiprocessing.pool import ThreadPool
 import pytest
 
 from axonius.consts.gui_consts import GUI_CONFIG_NAME
+from axonius.utils.debug import redprint
 from axonius.utils.json import from_json
 from conf_tools import TUNNELED_ADAPTERS
 from scripts.instances.instances_modes import get_instance_mode, InstancesModes
@@ -569,7 +570,7 @@ class AxoniusService:
                     service.handle_tunneled_container()
                 return None
             except Exception as e:
-                print(e)
+                redprint(e)
                 return service
 
         with ThreadPool(5) as pool:

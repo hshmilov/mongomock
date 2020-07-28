@@ -34,6 +34,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
                                           CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+from axonius.db_migrations import db_migration
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
                                        deserialize_db_permissions as old_deserialize_db_permissions)
@@ -63,140 +64,36 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     # pylint: disable=too-many-branches,too-many-lines,too-many-locals
     def _migrate_db(self):
         super()._migrate_db()
-        if self.db_schema_version < 10:
-            self._update_under_10()
-        if self.db_schema_version < 20:
-            self._update_under_20()
-        if self.db_schema_version < 30:
-            self._update_under_30()
-        if self.db_schema_version < 40:
-            self._update_under_40()
-        if self.db_schema_version < 50:
-            self._update_under_50()
-        if self.db_schema_version != 41:
-            print(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
+        self._run_all_migrations()
 
-    def _update_under_10(self):
-        if self.db_schema_version < 1:
-            self._update_schema_version_1()
-        if self.db_schema_version < 2:
-            self._update_schema_version_2()
-        if self.db_schema_version < 3:
-            self._update_schema_version_3()
-        if self.db_schema_version < 4:
-            self._update_schema_version_4()
-        if self.db_schema_version < 5:
-            self._update_schema_version_5()
-        if self.db_schema_version < 6:
-            self._update_schema_version_6()
-        if self.db_schema_version < 7:
-            self._update_schema_version_7()
-        if self.db_schema_version < 8:
-            self._update_schema_version_8()
-        if self.db_schema_version < 9:
-            self._update_schema_version_9()
-        if self.db_schema_version < 10:
-            self._update_schema_version_10()
-
-    def _update_under_20(self):
-        if self.db_schema_version < 11:
-            self._update_schema_version_11()
-        if self.db_schema_version < 12:
-            self._update_schema_version_12()
-        if self.db_schema_version < 13:
-            self._update_schema_version_13()
-        if self.db_schema_version < 14:
-            self._update_schema_version_14()
-        if self.db_schema_version < 15:
-            self._update_schema_version_15()
-        if self.db_schema_version < 16:
-            self._update_schema_version_16()
-        if self.db_schema_version < 17:
-            self._update_schema_version_17()
-        if self.db_schema_version < 18:
-            self._update_schema_version_18()
-        if self.db_schema_version < 19:
-            self._update_schema_version_19()
-        if self.db_schema_version < 20:
-            self._update_schema_version_20()
-
-    def _update_under_30(self):
-        if self.db_schema_version < 21:
-            self._update_schema_version_21()
-        if self.db_schema_version < 22:
-            self._update_schema_version_22()
-        if self.db_schema_version < 24:
-            self._update_schema_version_24()
-        if self.db_schema_version < 25:
-            self._update_schema_version_25()
-        if self.db_schema_version < 26:
-            self._update_schema_version_26()
-        if self.db_schema_version < 27:
-            self._update_schema_version_27()
-        if self.db_schema_version < 28:
-            self._update_schema_version_28()
-        if self.db_schema_version < 29:
-            self._update_schema_version_29()
-        if self.db_schema_version < 30:
-            self._update_schema_version_30()
-
-    def _update_under_40(self):
-        if self.db_schema_version < 31:
-            self._update_schema_version_31()
-        if self.db_schema_version < 32:
-            self._update_schema_version_32()
-        if self.db_schema_version < 33:
-            self._update_schema_version_33()
-        if self.db_schema_version < 34:
-            self._update_schema_version_34()
-        if self.db_schema_version < 35:
-            self._update_schema_version_35()
-        if self.db_schema_version < 36:
-            self._update_schema_version_36()
-        if self.db_schema_version < 37:
-            self._update_schema_version_37()
-        if self.db_schema_version < 38:
-            self._update_schema_version_38()
-        if self.db_schema_version < 39:
-            self._update_schema_version_39()
-        if self.db_schema_version < 40:
-            self._update_schema_version_40()
-
-    def _update_under_50(self):
-        if self.db_schema_version < 41:
-            self._update_schema_version_41()
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):
         print('upgrade to schema 1')
-        try:
-            preceding_charts = []
-            for chart in self._get_all_dashboard():
-                # Discard chart if does not comply with new or old structure
-                if not chart.get('name') or (
-                        (not chart.get('type') or not chart.get('views')) and not chart.get('metric')):
-                    continue
-                try:
-                    if chart.get('metric'):
-                        preceding_charts.append(chart)
-                    else:
-                        preceding_charts.append({
-                            'name': chart['name'],
-                            'metric': chart['type'],
-                            'view': 'pie' if chart['type'] == 'intersect' else 'histogram',
-                            'config': {
-                                'entity': chart['views'][0]['module'],
-                                'base': chart['views'][0]['name'],
-                                'intersecting': [x['name'] for x in chart['views'][1:]]
-                            } if chart['type'] == 'intersect' else {
-                                'views': chart['views']
-                            }
-                        })
-                except Exception as e:
-                    print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
-            self._replace_all_dashboard(preceding_charts)
-            self.db_schema_version = 1
-        except Exception as e:
-            print(f'Could not upgrade gui db to version 1. Details: {e}')
+        preceding_charts = []
+        for chart in self._get_all_dashboard():
+            # Discard chart if does not comply with new or old structure
+            if not chart.get('name') or (
+                    (not chart.get('type') or not chart.get('views')) and not chart.get('metric')):
+                continue
+            try:
+                if chart.get('metric'):
+                    preceding_charts.append(chart)
+                else:
+                    preceding_charts.append({
+                        'name': chart['name'],
+                        'metric': chart['type'],
+                        'view': 'pie' if chart['type'] == 'intersect' else 'histogram',
+                        'config': {
+                            'entity': chart['views'][0]['module'],
+                            'base': chart['views'][0]['name'],
+                            'intersecting': [x['name'] for x in chart['views'][1:]]
+                        } if chart['type'] == 'intersect' else {
+                            'views': chart['views']
+                        }
+                    })
+            except Exception as e:
+                print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
+        self._replace_all_dashboard(preceding_charts)
 
     def _get_all_dashboard(self):
         return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find({})
@@ -253,19 +150,16 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             }
         )
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_2(self):
         """
         See __perform_schema_2 for implementation
         :return:
         """
         print('upgrade to schema 2')
-        try:
-            self.__perform_schema_2()
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 2. Details: {e}')
+        self.__perform_schema_2()
 
-        self.db_schema_version = 2
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_3(self):
         """
         This upgrade adapts the configuration of the 'timeline' chart to have a range that could be absolute dates,
@@ -274,358 +168,317 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         :return:
         """
         print('upgrade to schema 3')
-        try:
-            preceding_charts = []
-            for chart in self._get_all_dashboard():
-                try:
-                    # Chart defined with a metric other than timeline or already in new structure, can be added as is
-                    if chart.get('metric', '') != 'timeline' or not chart.get('config') or chart['config'].get('range'):
-                        preceding_charts.append(chart)
-                    else:
-                        preceding_charts.append({
-                            'metric': chart['metric'],
-                            'view': chart['view'],
-                            'name': chart['name'],
-                            'config': {
-                                'views': chart['config']['views'],
-                                'timeframe': {
-                                    'type': 'absolute',
-                                    'from': chart['config']['datefrom'],
-                                    'to': chart['config']['dateto']
-                                }
+        preceding_charts = []
+        for chart in self._get_all_dashboard():
+            try:
+                # Chart defined with a metric other than timeline or already in new structure, can be added as is
+                if chart.get('metric', '') != 'timeline' or not chart.get('config') or chart['config'].get('range'):
+                    preceding_charts.append(chart)
+                else:
+                    preceding_charts.append({
+                        'metric': chart['metric'],
+                        'view': chart['view'],
+                        'name': chart['name'],
+                        'config': {
+                            'views': chart['config']['views'],
+                            'timeframe': {
+                                'type': 'absolute',
+                                'from': chart['config']['datefrom'],
+                                'to': chart['config']['dateto']
                             }
-                        })
-                except Exception as e:
-                    print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
-            self._replace_all_dashboard(preceding_charts)
-            self.db_schema_version = 3
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 3. Details: {e}')
+                        }
+                    })
+            except Exception as e:
+                print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
+        self._replace_all_dashboard(preceding_charts)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_4(self):
         print('upgrade to schema 4')
-        try:
-            # Fix Restricted User Role - Change permissions to Restricted
-            permissions = {
-                p.name: PermissionLevel.Restricted.name for p in PermissionType
+        # Fix Restricted User Role - Change permissions to Restricted
+        permissions = {
+            p.name: PermissionLevel.Restricted.name for p in PermissionType
+        }
+        permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
+        self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_one({
+            'name': PREDEFINED_ROLE_RESTRICTED
+        }, {
+            '$set': {
+                'permissions': permissions
             }
-            permissions[PermissionType.Dashboard.name] = PermissionLevel.ReadOnly.name
-            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_one({
-                'name': PREDEFINED_ROLE_RESTRICTED
+        })
+
+        # Fix the Google Login Settings - Rename 'client_id' field to 'client'
+        config_match = {
+            'config_name': CONFIG_CONFIG
+        }
+        current_config = self.db.get_collection(
+            GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
+        if current_config:
+            current_config_google = current_config['config']['google_login_settings']
+            if current_config_google.get('client_id'):
+                current_config_google['client'] = current_config_google['client_id']
+                del current_config_google['client_id']
+                self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
+                    config_match, current_config)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_5(self):
+        print('upgrade to schema 5')
+
+        # Change all labels not by GUI to be by GUI
+
+        def change_for_collection(col):
+            col.update_many(
+                filter={
+                    'tags': {
+                        '$elemMatch': {
+                            '$and': [
+                                {
+                                    'type': 'label'
+                                },
+                                {
+                                    PLUGIN_NAME: {
+                                        '$ne': GUI_PLUGIN_NAME
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                update={
+                    '$set': {
+                        f'tags.$[i].{PLUGIN_NAME}': GUI_PLUGIN_NAME,
+                        f'tags.$[i].{PLUGIN_UNIQUE_NAME}': GUI_PLUGIN_NAME
+                    }
+                },
+                array_filters=[
+                    {
+                        '$and': [
+                            {
+                                f'i.{PLUGIN_NAME}': {
+                                    '$ne': GUI_PLUGIN_NAME
+                                }
+                            },
+                            {
+                                'i.type': 'label'
+                            }
+                        ]
+                    }
+                ]
+            )
+
+        change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'devices_db'))
+        change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'users_db'))
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_6(self):
+        print('upgrade to schema 6')
+        # Fix the Okta Login Settings - Rename 'gui_url' field to 'gui2_url'
+        config_match = {
+            'config_name': CONFIG_CONFIG
+        }
+        current_config = self.db.get_collection(
+            GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
+        if current_config:
+            current_config_okta = current_config['config']['okta_login_settings']
+            if current_config_okta.get('gui_url'):
+                current_config_okta['gui2_url'] = current_config_okta['gui_url']
+                del current_config_okta['gui_url']
+                self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
+                    config_match, current_config)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_7(self):
+        print('upgrade to schema 7')
+        # If Instances screen default doesn't exist add it with Resticted default.
+        self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_many(
+            {f'permissions.{PermissionType.Instances.name}': {'$exists': False}},
+            {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
+
+        # Update Admin role with ReadWrite
+        self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).find_one_and_update(
+            {'name': PREDEFINED_ROLE_ADMIN},
+            {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_8(self):
+        print('upgrade to schema 8')
+        # If Instances screen default doesn't exist add it with Resticted default.
+        self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
+            {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
+             '$or': [{'admin': False}, {'admin': {'$exists': False}}],
+             'role_name': {'$ne': PREDEFINED_ROLE_ADMIN}},
+            {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
+
+        # Update Admin role with ReadWrite
+        self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
+            {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
+             '$or': [{'admin': False}, {'admin': {'$exists': False}}],
+             'role_name': PREDEFINED_ROLE_ADMIN},
+            {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_9(self):
+        print('Upgrade to schema 9')
+        # All non-admin Users - change any Alerts screen permissions to be under Enforcements screen
+        users_col = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
+        regular_users = users_col.find({
+            '$or': [{
+                'admin': False
+            }, {
+                'admin': {'$exists': False}
+            }]
+        })
+        for user in regular_users:
+            permissions = user['permissions']
+            if user.get('role_name') == PREDEFINED_ROLE_ADMIN:
+                default_perm = PermissionLevel.ReadWrite.name
+            else:
+                default_perm = PermissionLevel.Restricted.name
+            permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
+            if 'Alerts' in permissions:
+                del permissions['Alerts']
+            users_col.update_one({
+                '_id': user['_id']
             }, {
                 '$set': {
                     'permissions': permissions
                 }
             })
 
-            # Fix the Google Login Settings - Rename 'client_id' field to 'client'
-            config_match = {
-                'config_name': CONFIG_CONFIG
-            }
-            current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
-            if current_config:
-                current_config_google = current_config['config']['google_login_settings']
-                if current_config_google.get('client_id'):
-                    current_config_google['client'] = current_config_google['client_id']
-                    del current_config_google['client_id']
-                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
-                        config_match, current_config)
-
-            self.db_schema_version = 4
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 4. Details: {e}')
-
-    def _update_schema_version_5(self):
-        print('upgrade to schema 5')
-        try:
-            # Change all labels not by GUI to be by GUI
-            def change_for_collection(col):
-                col.update_many(
-                    filter={
-                        'tags': {
-                            '$elemMatch': {
-                                '$and': [
-                                    {
-                                        'type': 'label'
-                                    },
-                                    {
-                                        PLUGIN_NAME: {
-                                            '$ne': GUI_PLUGIN_NAME
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    update={
-                        '$set': {
-                            f'tags.$[i].{PLUGIN_NAME}': GUI_PLUGIN_NAME,
-                            f'tags.$[i].{PLUGIN_UNIQUE_NAME}': GUI_PLUGIN_NAME
-                        }
-                    },
-                    array_filters=[
-                        {
-                            '$and': [
-                                {
-                                    f'i.{PLUGIN_NAME}': {
-                                        '$ne': GUI_PLUGIN_NAME
-                                    }
-                                },
-                                {
-                                    'i.type': 'label'
-                                }
-                            ]
-                        }
-                    ]
-                )
-
-            change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'devices_db'))
-            change_for_collection(self.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'users_db'))
-
-            self.db_schema_version = 5
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 5. Details: {e}')
-
-    def _update_schema_version_6(self):
-        print('upgrade to schema 6')
-        try:
-            # Fix the Okta Login Settings - Rename 'gui_url' field to 'gui2_url'
-            config_match = {
-                'config_name': CONFIG_CONFIG
-            }
-            current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
-            if current_config:
-                current_config_okta = current_config['config']['okta_login_settings']
-                if current_config_okta.get('gui_url'):
-                    current_config_okta['gui2_url'] = current_config_okta['gui_url']
-                    del current_config_okta['gui_url']
-                    self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
-                        config_match, current_config)
-            self.db_schema_version = 6
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 6. Details: {e}')
-
-    def _update_schema_version_7(self):
-        print('upgrade to schema 7')
-        try:
-            # If Instances screen default doesn't exist add it with Resticted default.
-            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).update_many(
-                {f'permissions.{PermissionType.Instances.name}': {'$exists': False}},
-                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
-
-            # Update Admin role with ReadWrite
-            self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION).find_one_and_update(
-                {'name': PREDEFINED_ROLE_ADMIN},
-                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
-            self.db_schema_version = 7
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 7. Details: {e}')
-
-    def _update_schema_version_8(self):
-        print('upgrade to schema 8')
-        try:
-            # If Instances screen default doesn't exist add it with Resticted default.
-            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
-                {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
-                 '$or': [{'admin': False}, {'admin': {'$exists': False}}],
-                 'role_name': {'$ne': PREDEFINED_ROLE_ADMIN}},
-                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.Restricted.name}})
-
-            # Update Admin role with ReadWrite
-            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
-                {f'permissions.{PermissionType.Instances.name}': {'$exists': False},
-                 '$or': [{'admin': False}, {'admin': {'$exists': False}}],
-                 'role_name': PREDEFINED_ROLE_ADMIN},
-                {'$set': {f'permissions.{PermissionType.Instances.name}': PermissionLevel.ReadWrite.name}})
-            self.db_schema_version = 8
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 8. Details: {e}')
-
-    def _update_schema_version_9(self):
-        print('Upgrade to schema 9')
-        try:
-
-            # All non-admin Users - change any Alerts screen permissions to be under Enforcements screen
-            users_col = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
-            regular_users = users_col.find({
-                '$or': [{
-                    'admin': False
-                }, {
-                    'admin': {'$exists': False}
-                }]
+        # Roles - change any Alerts screen permissions to be under Enforcements screen
+        roles_col = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        for role in roles_col.find({}):
+            permissions = role['permissions']
+            if role['name'] == PREDEFINED_ROLE_ADMIN:
+                default_perm = PermissionLevel.ReadWrite.name
+            elif role['name'] == PREDEFINED_ROLE_READONLY:
+                default_perm = PermissionLevel.ReadOnly.name
+            else:
+                default_perm = PermissionLevel.Restricted.name
+            permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
+            if 'Alerts' in permissions:
+                del permissions['Alerts']
+            roles_col.update_one({
+                '_id': role['_id']
+            }, {
+                '$set': {
+                    'permissions': permissions
+                }
             })
-            for user in regular_users:
-                permissions = user['permissions']
-                if user.get('role_name') == PREDEFINED_ROLE_ADMIN:
-                    default_perm = PermissionLevel.ReadWrite.name
-                else:
-                    default_perm = PermissionLevel.Restricted.name
-                permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
-                if 'Alerts' in permissions:
-                    del permissions['Alerts']
-                users_col.update_one({
-                    '_id': user['_id']
-                }, {
-                    '$set': {
-                        'permissions': permissions
-                    }
-                })
 
-            # Roles - change any Alerts screen permissions to be under Enforcements screen
-            roles_col = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
-            for role in roles_col.find({}):
-                permissions = role['permissions']
-                if role['name'] == PREDEFINED_ROLE_ADMIN:
-                    default_perm = PermissionLevel.ReadWrite.name
-                elif role['name'] == PREDEFINED_ROLE_READONLY:
-                    default_perm = PermissionLevel.ReadOnly.name
-                else:
-                    default_perm = PermissionLevel.Restricted.name
-                permissions[PermissionType.Enforcements.name] = permissions.get('Alerts', default_perm)
-                if 'Alerts' in permissions:
-                    del permissions['Alerts']
-                roles_col.update_one({
-                    '_id': role['_id']
-                }, {
-                    '$set': {
-                        'permissions': permissions
-                    }
-                })
-            self.db_schema_version = 9
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 9. Details: {e}')
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_10(self):
         print('Upgrade to schema 10')
         self._update_default_locked_actions_legacy(['tenable_io_add_ips_to_target_group'])
-        self.db_schema_version = 10
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_11(self):
         print('Upgrade to schema 11')
-        try:
-            self._migrate_default_report()
-            self.db_schema_version = 11
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 11. Details: {e}')
+        self._migrate_default_report()
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_12(self):
         print('Upgrade to schema 12')
-        try:
-            self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
-            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
-            dashboard_spaces_collection.insert_many([{
-                'name': DASHBOARD_SPACE_DEFAULT,
-                'type': DASHBOARD_SPACE_TYPE_DEFAULT
-            }, {
-                'name': DASHBOARD_SPACE_PERSONAL,
-                'type': DASHBOARD_SPACE_TYPE_PERSONAL
-            }])
-            default_id = dashboard_spaces_collection.find_one({
-                'name': DASHBOARD_SPACE_DEFAULT
-            })['_id']
-            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({}, {
-                '$set': {
-                    'space': default_id
-                }
-            })
-            self.db_schema_version = 12
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 12. Details: {e}')
+        self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
+        dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+        dashboard_spaces_collection.insert_many([{
+            'name': DASHBOARD_SPACE_DEFAULT,
+            'type': DASHBOARD_SPACE_TYPE_DEFAULT
+        }, {
+            'name': DASHBOARD_SPACE_PERSONAL,
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL
+        }])
+        default_id = dashboard_spaces_collection.find_one({
+            'name': DASHBOARD_SPACE_DEFAULT
+        })['_id']
+        self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({}, {
+            '$set': {
+                'space': default_id
+            }
+        })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_13(self):
         print('Upgrade to schema 13')
-        try:
-            self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
-            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
-            replace_result = dashboard_spaces_collection.replace_one({
-                'type': DASHBOARD_SPACE_TYPE_DEFAULT
-            }, {
-                'name': DASHBOARD_SPACE_DEFAULT,
-                'type': DASHBOARD_SPACE_TYPE_DEFAULT
-            }, upsert=True)
-            dashboard_spaces_collection.replace_one({
-                'type': DASHBOARD_SPACE_TYPE_PERSONAL
-            }, {
-                'name': DASHBOARD_SPACE_PERSONAL,
-                'type': DASHBOARD_SPACE_TYPE_PERSONAL
-            }, upsert=True)
+        self._update_default_locked_actions_legacy(['sentinelone_initiate_scan_action'])
+        dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+        replace_result = dashboard_spaces_collection.replace_one({
+            'type': DASHBOARD_SPACE_TYPE_DEFAULT
+        }, {
+            'name': DASHBOARD_SPACE_DEFAULT,
+            'type': DASHBOARD_SPACE_TYPE_DEFAULT
+        }, upsert=True)
+        dashboard_spaces_collection.replace_one({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL
+        }, {
+            'name': DASHBOARD_SPACE_PERSONAL,
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL
+        }, upsert=True)
 
-            if replace_result.upserted_id:
-                self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({
-                    'space': {
-                        '$exists': False
-                    }
-                }, {
-                    '$set': {
-                        'space': replace_result.upserted_id
-                    }
-                })
-            self.db_schema_version = 13
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 13. Details: {e}')
+        if replace_result.upserted_id:
+            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many({
+                'space': {
+                    '$exists': False
+                }
+            }, {
+                '$set': {
+                    'space': replace_result.upserted_id
+                }
+            })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_14(self):
         """
         For version 2.7, update all history views' pageSize to 20
         """
         print('Upgrade to schema 14')
-        try:
-            self._entity_views_map[EntityType.Users].update_many({
-                'query_type': 'history'
-            }, {
-                '$set': {
-                    'view.pageSize': 20
-                }
-            })
-            self._entity_views_map[EntityType.Devices].update_many({
-                'query_type': 'history'
-            }, {
-                '$set': {
-                    'view.pageSize': 20
-                }
-            })
-            self.db_schema_version = 14
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 14. Details: {e}')
 
+        self._entity_views_map[EntityType.Users].update_many({
+            'query_type': 'history'
+        }, {
+            '$set': {
+                'view.pageSize': 20
+            }
+        })
+        self._entity_views_map[EntityType.Devices].update_many({
+            'query_type': 'history'
+        }, {
+            '$set': {
+                'view.pageSize': 20
+            }
+        })
+
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_15(self):
         print('Upgrade to schema 15')
         self._update_default_locked_actions_legacy(['tenable_io_create_asset'])
-        self.db_schema_version = 15
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_16(self):
         """
         For version 2.8, remove pageSize and page from all saved views
         """
         print('Upgrade to schema 16')
-        try:
-            for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({
-                    'query_type': 'saved'
-                }, {
-                    '$set': {
-                        'view.pageSize': 20,
-                        'view.page': 0
-                    }
-                })
-            self.db_schema_version = 16
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 15. Details: {e}')
+        for entity_type in EntityType:
+            self._entity_views_map[entity_type].update_many({
+                'query_type': 'saved'
+            }, {
+                '$set': {
+                    'view.pageSize': 20,
+                    'view.page': 0
+                }
+            })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_17(self):
         """
         For version 2.10, remove duplicated spaces
         """
         print('Upgrade to schema 17')
-        try:
-            self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_DEFAULT)
-            self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_PERSONAL)
-
-            self.db_schema_version = 17
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 17. Details: {e}')
+        self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_DEFAULT)
+        self._remove_unused_spaces(DASHBOARD_SPACE_TYPE_PERSONAL)
 
     def _remove_unused_spaces(self, spaces_type):
         dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
@@ -636,293 +489,275 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             indexes_to_delete = [space.get('_id') for space in dashboards[1:]]
             dashboard_spaces_collection.delete_many({'_id': {'$in': indexes_to_delete}})
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_18(self):
         """
         For version 2.10, fix order of fields for all saved queries
         """
         print('Upgrade to schema 18')
-        try:
-            fields_order = {
-                EntityType.Devices: [
-                    'adapters', 'specific_data.data.name', 'specific_data.data.hostname',
-                    'specific_data.data.last_seen', 'specific_data.data.network_interfaces.mac',
-                    'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type'
-                ],
-                EntityType.Users: [
-                    'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
-                    'specific_data.data.is_admin', 'specific_data.data.last_seen'
-                ]
-            }
-            for entity_type in EntityType:
-                views_collection = self._entity_views_map[entity_type]
-                saved_views = views_collection.find({
-                    'query_type': 'saved'
+        fields_order = {
+            EntityType.Devices: [
+                'adapters', 'specific_data.data.name', 'specific_data.data.hostname',
+                'specific_data.data.last_seen', 'specific_data.data.network_interfaces.mac',
+                'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type'
+            ],
+            EntityType.Users: [
+                'adapters', 'specific_data.data.image', 'specific_data.data.username', 'specific_data.data.domain',
+                'specific_data.data.is_admin', 'specific_data.data.last_seen'
+            ]
+        }
+        for entity_type in EntityType:
+            views_collection = self._entity_views_map[entity_type]
+            saved_views = views_collection.find({
+                'query_type': 'saved'
+            })
+            for view_doc in saved_views:
+                original_fields = view_doc.get('view', {}).get('fields', [])
+                reordered_fields = []
+                for field in fields_order[entity_type]:
+                    try:
+                        original_fields.remove(field)
+                    except ValueError:
+                        # Field from definition is not in saved fields - nothing to do
+                        continue
+                    reordered_fields.append(field)
+
+                reordered_fields.extend([field for field in original_fields if 'specific_data.data' in field])
+                if 'labels' in original_fields:
+                    reordered_fields.append('labels')
+                reordered_fields.extend([field for field in original_fields if 'adapters_data.' in field])
+                views_collection.update_one({
+                    '_id': view_doc['_id']
+                }, {
+                    '$set': {
+                        'view.fields': reordered_fields
+                    }
                 })
-                for view_doc in saved_views:
-                    original_fields = view_doc.get('view', {}).get('fields', [])
-                    reordered_fields = []
-                    for field in fields_order[entity_type]:
-                        try:
-                            original_fields.remove(field)
-                        except ValueError:
-                            # Field from definition is not in saved fields - nothing to do
-                            continue
-                        reordered_fields.append(field)
 
-                    reordered_fields.extend([field for field in original_fields if 'specific_data.data' in field])
-                    if 'labels' in original_fields:
-                        reordered_fields.append('labels')
-                    reordered_fields.extend([field for field in original_fields if 'adapters_data.' in field])
-                    views_collection.update_one({
-                        '_id': view_doc['_id']
-                    }, {
-                        '$set': {
-                            'view.fields': reordered_fields
-                        }
-                    })
-
-            self.db_schema_version = 18
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 18. Details: {e}')
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_19(self):
         """
         For version 2.11, add Getting Started With Axonius collection to db.
         """
         print('Upgrade to schema 19')
-        try:
-            self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
-                {
-                    'settings': {
-                        'autoOpen': True,
-                        'interactive': False
+        self.db.get_collection(GUI_PLUGIN_NAME, 'getting_started').insert_one(
+            {
+                'settings': {
+                    'autoOpen': True,
+                    'interactive': False
+                },
+                'milestones': [
+                    {
+                        'name': 'connect_adapters',
+                        'title': 'Connect adapters',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/adapters',
+                        'link': 'https://docs.axonius.com/docs/connect-adapters',
+                        'description': 'You can collect and correlate information '
+                                       'about your assets by using Axonius\' '
+                                       'adapters, which integrate with a wide array of security and IT '
+                                       'management solutions.\n\nGo to the Adapters screen to connect at '
+                                       'least three adapters to fetch data for your devices '
+                                       'and users from at least three different sources.'
                     },
-                    'milestones': [
-                        {
-                            'name': 'connect_adapters',
-                            'title': 'Connect adapters',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/adapters',
-                            'link': 'https://docs.axonius.com/docs/connect-adapters',
-                            'description': 'You can collect and correlate information '
-                                           'about your assets by using Axonius\' '
-                                           'adapters, which integrate with a wide array of security and IT '
-                                           'management solutions.\n\nGo to the Adapters screen to connect at '
-                                           'least three adapters to fetch data for your devices '
-                                           'and users from at least three different sources.'
-                        },
-                        {
-                            'name': 'examine_device',
-                            'title': 'Examine a device profile',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/devices',
-                            'link': 'https://docs.axonius.com/docs/examine-a-device-profile',
-                            'description': 'You can examine the details about your devices by looking '
-                                           'at their profiles, which displays the data that Axonius collected '
-                                           'and correlated from multiple sources.\n\nUse the Devices screen or the '
-                                           'search bar on Axonius Dashboard to search for a device '
-                                           'and examine its profile.'
-                        },
-                        {
-                            'name': 'query_saved',
-                            'title': 'Save a query',
-                            'completed': False,
-                            'path': '/devices',
-                            'link': 'https://docs.axonius.com/docs/save-a-query',
-                            'description': 'You can identify security gaps by running and '
-                                           'saving a query about your assets.\n\nUse the Query '
-                                           'Wizard on the Devices screen to create a query, '
-                                           'then save it so you can easily access it in the future.'
-                        },
-                        {
-                            'name': 'device_tag',
-                            'title': 'Tag a device',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/devices',
-                            'link': 'https://docs.axonius.com/docs/tag-a-device',
-                            'description': 'You can tag a single asset or a group of '
-                                           'assets that share common characteristics. Use tags to assign '
-                                           'context to your assets for granular filters and queries.\n\n '
-                                           'Go to the Devices screen, tag a few devices with shared '
-                                           'characteristics, then issue a query that includes the new tag.'
-                        },
-                        {
-                            'name': 'enforcement_executed',
-                            'title': 'Create and execute an enforcement set',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/enforcements',
-                            'link': 'https://docs.axonius.com/docs/create-and-execute-an-enforcement-set',
-                            'description': 'You can take action on the identified security gaps '
-                                           'by defining Enforcement Sets in the Axonius Security Policy '
-                                           'Enforcement Center.\n\nGo to the Enforcement Center screen '
-                                           'to create and execute an Enforcement Set.'
-                        },
-                        {
-                            'name': 'dashboard_created',
-                            'title': 'Create a dashboard chart',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/',
-                            'link': 'https://docs.axonius.com/docs/create-a-dashboard-chart',
-                            'description': 'You can customize the Axonius Dashboard with charts that '
-                                           'track the relevant metrics and show immediate insights based '
-                                           'on your saved queries.\n\nGo to the Axonius Dashboard, and add '
-                                           'a chart to a new custom space.'
-                        },
-                        {
-                            'name': 'report_generated',
-                            'title': 'Generate a report',
-                            'completed': False,
-                            'completionDate': None,
-                            'path': '/reports',
-                            'link': 'https://docs.axonius.com/docs/generate-a-report',
-                            'description': 'You can customize the Axonius Dashboard with charts '
-                                           'that track the relevant '
-                                           'metrics and show immediate insights based on your saved queries.\n\n '
-                                           'Go to the Axonius Dashboard, and add a chart to any '
-                                           'of the default spaces or to a '
-                                           'new custom space.'
-                        }
-                    ]
-                }
-            )
+                    {
+                        'name': 'examine_device',
+                        'title': 'Examine a device profile',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/devices',
+                        'link': 'https://docs.axonius.com/docs/examine-a-device-profile',
+                        'description': 'You can examine the details about your devices by looking '
+                                       'at their profiles, which displays the data that Axonius collected '
+                                       'and correlated from multiple sources.\n\nUse the Devices screen or the '
+                                       'search bar on Axonius Dashboard to search for a device '
+                                       'and examine its profile.'
+                    },
+                    {
+                        'name': 'query_saved',
+                        'title': 'Save a query',
+                        'completed': False,
+                        'path': '/devices',
+                        'link': 'https://docs.axonius.com/docs/save-a-query',
+                        'description': 'You can identify security gaps by running and '
+                                       'saving a query about your assets.\n\nUse the Query '
+                                       'Wizard on the Devices screen to create a query, '
+                                       'then save it so you can easily access it in the future.'
+                    },
+                    {
+                        'name': 'device_tag',
+                        'title': 'Tag a device',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/devices',
+                        'link': 'https://docs.axonius.com/docs/tag-a-device',
+                        'description': 'You can tag a single asset or a group of '
+                                       'assets that share common characteristics. Use tags to assign '
+                                       'context to your assets for granular filters and queries.\n\n '
+                                       'Go to the Devices screen, tag a few devices with shared '
+                                       'characteristics, then issue a query that includes the new tag.'
+                    },
+                    {
+                        'name': 'enforcement_executed',
+                        'title': 'Create and execute an enforcement set',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/enforcements',
+                        'link': 'https://docs.axonius.com/docs/create-and-execute-an-enforcement-set',
+                        'description': 'You can take action on the identified security gaps '
+                                       'by defining Enforcement Sets in the Axonius Security Policy '
+                                       'Enforcement Center.\n\nGo to the Enforcement Center screen '
+                                       'to create and execute an Enforcement Set.'
+                    },
+                    {
+                        'name': 'dashboard_created',
+                        'title': 'Create a dashboard chart',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/',
+                        'link': 'https://docs.axonius.com/docs/create-a-dashboard-chart',
+                        'description': 'You can customize the Axonius Dashboard with charts that '
+                                       'track the relevant metrics and show immediate insights based '
+                                       'on your saved queries.\n\nGo to the Axonius Dashboard, and add '
+                                       'a chart to a new custom space.'
+                    },
+                    {
+                        'name': 'report_generated',
+                        'title': 'Generate a report',
+                        'completed': False,
+                        'completionDate': None,
+                        'path': '/reports',
+                        'link': 'https://docs.axonius.com/docs/generate-a-report',
+                        'description': 'You can customize the Axonius Dashboard with charts '
+                                       'that track the relevant '
+                                       'metrics and show immediate insights based on your saved queries.\n\n '
+                                       'Go to the Axonius Dashboard, and add a chart to any '
+                                       'of the default spaces or to a '
+                                       'new custom space.'
+                    }
+                ]
+            }
+        )
 
-            self.db_schema_version = 19
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 19. Details: {e}')
-
+    # pylint:disable=invalid-triple-quote
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_20(self):
         """
         For version 2.11, add in every space a new attribute "panels_order" of type array.
         for each space this array should respectively holds the order of all the existing panels.
         This is requested as part of the Drag & Drop features in order to allow upgragded systems
         to benefits from the new feature
+        :return:
         """
         panels_order_by_space = defaultdict(list)
-        try:
-            dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
-            print('Upgrade to schema 20')
+        dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
+        print('Upgrade to schema 20')
+        for dashboard in self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find(
+                filter=filter_archived(),
+                projection={
+                    '_id': True,
+                    'space': True
+                }):
+            try:
+                panels_order_by_space[dashboard['space']].append(str(dashboard['_id']))
+            except Exception as e:
+                pass
 
-            for dashboard in self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find(
-                    filter=filter_archived(),
-                    projection={
-                        '_id': True,
-                        'space': True
-                    }):
-                try:
-                    panels_order_by_space[dashboard['space']].append(str(dashboard['_id']))
-                except Exception as e:
-                    pass
+        for space_id, dashboard_ids in panels_order_by_space.items():
+            try:
+                dashboard_spaces_collection.update_one({
+                    '_id': space_id
+                }, {
+                    '$push': {
+                        'panels_order': {'$each': dashboard_ids}
+                    }
+                })
 
-            for space_id, dashboard_ids in panels_order_by_space.items():
-                try:
-                    dashboard_spaces_collection.update_one({
-                        '_id': space_id
-                    }, {
-                        '$push': {
-                            'panels_order': {'$each': dashboard_ids}
-                        }
-                    })
+            except Exception as e:
+                logger.exception(f'Failed adding panels_order {dashboard_ids} to space {str(space_id)}')
 
-                except Exception as e:
-                    logger.exception(f'Failed adding panels_order {dashboard_ids} to space {str(space_id)}')
-
-            self.db_schema_version = 20
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 20. Details: {e}')
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_21(self):
         """
         For version 2.12, remove in every default saved_query of 'device_views' and 'user_views'
         the pageSize attribute under the view
         """
         print('Upgrade to schema 21')
-        try:
-            self.db.get_collection(GUI_PLUGIN_NAME, DEVICE_VIEWS).update_many({'view.pageSize': {'$exists': True}},
-                                                                              {'$unset': {'view.pageSize': 20}})
-            self.db.get_collection(GUI_PLUGIN_NAME, USER_VIEWS).update_many({'view.pageSize': {'$exists': True}},
-                                                                            {'$unset': {'view.pageSize': 20}})
-            self.db_schema_version = 21
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 21. Details: {e}')
+        self.db.get_collection(GUI_PLUGIN_NAME, DEVICE_VIEWS).update_many({'view.pageSize': {'$exists': True}},
+                                                                          {'$unset': {'view.pageSize': 20}})
+        self.db.get_collection(GUI_PLUGIN_NAME, USER_VIEWS).update_many({'view.pageSize': {'$exists': True}},
+                                                                        {'$unset': {'view.pageSize': 20}})
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_22(self):
         """
         For version 2.12, run the report periodic config migration
         """
         print('Upgrade to schema 22')
-        try:
-            self._migrate_report_periodic_config()
-            self.db_schema_version = 22
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 22. Details: {e}')
+        self._migrate_report_periodic_config()
 
+    # pylint: disable=R0201
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_23(self):
+        return
+
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_24(self):
         """
         For version 2.13, sync updated_by and last_updated fields in Enforcements, Reports and Saved Views
         """
         print('Upgrade to schema 24')
-        try:
-            find_query = {
-                'user_id': {
-                    '$type': 'objectId'
-                }
+        find_query = {
+            'user_id': {
+                '$type': 'objectId'
             }
-            hidden_user_id = self._get_hidden_user_id()
-            if hidden_user_id:
-                find_query['user_id']['$ne'] = hidden_user_id
+        }
+        hidden_user_id = self._get_hidden_user_id()
+        if hidden_user_id:
+            find_query['user_id']['$ne'] = hidden_user_id
 
-            update_query = [{
-                '$set': {
-                    UPDATED_BY_FIELD: '$user_id'
-                }
-            }]
+        update_query = [{
+            '$set': {
+                UPDATED_BY_FIELD: '$user_id'
+            }
+        }]
 
-            # Update reports_config:
-            #     'updated_by' from 'user_id'
-            self.db.gui_reports_config_collection().update_many(find_query, update_query)
+        # Update reports_config:
+        #     'updated_by' from 'user_id'
+        self.db.gui_reports_config_collection().update_many(find_query, update_query)
 
-            # Update reports:
-            #     'updated_by' from 'user_id'
-            self.db.enforcements_collection().update_many(find_query, update_query)
+        # Update reports:
+        #     'updated_by' from 'user_id'
+        self.db.enforcements_collection().update_many(find_query, update_query)
 
-            update_query[0]['$set'][LAST_UPDATED_FIELD] = '$timestamp'
-            # Update saved views, per entity:
-            #     'last_updated' from 'timestamp'
-            #     'updated_by' from 'user_id'
-            for entity_type in EntityType:
-                views_collection = self._entity_views_map[entity_type]
-                views_collection.update_many(find_query, update_query)
-            self.db_schema_version = 24
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 24. Details: {e}')
+        update_query[0]['$set'][LAST_UPDATED_FIELD] = '$timestamp'
+        # Update saved views, per entity:
+        #     'last_updated' from 'timestamp'
+        #     'updated_by' from 'user_id'
+        for entity_type in EntityType:
+            views_collection = self._entity_views_map[entity_type]
+            views_collection.update_many(find_query, update_query)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_25(self):
         """
         For 2.14 - to fix Predefined queries that do not have the 'last_updated' and 'updated_by'
         :return:
         """
         print('Upgrade to schema 25')
-        try:
-            for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({
-                    UPDATED_BY_FIELD: {
-                        '$exists': False
-                    },
-                    'user_id': '*'
-                }, [{
-                    '$set': {
-                        UPDATED_BY_FIELD: '$user_id',
-                        LAST_UPDATED_FIELD: '$timestamp'
-                    }
-                }])
-            self.db_schema_version = 25
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 25. Details: {e}')
+        for entity_type in EntityType:
+            self._entity_views_map[entity_type].update_many({
+                UPDATED_BY_FIELD: {
+                    '$exists': False
+                },
+                'user_id': '*'
+            }, [{
+                '$set': {
+                    UPDATED_BY_FIELD: '$user_id',
+                    LAST_UPDATED_FIELD: '$timestamp'
+                }
+            }])
 
     @mongo_retry()
     def delete_dup_users(self):
@@ -972,18 +807,16 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                         }
                     })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_26(self):
         """
         Check for duplicated users in users collections: AX-5836
         :return:
         """
         print('Upgrade to schema 26')
-        try:
-            self.delete_dup_users()
-            self.db_schema_version = 26
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 26. Details: {e}')
+        self.delete_dup_users()
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_27(self):
         """
         Change in structure of an 'expression' object:
@@ -991,167 +824,150 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         - 'nested' array becomes 'children' array
         """
         print('Upgrade to schema 27')
-        try:
-            for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({
+        for entity_type in EntityType:
+            self._entity_views_map[entity_type].update_many({
+                'view.query.expressions': {
+                    '$exists': True
+                }
+            }, {
+                '$set': {
+                    'view.query.expressions.$[obj].context': 'OBJ',
+                    'view.query.expressions.$[all].context': '',
+                }
+            }, array_filters=[{
+                'obj.obj': True
+            }, {
+                'all.obj': False
+            }])
+            self._entity_views_map[entity_type].update_many({
+                'view.query.expressions': {
+                    '$exists': True
+                }
+            }, [{
+                '$set': {
                     'view.query.expressions': {
-                        '$exists': True
-                    }
-                }, {
-                    '$set': {
-                        'view.query.expressions.$[obj].context': 'OBJ',
-                        'view.query.expressions.$[all].context': '',
-                    }
-                }, array_filters=[{
-                    'obj.obj': True
-                }, {
-                    'all.obj': False
-                }])
-                self._entity_views_map[entity_type].update_many({
-                    'view.query.expressions': {
-                        '$exists': True
-                    }
-                }, [{
-                    '$set': {
-                        'view.query.expressions': {
-                            '$map': {
-                                'input': '$view.query.expressions',
-                                'as': 'expression',
-                                'in': {
-                                    '$mergeObjects': [{
-                                        'children': '$$expression.nested'
-                                    }, {
-                                        '$arrayToObject': {
-                                            '$filter': {
-                                                'input': {'$objectToArray': '$$expression'},
-                                                'as': 'expression',
-                                                'cond': {'$ne': ['$$expression.k', 'nested']}
-                                            }
+                        '$map': {
+                            'input': '$view.query.expressions',
+                            'as': 'expression',
+                            'in': {
+                                '$mergeObjects': [{
+                                    'children': '$$expression.nested'
+                                }, {
+                                    '$arrayToObject': {
+                                        '$filter': {
+                                            'input': {'$objectToArray': '$$expression'},
+                                            'as': 'expression',
+                                            'cond': {'$ne': ['$$expression.k', 'nested']}
                                         }
-                                    }]
-                                }
+                                    }
+                                }]
                             }
                         }
                     }
-                }])
+                }
+            }])
 
-                self.db_schema_version = 27
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 27. Details: {e}')
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_28(self):
         print('upgrade to schema 28')
-        try:
-            config_match = {
-                'config_name': CONFIG_CONFIG
-            }
-            current_config = self.db.get_collection(
-                GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
-            if not current_config:
-                return
-            current_config['config']['system_settings']['exactSearch'] = True
-            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
-                config_match, current_config)
-            self.db_schema_version = 28
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 28. Details: {e}')
+        config_match = {
+            'config_name': CONFIG_CONFIG
+        }
+        current_config = self.db.get_collection(
+            GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).find_one(config_match)
+        if not current_config:
+            return
+        current_config['config']['system_settings']['exactSearch'] = True
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).replace_one(
+            config_match, current_config)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_29(self):
         """
         For 3.0 - remove last_updated field from Predefined Saved Queries
         :return:
         """
         print('Upgrade to schema 29')
-        try:
-            for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({
-                    PREDEFINED_FIELD: True
-                }, [{
-                    '$set': {
-                        LAST_UPDATED_FIELD: None
-                    }
-                }])
-            self.db_schema_version = 29
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 29. Details: {e}')
+        for entity_type in EntityType:
+            self._entity_views_map[entity_type].update_many({
+                PREDEFINED_FIELD: True
+            }, [{
+                '$set': {
+                    LAST_UPDATED_FIELD: None
+                }
+            }])
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_30(self):
         """
         For 3.1 - Change reports (pdf) namings containing */:?\
         :return:
         """
         print('Upgrade to schema 30')
-        try:
-            report_config_collection = self.db.gui_reports_config_collection()
-            reports_to_fix = report_config_collection.find(
-                {'name': {'$regex': r'[^\w@.\s-]'}})
-            fixed = {}
+        report_config_collection = self.db.gui_reports_config_collection()
+        reports_to_fix = report_config_collection.find(
+            {'name': {'$regex': r'[^\w@.\s-]'}})
+        fixed = {}
 
-            # Creating a fix map
-            for report in reports_to_fix:
-                fixed[report['uuid']] = {'new_name': re.sub(r'[^\w@.\s-]', '-', report['name']),
-                                         'old_name': report['name']}
+        # Creating a fix map
+        for report in reports_to_fix:
+            fixed[report['uuid']] = {'new_name': re.sub(r'[^\w@.\s-]', '-', report['name']),
+                                     'old_name': report['name']}
 
-            # Creating duplicates list
-            all_new_names = [current_report['new_name'] for current_report in fixed.values()]
+        # Creating duplicates list
+        all_new_names = [current_report['new_name'] for current_report in fixed.values()]
 
-            # list of dup names and number of appearances (Notice the set comprehension).
-            all_duplicate_new_names = {current_report_name for current_report_name in all_new_names if
-                                       all_new_names.count(current_report_name) > 1}
+        # list of dup names and number of appearances (Notice the set comprehension).
+        all_duplicate_new_names = {current_report_name for current_report_name in all_new_names if
+                                   all_new_names.count(current_report_name) > 1}
 
-            # If there are duplicates
-            if len(all_duplicate_new_names) != 0:
-                # New dict key usages will default to 0.
-                usage_counter = defaultdict(int)
-                for current_report in fixed.values():
-                    current_report_new_name = current_report['new_name']
-                    # If current name is a duplicate.
-                    if current_report_new_name not in all_duplicate_new_names:
-                        continue
-
-                    # pylint: disable=pointless-statement
-                    usage_counter[current_report_new_name] += 1
-                    current_report[
-                        'new_name'] = f'{current_report_new_name} ({usage_counter[current_report_new_name]})'
-
-            for uuid, names in fixed.items():
-                # Fixing name in reports_config collection
-                update_result = report_config_collection.update_one({'uuid': uuid},
-                                                                    {'$set': {'name': names['new_name']}})
-
-                if update_result.modified_count != 1:
-                    logger.error('Had a problem updating the report name to remove special characters.')
+        # If there are duplicates
+        if len(all_duplicate_new_names) != 0:
+            # New dict key usages will default to 0.
+            usage_counter = defaultdict(int)
+            for current_report in fixed.values():
+                current_report_new_name = current_report['new_name']
+                # If current name is a duplicate.
+                if current_report_new_name not in all_duplicate_new_names:
                     continue
 
-                # Fixing name in reports collection.
-                file_name_filter = {'filename': f'most_recent_{names["old_name"]}'}
-                file_name_update = {'$set': {'filename': f'most_recent_{names["new_name"]}'}}
-                update_result = self.db.get_collection(GUI_PLUGIN_NAME, 'reports').update_one(file_name_filter,
-                                                                                              file_name_update)
+                # pylint: disable=pointless-statement
+                usage_counter[current_report_new_name] += 1
+                current_report[
+                    'new_name'] = f'{current_report_new_name} ({usage_counter[current_report_new_name]})'
 
-                if update_result.modified_count != 1:
-                    logger.error('Had a problem updating the report name to remove special characters.')
-                    continue
+        for uuid, names in fixed.items():
+            # Fixing name in reports_config collection
+            update_result = report_config_collection.update_one({'uuid': uuid},
+                                                                {'$set': {'name': names['new_name']}})
 
-                # Fixing gridfs file.
-                self.db.get_collection(GUI_PLUGIN_NAME, 'fs.files').update_one(file_name_filter, file_name_update)
+            if update_result.modified_count != 1:
+                logger.error('Had a problem updating the report name to remove special characters.')
+                continue
 
-            self.db_schema_version = 30
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 30. Details: {e}')
+            # Fixing name in reports collection.
+            file_name_filter = {'filename': f'most_recent_{names["old_name"]}'}
+            file_name_update = {'$set': {'filename': f'most_recent_{names["new_name"]}'}}
+            update_result = self.db.get_collection(GUI_PLUGIN_NAME, 'reports').update_one(file_name_filter,
+                                                                                          file_name_update)
 
+            if update_result.modified_count != 1:
+                logger.error('Had a problem updating the report name to remove special characters.')
+                continue
+
+            # Fixing gridfs file.
+            self.db.get_collection(GUI_PLUGIN_NAME, 'fs.files').update_one(file_name_filter, file_name_update)
+
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_31(self):
         """
         For 3.3 - Migrate users and roles to the new permissions structure
         :return:
         """
         print('Upgrade to schema 31')
-        try:
-            self._migrate_old_users_and_roles_legacy()
-            self.db_schema_version = 31
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 31. Details: {e}')
+        self._migrate_old_users_and_roles_legacy()
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_32(self):
         """
         For 3.4 - Add a default value for a new feature flag in Axonius system:
@@ -1160,12 +976,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         :return:
         """
         print('Upgrade to schema 32')
-        try:
-            self._set_query_timeline_feature_flag_legacy()
-            self._fix_space_id_in_panels()
-            self.db_schema_version = 32
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 32. Details: {e}')
+        self._set_query_timeline_feature_flag_legacy()
+        self._fix_space_id_in_panels()
 
     def _fix_space_id_in_panels(self):
         dashboard_spaces_collection = self.db.get_collection(self.plugin_name, DASHBOARD_SPACES_COLLECTION)
@@ -1195,6 +1007,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             '$set': {'config.query_timeline_range': True}
         })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_33(self):
         """
         For 3.4 - Add a default value for a new feature flag in Axonius system:
@@ -1203,17 +1016,13 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         :return:
         """
         print('Upgrade to schema 33')
-        try:
-            self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one({
-                'config_name': FEATURE_FLAGS_CONFIG
-            }, {
-                '$set': {
-                    'config.enforcement_center': True
-                }
-            })
-            self.db_schema_version = 33
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 33. Details: {e}')
+        self.db.get_collection(GUI_PLUGIN_NAME, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION).update_one({
+            'config_name': FEATURE_FLAGS_CONFIG
+        }, {
+            '$set': {
+                'config.enforcement_center': True
+            }
+        })
 
     def _update_reports_views(self, entity_to_views):
         report_configs_update = self.db.gui_reports_config_collection().find({
@@ -1299,48 +1108,42 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             }
         return entity_to_views
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_34(self):
         """
         AX-6287 Update all Reports, Enforcements and Charts holding a view name, to hold its uuid instead
         """
         print('Upgrade to schema 34')
-        try:
-            entity_to_views = self._get_views_by_entity()
-            self._update_reports_views(entity_to_views)
-            self._update_dashboards_views(entity_to_views)
-            self._update_enforcements_views(entity_to_views)
-            self.db_schema_version = 34
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 34. Details: {e}')
+        entity_to_views = self._get_views_by_entity()
+        self._update_reports_views(entity_to_views)
+        self._update_dashboards_views(entity_to_views)
+        self._update_enforcements_views(entity_to_views)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_35(self):
         """
         For 3.4 - Default dashboard chart sort
         :return:
         """
         print('Upgrade to schema 35')
-        try:
-            self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many(
-                {
-                    'config': {
-                        '$ne': None
-                    },
-                    '$or': [{
-                        'metric': 'compare'
-                    }, {
-                        'metric': 'segment'
-                    }]
+        self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).update_many(
+            {
+                'config': {
+                    '$ne': None
+                },
+                '$or': [{
+                    'metric': 'compare'
                 }, {
-                    '$set': {
-                        'config.sort': {
-                            'sort_by': 'value',
-                            'sort_order': 'desc'
-                        }
+                    'metric': 'segment'
+                }]
+            }, {
+                '$set': {
+                    'config.sort': {
+                        'sort_by': 'value',
+                        'sort_order': 'desc'
                     }
-                })
-            self.db_schema_version = 35
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 35. Details: {e}')
+                }
+            })
 
     def _update_enforcement_tasks_views(self, entity_to_views):
         trigger_path = 'result.metadata.trigger.view'
@@ -1368,14 +1171,12 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_36(self):
         print('Upgrade to schema 36')
-        try:
-            self._update_enforcement_tasks_views(self._get_views_by_entity())
-            self.db_schema_version = 36
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 36. Details: {e}')
+        self._update_enforcement_tasks_views(self._get_views_by_entity())
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_37(self):
         """
         For 3.5 - Add a default value "not private" for all the existing devices and users views in the system
@@ -1383,133 +1184,115 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         :return:
         """
         print('Upgrade to schema 37')
-        try:
-            for entity_type in EntityType:
-                self._entity_views_map[entity_type].update_many({
-                    PRIVATE_FIELD: {'$exists': False}
-                }, {
-                    '$set': {
-                        PRIVATE_FIELD: False
-                    }
-                })
-            self.db_schema_version = 37
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 37. Details: {e}')
+        for entity_type in EntityType:
+            self._entity_views_map[entity_type].update_many({
+                PRIVATE_FIELD: {'$exists': False}
+            }, {
+                '$set': {
+                    PRIVATE_FIELD: False
+                }
+            })
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_38(self):
         """
         For 3.5 - Add compliance rules update role.
         :return:
         """
         print('Upgrade to schema 38')
-        try:
-            roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
-            bulk_updates = []
-            roles = roles_collection.find({})
+        roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        bulk_updates = []
+        roles = roles_collection.find({})
 
-            for role in roles:
-                rule_name = role['name']
-                if rule_name in ['Owner', 'OwnerReadOnly', 'Admin']:
-                    bulk_updates.append(UpdateOne(
-                        {
-                            '_id': role['_id'],
-                        },
-                        {
-                            '$set': {
-                                'permissions.compliance.post': True
-                            }
+        for role in roles:
+            rule_name = role['name']
+            if rule_name in ['Owner', 'OwnerReadOnly', 'Admin']:
+                bulk_updates.append(UpdateOne(
+                    {
+                        '_id': role['_id'],
+                    },
+                    {
+                        '$set': {
+                            'permissions.compliance.post': True
                         }
-                    ))
-                else:
-                    bulk_updates.append(UpdateOne(
-                        {
-                            '_id': role['_id'],
-                        },
-                        {
-                            '$set': {
-                                'permissions.compliance.post': False
-                            }
+                    }
+                ))
+            else:
+                bulk_updates.append(UpdateOne(
+                    {
+                        '_id': role['_id'],
+                    },
+                    {
+                        '$set': {
+                            'permissions.compliance.post': False
                         }
-                    ))
+                    }
+                ))
 
-            if len(bulk_updates) > 0:
-                roles_collection.bulk_write(bulk_updates)
-            self.db_schema_version = 38
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 38. Details: {e}')
+        if len(bulk_updates) > 0:
+            roles_collection.bulk_write(bulk_updates)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_39(self):
         """
         For 3.6 - Migrate the external service to a new configuration record
         :return:
         """
         print('Upgrade to schema 39')
-        try:
-            self.migrate_external_services_settings()
-            self.db_schema_version = 39
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 39. Details: {e}')
+        self.migrate_external_services_settings()
 
     # pylint: disable=R1702
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_40(self):
         """
         Change 'general_info' service to 'wmi_adapter' in saved queries.
         """
         print('Upgrade to schema 40')
-        try:
-            for entity_type in EntityType:
-                views_collection = self._entity_views_map[entity_type]
-                general_info_views = views_collection.find({
-                    'view.query.filter': {
-                        '$regex': '.*general_info.*'
+        for entity_type in EntityType:
+            views_collection = self._entity_views_map[entity_type]
+            general_info_views = views_collection.find({
+                'view.query.filter': {
+                    '$regex': '.*general_info.*'
+                }
+            })
+            for view_doc in general_info_views:
+                original_fields = view_doc.get('view', {}).get('fields', [])
+                # update fields names
+                original_fields = [field.replace('general_info', 'wmi_adapter') for field in original_fields]
+                # update query filter
+                query = view_doc.get('view', {}).get('query', {})
+                query['filter'] = query.get('filter', '').replace('general_info', 'wmi_adapter')
+                query['onlyExpressionsFilter'] = query.get('onlyExpressionsFilter', '').replace('general_info',
+                                                                                                'wmi_adapter')
+                # update expressions
+                expressions = query.get('expressions', [])
+                for expression in expressions:
+                    if not expression:
+                        continue
+                    for k, v in expression.items():
+                        if not isinstance(expression[k], str):
+                            continue
+                        expression[k] = expression[k].replace('general_info', 'wmi_adapter')
+                views_collection.update_one({
+                    '_id': view_doc['_id']
+                }, {
+                    '$set': {
+                        'view.fields': original_fields,
+                        'view.query': query
                     }
                 })
-                for view_doc in general_info_views:
-                    original_fields = view_doc.get('view', {}).get('fields', [])
-                    # update fields names
-                    original_fields = [field.replace('general_info', 'wmi_adapter') for field in original_fields]
-                    # update query filter
-                    query = view_doc.get('view', {}).get('query', {})
-                    query['filter'] = query.get('filter', '').replace('general_info', 'wmi_adapter')
-                    query['onlyExpressionsFilter'] = query.get('onlyExpressionsFilter', '').replace('general_info',
-                                                                                                    'wmi_adapter')
-                    # update expressions
-                    expressions = query.get('expressions', [])
-                    for expression in expressions:
-                        if not expression:
-                            continue
-                        for k, v in expression.items():
-                            if not isinstance(expression[k], str):
-                                continue
-                            expression[k] = expression[k].replace('general_info', 'wmi_adapter')
-                    views_collection.update_one({
-                        '_id': view_doc['_id']
-                    }, {
-                        '$set': {
-                            'view.fields': original_fields,
-                            'view.query': query
-                        }
-                    })
 
-            self.db_schema_version = 40
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 40. Details: {e}')
-            raise
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_41(self):
         """
         add last password change field to all users, for password expiration
         :return:
         """
         print('Upgrade to schema 41')
-        try:
-            self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
-                {},  # all users
-                {'$set': {'password_last_updated': datetime.utcnow()}}
-            )
-            self.db_schema_version = 41
-        except Exception as e:
-            print(f'Exception while upgrading gui db to version 41. Details: {e}')
+        self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION).update_many(
+            {},  # all users
+            {'$set': {'password_last_updated': datetime.utcnow()}}
+        )
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """
@@ -1573,7 +1356,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         if self.is_dev:
             volumes.extend(super().volumes_override)
             return volumes
-        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
+        libs = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
         volumes.extend([f'{libs}:{LIBS_PATH.as_posix()}:ro'])
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.
@@ -1777,6 +1561,9 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
 
     def get_report_pdf(self, report_id, *vargs, **kwargs):
         return self.get(f'reports/{report_id}/pdf', session=self._session, *vargs, **kwargs)
+
+    def get_chart_csv(self, chart_id, *vargs, **kwargs):
+        return self.get(f'dashboard/charts/{chart_id}/csv', session=self._session, *vargs, **kwargs)
 
     def get_saved_views(self):
 

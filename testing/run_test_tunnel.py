@@ -248,7 +248,7 @@ def main(ami_id=None):
                                                        timeout=600)
 
         instance_manager._InstanceManager__ssh_execute(instance, 'Update resolv file',
-                                                       f'docker exec tunnel /bin/sh -c \'echo -n {base64.b64encode(TUNNELER_RESOLV_CONF.encode("utf-8")).decode("utf-8")} | base64 -d > /etc/resolv.conf\'',
+                                                       f'docker exec axonius_tunnel /bin/sh -c \'echo -n {base64.b64encode(TUNNELER_RESOLV_CONF.encode("utf-8")).decode("utf-8")} | base64 -d > /etc/resolv.conf\'',
                                                        append_ts=False,
                                                        as_root=True)
         TC.print('Updated resolv.conf on tunnel machine')

@@ -3,6 +3,7 @@ from bson.objectid import ObjectId
 from pymongo.database import Database
 
 from axonius.consts.plugin_consts import EXECUTION_PLUGIN_NAME
+from axonius.db_migrations import db_migration
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
 from services.system_service import SystemService
@@ -15,11 +16,10 @@ class ExecutionService(PluginService, SystemService, UpdatablePluginMixin):
 
     def _migrate_db(self):
         super()._migrate_db()
+        self._run_all_migrations(nonsingleton=True)
 
-        if self.db_schema_version < 1:
-            self._update_nonsingleton_to_schema(1, self.__update_schema_version_1)
-
-    def __update_schema_version_1(self, specific_execution_db: Database):
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_1(self, specific_execution_db: Database):
         # Change execution to be a single instance, so we rename all collections over
         admin_db = self.db.client['admin']
         for collection_name in specific_execution_db.list_collection_names():

@@ -109,6 +109,7 @@ from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPH
 from axonius.consts.instance_control_consts import MetricsFields
 from axonius.db.db_client import get_db_client
 from axonius.db.files import DBFileHelper
+from axonius.db_migrations import DBMigration
 from axonius.devices import deep_merge_only_dict
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
 from axonius.email_server import EmailServer
@@ -192,6 +193,7 @@ ROUTED_FUNCTIONS = list()
 
 # Initialize running add_rule function counter
 RUNNING_ADD_RULES_COUNT = AtomicInteger(0)
+MIGRATION_PREFIX = '_update_async_schema'
 
 
 def random_string(length: int, source: str = string.ascii_letters + string.digits) -> str:
@@ -727,6 +729,13 @@ class PluginBase(Configurable, Feature, ABC):
         # Finished, Writing some log
         logger.info(f'Plugin {self.plugin_unique_name}:{self.version} '
                     f'with axonius-libs:{self.lib_version} started successfully')
+
+    def run_all_migrations(self):
+        migrator = DBMigration(migrations_prefix=MIGRATION_PREFIX,
+                               migration_class=self,
+                               version_collection=self._get_db_connection()[self.plugin_unique_name]['version'],
+                               version_fieldname='async_schema')
+        migrator.run_migrations()
 
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements

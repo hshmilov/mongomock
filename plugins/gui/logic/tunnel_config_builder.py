@@ -21,7 +21,47 @@ group nogroup'''
 
 base_config = '''#!/bin/sh
 AXONIUS_AGENT_BASE_FOLDER=/opt/axonius
-mkdir $AXONIUS_AGENT_BASE_FOLDER
+
+if [ "$(id -u)" != "0" ];then
+  echo "Axonius installer/uninstaller must run as root"
+  exit 1
+fi
+
+mkdir $AXONIUS_AGENT_BASE_FOLDER 2>/dev/null
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+
+error_exit() {{
+    echo "An error has occurred. Please contact Axonius support.\nError log can be found under: /opt/axonius/axonius_tunnel_error.log" >&3
+    exit 1
+}}
+
+if [ $# -eq 1 ]; then
+    if [ "$1" = "uninstall" ]; then
+        exec 1>/dev/null 2>&1
+        echo "Axonius Tunnel uninstallation - in progress..." >&3
+        docker kill tunnel; docker rm tunnel; docker image rm tunnel
+        docker kill axonius_tunnel; docker rm axonius_tunnel; docker image rm axonius_tunnel
+        rm -rf $AXONIUS_AGENT_BASE_FOLDER
+        if [ -d "$AXONIUS_AGENT_BASE_FOLDER" ]; then
+            echo "The Axonius Tunnel uninstall failed. Please contact the Axonius support" >&3
+            exit 1
+        fi
+        echo "The Axonius Tunnel has been successfully uninstalled." >&3
+        exit 0
+    else
+        echo "Bad argument"
+        exit 1
+    fi
+fi
+if [ $# -gt 1 ]; then
+    echo "Too many arguments provided" >&3
+    exit 1
+fi
+
+exec 1>$AXONIUS_AGENT_BASE_FOLDER/axonius_tunnel_error.log 2>&1
+echo "Axonius Tunnel installation started..." >&3
+echo "Step 1/4 : In progress..." >&3
 cd $AXONIUS_AGENT_BASE_FOLDER
 cat <<EOF > Dockerfile
 FROM alpine:3.11.6
@@ -68,17 +108,40 @@ else
     fi
 fi
 EOF
-
-
 echo -n {payload} | base64 -d | gzip -d > conf/user.ovpn
-docker build -t tunnel .
+if [ ! -s ./conf/user.ovpn ]; then
+    error_exit
+fi
+echo "Step 1/4 : Completed" >&3
 
-exec 2>/dev/null
-docker stop tunnel; docker rm tunnel
-exec 2>&1
-docker run --privileged -v $PWD/conf:/conf --net=host --name tunnel -d tunnel
-docker exec tunnel iptables -P FORWARD ACCEPT
-IFACE=$(docker exec tunnel route | grep '^default' | grep -o '[^ ]*$')
-docker exec tunnel iptables -t nat -F
-docker exec tunnel iptables -t nat -A POSTROUTING -o $IFACE -j MASQUERADE
+echo "Step 2/4 : In progress..." >&3
+docker build -t axonius_tunnel .
+docker stop axonius_tunnel; docker rm axonius_tunnel
+if [ $(docker image ls | grep axonius_tunnel -c) != "1" ]; then
+    error_exit
+fi
+if [ $(docker ps | grep axonius_tunnel -c) != "0" ]; then
+    error_exit
+fi
+echo "Step 2/4 : Completed" >&3
+
+echo "Step 3/4 : In progress..." >&3
+docker run --privileged -v $PWD/conf:/conf --net=host --name axonius_tunnel -d axonius_tunnel
+if [ $(docker ps | grep axonius_tunnel -c) != "1" ]; then
+    error_exit
+fi
+echo "Step 3/4 : Completed" >&3
+
+echo "Step 4/4 : In progress..." >&3
+docker exec axonius_tunnel iptables -P FORWARD ACCEPT
+IFACE=$(docker exec axonius_tunnel route | grep '^default' | grep -o '[^ ]*$')
+docker exec axonius_tunnel iptables -t nat -F
+docker exec axonius_tunnel iptables -t nat -A POSTROUTING -o $IFACE -j MASQUERADE
+if [ $(docker ps | grep axonius_tunnel -c) != "1" ]; then
+    error_exit
+fi
+echo "Step 4/4 : Completed" >&3
+
+echo "The Axonius Tunnel has been successfully installed.\n" >&3
+echo "Open the Axonius instance and go to the Tunnel Settings tab. The Tunnel Status button in the upper right corner of this screen will display Connected." >&3
 '''

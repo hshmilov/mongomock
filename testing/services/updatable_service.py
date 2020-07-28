@@ -3,6 +3,11 @@ from typing import Callable
 from pymongo.database import Database
 
 from axonius.consts.plugin_consts import VERSION_COLLECTION
+from axonius.db_migrations import DBMigration
+from axonius.utils.debug import redprint
+
+
+MIGRATION_PREFIX = '_update_schema'
 
 
 class UpdatablePluginMixin:
@@ -74,8 +79,16 @@ class UpdatablePluginMixin:
                 to_call(db[x])
             self.db_schema_version = version
         except Exception as e:
-            print(f'Could not upgrade {self.plugin_name} db to version {version}. Details: {e}')
+            redprint(f'Could not upgrade {self.plugin_name} db to version {version}. Details: {e}')
 
     @property
     def __version_collection(self):
         return self.db.get_collection(self.plugin_name, VERSION_COLLECTION)
+
+    def _run_all_migrations(self, nonsingleton: bool = False):
+        migrator = DBMigration(migrations_prefix=MIGRATION_PREFIX,
+                               migration_class=self,
+                               version_collection=self.__version_collection,
+                               version_fieldname='schema')
+        func_wrapper = self._upgrade_adapter_client_id if nonsingleton else None
+        migrator.run_migrations(func_wrapper)

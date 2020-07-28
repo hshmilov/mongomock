@@ -1,11 +1,11 @@
 import os
 import time
-from enum import Enum
 from typing import List, Tuple, Iterable
 from collections import namedtuple
 
 from axonius.clients.wmi_query import consts
 from axonius.utils.wait import wait_until
+from axonius.consts.gui_consts import Action, ActionCategory
 from testing.test_credentials.test_wmi_credentials import CLIENT_DETAILS
 from testing.test_credentials.test_ad_credentials import WMI_QUERIES_DEVICE, ad_client1_details
 from testing.test_credentials.test_shodan_credentials import OLD_CLIENT_DETAILS as shodan_client_details
@@ -37,49 +37,6 @@ class Trigger:
     Below = 'The number of results is below...'
 
 
-class Action(Enum):
-    send_emails = 'Send Email'
-    send_csv_to_s3 = 'Send CSV to Amazon S3'
-    create_notification = 'Push System Notification'
-    carbonblack_isolate = 'Isolate in Carbon Black CB Response'
-    cybereason_isolate = 'Isolate in Cybereason Deep Detect & Respond'
-    cybereason_unisolate = 'Unisolate in Cybereason Deep Detect & Respond'
-    cybereason_tag = 'Tag in Cybereason Deep Detect & Respond'
-    notify_syslog = 'Send to Syslog System'
-    tag = 'Add Tag'
-    untag = 'Remove Tag'
-    run_executable_windows = 'Deploy on Windows Device'
-    run_wmi_scan = 'Run WMI Scan'
-    run_windows_shell_command = 'Deploy Files and Run Windows Shell Command'
-    run_linux_ssh_scan = 'Run Linux SSH Scan'
-    shodan_enrichment = 'Enrich Device Data with Shodan'
-    censys_enrichment = 'Enrich Device Data with Censys'
-    webscan_enrichment = 'Enrich Device Data with Web Server Information'
-    scan_with_qualys = 'Add to Qualys Cloud Platform'
-    change_ldap_attribute = 'Update LDAP Attributes of Users or Devices'
-    ScanTenable = 'Add to Tenable'
-    carbonblack_defense_change_policy = 'Change Carbon Black CB Defense Policy'
-    carbonblack_defense_quarantine = 'Isolate Carbon Black CB Defense Device'
-    carbonblack_defense_unquarantine = 'Unisolate Carbon Black CB Defense Device'
-    tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
-    tenable_io_add_ips_to_target_group = 'Add IPs to Tenable.io Target Group'
-    create_jira_incident = 'Create Jira Issue'
-    add_custom_data = 'Add Custom Data'
-
-
-class ActionCategory:
-    Run = 'Deploy Files and Run Commands'
-    Notify = 'Notify'
-    Isolate = 'Execute Endpoint Security Agent Action'
-    Enrichment = 'Enrich Device or User Data'
-    Utils = 'Axonius Utilities'
-    Scan = 'Add Device to VA Scan'
-    Patch = 'Patch Device'
-    ManageAD = 'Manage Microsoft Active Directory (AD) Services'
-    Incident = 'Create Incident'
-    Block = 'Block Device in Firewall'
-
-
 class EnforcementsPage(EntitiesPage):
     SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
     SAVE_AND_EXIT_BUTTON_TEXT = 'Save & Exit'
@@ -98,7 +55,6 @@ class EnforcementsPage(EntitiesPage):
     ACTION_CONF_CONTAINER_CSS = '.x-action-config'
     ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .config'
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
-    ACTION_NAME_ID = 'action-name'
     API_KEY_ID = 'apikey'
     ACTION_BY_NAME_XPATH = '//div[contains(@class, \'x-text-box\') and child::div[text()=\'{action_name}\']]'
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
@@ -190,9 +146,6 @@ class EnforcementsPage(EntitiesPage):
 
     def is_disabled_new_enforcement_button(self):
         return self.is_element_disabled(self.get_button(self.NEW_ENFORCEMENT_BUTTON))
-
-    def fill_enforcement_name(self, name):
-        self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)
 
     def wait_for_action_library(self):
         self.wait_for_element_present_by_css(self.ACTION_LIBRARY_CONTAINER_CSS)
