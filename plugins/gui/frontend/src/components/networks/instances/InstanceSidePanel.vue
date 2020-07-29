@@ -25,10 +25,10 @@
             <div v-if="instance.is_master">
               <h5>Show Indication</h5>
               <ACheckbox
-                      id="use_as_environment_name"
-                      v-model="instance.use_as_environment_name"
-                      :disabled="disabled"
-                      @change="$emit('update:instance', instance)"
+                id="use_as_environment_name"
+                v-model="instance.use_as_environment_name"
+                :disabled="disabled"
+                @change="$emit('update:instance', instance)"
               />
             </div>
           </div>
@@ -54,7 +54,10 @@
             <h5 class="readonly-title">
               Last Seen
             </h5>
-            <p>{{ instance.last_seen }}</p>
+            <XStringView
+              :schema="DEFAULT_DATE_SCHEMA"
+              :value="instance.last_seen"
+            />
           </div>
           <div class="readonly-instance-fields__instance-field">
             <h5 class="readonly-title">
@@ -73,9 +76,13 @@
           <h5 class="metrics-title">
             Performance Metrics
           </h5>
-          <p>
-            Last updated: {{ lastUpdated }}
-          </p>
+          <div class="instance-metrics__last-updated">
+            <p> Last updated: </p>
+            <XStringView
+                    :schema="DEFAULT_DATE_SCHEMA"
+                    :value="instance.last_updated"
+            />
+          </div>
           <div
             v-for="field in metricsFields"
             :key="field.name"
@@ -129,12 +136,13 @@
 <script>
 import { mapState } from 'vuex';
 import _get from 'lodash/get';
+import { DEFAULT_DATE_SCHEMA } from '@store/modules/constants';
 import {
   Checkbox, Divider, Input,
 } from 'ant-design-vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
 import XButton from '@axons/inputs/Button.vue';
-import { formatDate } from '@constants/utils';
+import XStringView from '@neurons/schema/types/string/StringView.vue';
 
 export default {
   name: 'XInstanceSidePanel',
@@ -144,6 +152,7 @@ export default {
     ACheckbox: Checkbox,
     ADivider: Divider,
     XButton,
+    XStringView,
   },
   props: {
     visible: {
@@ -226,9 +235,9 @@ export default {
         },
       ];
     },
-    lastUpdated() {
-      return formatDate(this.instance.last_updated);
-    },
+  },
+  created() {
+    this.DEFAULT_DATE_SCHEMA = DEFAULT_DATE_SCHEMA;
   },
   methods: {
     onClose() {
@@ -343,6 +352,13 @@ export default {
             .readonly-title-metrics {
               font-weight: 300;
             }
+          }
+        }
+
+        &__last-updated {
+          display: flex;
+          > p {
+            margin-right: 10px;
           }
         }
       }

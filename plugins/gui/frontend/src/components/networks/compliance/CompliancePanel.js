@@ -4,11 +4,12 @@ import XButton from '@axons/inputs/Button.vue';
 import './compliance-panel.scss';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { mapMutations } from 'vuex';
+import { DEFAULT_DATE_SCHEMA } from '@store/modules/constants';
 import _capitalize from 'lodash/capitalize';
 import _isNil from 'lodash/isNil';
 import _get from 'lodash/get';
-import { formatDate } from '@constants/utils';
 import { getEntityPermissionCategory } from '@constants/entities';
+import XStringView from '@neurons/schema/types/string/StringView.vue';
 
 const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
@@ -35,6 +36,7 @@ export default {
   components: {
     xSidePanel,
     XButton,
+    XStringView,
   },
   props: {
     visible: {
@@ -46,9 +48,6 @@ export default {
     },
     fields: {
       type: Array,
-    },
-    dateFormat: {
-      type: String,
     },
   },
   data() {
@@ -153,9 +152,13 @@ export default {
       return (
         <div slot="panelContent" class="body">
           <div class="last-updated">
-            <p>
-              Last updated: {formatDate(this.data.last_updated, undefined, this.dateFormat)}
+            <p class="last-updated__title">
+              Last updated:
             </p>
+            <XStringView
+              schema={this.DEFAULT_DATE_SCHEMA}
+              value={this.data.last_updated}
+            />
           </div>
           {
             this.renderNonExpandableFields()
@@ -214,6 +217,9 @@ export default {
     getSidePanelContainer() {
       return document.querySelector('.x-cloud-compliance');
     },
+  },
+  created() {
+    this.DEFAULT_DATE_SCHEMA = DEFAULT_DATE_SCHEMA;
   },
   render() {
     return (

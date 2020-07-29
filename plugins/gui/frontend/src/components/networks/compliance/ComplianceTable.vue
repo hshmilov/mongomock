@@ -46,18 +46,16 @@
       :visible="isPanelOpen"
       :data="currentRule"
       :fields="fields"
-      :date-format="dateFormat"
       @close="closeSidePanel"
     />
   </div>
 </template>
 <script>
-import { mapActions, mapState, mapGetters } from 'vuex';
+import { mapActions, mapState } from 'vuex';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import XTable from '@components/neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
-import { DATE_FORMAT } from '../../../store/getters';
 import XCompliancePanel from './CompliancePanel';
 import XEnforcementMenu from './ComplianceEnforceMenu.vue';
 
@@ -150,9 +148,6 @@ export default {
       fields(state) {
         return state[this.module].view.schema_fields;
       },
-    }),
-    ...mapGetters({
-      dateFormat: DATE_FORMAT,
     }),
     selectedRules() {
       return this.currentRule ? { ids: [this.currentRuleId], include: true }
