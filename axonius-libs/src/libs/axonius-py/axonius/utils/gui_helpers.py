@@ -881,17 +881,11 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
     field_to_value = {}
     specific_adapters_values = []
     specific_adapter_name = ''
+    entity_data = dict(entity_datas) if isinstance(entity_datas, dict) else entity_datas
 
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
             continue
-
-        entity_data = dict(entity_datas) if isinstance(entity_datas, dict) else entity_datas
-
-        if include_details:
-            adapter_datas = {f'{value}_{i}': item for value in sorted(set(entity_data['adapters']))
-                             for i, item in enumerate(entity_data['adapters_data'][value])
-                             if value not in excluded_adapters.get(field_path, [])}
 
         if excluded_adapters and field_path in excluded_adapters:
             entity_data['specific_data'] = [item for item in entity_data['specific_data']
@@ -927,6 +921,9 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                 if specific_adapters_values == (None, None):
                     specific_adapters_values = []
 
+        adapter_datas = {f'{value}_{i}': item for value in sorted(set(entity_data['adapters']))
+                         for i, item in enumerate(entity_data['adapters_data'][value])
+                         if value not in excluded_adapters.get(field_path, [])}
         field_details = []
         for adapter_name in adapter_datas:
             field_detail = None
