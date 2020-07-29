@@ -175,6 +175,7 @@ class EpoAdapter(AdapterBase, Configurable):
             if last_seen:
                 device.last_seen = last_seen
 
+            device.device_serial = device_raw.get("EPOComputerProperties.SystemSerialNumber")
             domain = device_raw.get("EPOComputerProperties.DomainName")
             if is_domain_valid(domain):
                 device.domain = domain

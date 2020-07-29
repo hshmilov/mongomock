@@ -56,6 +56,9 @@ class ForcepointCsvAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
+                if not device_raw.get('Hostname'):
+                    logger.warning(f'Bad device with no name {device_raw}')
+                    continue
                 device.hostname = device_raw.get('Hostname')
                 device.id = device.hostname
                 device.add_agent_version(agent=AGENT_NAMES.forcepoint_csv,

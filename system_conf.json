@@ -3,6 +3,7 @@
     "add-to-exclude": [
       "google_big_query",
       "nimbul",
+      "jita",
       "edfs_csv",
       "igar",
       "scep",

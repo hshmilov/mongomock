@@ -649,25 +649,25 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             ad_entity.extension_attribute_17 = raw_data.get('extensionAttribute17')
             ad_entity.extension_attribute_18 = raw_data.get('extensionAttribute18')
             ad_entity.extension_attribute_19 = raw_data.get('extensionAttribute19')
-            ad_entity.extension_attribute_1_date = parse_date(raw_data.get('extensionAttribute1'))
-            ad_entity.extension_attribute_2_date = parse_date(raw_data.get('extensionAttribute2'))
-            ad_entity.extension_attribute_3_date = parse_date(raw_data.get('extensionAttribute3'))
-            ad_entity.extension_attribute_4_date = parse_date(raw_data.get('extensionAttribute4'))
-            ad_entity.extension_attribute_5_date = parse_date(raw_data.get('extensionAttribute5'))
-            ad_entity.extension_attribute_6_date = parse_date(raw_data.get('extensionAttribute6'))
-            ad_entity.extension_attribute_7_date = parse_date(raw_data.get('extensionAttribute7'))
-            ad_entity.extension_attribute_8_date = parse_date(raw_data.get('extensionAttribute8'))
-            ad_entity.extension_attribute_9_date = parse_date(raw_data.get('extensionAttribute9'))
-            ad_entity.extension_attribute_10_date = parse_date(raw_data.get('extensionAttribute10'))
-            ad_entity.extension_attribute_11_date = parse_date(raw_data.get('extensionAttribute11'))
-            ad_entity.extension_attribute_12_date = parse_date(raw_data.get('extensionAttribute12'))
-            ad_entity.extension_attribute_13_date = parse_date(raw_data.get('extensionAttribute13'))
-            ad_entity.extension_attribute_14_date = parse_date(raw_data.get('extensionAttribute14'))
-            ad_entity.extension_attribute_15_date = parse_date(raw_data.get('extensionAttribute15'))
-            ad_entity.extension_attribute_16_date = parse_date(raw_data.get('extensionAttribute16'))
-            ad_entity.extension_attribute_17_date = parse_date(raw_data.get('extensionAttribute17'))
-            ad_entity.extension_attribute_18_date = parse_date(raw_data.get('extensionAttribute18'))
-            ad_entity.extension_attribute_19_date = parse_date(raw_data.get('extensionAttribute19'))
+            ad_entity.extension_attribute_1_date = parse_date(raw_data.get('extensionAttribute1'), dayfirst=True)
+            ad_entity.extension_attribute_2_date = parse_date(raw_data.get('extensionAttribute2'), dayfirst=True)
+            ad_entity.extension_attribute_3_date = parse_date(raw_data.get('extensionAttribute3'), dayfirst=True)
+            ad_entity.extension_attribute_4_date = parse_date(raw_data.get('extensionAttribute4'), dayfirst=True)
+            ad_entity.extension_attribute_5_date = parse_date(raw_data.get('extensionAttribute5'), dayfirst=True)
+            ad_entity.extension_attribute_6_date = parse_date(raw_data.get('extensionAttribute6'), dayfirst=True)
+            ad_entity.extension_attribute_7_date = parse_date(raw_data.get('extensionAttribute7'), dayfirst=True)
+            ad_entity.extension_attribute_8_date = parse_date(raw_data.get('extensionAttribute8'), dayfirst=True)
+            ad_entity.extension_attribute_9_date = parse_date(raw_data.get('extensionAttribute9'), dayfirst=True)
+            ad_entity.extension_attribute_10_date = parse_date(raw_data.get('extensionAttribute10'), dayfirst=True)
+            ad_entity.extension_attribute_11_date = parse_date(raw_data.get('extensionAttribute11'), dayfirst=True)
+            ad_entity.extension_attribute_12_date = parse_date(raw_data.get('extensionAttribute12'), dayfirst=True)
+            ad_entity.extension_attribute_13_date = parse_date(raw_data.get('extensionAttribute13'), dayfirst=True)
+            ad_entity.extension_attribute_14_date = parse_date(raw_data.get('extensionAttribute14'), dayfirst=True)
+            ad_entity.extension_attribute_15_date = parse_date(raw_data.get('extensionAttribute15'), dayfirst=True)
+            ad_entity.extension_attribute_16_date = parse_date(raw_data.get('extensionAttribute16'), dayfirst=True)
+            ad_entity.extension_attribute_17_date = parse_date(raw_data.get('extensionAttribute17'), dayfirst=True)
+            ad_entity.extension_attribute_18_date = parse_date(raw_data.get('extensionAttribute18'), dayfirst=True)
+            ad_entity.extension_attribute_19_date = parse_date(raw_data.get('extensionAttribute19'), dayfirst=True)
         except Exception:
             logger.exception(f'Could not parse extension attributes')
 
@@ -1276,6 +1276,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 # OS. we must change device.os only after figure_os which initializes it
                 device.figure_os(device_raw.get('operatingSystem', ''))
                 device.os.build = device_raw.get('operatingSystemVersion')
+                try:
+                    build = device.os.build
+                    if '(' in build and ')' in build:
+                        device.os.build = build.split('(')[1].split(')')[0]
+                except Exception:
+                    pass
                 device.os.sp = device_raw.get('operatingSystemServicePack')
 
                 device.device_managed_by = get_first_object_from_dn(device_raw.get('managedBy'))

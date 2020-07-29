@@ -531,9 +531,6 @@ class AggregatorService(Triggerable, PluginBase):
         start_time = time.time()
         run_identifier.update_status({adapter_name: AdapterStatuses.Fetching.name for adapter_name in adapters})
 
-        if self._notify_on_adapters is True:
-            self.create_notification(f'Starting to fetch devices for {"".join(adapters)}')
-        self.send_external_info_log(f'Starting to fetch device for {"".join(adapters)}')
         logger.info(f'Starting to fetch device for {"".join(adapters)}')
         try:
             data = self._request_insertion_from_adapters_async(adapters)
@@ -562,9 +559,6 @@ class AggregatorService(Triggerable, PluginBase):
         known_adapters_status[adapter_unique_name] = AdapterStatuses.Fetching.name
         run_identifier.update_status(known_adapters_status)
 
-        if self._notify_on_adapters is True:
-            self.create_notification(f'Starting to fetch device for {adapter_unique_name}')
-        self.send_external_info_log(f'Starting to fetch device for {adapter_unique_name}')
         logger.info(f'Starting to fetch device for {adapter_unique_name}')
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name)

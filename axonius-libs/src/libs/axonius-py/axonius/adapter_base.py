@@ -379,8 +379,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     user_age_cutoff = (user_age_cutoff[0], min(last_cycle_start, user_age_cutoff[1]))
         except Exception:
             logger.exception(f'Failed setting entities age cutoff with regards to last cycle start, continuing')
-        self.send_external_info_log(f'Cleaning devices and users that are before '
-                                    f'{device_age_cutoff}, {user_age_cutoff}')
         logger.info(f'Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}')
         devices_cleaned = self.__clean_entity(device_age_cutoff, EntityType.Devices)
         users_cleaned = self.__clean_entity(user_age_cutoff, EntityType.Users)
@@ -800,7 +798,6 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             error_msg = f'Adapter {self.plugin_name} had connection error' \
                         f' to server with the ID {client_name}. Error is {str(e2)}'
             self.create_notification(error_msg)
-            self.send_external_info_log(error_msg)
             self._log_activity_connection_failure(client_name, execption)
             if self.mail_sender and self._adapter_errors_mail_address:
                 email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
@@ -926,9 +923,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             raise adapter_exceptions.CredentialErrorException(
                 f'Credentials error for {client_name} on {self.plugin_unique_name}')
         except adapter_exceptions.AdapterException as e:
-            logger.exception(f'AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}')
+            logger.error(f'AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}')
             raise adapter_exceptions.AdapterException(
-                f'AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}')
+                f'AdapterException for {client_name} on {self.plugin_unique_name}')
         except func_timeout.exceptions.FunctionTimedOut:
             logger.exception(f'Timeout for {client_name} on {self.plugin_unique_name}')
             raise adapter_exceptions.AdapterException(f'Fetching has timed out')

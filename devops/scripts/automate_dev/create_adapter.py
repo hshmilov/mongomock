@@ -249,7 +249,7 @@ DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
     else:
         template = \
             '''DEVICE_PER_PAGE = 200
-MAX_NUMBER_OF_DEVICES = 2000000
+MAX_NUMBER_OF_DEVICES = 20000000
 '''
 
     with open(filename, 'w') as file_:

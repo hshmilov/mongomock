@@ -104,6 +104,12 @@ class SccmAdapter(AdapterBase, Configurable):
         network_drivers_data = ListField(DriverData, 'Network Drivers Data')
         bios_release_date = Field(datetime.datetime, 'Bios Release Date')
         sccm_groups_data = ListField(SccmGroupData, 'Groups Data')
+        is_online = Field(bool, 'Is Online')
+        is_on_internet = Field(bool, 'Is On Internet')
+        last_online_time = Field(datetime.datetime, 'Last Online Time')
+        last_offline_time = Field(datetime.datetime, 'Last Offline Time')
+        access_mp = Field(str, 'Access MP')
+        guard_compliance_state = Field(str, 'Credential Guard Compliance State')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -317,6 +323,35 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'problem adding memory stuff to {device_raw}')
                 device_manufacturer = None
+
+                try:
+                    if isinstance(device_raw['guard_compliance_data'], dict):
+                        guard_compliance_data = device_raw['guard_compliance_data']
+                        if not isinstance(guard_compliance_data, dict):
+                            guard_compliance_data = {}
+                        guard_compliance_state = guard_compliance_data.get('ComplianceState')
+                        if guard_compliance_state == '1':
+                            device.guard_compliance_state = 'Compliant'
+                        elif guard_compliance_state == '3':
+                            device.guard_compliance_state = 'Non-Compliant'
+                        elif guard_compliance_state == '4':
+                            device.guard_compliance_state = 'Not-Eligible'
+                except Exception:
+                    logger.exception(f'Problem getting guard compliance data data dor {device_raw}')
+                try:
+                    if isinstance(device_raw['online_data'], dict):
+                        online_data = device_raw['online_data']
+                        if not isinstance(online_data, dict):
+                            online_data = {}
+                        device.is_online = online_data.get('CNIsOnline')\
+                            if isinstance(online_data.get('CNIsOnline'), bool) else None
+                        device.last_online_time = parse_date(online_data.get('CNLastOnlineTime'))
+                        device.last_offline_time = parse_date(online_data.get('CNLastOfflineTime'))
+                        device.access_mp = online_data.get('CNAccessMP')
+                        device.is_on_internet = online_data.get('CNIsOnInternet') \
+                            if isinstance(online_data.get('CNIsOnInternet'), bool) else None
+                except Exception:
+                    logger.exception(f'Problem getting online data dor {device_raw}')
                 try:
                     if isinstance(device_raw['bios_data'], dict):
                         bios_data = device_raw['bios_data']

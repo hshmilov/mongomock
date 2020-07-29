@@ -2067,14 +2067,6 @@ class PluginBase(Configurable, Feature, ABC):
 
             time_for_client = datetime.now() - time_before_client
             total_seconds = time_for_client.total_seconds()
-            if self._notify_on_adapters is True and (total_seconds or inserted_data_count) \
-                    and not 'general_info' in plugin_name and not should_log_info:
-                self.create_notification(
-                    f'Finished aggregating {entity_type} for client {client_name}, '
-                    f' aggregation took {str(total_seconds)} seconds and returned {inserted_data_count}.')
-                self.send_external_info_log(f'Finished aggregating {entity_type} for client {client_name}, '
-                                            f' aggregation took {str(total_seconds)} seconds and '
-                                            f'returned {inserted_data_count}.')
             if should_log_info is True:
                 logger.info(
                     f'Finished aggregating {entity_type} for client {client_name}, '
@@ -4658,6 +4650,10 @@ class PluginBase(Configurable, Feature, ABC):
                                 timestamp=datetime.now(),
                                 user=user_id,
                                 type=activity_type.value)
+        try:
+            self.send_external_info_log(message=str(new_activity_log))
+        except Exception:
+            logger.exception(f'Problem sending external log')
         self._audit_collection.insert_one(new_activity_log)
 
     @property

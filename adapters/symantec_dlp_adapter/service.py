@@ -138,6 +138,8 @@ class SymantecDlpAdapter(AdapterBase, Configurable):
                 device.id = str(device_id) + '_' + device_raw.get('AGENTNAME')
                 device.hostname = device_raw.get('AGENTNAME')
                 device.figure_os(device_raw.get('OSNAME'))
+                if device_raw.get('agentipaddress'):
+                    device.add_nic(ips=[device_raw.get('agentipaddress')])
                 device.add_agent_version(agent=AGENT_NAMES.symantec_dlp,
                                          version=device_raw.get('VERSION'),
                                          status=device_raw.get('STATUS'))

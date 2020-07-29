@@ -40,8 +40,8 @@ OS_DATA_QUERY = 'Select ResourceID, LastBootUpTime0 from v_GS_OPERATING_SYSTEM'
 
 
 QUERY_SOFTWARE = 'Select ResourceID, ProductName0, ProductVersion0 from v_GS_INSTALLED_SOFTWARE'
-QUERY_PATCH = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0 from v_GS_QUICK_FIX_ENGINEERING'
-QUERY_PATCH_2 = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0 from v_HS_QUICK_FIX_ENGINEERING'
+QUERY_PATCH = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0, InstalledOn0 from v_GS_QUICK_FIX_ENGINEERING'
+QUERY_PATCH_2 = 'Select ResourceID, Description0, FixComments0, InstallDate0, HotFixID0, InstalledOn0 from v_HS_QUICK_FIX_ENGINEERING'
 QUERY_PROGRAM = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS'
 QUERY_PROGRAM_2 = 'Select ResourceID, DisplayName0, Version0 from v_GS_ADD_REMOVE_PROGRAMS_64'
 BIOS_QUERY = 'Select ResourceID, SerialNumber0, Manufacturer0, ReleaseDate0 from v_GS_PC_BIOS'
@@ -70,3 +70,5 @@ NEW_SOFTWARE_QUERY = 'select ResourceID, ProductName, ProductVersion, CompanyNam
 APPLICATION_ASSIGNMENT_QUERY = 'select ApplicationName, CollectionID from v_ApplicationAssignment '
 SVC_QUERY = 'select DisplayName0, PathName0, ServiceType0, StartMode0, ResourceID, State0 from v_GS_SERVICE '
 MEM_QUERY = 'select TotalPhysicalMemory0, ResourceID from v_GS_X86_PC_MEMORY'
+ONLINE_QUERY = 'select CNIsOnline, MachineID, CNLastOnlineTime, CNLastOfflineTime, CNIsOnInternet, CNAccessMP from v_CollectionMemberClientBaselineStatus'
+GUARD_COMPLIANCE_QUERY = 'select ComplianceState, ResourceID from vdcmdeploymentsystemdetails'

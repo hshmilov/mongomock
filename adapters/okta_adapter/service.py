@@ -40,6 +40,7 @@ class OktaAdapter(AdapterBase, Configurable):
         worker_type = Field(str, 'Worker Type')
         worker_sub_type = Field(str, 'Worker Sub Type')
         user_type = Field(str, 'User Type')
+        hire_date = Field(datetime.datetime, 'Hire Date')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -116,6 +117,8 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_created = parse_date(user_raw.get('created'))
                 user.mail = profile.get('email')
+                user.employee_id = profile.get('employeeNumber')
+                user.hire_date = parse_date(profile.get('hire_date'))
                 user.username = profile.get('login') or user.mail
                 if not user.username:
                     # according to `user_adapter.py` - a username is required for every User adapter

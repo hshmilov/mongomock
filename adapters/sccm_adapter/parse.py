@@ -31,6 +31,28 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
     client_data = _create_sccm_client_connection(client_config, devices_fetched_at_a_time)
     client_data.set_devices_paging(devices_fetched_at_a_time)
     with client_data:
+        guard_compliance_dict = dict()
+        try:
+            if not device_id:
+                for guard_data in client_data.query(consts.GUARD_COMPLIANCE_QUERY):
+                    machine_id = guard_data.get('ResourceID')
+                    if not machine_id:
+                        continue
+                    guard_compliance_dict[machine_id] = guard_data
+        except Exception:
+            logger.exception(f'Problem with online dict')
+
+        online_dict = dict()
+        try:
+            if not device_id:
+                for online_data in client_data.query(consts.ONLINE_QUERY):
+                    machine_id = online_data.get('MachineID')
+                    if not machine_id:
+                        continue
+                    online_dict[machine_id] = online_data
+        except Exception:
+            logger.exception(f'Problem with online dict')
+
         product_files_dict = dict()
         try:
             if not device_id:
@@ -490,6 +512,8 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             device_raw['share_data'] = shares_dict.get(device_raw.get('ResourceID'))
             device_raw['disks_data'] = disks_dict.get(device_raw.get('ResourceID'))
             device_raw['svc_data'] = svc_dict.get(device_raw.get('ResourceID'))
+            device_raw['online_data'] = online_dict.get(device_raw.get('ResourceID'))
+            device_raw['guard_compliance_data'] = guard_compliance_dict.get(device_raw.get('ResourceID'))
             device_raw['top_data'] = asset_top_dict.get(device_raw.get('ResourceID'))
             device_raw['compliance_data'] = compliance_dict.get(device_raw.get('ResourceID'))
             device_raw['bios_data'] = asset_bios_dict.get(device_raw.get('ResourceID'))

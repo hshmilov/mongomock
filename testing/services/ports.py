@@ -234,6 +234,7 @@ DOCKER_PORTS = {
     'infinipoint-adapter':              9949,
     'auvik-adapter':                    9950,
     'microsoft-kms-adapter':            9951,
+    'remediant-secureone-adapter':      9952,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,

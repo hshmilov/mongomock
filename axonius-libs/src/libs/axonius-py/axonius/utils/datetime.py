@@ -56,7 +56,7 @@ def _parse_unix_timestamp(unix_timestamp):
         return None
 
 
-def parse_date(datetime_to_parse):
+def parse_date(datetime_to_parse, dayfirst=False):
     """
     Parses date and returns it as UTC
     """
@@ -77,7 +77,7 @@ def parse_date(datetime_to_parse):
             if datetime_from_str and is_date_real(datetime_from_str):
                 return datetime_from_str
         datetime_to_parse = str(datetime_to_parse)
-        d = dateutil.parser.parse(datetime_to_parse).astimezone(timezone.utc)
+        d = dateutil.parser.parse(datetime_to_parse, dayfirst=dayfirst).astimezone(timezone.utc)
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None
         return d if is_date_real(d) else None

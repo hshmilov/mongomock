@@ -556,9 +556,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         # Change current phase
         self.current_phase = scheduler_consts.Phases.Research
-        if self._notify_on_adapters is True:
-            self.create_notification(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
-        self.send_external_info_log(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
         logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
         try:
             yield
@@ -598,7 +595,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.debug(f'Creating notification for subphase {subphase}')
                 self.create_notification(f'Started Subphase {subphase}')
             logger.debug(f'Trying to send syslog for subphase {subphase}')
-            self.send_external_info_log(f'Started Subphase {subphase}')
 
         def _complete_subphase():
             _log_activity_phase(AuditAction.CompletePhase)
@@ -757,9 +753,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
             _complete_subphase()
             _log_activity_research(AuditAction.Complete)
-            if self._notify_on_adapters is True:
-                self.create_notification(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
-            self.send_external_info_log(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
 
             try:
                 if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):

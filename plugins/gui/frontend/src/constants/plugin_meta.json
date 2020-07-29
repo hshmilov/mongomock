@@ -85,6 +85,11 @@
     "link": "https://docs.axonius.com/docs/remediant-secureone",
     "description": "Remediant SecureONE is a privileged access management solution that enables control and insight over the distribution, usage, and protection of privileged access across enterprise environments."
   },
+  "remediant_secureone_adapter": {
+    "title": "Remediant SecureONE (JITA)",
+    "link": "https://docs.axonius.com/docs/remediant-secureone",
+    "description": "Remediant SecureONE is a privileged access management solution that enables control and insight over the distribution, usage, and protection of privileged access across enterprise environments."
+  },
   "kenna_adapter": {
     "title": "Kenna Security Platform",
     "link": "https://docs.axonius.com/docs/kenna-security-platform",
@@ -1393,7 +1398,7 @@
     "link": "https://docs.axonius.com/docs/microsoft-azure-and-azure-active-directory-ad",
     "description": "Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers."
   },
-    "privx_adapter": {
+  "privx_adapter": {
     "title": "PrivX",
     "link": "https://docs.axonius.com/docs/privx",
     "description": "PrivX provides privileged access to on-prem and cloud environments, including control access to servers, network devices and other critical infrastructure according to user roles and privileges."

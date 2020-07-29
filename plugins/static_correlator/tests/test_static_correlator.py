@@ -686,9 +686,10 @@ def test_rule_correlate_ad_sccm_id():
 
 def test_rule_correlate_ad_azure_ad():
     device1 = get_raw_device(plugin_name=ACTIVE_DIRECTORY_PLUGIN_NAME, device_id='SomeDeviceId',
+                             hostname='ofir',
                              more_params=[('ad_name', 'ofir')])
     device2 = get_raw_device(plugin_name='azure_ad_adapter', device_id='SomeDeviceId',
-                             more_params=[('azure_display_name', 'Ofir')])
+                             more_params=[('azure_display_name', 'Ofir'), ('name', 'Ofir')])
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same display name', 1)
 
 

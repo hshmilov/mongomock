@@ -6,7 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from randori_adapter.connection import RandoriConnection
 from randori_adapter.client_id import get_client_id
@@ -21,6 +21,7 @@ class RandoriAdapter(AdapterBase):
         max_confidence = Field(int, 'Max Confidence')
         ip_count = Field(int, 'IP Count')
         target_temptation = Field(int, 'Target Temptation')
+        device_tags = ListField(str, 'Custom Device Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -105,7 +106,7 @@ class RandoriAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-nested-blocks
+    # pylint: disable=too-many-nested-blocks, too-many-branches
     def _create_device(self, device_raw, hostname_to_ip_dict, ips_data_dict, port_info_dict):
         try:
             device = self._new_device_adapter()
@@ -118,6 +119,14 @@ class RandoriAdapter(AdapterBase):
             device.confidence = device_raw.get('confidence') if isinstance(device_raw.get('confidence'), int) else None
             device.first_seen = parse_date(device_raw.get('first_seen'))
             device.last_seen = parse_date(device_raw.get('last_seen'))
+            try:
+                custom_tags = device_raw.get('tags')
+                if not isinstance(custom_tags, dict):
+                    custom_tags = {}
+                for custom_tag_name in custom_tags.keys():
+                    device.device_tags.append(custom_tag_name)
+            except Exception:
+                logger.exception(f'Problem with custom tags')
             device.max_confidence = device_raw.get('max_confidence')\
                 if isinstance(device_raw.get('max_confidence'), int) else None
             device.ip_count = device_raw.get('ip_count') if isinstance(device_raw.get('ip_count'), int) else None

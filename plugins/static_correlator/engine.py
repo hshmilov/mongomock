@@ -255,6 +255,21 @@ def compare_asset_hosts_full(adapter_device1, adapter_device2):
     return False
 
 
+def get_host_or_asset_full(adapter_device):
+    asset = get_hostname(adapter_device) or get_asset_name(adapter_device)
+    if asset:
+        return asset.lower().strip()
+    return None
+
+
+def compare_hosts_asset_full(adapter_device1, adapter_device2):
+    asset1 = get_host_or_asset_full(adapter_device1)
+    asset2 = get_host_or_asset_full(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def get_sccm_server(adapter_device):
     return adapter_device['data'].get('sccm_server')
 
@@ -489,7 +504,7 @@ def cb_defense_basic_id_condradict(adapter_device1, adapter_device2):
 
 
 def force_mac_adapters(adapter_device):
-    return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter']
+    return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter', 'aws_adapter']
 
 # pylint: disable=global-statement
 
@@ -729,6 +744,21 @@ def get_v_dash_name(adapter_device):
 def compare_v_dash_name(adapter_device1, adapter_device2):
     asset1 = get_v_dash_name(adapter_device1)
     asset2 = get_v_dash_name(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def get_host_asset_azure_ad(adapter_device):
+    asset = get_asset_or_host_full(adapter_device)
+    if asset:
+        return asset.split('.')[0].strip('$')
+    return None
+
+
+def host_asset_azure_ad_do_not_contradict(adapter_device1, adapter_device2):
+    asset1 = get_host_asset_azure_ad(adapter_device1)
+    asset2 = get_host_asset_azure_ad(adapter_device2)
     if asset1 and asset2 and asset1 == asset2:
         return True
     return False
@@ -1170,10 +1200,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on Twistlock')
         filtered_adapters_list = filter(is_from_twistlock_or_cloud,
-                                        filter(get_asset_or_host_full, adapters_to_correlate))
+                                        filter(get_host_or_asset_full, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
-                                      [get_asset_or_host_full],
-                                      [compare_asset_hosts_full],
+                                      [get_host_or_asset_full],
+                                      [compare_hosts_asset_full],
                                       [is_from_twistlock],
                                       [],
                                       {'Reason': 'They have the same hostname are twistlock'},
@@ -1258,8 +1288,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_azure_ad_id],
                                       [compare_azure_ad_id],
-                                      [],
-                                      [],
+                                      [lambda x: x['data'].get('azure_ad_id')],
+                                      [host_asset_azure_ad_do_not_contradict],
                                       {'Reason': 'They have the same AZURE AD ID'},
                                       CorrelationReason.StaticAnalysis)
 
@@ -1273,7 +1303,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_ad_name_or_azure_display_name],
                                       [compare_ad_name_or_azure_display_name],
                                       [is_from_ad],
-                                      [domain_do_not_contradict, hostnames_do_not_contradict],
+                                      [domain_do_not_contradict, hostnames_do_not_contradict,
+                                       host_asset_azure_ad_do_not_contradict],
                                       {'Reason': 'They have the same display name'},
                                       CorrelationReason.StaticAnalysis)
 

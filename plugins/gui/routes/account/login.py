@@ -79,8 +79,6 @@ class Login:
         log_metric(logger, SystemMetric.LOGIN_MARKER, 0)
         user_name = user.get('user_name')
         source = user.get('source')
-        if not self.is_axonius_user():
-            self.send_external_info_log(f'UI Login with user: {user_name} of source {source}')
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'enabled'):
             user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
@@ -111,11 +109,9 @@ class Login:
         }))
         if user_from_db is None:
             logger.info(f'Unknown user {user_name} tried logging in')
-            self.send_external_info_log(f'Unknown user {user_name} tried logging in')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
         if not bcrypt.verify(password, user_from_db['password']):
-            self.send_external_info_log(f'User {user_name} tried logging in with wrong password')
             logger.info(f'User {user_name} tried logging in with wrong password')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
