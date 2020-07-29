@@ -1,4 +1,5 @@
 import logging
+import time
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -15,6 +16,33 @@ class DeepSecurityConnection(RESTConnection):
                                   'Accept': 'application/json', 'api-version': 'v1'},
                          **kwargs)
         self._permanent_headers['api-secret-key'] = self._apikey
+
+    # pylint: disable=arguments-differ
+    def _do_request(self, *args, **kwargs):
+        kwargs.pop('raise_for_status', None)
+        kwargs.pop('use_json_in_response', None)
+        kwargs.pop('return_response_raw', None)
+        resp_raw = super()._do_request(
+            *args,
+            raise_for_status=False,
+            use_json_in_response=False,
+            return_response_raw=True,
+            **kwargs
+        )
+        if resp_raw.status_code == 429:
+            try:
+                retry_after = resp_raw.headers.get('Retry-After') or resp_raw.headers.get('retry-after')
+                if retry_after:
+                    logger.info(f'Got 429, sleeping for {retry_after}')
+                else:
+                    logger.info(f'Got 429 with no retry-after header, sleeping for 3')
+                    retry_after = 2
+                time.sleep(int(retry_after) + 1)
+            except Exception:
+                time.sleep(6)
+            return super()._do_request(*args, **kwargs)
+
+        return self._handle_response(resp_raw)
 
     def _connect(self):
         if not self._apikey:

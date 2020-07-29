@@ -990,6 +990,9 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             plugin_settings = self.db.plugins.get_plugin_settings(adapter_name)
             adapter_config = plugin_settings.configurable_configs
             schedule_settings = adapter_config.discovery_configuration.get(DISCOVERY_REPEAT_ON)
+            if isinstance(schedule_settings, list):
+                # Already migrated
+                continue
             if schedule_settings:
                 self.db.plugins.get_plugin_settings(adapter_name).configurable_configs.update_config(
                     'DiscoverySchema',

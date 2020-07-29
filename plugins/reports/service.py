@@ -22,7 +22,7 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_id
 from axonius.utils.files import get_local_config_file
-from axonius.utils.datetime import time_diff
+from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
@@ -595,9 +595,8 @@ class ReportsService(Triggerable, PluginBase):
         if trigger.period == TriggerPeriod.never and not manual:
             return result
 
-        if trigger.last_triggered and trigger.period != TriggerPeriod.all and not manual:
-            if not self._has_trigger_time_arrived(trigger):
-                return False
+        if trigger.period != TriggerPeriod.all and not manual and not self._has_trigger_time_arrived(trigger):
+            return result
 
         if manual_input:
             query_result = self.get_selected_entities(
@@ -671,29 +670,23 @@ class ReportsService(Triggerable, PluginBase):
            time_diff(current_time, scheduled_run_time).seconds > self.REPORT_TRIGGER_RUN_THRESHOLD:
             return False
 
-        # check if already ran today
-        if time_diff(current_date, trigger.last_triggered).seconds < self.REPORT_TRIGGER_RUN_THRESHOLD:
-            return False
-
         if trigger.period == TriggerPeriod.daily:
             # check if X days have passed since last run
-            return (current_date - trigger.last_triggered).days == trigger.period_recurrence
+            return (not trigger.last_triggered or
+                    days_diff(current_date, trigger.last_triggered) == trigger.period_recurrence)
+
         if trigger.period == TriggerPeriod.weekly:
             # check if weekdays match
             current_weekday = str(current_date.weekday())
             return current_weekday in trigger.period_recurrence
+
         if trigger.period == TriggerPeriod.monthly:
             current_day = str(current_date.day)
-            for day in trigger.period_recurrence:
-                # check if days of month match
-                if day != '29':
-                    if day == current_day:
-                        return True
-                else:
-                    # check if current day is last day of the month
-                    tomorrow = current_date + datetime.timedelta(days=1)
-                    if tomorrow.month != current_date.month:
-                        return True
+            tomorrow = current_date + datetime.timedelta(days=1)
+            if tomorrow.month != current_date.month:
+                # last day of month is marked in the recurrence as '29'
+                current_day = '29'
+            return current_day in trigger.period_recurrence
 
         return False
 
