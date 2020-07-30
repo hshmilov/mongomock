@@ -145,7 +145,7 @@ class WmiConnection:
         return resolved_hosts
 
     def get_device_list(self):
-        resolved_hosts = self.resolve_hosts(self._targets, self._dns_servers)
+        resolved_hosts = self.resolve_hosts(self._targets, self._dns_servers, self._hostname_for_validation)
         if not resolved_hosts:
             logger.error('Bad hostnames/ips')
             return

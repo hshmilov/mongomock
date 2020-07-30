@@ -17,7 +17,8 @@ from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.gui_consts import ParallelSearch
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
-                                          PLUGIN_UNIQUE_NAME, PARALLEL_ADAPTERS)
+                                          PLUGIN_UNIQUE_NAME, PARALLEL_ADAPTERS, PLUGIN_NAME,
+                                          ACTIVE_DIRECTORY_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
@@ -57,8 +58,10 @@ class AggregatorService(Triggerable, PluginBase):
     def _migrate_async_db(self):
         if self.db_async_schema_version < 1:
             self._update_async_schema_version_1()
+        if self.db_async_schema_version < 2:
+            self._update_async_schema_version_2()
 
-        if self.db_async_schema_version != 1:
+        if self.db_async_schema_version != 2:
             logger.error(f'Upgrade failed, db_async_schema_version is {self.db_async_schema_version}')
 
     def _delayed_initialization(self):
@@ -663,3 +666,62 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception as e:
             logger.exception(f'Exception while upgrading aggregator db to async version 1. Details: {e}')
             raise
+
+    def _update_async_schema_version_2(self):
+        logger.info(f'Upgrading to schema version 2 - migrate wmi adapter hostname')
+        try:
+            to_fix = []
+            internal_axon_id = None
+            count = 0
+            for device in self.devices_db.find({
+                'tags': {
+                    '$elemMatch': {'$and': [
+                        {'name': 'wmi_adapter_0'},
+                        {'data.hostname': {'$exists': True}}
+                    ]
+                    }}
+            }):
+                try:
+                    internal_axon_id = device.get('internal_axon_id')
+                    try:
+                        wmi_tag = [tag for tag in device.get('tags', []) if tag['name'] == 'wmi_adapter_0'][0]
+                        associated_adapters = wmi_tag.get('associated_adapters', [])
+                        wmi_tag_hostname = wmi_tag.get('data', {}).get('hostname', None)
+                        if wmi_tag_hostname and associated_adapters:
+                            associated_adapter_hostname = [
+                                adapter for adapter in device.get('adapters', [])
+                                if adapter[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]][0]. \
+                                get('data', {}).get('hostname', None)
+                        else:
+                            continue
+                    except Exception as e:
+                        logger.debug(f'Error while getting hostname for {internal_axon_id}: {e}')
+                        continue
+                    if associated_adapter_hostname and wmi_tag_hostname and \
+                            not associated_adapter_hostname.lower().startswith(wmi_tag_hostname.lower()):
+                        new_tags_value = [
+                            tag for tag in device.get('tags', []) if tag.get('name', '') != 'wmi_adapter_0'
+                        ]
+                        to_fix.append(pymongo.operations.UpdateOne(
+                            {'internal_axon_id': internal_axon_id},
+                            {
+                                '$set': {'tags': new_tags_value}
+                            }
+                        ))
+                    if len(to_fix) % 2500 == 0 and len(to_fix) != 0:
+                        count += 1
+                        logger.info(f'Updated {count * 2500} entities')
+                        self.devices_db.bulk_write(to_fix, ordered=False)
+                        to_fix.clear()
+                except Exception as e:
+                    logger.debug(f'Error while migrating device {internal_axon_id}: {e}')
+                if to_fix:
+                    logger.info(f'Finished updating {count * 2500 + len(to_fix)} entities')
+                    self.devices_db.bulk_write(to_fix, ordered=False)
+                    to_fix.clear()
+            self.db_async_schema_version = 2
+        except BulkWriteError as e:
+            logger.error(f'BulkWriteError: {e.details}')
+            raise
+        except Exception as e:
+            logger.exception(f'Exception while upgrading aggregator db to async version 2. Details: {e}')
