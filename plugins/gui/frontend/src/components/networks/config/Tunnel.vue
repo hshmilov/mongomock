@@ -331,12 +331,6 @@ export default {
       }
     },
     async saveConfig() {
-      if (this.emailList.length > 0 || this.emailList.emailList.length > 0) {
-        this.checkEmptySettings('send_emails');
-        if (this.anyEmptySettings) {
-          return;
-        }
-      }
       await this.saveTunnelEmailsList(this.emailList.emailList).then(() => {}).catch(() => {
         this.message = 'A problem occured while trying to save the tunnel settings';
       });

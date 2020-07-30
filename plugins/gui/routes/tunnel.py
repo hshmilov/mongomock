@@ -73,8 +73,13 @@ class Tunnel:
             self.create_notification('Tunnel is disconnected')
             self.send_tunnel_status_update_email()
             self.tunnel_status = False
-            log_metric(logger, metric_name=TunnelMetrics.TUNNEL_DISCONNECTED,
-                       metric_value=0, details=self.saas_params.get('COMPANY_FOR_SIGNUP', ''))
+            log_metric(logger,
+                       metric_name=TunnelMetrics.TUNNEL_DISCONNECTED,
+                       metric_value=0,
+                       company_name=self.saas_params.get('COMPANY_FOR_SIGNUP', ''),
+                       email_recipients=self._get_tunnel_email_recipients(),
+                       web_url=self.saas_params.get('WEB_URL', ''),
+                       smtp_enabled_in_client=self._email_settings['enabled'] if self._email_settings else False)
 
     def _tunnel_is_up(self):
         if not self.tunnel_status:
@@ -174,9 +179,12 @@ class Tunnel:
                                                    recipients)
                 email.send(f'Axonius Tunnel is disconnected since'
                            f' {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} UTC.\n<br>'
-                           f'A connection with the Axonius Tunnel is required to fetch data from various adapters.'
+                           f'Axonius is unable to connect to the Tunnel and will not be able to use it to fetch data '
+                           f'from the sources of specific adapters.'
+                           f'<br>Please check the Tunnel status in the Tunnel Settings page.'
                            f' For details, see <a href="https://docs.axonius.com/docs/installing-axonius-tunnel">'
-                           f'Installing Axonius Tunnel</a>')
+                           f'Installing Axonius Tunnel</a><br>'
+                           f'Use this link to access your Axonius instance: {self.saas_params.get("WEB_URL", "")}')
 
             except SMTPDataError:
                 logger.error('Error while contacting SMTP Server', exc_info=True)
