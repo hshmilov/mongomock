@@ -58,6 +58,7 @@ class ChartTitle(Enum):
     adapter_segment = 'Adapter Segmentation'
     abstract = 'Field Summary'
     timeline = 'Query Timeline'
+    matrix = 'Matrix Data'
 
     @classmethod
     def from_name(cls, name):
