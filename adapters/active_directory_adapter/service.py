@@ -884,7 +884,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     user.sw_hw_segment = user_raw.get('sEHWSegment')
                     user.se_job_code = user_raw.get('sEjobCode')
                     user.se_guid_manager = user_raw.get('sEguidManager')
-                    user.user_department = user_raw.get('sEdepartment')
+                    if user_raw.get('sEdepartment'):
+                        user.user_department = user_raw.get('sEdepartment')
                     user.se_department_role_title = user_raw.get('sEdepartmentRoleTitle')
                     user.se_sub_functional_area = user_raw.get('sEsubFunctionalArea')
                     user.director_two = user_raw.get('cwDirectorTwo')
