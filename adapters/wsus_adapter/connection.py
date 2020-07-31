@@ -15,7 +15,7 @@ WMI_NAMESPACE = '//./root/cimv2'
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
 MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
-DEVICE_PER_PAGE = 200
+DEVICE_PER_PAGE = 20  # 200 is too much for the network / memory of the WSUS server
 MAX_DEVICES = 2000000
 
 
@@ -149,10 +149,16 @@ class WsusWmiConnection:
         return None
 
     @staticmethod
-    def _prepare_pscommand_paged(command: str, start: int = 0, limit: int = DEVICE_PER_PAGE):
-        return f'powershell.exe -c {command} | ' \
-               f'Select-Object -Skip {start} -First {limit} | ' \
-               f'ConvertTo-Json'.replace('|', '^|')
+    def _paginate_pscommand(command: str, start: int = 0, limit: int = DEVICE_PER_PAGE):
+        return f'{command} | Select-Object -Skip {start} -First {limit}'
+
+    @staticmethod
+    def _pscommand_to_json(command):
+        return f'{command} | ConvertTo-Json'
+
+    @staticmethod
+    def _wrap_and_escape_pscommand(command):
+        return f'powershell.exe -c {command}'.replace('|', '^|')
 
     def _get_device_count(self):
         command = ['powershell.exe -c (Get-WsusServer).GetComputerTargetCount()']
@@ -169,11 +175,15 @@ class WsusWmiConnection:
 
         count_devices = self._get_device_count()
         get_computer_targets_cmd = '(Get-WsusServer).GetComputerTargets()'
-        get_updates_summary_cmd = f'{get_computer_targets_cmd}.GetUpdateInstallationSummary()'
         max_devices = min(count_devices, MAX_DEVICES)
         for start in range(0, max_devices, DEVICE_PER_PAGE):
-            get_targets_cmd = self._prepare_pscommand_paged(get_computer_targets_cmd, start)
-            get_summary_cmd = self._prepare_pscommand_paged(get_updates_summary_cmd, start)
+            get_targets_cmd_paged = self._paginate_pscommand(get_computer_targets_cmd, start)
+            get_summary_cmd_paged = f'({get_targets_cmd_paged}).GetUpdateInstallationSummary()'
+            get_targets_cmd = self._wrap_and_escape_pscommand(
+                self._pscommand_to_json(get_targets_cmd_paged))
+            get_summary_cmd = self._wrap_and_escape_pscommand(
+                self._pscommand_to_json(get_summary_cmd_paged)
+            )
             logger.info(f'Getting next {DEVICE_PER_PAGE} devices, progress: {start}/{max_devices}')
             try:
                 yield self._get_wmi_output([get_targets_cmd, get_summary_cmd])
