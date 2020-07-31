@@ -261,18 +261,20 @@ class IbossCloudAdapter(AdapterBase):
             subnet_policies = []
             ip = device_raw.get('ipAddress')
             mac = device_raw.get('macAddress')
-            for network, policy_dict in policies_by_network.items():
+            for network, policies_list in policies_by_network.items():
                 if ipaddress.ip_address(ip) in network:
                     subnets.append(str(network))
 
-                    subnet_policy = SubnetPolicy()
-                    subnet_policy.id = policy_dict.get('id')
-                    subnet_policy.note = policy_dict.get('note')
-                    subnet_policy.vlan_id = policy_dict.get('vlanId')
-                    subnet_policy.tunnel_type = policy_dict.get('tunnelType')
-                    subnet_policy.ip_address = policy_dict.get('ipAddress')
+                    for policy_dict in policies_list or []:
+                        if isinstance(policy_dict, dict):
+                            subnet_policy = SubnetPolicy()
+                            subnet_policy.id = policy_dict.get('id')
+                            subnet_policy.note = policy_dict.get('note')
+                            subnet_policy.vlan_id = policy_dict.get('vlanId')
+                            subnet_policy.tunnel_type = policy_dict.get('tunnelType')
+                            subnet_policy.ip_address = policy_dict.get('ipAddress')
 
-                    subnet_policies.append(subnet_policy)
+                            subnet_policies.append(subnet_policy)
             device.subnet_policies = subnet_policies
             device.add_nic(mac=mac, ips=[ip], subnets=subnets)
 

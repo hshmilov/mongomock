@@ -38,6 +38,8 @@ class ApplicationData(SmartJsonClass):
     application_owner = Field(str, 'Application Owner')
     application_url = Field(str, 'Application URL')
     description = Field(str, 'Application Description')
+    is_pg = Field(bool, 'PG')
+    is_abb = Field(bool, 'ABB')
 
 
 class IgarAdapter(AdapterBase):
@@ -77,6 +79,8 @@ class IgarAdapter(AdapterBase):
         ci_number = Field(str, 'CI Number')
         server_environent_supported_by = Field(str, 'Server Environent Supported By')
         manua_host_ip_address = Field(str, 'Manual Host IP Address')
+        is_pg = Field(bool, 'PG')
+        is_abb = Field(bool, 'ABB')
         # network equipment stuff
         att_active = Field(str, 'ATTActive')
         addr_geid = Field(str, 'Address GEID')
@@ -269,7 +273,10 @@ class IgarAdapter(AdapterBase):
                     owning_division_code=application_raw.get('Owning_Division_Code'),
                     application_owner=application_owner,
                     application_url=application_raw.get('ApplicationUrl'),
-                    description=application_raw.get('Application_description'))
+                    description=application_raw.get('Application_description'),
+                    is_abb=self._parse_bool(application_raw.get('ABB')),
+                    is_pg=self._parse_bool(application_raw.get('PG'))
+                )
                 application_owner = application_owner.lower()
                 users_data_dict[application_owner].append(('app', application_data))
             except Exception:
@@ -427,7 +434,10 @@ class IgarAdapter(AdapterBase):
                     application_owner=application_raw.get(
                         'Application_Owner') or application_raw.get('ApplicationOwner'),
                     application_url=application_raw.get('ApplicationUrl'),
-                    description=application_raw.get('Application_description'))
+                    description=application_raw.get('Application_description'),
+                    is_abb=self._parse_bool(application_raw.get('ABB')),
+                    is_pg=self._parse_bool(application_raw.get('PG'))
+                )
                 application_data_dict[application_id] = application_data
             except Exception:
                 logger.exception(f'Problem with application raw {application_raw}')
@@ -532,6 +542,8 @@ class IgarAdapter(AdapterBase):
                 device.ci_number = device_raw.get('CINumber')
                 device.server_environent_supported_by = device_raw.get('Server_Environent_Supported_By') or \
                     device_raw.get('ServerEnvironentSupportedBy')
+                device.is_pg = self._parse_bool(device_raw.get('PG'))
+                device.is_abb = self._parse_bool(device_raw.get('ABB'))
                 device.device_type = 'Server'
                 device.set_raw(device_raw)
                 yield device
