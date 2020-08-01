@@ -1190,6 +1190,9 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 adapter_name = adapter[PLUGIN_NAME]
                 plugin_settings = self.db.plugins.get_plugin_settings(adapter_name)
                 adapter_config = plugin_settings.configurable_configs
+                if adapter_config.discovery_configuration is None:
+                    # Old version probably custom discovery not available yet
+                    continue
                 schedule_settings = adapter_config.discovery_configuration.get(DISCOVERY_REPEAT_ON)
                 if isinstance(schedule_settings, list):
                     # Already migrated
