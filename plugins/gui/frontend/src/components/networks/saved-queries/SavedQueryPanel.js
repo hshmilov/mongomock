@@ -288,6 +288,7 @@ export default {
       this.$emit('run', this.queryId);
     },
     onClose() {
+      this.reset();
       this.$emit('close');
     },
     genQueryExpressionMarkup(usecase) {
