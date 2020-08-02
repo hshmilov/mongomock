@@ -44,6 +44,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
+from axonius.saas.input_params import read_saas_input_params
 from axonius.thread_stopper import StopThreadException
 from axonius.utils.backup import backup_to_s3, backup_to_external
 from axonius.utils.datetime import time_diff
@@ -97,13 +98,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                           max_instances=1)
         self.__realtime_scheduler.start()
 
-        self.__tunnel_status_scheduler = LoggedBackgroundScheduler(
-            executors={'default': ThreadPoolExecutorApscheduler(1)})
-        self.__tunnel_status_scheduler.add_job(func=self.__run_tunnel_check,
-                                               trigger=IntervalTrigger(minutes=TUNNEL_STATUS_CHECK_INTERVAL),
-                                               next_run_time=datetime.now(),
-                                               max_instances=1)
-        self.__tunnel_status_scheduler.start()
+        if read_saas_input_params():
+            self.__tunnel_status_scheduler = LoggedBackgroundScheduler(
+                executors={'default': ThreadPoolExecutorApscheduler(1)})
+            self.__tunnel_status_scheduler.add_job(func=self.__run_tunnel_check,
+                                                   trigger=IntervalTrigger(minutes=TUNNEL_STATUS_CHECK_INTERVAL),
+                                                   next_run_time=datetime.now(),
+                                                   max_instances=1)
+            self.__tunnel_status_scheduler.start()
 
         self.__custom_discovery_scheduler = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
