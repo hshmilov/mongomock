@@ -15,7 +15,7 @@ class CentrifyConnection(RESTConnection):
         self._app_id = app_id
         self._scope = scope
         super().__init__(*args, url_base_prefix='',
-                         headers={'Content-Type': 'application/json',
+                         headers={'Content-Type': 'application/x-www-form-urlencoded',
                                   'Accept': 'application/json'},
                          **kwargs)
         self._token = None  # auth token
@@ -25,12 +25,16 @@ class CentrifyConnection(RESTConnection):
         # API docs here are bad.
         # Details: https://developer.centrify.com/docs/client-credentials-flow#step-5-develop-a-client
         url = f'{URL_GET_TOKEN}/{self._app_id}'
+        # Body should not be json,
+        # And should be formatted pretty much like url params.
+        # See powershell sample (verify v.s. REST Sandbox like GetSandbox) at:
+        # https://github.com/centrify/centrify-samples-powershell/blob/master/module/Centrify.Samples.PowerShell.psm1
         body_params = {
             'grant_type': GRANT_TYPE_CLIENT,
             'scope': self._scope
         }
         try:
-            response = self._post(url, body_params=body_params, do_basic_auth=True)
+            response = self._post(url, body_params=body_params, do_basic_auth=True, use_json_in_body=False)
             if 'access_token' not in response:
                 raise RESTException(f'Bad response when trying to get token: {response}')
             self._token = response['access_token']
