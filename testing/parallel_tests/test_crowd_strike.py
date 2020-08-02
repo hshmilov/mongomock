@@ -1,4 +1,3 @@
-import pytest
 # we need fixture so ignore unused
 # pylint: disable=W0611
 from services.adapters.crowd_strike_service import (CrowdStrikeService,
@@ -28,7 +27,3 @@ class TestCrowdStrikeAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip('Not working')
-    def test_fetch_devices(self):
-        pass
