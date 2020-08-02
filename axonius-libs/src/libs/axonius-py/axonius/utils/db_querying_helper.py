@@ -114,6 +114,14 @@ def _perform_find(entity_views_db,
         if default_sort:
             # Default sort by adapters list size and then Mongo id (giving order of insertion)
             find_sort.append((ADAPTERS_LIST_LENGTH, pymongo.DESCENDING))
+    elif any(x for x in find_sort if x[0] == 'adapters') and entity_type in (EntityType.Devices, EntityType.Users):
+        # Adapters sort is based on the adapter_list_length value
+        for i, v in enumerate(find_sort):
+            if v[0] == 'adapters':
+                break
+        # pylint: disable=undefined-loop-variable
+        find_sort.append((ADAPTERS_LIST_LENGTH, v[1]))
+        del find_sort[i]
     return entity_views_db.find(filter=view_filter,
                                 sort=find_sort,
                                 projection=projection,

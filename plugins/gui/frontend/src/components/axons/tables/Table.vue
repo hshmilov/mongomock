@@ -241,7 +241,7 @@ export default {
         || this.getExcludeAdapters(fieldName).length);
     },
     sortable(field) {
-      return (this.onClickCol !== undefined) && field.name !== 'adapters';
+      return (this.onClickCol !== undefined);
     },
     toggleColumnFilter(fieldName) {
       this.filterColumnName = fieldName;
