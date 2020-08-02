@@ -9,6 +9,7 @@
       @refresh="refreshSettings"
       @action="actionToggle"
       @toaster="setTostaterMsg"
+      :disabled="!canUpdateSettings"
     />
     <XImportCertAndKeyModal
       v-if="importCertAndKeyActive"
@@ -122,6 +123,7 @@
       title="Run"
       type="primary"
       @click="saveCertificateSettings"
+      :disabled="!canUpdateSettings"
     >Save</XButton>
     <div
       v-if="error"
@@ -232,6 +234,10 @@ export default {
       },
       mutualTLSRequiredItems(state) {
         return state.settings.configurable.gui.GuiService.schema.items.find((item) => item.name == 'mutual_tls_settings').required;
+      },
+      canUpdateSettings() {
+        return this.$can(this.$permissionConsts.categories.Settings,
+          this.$permissionConsts.actions.Update);
       },
     }),
     ...mapGetters({
