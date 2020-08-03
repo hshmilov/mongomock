@@ -134,6 +134,8 @@ class DevicesPage(EntitiesPage):
         self.open_actions_menu()
         self.click_actions_enforce_button(self.TABLE_ACTIONS_ADD_ENFORCE)
         self.wait_for_element_present_by_css(self.ENFORCEMENT_PANEL_CONTENT_CSS, is_displayed=True)
+        # the autofocus has debounce for 500 ms.
+        time.sleep(0.6)
 
     def open_action_tag_config(self):
         self.find_element_by_text(ActionCategory.Utils).click()

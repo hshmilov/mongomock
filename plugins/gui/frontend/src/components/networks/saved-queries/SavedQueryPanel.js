@@ -429,8 +429,7 @@ export default {
     ]);
 
     return (
-      this.visible
-        ? <x-side-panel
+       <x-side-panel
             visible={this.visible}
             mask={!this.keepPanelStatic}
             panel-container={this.getSidePanelContainer}
@@ -500,7 +499,7 @@ export default {
                     }
                 </div>
             </div>
-        </x-side-panel> : null
+        </x-side-panel>
     );
   },
 };

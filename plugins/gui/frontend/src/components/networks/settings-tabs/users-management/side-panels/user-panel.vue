@@ -210,8 +210,7 @@ export default {
   // eslint-disable-next-line no-unused-vars
   render() {
     return (
-      this.visible
-        ? (<XSidePanel
+      <XSidePanel
         visible={this.visible}
         title={this.title}
         panel-class="user-panel"
@@ -243,7 +242,7 @@ export default {
             <XButton type="primary" onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
           </div>
         </div>
-      </XSidePanel>) : null
+      </XSidePanel>
     );
   },
 };

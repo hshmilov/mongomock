@@ -118,7 +118,7 @@ class Page:
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
-    ANTD_MODAL_OVERLAY_CSS = '.ant-drawer-content-wrapper'
+    ANTD_MODAL_OVERLAY_CSS = '.ant-drawer-open .ant-drawer-content-wrapper'
     DIALOG_OVERLAY_CSS = '.v-dialog'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\')' \
                                    ' and .//text()[normalize-space()=\'{message}\']]'
@@ -1326,3 +1326,6 @@ class Page:
 
     def fill_enforcement_name(self, name):
         self.fill_text_field_by_element_id(self.ENFORCEMENT_NAME_ID, name)
+
+    def click_enforcement_name_field(self):
+        self.driver.find_element_by_id(self.ENFORCEMENT_NAME_ID).click()

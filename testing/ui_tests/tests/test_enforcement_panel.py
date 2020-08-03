@@ -83,6 +83,7 @@ class TestEnforcementPanel(TestBase):
         self.devices_page.click_row_checkbox()
         self.devices_page.open_enforcement_panel()
         self._assert_error_message('')
+        self.devices_page.click_enforcement_name_field()
         self.devices_page.key_down_tab()
         self._assert_error_message(self.ENFORCEMENT_NAME_REQUIRED_ERROR)
         self.devices_page.fill_enforcement_name(self.FIRST_ENFORCEMENT_NAME)

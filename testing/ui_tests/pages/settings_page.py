@@ -178,8 +178,8 @@ class SettingsPage(Page):
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
-    ROLE_PANEL = '.role-panel'
-    USER_PANEL = '.user-panel'
+    ROLE_PANEL_ABSENT_CSS = '.role-panel.ant-drawer-open'
+    USER_PANEL_ABSENT_CSS = '.user-panel.ant-drawer-open'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
     CSS_SELECTOR_ROLE_PANEL_ACTION_BY_NAME = '.role-panel .actions .action-{action_name}'
     CSS_SELECTOR_USER_PANEL_ACTION_BY_NAME = '.user-panel .actions .action-{action_name}'
@@ -396,7 +396,7 @@ class SettingsPage(Page):
     def save_user_wait_done(self):
         self.get_enabled_button(self.SAVE_BUTTON).click()
         self.wait_for_user_updated_toaster()
-        self.wait_for_user_panel_closed()
+        self.wait_for_user_panel_absent()
 
     def assert_create_user_disabled(self):
         self.wait_for_element_present_by_xpath(
@@ -446,7 +446,7 @@ class SettingsPage(Page):
         self.create_new_user(username, password, first_name, last_name, role_name, wait_for_toaster, generate_password)
 
     def create_new_user(self, username, password, first_name=None, last_name=None, role_name=None,
-                        wait_for_toaster=True, generate_password=False):
+                        wait_for_toaster=True, generate_password=False, wait_for_side_panel_absence=True):
         self.wait_for_table_to_be_responsive()
         self.click_new_user()
         self.fill_new_user_details(username, password, first_name=first_name, last_name=last_name, role_name=role_name,
@@ -454,6 +454,8 @@ class SettingsPage(Page):
         self.click_create_user()
         if wait_for_toaster:
             self.wait_for_user_created_toaster()
+        if wait_for_side_panel_absence:
+            self.wait_for_user_panel_absent()
 
     def create_new_user_with_new_permission(self, username, password, first_name=None, last_name=None,
                                             permissions: dict = None):
@@ -532,10 +534,10 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css(self.ROLE_PANEL_CONTENT, is_displayed=True)
 
     def wait_for_role_panel_absent(self):
-        self.wait_for_element_absent_by_css(self.ROLE_PANEL)
+        self.wait_for_element_absent_by_css(self.ROLE_PANEL_ABSENT_CSS)
 
-    def wait_for_user_panel_closed(self):
-        self.wait_for_element_absent_by_css(self.USER_PANEL)
+    def wait_for_user_panel_absent(self):
+        self.wait_for_element_absent_by_css(self.USER_PANEL_ABSENT_CSS)
 
     def match_role_permissions(self, name, permissions):
         self.click_role_by_name(name)
@@ -1540,7 +1542,7 @@ class SettingsPage(Page):
 
     def close_user_panel(self):
         self.close_side_panel()
-        self.wait_for_user_panel_closed()
+        self.wait_for_user_panel_absent()
 
     def save_system_interval_schedule_settings(self, interval_value):
         session = requests.Session()

@@ -365,7 +365,7 @@ export default {
 
       &__footer {
         display: grid;
-        padding: 20px;
+        padding: 0 0 0 24px;
         grid-template-columns: 150px auto 150px;
 
 

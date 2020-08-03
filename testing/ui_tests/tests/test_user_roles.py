@@ -46,6 +46,7 @@ class TestUserRoles(TestBase):
         self.settings_page.fill_role_name(role_name)
         self.settings_page.click_create_role()
         self.settings_page.wait_for_role_successfully_created_toaster()
+        self.settings_page.wait_for_role_panel_absent()
         # test delete role is missing
         self.settings_page.click_role_by_name(self.settings_page.RESTRICTED_ROLE)
         self.settings_page.wait_for_role_panel_present()

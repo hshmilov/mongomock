@@ -1,14 +1,13 @@
 <template>
   <div>
     <XSidePanel
-      v-if="visible"
       panel-class="enforcement-panel"
       :visible="visible"
       :title="panelTitle"
       :panel-container="getSidePanelContainer"
       @close="closePanel"
     >
-      <template #panelContent>
+      <template #panelContent v-if="enforcement">
         <AForm class="enforcement-form">
           <AFormItem :colon="false">
             <span slot="label">
@@ -16,7 +15,6 @@
             </span>
             <AInput
               id="enforcement_name"
-              ref="enforcement_name_input"
               v-model="enforcement.name"
               placeholder="Enter Enforcement Set name"
               @focusout.stop="setEnforcementNameFocusedOut"
@@ -79,6 +77,7 @@ import { Form, Input } from 'ant-design-vue';
 import { mapState, mapActions } from 'vuex';
 import _cond from 'lodash/cond';
 import _constant from 'lodash/constant';
+import _get from 'lodash/get';
 import XEnforcementActionResult from '@networks/entities/EnforcementActionResult.vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
 import XButton from '@axons/inputs/Button.vue';
@@ -127,7 +126,7 @@ export default {
   },
   data() {
     return {
-      enforcement: {},
+      enforcement: null,
       actionValidation: {
         isValid: false,
         nameError: '',
@@ -183,7 +182,7 @@ export default {
     },
     selectedActionName: {
       get() {
-        return this.enforcement.actions.main.action.action_name;
+        return _get(this.enforcement, 'actions.main.action.action_name', '');
       },
       set(name) {
         this.enforcement.actions.main.action.action_name = name;
@@ -196,11 +195,6 @@ export default {
         this.resetEnforcementData('');
       }
     },
-  },
-  updated() {
-    this.$nextTick().then(() => {
-      this.$refs.enforcement_name_input.focus();
-    });
   },
   created() {
     if (!this.enforcementNames || !this.enforcementNames.length) {

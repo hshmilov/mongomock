@@ -79,6 +79,7 @@ class TestSettingsPermissions(PermissionsTestBase):
         self.settings_page.assert_user_remove_button_missing()
         self.settings_page.click_save_button()
         self.settings_page.wait_for_user_updated_toaster()
+        self.settings_page.wait_for_user_panel_absent()
 
         update_user = 'update user'
         self.settings_page.edit_user_wait_done(new_user,

@@ -395,10 +395,8 @@ export default {
   },
   render() {
     return (
-      this.visible
-        ? <XSidePanel
+       <XSidePanel
           visible={this.visible}
-          mask={!this.inSaveMode && this.visible}
           panel-container={this.getSidePanelContainer}
           panelClass={`role-panel ${this.mode !== FormMode.ViewRole ? 'with-footer' : ''}`}
           title={this.name}
@@ -455,7 +453,7 @@ export default {
                   </div>
                 </div>) : null
           }
-        </XSidePanel> : null
+        </XSidePanel>
     );
   },
 };

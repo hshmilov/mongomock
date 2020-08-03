@@ -93,7 +93,7 @@ class TestChangePasswordSettings(TestBase):
                                            FIRST_NAME,
                                            LAST_NAME,
                                            self.settings_page.RESTRICTED_ROLE,
-                                           wait_for_toaster=False)
+                                           wait_for_toaster=False, wait_for_side_panel_absence=False)
 
         self.settings_page.assert_server_error(PASSWORD_POLICY_ERROR_MSG)
 
@@ -104,7 +104,6 @@ class TestChangePasswordSettings(TestBase):
                                            FIRST_NAME,
                                            LAST_NAME,
                                            self.settings_page.RESTRICTED_ROLE)
-
         self.settings_page.click_edit_user(RESTRICTED_USERNAME)
         self.settings_page.fill_password_field('kjfsk8978')
         self.settings_page.click_save_button()

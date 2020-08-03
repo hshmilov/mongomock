@@ -27,7 +27,6 @@
       />
     </XTableWrapper>
     <XInstanceSidePanel
-      v-if="isSidePanelVisible"
       :instance.sync="sidePanelInstance"
       :visible="isSidePanelVisible"
       :disabled="!canEditInstances"

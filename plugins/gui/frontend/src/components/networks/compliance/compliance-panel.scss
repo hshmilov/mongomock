@@ -5,14 +5,10 @@
         &__content {
             overflow-y: auto;
             bottom: 0;
+            padding-bottom: 30px
         }
 
         .body {
-            padding-bottom: 84px;
-
-            > div {
-                margin-bottom: 20px;
-            }
 
             .last-updated {
                 font-size: 12px;

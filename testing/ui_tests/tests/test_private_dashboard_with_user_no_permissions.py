@@ -12,6 +12,7 @@ class TestPrivateDashboardWithUserNoPermissions(PermissionsTestBase):
                                                                      ui_consts.FIRST_NAME,
                                                                      ui_consts.LAST_NAME,
                                                                      self.settings_page.RESTRICTED_ROLE)
+
         self.settings_page.wait_for_table_to_load()
         settings_permissions = {
             'dashboard': [

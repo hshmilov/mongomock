@@ -223,10 +223,8 @@ export default {
   },
   render() {
     return (
-      this.visible
-        ? <x-side-panel
+      <x-side-panel
         visible={this.visible}
-        mask={!this.inSaveMode && this.visible}
         panel-container={this.getSidePanelContainer}
         panelClass='compliance-panel'
         title={this.data ? `${this.data.section} ${this.data.rule}` : ''}
@@ -238,7 +236,7 @@ export default {
         {
           this.renderFooter()
         }
-      </x-side-panel> : null
+      </x-side-panel>
     );
   },
 };

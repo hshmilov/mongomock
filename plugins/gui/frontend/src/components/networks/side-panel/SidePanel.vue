@@ -1,14 +1,14 @@
 <template>
   <ADrawer
     :destroy-on-close="true"
-    :wrap-class-name="wrapClass"
     :visible="visible"
+    :wrap-class-name="wrapClass"
     :wrap-style="wrapStyle"
     :closable="false"
-    :mask="mask"
     :width="width"
     :get-container="sidePanelContainer"
     @close="onClose"
+    :mask="mask"
   >
     <template #title>
       <span
@@ -83,13 +83,13 @@ export default {
   },
   computed: {
     sidePanelContainer() {
-      return this.panelContainer || undefined;
+      return this.panelContainer || false;
     },
     wrapClass() {
       return ['x-side-panel', this.panelClass].join(' ');
     },
     wrapStyle() {
-      return this.panelContainer ? { position: 'absolute' } : {};
+      return { position: 'absolute', right: '0px' };
     },
   },
   methods: {
@@ -101,88 +101,89 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-side-panel {
-        left: 0;
 
-        .ant-drawer-mask {
-            position: absolute;
+  .x-side-panel {
+
+    .ant-drawer-mask {
+      position: absolute;
+    }
+
+    .ant-drawer-content-wrapper {
+      position: absolute;
+    }
+
+    .ant-drawer-header {
+      width: 100%;
+      padding: 16px 28px;
+      background-color: $theme-orange;
+      align-items: center;
+      z-index: 2;
+      height: 64px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      border-radius: 0px;
+
+      .ant-drawer-title {
+        display: flex;
+        justify-content: space-between;
+
+        .title {
+          color: #fff;
+          max-width: 90%;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
         }
 
-        .ant-drawer-content-wrapper {
-            position: absolute;
+        .actions {
+          display: flex;
 
-          .ant-drawer-wrapper-body {
-            overflow: hidden !important;  // antd adds for some reason overflow: auto.
-
-            .ant-drawer-header {
-              width: 100%;
-              padding: 16px 28px;
-              background-color: $theme-orange;
-              align-items: center;
-              z-index: 2;
-              height: 64px;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              overflow: hidden;
-
-              .ant-drawer-title {
-                display: flex;
-                justify-content: space-between;
-
-                .title {
-                  color: #fff;
-                  max-width: 90%;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  overflow: hidden;
-                }
-
-                .actions {
-                  display: flex;
-
-                  .action-close {
-                    font-size: 20px;
-                    line-height: 25px;
-                    color: $theme-white;
-                    cursor: pointer;
-                  }
+          .action-close {
+            font-size: 20px;
+            line-height: 25px;
+            color: $theme-white;
+            cursor: pointer;
+          }
 
 
-                  ul {
-                    list-style: none;
-                    display: flex;
+          ul {
+            list-style: none;
+            display: flex;
 
-                    li {
-                      padding: 0 4px;
-                      cursor: pointer;
-                    }
-                  }
-                }
-              }
-            }
-
-            .ant-drawer-body {
-              height: calc(100% - 64px);
-              padding: 24px 0px 24px 24px;
-
-              &__content {
-                position: relative;
-                padding: 5px 28px 110px 5px;
-                height: calc(100% - 32px);
-                overflow-y: auto;
-              }
-              &__footer {
-                position: absolute;
-                padding: 5px 30px 0 30px;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                background-color: #fff;
-                height: 50px;
-              }
+            li {
+              padding: 0 4px;
+              cursor: pointer;
             }
           }
         }
+      }
     }
+
+    .ant-drawer-body {
+      height: calc(100% - 64px);
+      padding: 24px 0px 24px 24px;
+      width: 100%;
+
+      &__content {
+        position: relative;
+        padding: 5px 28px 110px 5px;
+        height: calc(100% - 32px);
+        overflow-y: auto;
+        @include  y-scrollbar;
+      }
+      &__footer {
+        position: absolute;
+        padding: 5px 30px 0 30px;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #fff;
+        height: 50px;
+      }
+    }
+  }
+
+
 
 </style>
