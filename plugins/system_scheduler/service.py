@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import logging
 import threading
 import time
@@ -999,9 +1000,21 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             :param plugin: the plugin dict as returned from /register
             """
             blocking = plugin[PLUGIN_NAME] not in ALWAYS_ASYNC_PLUGINS
-            self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
-                                        blocking=blocking,
-                                        timeout=24 * 3600, stop_on_timeout=True)
+            try:
+                self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                                            blocking=blocking,
+                                            timeout=24 * 3600, stop_on_timeout=True)
+            except ConnectionError:
+                # DNS record is missing, let dns watchdog time to reset all the dns records
+                logger.warning(f'Failed triggering {plugin[PLUGIN_NAME]} retrying in 80 seconds')
+                time.sleep(80)
+                try:
+                    self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                                                blocking=blocking,
+                                                timeout=24 * 3600, stop_on_timeout=True)
+                except ConnectionError:
+                    logger.critical(f'Failed triggering {plugin[PLUGIN_NAME]} probably '
+                                    f'container is down for some reason')
 
         with ThreadPoolExecutor() as executor:
 
