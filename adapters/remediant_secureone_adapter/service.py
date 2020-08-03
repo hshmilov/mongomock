@@ -239,7 +239,7 @@ class RemediantSecureoneAdapter(AdapterBase, Configurable):
                 'chunk_size',
                 'fetch_full_data'
             ],
-            'pretty_name': 'Remediant Secureone Configuration',
+            'pretty_name': 'Remediant SecureONE Configuration',
             'type': 'array'
         }
 

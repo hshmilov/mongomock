@@ -1089,9 +1089,9 @@
     "description": "Qualys Cloud Platform monitors customers' global security and compliance posture using sensors."
   },
   "nexpose_adapter": {
-    "title": "Rapid7 Nexpose",
+    "title": "Rapid7 Nexpose and InsightVM",
     "link": "https://docs.axonius.com/docs/rapid7-nexpose",
-    "description": "Rapid7 Nexpose is an on-premise vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation."
+    "description": "Rapid7 Nexpose is an on-premise vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation. Rapid7 InsightVM is a cloud-based vulnerability management solution that combines Rapid7’s Insight platform along with Nexpose core capabilities."
   },
   "sentinelone_adapter": {
     "title": "SentinelOne",
