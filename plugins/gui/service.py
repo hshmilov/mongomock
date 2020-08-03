@@ -823,7 +823,7 @@ class GuiService(Triggerable,
                         },
                         {
                             'name': 'defaultSort',
-                            'title': 'Sort by number of adapters in default view',
+                            'title': 'When no column sort is applied, sort by count of adapters',
                             'type': 'bool'
                         },
                         {

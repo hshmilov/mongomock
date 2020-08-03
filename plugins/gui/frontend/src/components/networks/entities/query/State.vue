@@ -77,7 +77,7 @@
               key="1"
               @click="reloadSelectedView"
               id="discardChanges"
-            >Cancel
+            >Discard Changes
             </AMenuItem>
           </AMenu>
         </ADropDown>
