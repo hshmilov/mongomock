@@ -192,7 +192,7 @@ export default {
     adaptersDetailsWithClientIdList() {
       return this.getFilteredAdapters.concat().map((adapter, index) => ({
         pluginName: [adapter],
-        clientId: this.data['meta_data.client_used'][index],
+        clientId: this.data['meta_data.client_used'] !== undefined ? this.data['meta_data.client_used'][index]: '',
       })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));
     },
     adaptersDetailsData() {
