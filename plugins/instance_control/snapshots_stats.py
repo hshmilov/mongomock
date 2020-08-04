@@ -66,6 +66,7 @@ def calculate_last_snapshot_size():
     device_storage_size = 0
     users_storage_size = 0
     users_indexes_size = 0
+    devices_indexes_size = 0
 
     collections_devices = PluginBase.Instance.aggregator_db_connection.list_collection_names(
         filter={'name': {'$regex': r'historical_devices_\d{4}_\d{2}_\d{2}'}})

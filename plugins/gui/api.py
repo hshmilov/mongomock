@@ -1117,7 +1117,7 @@ class APIMixin:
         collection.drop()
 
         self._insert_indexes_entity(entity_type=entity_type)
-        return return_doc
+        return jsonify(return_doc)
 
     def _entity_by_id(self, entity_type: EntityType, entity_id):
         """
@@ -1233,7 +1233,7 @@ class APIMixin:
     @api_add_rule(rule='devices/destroy', methods=['POST'], required_permission=DEVICE_ASSETS_UPDATE)
     def api_devices_destroy(self):
         """Delete all assets and optionally all historical assets."""
-        return jsonify(self._destroy_assets(entity_type=EntityType.Devices, historical_prefix='historical_devices_'))
+        return self._destroy_assets(entity_type=EntityType.Devices, historical_prefix='historical_devices_')
 
     #########
     # USERS #
@@ -1326,7 +1326,7 @@ class APIMixin:
     @api_add_rule(rule='users/destroy', methods=['POST'], required_permission=USER_ASSETS_UPDATE)
     def api_users_destroy(self):
         """Delete all assets and optionally all historical assets."""
-        return jsonify(self._destroy_assets(entity_type=EntityType.Users, historical_prefix='historical_users_'))
+        return self._destroy_assets(entity_type=EntityType.Users, historical_prefix='historical_users_')
 
     ################
     # ENFORCEMENTS #
