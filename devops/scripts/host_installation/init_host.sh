@@ -263,16 +263,15 @@ if [[ -d "/etc/scalyr-agent-2" ]]; then
     echo "scalyr exist"
 else
     echo "install scalyr agent"
-    wget -q https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.1_all.deb
+    wget -q https://www.scalyr.com/scalyr-repo/stable/latest/scalyr-repo-bootstrap_1.2.2_all.deb
     dpkg -r scalyr-repo scalyr-repo-bootstrap  # Remove any previous repository definitions, if any.
-    dpkg -i scalyr-repo-bootstrap_1.2.1_all.deb
+    dpkg -i scalyr-repo-bootstrap_1.2.2_all.deb
     set +e
     _wait_for_apt update
     set -e
     _wait_for_apt install scalyr-repo -y
     _wait_for_apt install scalyr-agent-2 -y
-    rm scalyr-repo-bootstrap_1.2.1_all.deb
-    _wait_for_apt install -yq scalyr-agent-2 # upgrade to latest
+    rm scalyr-repo-bootstrap_1.2.2_all.deb
 fi
 
 # Install Zscaler root certificate
