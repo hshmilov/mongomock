@@ -68,12 +68,10 @@ def upload_to_cf_protected_bucket(aws_key, aws_secret, version_name, **_):
 def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
     upgrader_command = f'aws s3 cp s3://axonius-releases/{version_name}/axonius_{version_name}.py' \
                        ' s3://axonius-releases/latest_release/axonius_upgrader.py' \
-                       ' --acl public-read' \
                        f' --region {REGION}'
 
     ova_command = f'aws s3 cp s3://axonius-releases/{version_name}/{version_name}/{version_name}_export.ova' \
                   ' s3://axonius-releases/latest_release/axonius_release.ova' \
-                  ' --acl public-read' \
                   f' --region {REGION}'
 
     env = get_env(aws_key, aws_secret)
@@ -96,7 +94,7 @@ def upload_to_production(aws_key, aws_secret, version_name, ami_id, **_):
 def write_file_to_latest_release_bucket(env, data, file_name):
     data_file = Path(file_name)
     data_file.write_text(data)
-    set_file_command = f'aws s3 cp {file_name} s3://axonius-releases/latest_release/{file_name} --acl public-read'
+    set_file_command = f'aws s3 cp {file_name} s3://axonius-releases/latest_release/{file_name}'
     run_on_subprocess(set_file_command, env=env, shell=True, check=True, stderr=STDOUT)
     data_file.unlink()
 
