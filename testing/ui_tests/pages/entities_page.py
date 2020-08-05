@@ -465,6 +465,9 @@ class EntitiesPage(Page):
     def find_query_search_input(self):
         return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS)
 
+    def get_query_search_input_value(self):
+        return self.driver.find_element_by_css_selector(self.QUERY_SEARCH_INPUT_CSS).get_attribute('value')
+
     def get_query_search_input_attribute(self, attribute):
         return self.find_query_search_input().get_attribute(attribute)
 
