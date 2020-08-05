@@ -6,6 +6,7 @@
     "qemu_output_directory": "output-axonius",
     "qcow_output": "axonius.qcow3",
     "deployment_script": "./deploy_encrypted_axonius.sh",
+    "boot_config_script": "empty_config_script",
     "manifest_file": "manifest.json",
     "ami_regions": ""
   },
@@ -174,6 +175,11 @@
       "type": "file",
       "source": "{{user `installer`}}",
       "destination": "/home/ubuntu/version.zip"
+    },
+    {
+      "type": "file",
+      "source": "{{user `boot_config_script`}}",
+      "destination": "/home/ubuntu/boot_configuration_script.tar"
     },
     {
       "type": "shell",

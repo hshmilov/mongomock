@@ -1,9 +1,12 @@
 from pathlib import Path
 
+from axonius.consts.plugin_consts import BOOT_CONFIGURATION_SCRIPT_FILENAME
+
 HOSTNAME_FILE_PATH = Path('/home/axonius/app/hostname')
-UPLOAD_FILE_PATH = Path('/home/ubuntu/cortex/uploaded_files')
+UPLOAD_FILE_PATH = Path('/home/axonius/uploaded_files')
 UPLOAD_FILE_SCRIPTS_PATH = Path('/home/ubuntu/cortex/devops/scripts/offline')
 UPLOAD_FILE_SCRIPT_NAME = 'execute_configuration_script.py'
+BOOT_CONFIG_FILE_PATH = Path(UPLOAD_FILE_PATH, BOOT_CONFIGURATION_SCRIPT_FILENAME)
 
 
 class InstanceControlConsts:

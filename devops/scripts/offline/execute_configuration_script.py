@@ -2,12 +2,13 @@
 import subprocess
 import tarfile
 from pathlib import Path
+import sys
 
 # pylint: disable=too-many-branches
 
 
 def main():
-    file_name = 'configuration_script.tar'
+    file_name = sys.argv[1] if len(sys.argv) > 1 else 'configuration_script.tar'
     working_dir = Path().home()
     file_path = Path(working_dir, 'cortex/uploaded_files/', file_name)
     new_file_path = Path(working_dir, file_name)

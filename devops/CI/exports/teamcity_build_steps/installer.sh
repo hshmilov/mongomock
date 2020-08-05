@@ -34,6 +34,7 @@ curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POS
         <property name=\"teamcity.build.triggeredBy.username\" value=\"$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME\"/>
         <property name=\"branch\" value=\"$BRANCH\"/>
         <property name=\"fork\" value=\"$FORK\"/>
+        <property name=\"boot_config_script\" value=\"$BOOT_CONFIG_SCRIPT\"/>
         <property name=\"env.ADDITIONAL_EXPORTS_PARAMS\" value=\"$ADDITIONAL_CLOUD_PARAMS\"/>
     </properties>
 
@@ -55,6 +56,7 @@ curl -k -u "$SYSTEM_TEAMCITY_AUTH_USERID:$SYSTEM_TEAMCITY_AUTH_PASSWORD"  -X POS
         <property name=\"teamcity.build.triggeredBy.username\" value=\"$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME\"/>
         <property name=\"branch\" value=\"$BRANCH\"/>
         <property name=\"fork\" value=\"$FORK\"/>
+        <property name=\"boot_config_script\" value=\"$BOOT_CONFIG_SCRIPT\"/>
         <property name=\"env.ADDITIONAL_EXPORTS_PARAMS\" value=\"--unencrypted --installer-s3-name $NAME $ADDITIONAL_CLOUD_PARAMS\"/>
     </properties>
 

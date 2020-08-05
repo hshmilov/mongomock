@@ -37,7 +37,10 @@ DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, I
 SYSTEM_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'machine_boot.sh')
 INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
 INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
+UPLOADED_FILES_DIR_NAME = 'uploaded_files'
+BOOT_CONFIGURATION_NAME = Path('boot_configuration_script.tar')
 AXONIUS_SETTINGS_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCE_SETTINGS_DIR_NAME)
+UPLOADED_FILES_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, UPLOADED_FILES_DIR_NAME)
 INSTANCE_IS_MASTER_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.logged_in')
 BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted_for_production')
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
@@ -204,6 +207,15 @@ def set_special_permissions():
         run_cmd(cmd.split())
 
 
+def create_boot_config_file():
+    try:
+        if BOOT_CONFIGURATION_NAME.is_file() and BOOT_CONFIGURATION_NAME.stat().st_size > 0:
+            os.makedirs(UPLOADED_FILES_PATH, exist_ok=True)
+            BOOT_CONFIGURATION_NAME.replace(Path(UPLOADED_FILES_PATH, BOOT_CONFIGURATION_NAME))
+    except Exception as e:
+        print(f'Error creating boot file config {e}')
+
+
 def create_venv():
     print_state('Creating python venv')
     args = f'python3 -m virtualenv --python=python3.6 --clear {VENV_PATH} --never-download'.split(' ')
@@ -222,6 +234,7 @@ def install(first_time, no_research, master_only):
     load_new_source()
     create_venv()
     install_requirements()
+    create_boot_config_file()
 
     print('Activating venv!')
     activate_this_file = os.path.join(VENV_PATH, 'bin', 'activate_this.py')

@@ -21,10 +21,11 @@ from axonius.consts.gui_consts import Signup
 from axonius.consts.instance_control_consts import (InstanceControlConsts,
                                                     UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
                                                     METRICS_INTERVAL_MINUTES, METRICS_SCRIPT_PATH,
-                                                    METRICS_ENV_FILE_PATH, MetricsFields)
+                                                    METRICS_ENV_FILE_PATH, MetricsFields, BOOT_CONFIG_FILE_PATH)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
-                                          NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME)
+                                          NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
+                                          BOOT_CONFIGURATION_SCRIPT_FILENAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
@@ -136,6 +137,20 @@ class InstanceControlService(Triggerable, PluginBase):
                                                max_instances=1,
                                                coalesce=True)
         self.send_instance_data_thread.start()
+
+    def _delayed_initialization(self):
+        self.run_boot_config_file()
+
+    def run_boot_config_file(self):
+        try:
+            if BOOT_CONFIG_FILE_PATH.exists():
+                if BOOT_CONFIG_FILE_PATH.stat().st_size > 0:
+                    self.execute_configuration_script_on_host(BOOT_CONFIGURATION_SCRIPT_FILENAME)
+                else:
+                    logger.debug('deleting empty boot configuration file')
+                    BOOT_CONFIG_FILE_PATH.unlink()
+        except Exception:
+            logger.exception('Error running boot config file')
 
     def trigger_execute_shell(self, post_json: dict):
         logger.info(f'Got execute shell triggerable with post_json: {str(post_json)}')
@@ -279,7 +294,10 @@ class InstanceControlService(Triggerable, PluginBase):
         if not Path(file_docker_path).exists():
             logger.error(f'execute_file: file not exist at:{file_docker_path}')
             return return_error('file not exist', 404)
+        self.execute_configuration_script_on_host()
+        return 'file executed successfully'
 
+    def execute_configuration_script_on_host(self, config_script_path=''):
         execution_script_path = Path(UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
         # copy execution python script aka axcs
         local_file_name = '/home/ubuntu/axcs.py'
@@ -298,9 +316,9 @@ class InstanceControlService(Triggerable, PluginBase):
         logger.info(f'execute_file: got file to execute, follow up in host at '
                     f'{nohup_log_file_name}')
 
-        cmd = f'sudo nohup {local_file_name} > {nohup_log_file_name} 2>&1 &'
+        cmd = f'sudo nohup {local_file_name} {config_script_path} > {nohup_log_file_name} 2>&1 &'
         self.__exec_command_verbose(cmd)
-        return f'file executed successfully'
+        return True
 
     def __get_node_metadata(self):
         logger.info('Starting Thread: Sending instance data to core.')

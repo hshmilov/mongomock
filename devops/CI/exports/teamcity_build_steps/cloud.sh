@@ -2,7 +2,7 @@
 
 set -e
 
-PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step cloud --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" cloud --installer-s3-name $NAME --name $NAME $ADDITIONAL_EXPORTS_PARAMS --qcow-output output.qcow3 --disk-size $DISK_SIZE
+PYTHONPATH=devops python3 -u devops/CI/exports/axonius_exports.py --teamcity-step cloud --exports-server-token $TEAMCITY_BUILDS_TOKEN --exports-notifications-url=$EXPORTS_UPDATE_ENDPOINT --teamcity-log "$TEAMCITY_SERVERURL/viewLog.html?buildId=$TEAMCITY_BUILD_ID" --teamcity-owner "$TEAMCITY_BUILD_TRIGGEREDBY_USERNAME" cloud --installer-s3-name $NAME --name $NAME $ADDITIONAL_EXPORTS_PARAMS --qcow-output output.qcow3 --disk-size $DISK_SIZE --boot-config-script "$BOOT_CONFIG_SCRIPT"
 
 function finish {
   rm output.qcow3

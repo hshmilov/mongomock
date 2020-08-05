@@ -82,6 +82,7 @@ def main():
     cloud_parser.add_argument('--disk-size', default=500, type=int)
     cloud_parser.add_argument('--unencrypted', default=False, action='store_true')
     cloud_parser.add_argument('--name', type=str, required=True)
+    cloud_parser.add_argument('--boot-config-script', type=str, default='')
     cloud_parser.set_defaults(entrypoint=cloud)
 
     ova_vhd_parser = subparsers.add_parser('ova_vhd')
@@ -177,6 +178,8 @@ def cloud(args, notify):
                 subprocess_arguments.append('-force')
             if args.unencrypted:
                 subprocess_arguments.extend(['-var', f'deployment_script=./deploy_unencrypted_axonius.sh'])
+            if args.boot_config_script:
+                subprocess_arguments.extend(['-var', f'boot_config_script={args.boot_config_script}'])
             subprocess_arguments.append(cloud_packer_file)
             try:
                 subprocess.run(subprocess_arguments, check=True, cwd=_SCRIPT_FOLDER)

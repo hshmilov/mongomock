@@ -68,13 +68,16 @@ class Signup:
 
         signup_collection.insert_one(signup_data)
 
-        self.plugins.gui.configurable_configs.update_config(
-            FeatureFlags.__name__,
-            {
-                gui_consts.FeatureFlagsNames.TrialEnd:
-                    (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
-            }
-        )
+        feature_flags = self.plugins.gui.configurable_configs[FeatureFlags.__name__]
+        if not feature_flags or \
+                (isinstance(feature_flags, dict) and feature_flags.get(gui_consts.FeatureFlagsNames.TrialEnd) != ''):
+            self.plugins.gui.configurable_configs.update_config(
+                FeatureFlags.__name__,
+                {
+                    gui_consts.FeatureFlagsNames.TrialEnd:
+                        (datetime.now() + timedelta(days=30)).isoformat()[:10].replace('-', '/')
+                }
+            )
 
         # Reset this setting for new (version > 2.11) customers upon signup (Getting Started With Axonius Checklist)
         self.plugins.core.configurable_configs.update_config(
