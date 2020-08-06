@@ -179,9 +179,12 @@ class AzureClient:
             for vm in self.compute.virtual_machine_scale_set_vms.list(rg_name, scale_set_name):
                 try:
                     vm_dict = vm.as_dict()
-                    vm_dict['network_profile']['network_interfaces'] = [
-                        self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
-                    ]
+                    if vm.network_profile:
+                        vm_dict['network_profile']['network_interfaces'] = [
+                            self._get_iface_dict(iface, subnets) for iface in vm.network_profile.network_interfaces
+                        ]
+                    else:
+                        logger.warning(f'No network profile data for vm {vm_dict}')
                     # Check in case the comment from _get_vm_instance_view does not apply for
                     # azure.mgmt.compute.model.VirtualMachineScaleSetVM objects
                     if not vm.instance_view:
