@@ -213,7 +213,7 @@ class AggregatorService(Triggerable, PluginBase):
                     'check_fetch_time': check_fetch_time
                 })
                 try:
-                    if data.content and from_json(data.content).get('min_time_check') is True:
+                    if data and data.content and from_json(data.content).get('min_time_check') is True:
                         logger.info(f'got min_time_check in adapter {adapter}: '
                                     f'The minimum time between fetches hasn\'t been reached yet.')
                         break
@@ -424,18 +424,21 @@ class AggregatorService(Triggerable, PluginBase):
 
         return self._fetch_data_from_adapters(adapters, run_identifier)
 
-    def _request_clean_db_from_adapter(self, plugin_unique_name):
+    def _request_clean_db_from_adapter(self, adapter_unique_list):
         '''
         calls /clean_devices on the given adapter unique name
         :return:
         '''
-        if self.devices_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1) or \
-                self.users_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1):
-            response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
+        for plugin_unique_name in adapter_unique_list:
+            if self.devices_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1) or \
+                    self.users_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1):
+                response = self._trigger_remote_plugin(plugin_unique_name, 'clean_devices')
 
-            if response.status_code != 200:
-                logger.error(f'Failed cleaning db with adapter {plugin_unique_name}. ' +
-                             f'Reason: {str(response.content)}')
+                if response.status_code != 200:
+                    logger.error(f'Failed cleaning db with adapter {plugin_unique_name}. ' +
+                                 f'Reason: {str(response.content)}')
+                    continue
+                break
 
     def _clean_db_devices_from_adapters(self, current_adapters):
         ''' Function for cleaning the devices db.
@@ -444,18 +447,21 @@ class AggregatorService(Triggerable, PluginBase):
         '''
         try:
             futures_for_adapter = {}
-
+            adapters_name_to_unique = dict()
+            num_of_adapters_to_fetch = len(current_adapters)
+            for adapter in current_adapters:
+                if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
+                    # This is not an adapter, not running
+                    num_of_adapters_to_fetch -= 1
+                    continue
+                if adapter[PLUGIN_NAME] not in adapters_name_to_unique:
+                    adapters_name_to_unique[adapter[PLUGIN_NAME]] = []
+                adapters_name_to_unique[adapter[PLUGIN_NAME]].append(adapter[PLUGIN_UNIQUE_NAME])
             # let's add jobs for all adapters
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._aggregation_max_workers) as executor:
-                num_of_adapters_to_fetch = len(current_adapters)
-                for adapter in current_adapters:
-                    if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
-                        # This is not an adapter, not running
-                        num_of_adapters_to_fetch -= 1
-                        continue
-
+                for adapter_name, adapter_unique_list in adapters_name_to_unique.items():
                     futures_for_adapter[executor.submit(
-                        self._request_clean_db_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                        self._request_clean_db_from_adapter, adapter_unique_list)] = adapter_name
 
                 for future in concurrent.futures.as_completed(futures_for_adapter):
                     try:

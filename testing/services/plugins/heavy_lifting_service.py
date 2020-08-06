@@ -16,6 +16,10 @@ class HeavyLiftingService(PluginService):
     def get_max_uwsgi_processes(self) -> int:
         return 8
 
+    @property
+    def get_min_uwsgi_processes(self) -> int:
+        return 2
+
 
 @pytest.fixture(scope='module')
 def heavy_lifting_fixture(request):

@@ -25,6 +25,7 @@
         </XButton>
         <XButton
           type="primary"
+          :disabled="!selectedEnforcement"
           @click="runEnforcement"
         >
           Run

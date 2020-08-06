@@ -12,7 +12,6 @@ class TestEnforcementPanel(TestBase):
     DUMMY_ENFORCEMENT_NAME = 'Dummy Enforcement'
     DUMMY_ACTION_NAME = 'Dummy Action'
     DUMMY_TAG = 'Dummy Tag'
-    SUCCESS_MESSAGE = 'Enforcement task has been created successfully'
     ENFORCEMENT_NAME_REQUIRED_ERROR = 'Enforcement Name is a required field'
     ENFORCEMENT_NAME_TAKEN_ERROR = 'Name already taken by another Enforcement'
     ACTION_NAME_REQUIRED_ERROR = 'Action name is a required field'
@@ -58,7 +57,8 @@ class TestEnforcementPanel(TestBase):
     def _test_new_task_navigation(self, enforcement_name):
         self.devices_page.click_row_checkbox(2)
         self.devices_page.run_enforcement_on_selected_device(enforcement_name, False)
-        assert self.devices_page.get_enforcement_result_link().text == self.SUCCESS_MESSAGE
+        assert self.devices_page.get_enforcement_result_link().text == \
+            self.devices_page.ENFORCEMENT_TASK_SUCCESS_MESSAGE
         self.devices_page.get_enforcement_result_link().click()
         self.enforcements_page.wait_for_table_to_be_responsive()
         self.enforcements_page.wait_for_element_present_by_text(self.FIRST_ENFORCEMENT_NAME)

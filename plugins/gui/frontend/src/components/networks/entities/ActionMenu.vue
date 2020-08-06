@@ -70,13 +70,13 @@
           <AMenuItem
             id="run_enforce"
             key="run_enforce_entities"
-            :disabled="runExistingEnforcementRestricted"
+            :disabled="runEnforcementDisabled"
             @click="handleModalClick(MODAL_ACTIONS.enforce)"
           >
             Use Existing Enforcement
             <ATooltip
-              v-if="runExistingEnforcementRestricted"
-              title="You don't have permission to run enforcements"
+              v-if="runEnforcementDisabled"
+              :title="disabledRunEnforcementTooltip"
               placement="bottom"
             >
               <AIcon
@@ -147,9 +147,10 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from 'vuex';
+import { mapActions, mapMutations, mapState } from 'vuex';
 import _get from 'lodash/get';
 import { SET_ENFORCEMENT } from '@store/modules/enforcements';
+import { FETCH_DATA_CONTENT } from '@store/actions';
 import {
   Icon, Tooltip, Dropdown, Menu,
 } from 'ant-design-vue';
@@ -219,22 +220,25 @@ export default {
       dataCount(state) {
         return state[this.module].count.data;
       },
-      runExistingEnforcementRestricted() {
-        return this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.View)
-                || this.$cannot(this.$permissionConsts.categories.Enforcements,
-                  this.$permissionConsts.actions.Run);
-      },
-      createNewEnforcementRestricted() {
-        return this.$cannot(this.$permissionConsts.categories.Enforcements,
-          this.$permissionConsts.actions.Add)
-                || this.$cannot(this.$permissionConsts.categories.Enforcements,
-                  this.$permissionConsts.actions.Run);
-      },
       enforcementsLocked(state) {
         return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
+      noEnforcementSetsDefined(state) {
+        return _get(state, 'enforcements.content.data', []).length === 0;
+      },
     }),
+    runExistingEnforcementRestricted() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.View)
+              || this.$cannot(this.$permissionConsts.categories.Enforcements,
+                this.$permissionConsts.actions.Run);
+    },
+    createNewEnforcementRestricted() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Add)
+              || this.$cannot(this.$permissionConsts.categories.Enforcements,
+                this.$permissionConsts.actions.Run);
+    },
     actionButtonClass() {
       return {
         entityMenuInactive: this.disabled,
@@ -254,11 +258,31 @@ export default {
     disabledMenuItemDescription() {
       return `Select ${this.module} to see more actions`;
     },
+    runEnforcementDisabled() {
+      return this.runExistingEnforcementRestricted || this.noEnforcementSetsDefined;
+    },
+    disabledRunEnforcementTooltip() {
+      return this.runExistingEnforcementRestricted ? 'You don\'t have permission to run enforcements'
+        : 'No Enforcement Sets are configured';
+    },
   },
   created() {
     this.MODAL_ACTIONS = ModalActionsEnum;
   },
+  mounted() {
+    if (this.noEnforcementSetsDefined && !this.runExistingEnforcementRestricted) {
+      this.fetchContent({
+        module: 'enforcements',
+        getCount: false,
+      });
+    }
+  },
   methods: {
+    ...mapActions(
+      {
+        fetchContent: FETCH_DATA_CONTENT,
+      },
+    ),
     ...mapMutations({
       setEnforcement: SET_ENFORCEMENT,
     }),

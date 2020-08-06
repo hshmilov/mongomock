@@ -9,6 +9,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field, ListField
+from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -17,6 +18,11 @@ from box_platform_adapter.client_id import get_client_id
 from box_platform_adapter.consts import DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+
+class NotificationEmail(SmartJsonClass):
+    email = Field(str, 'Email')
+    is_confirmed = Field(bool, 'Email Confirmed')
 
 
 class BoxPlatformAdapter(AdapterBase):
@@ -38,7 +44,8 @@ class BoxPlatformAdapter(AdapterBase):
         hostname = Field(str, 'Hostname')
         is_platform_access_only = Field(bool, 'Platform Access Only')
         external_app_user_id = Field(str, 'External App User ID')
-        email_confirmed = Field(bool, 'Email Confirmed')
+        # email_confirmed = Field(bool, 'Email Confirmed')
+        notif_emails = ListField(NotificationEmail, 'Notification Email')
         user_tags = ListField(str, 'Custom User Tags')
 
     def __init__(self, *args, **kwargs):
@@ -87,7 +94,7 @@ class BoxPlatformAdapter(AdapterBase):
 
         :return: Iterable(boxsdk.user.User) with all the attributes returned from the Server.
         """
-        yield from client_data.users(user_type='all', limit=DEVICE_PER_PAGE)
+        yield from client_data.users(user_type='all', limit=DEVICE_PER_PAGE)  # This Client automatically does paging
 
     @staticmethod
     def _clients_schema():
@@ -144,7 +151,9 @@ class BoxPlatformAdapter(AdapterBase):
             return bool(value)
         return None
 
+    # pylint:disable=too-many-statements
     def _create_user(self, user_raw_obj):
+        # User object reference: https://developer.box.com/reference/resources/user/
         try:
             user_raw = user_raw_obj.response_object
             user = self._new_user_adapter()
@@ -155,7 +164,7 @@ class BoxPlatformAdapter(AdapterBase):
             # Axonius generic stuff
             user.id = user_id + '_' + (user_raw.get('login') or '')
             user.display_name = user_raw.get('name')
-            user.mail = user_raw.get('notification_email', {}).get('email')
+            user.mail = user_raw.get('login')  # This is "The primary email address of this user" (from docs)
             user.user_telephone_number = user_raw.get('phone')
             user.user_title = user_raw.get('job_title')
             user.image = user_raw.get('avatar_url')
@@ -186,9 +195,22 @@ class BoxPlatformAdapter(AdapterBase):
             user.hostname = user_raw.get('hostname')
             user.is_platform_access_only = self._parse_bool(user_raw.get('is_platform_access_only'))
             user.external_app_user_id = user_raw.get('external_app_user_id')
-            notif_email = user_raw.get('notification_email')
-            if isinstance(notif_email, dict):
-                user.email_confirmed = self._parse_bool(notif_email.get('is_confirmed'))
+            notif_emails_raw = user_raw.get('notification_email')
+            if isinstance(notif_emails_raw, dict):
+                notif_emails_raw = [notif_emails_raw]
+            if isinstance(notif_emails_raw, list):
+                user_notif_emails = list()
+                for notif_email_data in notif_emails_raw:
+                    if not isinstance(notif_email_data, dict):
+                        logger.warning(f'Failed to parse email data for {user_raw_obj} from {notif_email_data}')
+                        continue
+                    email_confirmed = self._parse_bool(notif_email_data.get('is_confirmed'))
+                    notif_email = notif_email_data.get('email')
+                    user_notif_emails.append(NotificationEmail(
+                        email=notif_email,
+                        is_confirmed=email_confirmed
+                    ))
+                user.notif_emails = user_notif_emails
             user_tags = user_raw.get('my_tags') or None
             if isinstance(user_tags, list):
                 user.user_tags = user_tags
