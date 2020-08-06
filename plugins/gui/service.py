@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import secrets
 import subprocess
 import threading
@@ -27,6 +28,7 @@ from flask import session, g
 # pylint: disable=import-error,no-name-in-module
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.system_consts import AXONIUS_SAAS_VAR_NAME
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.saas.input_params import read_saas_input_params
 from axonius.saas.saas_secrets_manager import SaasSecretsManager
@@ -50,7 +52,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
-                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES)
+                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, Signup)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -62,7 +64,8 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           PASSWORD_MIN_UPPERCASE, PASSWORD_MIN_NUMBERS, PASSWORD_MIN_SPECIAL_CHARS,
                                           PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
                                           PASSWORD_PROTECTION_LOCKOUT_MIN, PASSWORD_PROTECTION_BY_IP,
-                                          RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION)
+                                          RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION,
+                                          AXONIUS_SETTINGS_PATH)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
@@ -245,6 +248,21 @@ class GuiService(Triggerable,
         if read_saas_input_params():
             self.ssm_client = SaasSecretsManager()
             self.saas_params = read_saas_input_params()
+            self.tunnel_status = False
+        elif os.environ.get(AXONIUS_SAAS_VAR_NAME):
+            if Signup.SignupCollection in self._get_db_connection()[self.plugin_name].list_collection_names():
+                company_name = self._get_collection(Signup.SignupCollection).find_one({}).get(Signup.CompanyField, '')
+            else:
+                company_name = ''
+            with open(AXONIUS_SETTINGS_PATH / 'vpn_data' / 'user.ovpn', 'r') as fh:
+                web_url = re.findall(r'remote\s(\d.*?)\s', fh.read())
+            self.saas_params = {
+                'AXONIUS_SAAS_NODE': 'True',
+                'WEB_URL': f'https://{web_url}',
+                'TUNNEL_URL': f'{web_url}:2212',
+                'COMPANY_FOR_SIGNUP': company_name,
+                'MACHINE_ENVIRONMENT': 'test' if os.environ.get('PROD') == 'false' else 'prod'
+            }
             self.tunnel_status = False
 
         try:

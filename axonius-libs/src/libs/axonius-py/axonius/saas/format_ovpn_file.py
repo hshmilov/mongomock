@@ -46,8 +46,9 @@ def format_ovpn_file():
         server_addr = calc_openvpn_address()
         port = 2212
     else:
-        server_addr = saas_params['TUNNEL_URL'] if 'TUNNEL_URL' in saas_params else calc_openvpn_address()
-        port = 443 if 'TUNNEL_URL' in saas_params else 2212
+        server_addr = saas_params['TUNNEL_URL'] if saas_params and 'TUNNEL_URL' in saas_params \
+            else calc_openvpn_address()
+        port = 443 if saas_params and 'TUNNEL_URL' in saas_params else 2212
 
     formatted_file = OVPN_FILE_TEMPLATE.format(SERVER_ADDR=server_addr, KEYS=keys_section, PORT=port)
     (VPN_DATA_DIR / 'user.ovpn').write_text(formatted_file)

@@ -24,7 +24,7 @@ from axonius.consts.system_consts import (METADATA_PATH,
                                           CUSTOMER_CONF_PATH,
                                           NODE_MARKER_PATH,
                                           NODE_CONF_PATH,
-                                          CORTEX_PATH, AXONIUS_VPN_DATA_PATH)
+                                          CORTEX_PATH, AXONIUS_VPN_DATA_PATH, AXONIUS_SAAS_VAR_NAME)
 from devops.scripts.watchdog import watchdog_main
 from tunnel_setup import setup_openvpn
 
@@ -99,6 +99,7 @@ def system_entry_point(args):
     parser.add_argument('--skip', action='store_true', default=False, help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
+    parser.add_argument('--saas', action='store_true', default=False, help='SaaS Mode')
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction,
                         help='Adapters and Services to exclude',
                         default=[])
@@ -125,7 +126,7 @@ def system_entry_point(args):
             f.write(get_metadata('none').encode())
 
     if not os.path.exists(os.path.join(AXONIUS_VPN_DATA_PATH, 'openvpn.conf')) \
-            and read_saas_input_params() and not NODE_MARKER_PATH.is_file() and \
+            and (read_saas_input_params() or args.saas) and not NODE_MARKER_PATH.is_file() and \
             not os.environ.get('NODE_INIT_NAME', None) and 'linux' in sys.platform.lower():
         setup_openvpn()
 
@@ -162,6 +163,9 @@ def system_entry_point(args):
     if args.build_tag:
         assert BuildModes.has_value(args.build_tag), f'unknown build tag: {args.build_tag}'
         args.build_tag = args.build_tag.lower()
+
+    if args.saas:
+        args.env.append(f'{AXONIUS_SAAS_VAR_NAME}=TRUE')
 
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image, tag=args.build_tag)
