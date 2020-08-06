@@ -80,7 +80,6 @@ class TestEntityResults(TestBase):
             self.users_page.run_filter_query('avidor')
             self.users_page.hover_over_entity_adapter_icon(index=0)
             adapters_popup_table_data = [x['Name'] for x in self.users_page.get_adapters_popup_table_data()]
-            self.users_page.unhover_over_entity_adapter_icon()
             self.users_page.click_expand_row()
             adapters_expanded_data = self.users_page.get_column_data_adapter_title_tooltip()
             assert adapters_popup_table_data == adapters_expanded_data

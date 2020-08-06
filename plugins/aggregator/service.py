@@ -677,8 +677,9 @@ class AggregatorService(Triggerable, PluginBase):
             logger.error(f'BulkWriteError: {e.details}')
             raise
 
-    def _update_async_schema_version_2(self):
-        logger.info(f'Upgrading to schema version 2 - migrate wmi adapter hostname')
+    @db_migration(raise_on_failure=False, logger=logger)
+    def _update_async_schema_version_3(self):
+        logger.info(f'Upgrading to schema version 3 - migrate wmi adapter hostname')
         try:
             to_fix = []
             internal_axon_id = None
@@ -729,9 +730,6 @@ class AggregatorService(Triggerable, PluginBase):
                     logger.info(f'Finished updating {count * 2500 + len(to_fix)} entities')
                     self.devices_db.bulk_write(to_fix, ordered=False)
                     to_fix.clear()
-            self.db_async_schema_version = 2
         except BulkWriteError as e:
             logger.error(f'BulkWriteError: {e.details}')
             raise
-        except Exception as e:
-            logger.exception(f'Exception while upgrading aggregator db to async version 2. Details: {e}')
