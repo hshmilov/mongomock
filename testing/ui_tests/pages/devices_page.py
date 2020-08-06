@@ -90,9 +90,9 @@ class DevicesPage(EntitiesPage):
     HOST_NAME_AGGREGATED_FIELD_CSS = '.x-list .item-container .label[for="specific_data.data.hostname"] ~ div .item'
     ENFORCEMENT_PANEL_CONTENT_CSS = '.enforcement-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
     SAVE_AND_RUN_ENFORCEMENT_BUTTON = 'Save and Run'
-    RESULT_TASK_LINK_ID = 'task_link'
     BACK_TO_ACTION_LIBRARY_BUTTON_CSS = '.back-button'
     ENFORCEMENT_PANEL_FOOTER_ERROR_CSS = '.error-text'
+    ENFORCEMENT_TASK_SUCCESS_MESSAGE = 'Enforcement task has been created successfully'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -145,7 +145,7 @@ class DevicesPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.BACK_TO_ACTION_LIBRARY_BUTTON_CSS).click()
 
     def get_enforcement_result_link(self):
-        return self.driver.find_element_by_id(self.RESULT_TASK_LINK_ID)
+        return self.find_element_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
 
     def get_save_and_run_enforcement_button(self):
         return self.get_button(self.SAVE_AND_RUN_ENFORCEMENT_BUTTON)
@@ -171,7 +171,7 @@ class DevicesPage(EntitiesPage):
             self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_NEW_OPTION_CSS, tag
         )
         self.click_button(self.SAVE_AND_RUN_ENFORCEMENT_BUTTON)
-        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
+        self.wait_for_element_present_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
         if close_result_modal:
             self.click_button('Close')
             self.wait_for_modal_close()
@@ -191,7 +191,7 @@ class DevicesPage(EntitiesPage):
             self.DROPDOWN_SELECTED_OPTION_CSS, action
         )
         self.click_button('Run')
-        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
+        self.wait_for_element_present_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
         self.click_button('Close')
         self.wait_for_modal_close()
         return selected_count
@@ -263,7 +263,7 @@ class DevicesPage(EntitiesPage):
                                           selected_options_css_selector=self.DROPDOWN_SELECTED_OPTION_CSS,
                                           text=enforcement_name)
         self.click_button('Run')
-        self.wait_for_element_present_by_id(self.RESULT_TASK_LINK_ID)
+        self.wait_for_element_present_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
         if close_result_modal:
             self.click_button('Close')
             self.wait_for_modal_close()

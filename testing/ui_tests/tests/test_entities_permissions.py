@@ -19,6 +19,10 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
 
     RUN_TAG_ENFORCEMENT_NAME = 'Run Tag'
 
+    DUMMY_ENFORCEMENT_NAME = 'Dummy Enforcement'
+    DUMMY_ACTION_NAME = 'Dummy Action Name'
+    DUMMY_TAG_NAME = 'Dummy Tag Name'
+
     def test_devices_permissions(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
@@ -473,7 +477,9 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.wait_for_table_to_load()
         entities_page.click_row_checkbox(make_yes=True)
         entities_page.open_actions_menu()
-        assert not entities_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_RUN_ENFORCE)
+        # The "run existing enforcement" button should still be disabled since there aren't any
+        # enforcements yet
+        assert entities_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_RUN_ENFORCE)
         assert self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_ADD_ENFORCE)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'enforcements',
@@ -486,3 +492,13 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.click_row_checkbox(make_yes=True)
         entities_page.open_actions_menu()
         assert not self.devices_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_ADD_ENFORCE)
+        self.devices_page.close_actions_dropdown()
+        # Create a random enforcement in order to check that the "run existing enforcement"
+        # is no longer disabled
+        self.devices_page.create_and_run_tag_enforcement(self.DUMMY_ENFORCEMENT_NAME,
+                                                         self.DUMMY_ACTION_NAME,
+                                                         self.DUMMY_TAG_NAME)
+        self.devices_page.wait_for_table_to_be_responsive()
+        entities_page.click_row_checkbox()
+        entities_page.open_actions_menu()
+        assert not entities_page.is_enforce_button_disabled(self.devices_page.TABLE_ACTIONS_RUN_ENFORCE)

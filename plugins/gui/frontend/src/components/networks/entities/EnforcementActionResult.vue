@@ -29,7 +29,6 @@
           <div class="mt-12 navigate-task-link">
             <a
               v-if="!userCannotViewEnforcementsTasks"
-              id="task_link"
               @click="onNavigateToEnforcementTasks"
             >
               {{ newTaskMessage }}
