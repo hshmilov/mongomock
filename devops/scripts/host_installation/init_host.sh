@@ -94,9 +94,10 @@ fi
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 export DEBIAN_FRONTEND=noninteractive
 dpkg --add-architecture i386
-_wait_for_apt update
+echo "### INITIAL SYSTEM UPDATE ###"
+_wait_for_apt -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-confdef" update
 echo "Upgrading..."
-_wait_for_apt upgrade -yq -f
+_wait_for_apt -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-confdef" upgrade -yq -f
 echo "Done upgrading"
 
 echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
@@ -269,8 +270,9 @@ else
     set +e
     _wait_for_apt update
     set -e
-    _wait_for_apt install scalyr-repo -y
-    _wait_for_apt install scalyr-agent-2 -y
+    echo "Passing confdef and confold"
+    _wait_for_apt -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-confdef"  install scalyr-repo -y
+    _wait_for_apt -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef" install scalyr-agent-2 -y
     rm scalyr-repo-bootstrap_1.2.2_all.deb
 fi
 
