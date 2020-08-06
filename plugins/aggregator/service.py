@@ -213,7 +213,7 @@ class AggregatorService(Triggerable, PluginBase):
                     'check_fetch_time': check_fetch_time
                 })
                 try:
-                    if data.content and from_json(data.content).get('min_time_check') is True:
+                    if data and data.content and from_json(data.content).get('min_time_check') is True:
                         logger.info(f'got min_time_check in adapter {adapter}: '
                                     f'The minimum time between fetches hasn\'t been reached yet.')
                         break
