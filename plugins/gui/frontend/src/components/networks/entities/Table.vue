@@ -167,7 +167,11 @@ export default {
         },
       });
     }
-    this.$refs.table.fetchContentPages();
+    try {
+      this.$refs.table.fetchContentPages();
+    } catch (error) {
+      // Caused because neurons table component didnt initalize yet
+    }
   },
   methods: {
     ...mapMutations({
