@@ -123,9 +123,10 @@ class CentrifyConnection(RESTConnection):
         try:
             self._renew_token_if_needed()
             users_response = self._post(URL_USERS)
-            if not isinstance(users_response.get('Result'), list):
+            if not isinstance(users_response.get('Result'), dict) \
+                    or not isinstance(users_response['Result'].get('Columns'), list):
                 raise RESTException(f'Bad response from server: {users_response}')
-            for user_result in users_response.get('Result'):
+            for user_result in users_response.get('Result').get('Columns'):
                 if not isinstance(user_result, dict):
                     logger.warning(f'Got bad entry in response from server: {user_result}')
                     continue
