@@ -148,7 +148,12 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
                 version_value = device_raw.get(version_field)
                 if isinstance(version_value, str):
                     device.add_installed_software(name=software_name, version=version_value, architecture=device_arch)
-            device.organizational_unit = device_raw.get('organization_name')
+
+            organizational_unit = device_raw.get('organization_name')
+            if isinstance(organizational_unit, str):
+                organizational_unit = [organizational_unit]
+            if isinstance(organizational_unit, list):
+                device.organizational_unit = organizational_unit
             device.device_managed_by = device_raw.get('owner_name')
 
             if isinstance(device_raw.get('uptime_seconds'), int):
@@ -175,8 +180,8 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             device.ptable_name = device_raw.get('ptable_name')
             if isinstance(device_raw.get('capabilities'), list):
                 device.capabilities = device_raw.get('capabilities')
-            device.compute_profile_name = device_raw.get('compute_profile_name')
-            device.compute_resource_name = device_raw.get('compute_resource_name')
+            device.compute_profile = device_raw.get('compute_profile_name')
+            device.compute_resource = device_raw.get('compute_resource_name')
             device.medium_name = device_raw.get('medium_name')
             device.image_name = device_raw.get('image_name')
             device.image_file = device_raw.get('image_file')
@@ -195,11 +200,11 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
 
                 content_view = content_facet.get('content_view')
                 if isinstance(content_view, dict):
-                    device.content_view = content_view.get('name')
+                    device.content_view_name = content_view.get('name')
 
                 lifecycle_environment = content_facet.get('lifecycle_environment')
                 if isinstance(lifecycle_environment, dict):
-                    device.lifecycle_environment = lifecycle_environment.get('name')
+                    device.lifecycle_environment_name = lifecycle_environment.get('name')
 
             # facts
             device_facts = device_raw.get(consts.ATTR_INJECTED_FACTS)

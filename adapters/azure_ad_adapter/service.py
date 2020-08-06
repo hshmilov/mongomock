@@ -151,6 +151,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                     f'Token has expired. Please follow the documentation to '
                                     f're-set the token. Full message: {str(e)}'
                                 )
+                        else:
+                            raise
                 else:
                     connection.test_connection()
             except Exception:

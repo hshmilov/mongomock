@@ -1,7 +1,7 @@
 import logging
 
 from axonius.utils.gui_helpers import add_labels_to_entities
-from axonius.types.enforcement_classes import EntitiesResult
+from axonius.types.enforcement_classes import EntitiesResult, TriggeredReason
 from reports.action_types.action_type_base import ActionTypeBase, generic_success
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -57,7 +57,7 @@ class TagAllEntitiesAction(ActionTypeBase):
 
         # Remove the tag from unqueried entities
         if self._config.get('should_remove_tag_from_no_queried',
-                            False) and not self._run_configuration.view.id:
+                            False) and self._run_configuration.view.id != TriggeredReason.custom_selection:
             self.untag_unqueried(namespace)
 
         # Add the tag to queried entities

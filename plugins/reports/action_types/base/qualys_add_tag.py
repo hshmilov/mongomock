@@ -123,7 +123,7 @@ class QualysAddTag(ActionTypeBase):
                                                https_proxy=self._config.get(consts.HTTPS_PROXY))
 
             with connection:
-                status, error_message = connection.add_tags_to_qualys_ids(axon_by_qualys_id)
+                status, error_message = connection.add_tags_to_qualys_ids(qualys_dict)
                 if not status:
                     return (yield from generic_fail(axon_by_qualys_id.values(), error_message))
                 return (yield from generic_success(axon_by_qualys_id.values()))

@@ -322,7 +322,7 @@ class AzureCloudConnection(RESTConnection):
 
         page_num = 1
         while '@odata.nextLink' in result and page_num < PAGINATION_LIMIT:
-            result = self._get(result['@odata.nextLink'], force_full_url=True)
+            result = self._graph_request('GET', result['@odata.nextLink'], force_full_url=True)
             yield from result['value']
             page_num += 1
 

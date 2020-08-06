@@ -8,7 +8,7 @@ IDENTIFIERS = {
                  'dnsname', 'hosthostname', 'endpointfqdn', 'devicename', 'dns', 'nthost', 'dnshostname', 'cn'],
     'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs', 'registermac', 'clientid'],
     'ip': ['ipaddresstext', 'ip', 'ipaddress', 'ipaddresses', 'ips', 'primaryip', 'endpointipaddress', 'registerip',
-           'lastip'],
+           'lastip', 'address'],
     'subnetmask': ['ipsubnetmask'],
     'model': ['model', 'modelid', 'endpointmodel'],
     'serial': ['serial', 'serialnumber', 'sn', 'hostserialnumber', 'deviceserialnumber', 'serial#',
