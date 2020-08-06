@@ -166,6 +166,10 @@ class DockerService(AxonService):
     def get_max_uwsgi_processes(self) -> int:
         return 1
 
+    @property
+    def get_min_uwsgi_processes(self) -> int:
+        return 0
+
     @staticmethod
     def get_dockerfile(*args, **kwargs):
         return f''
@@ -253,6 +257,8 @@ class DockerService(AxonService):
         env_variables.extend(['--env', f'SERVICE_CLASS_NAME={self.service_class_name}'])
         env_variables.extend(['--env', f'UWSGI_THREADS={self.get_max_uwsgi_threads}'])
         env_variables.extend(['--env', f'UWSGI_PROCESSES={self.get_max_uwsgi_processes}'])
+        if self.get_min_uwsgi_processes:
+            env_variables.extend(['--env', f'UWSGI_CHEAPER={self.get_min_uwsgi_processes}'])
         if mode == 'prod':
             env_variables.extend(['--env', 'PROD=true'])
         else:
