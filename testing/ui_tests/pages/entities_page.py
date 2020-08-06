@@ -120,7 +120,8 @@ class EntitiesPage(Page):
 
     TABLE_DATA_SLICER_TYPE_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
-    TABLE_DATA_EXPAND_CELL_XPATH = '//div[contains(@class, \'ant-popover\')]//*[@class=\'table\']'
+    TABLE_DATA_EXPAND_CELL_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
+                                   f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
     TABLE_DATA_EXPAND_CELL_BODY_XPATH = f'{TABLE_DATA_EXPAND_CELL_XPATH}/tbody'
     TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
 
@@ -208,7 +209,7 @@ class EntitiesPage(Page):
     FILTERED_ADAPTER_ICON_CSS = '.img-filtered'
 
     REMAINDER_CSS = '.x-data .array.inline .item .remainder>span'
-    TOOLTIP_CSS = '.ant-popover'
+    TOOLTIP_CSS = '.x-tooltip'
     TOOLTIP_TABLE_HEAD_CSS = f'{TOOLTIP_CSS} .x-table .table thead .clickable th'
     TOOLTIP_TABLE_DATA_CSS = f'{TOOLTIP_CSS} .x-table .table tbody .x-table-row td'
     ADAPTERS_TOOLTIP_TABLE_CSS = f'{TOOLTIP_CSS} .table'
@@ -1573,7 +1574,7 @@ class EntitiesPage(Page):
         return self.get_coloumn_data_count_bool(col_name, generic_col=generic_col)
 
     def wait_close_column_details_popup(self):
-        self.wait_for_element_absent_by_css('.ant-popover .content .table')
+        self.wait_for_element_absent_by_css('.details-table-container .popup .content .table')
 
     def find_query_header(self):
         return self.driver.find_element_by_css_selector('.x-query .x-query-state .header')
@@ -1645,10 +1646,6 @@ class EntitiesPage(Page):
         icon = table_row.find_elements_by_tag_name('td')[2]
         ActionChains(self.driver).move_to_element(icon).perform()
         assert self.driver.find_element_by_css_selector(self.ADAPTERS_TOOLTIP_TABLE_CSS)
-
-    def unhover_over_entity_adapter_icon(self, index=0):
-        ActionChains(self.driver).move_by_offset(0, -200).perform()
-        self.wait_for_element_absent_by_css(self.ADAPTERS_TOOLTIP_TABLE_CSS)
 
     def get_table_scroll_position(self):
         return self.get_scroll_position(self.TABLE_CONTAINER_CSS)

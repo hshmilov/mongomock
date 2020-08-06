@@ -1,105 +1,109 @@
 <template>
   <div class="x-slice">
     <slot :sliced="slicedData" />
-    <APopover
-      :get-popup-container="getPopupContainer"
-      :destroy-tooltip-on-hide="true"
+    <div
+      v-if="remainder"
+      class="remainder"
+      @mouseover.stop="onHoverRemainder"
+      @mouseleave="onLeaveRemainder"
     >
-      <template slot="content">
-        <XTable
+      <span>+{{ remainder }}</span>
+      <x-tooltip v-if="inHover">
+        <x-table
           slot="body"
           v-bind="tooltipTable"
         />
-      </template>
-      <div
-        v-if="remainder"
-        class="remainder"
-      >
-        <span>+{{ remainder }}</span>
-      </div>
-    </APopover>
+      </x-tooltip>
+    </div>
   </div>
 </template>
 
 <script>
-import { Popover } from 'ant-design-vue';
-import _get from 'lodash/get';
-import { mapState } from 'vuex';
-import XTable from '../../axons/tables/Table.vue';
-import { isObjectListField } from '../../../constants/utils';
+  import xTable from '../../axons/tables/Table.vue'
+  import xTooltip from '../../axons/popover/Tooltip.vue'
+  import {isObjectListField } from '../../../constants/utils'
 
-export default {
-  name: 'XSlice',
-  components: {
-    XTable,
-    APopover: Popover,
-  },
-  props: {
-    schema: {
-      type: Object,
-      required: true,
+  import {mapState} from 'vuex'
+
+  export default {
+    name: 'XSlice',
+    components: {
+      xTable, xTooltip
     },
-    value: {
-      type: [String, Number, Boolean, Array, Object],
-      default: undefined,
-    },
-  },
-  computed: {
-    ...mapState({
-      defaultColumnLimit(state) {
-        return _get(state, 'configuration.data.system.defaultColumnLimit', 0);
+    props: {
+      schema: {
+        type: Object,
+        required: true
       },
-    }),
-    limit() {
-      if (!Array.isArray(this.value) || this.schema.name === 'adapters') {
-        return 0;
+      value: {
+        type: [String, Number, Boolean, Array, Object],
+        default: undefined
       }
-      if (isObjectListField(this.schema)) {
-        return 1;
-      }
-      if (this.schema.limit) return this.schema.limit;
-      return this.defaultColumnLimit;
     },
-    slicedData() {
-      if (!this.limit) {
-        return this.value;
-      }
-      return this.value.slice(0, this.limit);
-    },
-    remainder() {
-      return this.limit && this.value.length > this.limit ? this.value.length - this.limit : 0;
-    },
-    tooltipTable() {
-      let schema = { ...this.schema };
-      if (schema.type === 'array' && !Array.isArray(schema.items) && !isObjectListField(schema)) {
-        schema = { ...schema, ...schema.items };
-      }
-      if (this.value.length > 500) {
-        schema.title += ' (first 500 results)';
-      }
+    data () {
       return {
-        fields: [schema],
-        data: this.value.slice(0, 500),
-        colFilters: {
-          [schema.name]: this.filter,
-        },
-        filterable: false,
-      };
+        inHover: false
+      }
     },
-  },
-  methods: {
-    getPopupContainer() {
-      return this.$el.closest('.x-table-wrapper > .x-table') || this.$el;
+    computed: {
+      ...mapState({
+        defaultColumnLimit (state) {
+          if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return 0
+          return state.configuration.data.system.defaultColumnLimit
+        }
+      }),
+      limit () {
+        if (!Array.isArray(this.value) || this.schema.name === 'adapters') {
+          return 0
+        }
+        if (isObjectListField(this.schema)) {
+          return 1
+        }
+        if (this.schema.limit) return this.schema.limit;
+        return this.defaultColumnLimit;
+      },
+      slicedData () {
+        if (!this.limit) {
+          return this.value
+        }
+        return this.value.slice(0, this.limit)
+      },
+      remainder () {
+        return this.limit && this.value.length > this.limit ? this.value.length - this.limit : 0
+      },
+      tooltipTable () {
+        let schema = { ...this.schema }
+        if (schema.type === 'array' && !Array.isArray(schema.items) && !isObjectListField(schema)) {
+          schema = { ...schema, ...schema.items }
+        }
+        if (this.value.length > 500) {
+          schema.title += ' (first 500 results)'
+        }
+        return {
+          fields: [schema],
+          data: this.value.slice(0, 500),
+          colFilters: {
+            [schema.name]: this.filter
+          },
+          filterable: false
+        }
+      }
     },
-  },
-};
+    methods: {
+      onHoverRemainder () {
+        this.inHover = true
+      },
+      onLeaveRemainder () {
+        this.inHover = false
+      }
+    }
+  }
 </script>
 
 <style lang="scss">
   .x-slice {
     display: flex;
     align-items: center;
-    position: relative;
     .remainder {
       position: relative;
       height: 20px;
@@ -111,6 +115,16 @@ export default {
       cursor: pointer;
       display: flex;
       align-items: center;
+      .x-tooltip {
+        top: 20px;
+        left: 0;
+        &.left {
+          left: auto;
+        }
+        &.top {
+          top: auto;
+        }
+      }
     }
   }
 </style>

@@ -33,8 +33,13 @@ class CentrifyConnection(RESTConnection):
             'grant_type': GRANT_TYPE_CLIENT,
             'scope': self._scope
         }
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         try:
-            response = self._post(url, body_params=body_params, do_basic_auth=True, use_json_in_body=False)
+            response = self._post(url,
+                                  body_params=body_params,
+                                  do_basic_auth=True,
+                                  use_json_in_body=False,
+                                  extra_headers=headers)
             if 'access_token' not in response:
                 raise RESTException(f'Bad response when trying to get token: {response}')
             self._token = response['access_token']
@@ -85,7 +90,7 @@ class CentrifyConnection(RESTConnection):
             raise RESTException('No username or password')
         try:
             self._renew_token_if_needed()
-            next(self.get_user_list(), None)
+            self._post(URL_USERS)
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
@@ -101,7 +106,7 @@ class CentrifyConnection(RESTConnection):
             'userUuid': user_uuid
         }
         # Intentionally not wrapped in try/except, exceptions handled in get_user_list()
-        result = self._post(URL_APPS, url_params)
+        result = self._post(URL_APPS, url_params=url_params)
         if isinstance(result.get('Result'), dict):
             return [result.get('Result')]
         if isinstance(result.get('Result'), list):
@@ -118,9 +123,10 @@ class CentrifyConnection(RESTConnection):
         try:
             self._renew_token_if_needed()
             users_response = self._post(URL_USERS)
-            if not isinstance(users_response.get('Result'), list):
+            if not isinstance(users_response.get('Result'), dict) \
+                    or not isinstance(users_response['Result'].get('Columns'), list):
                 raise RESTException(f'Bad response from server: {users_response}')
-            for user_result in users_response.get('Result'):
+            for user_result in users_response.get('Result').get('Columns'):
                 if not isinstance(user_result, dict):
                     logger.warning(f'Got bad entry in response from server: {user_result}')
                     continue
