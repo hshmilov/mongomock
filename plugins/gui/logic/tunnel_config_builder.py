@@ -21,6 +21,7 @@ group nogroup'''
 
 base_config = '''#!/bin/sh
 AXONIUS_AGENT_BASE_FOLDER=/opt/axonius
+PERMANENT=1
 
 if [ "$(id -u)" != "0" ];then
   echo "Axonius installer/uninstaller must run as root"
@@ -49,6 +50,8 @@ if [ $# -eq 1 ]; then
         fi
         echo "The Axonius Tunnel has been successfully uninstalled." >&3
         exit 0
+    elif [ "$1" = "no_auto_start" ]; then
+        PERMANENT=0
     else
         echo "Bad argument"
         exit 1
@@ -61,7 +64,7 @@ fi
 
 exec 1>$AXONIUS_AGENT_BASE_FOLDER/axonius_tunnel_error.log 2>&1
 echo "Axonius Tunnel installation started..." >&3
-echo "Step 1/4 : In progress..." >&3
+echo "Step 1/3 : In progress..." >&3
 cd $AXONIUS_AGENT_BASE_FOLDER
 cat <<EOF > Dockerfile
 FROM alpine:3.11.6
@@ -81,9 +84,15 @@ EOF
 mkdir scripts
 mkdir conf
 
-cat <<EOF > scripts/init_dnsmasq.sh
+cat <<EOF > scripts/startup.sh
 #!/bin/bash
+iptables -P FORWARD ACCEPT
+IFACE=\$(route | grep '^default' | grep -o '[^ ]*$')
+iptables -t nat -F
+iptables -t nat -A POSTROUTING -o \$IFACE -j MASQUERADE
+
 dnsmasq --log-facility=/tmp/dnsmasq.log --interface=tun0 --cache-size=0 --bind-interfaces --max-cache-ttl=0 &
+
 EOF
 
 cat <<EOF > scripts/stop_dnsmasq.sh
@@ -99,12 +108,12 @@ EOF
 cat <<EOF > scripts/init.sh
 #!/bin/bash
 if [[ "{proxy_enabled}" == "True" && "{proxy_username}" != "" ]]; then
-    openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/init_dnsmasq.sh --down /scripts/stop_dnsmasq.sh --http-proxy {proxy_addr} {proxy_port} /conf/auth basic
+    openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/startup.sh --down /scripts/stop_dnsmasq.sh --http-proxy {proxy_addr} {proxy_port} /conf/auth basic
 else
     if [ "{proxy_enabled}" == "True" ]; then
-        openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/init_dnsmasq.sh --down /scripts/stop_dnsmasq.sh --http-proxy {proxy_addr} {proxy_port}
+        openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/startup.sh --down /scripts/stop_dnsmasq.sh --http-proxy {proxy_addr} {proxy_port}
     else
-        openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/init_dnsmasq.sh --down /scripts/stop_dnsmasq.sh
+        openvpn --config /conf/user.ovpn --script-security 2 --up /scripts/startup.sh --down /scripts/stop_dnsmasq.sh
     fi
 fi
 EOF
@@ -112,9 +121,9 @@ echo -n {payload} | base64 -d | gzip -d > conf/user.ovpn
 if [ ! -s ./conf/user.ovpn ]; then
     error_exit
 fi
-echo "Step 1/4 : Completed" >&3
+echo "Step 1/3 : Completed" >&3
 
-echo "Step 2/4 : In progress..." >&3
+echo "Step 2/3 : In progress..." >&3
 docker build -t axonius_tunnel .
 docker stop axonius_tunnel; docker rm axonius_tunnel
 if [ $(docker image ls | grep axonius_tunnel -c) != "1" ]; then
@@ -123,24 +132,18 @@ fi
 if [ $(docker ps | grep axonius_tunnel -c) != "0" ]; then
     error_exit
 fi
-echo "Step 2/4 : Completed" >&3
+echo "Step 2/3 : Completed" >&3
 
-echo "Step 3/4 : In progress..." >&3
-docker run --privileged -v $PWD/conf:/conf --net=host --name axonius_tunnel -d axonius_tunnel
+echo "Step 3/3 : In progress..." >&3
+if [ $PERMANENT -eq 0 ]; then
+    docker run --privileged -v $PWD/conf:/conf --net=host --name axonius_tunnel -d axonius_tunnel
+else
+    docker run --privileged -v $PWD/conf:/conf --net=host --restart unless-stopped --name axonius_tunnel -d axonius_tunnel
+fi
 if [ $(docker ps | grep axonius_tunnel -c) != "1" ]; then
     error_exit
 fi
-echo "Step 3/4 : Completed" >&3
-
-echo "Step 4/4 : In progress..." >&3
-docker exec axonius_tunnel iptables -P FORWARD ACCEPT
-IFACE=$(docker exec axonius_tunnel route | grep '^default' | grep -o '[^ ]*$')
-docker exec axonius_tunnel iptables -t nat -F
-docker exec axonius_tunnel iptables -t nat -A POSTROUTING -o $IFACE -j MASQUERADE
-if [ $(docker ps | grep axonius_tunnel -c) != "1" ]; then
-    error_exit
-fi
-echo "Step 4/4 : Completed" >&3
+echo "Step 3/3 : Completed" >&3
 
 echo "The Axonius Tunnel has been successfully installed.\n" >&3
 echo "Open the Axonius instance and go to the Tunnel Settings tab. The Tunnel Status button in the upper right corner of this screen will display Connected." >&3
