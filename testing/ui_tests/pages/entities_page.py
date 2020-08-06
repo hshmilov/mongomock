@@ -71,6 +71,7 @@ class EntitiesPage(Page):
     QUERY_ERROR_CSS = '.x-filter .error-text'
     QUERY_COMP_EXISTS = 'exists'
     QUERY_COMP_CONTAINS = 'contains'
+    QUERY_COMP_REGEX = 'regex'
     QUERY_COMP_TRUE = 'true'
     QUERY_COMP_FALSE = 'false'
     QUERY_COMP_EQUALS = 'equals'
@@ -640,6 +641,9 @@ class EntitiesPage(Page):
 
     def build_query_field_contains(self, field_name, field_value):
         self.build_query(field_name, field_value, self.QUERY_COMP_CONTAINS)
+
+    def build_query_field_regex(self, field_name, field_value):
+        self.build_query(field_name, field_value, self.QUERY_COMP_REGEX)
 
     def build_query_field_contains_with_adapter(self, field_name, field_value, adapter_name):
         self.build_query_with_adapter(field_name, field_value, self.QUERY_COMP_CONTAINS, adapter_name)

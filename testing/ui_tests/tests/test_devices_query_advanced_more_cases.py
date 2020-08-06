@@ -36,6 +36,15 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         self.devices_page.click_query_wizard()
         assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_CONTAINS
 
+    def test_regex_no_escaping(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.build_query_field_contains(self.devices_page.FIELD_ASSET_NAME, '^')
+        assert '\\' in self.devices_page.find_search_value()
+
+        self.devices_page.reset_query()
+        self.devices_page.build_query_field_regex(self.devices_page.FIELD_ASSET_NAME, '^')
+        assert '\\' not in self.devices_page.find_search_value()
+
     def test_in_adapters_query(self):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()

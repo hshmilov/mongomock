@@ -68,6 +68,7 @@ const exists_array = '({field} == ({"$exists":true,"$ne":[]}))';
 const equals = '{field} == "{val}"';
 const IN = '{field} in [{val}]';
 const contains = '{field} == regex("{val}", "i")';
+const regex = '{field} == regex("{val}", "i")';
 const numerical = {
   equals: '{field} == {val}',
   IN: '{field} in [{val}]',
@@ -138,6 +139,7 @@ export const compOps = {
     IN,
     starts: '{field} == regex("^{val}", "i")',
     ends: '{field} == regex("{val}$", "i")',
+    regex,
     exists: exists_str,
   },
   bool: {
