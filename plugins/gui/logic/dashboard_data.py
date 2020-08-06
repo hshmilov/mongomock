@@ -6,6 +6,7 @@ from functools import wraps
 from multiprocessing import cpu_count
 from threading import Semaphore
 from typing import (List, Iterable, Tuple, Optional)
+import re
 
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
@@ -685,15 +686,22 @@ def _generate_segmented_field_query_filter(field_name, value, with_regex=False):
     :param with_regex: use contain in true and compare in false
     :return: one name value pair query string
     """
+
+    def escape_regex_value(_value):
+        return re.escape(_value)
+
+    def escape_new_line(_value):
+        return _value.replace('\n', '\\n')
+
     query_filter = ''
     if isinstance(value, str):
         if value in ['false', 'true']:
             query_filter = f'{field_name} == {value}'
         else:
             if with_regex:
-                query_filter = f'{field_name} == regex("{value}","i")'
+                query_filter = f'{field_name} == regex("{escape_regex_value(value)}","i")'
             else:
-                query_filter = f'{field_name} == "{value}"'
+                query_filter = f'{field_name} == "{escape_new_line(value)}"'
     elif isinstance(value, int):
         query_filter = f'{field_name} == {value}'
     elif isinstance(value, datetime):
