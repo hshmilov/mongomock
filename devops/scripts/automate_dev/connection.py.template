@@ -14,6 +14,14 @@ class {capital_adapter_name}Connection(RESTConnection):
                          headers={{'Content-Type': 'application/json',
                                   'Accept': 'application/json'}},
                          **kwargs)
+        self._session_refresh = None
+
+    # TODO: implement
+    def _refresh_token(self):
+        # AUTOADAPTER
+        if self._session_refresh and self._session_refresh > datetime.datetime.now():
+            return
+        # Make request 
 
     # TODO: implement
     def _connect(self):
@@ -37,6 +45,8 @@ class {capital_adapter_name}Connection(RESTConnection):
 
     # TODO: implement
     def get_device_list(self):
+        # This function must exist even if the adapter doesnt fetch devices
+        # Just do pass
         # AUTOADAPTER
         try:
             yield from self._paginated_device_get()

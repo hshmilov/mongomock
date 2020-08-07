@@ -18,6 +18,15 @@ Basically we do the following things
         -> AUTOADAPTER - implement schema, fetch devices, etc
     -> create adapters/<adapter_name>_adapter/client_id.py
         -> AUTOADAPTER - implement get_client_id
+    -> create adapter/<adapter_name>_adapter/structures.py
+        -> AUTOADAPTER - implement <adapter_name>DeviceInstance
+        -> AUTOADAPTER - implement <adapter_name>UserInstance
+
+-> mkdir axonius-libs/src/libs/axonius-py/axonius/clients/<adapter_name>
+    -> create axonius-libs/src/libs/axonius-py/axonius/clients/<adapter_name>/__init__.py
+    -> create axonius-libs/src/libs/axonius-py/axonius/clients/<adapter_name>/connection.py
+        -> AUTOADAPTER - implement connection, get_device_list, get_user_list, etc
+    -> create axonius-libs/src/libs/axonius-py/axonius/clients/<adapter_name>/consts.py
 
 -> create testing/test_credentials/test_<adapter_name>_credentials.py
     -> AUTOADAPTER - add client_details example
@@ -28,6 +37,7 @@ Basically we do the following things
 -> create testing/parallel_tests/test_<adapter_name>.py
 
 -> add port to testing/services/ports.py
+    -> Modify location of the adapter port
 """
 # pylint:disable=invalid-string-quote,invalid-name
 import json
@@ -73,17 +83,26 @@ def get_action_table(adapter_name: str) -> OrderedDict:
     """ returns table for each adapter file -> (validator, action) """
 
     return OrderedDict({
+        # Meta Data
         f'plugins/gui/frontend/src/constants/plugin_meta.json': (description_validator, description_action),
         f'axonius-libs/src/libs/axonius-py/axonius/assets/logos/adapters/{adapter_name}_adapter.png':
             (not_exists_validator, image_action),
+
+        # Adapter
         f'adapters/{adapter_name}_adapter': (not_exists_validator, adapter_dir_action),
         f'adapters/{adapter_name}_adapter/__init__.py': (not_exists_validator, adapter_init_action),
         f'adapters/{adapter_name}_adapter/config.ini': (not_exists_validator, config_ini_action),
         f'adapters/{adapter_name}_adapter/service.py': (not_exists_validator, service_action),
         f'adapters/{adapter_name}_adapter/client_id.py': (not_exists_validator, client_id_action),
-        f'adapters/{adapter_name}_adapter/consts.py': (not_exists_validator, consts_action),
-        f'adapters/{adapter_name}_adapter/connection.py': (not_exists_validator, connection_action),
         f'adapters/{adapter_name}_adapter/structures.py': (not_exists_validator, structures_action),
+
+        # Connection
+        f'axonius-libs/src/libs/axonius-py/axonius/clients/{adapter_name}': (not_exists_validator, adapter_dir_action),
+        f'axonius-libs/src/libs/axonius-py/axonius/clients/{adapter_name}/__init__.py': (not_exists_validator, adapter_init_action),
+        f'axonius-libs/src/libs/axonius-py/axonius/clients/{adapter_name}/connection.py': (not_exists_validator, connection_action),
+        f'axonius-libs/src/libs/axonius-py/axonius/clients/{adapter_name}/consts.py': (not_exists_validator, consts_action),
+
+        # Tests
         f'testing/test_credentials/test_{adapter_name}_credentials.py': (not_exists_validator, creds_action),
         f'testing/services/adapters/{adapter_name}_service.py': (not_exists_validator, test_service_action),
         f'testing/parallel_tests/test_{adapter_name}.py': (not_exists_validator, parallel_tests_action),
@@ -186,14 +205,15 @@ def service_action(filename: str, adapter_name: str, adapter_type: str):
         file_.write(template)
 
 
-def connection_action(filename: str, adapter_name: str, *args):
+def connection_action(filename: str, adapter_name: str, adapter_type: str):
     """ Create service.py file for the adapter """
 
-    template = open(os.path.join(get_cortex_dir(), 'devops/scripts/automate_dev/connection.py.template'),
-                    'r', encoding='utf-8').read()
-    template = template.format(capital_adapter_name=capitalize_adapter_name(adapter_name))
-    with open(filename, 'w') as file_:
-        file_.write(template)
+    if adapter_type == AdapterTypes.REST.value:
+        template = open(os.path.join(get_cortex_dir(), 'devops/scripts/automate_dev/connection.py.template'),
+                        'r', encoding='utf-8').read()
+        template = template.format(capital_adapter_name=capitalize_adapter_name(adapter_name))
+        with open(filename, 'w') as file_:
+            file_.write(template)
 
 
 def structures_action(filename: str, adapter_name: str, *args):
@@ -335,6 +355,10 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
 
     @pytest.mark.skip('No test environment')
     def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('No test environment')
+    def test_fetch_users(self):
         pass
 
     @pytest.mark.skip('No test environment')

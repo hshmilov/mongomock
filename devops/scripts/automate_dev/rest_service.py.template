@@ -2,10 +2,11 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.connection import RESTException
+from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.clients.{adapter_name}.connection import {capital_adapter_name}Connection
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from {adapter_name}_adapter.connection import {capital_adapter_name}Connection
+from axonius.utils.parsing import parse_bool_from_raw, int_or_none, float_or_none
 from {adapter_name}_adapter.client_id import get_client_id
 from {adapter_name}_adapter.structures import {capital_adapter_name}DeviceInstance, {capital_adapter_name}UserInstance
 
@@ -156,12 +157,11 @@ class {capital_adapter_name}Adapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {{device_raw}}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('') or '')
 
             self._fill_{adapter_name}_device_fields(device_raw, device)
 
             device.set_raw(device_raw)
-
             return device
         except Exception:
             logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
@@ -201,12 +201,11 @@ class {capital_adapter_name}Adapter(AdapterBase):
             if user_id is None:
                 logger.warning(f'Bad user with no ID {{user_raw}}')
                 return None
-            user.id = user_id + '_' + (user_raw.get('') or '')
+            user.id = str(user_id) + '_' + (user_raw.get('') or '')
 
             self._fill_{adapter_name}_user_fields(user_raw, user)
 
             user.set_raw(user_raw)
-
             return user
         except Exception:
             logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
