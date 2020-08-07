@@ -292,7 +292,12 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
         for software in raw_device_data.get('software') or []:
             try:
-                device.add_installed_software(name=software)
+                sw_version = None
+                if software and ' [version' in software:
+                    sw_version = software[software.find(' [version ') + len(' [version '):].split(']')[0]
+                    software = software[:software.find(' [version ')]
+
+                device.add_installed_software(name=software, version=sw_version)
             except Exception as e:
                 logger.exception(f'Failed to add installed software {software}')
         device.add_nic(mac=raw_device_data.get('macAddress'), ips=ips)

@@ -89,7 +89,7 @@ class PureStorageFlashArrayAdapter(AdapterBase):
                     'title': 'Private Key',
                     'description': 'Unencrypted Private Key',
                     'type': 'string',
-                    'format': 'Password'
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',

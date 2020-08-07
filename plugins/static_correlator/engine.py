@@ -31,7 +31,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
                                    is_azuread_or_ad_and_have_name,
                                    hostname_not_problematic, os_do_not_contradict,
-                                   is_different_plugin,
+                                   is_different_plugin, ips_do_not_contradict,
                                    is_from_juniper_and_asset_name,
                                    is_windows, is_linux, get_cloud_id_or_hostname, compare_cloud_id_or_hostname,
                                    is_junos_space_device,
@@ -94,7 +94,6 @@ def is_only_host_adapter(adapter_device):
                                               'cloud_health_adapter',
                                               'symantec_ee_adapter',
                                               'arsenal_adapter',
-                                              'sccm_adapter',
                                               'guardium_adapter',
                                               'datadog_adapter',
                                               'observium_adapter',
@@ -111,6 +110,7 @@ def is_only_host_adapter(adapter_device):
                                               'amd_db_adapter',
                                               'hp_nnmi_adapter',
                                               'sal_adapter',
+                                              'snipeit_adapter',
                                               'druva_adapter']):
         return True
     try:
@@ -383,7 +383,9 @@ def is_service_now_and_no_other(adapter_device):
 
 
 def is_only_asset_nams_adapter(adapter_device):
-    return is_ca_cmdb_adapter(adapter_device) or is_netbox_adapter(adapter_device)\
+    name = get_asset_name(adapter_device) or ''
+    return is_ca_cmdb_adapter(adapter_device) or \
+        (is_netbox_adapter(adapter_device) and not get_normalized_ip(adapter_device) and '.' not in name) \
         or is_ivanti_cm_adapter(adapter_device) or is_service_now_and_no_other(adapter_device)
 
 
@@ -509,6 +511,28 @@ def force_mac_adapters(adapter_device):
 # pylint: disable=global-statement
 
 
+def get_asset_gce_chef(adapter_device):
+    name = adapter_device['data'].get('name')
+    if not name:
+        return None
+    name = name.lower()
+    if adapter_device.get('plugin_name') == 'chef_adapter':
+        if '.' not in name:
+            return None
+        return name.split('.')[0] + '-' + name.split('.')[1]
+    if adapter_device.get('plugin_name') == 'gce_adapter':
+        return name
+    return None
+
+
+def compare_asset_gce_chef(adapter_device1, adapter_device2):
+    asset1 = get_asset_gce_chef(adapter_device1)
+    asset2 = get_asset_gce_chef(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def get_fw_ip(adapter_device):
     return adapter_device['data'].get('fw_ip')
 
@@ -527,7 +551,8 @@ def is_a_record_device(adapter_device):
 
 
 def is_full_hostname_adapter(adapter_device):
-    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter', 'tanium_adapter'] \
+    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter', 'tanium_adapter',
+                                                 'sccm_adapter'] \
         or is_a_record_device(adapter_device)
 
 
@@ -817,6 +842,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [has_hostname, has_name, has_mac, has_serial, has_cloud_id, has_ad_or_azure_name, has_last_used_users,
                 has_nessus_scan_no_id, has_resource_id, has_public_ips]
+
+    def _correlate_gce_chef(self, adapters_to_correlate):
+        logger.info('Starting to correlate GCE')
+        filtered_adapters_list = filter(get_asset_gce_chef, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_gce_chef],
+                                      [compare_asset_gce_chef],
+                                      [],
+                                      [ips_do_not_contradict],
+                                      {'Reason': 'They have the same GCE-CHEF name'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_fw_ip(self, adapters_to_correlate):
         logger.info('Starting to correlate fw ip')
@@ -1546,6 +1582,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_mac(adapters_to_correlate, correlate_by_snow_mac)
         yield from self._correlate_host_serial_g(adapters_to_correlate)
         yield from self._correlate_fw_ip(adapters_to_correlate)
+        yield from self._correlate_gce_chef(adapters_to_correlate)
 
     @staticmethod
     def _post_process(first_name, first_id, second_name, second_id, data, reason) -> bool:

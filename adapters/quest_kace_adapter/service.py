@@ -113,7 +113,10 @@ class QuestKaceAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = device_id + '_' + (device_raw.get('Name') or '')
-            device.hostname = device_raw.get('Name')
+            hostname = device_raw.get('Name')
+            if hostname:
+                device.name = hostname
+                device.hostname = hostname.split(' (')[0]
             device.asset_tag = device_raw.get('Asset_tag')
             device.bios_serial = device_raw.get('Bios_serial_number')
             device.bios_version = device_raw.get('Bios_version')

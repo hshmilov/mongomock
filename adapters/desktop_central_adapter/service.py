@@ -101,6 +101,13 @@ class DesktopCentralAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'port',
+                    'title': 'Port',
+                    'default': consts.DEFAULT_PORT,
+                    'type': 'integer',
+                    'format': 'port'
+                },
+                {
                     'name': 'username_domain',
                     'title': 'User Name Domain',
                     'type': 'string'
@@ -129,6 +136,7 @@ class DesktopCentralAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
+                'port',
                 'username',
                 'password',
                 'verify_ssl'

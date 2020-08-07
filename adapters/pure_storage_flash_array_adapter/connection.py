@@ -20,7 +20,6 @@ class PureStorageFlashArrayConnection(RESTConnection):
 
     def __init__(self, *args, application_id, private_key, **kwargs):
         super().__init__(*args,
-                         url_base_prefix=API_PREFIX,
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
@@ -29,7 +28,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
         self._token = None
         self._token_type = None
         self._token_expires = None
-        self._private_key = private_key
+        self._private_key = private_key.replace(r'\n', '\n')
         self._application_id = application_id
 
     def _refresh_token(self):
@@ -46,7 +45,10 @@ class PureStorageFlashArrayConnection(RESTConnection):
                 'subject_token': self._jwt,
                 'subject_token_type': ACCESS_TOKEN_SUBJECT_TOKEN_TYPE
             }
-            response = self._post(API_OAUTH_PREFIX, body_params=body_params)
+            response = self._post(API_OAUTH_PREFIX, body_params=body_params,
+                                  use_json_in_body=False,
+                                  extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                                  )
             if not (isinstance(response, dict) and response.get('access_token')):
                 raise RESTException(f'Failed fetching access token, received invalid response: {response}')
 
@@ -97,7 +99,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
             url_params = {
                 'limit': 1
             }
-            self._get('arrays', url_params=url_params)
+            self._get(API_PREFIX + 'arrays', url_params=url_params)
 
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
@@ -107,8 +109,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
             network_interfaces = self._get_network_interfaces()
 
             url_params = {
-                'limit': DEVICE_PER_PAGE,
-                'continuation_token': NULL_STR
+                'limit': DEVICE_PER_PAGE
             }
             response = self._get('arrays', url_params=url_params)
             if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
@@ -141,7 +142,6 @@ class PureStorageFlashArrayConnection(RESTConnection):
             network_interfaces = defaultdict(list)
             url_params = {
                 'limit': DEVICE_PER_PAGE,
-                'continuation_token': NULL_STR
             }
             response = self._get('network-interfaces', url_params=url_params)
             if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
@@ -155,7 +155,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
                     if isinstance(array, dict) and array.get('id'):
                         network_interfaces[array.get('id')].append(network_interface)
 
-            while response.get('continuation_token'):
+            while response.get('continuation_token') and response.get('continuation_token') != NULL_STR:
                 url_params['continuation_token'] = response.get('continuation_token')
                 response = self._get('network-interfaces', url_params=url_params)
                 if not (isinstance(response, dict) and isinstance(response.get('items'), list)):

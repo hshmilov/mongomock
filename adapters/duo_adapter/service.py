@@ -117,6 +117,10 @@ class DuoAdapter(AdapterBase):
             user.account_disabled = False
         last_logon_raw = raw_user_data.get('last_login')
         user.user_created = parse_date(raw_user_data.get('parse_date'))
+        phones_raw = raw_user_data.get('phones')
+        if isinstance(phones_raw, list) and phones_raw:
+            if isinstance(phones_raw[0], dict):
+                user.user_telephone_number = phones_raw[0].get('number')
         groups_raw = raw_user_data.get('groups')
         if not isinstance(groups_raw, list):
             groups_raw = []

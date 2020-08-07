@@ -168,7 +168,9 @@ class RedSealClient:
                 try:
                     config_name = config_raw.get('Name')
                     config_url = config_raw.get('URL')
-                    if config_name in ['ARP table']:
+                    if config_name:
+                        config_name = config_name.lower()
+                    if config_name in ['arp table']:
                         data[f'{config_name}_full'] = self._get(session, config_url)
                 except Exception:
                     logger.exception(f'Problem with config raw')

@@ -180,7 +180,7 @@ class RedsealAdapter(AdapterBase, Configurable):
 
         device.rs_imported_from = raw_device_data.get('ImportDevicePluginName')
         try:
-            arp = ((raw_device_data.get('ARP table_full') or {}).get('Configuration') or {}).get('FileLine')
+            arp = ((raw_device_data.get('arp table_full') or {}).get('Configuration') or {}).get('FileLine')
             if not isinstance(arp, list):
                 arp = []
             for arp_line in arp:

@@ -19,7 +19,7 @@ class DesktopCentralConnection(RESTConnection):
         if self._username is not None and self._password is not None:
             connection_dict = {'username': self._username,
                                'password': str(base64.b64encode(bytes(self._password, 'utf-8')), encoding='utf-8')}
-            if self._username_domain is None:
+            if not self._username_domain:
                 connection_dict['auth_type'] = consts.LOCAL_AUTHENTICATION
             else:
                 connection_dict['auth_type'] = consts.DOMAIN_AUTHENTICATION

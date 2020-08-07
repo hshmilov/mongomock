@@ -21,7 +21,7 @@ IDENTIFIERS = {
     'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen', 'endpointlfdt'],
     'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork'],
     'domain': ['domain', 'domainname', 'endpointdomain'],
-    'username': ['username'],
+    'username': ['username', 'samaccountname'],
     'first_name': ['firstname', 'givenname'],
     'last_name': ['lastname', 'surname', 'sn'],
     'software': ['software'],
