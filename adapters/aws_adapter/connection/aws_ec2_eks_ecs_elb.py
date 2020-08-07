@@ -1017,25 +1017,6 @@ def parse_raw_data_inner_regular(
                                          f'{str(route_tables)} for '
                                          f'{str(device.id)}')
 
-                # cloudfront
-                if options.get('fetch_cloudfront'):
-                    try:
-                        if cloudfront_distributions and \
-                                isinstance(cloudfront_distributions, dict):
-                            fetch_cloudfront(device=device,
-                                             distributions=cloudfront_distributions)
-                        else:
-                            if cloudfront_distributions is not None:
-                                logger.warning(f'Malformed Cloudfront distributions. '
-                                               f'Expected a dict, got '
-                                               f'{type(cloudfront_distributions)}: '
-                                               f'{str(cloudfront_distributions)}')
-                    except Exception:
-                        logger.exception(
-                            f'Unable to populate Cloudfront distributions '
-                            f'for {device.aws_device_type} resource: '
-                            f'{device.name}')
-
                 device.set_raw(device_raw)
                 yield device
 
