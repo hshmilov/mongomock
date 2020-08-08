@@ -1442,9 +1442,9 @@ def parse_raw_data_inner_regular(
                 elb_type = elb_raw.get('type')
                 if isinstance(security_policies, dict):
                     if elb_type == 'classic':
-                        policies = security_policies['classic']
+                        policies = security_policies.get('classic')
                     elif elb_type == 'application':
-                        policies = security_policies['application']
+                        policies = security_policies.get('application')
                     else:
                         policies = list()
 
