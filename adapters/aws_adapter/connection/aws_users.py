@@ -576,7 +576,7 @@ def get_last_accessed_services(client: boto3.session.Session.client,
             name='JobId',
             operation='GetServiceLastAccessedDetails',
             argument='JobStatus',
-            delay=10,
+            delay=3,
             max_attempts=12
         )
         job_id_waiter.wait(JobId=job_id)
