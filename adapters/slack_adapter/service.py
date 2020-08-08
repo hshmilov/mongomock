@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import int_or_none, parse_bool_from_raw
 from axonius.utils.datetime import parse_date
 from slack_adapter.connection import SlackConnection
 from slack_adapter.client_id import get_client_id
@@ -20,24 +21,6 @@ class SlackAdapter(AdapterBase, Configurable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-
-    @staticmethod
-    def _parse_int(value):
-        try:
-            return int(value) if value else None
-        except Exception as e:
-            logger.warning(f'Failed to parse {value} as int: {str(e)}')
-        return None
-
-    @staticmethod
-    def _parse_bool(value):
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.lower() == 'true'
-        if isinstance(value, int):
-            return bool(value)
-        return None
 
     @staticmethod
     def _get_client_id(client_config):
@@ -137,18 +120,21 @@ class SlackAdapter(AdapterBase, Configurable):
             profile.real_name_normalized = user_raw.get('real_name_normalize')
             profile.skype = user_raw.get('skype')
             profile.team = user_raw.get('team')
+            profile.status_emoji = user_raw.get('status_emoji')
+            profile.status_text = user_raw.get('status_text')
             user.profile = profile
         except Exception:
             logger.exception(f'Failed creating profile for user {user_raw}')
 
-    def _fill_user_enterprise_user(self, user_raw: dict, user: MyUserAdapter):
+    @staticmethod
+    def _fill_user_enterprise_user(user_raw: dict, user: MyUserAdapter):
         try:
             enterprise_grid_user = EnterpriseGridUser()
             enterprise_grid_user.enterprise_id = user_raw.get('enterprise_id')
             enterprise_grid_user.enterprise_name = user_raw.get('enterprise_name')
             enterprise_grid_user.id = user_raw.get('id')
-            enterprise_grid_user.is_admin = self._parse_bool(user_raw.get('is_admin'))
-            enterprise_grid_user.is_owner = self._parse_bool(user_raw.get('is_owner'))
+            enterprise_grid_user.is_admin = parse_bool_from_raw(user_raw.get('is_admin'))
+            enterprise_grid_user.is_owner = parse_bool_from_raw(user_raw.get('is_owner'))
             if isinstance(user_raw.get('teams'), list):
                 enterprise_grid_user.teams = user_raw.get('teams')
             elif isinstance(user_raw.get('teams'), str):
@@ -159,22 +145,22 @@ class SlackAdapter(AdapterBase, Configurable):
 
     def _fill_slack_user_fields(self, user_raw: dict, user: MyUserAdapter):
         try:
-            user.always_active = self._parse_bool(user_raw.get('always_active'))
+            user.always_active = parse_bool_from_raw(user_raw.get('always_active'))
             user.color = user_raw.get('color')
-            user.deleted = self._parse_bool(user_raw.get('deleted'))
-            user.has_2fa = self._parse_bool(user_raw.get('has_2fa'))
-            user.is_app_user = self._parse_bool(user_raw.get('is_app_user'))
-            user.is_invited_user = self._parse_bool(user_raw.get('is_invited_user'))
-            user.is_owner = self._parse_bool(user_raw.get('is_owner'))
-            user.is_primary_owner = self._parse_bool(user_raw.get('is_primary_owner'))
-            user.is_restricted = self._parse_bool(user_raw.get('is_restricted'))
-            user.is_stranger = self._parse_bool(user_raw.get('is_stranger'))
-            user.is_ultra_restricted = self._parse_bool(user_raw.get('is_ultra_restricted'))
+            user.deleted = parse_bool_from_raw(user_raw.get('deleted'))
+            user.has_2fa = parse_bool_from_raw(user_raw.get('has_2fa'))
+            user.is_app_user = parse_bool_from_raw(user_raw.get('is_app_user'))
+            user.is_invited_user = parse_bool_from_raw(user_raw.get('is_invited_user'))
+            user.is_owner = parse_bool_from_raw(user_raw.get('is_owner'))
+            user.is_primary_owner = parse_bool_from_raw(user_raw.get('is_primary_owner'))
+            user.is_restricted = parse_bool_from_raw(user_raw.get('is_restricted'))
+            user.is_stranger = parse_bool_from_raw(user_raw.get('is_stranger'))
+            user.is_ultra_restricted = parse_bool_from_raw(user_raw.get('is_ultra_restricted'))
             user.locale = user_raw.get('locale')
             user.two_factor_type = user_raw.get('two_factor_type')
             user.user_time_zone = user_raw.get('user_time_zone')
             user.user_time_zone_label = user_raw.get('user_time_zone_label')
-            user.user_time_zone_offset = self._parse_int(user_raw.get('user_time_zone_offset'))
+            user.user_time_zone_offset = int_or_none(user_raw.get('user_time_zone_offset'))
             if isinstance(user_raw.get('team_id'), list):
                 user.team_ids = user_raw.get('team_id')
             elif isinstance(user_raw.get('team_id'), str):
@@ -188,6 +174,13 @@ class SlackAdapter(AdapterBase, Configurable):
         except Exception:
             logger.exception(f'Failed creating instance for user {user_raw}')
 
+    @staticmethod
+    def _get_image_attribute(profile: dict):
+        user_image = profile.get('image_original') or profile.get('image_512') or profile.get('image_192') or \
+            profile.get('image_72') or profile.get('image_48') or profile.get('image_32') or \
+            profile.get('image_24')
+        return user_image
+
     def _create_user(self, user_raw: dict, user: MyUserAdapter):
         try:
             user_id = user_raw.get('id')
@@ -195,15 +188,29 @@ class SlackAdapter(AdapterBase, Configurable):
                 logger.warning(f'Bad user with no ID {user_raw}')
                 return None
             user.id = user_id
-            user.is_admin = self._parse_bool(user_raw.get('is_admin'))
-            user.last_seen = parse_date(user_raw.get('updated'))
-            if user_raw.get('profile') and isinstance(user_raw.get('profile'), dict):
-                user.display_name = user_raw.get('profile').get('display_name')
-                user.first_name = user_raw.get('profile').get('first_name')
-                user.last_name = user_raw.get('profile').get('last_name')
-                user.mail = user_raw.get('profile').get('email')
-                user.user_telephone_number = user_raw.get('profile').get('phone')
-                user.user_title = user_raw.get('profile').get('title')
+            user.is_admin = parse_bool_from_raw(user_raw.get('is_admin'))
+            # updated is 0 when the date doesn't exist
+            if user_raw.get('updated') != 0:
+                user.last_seen = parse_date(user_raw.get('updated'))
+            profile = user_raw.get('profile')
+            if profile and isinstance(profile, dict):
+                user.display_name = profile.get('display_name')
+                user.first_name = profile.get('first_name')
+                user.last_name = profile.get('last_name')
+                user.mail = profile.get('email')
+                user.user_telephone_number = profile.get('phone')
+                user.user_title = profile.get('title')
+                user.image = self._get_image_attribute(profile)
+
+                if profile.get('first_name') and profile.get('last_name'):
+                    user.username = f'{profile.get("first_name")} {profile.get("last_name")}'
+                elif profile.get('display_name'):
+                    user.username = profile.get('display_name')
+                elif profile.get('real_name'):
+                    user.username = profile.get('real_name')
+                else:
+                    user.username = profile.get('first_name') or profile.get('last_name') or None
+
             self._fill_slack_user_fields(user_raw, user)
             user.set_raw(user_raw)
             return user

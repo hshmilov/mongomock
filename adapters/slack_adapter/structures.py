@@ -9,6 +9,8 @@ class Profile(SmartJsonClass):
     real_name_normalized = Field(str, 'Filtered Real Name')
     skype = Field(str, 'Skype')
     team = Field(str, 'Team')
+    status_text = Field(str, 'Status Text')
+    status_emoji = Field(str, 'Status Emoji')
 
 
 class EnterpriseGridUser(SmartJsonClass):
