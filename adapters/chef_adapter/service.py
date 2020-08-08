@@ -13,7 +13,7 @@ from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
-from axonius.utils.datetime import parse_date
+from axonius.utils.datetime import parse_date, is_date_real
 from axonius.utils.parsing import format_mac, is_valid_ip
 from chef_adapter.connection import ChefConnection
 from chef_adapter.exceptions import ChefException
@@ -315,9 +315,8 @@ class ChefAdapter(AdapterBase):
                 axonius_features = device_raw_automatic.get('axonius_features', {})
                 if axonius_features:
                     features = axonius_features.get('data', {}) or {}
+                    put_dynamic_field(device, 'axonius_features', features, 'Axonius Features')
                     for key, value in features.items():
-                        device.set_dynamic_field(f'axonius_feature_{key}', str(value))
-
                         if FeatureFlagsNames.TrialEnd in key and value:
                             try:
                                 as_date = parse_date(value)
@@ -328,6 +327,12 @@ class ChefAdapter(AdapterBase):
                                                              int)
                             except Exception as e:
                                 logger.error(f'Failed to parse axonius trial end {value}:{e}')
+
+                        if key in [FeatureFlagsNames.TrialEnd, FeatureFlagsNames.ExpiryDate] and value:
+                            if is_date_real(parse_date(value)):
+                                # normalize trial dates to be '-' separated
+                                value = str(value).replace('/', '-')
+                        device.set_dynamic_field(f'axonius_feature_{key}', str(value))
 
                     raw_copy = copy(device_raw)
                     raw_copy['normal'] = {}  # can contain sensitive data
