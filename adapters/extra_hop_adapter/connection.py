@@ -30,8 +30,8 @@ class ExtraHopConnection(RESTConnection):
                 'offset': 0
             }
             self._get('devices', url_params=url_params)
-        except Exception:
-            raise ValueError(f'Error: Invalid response from server, please check domain or credentials')
+        except Exception as e:
+            raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
     # pylint: disable=logging-format-interpolation
     def _paginated_get(self):
