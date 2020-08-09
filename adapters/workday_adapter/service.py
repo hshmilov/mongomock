@@ -3,7 +3,7 @@ import json
 import logging
 # pylint: disable=import-error
 from zeep.helpers import serialize_object
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -33,6 +33,7 @@ class WorkdayAdapter(AdapterBase):
         is_rehire = Field(bool, 'Rehire')
         original_hire_date = Field(datetime.datetime, 'Original Hire Date')
         reporting_name = Field(str, 'Reporting Name')
+        emails = ListField(str, 'Emails')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -167,7 +168,7 @@ class WorkdayAdapter(AdapterBase):
             logger.warning(f'Failed to parse date {date_obj} as datetime.datetime: {str(e)}')
         return None
 
-    # pylint: disable = too-many-statements
+    # pylint: disable = too-many-statements, too-many-branches, too-many-locals
     def _create_user(self, worker_obj):
         try:
             user = self._new_user_adapter()
@@ -178,12 +179,26 @@ class WorkdayAdapter(AdapterBase):
 
             # Axonius generic stuff
             user.id = f'{user_id}_{str(worker_obj.Worker_ID) or ""}'
-            user.mail = user_id
+            # in case we can't get emails later, this might sometimes be an email
+            user.mail = user_id if '@' in str(user_id) else None
             user.employee_id = worker_obj.Worker_ID
             user_name = None
-            # Parse the user's name from the object
+            # Parse the user's name and emails from the object
             try:
-                name_data = worker_obj.Personal_Data.Name_Data
+                personal_data = worker_obj.Personal_Data
+                try:
+                    contact_data = personal_data.Contact_Data
+                    email_data = contact_data.Email_Address_Data
+                    if email_data and isinstance(email_data, list):
+                        email = email_data[0].Email_Address
+                        user.mail = email
+                        emails = list()
+                        for mail_data in email_data:
+                            emails.append(mail_data.Email_Address)
+                        user.emails = emails
+                except Exception as e:
+                    logger.warning(f'Failed to process email data for {user_id}: {str(e)}')
+                name_data = personal_data.Name_Data
                 user_name = name_data.Legal_Name_Data.Name_Detail_Data.Formatted_Name
                 user.display_name = user_name
                 user.first_name = name_data.Legal_Name_Data.Name_Detail_Data.First_Name
@@ -214,8 +229,7 @@ class WorkdayAdapter(AdapterBase):
                 user.terminated_date = self._parse_date(work_status_data.Termination_Date)
                 user.is_rehire = work_status_data.Rehire
                 user.original_hire_date = self._parse_date(work_status_data.Original_Hire_Date)
-                if not getattr(user, 'end_date', None):
-                    user.end_date = self._parse_date(work_status_data.End_Employment_Date)
+                user.end_date = self._parse_date(work_status_data.End_Employment_Date)
             except Exception as e:
                 logger.warning(f'Failed to parse employment status information for {user_id}: {str(e)}')
 
