@@ -6,7 +6,8 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.json import from_json
 from airwatch_adapter.consts import ENROLLED_DEVICE, NOT_ENROLLED_DEVICE, PAGE_SIZE, MAX_APPS_NUMBER, \
-    MAX_DEVICES_NUMBER, ERROR_MUTED_SUBENDPOINTS, DEVICE_EXTENDED_INFO_KEY
+    MAX_DEVICES_NUMBER, ERROR_MUTED_SUBENDPOINTS, DEVICE_EXTENDED_INFO_KEY, DEVICES_ENDPOINT, APPS_SUBENDPOINT, \
+    NETWORK_SUBENDPOINT, NOTES_SUBENDPOINT, TAGS_SUBENDPOINT, PROFILES_SUBENDPOINT
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -96,7 +97,13 @@ class AirwatchConnection(RESTConnection):
             self,
             async_chunks: Optional[int] = None,
             page_size: Optional[int] = None,
-            socket_recv_session_timeout: Optional[int] = None
+            socket_recv_session_timeout: Optional[int] = None,
+            fetch_not_enrolled_devices: bool=True,
+            fetch_device_apps: bool=True,
+            fetch_device_networks: bool=True,
+            fetch_device_notes: bool=True,
+            fetch_device_tags: bool=True,
+            fetch_device_profiles: bool=True,
     ):
         serials_imei_set = set()
 
@@ -121,15 +128,31 @@ class AirwatchConnection(RESTConnection):
                 logger.exception(f'Problem getting id for {device_raw}')
                 continue
             device_raw_by_device_id.setdefault(str(device_id), device_raw)
-            async_requests.extend(self._prepare_async_dict(request_dict) for request_dict in
-                                  [{'name': f'mdm/devices/{str(device_id)}'},
-                                   {'name': f'mdm/devices/{str(device_id)}/apps',
-                                    # Retrieve apps initial page. if needed, additional pages would be requested later
-                                    'url_params': {'pagesize': page_size, 'page': 0}},
-                                   {'name': f'mdm/devices/{str(device_id)}/network'},
-                                   {'name': f'mdm/devices/{str(device_id)}/notes'},
-                                   {'name': f'mdm/devices/{str(device_id)}/tags'},
-                                   {'name': f'mdm/devices/{str(device_id)}/profiles'}])
+
+            # request extended device information
+            curr_device_requests = [{'name': f'{DEVICES_ENDPOINT}/{str(device_id)}'}]
+
+            if fetch_device_apps:
+                curr_device_requests.append({
+                    'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{APPS_SUBENDPOINT}',
+                    # Retrieve apps initial page. if needed, additional pages would be requested later
+                    'url_params': {'pagesize': page_size, 'page': 0}})
+
+            if fetch_device_networks:
+                curr_device_requests.append({'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{NETWORK_SUBENDPOINT}'})
+
+            if fetch_device_notes:
+                curr_device_requests.append({'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{NOTES_SUBENDPOINT}'})
+
+            if fetch_device_tags:
+                curr_device_requests.append({'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{TAGS_SUBENDPOINT}'})
+
+            if fetch_device_profiles:
+                curr_device_requests.append({'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{PROFILES_SUBENDPOINT}'})
+
+            async_requests.extend(self._prepare_async_dict(request_dict)
+                                  for request_dict in curr_device_requests)
+
             if device_raw.get('SerialNumber'):
                 serials_imei_set.add(device_raw.get('SerialNumber'))
             if device_raw.get('Imei'):
@@ -179,7 +202,7 @@ class AirwatchConnection(RESTConnection):
                 logger.warning(f'invalid {response_subendpoint} response returned: {response}')
                 return
 
-            if response_subendpoint == 'network':
+            if response_subendpoint == NETWORK_SUBENDPOINT:
                 device_raw['Network'] = response
                 continue
 
@@ -188,17 +211,18 @@ class AirwatchConnection(RESTConnection):
                 logger.warning(f'invalid {response_subendpoint} response returned: {response}')
                 return
 
-            if response_subendpoint == 'apps':
+            if response_subendpoint == APPS_SUBENDPOINT:
                 device_raw.setdefault('DeviceApps', []).extend(response.get('DeviceApps') or [])
 
                 # try to append additional pages for later handling
+                # Note: if we got here, it means fetch_device_apps==True, no need for additional checks
                 try:
                     total_count = min(response.get('Total', 1), MAX_APPS_NUMBER)
                     pages_count = 1
                     while total_count > pages_count * page_size:
                         try:
                             additional_async_requests.append(self._prepare_async_dict({
-                                'name': f'mdm/devices/{str(device_id)}/apps',
+                                'name': f'{DEVICES_ENDPOINT}/{str(device_id)}/{APPS_SUBENDPOINT}',
                                 'url_params': {'pagesize': page_size, 'page': pages_count}}))
                         except Exception:
                             logger.exception(f'Got problem fetching app for {device_raw} in page {pages_count}')
@@ -209,15 +233,15 @@ class AirwatchConnection(RESTConnection):
 
                 continue
 
-            elif response_subendpoint == 'notes':
+            elif response_subendpoint == NOTES_SUBENDPOINT:
                 device_raw['DeviceNotes'] = response.get('DeviceNotes')
                 continue
 
-            elif response_subendpoint == 'tags':
+            elif response_subendpoint == TAGS_SUBENDPOINT:
                 device_raw['DeviceTags'] = response.get('Tag')
                 continue
 
-            elif response_subendpoint == 'profiles':
+            elif response_subendpoint == PROFILES_SUBENDPOINT:
                 device_raw['profiles_raw'] = response.get('DeviceProfiles')
                 continue
 
@@ -245,7 +269,7 @@ class AirwatchConnection(RESTConnection):
             if not response:
                 continue
 
-            if response_subendpoint == 'apps':
+            if response_subendpoint == APPS_SUBENDPOINT:
                 device_raw.setdefault('DeviceApps', []).extend(response.get('DeviceApps') or [])
 
             else:
@@ -256,6 +280,8 @@ class AirwatchConnection(RESTConnection):
         for device_raw in device_raw_by_device_id.values():
             yield device_raw, ENROLLED_DEVICE
 
+        if not fetch_not_enrolled_devices:
+            return
         self._session_headers['Accept'] = 'application/json;version=2'
         uuid_list = []
         try:

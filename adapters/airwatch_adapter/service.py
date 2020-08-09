@@ -89,7 +89,13 @@ class AirwatchAdapter(AdapterBase, Configurable):
             yield from client_data.get_device_list(
                 async_chunks=self.__async_chunks,
                 page_size=self.__page_size,
-                socket_recv_session_timeout=self.__recv_session_timeout
+                socket_recv_session_timeout=self.__recv_session_timeout,
+                fetch_not_enrolled_devices=self._fetch_not_enrolled_devices,
+                fetch_device_apps=self._fetch_device_apps,
+                fetch_device_networks=self._fetch_device_networks,
+                fetch_device_notes=self._fetch_device_notes,
+                fetch_device_tags=self._fetch_device_tags,
+                fetch_device_profiles=self._fetch_device_profiles,
             )
 
     def _clients_schema(self):
@@ -350,9 +356,48 @@ class AirwatchAdapter(AdapterBase, Configurable):
                     'name': 'recv_session_timeout',
                     'type': 'integer',
                     'title': 'Socket recv session timeout'
+                },
+                {
+                    'name': 'fetch_not_enrolled_devices',
+                    'type': 'bool',
+                    'title': 'Fetch devices not enrolled'
+                },
+                {
+                    'name': 'fetch_device_apps',
+                    'type': 'bool',
+                    'title': 'Fetch device apps'
+                },
+                {
+                    'name': 'fetch_device_networks',
+                    'type': 'bool',
+                    'title': 'Fetch device networks'
+                },
+                {
+                    'name': 'fetch_device_notes',
+                    'type': 'bool',
+                    'title': 'Fetch device notes'
+                },
+                {
+                    'name': 'fetch_device_tags',
+                    'type': 'bool',
+                    'title': 'Fetch device tags'
+                },
+                {
+                    'name': 'fetch_device_profiles',
+                    'type': 'bool',
+                    'title': 'Fetch device profiles'
                 }
             ],
-            'required': ['async_chunks', 'recv_session_timeout', 'page_size'],
+
+            'required': ['async_chunks',
+                         'recv_session_timeout',
+                         'page_size',
+                         'fetch_not_enrolled_devices',
+                         'fetch_device_apps',
+                         'fetch_device_networks',
+                         'fetch_device_notes',
+                         'fetch_device_tags',
+                         'fetch_device_profiles'],
             'pretty_name': 'AirWatch Configuration',
             'type': 'array'
         }
@@ -362,10 +407,22 @@ class AirwatchAdapter(AdapterBase, Configurable):
         return {
             'async_chunks': 50,
             'page_size': 500,
-            'recv_session_timeout': 300
+            'recv_session_timeout': 300,
+            'fetch_not_enrolled_devices': True,
+            'fetch_device_apps': True,
+            'fetch_device_networks': True,
+            'fetch_device_notes': True,
+            'fetch_device_tags': True,
+            'fetch_device_profiles': True,
         }
 
     def _on_config_update(self, config):
         self.__async_chunks = config.get('async_chunks') or 50
         self.__page_size = config.get('page_size') or 500
         self.__recv_session_timeout = config.get('recv_session_timeout') or 300
+        self._fetch_not_enrolled_devices = config.get('fetch_not_enrolled_devices')
+        self._fetch_device_apps = config.get('fetch_device_apps')
+        self._fetch_device_networks = config.get('fetch_device_networks')
+        self._fetch_device_notes = config.get('fetch_device_notes')
+        self._fetch_device_tags = config.get('fetch_device_tags')
+        self._fetch_device_profiles = config.get('fetch_device_profiles')
