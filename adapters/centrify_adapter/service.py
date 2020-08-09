@@ -164,15 +164,16 @@ class CentrifyAdapter(AdapterBase):
             apps = list()
             if isinstance(updata, list):
                 for app_raw in updata:
-                    app_data = cls._parse_apo_data(app_raw)
+                    app_data = cls._parse_app_data(app_raw)
                     if app_data:
                         apps.append(app_data)
-            user.centrify_apps = apps or None
+            if apps:
+                user.centrify_apps = apps
         except Exception:
             logger.exception(f'Failed creating instance for user {user_raw}')
 
     @classmethod
-    def _parse_apo_data(cls, app_raw: dict):
+    def _parse_app_data(cls, app_raw: dict):
         if not isinstance(app_raw, dict):
             return None
         try:
@@ -225,7 +226,7 @@ class CentrifyAdapter(AdapterBase):
                 logger.warning(f'Bad user with no ID {user_raw}')
                 return None
             user.id = user_id + '_' + (user_raw.get('Mail') or '')
-            user.name = user_raw.get('Name')
+            user.username = user_raw.get('Name')
             user.display_name = user_raw.get('DisplayName')
             user.mail = user_raw.get('Mail')
             user.description = user_raw.get('Description')
