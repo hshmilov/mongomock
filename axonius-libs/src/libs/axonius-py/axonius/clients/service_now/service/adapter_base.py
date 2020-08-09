@@ -119,6 +119,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'type': 'bool',
             'title': 'Fetch active compliance policy exceptions'
         },
+        {
+            'name': 'use_exclusion_field',
+            'type': 'bool',
+            'title': 'Do not fetch devices or users marked as excluded'
+        },
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
@@ -133,6 +138,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_ci_relations',
         'when_no_hostname_fallback_to_name'
         'fetch_compliance_exceptions',
+        'use_exclusion_field',
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
@@ -150,6 +156,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_ci_relations': False,
         'when_no_hostname_fallback_to_name': False,
         'fetch_compliance_exceptions': False,
+        'use_exclusion_field': False,
     }
 
     @abstractmethod
@@ -255,6 +262,12 @@ class ServiceNowAdapterBase(AdapterBase):
             snow_compliance_exception_ids_dict = dict()
         if snow_compliance_exception_data_dict is None:
             snow_compliance_exception_data_dict = dict()
+        try:
+            if self._use_exclusion_field and (device_raw.get('u_exclude_from_discovery') is not None):
+                logger.debug(f'ignoring excluded device {device_raw.get("sys_id")}')
+                return None
+        except Exception:
+            logger.warning(f'Failed handling exclusion of device')
         try:
             device = self._new_device_adapter()
             device_id = device_raw.get('sys_id')
@@ -1204,5 +1217,6 @@ class ServiceNowAdapterBase(AdapterBase):
         self.__fetch_ci_relations = config['fetch_ci_relations']
         self.__when_no_hostname_fallback_to_name = config.get('when_no_hostname_fallback_to_name') or False
         self._fetch_compliance_exceptions = config['fetch_compliance_exceptions']
+        self._use_exclusion_field = config['use_exclusion_field']
 
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE
