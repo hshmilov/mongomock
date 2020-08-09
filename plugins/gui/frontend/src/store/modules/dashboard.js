@@ -317,12 +317,16 @@ export const dashboard = {
     },
     [FETCH_DASHBOARD_PANEL]({ dispatch, commit }, payload) {
       const {
-        uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
+        uuid, historical, skip, limit, search, refresh, sortBy, sortOrder, blocking,
       } = payload;
 
       let rule = sortBy && sortOrder ? `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`
         + `&sort_by=${sortBy}&sort_order=${sortOrder}`
         : `dashboard/charts/${uuid}?skip=${skip}&limit=${limit}`;
+
+      if (blocking) {
+        rule += `&blocking=${blocking}`;
+      }
 
       if (!skip) {
         commit(UPDATE_DASHBOARD_PANEL, {

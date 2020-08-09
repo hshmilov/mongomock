@@ -45,6 +45,7 @@
             :sortable="isSortable(chart)"
             :is-chart-filterable="isChartFilterable"
             :ignore-permissions="ignorePermissions"
+            :current-search-filter="filter"
             v-on="$listeners"
             @edit="editPanel"
             @toggleShowSearch="toggleShowSearch"
@@ -380,6 +381,8 @@ export default {
       return isChartEmptyBase;
     },
     fetchChartData(uuid, skip, historical, refresh, search) {
+      const sortBy = _get(this.chart, 'selectedSort.sortBy') || _get(this.chart, 'config.sort.sort_by');
+      const sortOrder = _get(this.chart, 'selectedSort.sortOrder') || _get(this.chart, 'config.sort.sort_order');
       return this.fetchDashboardPanel({
         uuid,
         spaceId: this.currentSpace,
@@ -388,8 +391,8 @@ export default {
         historical,
         search: search || this.filter,
         refresh,
-        sortBy: _get(this.chart, 'selectedSort.sortBy'),
-        sortOrder: _get(this.chart, 'selectedSort.sortOrder'),
+        sortBy,
+        sortOrder,
       });
     },
     async fetchAllChartData(uuid, skip) {
@@ -425,7 +428,7 @@ export default {
     },
     // eslint-disable-next-line func-names
     fetchFilteredPanel: _debounce(function () {
-      this.fetchChartData(this.chart.uuid, 0, this.chart.historical, true, this.filter);
+      this.fetchChartData(this.chart.uuid, 0, this.chart.historical, false, this.filter);
     }, 300),
     editPanel() {
       this.filter = '';

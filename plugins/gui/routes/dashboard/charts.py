@@ -176,7 +176,7 @@ class Charts:
                                                                 sort_by=sort_by, sort_order=sort_order)
         else:
             try:
-                if request.args.get('refresh', False):
+                if request.args.get('refresh', False) or request.args.get('blocking', False):
                     # we want to wait for a fresh data
                     generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
                                                                             sort_order=sort_order,

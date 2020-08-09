@@ -75,7 +75,7 @@
             <AMenuItem
               id="refresh_chart"
               key="5"
-              @click="fetchChartData"
+              @click="fetchChartData(true)"
             >
               Refresh
             </AMenuItem>
@@ -221,12 +221,13 @@ import {
   MOVE_OR_COPY_TOGGLE,
   FETCH_DASHBOARD_PANEL,
   FETCH_CHART_CSV,
-} from '../../../store/modules/dashboard';
+} from '@store/modules/dashboard';
 import {
   ChartSortTypeEnum,
   ChartSortOrderEnum,
   ChartSortOrderLabelEnum,
-} from '../../../constants/dashboard';
+} from '@constants/dashboard';
+
 export default {
   name: 'PanelActions',
   components: {
@@ -252,10 +253,13 @@ export default {
       type: Boolean,
       default: false,
     },
+    currentSearchFilter: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return {
-      filter: '',
       showSearch: false,
       selectedSortBy: null,
       selectedSortOrder: null,
@@ -304,7 +308,7 @@ export default {
         currentPanel: this.chart,
       });
     },
-    fetchChartData() {
+    fetchChartData(refresh) {
       this.$emit('menu-clicked');
       this.fetchDashboardPanel({
         uuid: this.chart.uuid,
@@ -312,10 +316,11 @@ export default {
         skip: 0,
         limit: 100,
         historical: this.chart.historical,
-        search: this.filter,
-        refresh: true,
+        search: this.currentSearchFilter,
+        refresh,
         sortBy: this.sortBy,
         sortOrder: this.sortOrder,
+        blocking: true,
       });
     },
     exportCSV(uuid, name, historical) {
@@ -343,7 +348,7 @@ export default {
     sortClick(sortConfig) {
       this.selectedSortBy = sortConfig.sortBy;
       this.selectedSortOrder = sortConfig.sortOrder;
-      this.fetchChartData();
+      this.fetchChartData(false);
     },
     getSortTitle(type) {
       return `Sort by ${_capitalize(type)}`;
