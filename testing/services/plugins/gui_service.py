@@ -1528,6 +1528,26 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def put_api_report(self, report_data, *vargs, **kwargs):
         return self.put(f'V{self.get_api_version()}/reports', report_data, *vargs, **kwargs)
 
+    def add_panel(self, space_id, data):
+        return self.put(f'dashboard/charts/{space_id}', data=json.dumps(data), session=self._session)
+
+    def edit_panel(self, panel_id, data):
+        return self.post(f'dashboard/charts/{panel_id}', data=json.dumps(data), session=self._session)
+
+    def remove_panel(self, panel_id, space_id):
+        return self.delete(f'dashboard/charts/{panel_id}',
+                           data=json.dumps({'panelId': panel_id, 'spaceId': space_id}),
+                           session=self._session)
+
+    def move_panel(self, panel_id, space_id):
+        return self.put(f'dashboard/charts/move/{panel_id}',
+                        data=json.dumps({'destinationSpace': space_id}),
+                        session=self._session)
+
+    def get_space_id_from_panel(self, panel_id: str):
+        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)\
+            .find_one(filter={'_id': ObjectId(panel_id)}, projection={'space': 1})
+
     def get_gui_settings(self):
         return self.db.plugins.get_plugin_settings(GUI_PLUGIN_NAME).configurable_configs[CONFIG_CONFIG]
 

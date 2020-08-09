@@ -5,6 +5,7 @@ from axonius.consts.gui_consts import DASHBOARD_SPACE_PERSONAL
 from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
 from ui_tests.tests.permissions_test_base import PermissionsTestBase
+from ui_tests.tests.ui_consts import DEVICES_MODULE, ASSET_NAME_FIELD_NAME
 
 
 class TestDashboardPermissions(PermissionsTestBase):
@@ -16,6 +17,7 @@ class TestDashboardPermissions(PermissionsTestBase):
     TEST_SPACE_NAME_RENAME = 'test rename'
     TEST_RENAME_SPACE_NAME = 'rename space'
     NOTE_TEXT = 'note text'
+    TEST_CARD_TITLE = 'testing card'
 
     def test_dashboard_permissions(self):
         self.settings_page.disable_getting_started_feature()
@@ -165,3 +167,37 @@ class TestDashboardPermissions(PermissionsTestBase):
         assert not self.dashboard_page.is_missing_remove_space()
         self.dashboard_page.remove_space()
         self.dashboard_page.remove_space()
+
+    def test_chart_permissions_via_api(self):
+        self.settings_page.add_user_with_duplicated_role(ui_consts.NOTES_USERNAME,
+                                                         ui_consts.NEW_PASSWORD,
+                                                         ui_consts.FIRST_NAME,
+                                                         ui_consts.LAST_NAME,
+                                                         self.settings_page.ADMIN_ROLE)
+        self.dashboard_page.switch_to_page()
+        self.base_page.run_discovery()
+        self.dashboard_page.add_new_space(self.TEST_SPACE_NAME, [self.settings_page.VIEWER_ROLE])
+        self.dashboard_page.select_space(3)
+        self.dashboard_page.add_segmentation_card(module=DEVICES_MODULE,
+                                                  field=ASSET_NAME_FIELD_NAME,
+                                                  title=self.TEST_CARD_TITLE)
+
+        # test api with new user login
+        panel_id = str(self.dashboard_page.get_card_id(self.TEST_CARD_TITLE))
+        space_id = str(self._get_card_space_id(panel_id))
+
+        self._try_to_fail_add_panel_to_restricted_space(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD, space_id)
+        self._try_to_fail_edit_panel_from_restricted_space(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD, panel_id)
+        self._try_to_fail_remove_panel_from_restricted_space(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD,
+                                                             panel_id, space_id)
+
+        self.dashboard_page.remove_card(self.TEST_CARD_TITLE)
+        self.dashboard_page.select_space(1)
+        self.dashboard_page.add_segmentation_card(module=DEVICES_MODULE,
+                                                  field=ASSET_NAME_FIELD_NAME,
+                                                  title=self.TEST_CARD_TITLE)
+
+        panel_id = str(self.dashboard_page.get_card_id(self.TEST_CARD_TITLE))
+        self._try_to_fail_move_panel_to_restricted_space(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD,
+                                                         panel_id, space_id)
+        self.dashboard_page.remove_card(self.TEST_CARD_TITLE)

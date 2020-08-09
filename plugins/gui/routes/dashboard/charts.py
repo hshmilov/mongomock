@@ -51,7 +51,6 @@ NO_ACCESS_ERROR_MESSAGE = 'You are lacking some permissions for this request'
 
 
 class ChartTitle(Enum):
-
     intersect = 'Query Intersection'
     compare = 'Query Comparison'
     segment = 'Field Segmentation'
@@ -83,6 +82,22 @@ class Charts:
         """
         return jsonify(self._get_dashboard(skip, limit))
 
+    def restrict_space_action_by_user_role(self, space_id: ObjectId):
+        space = self._dashboard_spaces_collection.find_one({
+            '$and': [
+                {'_id': space_id},
+                {
+                    '$or': [
+                        {'public': {'$in': [None, True]}},
+                        {'roles': str(self.get_user_role_id())}
+                    ]
+                } if not self.is_admin_user() else {}
+            ]
+        })
+        if space:
+            return False
+        return True
+
     @gui_route_logged_in('<space_id>', methods=['PUT'], enforce_trial=False,
                          activity_params=[CHART_TYPE, SPACE_NAME, CHART_NAME], proceed_and_set_access=True)
     def add_dashboard_space_panel(self, space_id, no_access):
@@ -102,7 +117,10 @@ class Charts:
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        dashboard_data['space'] = ObjectId(space_id)
+        source_space_id = ObjectId(space_id)
+        if self.restrict_space_action_by_user_role(source_space_id):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+        dashboard_data['space'] = source_space_id
         dashboard_data['user_id'] = get_connected_user_id()
         dashboard_data[LAST_UPDATED_FIELD] = datetime.now()
         insert_result = self._dashboard_collection.insert_one(dashboard_data)
@@ -221,6 +239,10 @@ class Charts:
         dashboard_data = dict(self.get_request_data_as_object())
         dashboard_data.pop('private', None)
 
+        old_chart = self._dashboard_collection.find_one(filter={'_id': panel_id}, projection={'space': 1})
+        if self.restrict_space_action_by_user_role(old_chart.get('space')):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         update_data = {
             **dashboard_data,
             'user_id': get_connected_user_id(),
@@ -280,6 +302,10 @@ class Charts:
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         panel_id = ObjectId(panel_id)
+
+        old_chart = self._dashboard_collection.find_one(filter={'_id': panel_id}, projection={'space': 1})
+        if self.restrict_space_action_by_user_role(old_chart.get('space')):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         update_data = {
             'archived': True
@@ -342,6 +368,9 @@ class Charts:
                                                                     {'_id': 1})
         if personal_space.get('_id') == destination_space_id:
             return return_error(f'Can not move panels to {personal_space.get("name")}', 400)
+
+        if self.restrict_space_action_by_user_role(ObjectId(destination_space_id)):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         target_space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(destination_space_id)

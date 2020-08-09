@@ -632,6 +632,9 @@ class DashboardPage(BasePage):
     def get_card(self, card_title):
         return self.wait_for_element_present_by_css(f'.card-container-outer[name="{card_title}"]')
 
+    def get_card_id(self, card_title):
+        return self.get_card(card_title).get_attribute('id')
+
     def get_all_cards(self):
         return self.driver.find_elements_by_css_selector('.x-tab.active div.x-card')
 
