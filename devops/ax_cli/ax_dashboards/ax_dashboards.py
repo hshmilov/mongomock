@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import List, Dict
 
 import click
+from bson import ObjectId
 from tabulate import tabulate
 
 
@@ -173,6 +174,8 @@ def ax_dashboards_import(ctx, input_json_file, replace, creator):
     click.secho(f'Importing queries...', fg='green')
     for view_type in [DEVICE_VIEWS, USER_VIEWS]:
         for entity_query_id, entity_query in input_json[view_type].items():
+            if 'name' not in entity_query:
+                continue
             current = gui.self_database[view_type].find_one({'name': entity_query['name']})
             if current:
                 new_oid = str(current['_id'])
@@ -180,7 +183,7 @@ def ax_dashboards_import(ctx, input_json_file, replace, creator):
             else:
                 entity_query['user_id'] = creator_id
                 entity_query['updated_by'] = creator_id
-                entity_query.pop('_id', None)
+                entity_query['_id'] = ObjectId(entity_query['_id'])
                 new_oid = str(gui.self_database[view_type].insert_one(entity_query).inserted_id)
                 click.secho(f'Query {entity_query["name"]!r}: imported as {new_oid!r}', fg='green')
 

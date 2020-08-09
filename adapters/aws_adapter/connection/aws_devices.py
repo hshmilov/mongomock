@@ -44,7 +44,7 @@ def query_devices_for_one_account(
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures_dict = {
                 executor.submit(
-                    connect_client_by_source, get_boto3_session(*client_data_by_region), region_name, client_config
+                    connect_client_by_source, get_boto3_session(**client_data_by_region), region_name, client_config
                 ): region_name for region_name, client_data_by_region in account_regions_clients.items()
             }
 

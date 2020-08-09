@@ -28,13 +28,13 @@ from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, 
     AWSAdapter, AwsRawDataTypes, AWS_ACCESS_KEY_ID, \
     AWS_ENDPOINT_FOR_REACHABILITY_TEST, REGION_NAME, GET_ALL_REGIONS, \
     AWS_SECRET_ACCESS_KEY, USE_ATTACHED_IAM_ROLE, ROLES_TO_ASSUME_LIST, \
-    PROXY, ACCOUNT_TAG
+    PROXY, ACCOUNT_TAG, ADVANCED_CONFIG
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.aws.aws_clients import get_boto3_session, \
-    parse_roles_to_assume_file
+    parse_roles_to_assume_file, parse_aws_advanced_config, AWS_MFA_SERIAL_NUMBER, AWS_MFA_TOTP_CODE
 from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, \
-    REGIONS_NAMES
+    REGIONS_NAMES, AWSAdvancedConfig
 from axonius.clients.aws.utils import get_aws_config
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import DEFAULT_PARALLEL_COUNT
@@ -106,6 +106,12 @@ class AwsAdapter(AdapterBase, Configurable):
         clients_dict = dict()
         client_config = client_config.copy()
 
+        if client_config.get(ADVANCED_CONFIG):
+            advanced_config_file_raw = self._grab_file_contents(client_config[ADVANCED_CONFIG]).decode('utf-8')
+            advanced_config = parse_aws_advanced_config(advanced_config_file_raw)
+        else:
+            advanced_config = {}
+
         # Lets start with getting all parameters and validating them.
         if client_config.get(ROLES_TO_ASSUME_LIST):
             roles_to_assume_file = self._grab_file_contents(client_config[ROLES_TO_ASSUME_LIST]).decode('utf-8')
@@ -148,22 +154,41 @@ class AwsAdapter(AdapterBase, Configurable):
         ec2_check_status_lock = threading.Lock()
         failed_connections_per_principal = defaultdict(set)
 
+        aws_mfa_serial_number = advanced_config.get(AWSAdvancedConfig.aws_mfa_serial_number.value)
+        aws_mfa_totp_code = advanced_config.get(AWSAdvancedConfig.aws_mfa_totp_code.value)
+
+        if aws_mfa_serial_number and aws_mfa_totp_code:
+            logger.info(f'Using AWS MFA with serial {aws_mfa_serial_number}')
+            aws_mfa_details = {
+                AWS_MFA_SERIAL_NUMBER: aws_mfa_serial_number,
+                AWS_MFA_TOTP_CODE: aws_mfa_totp_code
+            }
+        else:
+            aws_mfa_details = None
+
         def connect_iam(region_name: str):
             current_try = f'IAM User {aws_access_key_id} with region {region_name}'
             time_start = time.time()
             try:
-                session_params = (
-                    client_config.get(AWS_ACCESS_KEY_ID),
-                    client_config.get(AWS_SECRET_ACCESS_KEY),
-                    https_proxy,
-                    region_name
-                )
-                permanent_session = get_boto3_session(*session_params)
+                session_params = {
+                    'aws_access_key_id': client_config.get(AWS_ACCESS_KEY_ID),
+                    'aws_secret_access_key': client_config.get(AWS_SECRET_ACCESS_KEY),
+                    'https_proxy': https_proxy,
+                    'sts_region_name': region_name
+                }
+
+                if aws_mfa_details:
+                    session_params['aws_mfa_details'] = aws_mfa_details
+
+                permanent_session = get_boto3_session(**session_params)
                 with ec2_check_status_lock:
                     # If ec2_check_status does not exist or is False, then we need to test ec2
                     should_test = not ec2_check_status.get(aws_access_key_id)
                 if should_test:
-                    self._test_ec2_connection(permanent_session, config=get_aws_config(client_config.get(PROXY)))
+                    if advanced_config.get(AWSAdvancedConfig.skip_ec2_verification.value):
+                        self._test_basic_creds(permanent_session, config=get_aws_config(client_config.get(PROXY)))
+                    else:
+                        self._test_ec2_connection(permanent_session, config=get_aws_config(client_config.get(PROXY)))
                 clients_dict[aws_access_key_id][region_name] = session_params
                 with ec2_check_status_lock:
                     ec2_check_status[aws_access_key_id] = True
@@ -178,18 +203,23 @@ class AwsAdapter(AdapterBase, Configurable):
             current_try = f'role {role_arn_inner} with region {region_name}'
             time_start = time.time()
             try:
-                session_params = (
-                    client_config.get(AWS_ACCESS_KEY_ID),
-                    client_config.get(AWS_SECRET_ACCESS_KEY),
-                    https_proxy,
-                    region_name,
-                    role_arn_inner,
-                    role_arn_external_id
-                )
-                auto_refresh_session = get_boto3_session(*session_params)
+                session_params = {
+                    'aws_access_key_id': client_config.get(AWS_ACCESS_KEY_ID),
+                    'aws_secret_access_key': client_config.get(AWS_SECRET_ACCESS_KEY),
+                    'https_proxy': https_proxy,
+                    'sts_region_name': region_name,
+                    'assumed_role_arn': role_arn_inner,
+                    'external_id': role_arn_external_id
+                }
+
+                if aws_mfa_details:
+                    session_params['aws_mfa_details'] = aws_mfa_details
+
+                auto_refresh_session = get_boto3_session(**session_params)
                 with ec2_check_status_lock:
                     # If ec2_check_status does not exist or is False, then we need to test ec2
-                    should_test = not ec2_check_status.get(role_arn_inner)
+                    should_test = not ec2_check_status.get(role_arn_inner) and not \
+                        advanced_config.get(AWSAdvancedConfig.skip_ec2_verification.value)
                 if should_test:
                     self._test_ec2_connection(auto_refresh_session, config=get_aws_config(client_config.get(PROXY)))
                 clients_dict[role_arn_inner][region_name] = session_params
@@ -282,6 +312,15 @@ class AwsAdapter(AdapterBase, Configurable):
             if 'Request would have succeeded, but DryRun flag is set.' not in str(e):
                 raise
 
+    @staticmethod
+    def _test_basic_creds(session, **extra_params):
+        try:
+            boto3_client_sts = session.client('sts', **extra_params)
+            boto3_client_sts.get_caller_identity()  # this call should succeed even if the session has no perms at all!
+        except Exception:
+            logger.warning(f'Failed calling get_caller_identity')
+            raise ValueError(f'Invalid Credentials')
+
     def _query_devices_by_client(self, client_name, client_data_credentials):
         # we must re-create all credentials (const and temporary)
         https_proxy = client_data_credentials.get(PROXY)
@@ -355,7 +394,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         client_data_aws_clients[account][region_name], warnings = \
                             connect_client_by_source(
-                                get_boto3_session(*client_data_by_region), region_name, client_config, 'users')
+                                get_boto3_session(**client_data_by_region), region_name, client_config, 'users')
                         successful_connections.append(current_try)
                         if warnings:
                             for service_name, service_error in warnings.items():
@@ -421,7 +460,7 @@ class AwsAdapter(AdapterBase, Configurable):
                     try:
                         client_data_aws_clients[account][region_name], warnings = \
                             connect_client_by_source(
-                                get_boto3_session(*client_data_by_region),
+                                get_boto3_session(**client_data_by_region),
                                 region_name,
                                 client_config,
                                 'roles')
@@ -528,6 +567,12 @@ class AwsAdapter(AdapterBase, Configurable):
                     'title': 'Use attached IAM role',
                     'description': 'Use the IAM role attached to this instance instead of using the credentials',
                     'type': 'bool'
+                },
+                {
+                    'name': ADVANCED_CONFIG,
+                    'title': 'Advanced Configuration file',
+                    'description': 'A JSON-file representing advanced configuration',
+                    'type': 'file'
                 }
             ],
             'required': [

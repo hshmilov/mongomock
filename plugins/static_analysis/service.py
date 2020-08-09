@@ -76,10 +76,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
             max_instances=1)
         self.__scheduler.start()
 
-        self.__jobs = AnalysisTypes(cve_enrichment=self.__add_enriched_cve_data,
-                                    user_devices_association=self.__associate_users_with_devices,
+        self.__jobs = AnalysisTypes(user_devices_association=self.__associate_users_with_devices,
                                     last_used_user_association=self.__parse_devices_last_used_users_departments,
-                                    virtual_host=self.__add_virtual_host)
+                                    virtual_host=self.__add_virtual_host,
+                                    cve_enrichment=self.__add_enriched_cve_data)
 
     def __update_nvd_db(self):
         try:

@@ -31,6 +31,14 @@ def yield_numbers_with_sleep(numbers: int, sleep: int):
     return numbers
 
 
+def yield_numbers_and_raise(numbers: int, raise_on: int, sleep_between_yield: int):
+    for i in range(numbers):
+        time.sleep(sleep_between_yield)
+        yield i
+        if i == raise_on:
+            raise ValueError('Some Error')
+
+
 def test_concurrent_multiprocess_yield_normal():
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -157,6 +165,26 @@ def test_thread_stopper():
     ThreadStopper.async_raise([yield_thread.ident])
 
 
+def test_regular_exception():
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+    def do_the_yield():
+        _ = (
+            yield from concurrent_multiprocess_yield(
+                [
+                    (yield_numbers_and_raise, (3, 0, 1), {}),
+                    (yield_numbers_and_raise, (3, -1, 1), {})
+                ],
+                3
+            )
+        )
+
+    # This point will get stuck forever if the process does not shut down correctly.
+    for i in do_the_yield():
+        print(i)
+    print('Done')
+
+
 if __name__ == '__main__':
-    test_thread_stopper()
+    test_regular_exception()
     sys.exit(0)

@@ -47,3 +47,8 @@ client_ec2_with_proxy = client_details[0][0].copy()
 client_ecs_with_proxy = client_details[1][0].copy()
 client_ec2_with_proxy['proxy'] = f"{PROXY_IP}:{PROXY_PORT}"
 client_ecs_with_proxy['proxy'] = f"{PROXY_IP}:{PROXY_PORT}"
+
+# AWS MFA Tests
+# Assuming user: arn:aws:iam::405773942477:user/test_user_mfa
+# Role to assume: arn:aws:iam::817364327683:role/Axonius-Readonly-Role-MFA-Required-To-Be-Assumed
+# Another role: arn:aws:iam::405773942477:role/Axonius-AssumeRole-With-Mfa-Test-Role

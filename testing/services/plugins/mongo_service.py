@@ -57,9 +57,7 @@ class MongoService(SystemService, WeaveService):
 
     @property
     def max_allowed_memory(self):
-        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
-        total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
-        return total_memory
+        return None
 
     @property
     def memory_swappiness(self) -> Optional[int]:

@@ -103,7 +103,7 @@ class ChangeLdapAttribute(ActionTypeBase):
 
         for chunk in chunks(CHUNK_SIZE, self._internal_axon_ids):
             action_data = {
-                'internal_axon_ids': self._internal_axon_ids,
+                'internal_axon_ids': chunk,
                 'client_config': self._config,
                 'credentials': credentials,
                 'entity': self._entity_type.value

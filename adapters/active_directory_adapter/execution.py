@@ -93,22 +93,22 @@ class ActiveDirectoryExecutionMixIn(Triggerable):
                 'message': f'Error: No LDAP attributes'
             }
         try:
-            entities = iterate_axonius_entities(EntityType(entity), internal_axon_ids)
-            for ent in entities:
-                try:
-                    axon_id, json = self.change_entity_ldap_attribute(ent, ldap_attributes, credentials)
-                    if axon_id in internal_axon_ids:
-                        internal_axon_ids.remove(axon_id)
-                    results[axon_id] = json
-                except Exception:
-                    logger.exception('Error changing ldap attribute')
-
-            # this should never happen
+            # Initialize all to failure in case we don't populate it later
             for _id in internal_axon_ids:
                 results[_id] = {
                     'success': False,
                     'value': f'Entity {_id} not found'
                 }
+
+            entities = iterate_axonius_entities(EntityType(entity), internal_axon_ids)
+            for i, ent in enumerate(entities):
+                try:
+                    if i and i % 500 == 0:
+                        logger.info(f'change entity ldap attribute: finished {i}')
+                    axon_id, json = self.change_entity_ldap_attribute(ent, ldap_attributes, credentials)
+                    results[axon_id] = json
+                except Exception:
+                    logger.exception('Error changing ldap attribute')
         except Exception as e:
             logger.exception(f'LDAP Error: {e}')
             return {

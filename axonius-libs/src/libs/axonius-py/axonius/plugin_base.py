@@ -710,6 +710,9 @@ class PluginBase(Configurable, Feature, ABC):
         self._update_config_inner()
         self.__save_hyperlinks_to_db()
 
+        self.multiprocessing_manager = multiprocessing.Manager()
+        self.multiprocessing_shared_dict = self.multiprocessing_manager.dict()
+
         # Used by revving_cache
         self.cached_operation_scheduler = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorReusable(self._common_executor)

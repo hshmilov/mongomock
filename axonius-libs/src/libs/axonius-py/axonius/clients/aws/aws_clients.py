@@ -5,7 +5,8 @@ import functools
 import json
 import logging
 import re
-from typing import Dict, List, Tuple
+import time
+from typing import Dict, List, Tuple, Optional
 
 import boto3
 
@@ -13,7 +14,68 @@ from botocore.config import Config
 from botocore.credentials import RefreshableCredentials
 from botocore.session import get_session
 
+# pylint: disable=import-error
+import pyotp
+
 logger = logging.getLogger(f'axonius.{__name__}')
+
+AWS_MFA_SERIAL_NUMBER = 'serial_number'
+AWS_MFA_TOTP_CODE = 'totp_code'
+MAX_GET_SESSION_TOKEN_RETRIES = 3
+TIME_TO_SLEEP_BETWEEN_RETRIES_IN_SECONDS = 63   # 1 minute for totp code to re-generate, 3 seconds for safety
+
+
+def get_session_token_with_totp(sts_client, aws_mfa_details: dict, aws_config: Config, identity: str) -> dict:
+    # Since we have multiple roles that are trying to re-create the same boto3 session using AWS MFA, and since AWS
+    # allows using the TOTP only once in a minute, we have to sync the session between the different processes,
+    # otherwise, each role assumption would take 1 min at least.
+    # first, try using the latest dictionary we have
+    from axonius.plugin_base import PluginBase
+    multiprocessing_shared_dict = PluginBase.Instance.multiprocessing_shared_dict
+    identity_string = f'aws_mfa_dict_{identity}'
+    aws_mfa_latest_dict = multiprocessing_shared_dict.get(identity_string)
+    if aws_mfa_latest_dict:
+        try:
+            current_session = boto3.Session(
+                aws_access_key_id=aws_mfa_latest_dict['Credentials']['AccessKeyId'],
+                aws_secret_access_key=aws_mfa_latest_dict['Credentials']['SecretAccessKey'],
+                aws_session_token=aws_mfa_latest_dict['Credentials']['SessionToken']
+            )
+            current_session.client('sts', config=aws_config).get_caller_identity()
+            return aws_mfa_latest_dict
+        except Exception:
+            logger.debug(f'Could not use latest aws mfa dict, will try to generate on our own')
+
+    for i in range(MAX_GET_SESSION_TOKEN_RETRIES):
+        try:
+            new_aws_mfa_creds = sts_client.get_session_token(
+                SerialNumber=aws_mfa_details.get(AWS_MFA_SERIAL_NUMBER),
+                TokenCode=pyotp.TOTP(aws_mfa_details.get(AWS_MFA_TOTP_CODE)).now()
+            )
+            logger.debug(f'Succeeded TOTP on try {i}')
+            multiprocessing_shared_dict[identity_string] = new_aws_mfa_creds
+            break
+        except Exception:
+            logger.debug(f'Failed TOTP {i}', exc_info=True)
+            time.sleep(TIME_TO_SLEEP_BETWEEN_RETRIES_IN_SECONDS)
+    else:
+        raise ValueError(f'Could not authenticate with TOTP')
+
+    return new_aws_mfa_creds
+
+
+def parse_aws_advanced_config(file_contents: str) -> dict:
+    if not file_contents.strip():
+        return {}
+    try:
+        config = json.loads(file_contents.strip())
+    except Exception:
+        raise ValueError('Error parsing advanced config file - expecting a valid json format')
+
+    if not isinstance(config, dict):
+        raise ValueError('Error parsing advanced config file - expecting a dictionary ({})')
+
+    return config
 
 
 def parse_roles_to_assume_file(file_contents: str) -> Tuple[Dict[str, Dict], List]:
@@ -66,7 +128,8 @@ def get_assumed_session(
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
         aws_config: Config = None,
-        external_id: str = None
+        external_id: str = None,
+        aws_mfa_details: Optional[dict] = None
 ):
     """STS Role assume a boto3.Session
 
@@ -76,10 +139,10 @@ def get_assumed_session(
     session_credentials = RefreshableCredentials.create_from_metadata(
         metadata=functools.partial(
             boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
-            aws_config, external_id)(),
+            aws_config, external_id, aws_mfa_details)(),
         refresh_using=functools.partial(
             boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
-            aws_config, external_id),
+            aws_config, external_id, aws_mfa_details),
         method='sts-assume-role'
     )
     role_session = get_session()
@@ -93,7 +156,8 @@ def boto3_role_credentials_metadata_maker(
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
         aws_config: Config = None,
-        external_id: str = None
+        external_id: str = None,
+        aws_mfa_details: Optional[dict] = None
 ):
     """
     Generates a "metadata" dict creator that is used to initialize auto-refreshing sessions.
@@ -106,7 +170,19 @@ def boto3_role_credentials_metadata_maker(
         aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key
     )
+
     sts_client = current_session.client('sts', config=aws_config)
+
+    if aws_mfa_details:
+        new_aws_mfa_creds = get_session_token_with_totp(sts_client, aws_mfa_details, aws_config, aws_access_key_id)
+
+        current_session = boto3.Session(
+            aws_access_key_id=new_aws_mfa_creds['Credentials']['AccessKeyId'],
+            aws_secret_access_key=new_aws_mfa_creds['Credentials']['SecretAccessKey'],
+            aws_session_token=new_aws_mfa_creds['Credentials']['SessionToken']
+        )
+
+        sts_client = current_session.client('sts', config=aws_config)
 
     params = {
         'RoleArn': role_arn,
@@ -135,7 +211,8 @@ def get_boto3_session(
         https_proxy: str = None,
         sts_region_name: str = None,
         assumed_role_arn: str = None,
-        external_id: str = None
+        external_id: str = None,
+        aws_mfa_details: Optional[dict] = None
 ) -> boto3.Session:
     """
     Gets a boto3.Session object with the required parameters.
@@ -148,6 +225,7 @@ def get_boto3_session(
                             a gov region if this is a gov account. This is only used to assume the role.
     :param assumed_role_arn: an optional assume role arn. If supplied, the session will be an assumed role session
     :param external_id: an optional external id string
+    :param aws_mfa_details: optional MFA details
     :return:
     """
 
@@ -163,7 +241,8 @@ def get_boto3_session(
             aws_access_key_id,
             aws_secret_access_key,
             aws_config,
-            external_id
+            external_id,
+            aws_mfa_details
         )
     else:
         session = boto3.Session(
@@ -171,6 +250,18 @@ def get_boto3_session(
             aws_secret_access_key=aws_secret_access_key,
             region_name=sts_region_name
         )
+
+        if aws_mfa_details:
+            sts_client = session.client('sts', config=aws_config)
+
+            new_aws_mfa_creds = get_session_token_with_totp(sts_client, aws_mfa_details, aws_config, aws_access_key_id)
+
+            session = boto3.Session(
+                aws_access_key_id=new_aws_mfa_creds['Credentials']['AccessKeyId'],
+                aws_secret_access_key=new_aws_mfa_creds['Credentials']['SecretAccessKey'],
+                aws_session_token=new_aws_mfa_creds['Credentials']['SessionToken'],
+                region_name=sts_region_name
+            )
 
     return session
 

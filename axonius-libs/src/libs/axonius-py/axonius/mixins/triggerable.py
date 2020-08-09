@@ -1,3 +1,4 @@
+import copy
 import functools
 import logging
 import traceback
@@ -357,6 +358,16 @@ class Triggerable(Feature, ABC):
         finally:
             self.__prioritized_state.discard(state.job_name)
 
+    def __triggered_wrapper(self, job_name, post_json, run_id, *args):
+        try:
+            # deep copy post_json because we will be inserting it as-is to the db. deep-copying it
+            # will allow this to be put in the db in it's original mode, even if it is changed in _triggered.
+            post_json_copy = copy.deepcopy(post_json)
+        except Exception:
+            post_json_copy = post_json
+
+        return self._triggered(job_name, post_json_copy, run_id, *args)
+
     def __trigger_prioritized_impl(self, state: StoredJobState, timeout: int = None):
         """
         See __trigger_prioritized
@@ -368,10 +379,10 @@ class Triggerable(Feature, ABC):
             if timeout:
                 result = func_timeout.func_timeout(
                     timeout=timeout,
-                    func=self._triggered,
+                    func=self.__triggered_wrapper,
                     args=(state.job_name, state.post_json, run_id)) or ''
             else:
-                result = self._triggered(state.job_name, state.post_json, run_id) or ''
+                result = self.__triggered_wrapper(state.job_name, state.post_json, run_id) or ''
         except Exception as e:
             failed = e
             tb = ''.join(traceback.format_tb(e.__traceback__))
@@ -509,7 +520,7 @@ class Triggerable(Feature, ABC):
                 })
                 # update here
             run_id = RunIdentifier(self.__triggerable_db, job_state.associated_stored_job_state_id)
-            return self._triggered(job_name, post_json, run_id, *args, **kwargs)
+            return self.__triggered_wrapper(job_name, post_json, run_id, *args, **kwargs)
 
         if job_state.triggered:
             if reschedulable:

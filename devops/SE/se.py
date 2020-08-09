@@ -79,6 +79,7 @@ def usage():
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     {name} ru [container-name] - Recover uwsgi
+    {name} kill [adapters]
     '''
 
 
@@ -536,6 +537,21 @@ def main():
             f'docker exec {container_name} python3 -u ../hacks/recover_uwsgi.py', shell=True, cwd=ROOT_DIR
         )
 
+    elif component == 'kill':
+        try:
+            what_to_kill = sys.argv[2]
+        except Exception:
+            print(usage())
+            return -1
+
+        if what_to_kill == 'adapters':
+            kill_command = 'docker rm -f `docker ps -a -q --filter "name=-adapter"`'
+            subprocess.check_call(
+                kill_command, shell=True, cwd=ROOT_DIR
+            )
+        else:
+            print(usage())
+            return -1
     else:
         print(usage())
         return -1

@@ -1,3 +1,5 @@
+from enum import Enum
+
 REGIONS_NAMES = [
     'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
     'ap-east-1', 'ap-south-1', 'ap-northeast-3', 'ap-northeast-2', 'ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2',
@@ -8,3 +10,10 @@ REGIONS_NAMES = [
 ]
 CHINA_REGION_NAMES = ['cn-north-1', 'cn-northwest-1']
 GOV_REGION_NAMES = ['us-gov-west-1', 'us-gov-east-1']
+
+
+# Advanced configuration
+class AWSAdvancedConfig(Enum):
+    skip_ec2_verification = 'skip_ec2_verification'
+    aws_mfa_serial_number = 'aws_mfa_serial_number'
+    aws_mfa_totp_code = 'aws_mfa_totp_code'

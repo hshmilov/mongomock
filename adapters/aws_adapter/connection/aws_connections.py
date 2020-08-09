@@ -33,9 +33,6 @@ def connect_client_by_source(session: boto3.Session,
             clients['ec2'] = c
         except Exception as e:
             errors['ec2'] = str(e)
-            # the only service we truely need is ec2. all the rest are optional.
-            # If this has failed we raise an exception
-            raise ValueError(f'Could not connect: {errors.get("ec2")}')
 
         try:
             c = session.client('ecs', **params)
