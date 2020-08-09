@@ -758,6 +758,11 @@
     "link": "https://docs.axonius.com/docs/hp-ilo",
     "description": "HP Integrated Lights-Out (iLO) is server management software that enables the configuration, monitoring, and updating of HPE servers."
   },
+    "kolide_adapter": {
+    "title": "Kolide Fleet",
+    "link": "https://docs.axonius.com/docs/kolide-fleet",
+    "description": "Kolide Fleet is an open source osquery manager"
+  },
   "riverbed_adapter": {
     "title": "Riverbed SteelCentral Controller (SCC) - BETA",
     "link": "https://docs.axonius.com/docs/riverbed-steelcentral-controller-scc",
