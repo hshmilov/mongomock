@@ -17,6 +17,7 @@ from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from axonius.clients.qualys import consts
 from axonius.clients.qualys.connection import QualysScansConnection
 from qualys_scans_adapter.structures import InventoryInstance, InventoryContainer, InventoryAgent, InventorySensor, \
@@ -60,31 +61,21 @@ class QualysTicket(SmartJsonClass):
     number = Field(int, 'Number')
     creation_datetime = Field(datetime.datetime, 'Creation Date')
     current_state = Field(str, 'Current State')
-    invalid = Field(int, 'Invalid')
-    assignee = Field(str, 'Assignee')
-    detection = Field(str, 'Detection')
-    stats = Field(str, 'Stats')
-    vuln_info = Field(str, 'Vulnerability Info')
-    details = Field(str, 'Details')
-    ticket = Field(str, 'Ticket')
-    state = Field(str, 'State')
-    due_date = Field(str, 'Due Date')
-    overdue = Field(str, 'Overdue')
+    invalid = Field(bool, 'Invalid')
+    assignee_name = Field(str, 'Assignee Name')
+    assignee_mail = Field(str, 'Assignee Email')
+    assignee_login = Field(str, 'Assignee Login')
     ip = Field(str, 'IP')
-    port = Field(str, 'Port')
-    dns_hostname = Field(str, 'Dns Hostname')
-    netbios_hostname = Field(str, 'Netbios Hostname')
-    type = Field(str, 'Type')
-    severity = Field(str, 'Severity')
-    qid = Field(str, 'QID')
-    vulnerability_title = Field(str, 'Vulnerability Title')
-    owner = Field(str, 'Owner')
-    owner_email = Field(str, 'Owner Email')
-    modified = Field(str, 'Modified')
-    created = Field(str, 'Created')
-    resolved = Field(str, 'Resolved')
-    last_open_date_time = Field(str, 'Last Open Date Time')
-    last_closed_date_time = Field(str, 'Last Closed Date Time')
+    dns_name = Field(str, 'DNS Name')
+    service = Field(str, 'Service')
+    first_found = Field(datetime.datetime, 'First Found')
+    last_found = Field(datetime.datetime, 'Last Found')
+    last_scan = Field(datetime.datetime, 'Last Scan')
+    title = Field(str, 'Vulnerability Title')
+    ticket_type = Field(str, 'Vulnerability Type')
+    qid = Field(int, 'Vulnerability QID')
+    severity = Field(int, 'Vulnerability Severity')
+    cve_id_list = ListField(str, 'Vulnerability CVE IDs')
 
 
 class QualysHost(SmartJsonClass):
@@ -122,14 +113,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self._qid_info = self.parse_qid_info()
-
-    @staticmethod
-    def parse_int(value):
-        try:
-            return int(value)
-        except Exception as e:
-            logger.warning(f'Failed to parse {value} as int: {str(e)}')
-        return None
 
     @staticmethod
     def _parse_qid_info_field(field, value):
@@ -682,13 +665,13 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
                 if isinstance(extra_hosts, list):
                     hosts = []
-                    for extra_host in list(set(extra_hosts)):  # Avoid duplications if exist
+                    for extra_host in extra_hosts:
                         if isinstance(extra_host, dict):
                             host = QualysHost()
 
-                            host.last_vm_scan_duration = self.parse_int(extra_host.get('LAST_VM_SCANNED_DURATION'))
+                            host.last_vm_scan_duration = int_or_none(extra_host.get('LAST_VM_SCANNED_DURATION'))
                             host.last_vm_auth_scanned_date = parse_date(extra_host.get('LAST_VM_AUTH_SCANNED_DATE'))
-                            host.last_vm_auth_scanned_duration = self.parse_int(
+                            host.last_vm_auth_scanned_duration = int_or_none(
                                 extra_host.get('LAST_VM_AUTH_SCANNED_DURATION'))
                             host.last_vm_scan_date = parse_date(extra_host.get('LAST_VM_SCANNED_DATE'))
                             host.last_vulm_scan_datetime = parse_date(extra_host.get('LAST_VULN_SCAN_DATETIME'))
@@ -699,12 +682,12 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             if isinstance(asset_group_ids, str):
                                 asset_group_ids = [asset_group_ids]
                             if isinstance(asset_group_ids, list):
-                                device.asset_group_ids = asset_group_ids
+                                host.asset_group_ids = asset_group_ids
 
                             hosts.append(host)
                     device.hosts = hosts
             except Exception as e:
-                logger.warning(f'Failed parsing device hosts information: {extra_hosts} - {str(e)}')
+                logger.warning(f'Failed parsing device hosts information: {extra_hosts} - {str(e)}', exc_info=True)
 
             extra_report = device_raw.get('extra_report')
             if isinstance(extra_report, dict) and extra_report:
@@ -732,7 +715,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
                 device.report = report_ticket
 
-            # TBD - Test
             try:
                 extra_tickets = device_raw.get('extra_tickets')
                 if isinstance(extra_tickets, list):
@@ -741,34 +723,33 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         if isinstance(extra_ticket, dict):
                             ticket = QualysTicket()
 
-                            ticket.number = self.parse_int(extra_ticket.get('NUMBER'))
+                            ticket.number = int_or_none(extra_ticket.get('NUMBER'))
                             ticket.creation_datetime = parse_date(extra_ticket.get('CREATION_DATETIME'))
                             ticket.current_state = extra_ticket.get('CURRENT_STATE')
-                            ticket.invalid = self.parse_int(extra_ticket.get('INVALID'))
-                            ticket.assignee = extra_ticket.get('ASSIGNEE')
-                            ticket.detection = extra_ticket.get('DETECTION')
-                            ticket.stats = extra_ticket.get('STATS')
-                            ticket.vuln_info = extra_ticket.get('VULN_INFO')
-                            ticket.details = extra_ticket.get('DETAILS')
-                            ticket.ticket = extra_ticket.get('TICKET')
-                            ticket.state = extra_ticket.get('STATE')
-                            ticket.due_date = extra_ticket.get('DUE_DATETIME')
-                            ticket.overdue = extra_ticket.get('OVERDUE')
-                            ticket.ip = extra_ticket.get('IP')
-                            ticket.port = extra_ticket.get('PORT')
-                            ticket.dns_hostname = extra_ticket.get('DNS_HOSTNAME')
-                            ticket.netbios_hostname = extra_ticket.get('NETBIOS_HOSTNAME')
-                            ticket.type = extra_ticket.get('TYPE')
-                            ticket.severity = extra_ticket.get('SEVERITY')
-                            ticket.qid = extra_ticket.get('QID')
-                            ticket.vulnerability_title = extra_ticket.get('VULNERABILITY_TITLE')
-                            ticket.owner = extra_ticket.get('OWNER')
-                            ticket.owner_email = extra_ticket.get('OWNER_EMAIL')
-                            ticket.modified = extra_ticket.get('MODIFIED')
-                            ticket.created = extra_ticket.get('CREATED')
-                            ticket.resolved = extra_ticket.get('RESOLVED')
-                            ticket.last_open_date_time = parse_date(extra_ticket.get('LAST_OPEN_DATE_TIME'))
-                            ticket.last_closed_date_time = parse_date(extra_ticket.get('LAST_CLOSED_DATE_TIME'))
+                            ticket.invalid = parse_bool_from_raw(extra_ticket.get('INVALID'))
+                            assignee = extra_ticket.get('ASSIGNEE')
+                            if isinstance(assignee, dict):
+                                ticket.assignee_name = assignee.get('NAME')
+                                ticket.assignee_mail = assignee.get('EMAIL')
+                                ticket.assignee_login = assignee.get('LOGIN')
+                            detection = extra_ticket.get('DETECTION')
+                            if isinstance(detection, dict):
+                                ticket.ip = detection.get('IP')
+                                ticket.dns_name = detection.get('DNSNAME')
+                                ticket.service = detection.get('SERVICE')
+                            stats = extra_ticket.get('STATS')
+                            if isinstance(stats, dict):
+                                ticket.first_found = parse_date(stats.get('FIRST_FOUND_DATETIME'))
+                                ticket.last_found = parse_date(stats.get('LAST_FOUND_DATETIME'))
+                                ticket.last_scan = parse_date(stats.get('LAST_SCAN_DATETIME'))
+                            vuln = extra_ticket.get('VULN')
+                            if isinstance(vuln, dict):
+                                ticket.title = vuln.get('TITLE')
+                                ticket.ticket_type = vuln.get('TYPE')
+                                ticket.qid = int_or_none(vuln.get('QID'))
+                                ticket.severity = int_or_none(vuln.get('SEVERITY'))
+                                if isinstance(vuln.get('CVE_ID_LIST'), list):
+                                    ticket.cve_id_list = vuln.get('CVE_ID_LIST')
 
                             tickets.append(ticket)
                     device.tickets = tickets
