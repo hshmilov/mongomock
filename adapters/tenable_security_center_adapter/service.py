@@ -295,8 +295,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 sw_version = None
                 if software and ' [version' in software:
                     sw_version = software[software.find(' [version ') + len(' [version '):].split(']')[0]
-                    software = software[:software.find(' [version ')]
-
+                    software = software[:software.find(' [version ')].strip()
                 device.add_installed_software(name=software, version=sw_version)
             except Exception as e:
                 logger.exception(f'Failed to add installed software {software}')

@@ -208,9 +208,9 @@ def compare_dst_name(adapter_device1, adapter_device2):
 
 
 def get_agent_uuid(adapter_device):
-    if not adapter_device.get('plugin_name') == 'tenable_io_adapter':
+    if adapter_device.get('plugin_name') not in ['tenable_io_adapter', 'tenable_security_center_adapter']:
         return None
-    agent_uuid = adapter_device['data'].get('agent_uuid')
+    agent_uuid = adapter_device['data'].get('agent_uuid') or adapter_device['data'].get('uuid')
     if agent_uuid:
         return agent_uuid.replace('-', '').lower()
     return None
@@ -972,7 +972,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                             mac_manufacturer = ''
                         # pylint: disable=line-too-long
                         if not (is_different_plugin(x, y) or force_mac_adapters(x))\
-                                or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and compare_domain_for_correlation(x, y)) \
+                                or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and is_windows(x) and is_windows(y) and compare_domain_for_correlation(x, y)) \
                                 or x.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or y.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or cb_defense_basic_id_condradict(x, y) \
