@@ -101,7 +101,7 @@ chardet==3.0.4
 gql==0.1.0
 graphql-core==2.2.1
 idna==2.8
-promise==2.2.1
+promise==2.3
 pytz==2019.3
 requests==2.22.0
 Rx==1.6.1
