@@ -823,6 +823,11 @@
     "link": "",
     "description": "SaltStack Open Source is open-source software for event-driven security, cloud and configuration management."
   },
+  "ibm_qradar_adapter": {
+    "title": "IBM QRadar - BETA",
+    "link": "https://docs.axonius.com/docs/ibm-qradar",
+    "description": "IBM QRadar is a Security Information and Event Management (SIEM) solution that enables security teams to detect, prioritize and response to threats across the enterprise."
+  },
   "snipeit_adapter": {
     "title": "Snipe-IT",
     "link": "https://docs.axonius.com/docs/snipe-it",
