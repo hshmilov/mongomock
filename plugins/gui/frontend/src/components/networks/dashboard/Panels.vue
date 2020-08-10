@@ -139,6 +139,7 @@ export default {
         this.saveReorderedPanels({
           panels_order: newPanels.map((panel) => panel.uuid),
           spaceId: this.currentSpace,
+          private: this.ignorePermissions ? true : undefined,
         });
       },
     },

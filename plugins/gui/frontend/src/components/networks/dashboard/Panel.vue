@@ -30,7 +30,7 @@
       </XCard>
       <div
         class="x-card card__item"
-        :class="{'custom-card': draggable}"
+        :class="{'custom-card': canBeDragged}"
       >
 
         <div class="header">
@@ -148,7 +148,7 @@
             </div>
           </div>
           <div
-            v-if="draggable"
+            v-if="canBeDragged"
             class="drag-handle"
           >
             <VIcon size="15">
@@ -323,6 +323,15 @@ export default {
         };
       }
       return null;
+    },
+    canBeDragged() {
+      return (
+        this.ignorePermissions
+        || this.$can(this.$permissionConsts.categories.Dashboard,
+          this.$permissionConsts.actions.Update,
+          this.$permissionConsts.categories.Charts)
+      )
+          && this.draggable;
     },
   },
   mounted() {

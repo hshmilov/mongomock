@@ -87,6 +87,7 @@ class DashboardPage(BasePage):
     SPACES_XPATH = '//div[@class=\'x-spaces\']'
     ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
     SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
+    SPACE_HEADERS_TITLE_CSS = '.x-spaces .x-tabs .header-tab > div[title=\"{title}\"]'
     SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
     NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
     RENAME_SPACE_INPUT_ID = 'rename_space'
@@ -646,6 +647,14 @@ class DashboardPage(BasePage):
         pie = self.get_pie_chart_from_card(card)
         pie.find_element_by_css_selector('svg').click()
 
+    def is_drag_and_drop_button_present(self, card_title):
+        panel = self.get_card(card_title)
+        try:
+            panel.find_element_by_css_selector('.drag-handle')
+            return True
+        except NoSuchElementException:
+            return False
+
     def is_edit_card_button_present(self, card_title):
         panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
         if len(panel.find_elements_by_css_selector(self.CARD_MENU_BTN_CSS)) == 0:
@@ -1099,6 +1108,9 @@ class DashboardPage(BasePage):
     def find_space_header(self, index=1):
         return self.find_elements_by_xpath(self.SPACE_HEADERS_XPATH)[index - 1]
 
+    def find_space_header_by_title(self, title=''):
+        return self.driver.find_element_by_css_selector(self.SPACE_HEADERS_TITLE_CSS.format(title=title))
+
     def find_space_header_title(self, index=1):
         return self.find_space_header(index).find_element_by_tag_name('div').text
 
@@ -1131,6 +1143,10 @@ class DashboardPage(BasePage):
             # Good, indeed missing
             return True
         return False
+
+    def select_space_by_name(self, space_name):
+        space = self.find_space_header_by_title(space_name)
+        space.click()
 
     def select_space(self, index=0):
         space_header = self.find_space_header(index)

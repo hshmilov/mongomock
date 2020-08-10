@@ -4,7 +4,7 @@ from typing import Dict
 
 import pymongo
 from bson import ObjectId
-from flask import jsonify
+from flask import jsonify, request
 
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
@@ -30,7 +30,7 @@ from gui.logic.historical_dates import (all_historical_dates,
                                         first_historical_date)
 from gui.logic.routing_helper import (gui_category_add_rules,
                                       gui_route_logged_in)
-from gui.routes.dashboard.charts import Charts, SPACE_NAME, SPACE_ID
+from gui.routes.dashboard.charts import Charts, SPACE_NAME, SPACE_ID, NO_ACCESS_ERROR_MESSAGE
 from gui.routes.dashboard.notifications import Notifications
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -488,8 +488,12 @@ class Dashboard(Charts, Notifications):
                          required_permission=PermissionValue.get(PermissionAction.Update,
                                                                  PermissionCategory.Dashboard,
                                                                  PermissionCategory.Charts),
-                         activity_params=[SPACE_NAME])
-    def reorder_dashboard_space_panels(self, space_id):
+                         activity_params=[SPACE_NAME], proceed_and_set_access=True)
+    def reorder_dashboard_space_panels(self, space_id, no_access):
+
+        if no_access and not request.get_json().get('private'):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         panels_order = self.get_request_data_as_object().get('panels_order')
         space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(space_id)
