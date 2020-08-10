@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Optional, Iterable
+from typing import Optional, Iterable, List
 from funcy import chunks
 
 from axonius.clients.rest.connection import RESTConnection
@@ -107,86 +107,116 @@ class RedhatSatelliteConnection(RESTConnection):
     def _iter_async_facts_for_hosts(self,
                                     host_names: Iterable[str],
                                     async_chunks: int = consts.ASYNC_CHUNKS):
-        # just in case a single host_name was passed
-        if isinstance(host_names, str):
-            host_names = [host_names]
+        try:
+            # just in case a single host_name was passed
+            if isinstance(host_names, str):
+                host_names = [host_names]
 
-        # Facts is under API V2
-        async_requests = [
-            self._prepare_async_subendpoint_request(
-                f'{consts.HOSTS_V2_ENDPOINT}/{host_name}/{consts.FACTS_SUBENDPOINT}'
-            ) for host_name in host_names
-        ]
+            # Facts is under API V2
+            async_requests = [
+                self._prepare_async_subendpoint_request(
+                    f'{consts.HOSTS_V2_ENDPOINT}/{host_name}/{consts.FACTS_SUBENDPOINT}'
+                ) for host_name in host_names
+            ]
 
-        # Handle succesful fact retrievals
-        for response in self._async_get(async_requests,
-                                        chunks=async_chunks,
-                                        retry_on_error=True):
-            if not self._is_async_response_good(response):
-                logger.error(f'Async response returned bad, its {response}')
-                continue
+            # Handle succesful fact retrievals
+            for response in self._async_get(async_requests,
+                                            chunks=async_chunks,
+                                            retry_on_error=True):
+                if not self._is_async_response_good(response):
+                    logger.error(f'Async response returned bad, its {response}')
+                    continue
 
-            # response[results]: {host_name: facts_dict, ...}
-            if not (isinstance(response, dict) and isinstance(response.get('results'), dict)):
-                logger.warning(f'invalid response returned: {response}')
-                continue
+                # response[results]: {host_name: facts_dict, ...}
+                if not (isinstance(response, dict) and isinstance(response.get('results'), dict)):
+                    logger.warning(f'invalid response returned: {response}')
+                    continue
 
-            for host_name, result in response['results'].items():
-                yield (host_name, result)
+                for host_name, result in response['results'].items():
+                    yield (host_name, result)
+        except Exception:
+            logger.exception(f'Unexpected error during facts iteation')
 
     def _iter_async_packages_for_hosts(self,
-                                       host_names: Iterable[str],
+                                       host_ids: list,
                                        async_chunks: int = consts.ASYNC_CHUNKS):
-        # Packages is under API V1
-        # https://access.redhat.com/discussions/2592151?tour=8
-        async_requests_by_hostname = {
-            host_name: self._prepare_async_subendpoint_request(
-                f'{consts.HOSTS_ENDPOINT}/{host_name}/{consts.PACKAGES_SUBENDPOINT}'
-            ) for host_name in host_names
+        try:
+            # Packages is under API V1
+            # https://access.redhat.com/discussions/2592151?tour=8
+            async_requests_by_host_id = {
+                host_id: self._prepare_async_subendpoint_request(
+                    f'{consts.HOSTS_ENDPOINT}/{host_id}/{consts.PACKAGES_SUBENDPOINT}'
+                ) for host_id in host_ids
+            }
+
+            # Handle succesful package retrievals
+            for host_id, response in zip(async_requests_by_host_id.keys(),
+                                         self._async_get(list(async_requests_by_host_id.values()),
+                                                         chunks=async_chunks,
+                                                         retry_on_error=True)):
+                if not self._is_async_response_good(response):
+                    logger.warning(f'Async response returned bad for packages of host id {host_id}: {response}')
+                    continue
+
+                # response[results]: [package_dict, ...]
+                if not (isinstance(response, dict) and isinstance(response.get('results'), list)):
+                    logger.warning(f'invalid response returned for packages of host id {host_id}: {response}')
+                    continue
+
+                yield (host_id, response['results'])
+
+        except Exception:
+            logger.exception(f'Unexpected error during packages iteration')
+
+    def _inject_async_packages_for_hosts(self,
+                                         hosts: Iterable[dict],
+                                         async_chunks: int = consts.ASYNC_CHUNKS):
+        hosts_by_ids = {
+            host.get('id'): host
+            for host in hosts
+            if isinstance(host, dict) and host.get('id')
         }
-
-        # Handle succesful fact retrievals
-        for host_name, response in zip(async_requests_by_hostname.keys(),
-                                       self._async_get(async_requests_by_hostname.values(),
-                                                       chunks=async_chunks,
-                                                       retry_on_error=True)):
-            if not self._is_async_response_good(response):
-                logger.warning(f'Async response returned bad for hostname {host_name}: {response}')
-                continue
-
-            # response[results]: [package_dict, ...]
-            if not (isinstance(response, dict) and isinstance(response.get('results'), list)):
-                logger.warning(f'invalid response returned for hostname {host_name}: {response}')
-                continue
-
-            yield (host_name, response['results'])
-
-    def _inject_async_packages_for_hosts_by_hostname(self,
-                                                     hosts_by_hostname,
-                                                     async_chunks: int = consts.ASYNC_CHUNKS):
-        for host_name, packages_response in self._iter_async_packages_for_hosts(hosts_by_hostname.keys(),
-                                                                                async_chunks=async_chunks):
-            curr_hosts = hosts_by_hostname.get(host_name)
-            if not (curr_hosts and isinstance(curr_hosts, list)):
-                logger.warning(f'No hosts found for packages request for hostname {host_name}')
-                continue
-            for host in curr_hosts:
+        for host_id, packages_response in self._iter_async_packages_for_hosts(list(hosts_by_ids.keys()),
+                                                                              async_chunks=async_chunks):
+            try:
+                curr_host = hosts_by_ids.get(host_id)
+                if not (curr_host and isinstance(curr_host, dict)):
+                    logger.warning(f'No host found for packages request for host id {host_id}')
+                    continue
                 # Note: packages_response might be None if no packages were returned for host_name
-                host[consts.ATTR_INJECTED_PACKAGES] = packages_response
+                curr_host[consts.ATTR_INJECTED_PACKAGES] = packages_response
+            except Exception:
+                logger.exception(f'Failed injecting packages for host id {host_id}', exc_info=True)
 
     def _inject_async_facts_for_hosts_by_hostname(self,
-                                                  hosts_by_hostname,
+                                                  hosts: List[dict],
                                                   async_chunks: int = consts.ASYNC_CHUNKS):
-        for host_name, facts_response in self._iter_async_facts_for_hosts(hosts_by_hostname.keys(),
-                                                                          async_chunks=async_chunks):
-            curr_hosts = hosts_by_hostname.get(host_name)
-            if not (curr_hosts and isinstance(curr_hosts, list)):
-                logger.warning(f'No hosts found for facts request for hostname {host_name}')
+
+        hosts_by_hostname = defaultdict(list)
+        for host in hosts:
+            # Invalid host
+            if not isinstance(host, dict):
+                logger.warning(f'got invalid host: {host}')
+                break
+
+            host_name = host.get('name')
+            if not (host_name and isinstance(host_name, str)):
                 continue
 
-            for host in curr_hosts:
-                # Note: facts_response might be None if no facts were returned for host_name
-                host[consts.ATTR_INJECTED_FACTS] = facts_response
+            hosts_by_hostname[host_name].append(host)
+        for host_name, facts_response in self._iter_async_facts_for_hosts(hosts_by_hostname.keys(),
+                                                                          async_chunks=async_chunks):
+            try:
+                curr_hosts = hosts_by_hostname.get(host_name)
+                if not (curr_hosts and isinstance(curr_hosts, list)):
+                    logger.warning(f'No hosts found for facts request for hostname {host_name}')
+                    continue
+
+                for host in curr_hosts:
+                    # Note: facts_response might be None if no facts were returned for host_name
+                    host[consts.ATTR_INJECTED_FACTS] = facts_response
+            except Exception:
+                logger.warning(f'Failed injecting facts for host {host_name}', exc_info=True)
 
     def _iter_hosts(self, limit: Optional[int] = None, should_raise=False):
         yield from self.paginated_get(consts.HOSTS_V2_ENDPOINT,
@@ -200,31 +230,15 @@ class RedhatSatelliteConnection(RESTConnection):
                         hosts_chunk_size: int = consts.DEVICE_PER_PAGE):
 
         # For every 1000 hosts, run facts and packages async
-        for chunk in chunks(consts.HOSTS_CHUNKS, self._iter_hosts()):
-
-            chunk_hosts_by_hostname = defaultdict(list)
-            for host in chunk:
-                # Invalid host
-                if not isinstance(host, dict):
-                    logger.warning(f'got invalid host: {host}')
-                    break
-
-                # yield hosts with no hostnames here as we can't retrieve the rest of their data
-                host_name = host.get('name')
-                if not host_name:
-                    yield host
-                    continue
-
-                chunk_hosts_by_hostname[host_name].append(host)
+        for hosts_chunk in chunks(consts.HOSTS_CHUNKS, self._iter_hosts()):
 
             if fetch_host_facts:
-                self._inject_async_facts_for_hosts_by_hostname(chunk_hosts_by_hostname,
+                self._inject_async_facts_for_hosts_by_hostname(hosts_chunk,
                                                                async_chunks=async_chunks)
 
             if fetch_host_packages:
-                self._inject_async_packages_for_hosts_by_hostname(chunk_hosts_by_hostname,
-                                                                  async_chunks=async_chunks)
+                self._inject_async_packages_for_hosts(hosts_chunk,
+                                                      async_chunks=async_chunks)
 
             # yield hosts after being potentially injected
-            for hosts in chunk_hosts_by_hostname.values():
-                yield from hosts
+            yield from hosts_chunk
