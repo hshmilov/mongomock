@@ -1,8 +1,8 @@
 import logging
 from ui_tests.pages.page import Page
 
-# will be 60*60*5*0.2 seconds
-DISCOVERY_TIMEOUT = 60 * 60 * 5
+# will be 1 hour (Because of the interval)
+DISCOVERY_TIMEOUT = 60 * 60 * 5 * 0.4
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
