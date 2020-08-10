@@ -22,7 +22,6 @@ from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.db_querying_helper import perform_saved_view_by_id
 from axonius.utils.files import get_local_config_file
-from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.mongo_escaping import unescape_dict
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FIELD, ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD,
@@ -69,8 +68,6 @@ class ReportsService(Triggerable, PluginBase):
     # The amount of internal_axon_ids that are saved in a single document in self.__internal_axon_ids_lists
     # Should be lower than document size, while not too low so pagination is common
     INTERNAL_AXON_IDS_PER_DOCUMENT = 100 * 1000
-
-    REPORT_TRIGGER_RUN_THRESHOLD = 180
 
     def __init__(self, *args, **kwargs):
         """ This service is responsible for alerting users in several ways and cases when a
@@ -154,7 +151,7 @@ class ReportsService(Triggerable, PluginBase):
                       )
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
-        if job_name in ['execute', 'custom_execute']:
+        if job_name == 'execute':
             with ThreadPool(10) as pool:
                 def run_specific_configuration(report_name, configuration_name):
                     try:
@@ -167,9 +164,10 @@ class ReportsService(Triggerable, PluginBase):
                     except Exception:
                         logger.exception(f'Exception when running {report_name} {configuration_name}')
 
-                period_filter = '$eq' if job_name == 'execute' else '$ne'
                 reports = self.__reports_collection.find({
-                    f'{TRIGGERS_FIELD}.period': {period_filter: 'all'}
+                    f'{TRIGGERS_FIELD}.period': {
+                        '$eq': TriggerPeriod.all.name
+                    }
                 }, projection={
                     'name': 1,
                     f'{TRIGGERS_FIELD}.name': 1
@@ -592,10 +590,7 @@ class ReportsService(Triggerable, PluginBase):
         :return: Updated Recipe in case the configuration has run
         """
         result = None
-        if trigger.period == TriggerPeriod.never and not manual:
-            return result
-
-        if trigger.period != TriggerPeriod.all and not manual and not self._has_trigger_time_arrived(trigger):
+        if trigger.period != TriggerPeriod.all and not manual:
             return result
 
         if manual_input:
@@ -664,37 +659,6 @@ class ReportsService(Triggerable, PluginBase):
             })
             _log_activity_trigger(AuditAction.Complete)
         return result
-
-    # pylint: disable=R0911
-    def _has_trigger_time_arrived(self, trigger):
-        current_date = datetime.datetime.now()
-        current_time = current_date.time()
-        scheduled_run_time = datetime.datetime.strptime(trigger.period_time, '%H:%M').time()
-
-        # check if time matches the scheduled time
-        if current_time < scheduled_run_time or \
-           time_diff(current_time, scheduled_run_time).seconds > self.REPORT_TRIGGER_RUN_THRESHOLD:
-            return False
-
-        if trigger.period == TriggerPeriod.daily:
-            # check if X days have passed since last run
-            return (not trigger.last_triggered or
-                    days_diff(current_date, trigger.last_triggered) == trigger.period_recurrence)
-
-        if trigger.period == TriggerPeriod.weekly:
-            # check if weekdays match
-            current_weekday = str(current_date.weekday())
-            return current_weekday in trigger.period_recurrence
-
-        if trigger.period == TriggerPeriod.monthly:
-            current_day = str(current_date.day)
-            tomorrow = current_date + datetime.timedelta(days=1)
-            if tomorrow.month != current_date.month:
-                # last day of month is marked in the recurrence as '29'
-                current_day = '29'
-            return current_day in trigger.period_recurrence
-
-        return False
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

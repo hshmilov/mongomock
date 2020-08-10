@@ -21,8 +21,7 @@ from flask import jsonify
 
 from axonius.adapter_base import AdapterBase, WEEKDAYS
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
-from axonius.consts.adapter_consts import LAST_FETCH_TIME
+from axonius.consts.adapter_consts import LAST_FETCH_TIME, ADAPTER_PLUGIN_TYPE
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
@@ -34,11 +33,16 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           GUI_PLUGIN_NAME, DISCOVERY_CONFIG_NAME,
                                           ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON,
                                           DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
-                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME,
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                          AGGREGATOR_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.consts.scheduler_consts import SchedulerState, CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, \
-    TUNNEL_STATUS_CHECK_INTERVAL, CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD, \
-    CUSTOM_ENFORCEMENT_CHECK_INTERVAL
+from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
+                                             CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
+                                             CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD,
+                                             RUN_ENFORCEMENT_CHECK_INTERVAL, RUN_ENFORCEMENT_THRESHOLD,
+                                             RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID)
+from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -47,8 +51,9 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.saas.input_params import read_saas_input_params
 from axonius.thread_stopper import StopThreadException
+from axonius.types.enforcement_classes import TriggerPeriod, Trigger
 from axonius.utils.backup import backup_to_s3, backup_to_external
-from axonius.utils.datetime import time_diff
+from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.files import get_local_config_file
 from axonius.utils.root_master.root_master import root_master_restore_from_s3, root_master_restore_from_smb
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
@@ -74,8 +79,8 @@ class SystemSchedulerResearchMode(Enum):
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
-                         requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
-        self.current_phase = scheduler_consts.Phases.Stable
+                         requested_unique_plugin_name=SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
+        self.current_phase = Phases.Stable
 
         # whether or not stopping sequence has initiated
         self.__stopping_initiated = False
@@ -87,8 +92,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._trigger,
                                                trigger=self.get_research_trigger_by_mode(),
-                                               name=scheduler_consts.RESEARCH_THREAD_ID,
-                                               id=scheduler_consts.RESEARCH_THREAD_ID,
+                                               name=RESEARCH_THREAD_ID,
+                                               id=RESEARCH_THREAD_ID,
                                                max_instances=1)
         self._research_phase_scheduler.start()
 
@@ -117,15 +122,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                                   max_instances=1)
         self.__custom_discovery_scheduler.start()
 
-        self.__custom_schedule_enforcement_scheduler = LoggedBackgroundScheduler(executors={
+        self.__run_enforcements_scheduler = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
         })
-        self.__custom_schedule_enforcement_scheduler.add_job(
-            func=self.__run_custom_schedule_enforcements,
-            trigger=IntervalTrigger(seconds=CUSTOM_ENFORCEMENT_CHECK_INTERVAL),
-            next_run_time=datetime.now(),
-            max_instances=1)
-        self.__custom_schedule_enforcement_scheduler.start()
+        self.__run_enforcements_scheduler.add_job(func=self.__run_triggered_enforcements,
+                                                  trigger=IntervalTrigger(seconds=RUN_ENFORCEMENT_CHECK_INTERVAL),
+                                                  next_run_time=datetime.now(),
+                                                  max_instances=1)
+        self.__run_enforcements_scheduler.start()
 
         self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
@@ -234,8 +238,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         Get plugin state.
         """
-        next_run_time = self._research_phase_scheduler.get_job(
-            scheduler_consts.RESEARCH_THREAD_ID).next_run_time
+        next_run_time = self._research_phase_scheduler.get_job(RESEARCH_THREAD_ID).next_run_time
         last_triggered_job = self.get_last_job(
             {
                 'job_name': 'execute',
@@ -293,8 +296,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         # reschedule
         # Saving next_run in order to restore it after 'reschedule_job' overrides this value. We want to restore
         # this value because updating schedule rate should't change the next scheduled time
-        scheduler.reschedule_job(
-            scheduler_consts.RESEARCH_THREAD_ID, trigger=self.get_research_trigger_by_mode())
+        scheduler.reschedule_job(RESEARCH_THREAD_ID, trigger=self.get_research_trigger_by_mode())
 
     def get_research_trigger_by_mode(self) -> BaseTrigger:
         if self.__system_research_mode == SystemSchedulerResearchMode.rate.value:
@@ -464,7 +466,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def configure_correlation_scheduler(self):
         scheduler = getattr(self, '_correlation_scheduler', None)
         if scheduler:
-            job = scheduler.get_job(scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID)
+            job = scheduler.get_job(CORRELATION_SCHEDULER_THREAD_ID)
             if not self._correlation_schedule_settings.get('enabled'):
                 if job:
                     logger.info(f'Removing correlation scheduler')
@@ -489,8 +491,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         func=self.run_correlations,
                         trigger=new_interval,
                         next_run_time=datetime.now() + timedelta(hours=hours),
-                        name=scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID,
-                        id=scheduler_consts.CORRELATION_SCHEDULER_THREAD_ID,
+                        name=CORRELATION_SCHEDULER_THREAD_ID,
+                        id=CORRELATION_SCHEDULER_THREAD_ID,
                         max_instances=1,
                         coalesce=True
                     )
@@ -550,27 +552,26 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         A context manager that enters research phase if it's not already under way.
         :return:
         """
-        if self.state.Phase is scheduler_consts.Phases.Research:
-            raise PhaseExecutionException(
-                f'{scheduler_consts.Phases.Research.name} is already executing.')
+        if self.state.Phase is Phases.Research:
+            raise PhaseExecutionException(f'{Phases.Research.name} is already executing.')
         if self.__stopping_initiated:
             logger.info('Stopping initiated, not running')
             return
 
         # Change current phase
-        self.current_phase = scheduler_consts.Phases.Research
-        logger.info(f'Entered {scheduler_consts.Phases.Research.name} Phase.')
+        self.current_phase = Phases.Research
+        logger.info(f'Entered {Phases.Research.name} Phase.')
         try:
             yield
         except StopThreadException:
             logger.info('Stopped execution')
             raise
         except BaseException:
-            logger.exception(f'Failed {scheduler_consts.Phases.Research.name} Phase.')
+            logger.exception(f'Failed {Phases.Research.name} Phase.')
             raise
         finally:
-            logger.info(f'Back to {scheduler_consts.Phases.Stable} Phase.')
-            self.current_phase = scheduler_consts.Phases.Stable
+            logger.info(f'Back to {Phases.Stable} Phase.')
+            self.current_phase = Phases.Stable
             self.state = SchedulerState()
 
         return
@@ -590,7 +591,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     'phase': self.state.SubPhase.value
                 })
 
-        def _start_subphase(subphase: scheduler_consts.ResearchPhases):
+        def _start_subphase(subphase: ResearchPhases):
             self.state.SubPhase = subphase
             logger.info(f'Started Subphase {subphase}')
             _log_activity_phase(AuditAction.StartPhase)
@@ -602,15 +603,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         def _complete_subphase():
             _log_activity_phase(AuditAction.CompletePhase)
 
-        def _change_subphase(subphase: scheduler_consts.ResearchPhases):
+        def _change_subphase(subphase: ResearchPhases):
             _complete_subphase()
             _start_subphase(subphase)
 
         # pylint: disable=no-else-return
         with self._start_research():
-            self.state.Phase = scheduler_consts.Phases.Research
+            self.state.Phase = Phases.Research
             _log_activity_research(AuditAction.Start)
-            _start_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+            _start_subphase(ResearchPhases.Fetch_Devices)
             time.sleep(5)  # for too-quick-cycles
 
             if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
@@ -620,7 +621,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     root_master_restore_from_s3()
                     self._request_gui_dashboard_cache_clear()
                     # 2. Run enforcement center
-                    _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
+                    _change_subphase(ResearchPhases.Post_Correlation)
                     post_correlation_plugins = [plugin for plugin in self._get_plugins(PluginSubtype.PostCorrelation)
                                                 if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
                     if post_correlation_plugins:
@@ -641,8 +642,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     response = root_master_restore_from_smb()
                     self._request_gui_dashboard_cache_clear()
 
-                    _change_subphase(
-                        scheduler_consts.ResearchPhases.Post_Correlation)
+                    _change_subphase(ResearchPhases.Post_Correlation)
                     post_correlation_plugins = [plugin for plugin in
                                                 self._get_plugins(PluginSubtype.PostCorrelation)
                                                 if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
@@ -674,14 +674,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             # Fetch Scanners Data.
             try:
-                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
+                _change_subphase(ResearchPhases.Fetch_Scanners)
                 self._run_aggregator_phase(PluginSubtype.ScannerAdapter)
             except Exception:
                 logger.error('Failed running fetch_scanners phase', exc_info=True)
 
             # Clean old devices.
             try:
-                _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
+                _change_subphase(ResearchPhases.Clean_Devices)
                 self._request_gui_dashboard_cache_clear()
 
                 self._run_cleaning_phase()
@@ -690,14 +690,14 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             # Run Pre Correlation plugins.
             try:
-                _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
+                _change_subphase(ResearchPhases.Pre_Correlation)
                 self._run_plugins(self._get_plugins(PluginSubtype.PreCorrelation))
             except Exception:
                 logger.error(f'Failed running pre-correlation phase', exc_info=True)
 
             # Run Correlations.
             try:
-                _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
+                _change_subphase(ResearchPhases.Run_Correlations)
                 if not self.run_correlations():
                     #  If the correlation was not run because there is an existing one already running, then wait
                     # for it to finish, only then transition to next phase.
@@ -709,7 +709,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.error(f'Failed running correlation phase', exc_info=True)
 
             try:
-                _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
+                _change_subphase(ResearchPhases.Post_Correlation)
                 post_correlations_plugins = self._get_plugins(PluginSubtype.PostCorrelation)
 
                 if not self.__analyse_reimage:
@@ -725,7 +725,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             try:
                 if self.__save_history:
                     # Save history.
-                    _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
+                    _change_subphase(ResearchPhases.Save_Historical)
                     free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
                     if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
                         logger.error(f'Can not save history - less than 15 GB on disk!')
@@ -753,7 +753,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             except Exception:
                 logger.exception(f'Could not restart heavy-lifting')
 
-            logger.info(f'Finished {scheduler_consts.Phases.Research.name} Phase Successfully.')
+            logger.info(f'Finished {Phases.Research.name} Phase Successfully.')
             _complete_subphase()
             _log_activity_research(AuditAction.Complete)
 
@@ -771,7 +771,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         names = self.plugins.get_plugin_names_with_config(AdapterBase.__name__, {'realtime_adapter': True})
         for adapter in self.core_configs_collection.find(
                 {
-                    'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+                    'plugin_type': ADAPTER_PLUGIN_TYPE
                 }
         ):
 
@@ -849,7 +849,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def __get_all_adapters(self):
         yield from self.core_configs_collection.find(
             {
-                'plugin_type': adapter_consts.ADAPTER_PLUGIN_TYPE
+                'plugin_type': ADAPTER_PLUGIN_TYPE
             }
         )
 
@@ -966,14 +966,80 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception('Error triggering custom discovery adapters')
         logger.info('Finished Custom Discovery cycle')
 
-    def __run_custom_schedule_enforcements(self):
-        post_correlation_plugins = [plugin for plugin in self._get_plugins(PluginSubtype.PostCorrelation)
-                                    if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
-        if post_correlation_plugins:
-            self._trigger_remote_plugin(post_correlation_plugins[0][plugin_consts.PLUGIN_UNIQUE_NAME],
-                                        job_name='custom_execute',
-                                        blocking=False,
-                                        timeout=24 * 3600, stop_on_timeout=True)
+    @staticmethod
+    def should_trigger_run_enforcement(trigger: Trigger):
+        current_date = datetime.now()
+        current_time = current_date.time()
+        scheduled_run_time = datetime.strptime(trigger.period_time, '%H:%M').time()
+
+        # check if time matches the scheduled time
+        if (current_time < scheduled_run_time or
+                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_THRESHOLD):
+            return False
+
+        if trigger.period == TriggerPeriod.daily:
+            # check if X days have passed since last run
+            return (not trigger.last_triggered or
+                    days_diff(current_date, trigger.last_triggered) == trigger.period_recurrence)
+
+        if trigger.period == TriggerPeriod.weekly:
+            # check if weekdays match
+            current_weekday = str(current_date.weekday())
+            return current_weekday in trigger.period_recurrence
+
+        if trigger.period == TriggerPeriod.monthly:
+            current_day = str(current_date.day)
+            tomorrow = current_date + timedelta(days=1)
+            if tomorrow.month != current_date.month:
+                # last day of month is marked in the recurrence as '29'
+                current_day = '29'
+            return current_day in trigger.period_recurrence
+
+        return False
+
+    def get_enforcements_to_run(self):
+        scheduled_enforcements = self._get_collection(REPORTS_PLUGIN_NAME, REPORTS_PLUGIN_NAME).find({
+            f'{TRIGGERS_FIELD}.period': {
+                '$nin': [TriggerPeriod.all.name, TriggerPeriod.never.name]
+            }
+        }, projection={
+            'name': 1,
+            f'{TRIGGERS_FIELD}': 1
+        })
+        for enforcement in scheduled_enforcements:
+            try:
+                if not enforcement.get(TRIGGERS_FIELD):
+                    continue
+
+                trigger = Trigger.from_dict(enforcement[TRIGGERS_FIELD])
+                if self.should_trigger_run_enforcement(trigger):
+                    yield {
+                        'report_name': enforcement.get('name', ''),
+                        'configuration_name': trigger.name
+                    }
+            except Exception:
+                logger.exception(f'Error checking enforcement "{enforcement.get("name", "unknown")}"')
+
+    def __run_triggered_enforcements(self):
+        enforcements_to_run = list(self.get_enforcements_to_run())
+        if not enforcements_to_run:
+            logger.debug('No enforcements to run, not doing anything at all')
+            return
+        logger.info(f'Starting Trigger {len(enforcements_to_run)} Enforcements to Run')
+
+        def triggered(*args, **kwargs):
+            logger.debug(f'Enforcement has finished running')
+
+        def rejected(err):
+            logger.exception(f'Failed running scheduled enforcement', exc_info=err)
+
+        try:
+            for enforcement_data in enforcements_to_run:
+                self._async_trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data=enforcement_data).then(
+                    did_fulfill=triggered, did_reject=rejected)
+        except Exception:
+            logger.exception('Error triggering enforcements to run')
+        logger.info('Finished Triggering Enforcements')
 
     def _get_plugins(self, plugin_subtype: PluginSubtype) -> list:
         """
@@ -1001,7 +1067,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             """
             blocking = plugin[PLUGIN_NAME] not in ALWAYS_ASYNC_PLUGINS
             try:
-                self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                             blocking=blocking,
                                             timeout=24 * 3600, stop_on_timeout=True)
             except ConnectionError:
@@ -1009,7 +1075,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.warning(f'Failed triggering {plugin[PLUGIN_NAME]} retrying in 80 seconds')
                 time.sleep(80)
                 try:
-                    self._trigger_remote_plugin(plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                    self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                                 blocking=blocking,
                                                 timeout=24 * 3600, stop_on_timeout=True)
                 except ConnectionError:
@@ -1020,7 +1086,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             future_for_pre_correlation_plugin = {
                 executor.submit(run_trigger_on_plugin, plugin):
-                    plugin[plugin_consts.PLUGIN_NAME] for plugin in plugins_to_run
+                    plugin[PLUGIN_NAME] for plugin in plugins_to_run
             }
 
             for future in as_completed(future_for_pre_correlation_plugin):
@@ -1038,7 +1104,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         data = {
             'adapters': adapters
         }
-        self._run_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6,
+        self._run_blocking_request(AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6,
                                    data=data)
 
     def _run_historical_phase(self, max_days_to_save):
@@ -1047,7 +1113,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return:
         """
         self._run_blocking_request(
-            plugin_consts.AGGREGATOR_PLUGIN_NAME,
+            AGGREGATOR_PLUGIN_NAME,
             'save_history',
             data={'max_days_to_save': max_days_to_save},
             timeout=3600 * 6,
@@ -1059,7 +1125,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :param plugin_subtype: A plugin_subtype to filter as a white list.
         :return: none
         """
-        aggregator_job_id = self._run_non_blocking_request(plugin_consts.AGGREGATOR_PLUGIN_NAME,
+        aggregator_job_id = self._run_non_blocking_request(AGGREGATOR_PLUGIN_NAME,
                                                            'fetch_filtered_adapters',
                                                            data={'plugin_subtype': plugin_subtype.value})
         self.state.AssociatePluginId = aggregator_job_id
@@ -1072,7 +1138,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :param plugin_subtype: A plugin_subtype to filter as a white list.
         :return: None
         """
-        self._wait_for_request(plugin_consts.AGGREGATOR_PLUGIN_NAME, 'fetch_filtered_adapters',
+        self._wait_for_request(AGGREGATOR_PLUGIN_NAME, 'fetch_filtered_adapters',
                                data={'plugin_subtype': plugin_subtype.value}, timeout=48 * 3600)
 
     def _run_blocking_request(self, plugin_name: str, job_name: str, data: dict = None, timeout: int = None):
@@ -1152,12 +1218,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         return PluginSubtype.Core
 
     def _stopped(self, job_name: str):
-        logger.info(f'Got a stop request: Back to {scheduler_consts.Phases.Stable} Phase.')
+        logger.info(f'Got a stop request: Back to {Phases.Stable} Phase.')
         try:
             self.__stopping_initiated = True
             self._stop_plugins()
         finally:
-            self.current_phase = scheduler_consts.Phases.Stable
+            self.current_phase = Phases.Stable
             self.state = SchedulerState()
             self.__stopping_initiated = False
 
