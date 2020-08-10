@@ -37,14 +37,13 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
                                                 https_proxy=client_config.get('https_proxy'))
 
     # pylint: disable=arguments-differ
-    def get_connection(self, client_config):
+    @staticmethod
+    def get_connection(client_config):
         connection = RedhatSatelliteConnection(domain=client_config['domain'],
                                                verify_ssl=client_config['verify_ssl'],
                                                https_proxy=client_config.get('https_proxy'),
                                                username=client_config['username'],
-                                               password=client_config['password'],
-                                               fetch_host_facts=self._fetch_host_facts,
-                                               hosts_chunk_size=self._hosts_chunk_size)
+                                               password=client_config['password'])
         with connection:
             pass
         return connection
@@ -58,8 +57,7 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -69,7 +67,10 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_host_facts=self._fetch_host_facts,
+                                                   fetch_host_packages=self._fetch_host_packages,
+                                                   hosts_chunk_size=self._hosts_chunk_size,
+                                                   async_chunks=self._async_chunks,)
 
     @staticmethod
     def _clients_schema():
@@ -245,6 +246,29 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             # now that we've collected all os_components possible, from host and its facts, figure out the os
             device.figure_os(' '.join(comp or '' for comp in os_components))
 
+            # handle package, remove from raw to prevent bloating
+            device_packages = device_raw.pop(consts.ATTR_INJECTED_PACKAGES, None)
+            if isinstance(device_packages, list):
+                for package in device_packages:
+                    try:
+                        if not (isinstance(package, dict) and package.get('nvra')):
+                            logger.warning(f'got invalid package for device {device_id}: {package}')
+                            continue
+                        # nvra = name-version-release.arch
+                        # Example: abrt-2.1.11-42.el7.x86_64
+                        # Refrence: https://access.redhat.com/solutions/3099311
+                        # release Reference: https://access.redhat.com/discussions/1434473
+                        name, version, rest = package.get('nvra').split('-', 2)
+                        if rest.endswith('.rpm'):
+                            rest = rest[:-4]
+                        rhel_release, arch = rest.rsplit('.', 1)
+                        device.add_installed_software(name=name,
+                                                      version=version,
+                                                      architecture=arch,
+                                                      source=rhel_release)
+                    except Exception:
+                        logger.warning(f'Failed adding package to device {device_id}: {package}', exc_info=True)
+
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -259,7 +283,6 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
 
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
 
     @classmethod
@@ -272,13 +295,26 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
                     'type': 'bool',
                 },
                 {
+                    'name': 'fetch_host_packages',
+                    'title': 'Fetch host packages',
+                    'type': 'bool',
+                },
+                {
                     'name': 'hosts_chunk_size',
                     'title': 'Host chunk size',
                     'description': 'Hosts fetching chunk size.',
                     'type': 'number',
-                }
+                },
+                {
+                    'name': 'async_chunks',
+                    'title': 'Number of requests to perform in parallel',
+                    'type': 'number',
+                },
             ],
-            'required': ['fetch_host_facts', 'hosts_chunk_size'],
+            'required': ['fetch_host_facts',
+                         'fetch_host_packages',
+                         'hosts_chunk_size',
+                         'async_chunks'],
             'pretty_name': 'Red Hat Satellite Configuration',
             'type': 'array',
         }
@@ -287,9 +323,13 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_host_facts': True,
+            'fetch_host_packages': True,
             'hosts_chunk_size': consts.DEVICE_PER_PAGE,
+            'async_chunk': consts.ASYNC_CHUNKS,
         }
 
     def _on_config_update(self, config):
         self._fetch_host_facts = config.get('fetch_host_facts', True)
-        self._hosts_chunk_size = config.get('hosts_chunk_size', consts.DEVICE_PER_PAGE)
+        self._fetch_host_packages = config.get('fetch_host_packages', True)
+        self._hosts_chunk_size = config.get('hosts_chunk_size') or consts.DEVICE_PER_PAGE
+        self._async_chunks = config.get('async_chunks') or consts.ASYNC_CHUNKS
