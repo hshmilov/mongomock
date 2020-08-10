@@ -221,9 +221,9 @@ export default {
   watch: {
     isHidden() {
       /*
-            Change of hidden, means some fields may appear or disappear.
-            Therefore, the new children should be re-validated but the DOM has not updated yet
-         */
+      Change of hidden, means some fields may appear or disappear.
+      Therefore, the new children should be re-validated but the DOM has not updated yet
+      */
       this.needsValidation = true;
     },
     stringListError() {
@@ -286,72 +286,39 @@ export default {
     onRemoveValidate(validity) {
       this.$emit('remove-validate', this.addSchemaPrefix(validity));
     },
-    formatFieldName(validity) {
-      let fieldName = validity.name;
-      if (Array.isArray(this.schema.items)
-              && this.schema.items.length > 1
-              && this.schema.items[0].name === 'enabled'
-              && this.schema.items[1].name === 'conditional') {
-        const fileNameParts = fieldName.split('.');
-        fileNameParts.splice(0, 1);
-        fieldName = fileNameParts.join('.');
-      }
-      return fieldName;
-    },
     addSchemaPrefix(validity) {
-      let newValidity = null;
+      if (!this.schema.name) {
+        return validity;
+      }
       if (Array.isArray(validity)) {
-        newValidity = validity.map((fieldValidity) => ({ ...fieldValidity, name: `${this.schema.name}.${this.formatFieldName(fieldValidity)}` }));
-      } else {
-        newValidity = { ...validity, name: `${this.schema.name}.${this.formatFieldName(validity)}` };
+        return validity.map((fieldValidity) => ({
+          ...fieldValidity,
+          name: `${this.schema.name}.${fieldValidity.name}`,
+        }));
       }
-      return newValidity;
+      return { ...validity, name: `${this.schema.name}.${validity.name}` };
     },
-    validate(silent, checkHiddenFields = false) {
-      // If the user reverted his choice and decided not to fill a certain group of options,
-      // We go through each of the children fields and make sure to invalidate them.
-      // In other words, once the option sub fields is invisible again, we have to make them valid
-      // since they are no longer relevant for validation.
-
-      if (Array.isArray(this.schema.items)
-                    && this.schema.items.length > 1
-                    && this.schema.items[0].name === 'enabled'
-                    && this.schema.items[1].name === 'conditional') {
-        const enabledItem = this.schema.items[0].name;
-        const conditionalSelectedItem = this.schema.items[1].name;
-        const conditionalEnumItems = this.schema.items[1].enum;
-
-        // if form enabled then remove validation from drop down list unselected items ( hidden )
-        if (this.data[enabledItem] === true) {
-          const selected = this.data[conditionalSelectedItem];
-          conditionalEnumItems.filter((item) => (item.name !== selected)).forEach((item) => {
-            this.$emit('remove-validate',
-              Object.keys(this.data[item.name])
-                .map((conditionalItem) => ({ name: `${this.schema.name}.${conditionalItem}` })));
-          });
-          // if form is not enabled remove validate from all drop down list items
-        } else {
-          conditionalEnumItems.forEach((item) => {
-            this.$emit('remove-validate', Object.keys(this.data[item.name])
-              .map((mapItem) => ({ name: `${this.schema.name}.${mapItem}` })));
-          });
-        }
-      }
-
-      if (checkHiddenFields
-           && this.schema.items[0].name === 'enabled'
-           && this.data[this.schema.items[0].name] === false
-           && this.schema.items.length > 1) {
-        this.$emit('remove-validate', this.schema.items.slice(1)
-          .map((item) => ({ name: `${this.schema.name}.${item.name}` })));
-        return;
-      }
-
+    validate(silent) {
       if (this.isStringList) {
         this.validateStringList(silent);
-      } else if (this.$refs.itemChild) {
-        this.$refs.itemChild.forEach((item) => item.validate(silent));
+        return;
       }
+      if (!this.$refs.itemChild) {
+        return;
+      }
+      const activeFieldNames = this.$refs.itemChild.map((ref) => ref.schema.name);
+      const isFieldHidden = (field) => !activeFieldNames.includes(field.name);
+      const isFieldRecursible = (field) => (field.items && Array.isArray(field.items));
+      const getHiddenFields = (fields, path) => fields.filter(isFieldHidden)
+        .reduce((hiddenFields, currentField) => {
+          const name = path ? `${path}.${currentField.name}` : currentField.name;
+          if (isFieldRecursible(currentField)) {
+            return [...hiddenFields, ...getHiddenFields(currentField.items, name)];
+          }
+          return [...hiddenFields, { name }];
+        }, []);
+      this.$emit('remove-validate', getHiddenFields(this.schema.items, this.schema.name));
+      this.$refs.itemChild.forEach((item) => item.validate(silent));
     },
     addNewItem() {
       if (!this.schema.items.items) {

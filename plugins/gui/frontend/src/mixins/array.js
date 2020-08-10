@@ -84,7 +84,7 @@ export default {
     },
     dataSchemaItems() {
       const data = this.processedData;
-      return this.processedSchemaItems
+      return this.shownSchemaItems
         .filter((schema) => !this.empty(data[schema.name]))
         .map((schema) => ({
           schema, data: data[schema.name],

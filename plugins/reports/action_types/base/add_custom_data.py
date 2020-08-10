@@ -6,6 +6,14 @@ from reports.action_types.action_type_base import ActionTypeBase, generic_succes
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
+FIELD_TYPE_ENUM = [{
+    'name': 'field_value',
+    'title': 'String'
+}, {
+    'name': 'field_on',
+    'title': 'Boolean'
+}]
+
 
 class AddCustomDataAction(ActionTypeBase):
     """
@@ -22,13 +30,33 @@ class AddCustomDataAction(ActionTypeBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'conditional',
+                    'title': 'Field type',
+                    'type': 'string',
+                    'enum': FIELD_TYPE_ENUM,
+                    'default': 'field_value'
+                },
+                {
                     'name': 'field_value',
                     'title': 'Field value',
                     'type': 'string'
+                },
+                {
+                    'name': 'field_on',
+                    'title': 'Field value',
+                    'type': 'bool',
+                    'enum': [{
+                        'name': True,
+                        'title': 'Yes'
+                    }, {
+                        'name': False,
+                        'title': 'No'
+                    }],
+                    'default': True,
                 }
             ],
             'required': [
-                'field_name', 'field_value'
+                'field_name', 'conditional', 'field_value', 'field_on'
             ],
             'type': 'array'
         }
@@ -37,16 +65,21 @@ class AddCustomDataAction(ActionTypeBase):
     def default_config() -> dict:
         return {
             'field_name': '',
-            'field_value': ''
+            'conditional': 'field_value',
+            'field_value': '',
+            'field_on': True
         }
 
     def _run(self) -> EntitiesResult:
         if not self._internal_axon_ids:
             return []
 
+        field_type = self._config['conditional']
+        field_content = self._config[field_type]
+        field_name = self._config['field_name']
         custom_data = {
             'data': {
-                self._config['field_name']: self._config['field_value'],
+                field_name: field_content,
                 'id': 'unique'
             },
             'selection': {
@@ -61,5 +94,8 @@ class AddCustomDataAction(ActionTypeBase):
         if response.status_code == 200:
             return generic_success(self._internal_axon_ids)
 
-        error = response.json().get('message', {}).get(self._config['field_name'], '')
+        error = response.json().get('message', {}).get(field_name, '')
+        if 'Wrong type' in error:
+            alternate_type = next(filter(lambda x: x['name'] != field_type, FIELD_TYPE_ENUM))['title']
+            error = f'Cannot add custom field - \'{field_name}\' already exists as \'{alternate_type}\''
         return [EntityResult(x, False, error) for x in self._internal_axon_ids]

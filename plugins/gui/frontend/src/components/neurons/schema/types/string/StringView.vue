@@ -98,17 +98,22 @@ export default {
       if (schema.cellRenderer) {
         return schema.cellRenderer(value);
       }
+      if (schema.enum) {
+        const enumSelectedOption = schema.enum.find((item) => item.name === value);
+        return enumSelectedOption ? enumSelectedOption.title : value;
+      }
+      if (!schema.format) {
+        return value;
+      }
       if (schema.format === 'user') {
         return this.formatUsername(JSON.parse(value));
       }
-      if (!schema.format) return value;
       if (schema.format.includes('date') || schema.format.includes('time')) {
         return formatDate(value, schema, dateFormat);
       }
       if (schema.format === 'password') {
         return '********';
       }
-
       return value;
     },
   },

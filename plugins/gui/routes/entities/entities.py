@@ -429,9 +429,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                         field_name = f'custom_{field_name}'
                         entity_to_add.declare_new_field(field_name, Field(type(v), k))
                     setattr(entity_to_add, field_name, v)
-            except Exception as e:
-                errors[k] = f'Value {v} not compatible with field {k}.'
-                logger.exception(errors[k])
+            except ValueError as e:
+                errors[k] = str(e)
 
         if len(errors) > 0:
             return return_error(errors, 400)

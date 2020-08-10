@@ -195,43 +195,58 @@ export default {
 </script>
 
 <style lang="scss">
-    .x-action-config {
-        height: 100%;
-        display: grid;
-        grid-template-rows: 60px calc(100% - 108px) 48px;
-        align-items: flex-start;
-        .name {
-            display: flex;
-            align-items: center;
-            &__label {
-                flex: 1 0 auto;
-            }
-            #action-name {
-                margin-left: 12px;
-                &.disabled {
-                    opacity: 0.6;
-                }
-            }
+  .x-action-config {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 60px calc(100% - 108px) 48px;
+    align-items: flex-start;
+
+    .name {
+      display: flex;
+      align-items: center;
+
+      &__label {
+        flex: 1 0 auto;
+      }
+
+      #action-name {
+        margin-left: 12px;
+
+        &.disabled {
+          opacity: 0.6;
         }
-        .config {
-            @include  y-scrollbar;
-            overflow: auto;
-            height: 100%;
-            .config__title {
-                margin-top: 0;
-                margin-bottom: 12px;
-            }
-            .x-form > .x-array-edit > div > div > .list {
-                grid-template-columns: 1fr;
-                grid-gap: 24px 0;
-                display: grid;
-            }
-        }
-        .actions {
-            text-align: right;
-            .error-text {
-                min-height: 20px;
-            }
-        }
+      }
     }
+
+    .config {
+      @include y-scrollbar;
+      overflow: auto;
+      height: 100%;
+
+      .config__title {
+        margin-top: 0;
+        margin-bottom: 12px;
+      }
+
+      .x-form > .x-array-edit > div > div > .list {
+        grid-template-columns: 1fr;
+        grid-gap: 24px 0;
+        display: grid;
+
+        .item_field_on {
+          .x-select {
+            width: 200px;
+          }
+        }
+      }
+    }
+
+    .actions {
+      text-align: right;
+
+      .error-text {
+        min-height: 20px;
+      }
+    }
+  }
 </style>

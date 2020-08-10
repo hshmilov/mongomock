@@ -278,16 +278,6 @@ export default {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.Update);
     },
-    validResearchRate() {
-      if (!this.schedulerSettings.config) return 12;
-      return this.validNumber(
-        this.schedulerSettings.config.discovery_settings.system_research_rate,
-      );
-    },
-    validResearchDate() {
-      return this.schedulerSettings.config.discovery_settings
-        .system_research_date.system_research_date_recurrence >= 0;
-    },
     validPasswordResetSettings() {
       if (!this.coreSettings.config) {
         return false;
@@ -332,10 +322,7 @@ export default {
       return password_max_allowed_tries >= 5 && password_lockout_minutes > 0;
     },
     isResearchDisabled() {
-      if (this.schedulerSettings.config.discovery_settings.conditional === 'system_research_date') {
-        return !this.schedulerComplete || !this.canUpdateSettings || !this.validResearchDate;
-      }
-      return !this.schedulerComplete || !this.canUpdateSettings || !this.validResearchRate;
+      return !this.schedulerComplete || !this.canUpdateSettings;
     },
     canViewUsersAndRoles() {
       return this.$can(this.$permissionConsts.categories.Settings,

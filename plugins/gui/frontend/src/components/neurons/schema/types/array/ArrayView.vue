@@ -113,8 +113,8 @@ export default {
       return this.schema.title && this.schema.title !== 'SEPARATOR';
     },
     visibleDataSchemaItems() {
-      return this.dataSchemaItems
-        .filter((item, index) => !this.collapsed || (!this.isOrderedObject && index < 5));
+      const isItemVisible = (_, index) => !this.collapsed || (!this.isOrderedObject && index < 5);
+      return this.dataSchemaItems.filter(isItemVisible);
     },
   },
   created() {
