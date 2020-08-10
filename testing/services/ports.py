@@ -286,6 +286,7 @@ DOCKER_PORTS = {
     'arista-eos-adapter':               10002,
     'men-and-mice-adapter':             10004,
     'edfs-csv-adapter':                 10005,
+    'logmein-adapter':                  10006,
     'kolide-adapter':                   10007,
     'cisco-ucsm-adapter':               10010,
     'openvas-adapter':                  10014,
