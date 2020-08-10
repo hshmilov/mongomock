@@ -52,13 +52,8 @@ class SlackSendMessageAction(ActionTypeAlert):
                     'format': 'text'
                 },
                 {
-                    'name': 'https_proxy',
-                    'title': 'HTTPS Proxy',
-                    'type': 'string'
-                },
-                {
                     'name': 'display',
-                    'title': 'Display results format',
+                    'title': 'Results display format',
                     'type': 'string',
                     'enum': [JSON_DISPLAY, TABLE_DISPLAY],
                     'default': JSON_DISPLAY

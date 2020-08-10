@@ -51,7 +51,7 @@ class HaveibeenpwnedEnrichment(ActionTypeBase):
                 },
                 {
                     'name': 'domain_whitelist',
-                    'title': 'Domain Whitelist',
+                    'title': 'Domain whitelist',
                     'type': 'string'
                 }
             ],
