@@ -457,7 +457,7 @@ class CISAzureCategory5:
             try:
                 all_keyvaults = self.azure.keyvault.get_all_azure_keyvaults_for_subscription(subscription_id)
             except Exception as e:
-                self.report.add_rule_error(
+                errors.append(
                     f'Could not get all keyvaults for subscription {subscription_name!r}: {str(e)}'
                 )
                 return
