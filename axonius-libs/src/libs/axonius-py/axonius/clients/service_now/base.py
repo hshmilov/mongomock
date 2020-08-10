@@ -120,10 +120,10 @@ class ServiceNowConnectionMixin(ABC):
                     table_result, consts.RELATIONS_TABLE_CHILD_KEY)
 
         # Compliance Exception connections -
-        #   curr_table = {'control.profile.applies_to.value': [policy_exception.value, ...]}
+        #   curr_table = {'control.profile.cmdb_ci.value': [policy_exception.value, ...]}
         # Note: policy_exception objects are handled in the generic initial if
         elif table_key == consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE:
-            applies_to = table_result.get('control.profile.applies_to')
+            applies_to = table_result.get('control.profile.cmdb_ci')
             if not (isinstance(applies_to, dict) and isinstance(applies_to.get('value'), str)):
                 logger.debug(f'Compliance exception missing target asset: {table_result}')
                 return
@@ -134,7 +134,7 @@ class ServiceNowConnectionMixin(ABC):
             curr_table.setdefault(applies_to.get('value'), list()).append(policy_exception.get('value'))
 
         else:
-            logger.error('Invalid sub_table_key encountered {sub_table_key}')
+            logger.error(f'Invalid table_key encountered {table_key}')
             return
 
     # pylint: disable=too-many-branches,too-many-statements,too-many-locals

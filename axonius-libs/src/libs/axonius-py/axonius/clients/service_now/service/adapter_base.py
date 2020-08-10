@@ -896,7 +896,7 @@ class ServiceNowAdapterBase(AdapterBase):
             device.u_management_access_type = device_raw.get('u_management_access_type')
             device.u_network_zone = device_raw.get('u_network_zone')
 
-            device_compliance_exception_ids = snow_compliance_exception_ids_dict.get(device_id)
+            device_compliance_exception_ids = snow_compliance_exception_ids_dict.get(str(device_id))
             if isinstance(device_compliance_exception_ids, list):
                 device_compliance_exceptions = []
                 for compliance_exception_id in device_compliance_exception_ids:
@@ -1159,6 +1159,8 @@ class ServiceNowAdapterBase(AdapterBase):
             software_product_dict = table_devices_data.get(consts.SOFTWARE_PRODUCT_TABLE)
             model_dict = table_devices_data.get(consts.MODEL_TABLE)
             snow_logicalci_dict = table_devices_data.get(consts.LOGICALCI_TABLE)
+            snow_compliance_exc_ids_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE)
+            snow_compliance_exc_data_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_DATA_TABLE)
 
             for device_raw in table_devices_data[consts.DEVICES_KEY]:
                 device = self.create_snow_device(device_raw=device_raw,
@@ -1182,7 +1184,9 @@ class ServiceNowAdapterBase(AdapterBase):
                                                  snow_software_product_table_dict=software_product_dict,
                                                  snow_model_dict=model_dict,
                                                  snow_logicalci_dict=snow_logicalci_dict,
-                                                 operational_status_dict=operational_status_dict)
+                                                 operational_status_dict=operational_status_dict,
+                                                 snow_compliance_exception_ids_dict=snow_compliance_exc_ids_dict,
+                                                 snow_compliance_exception_data_dict=snow_compliance_exc_data_dict)
                 if device:
                     yield device
 
