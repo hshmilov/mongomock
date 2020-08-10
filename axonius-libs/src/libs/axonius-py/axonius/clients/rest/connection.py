@@ -7,7 +7,7 @@ import math
 import threading
 from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
-from typing import Tuple
+from typing import Tuple, Type
 
 from urllib3.util.url import parse_url
 import requests
@@ -37,9 +37,83 @@ MAX_ASYNC_RETRIES = 3
 ASYNC_ERROR_SLEEP_TIME = 3
 
 
+class RestDict(dict):
+    """
+    A Class that overrides dict in order to help us check the return values from RestConnection.
+    """
+
+    def get(self, k, d=None, *, expected_type: Type = None, should_raise: bool = False,
+            convert_empty_values: bool = True):
+        """
+        This function override get function in dict, and check if the return type is what we expected.
+        :param k: The key in the dict.
+        :param d: Default value in case key doesn't exists.
+        :param expected_type: The expected type of the value returned from get(k,d).
+        :param should_raise: should raise exception if the expected type is not what we expected.
+                             if True will raise ValueError.
+        :param convert_empty_values: In case the value type is not what we expected,
+                                     if True will return empty value of the expected type.
+        :return: In case the value type is what we expected or convert_empty_values is False will return value,
+                 in case the value type is not what we expected and convert_empty_values is True
+                 will return empty value of the expected type.
+        """
+        if not expected_type:
+            return super().get(k, d)
+        value = super().get(k, d)
+        if value and not isinstance(value, expected_type):
+            log = f'value type not as expected. key:{k}, value: {value}, type: {type(value)}, expected: {expected_type}'
+            logger.warning(log)
+            if should_raise:
+                raise ValueError(log)
+            if convert_empty_values:
+                return expected_type()
+        if convert_empty_values and value is None:
+            return expected_type()
+        return value
+
+
+class RestList(list):
+    def __init__(self, *args, expected_type: Type = None, should_raise: bool = False, convert_empty_values: bool = True,
+                 **kwargs):
+        """
+        A Class that overrides list in order to help us check the return values from RestConnection.
+        :param args: Additional arguments.
+        :param expected_type: The expected type of the value returned from getitem.
+        :param should_raise: should raise exception if the expected type is not what we expected.
+                             if True will raise ValueError.
+        :param convert_empty_values: In case the value type is not what we expected,
+                                     if True will return empty value of the expected type.
+        :param kwargs: Keyword additional arguments.
+        """
+        super().__init__(*args, **kwargs)
+        self._expected_type = expected_type
+        self._should_raise = should_raise
+        self._convert_empty_values = convert_empty_values
+
+    def __getitem__(self, key):
+        """
+        This function overrides getitem function in list, and check if the return type is what we expected.
+        :param key: The index in the list.
+        :return: In case the value type is what we expected or convert_empty_values is False will return value,
+                 in case the value type is not what we expected and convert_empty_values is True
+                 will return empty value of the expected type.
+        """
+        if not self._expected_type:
+            return super().__getitem__(key)
+        value = super().__getitem__(key)
+        if not isinstance(value, self._expected_type):
+            log = f'value type not as expected. value: {value} type: {type(value)} expected: {self._expected_type}'
+            logger.warning(log)
+            if self._should_raise:
+                raise ValueError(log)
+            if self._convert_empty_values:
+                return self._expected_type()
+        if self._convert_empty_values and value is None:
+            return self._expected_type()
+        return value
+
+
 # pylint: disable=R0902
-
-
 class RESTConnection(ABC):
     # pylint: disable=R0913
     def __init__(self, domain: str, username: str = None, password: str = None, apikey: str = None,
@@ -307,7 +381,7 @@ class RESTConnection(ABC):
     def _do_request(self, method, name, url_params=None, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
                     do_digest_auth=False, return_response_raw=False, alternative_auth_dict=None, extra_headers=None,
-                    raise_for_status=True, files_param=None, alternative_proxies=None):
+                    raise_for_status=True, files_param=None, alternative_proxies=None, response_type=None):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -366,10 +440,21 @@ class RESTConnection(ABC):
         except requests.HTTPError as e:
             self._handle_http_error(e)
 
-        return self._handle_response(response,
-                                     raise_for_status=raise_for_status,
-                                     use_json_in_response=use_json_in_response,
-                                     return_response_raw=return_response_raw)
+        response = self._handle_response(response,
+                                         raise_for_status=raise_for_status,
+                                         use_json_in_response=use_json_in_response,
+                                         return_response_raw=return_response_raw)
+        if not response_type:
+            return response
+        if not isinstance(response, response_type):
+            logger.warning(
+                f'response type not as expected response:{response}, type: {type(response)}, expected: {response_type}')
+            return response_type()
+        if isinstance(response_type(), dict):
+            return RestDict(response)
+        if isinstance(response_type(), list):
+            return RestList(response)
+        return response
 
     @staticmethod
     def _handle_http_error(error):
@@ -384,7 +469,8 @@ class RESTConnection(ABC):
             message = str(error)
         raise RESTRequestException(message)
 
-    def _handle_response(self, response, raise_for_status=True, use_json_in_response=True, return_response_raw=False):
+    def _handle_response(self, response, raise_for_status=True, use_json_in_response=True,
+                         return_response_raw=False):
         try:
             if raise_for_status:
                 response.raise_for_status()
@@ -510,7 +596,8 @@ class RESTConnection(ABC):
             logger.info(f'Got 429 response, waiting for {sleep_time} seconds.')
             await asyncio.sleep(sleep_time)
         except Exception as e:
-            logger.error(f'Error getting retry header from 429 response: {e}. sleeping for {DEFAULT_429_SLEEP_TIME}')
+            logger.error(
+                f'Error getting retry header from 429 response: {e}. sleeping for {DEFAULT_429_SLEEP_TIME}')
             await asyncio.sleep(DEFAULT_429_SLEEP_TIME)
 
     # pylint: disable=R0915

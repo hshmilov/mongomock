@@ -1,0 +1,7 @@
+DEVICE_PER_PAGE = 200
+MAX_NUMBER_OF_DEVICES = 2000000
+MAX_NUMBER_OF_USERS = 2000000
+DEVICES_URL = r'api/v1/device'
+USERS_URL = r'api/v1/people'
+DATACENTER_URL = r'api/v1/datacenter'
+CABINET_URL = r'api/v1/cabinet'

@@ -1203,6 +1203,11 @@
     "link": "https://docs.axonius.com/docs/microsoft-kms",
     "description": "Microsoft Key Management Service (KMS) is an activation service that allows organizations to activate systems within their own network, eliminating the need for individual computers to connect to Microsoft for product activation."
   },
+  "opendcim_adapter": {
+    "title": "openDCIM",
+    "link": "https://docs.axonius.com/docs/opendcim",
+    "description": "openDCIM is a free and open source Data Center Infrastructure Management solution."
+  },
   "minerva_adapter": {
     "title": "Minerva Labs Endpoint Malware Vaccination",
     "link": "",

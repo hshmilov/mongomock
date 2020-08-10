@@ -490,6 +490,13 @@ def is_valid_ip(ip):
         return False
 
 
+def is_private_ip(ip):
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except Exception:
+        return False
+
+
 def is_valid_ipv4(ip):
     """Check if an ip address is in valid IPv4 format.
 
