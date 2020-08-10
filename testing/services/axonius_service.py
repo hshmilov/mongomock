@@ -282,6 +282,14 @@ class AxoniusService:
             core_service.wait_for_service()
             services_to_start.remove(core_service)
 
+        gui_service = next((x for x in services_to_start if x.container_name == 'gui'), None)
+
+        if gui_service:
+            # if core is also restarted, we can't restart anything else before it finishes
+            _start_service(gui_service)
+            gui_service.wait_for_service()
+            services_to_start.remove(gui_service)
+
         if self.instance_mode == InstancesModes.mongo_only.value and NODE_MARKER_PATH.is_file():
             # when running a mongo only instance, we want to wait for the master instance to be up
             # and then start up the rest of the services (for now, instance control)
