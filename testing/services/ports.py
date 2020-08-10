@@ -123,6 +123,7 @@ DOCKER_PORTS = {
     'specops-adapter':                  6008,
     'nutanix-adapter':                  6009,
     'minerva-adapter':                  6010,
+    'venafi-adapter':                   6011,
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,
     'prisma-cloud-adapter':             6014,
