@@ -131,7 +131,7 @@ class TestCyberarkIntegration(TestBase):
             print('Running discovery.')
 
             self._wait_until_click_intercepted(self.base_page.run_discovery)
-            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0)
             self.adapters_page.clean_adapter_servers(CSV_NAME)
 
         print('Removing cyberark settings.')
@@ -188,7 +188,7 @@ class TestCyberarkIntegration(TestBase):
                 print('Running discovery.')
                 self.base_page.run_discovery()
                 print('waiting for check device count')
-                wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
+                wait_until(lambda: self.devices_page.check_csv_device_count() > 0)
 
             print('cyberark simulator is killed, done checking waiting for check device count.')
             self.base_page.run_discovery()

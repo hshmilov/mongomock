@@ -756,15 +756,13 @@ class TestDevicesQueryAdvancedCases(TestBase):
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EQUALS,
-                value=self.CONNECTION_LABEL) != 0
-        )
+                value=self.CONNECTION_LABEL) != 0)
 
         # check exists
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=self.devices_page.QUERY_COMP_EXISTS,
-                value=self.CONNECTION_LABEL) != 0
-        )
+                value=self.CONNECTION_LABEL) != 0)
 
         # check operator in positive value
         wait_until(lambda: self.devices_page.get_device_count_by_connection_label(

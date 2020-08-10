@@ -39,7 +39,7 @@ class TestThycoticIntegration(TestBase):
         with CsvService().contextmanager(take_ownership=True):
             self._create_new_csv_connection_with_vault(secret_id=THYCOTIC_SECRET_SERVER_CSV_SECRET_KEY_ID,
                                                        vault_field='Secret Key')
-            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0)
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
         self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
@@ -69,13 +69,13 @@ class TestThycoticIntegration(TestBase):
             self.adapters_page.wait_for_data_collection_toaster_start()
             self.adapters_page.wait_for_data_collection_toaster_absent()
             # Check successful device fetch.
-            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=5)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0)
 
             # verify vault button not present after removed from config
             self.settings_page.clear_enterprise_password_mgmt_settings()
             self.adapters_page.switch_to_page()
             self.adapters_page.open_add_edit_server(CSV_NAME, row_position=1)
-            wait_until(lambda: not self.adapters_page.is_save_button_disabled(), total_timeout=20)
+            wait_until(lambda: not self.adapters_page.is_save_button_disabled())
             self.adapters_page.verify_password_vault_button_not_present()
             self.adapters_page.click_cancel()
             self.adapters_page.clean_adapter_servers(CSV_NAME)
@@ -93,7 +93,7 @@ class TestThycoticIntegration(TestBase):
             # step 1 = valid config
             self._create_new_csv_connection_with_vault()
             # Check successful device fetch.
-            wait_until(lambda: self.devices_page.check_csv_device_count() > 0, total_timeout=200, interval=20)
+            wait_until(lambda: self.devices_page.check_csv_device_count() > 0)
 
             # step 2 : update to invalid thycotic port and verify password fetch failed
             invalid_thycotic_server = copy.deepcopy(THYCOTIC_SECRET_SEREVER)
