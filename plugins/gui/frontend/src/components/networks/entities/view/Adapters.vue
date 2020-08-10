@@ -307,6 +307,7 @@ export default {
       border-bottom: 2px solid rgba($theme-orange, 0.4);
       display: flex;
       align-items: center;
+      overflow: hidden;
 
       &__source {
         flex: 1 0 auto;

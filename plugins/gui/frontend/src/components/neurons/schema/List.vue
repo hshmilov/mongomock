@@ -54,6 +54,7 @@ export default {
         .list-actions {
             display: flex;
             justify-content: flex-end;
+            overflow: hidden;
 
             .x-button {
                 font-size: 12px;
