@@ -59,15 +59,6 @@ class AggregatorService(Triggerable, PluginBase):
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
         self.local_db_schema_version = self.aggregator_db_connection['version']
 
-    def _migrate_async_db(self):
-        if self.db_async_schema_version < 1:
-            self._update_async_schema_version_1()
-        if self.db_async_schema_version < 2:
-            self._update_async_schema_version_2()
-
-        if self.db_async_schema_version != 2:
-            logger.error(f'Upgrade failed, db_async_schema_version is {self.db_async_schema_version}')
-
     def _delayed_initialization(self):
         """
         See parent docs
