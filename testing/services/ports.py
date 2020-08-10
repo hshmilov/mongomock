@@ -293,6 +293,7 @@ DOCKER_PORTS = {
     'box-platform-adapter':             10016,
     'hp-nnmi-xml-adapter':              10017,
     'keycloak-adapter':                 10018,
+    'wing-adapter':                     10019,
     'pa-users-csv-adapter':             10110,
     'php-ipam-adapter':                 10111,
     'infoblox-netmri-adapter':          10112,

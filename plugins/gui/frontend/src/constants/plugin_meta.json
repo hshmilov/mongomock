@@ -1398,6 +1398,11 @@
     "link": "",
     "description": "Stresstest can be configured with any amount of devices and it creates that number of random devices."
   },
+  "wing_adapter": {
+    "title": "Extreme Networks ExtremeWireless WiNG - BETA",
+    "link": "https://docs.axonius.com/docs/extreme-networks-extremewireless-wing",
+    "description": "Extreme Networks ExtremeWireless WiNG in a WLAN operating system designed to scale efficiently from the smallest networks to large, geographically dispersed deployments."
+  },
   "digital_shadows_adapter": {
     "title": "Digital Shadows SearchLight",
     "link": "https://docs.axonius.com/docs/digital-shadows-searchlight",
