@@ -3,12 +3,13 @@ import logging
 import csv
 import io
 import re
+from typing import Optional
 from ipaddress import ip_address
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.qualys.consts import INVENTORY_TYPE, UNSCANNED_IP_TYPE
+from axonius.clients.qualys.consts import INVENTORY_TYPE, UNSCANNED_IP_TYPE, ASSET_GROUP_MASTER_PREFIX
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, QualysAgentVuln, DeviceOpenPort
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
@@ -103,6 +104,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         tickets = ListField(QualysTicket, 'Tickets')
         report = Field(QualysReport, 'Report')
         unscanned_device = Field(bool, 'Unscanned Device')
+        qualys_asset_groups = ListField(str, 'Asset Groups')
 
         def add_qualys_vuln(self, **kwargs):
             self.qualys_agent_vulns.append(QualysAgentVuln(**kwargs))
@@ -554,12 +556,28 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
             try:
                 for tag_raw in (device_raw.get('tags') or {}).get('list') or []:
+                    if not isinstance(tag_raw, dict):
+                        logger.warning(f'Invalid tag found {tag_raw}')
+                        continue
+                    tag_name: Optional[str] = (tag_raw.get('TagSimple') or {}).get('name')
+                    if not (tag_name and isinstance(tag_name, str)):
+                        logger.warning(f'Tag with no/invalid name: {tag_raw}')
+                        continue
                     try:
-                        if (tag_raw.get('TagSimple') or {}).get('name') in qualys_tags_white_list:
+                        if tag_name in qualys_tags_white_list:
                             tags_ok = True
-                        device.qualys_tags.append((tag_raw.get('TagSimple') or {}).get('name'))
+                        device.qualys_tags.append(tag_name)
                     except Exception:
                         logger.exception(f'Problem with tag {tag_raw}')
+                    try:
+                        if tag_name.startswith(ASSET_GROUP_MASTER_PREFIX):
+                            asset_group = tag_name[len(ASSET_GROUP_MASTER_PREFIX):]
+                            if asset_group:
+                                device.qualys_asset_groups.append(asset_group)
+                            else:
+                                logger.warning(f'empty asset_group {tag_raw}')
+                    except Exception:
+                        logger.exception(f'Problem with asset_group from tag {tag_raw}')
             except Exception:
                 logger.exception(f'Problem with adding tags to Qualys agent {device_raw}')
 
