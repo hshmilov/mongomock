@@ -52,7 +52,7 @@ class MicrosoftKmsAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get(consts.MICROSOFT_KMS_DATABASE)}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
         """
