@@ -98,9 +98,6 @@ adapters/nexpose_adapter/clients/nexpose_v2_client.py
 adapters/observeit_adapter/service.py
 adapters/openstack_adapter/service.py
 adapters/oracle_vm_adapter/connection.py
-adapters/puppet_adapter/connection.py
-adapters/puppet_adapter/consts.py
-adapters/puppet_adapter/exceptions.py
 adapters/puppet_adapter/service.py
 adapters/qcore_adapter/qcore_mongo.py
 adapters/qcore_adapter/service.py

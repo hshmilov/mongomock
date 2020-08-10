@@ -1,10 +1,14 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 import requests
-import puppet_adapter.consts as consts
+
 from axonius.utils.files import create_temp_file
 from axonius.clients.rest.connection import RESTConnection
+import puppet_adapter.consts as consts
 from puppet_adapter.exceptions import PuppetException
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+# pylint: disable=logging-format-interpolation
 
 
 def _parse_json_request(response):
@@ -13,11 +17,10 @@ def _parse_json_request(response):
     """
     if response.ok:
         return response.json()
-    else:
-        raise PuppetException(f"Query failed: {response.status_code}")
+    raise PuppetException(f'Query failed: {response.status_code}')
 
 
-class PuppetConnection(object):
+class PuppetConnection:
 
     def __init__(self, puppet_server_address: str, ca_file_data: bytes, cert_file: bytes, private_key: bytes):
         """
@@ -37,13 +40,15 @@ class PuppetConnection(object):
         # Do a basic request just to test connectivity
         try:
             query_response = self._session.get(
-                f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes", timeout=(5, 30))
+                f'{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes', timeout=(5, 30))
         except requests.RequestException as err:
-            logger.exception("Error in querying the nodes from the puppet server." +
-                             " Error information:{0}".format(str(err)))
+            logger.exception('Error in querying the nodes from the puppet server. '
+                             'Error information:{0}'.format(str(err)))
             raise
 
         _parse_json_request(query_response)
+
+     # pylint:disable=invalid-triple-quote
 
     def get_device_list(self):
         """ This function returns a json with all the data about all the devices in the server.
@@ -51,10 +56,10 @@ class PuppetConnection(object):
         """
         try:
             query_response = self._session.get(
-                f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes", timeout=(5, 30))
+                f'{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes', timeout=(5, 30))
         except requests.RequestException as err:
-            logger.exception("Error in querying the nodes from the puppet server." +
-                             " Error information:{0}".format(str(err)))
+            logger.exception('Error in querying the nodes from the puppet server. '
+                             'Error information:{0}'.format(str(err)))
             raise
 
         parsed_query_nodes_json = _parse_json_request(query_response)
@@ -64,10 +69,10 @@ class PuppetConnection(object):
             try:
                 devices_count += 1
                 if devices_count % 1000 == 0:
-                    logger.info(f"Got {devices_count} devices out of {num_of_devices}")
+                    logger.info(f'Got {devices_count} devices out of {num_of_devices}')
                 yield self._query_fact_device(json_node)
             except PuppetException as err:
-                logger.exception(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")
+                logger.exception(f'Error in getting information about node:{str(json_node)}. Error:{str(err)}')
 
     def _query_fact_device(self, basic_json_node: dict=None):
         """ This function gets a json with basic information about a node (or nothing if not needed),
@@ -79,7 +84,7 @@ class PuppetConnection(object):
         device = dict(basic_json_node or {})
 
         try:
-            url = f"{self._base_puppet_url }{consts.PUPPET_API_PREFIX}/nodes/{basic_json_node['certname']}/facts"
+            url = f'{self._base_puppet_url }{consts.PUPPET_API_PREFIX}/nodes/{basic_json_node["certname"]}/facts'
             query_response = self._session.get(url, timeout=(5, 30))
         except requests.RequestException as err:
             raise PuppetException(str(err))
