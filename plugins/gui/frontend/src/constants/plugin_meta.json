@@ -1363,6 +1363,11 @@
     "link": "",
     "description": ""
   },
+  "symantec_dcs_adapter": {
+    "title": "Symantec Data Center Security (DCS) Server Advanced",
+    "link": "https://docs.axonius.com/docs/symantec-data-center-security-dcs-server-advanced",
+    "description": "Symantec Data Center Security Server Advanced delivers security detection, monitoring, and prevention capabilities for both physical and virtual server infrastructures."
+  },
   "softlayer_adapter": {
     "title": "IBM Cloud",
     "link": "",

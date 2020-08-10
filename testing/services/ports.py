@@ -89,6 +89,7 @@ DOCKER_PORTS = {
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,
     'deep-security-adapter':            5799,
+    'symantec-dcs-adapter':             5839,
     'quest-kace-adapter':               5840,
     'skybox-adapter':                   5841,
     'free-ipa-adapter':                 5869,
