@@ -1428,6 +1428,11 @@
     "link": "https://docs.axonius.com/docs/sqlite",
     "description": "The SQLite adapter imports device information from SQLite database."
   },
+  "symantec_edr_adapter": {
+    "title": "Symantec Endpoint Detection and Response (EDR)",
+    "link": "https://docs.axonius.com/docs/symantec-edr",
+    "description": "Symantec Endpoint Detection and Response (EDR) performs the security tasks that detect, protect, and respond to threats to the organization's network."
+  },
   "rancher_adapter": {
     "title": "Rancher",
     "link": "https://docs.axonius.com/docs/rancher",

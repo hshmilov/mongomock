@@ -326,6 +326,7 @@ DOCKER_PORTS = {
     'opendcim-adapter':                 14289,
     'rancher-adapter':                  14297,
     'privx-adapter':                    14333,
+    'symantec-edr-adapter':             14334,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }
