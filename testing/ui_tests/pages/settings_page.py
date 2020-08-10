@@ -28,13 +28,13 @@ class SettingsPage(Page):
     GLOBAL_SETTINGS_CSS = 'li#global-settings-tab'
     CERTIFICATE_SETTINGS_CSS = 'li#certificate-settings-tab'
     GUI_SETTINGS_CSS = 'li#gui-settings-tab'
-    IDENTITY_PROVIDERS_SETTINGS_CSS = 'li#identity-providers-tab'
-    TUNNEL_SETTINGS_CSS = 'li#tunnel-tab'
+    IDENTITY_PROVIDERS_SETTINGS_CSS = 'li#identity-providers-settings-tab'
+    TUNNEL_SETTINGS_CSS = 'li#tunnel-settings-tab'
     LIFECYCLE_SETTINGS_CSS = 'li#research-settings-tab'
-    MANAGE_USERS_CSS = 'li#user-settings-tab'
-    MANAGE_ROLES_CSS = 'li#roles-settings-tab'
+    MANAGE_USERS_CSS = 'li#manage-users-tab'
+    MANAGE_ROLES_CSS = 'li#manage-roles-tab'
     FEATURE_FLAGS_CSS = 'li#feature-flags-tab'
-    ABOUT_CSS = 'li#about-settings-tab'
+    ABOUT_CSS = 'li#about-tab'
     SEND_EMAILS_LABEL = 'Send emails'
     EVALUATE_ROLE_ASSIGNMENT_ON_DDL = 'label[for=evaluate_role_assignment_on] + div.x-select'
     DISABLE_REMEMBER_ME = 'Disable \'Remember me\''
@@ -1789,3 +1789,10 @@ class SettingsPage(Page):
         valid_users = [u for u in all_users if u.source.lower() == 'saml']
         assert len(valid_users) == 1, 'Got more or less than expected valid saml usernames'
         return valid_users[0]
+
+    def wait_for_tunnel_disconnected_modal(self):
+        self.wait_for_element_present_by_css('.tunnel-modal')
+
+    def close_tunnel_disconnected_modal(self):
+        self.wait_for_element_present_by_css('.ant-modal-close-x').click()
+        self.wait_for_modal_close()

@@ -45,3 +45,16 @@ export const passwordPolicyFormatterEnum = {
   password_min_numbers: (value) => `${value} number`,
   password_min_special_chars: (value) => `${value} special character`,
 };
+
+export const tunnelConnectionStatuses = {
+  connected: 'connected',
+  disconnected: 'disconnected',
+  notAvailable: 'not_available',
+  neverConnected: 'never_connected',
+};
+
+export const emptyScheme = {
+  name: 'empty',
+  type: 'array',
+  items: [],
+};

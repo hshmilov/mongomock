@@ -97,6 +97,7 @@ class TestChangePasswordSettings(TestBase):
 
         self.settings_page.assert_server_error(PASSWORD_POLICY_ERROR_MSG)
 
+        self.settings_page.close_user_panel()
         self.settings_page.safe_refresh()
         self.settings_page.click_manage_users_settings()
         self.settings_page.create_new_user(RESTRICTED_USERNAME,
@@ -108,6 +109,7 @@ class TestChangePasswordSettings(TestBase):
         self.settings_page.fill_password_field('kjfsk8978')
         self.settings_page.click_save_button()
         self.settings_page.assert_server_error(PASSWORD_POLICY_ERROR_MSG)
+        self.settings_page.close_user_panel()
 
         self.settings_page.safe_refresh()
         self.settings_page.click_manage_users_settings()

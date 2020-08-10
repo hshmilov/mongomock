@@ -5,6 +5,8 @@
   >
     <XTabs
       ref="tabs"
+      :active-tab-url="true"
+      page-base-url="/settings"
     >
       <XTab
         id="research-settings-tab"
@@ -88,7 +90,7 @@
       </XTab>
       <XTab
         v-if="canViewUsersAndRoles"
-        id="identity-providers-tab"
+        id="identity-providers-settings-tab"
         title="Identity Providers Settings"
       >
         <div class="tab-settings">
@@ -131,14 +133,14 @@
       </XTab>
       <XTab
         v-if="canViewUsersAndRoles"
-        id="user-settings-tab"
+        id="manage-users-tab"
         title="Manage Users"
       >
         <XUsersManagement />
       </XTab>
       <XTab
         v-if="canViewUsersAndRoles"
-        id="roles-settings-tab"
+        id="manage-roles-tab"
         title="Manage Roles"
       >
         <XRolesTable />
@@ -151,13 +153,13 @@
       </XTab>
       <XTab
         v-if="tunnelTabEnabled || $isAxoniusUser()"
-        id="tunnel-tab"
+        id="tunnel-settings-tab"
         title="Tunnel Settings"
       >
         <XTunnel />
       </XTab>
       <XTab
-        id="about-settings-tab"
+        id="about-tab"
         title="About"
       >
         <div class="tab-settings">
@@ -553,8 +555,8 @@ export default {
       .research-settings-tab,
       .global-settings-tab,
       .gui-settings-tab,
-      .identity-providers-tab,
-      .about-settings-tab {
+      .identity-providers-settings-tab,
+      .about-tab {
         .x-form {
           max-width: 30%;
         }
@@ -592,7 +594,7 @@ export default {
       }
     }
 
-    .identity-providers-tab {
+    .identity-providers-settings-tab {
       .draggable {
         min-width: 685px;
       }

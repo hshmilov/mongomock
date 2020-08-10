@@ -9,6 +9,7 @@
   >
     <XSafeguard />
     <XMessageModal />
+    <XTunnelConnectionModal />
     <!--Link for downloading files-->
     <a id="file-auto-download-link"></a>
     <!-- Nested navigation linking to routes defined in router/index.js -->
@@ -62,6 +63,7 @@ import XBottomBar from './networks/navigation/BottomBar.vue';
 import XSideBar from './networks/navigation/SideBar.vue';
 import XLogin from './networks/system/Login.vue';
 import XAccessModal from './neurons/popover/AccessModal.vue';
+import XTunnelConnectionModal from './neurons/popover/TunnelConnectionModal.vue';
 import XToast from './axons/popover/Toast.vue';
 import Icon from './axons/icons/Icon';
 import sessionTimeoutMixin from '../mixins/session_timeout';
@@ -123,6 +125,7 @@ export default {
     XGettingStarted,
     XFabTransition,
     XIcon: Icon,
+    XTunnelConnectionModal,
   },
   mixins: [sessionTimeoutMixin],
   data() {

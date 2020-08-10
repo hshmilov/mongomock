@@ -48,6 +48,7 @@
 
 <script>
 import { mapState } from 'vuex';
+import _get from 'lodash/get';
 import { Dropdown, Menu } from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
 import XButton from '@axons/inputs/Button.vue';
@@ -67,7 +68,7 @@ export default {
   computed: {
     ...mapState({
       isActiveCSR(state) {
-        return state.settings.configurable.core.CoreService.config.csr_settings.status;
+        return _get(state, 'settings.configurable.core.CoreService.config.csr_settings.status');
       },
     }),
   },

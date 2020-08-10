@@ -13,7 +13,8 @@ from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import TunnelMetrics
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, \
     TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_SETTINGS, \
-    TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT, TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW
+    TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT, TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, \
+    TUNNEL_DISCONNECT_SYSTEM_NOTIFICATION_CONTENT
 from axonius.consts.system_consts import VPN_DATA_DIR_FROM_GUI
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.logging.metric_helper import log_metric
@@ -70,7 +71,8 @@ class Tunnel:
     def _tunnel_is_down(self):
         if self.tunnel_status:
             self.log_activity(AuditCategory.Tunnel, AuditAction.Disconnected, activity_type=AuditType.Error)
-            self.create_notification('Tunnel is disconnected')
+            self.create_notification(title='Tunnel is disconnected',
+                                     content=TUNNEL_DISCONNECT_SYSTEM_NOTIFICATION_CONTENT)
             self.send_tunnel_status_update_email()
             self.tunnel_status = False
             log_metric(logger,
@@ -85,6 +87,7 @@ class Tunnel:
         if not self.tunnel_status:
             self.log_activity(AuditCategory.Tunnel, AuditAction.Connected)
             self.tunnel_status = True
+            self.tunnel_first_up = True
             log_metric(logger, metric_name=TunnelMetrics.TUNNEL_CONNECTED,
                        metric_value=1, details=self.saas_params.get('COMPANY_FOR_SIGNUP', ''))
 

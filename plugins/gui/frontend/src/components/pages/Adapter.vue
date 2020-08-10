@@ -38,6 +38,12 @@
             :multiple-row-selection="canDelete"
           />
         </XTableWrapper>
+        <XAdapterTunnelConnectionMessage
+          v-if="showTunnelConnectionMessage"
+          :status="tunnelStatus"
+          :use-tunnel-setting="useTunnelSetting"
+          @open-settings="openSettings"
+        />
         <div class="config-settings">
           <XButton
             type="link"
@@ -193,6 +199,7 @@ import XModal from '@axons/popover/Modal/index.vue';
 import XButton from '@axons/inputs/Button.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XToast from '@axons/popover/Toast.vue';
+import XAdapterTunnelConnectionMessage from '@neurons/alerts/AdapterTunnelConnectionMessage.vue';
 import { parseVaultError } from '@constants/utils';
 import { FETCH_SYSTEM_CONFIG } from '@store/actions';
 import {
@@ -209,6 +216,7 @@ import XAdapterAdvancedSettings from '@networks/adapters/adapter-advanced-settin
 import { Icon } from 'ant-design-vue';
 
 
+import { tunnelConnectionStatuses } from '@constants/settings';
 import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
 import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
@@ -228,6 +236,7 @@ export default {
     AIcon: Icon,
     XIcon,
     XAdapterAdvancedSettings,
+    XAdapterTunnelConnectionMessage,
   },
   data() {
     return {
@@ -248,6 +257,7 @@ export default {
       message: '',
       toastTimeout: 60000,
       advancedSettings: false,
+      useTunnelSetting: undefined,
       deleting: false, // whether or not the modal for deleting confirmation is displayed
       deleteEntities: false, // if 'deleting = true' and deleting was confirmed this means that
       // also the entities of the associated users should be deleted
@@ -267,14 +277,20 @@ export default {
       isPasswordVaultEnabled(state) {
         return _get(state, 'configuration.data.global.passwordManagerEnabled', false);
       },
-      connectionLabelValid() {
-        return !this.requireConnectionLabel || this.serverModal.connectionLabel;
-      },
       adapterSchema(state) {
         const schema = _get(state, `adapters.adapterSchemas.${this.adapterId}`);
         return schema;
       },
+      tunnelStatus(state) {
+        return _get(state, 'dashboard.lifecycle.data.tunnelStatus', tunnelConnectionStatuses.notAvailable);
+      },
     }),
+    connectionLabelValid() {
+      return !this.requireConnectionLabel || this.serverModal.connectionLabel;
+    },
+    showTunnelConnectionMessage() {
+      return this.tunnelStatus.toString() !== tunnelConnectionStatuses.notAvailable;
+    },
     cannotOpenAdvancedSettings() {
       return this.$cannot(this.$permissionConsts.categories.Adapters,
         this.$permissionConsts.actions.Update);
@@ -373,7 +389,8 @@ export default {
     this.fetchConfig();
     this.hintAdapterUp(this.adapterId);
     await this.lazyFetchAdapters();
-    await this.fetchAdapterConnections(this.adapterId);
+    const { settings } = await this.fetchAdapterConnections(this.adapterId);
+    this.useTunnelSetting = settings.connect_via_tunnel;
     this.loading = false;
     await this.lazyFetchConnectionLabels();
     this.setDefaultInstance();
@@ -538,11 +555,15 @@ export default {
         setTimeout(() => {
           this.message = '';
         }, 5000);
+        this.useTunnelSetting = config.connect_via_tunnel;
         return true;
       });
     },
     toggleSettings() {
       this.advancedSettings = !this.advancedSettings;
+    },
+    openSettings() {
+      this.advancedSettings = true;
     },
     setDefaultInstance() {
       this.serverModal.instanceId = this.instanceDefaultName;
@@ -584,7 +605,13 @@ export default {
         font-weight: 200;
       }
     }
-
+    .tunnel-connection-message {
+      margin-top: 20px;
+      padding-left: 16px;
+      + .config-settings {
+        margin-top: 20px;
+      }
+    }
     .config-settings {
       margin-top: 64px;
 

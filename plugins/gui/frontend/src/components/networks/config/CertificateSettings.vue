@@ -6,10 +6,10 @@
       SSL Certificate
     </h1>
     <XCertificateActions
+      :disabled="!canUpdateSettings"
       @refresh="refreshSettings"
       @action="actionToggle"
       @toaster="setTostaterMsg"
-      :disabled="!canUpdateSettings"
     />
     <XImportCertAndKeyModal
       v-if="importCertAndKeyActive"
@@ -122,8 +122,8 @@
       id="SaveSettings"
       title="Run"
       type="primary"
-      @click="saveCertificateSettings"
       :disabled="!canUpdateSettings"
+      @click="saveCertificateSettings"
     >Save</XButton>
     <div
       v-if="error"
@@ -139,6 +139,7 @@
 <script>
 
 import { mapActions, mapState, mapGetters } from 'vuex';
+import _get from 'lodash/get';
 import XButton from '@axons/inputs/Button.vue';
 import XToast from '@axons/popover/Toast.vue';
 import {
@@ -189,7 +190,7 @@ export default {
       resetSystemDefaultsActive: false,
       SSLTrust: {
         ssl_trust_settings: {
-          enabled: true,
+          enabled: false,
           ca_files: [],
         },
       },
@@ -204,42 +205,58 @@ export default {
   },
   computed: {
     ...mapState({
-      sslTrustSettings(state) {
-        return state.settings.configurable.core.CoreService.config.ssl_trust_settings;
+      coreService(state) {
+        return _get(state, 'settings.configurable.core.CoreService', {});
       },
-      mutualTLSSettings(state) {
-        return state.settings.configurable.gui.GuiService.config.mutual_tls_settings;
-      },
-      isActiveCSR(state) {
-        return state.settings.configurable.core.CoreService.config.csr_settings.status;
-      },
-      csrPendingName(state) {
-        return state.settings.configurable.core.CoreService.config.csr_settings.subject_name;
-      },
-      csrPendingSince(state) {
-        return formatDate(state.settings.configurable.core.CoreService.config.csr_settings.submission_date, 'date', this.dateFormat).split(' ')[0];
-      },
-      sslTrustItems(state) {
-        let items = state.settings.configurable.core.CoreService.schema.items.find((item) => item.name == 'ssl_trust_settings');
-        delete items.hidden;
-        return [items];
-      },
-      sslTrustRequiredItems(state) {
-        return state.settings.configurable.core.CoreService.schema.items.find((item) => item.name == 'ssl_trust_settings').required;
-      },
-      mutualTLSItems(state) {
-        let items = state.settings.configurable.gui.GuiService.schema.items.find((item) => item.name == 'mutual_tls_settings');
-        delete items.hidden;
-        return [items];
-      },
-      mutualTLSRequiredItems(state) {
-        return state.settings.configurable.gui.GuiService.schema.items.find((item) => item.name == 'mutual_tls_settings').required;
-      },
-      canUpdateSettings() {
-        return this.$can(this.$permissionConsts.categories.Settings,
-          this.$permissionConsts.actions.Update);
+      guiService(state) {
+        return _get(state, 'settings.configurable.gui.GuiService', {});
       },
     }),
+    isActiveCSR() {
+      return _get(this.coreService, 'config.csr_settings.status');
+    },
+    sslTrustSettings() {
+      return _get(this.coreService, 'config.ssl_trust_settings');
+    },
+    csrPendingName() {
+      return _get(this.coreService, 'config.csr_settings.subject_name');
+    },
+    csrPendingSince() {
+      return formatDate(
+        _get(this.coreService, 'config.csr_settings.submission_date', ''), 'date', this.dateFormat,
+      ).split(' ')[0];
+    },
+    sslTrustItems() {
+      const items = _get(this.coreService, 'schema.items', []).find((item) => item.name === 'ssl_trust_settings');
+      if (items) {
+        delete items.hidden;
+        return [items];
+      }
+      return [];
+    },
+    sslTrustRequiredItems() {
+      const items = _get(this.coreService, 'schema.items', []).find((item) => item.name === 'ssl_trust_settings');
+      return items ? items.required : [];
+    },
+    mutualTLSSettings() {
+      return _get(this.guiService, 'config.mutual_tls_settings');
+    },
+    mutualTLSItems() {
+      const items = _get(this.guiService, 'schema.items', []).find((item) => item.name === 'mutual_tls_settings');
+      if (items) {
+        delete items.hidden;
+        return [items];
+      }
+      return [];
+    },
+    mutualTLSRequiredItems() {
+      const items = _get(this.guiService, 'schema.items', []).find((item) => item.name === 'mutual_tls_settings');
+      return items ? items.required : [];
+    },
+    canUpdateSettings() {
+      return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.Update);
+    },
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
@@ -273,10 +290,18 @@ export default {
       return this.certDetails.expires_on;
     },
   },
+  watch: {
+    sslTrustSettings: {
+      handler: 'setSSLTrustSettings',
+      immediate: true,
+    },
+    mutualTLSSettings: {
+      handler: 'setMutualTLSSettings',
+      immediate: true,
+    },
+  },
   mounted() {
     this.updateCertificateDetailsView();
-    this.SSLTrust.ssl_trust_settings = this.sslTrustSettings;
-    this.mutualTLS.mutual_tls_settings = this.mutualTLSSettings;
   },
   methods: {
     ...mapActions({
@@ -286,6 +311,12 @@ export default {
       resetCertificateSettings: RESET_CERTIFICATE_SETTINGS,
       loadPluginConfig: LOAD_PLUGIN_CONFIG,
     }),
+    setSSLTrustSettings() {
+      this.SSLTrust.ssl_trust_settings = this.sslTrustSettings;
+    },
+    setMutualTLSSettings() {
+      this.mutualTLS.mutual_tls_settings = this.mutualTLSSettings;
+    },
     saveCertificateSettings() {
       this.setCertificateSettings({
         ssl_trust: this.SSLTrust.ssl_trust_settings,

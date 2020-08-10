@@ -6,7 +6,10 @@ import { SHOULD_SHOW_CLOUD_COMPLIANCE } from '@store/modules/settings';
 import { REQUEST_API } from '../actions';
 import { RESET_DEVICES_STATE } from './devices';
 import { RESET_USERS_STATE } from './users';
-import { RESET_DASHBOARD_STATE } from '@store/modules/dashboard';
+import {
+  RESET_DASHBOARD_STATE,
+  RESET_TUNNEL_CONNECTION_CHECKING,
+} from '@store/modules/dashboard';
 import { getPermissionsStructure } from '@constants/permissions';
 
 export const UPDATE_EXISTING_USER = 'UPDATE_EXISTING_USER';
@@ -301,6 +304,7 @@ export const auth = {
           if (!response || !response.status) {
             reject(commit(SET_USER, { error: 'Login failed.' }));
           } else if (response.status === 200) {
+            commit(RESET_TUNNEL_CONNECTION_CHECKING);
             resolve(dispatch(GET_USER));
           } else {
             reject(commit(SET_USER, { error: response.data.message, fetching: false }));

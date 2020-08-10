@@ -906,6 +906,9 @@ class Page:
     def safe_refresh(self):
         self.driver.get(self.driver.current_url)
 
+    def hard_refresh(self):
+        self.driver.refresh()
+
     def wait_for_uploading_file(self, file_name):
         self.wait_for_element_present_by_text(file_name)
 

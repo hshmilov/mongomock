@@ -162,7 +162,7 @@ class AdaptersPage(EntitiesPage):
         self.fill_text_field_by_element_id('last_seen_threshold_hours', value)
 
     def click_advanced_configuration(self):
-        self.find_element_by_text('Adapter Configuration').click()
+        self.wait_for_element_present_by_id('AdapterBase').click()
         time.sleep(1.5)
 
     def click_discovery_configuration(self):

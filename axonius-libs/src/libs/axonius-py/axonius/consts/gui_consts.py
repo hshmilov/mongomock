@@ -450,3 +450,10 @@ class ActionCategory:
     ManageAD = 'Manage Microsoft Active Directory (AD) Services'
     Incident = 'Create Incident'
     Block = 'Block Device in Firewall'
+
+
+class TunnelStatuses:
+    not_available = 'not_available'  # this is not a saas machine
+    never_connected = 'never_connected'  # this is a saas machine, never connected to tunnel
+    connected = 'connected'  # this is a saas machine, connected to tunnel
+    disconnected = 'disconnected'  # this is a saas machine, disconnected from tunnel

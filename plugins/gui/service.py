@@ -249,6 +249,7 @@ class GuiService(Triggerable,
             self.ssm_client = SaasSecretsManager()
             self.saas_params = read_saas_input_params()
             self.tunnel_status = False
+            self.tunnel_first_up = False
         elif os.environ.get(AXONIUS_SAAS_VAR_NAME):
             if Signup.SignupCollection in self._get_db_connection()[self.plugin_name].list_collection_names():
                 company_name = self._get_collection(Signup.SignupCollection).find_one({}).get(Signup.CompanyField, '')

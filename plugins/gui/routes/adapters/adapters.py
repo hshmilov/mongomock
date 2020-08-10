@@ -8,10 +8,11 @@ from flask import (jsonify,
 
 from axonius.consts import adapter_consts
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
+from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
-                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL)
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
@@ -168,6 +169,15 @@ class Adapters(Connections):
             }
         }).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
 
+        # in a saas machines, the adapter page need one setting from the adapters settings to notify
+        # the user about his state. this code will run only in sass machine and will get that setting
+        # and send it to the GUi
+        settings = {}
+        if self.feature_flags_config().get(FeatureFlagsNames.EnableSaaS, False):
+            adapter_settings = self.plugins.get_plugin_settings(plugin_name).configurable_configs.adapter_configuration
+            if CONNECT_VIA_TUNNEL in adapter_settings:
+                settings[CONNECT_VIA_TUNNEL] = adapter_settings[CONNECT_VIA_TUNNEL]
+
         clients_result = []
         schema = None
         for adapter in registered_adapter_instances:
@@ -208,7 +218,7 @@ class Adapters(Connections):
 
                 clients_result.append(client)
 
-        return {'schema': schema, 'clients': clients_result}
+        return {'schema': schema, 'clients': clients_result, 'settings': settings}
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters(self):

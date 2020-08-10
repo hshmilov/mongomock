@@ -1,4 +1,5 @@
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
+import { tunnelConnectionStatuses } from '@constants/settings';
 import { REQUEST_API, downloadFile } from '../actions';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
@@ -43,6 +44,8 @@ export const MOVE_PANEL = 'MOVE_PANEL';
 export const COPY_PANEL = 'COPY_PANEL';
 export const RESET_DASHBOARD_STATE = 'RESET_DASHBOARD_STATE';
 export const RESET_DASHBOARD_SORT = 'RESET_DASHBOARD_SORT';
+export const TOGGLE_TUNNEL_CONNECTION_MODAL = 'TOGGLE_TUNNEL_CONNECTION_MODAL';
+export const RESET_TUNNEL_CONNECTION_CHECKING = 'RESET_TUNNEL_CONNECTION_CHECKING';
 
 export const dashboard = {
   state: {
@@ -57,6 +60,7 @@ export const dashboard = {
     firstUse: { data: null, fetching: false, error: '' },
     moveOrCopyActive: false,
     currentPanel: null,
+    tunnelDisconnected: false,
   },
   mutations: {
     [UPDATE_LIFECYCLE](state, payload) {
@@ -70,6 +74,7 @@ export const dashboard = {
           status: payload.data.status,
           lastStartTime: payload.data.last_start_time,
           lastFinishedTime: payload.data.last_finished_time,
+          tunnelStatus: payload.data.tunnel_status,
         };
       }
     },
@@ -269,16 +274,28 @@ export const dashboard = {
       }
       panel.selectedSort = null;
     },
+    [TOGGLE_TUNNEL_CONNECTION_MODAL](state, payload) {
+      state.tunnelDisconnected = payload && payload.status ? payload.status : false;
+    },
+    [RESET_TUNNEL_CONNECTION_CHECKING](state) {
+      state.lifecycle.data.tunnelStatus = tunnelConnectionStatuses.notAvailable;
+    },
   },
   actions: {
     [FETCH_LIFECYCLE]({ dispatch, commit, state }) {
       const currentLifecycleStatus = state.lifecycle.data.status;
+      const currentTunnelStatus = state.lifecycle.data.tunnelStatus;
       return dispatch(REQUEST_API, {
         rule: 'dashboard/lifecycle',
         type: UPDATE_LIFECYCLE,
       }).then(() => {
         if (currentLifecycleStatus !== 'done' && state.lifecycle.data.status === 'done') {
           commit(RESET_DEVICES_MERGED_DATA_BY_ID);
+        }
+        if (currentTunnelStatus
+            && currentTunnelStatus !== state.lifecycle.data.tunnelStatus
+            && state.lifecycle.data.tunnelStatus === tunnelConnectionStatuses.disconnected) {
+          commit(TOGGLE_TUNNEL_CONNECTION_MODAL, { status: true });
         }
       });
     },

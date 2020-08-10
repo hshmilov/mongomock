@@ -139,9 +139,16 @@ RESET_PASSWORD_SETTINGS = 'password_reset_password'
 RESET_PASSWORD_LINK_EXPIRATION = 'reset_password_link_expiration'
 PASSWORD_EXPIRATION_SETTINGS = 'password_expiration_settings'
 PASSWORD_EXPIRATION_DAYS = 'password_expiration_days'
+
+# ADAPTER SETTINGS #
+CONNECT_VIA_TUNNEL = 'connect_via_tunnel'
+
 # TUNNEL #
 TUNNEL_SETTINGS = 'tunnel_settings'
 TUNNEL_EMAILS_RECIPIENTS = 'tunnel_email_recipients'
+TUNNEL_DISCONNECT_SYSTEM_NOTIFICATION_CONTENT = 'Axonius is unable to connect to the Tunnel and will not be able' \
+                                                ' to use it to fetch data from the source of this adapter. ' \
+                                                'Please check the Tunnel Settings page for more information.'
 
 # COLLECTIONS #
 CONFIGURABLE_CONFIGS_LEGACY_COLLECTION = 'configurable_configs'

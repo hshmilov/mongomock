@@ -8,7 +8,7 @@ from flask import jsonify, request
 
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT,
+                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT, TunnelStatuses,
                                        DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
@@ -404,13 +404,11 @@ class Dashboard(Charts, Notifications):
         is_running = execution_state['state'] == TriggerStates.Triggered.name
         del res, execution_state
 
-        # pylint: disable=no-member
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             raise RuntimeError(f'Error fetching status of system scheduler. Reason: {state_response.text}')
 
         state_response = state_response.json()
-        # pylint: disable=no-member
         state = SchedulerState(**state_response['state'])
         is_research = state.Phase == Phases.Research.name
 
@@ -451,6 +449,8 @@ class Dashboard(Charts, Notifications):
                     'additional_data': additional_data
                 })
 
+        # check tunnel status
+        tunnel_gui_status = self.get_tunnel_status()
         # pylint: enable=no-member
 
         return {
@@ -458,8 +458,26 @@ class Dashboard(Charts, Notifications):
             'next_run_time': state_response['next_run_time'],
             'last_start_time': state_response['last_start_time'],
             'last_finished_time': state_response['last_finished_time'],
-            'status': nice_state.name
+            'status': nice_state.name,
+            'tunnel_status': tunnel_gui_status
         }
+    # pylint: enable=too-many-branches
+
+    def get_tunnel_status(self) -> TunnelStatuses:
+        """
+        get the status of the current machine,
+        this method relay on non-existing variables to know if this is not a saas machine
+        or if the first time connection happened
+        :return: tunnel status from the enum TunnelStatuses
+        """
+        if hasattr(self, 'tunnel_status'):
+            if hasattr(self, 'tunnel_first_up') and self.tunnel_first_up:
+                status = TunnelStatuses.connected if self.tunnel_status else TunnelStatuses.disconnected
+            else:
+                status = TunnelStatuses.never_connected
+        else:
+            status = TunnelStatuses.not_available
+        return status
 
     @gui_route_logged_in(DASHBOARD_LIFECYCLE_ENDPOINT, methods=['GET'], enforce_trial=False,
                          required_permission_values={PermissionValue.get(PermissionAction.RunManualDiscovery,

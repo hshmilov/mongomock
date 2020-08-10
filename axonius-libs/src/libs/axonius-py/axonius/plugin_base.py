@@ -3618,26 +3618,36 @@ class PluginBase(Configurable, Feature, ABC):
                         {
                             'name': TUNNEL_PROXY_SETTINGS,
                             'type': 'array',
+                            'required': ['enabled', TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT],
                             'items': [
                                 {
                                     'name': 'enabled',
-                                    'type': 'bool'
+                                    'title': 'Use proxy',
+                                    'type': 'bool',
+                                    'required': True
                                 },
                                 {
                                     'name': TUNNEL_PROXY_ADDR,
-                                    'type': 'string'
+                                    'title': 'Proxy address',
+                                    'type': 'string',
+                                    'required': True
                                 },
                                 {
                                     'name': TUNNEL_PROXY_PORT,
-                                    'type': 'number'
+                                    'title': 'Proxy port',
+                                    'type': 'number',
+                                    'required': True
                                 },
                                 {
                                     'name': TUNNEL_PROXY_USER,
+                                    'title': 'Proxy user name',
                                     'type': 'string'
                                 },
                                 {
                                     'name': TUNNEL_PROXY_PASSW,
-                                    'type': 'string'
+                                    'title': 'Proxy password',
+                                    'type': 'string',
+                                    'format': 'password',
                                 }
                             ]
                         }

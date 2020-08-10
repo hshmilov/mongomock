@@ -78,7 +78,7 @@ class TestMutualTLS(TestBase):
         self.settings_page.set_mutual_tls(b'aaaaaaaaaaaaaaa')
         self.settings_page.save_and_wait_for_toaster(toaster_message=NOT_PEM_FORMAT_ERROR_MSG)
 
-        self.settings_page.safe_refresh()
+        self.settings_page.hard_refresh()
         self.settings_page.click_certificate_settings()
         fname = self.settings_page.set_mutual_tls(cert_file)
         self.settings_page.save_and_wait_for_toaster(toaster_message=CERT_SUCCESS_TOASTER_MSG)
