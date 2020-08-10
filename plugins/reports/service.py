@@ -638,6 +638,13 @@ class ReportsService(Triggerable, PluginBase):
                 })
             _log_activity_trigger(AuditAction.Start)
 
+            # update last triggered
+            self.__update_run_configuration(report['_id'], trigger.name, {
+                '$set': {
+                    f'{TRIGGERS_FIELD}.$[i].{LAST_TRIGGERED_FIELD}': datetime.datetime.utcnow()
+                }
+            })
+
             result = self._call_actions(report, recipe, triggered_reason, trigger,
                                         query_difference.added
                                         if trigger.run_on == RunOnEntities.AddedEntities
@@ -650,7 +657,6 @@ class ReportsService(Triggerable, PluginBase):
                 '$set': {
                     f'{TRIGGERS_FIELD}.$[i].result': self.__insert_new_list_internal_axon_ids(query_result),
                     f'{TRIGGERS_FIELD}.$[i].result_count': len(query_result),
-                    f'{TRIGGERS_FIELD}.$[i].{LAST_TRIGGERED_FIELD}': datetime.datetime.utcnow()
                 },
                 '$inc': {
                     f'{TRIGGERS_FIELD}.$[i].{TIMES_TRIGGERED_FIELD}': 1
