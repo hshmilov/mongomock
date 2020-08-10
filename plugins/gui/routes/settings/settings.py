@@ -230,6 +230,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def _schedule_research_phase(self):
         """Add for public API usage."""
         self._trigger_remote_plugin(SYSTEM_SCHEDULER_PLUGIN_NAME, blocking=False, external_thread=False)
+        logger.info('Triggered discovery')
 
         self._lifecycle.clean_cache()
         return ''
