@@ -66,7 +66,35 @@ class LandeskAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         client = self.get_connection(client_data)
-        return client.service.ListMachines('')
+        devices_raw_data = client.service.ListMachines('')
+        for device_raw_obj in devices_raw_data['Devices']['Device']:
+            try:
+                device_raw = device_raw_obj.__dict__['__values__']
+                device_id = device_raw.get('GUID')
+                if device_id is None:
+                    logger.warning(f'Bad device with no ID {device_raw}')
+                    continue
+                try:
+                    bios_serial = client.service.GetMachineData(device_id,
+                                                                '<Columns><Column>'
+                                                                'Computer.Bios."Serial Number"</Column>'
+                                                                '</Columns>')
+                    device_raw['bios_serial'] = bios_serial['MachineData']['ValuePair'][0]['Value']
+                except Exception:
+                    logger.exception(f'Problem with bios')
+                try:
+                    device_raw['sw_raw'] = []
+                    sw_raw = client.service.GetMachineData(device_id,
+                                                           '<Columns><Column>'
+                                                           '"Computer"."Software"."Package"."Name"</Column>'
+                                                           '</Columns>')['MachineData']['ValuePair']
+                    for sw_dict in sw_raw:
+                        device_raw['sw_raw'].append(sw_dict.get('Value'))
+                except Exception:
+                    logger.debug(f'Problem with sw ', exc_info=True)
+                yield device_raw
+            except Exception:
+                logger.exception('Problem with device raw')
 
     @staticmethod
     def _clients_schema():
@@ -111,6 +139,15 @@ class LandeskAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + (device_raw.get('DeviceName') or '')
             device.hostname = device_raw.get('DeviceName')
+            device.bios_serial = device_raw.get('bios_serial')
+            try:
+                sw_raw = device_raw.get('sw_raw')
+                if not isinstance(sw_raw, list):
+                    sw_raw = []
+                for sw_name in sw_raw:
+                    device.add_installed_software(name=sw_name)
+            except Exception:
+                logger.exception(f'Problem wit parse sw')
             ip = device_raw.get('IPAddress')
             try:
                 ip = str(ipaddress.ip_address(ip))
@@ -137,8 +174,8 @@ class LandeskAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         if devices_raw_data is None:
             return
-        for device_raw in devices_raw_data['Devices']['Device']:
-            device = self._create_device(device_raw.__dict__['__values__'])
+        for device_raw in devices_raw_data:
+            device = self._create_device(device_raw)
             if device:
                 yield device
 
