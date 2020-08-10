@@ -325,7 +325,7 @@ export const getOpsList = (opsMap) => Object.keys(opsMap).map((op) => ({
 
 const isStringComparison = (schema, compOp) => {
   const typesExpectingString = ['string', 'integer', 'number', 'array'];
-  const opsExpectingString = ['IN', 'contains'];
+  const opsExpectingString = ['IN', 'contains', 'regex'];
   return typesExpectingString.includes(schema.type) && opsExpectingString.includes(compOp);
 };
 
