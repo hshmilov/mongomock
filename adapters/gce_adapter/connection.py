@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import defaultdict
 
 from datetime import timedelta, datetime
 
@@ -14,6 +15,7 @@ CLOUD_SQL_BASE_URL = 'https://www.googleapis.com/sql/v1beta4/projects'
 STORAGE_BASE_URL = 'https://www.googleapis.com/storage/v1'
 BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
 IAM_BASE_URL = f'https://iam.googleapis.com'
+SCC_BASE_URL = f'https://securitycenter.googleapis.com/v1'
 
 
 class GoogleCloudPlatformConnection(RESTConnection):
@@ -23,6 +25,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                  fetch_cloud_sql: bool = False,
                  fetch_storage: bool = False,
                  fetch_roles: bool = False,
+                 scc_orgs: str = '',
                  **kwargs):
         super().__init__(
             *args, domain='https://cloudresourcemanager.googleapis.com',
@@ -38,13 +41,18 @@ class GoogleCloudPlatformConnection(RESTConnection):
         self.__access_token = None
         self.__last_token_fetch = None
         self.__fetch_cloud_sql = fetch_cloud_sql
+        if isinstance(scc_orgs, str):
+            self.__scc_orgs = list(org.strip() for org in scc_orgs.split(','))
+        elif isinstance(scc_orgs, list):
+            self._scc_orgs = list(org.strip() for org in scc_orgs)
         self.__scopes = {
             'sql': ['https://www.googleapis.com/auth/sqlservice.admin'],
             'compute': ['https://www.googleapis.com/auth/cloudplatformprojects.readonly'],
             'storage': ['https://www.googleapis.com/auth/cloud-platform.read-only',
                         'https://www.googleapis.com/auth/devstorage.read_only'],
             'iam': ['https://www.googleapis.com/auth/cloud-platform.read-only',
-                    'https://www.googleapis.com/auth/iam']
+                    'https://www.googleapis.com/auth/iam'],
+            'scc': ['https://www.googleapis.com/auth/cloud-platform.read-only']
         }
 
     def _get_scopes(self):
@@ -56,6 +64,8 @@ class GoogleCloudPlatformConnection(RESTConnection):
             scopes.extend(self.__scopes['storage'])
         if self.__fetch_roles:
             scopes.extend(self.__scopes['iam'])
+        if self.__scc_orgs:
+            scopes.extend(self.__scopes['scc'])
         return ' '.join(scopes)
 
     def _paginated_request(self, method, *args, **kwargs):
@@ -263,3 +273,73 @@ class GoogleCloudPlatformConnection(RESTConnection):
             if 'roles' not in page:
                 raise ValueError(f'Bad response while getting iam roles list for project {project_id}: {page}')
             yield from page['roles']
+
+    def _get_scc_sources(self, org_id):
+        for page in self._paginated_get(f'{SCC_BASE_URL}/parent=organizations/{org_id}', force_full_url=True):
+            if not (isinstance(page, dict) and isinstance(page.get('sources'), list)):
+                raise ValueError(f'Bad response while getting scc sources list for organization {org_id}: {page}')
+            yield from page['sources']
+
+    def _get_scc_findings(self, org_id, source_id='-'):
+        findings_url = f'{SCC_BASE_URL}/parent=organizations/{org_id}/sources/{source_id}/findings'
+        for page in self._paginated_get(findings_url, force_full_url=True):
+            if not (isinstance(page, dict) and isinstance(page.get('listFindingsResults'), list)):
+                raise ValueError(f'Bad response while getting scc findings list for source {source_id}: {page}')
+            yield from page['listFindingsResults']
+
+    def _get_scc_assets(self, org_id):
+        assets_url = f'{SCC_BASE_URL}/parent=organizations/{org_id}/assets'
+        for page in self._paginated_get(assets_url, force_full_url=True):
+            if not (isinstance(page, dict) and isinstance(page.get('listAssetResults'), list)):
+                raise ValueError(f'Bad response while getting scc assets list for org {org_id}: {page}')
+            yield from page['listAssetResults']
+
+    @staticmethod
+    def _map_findings_to_resources(findings_iter):
+        """
+        Create a resource_id: [finding, finding, ...] dict based on findings iterable
+        :param findings_iter: Iterable of dictionaries, representing SCC findings.
+        :return: dict[resource_name: list(findings)]
+        """
+        results_dict = defaultdict(list)
+        for finding in findings_iter:
+            if not isinstance(finding, dict):
+                logger.warning(f'Failed to parse finding {finding}!')
+                continue
+            if not isinstance(finding.get('resource'), dict):
+                logger.warning(f'Failed to get resource info from finding {finding}')
+                continue
+            res_name = finding.get('resource').get('name')
+            if res_name and isinstance(res_name, str):
+                results_dict[res_name].append(finding)
+        return results_dict
+
+    def get_scc_assets(self):
+        for org in self.__scc_orgs:
+            logger.info(f'Fetching scc assets and findings for org {org}')
+            try:
+                findings_iter = self._get_scc_findings(org)
+                findings_dict = self._map_findings_to_resources(findings_iter)
+                assets = self._get_scc_assets(org)
+                for asset_result in assets:
+                    if not isinstance(asset_result, dict):
+                        logger.error(f'Asset result is not a dict: {asset_result}')
+                        continue
+                    asset = asset_result.get('asset')
+                    if not isinstance(asset, dict):
+                        logger.warning(f'Got bad asset {asset}, expected dict!')
+                        continue
+                    scc_props = asset.get('securityCenterProperties')
+                    if not isinstance(scc_props, dict):
+                        logger.warning(f'Got bad scc props for asset {asset}, '
+                                       f'expected dict and got instead {scc_props}')
+                        continue
+                    resource_name = scc_props.get('resourceName')
+                    asset['findings'] = findings_dict.get(resource_name)
+                    asset['organization_id'] = org
+                    yield asset
+            except Exception as e:
+                logger.warning(f'Got {str(e)} trying to get SCC assets and findings for org {org}', exc_info=True)
+                continue
+            logger.info(f'Finished fetching scc assets and findings for org {org}')
+        logger.info(f'Finished fetching all scc assets and findings')

@@ -23,7 +23,8 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.parsing import format_subnet
 from gce_adapter.connection import GoogleCloudPlatformConnection
-from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_REASONS, SQL_INSTANCE_TYPES
+from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_REASONS, SQL_INSTANCE_TYPES, \
+    SCC_FINDING_STATES
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -45,6 +46,7 @@ class DeviceType(enum.Enum):
     COMPUTE = 1
     STORAGE = 2
     DATABASE = 3
+    SCC_ASSET = 4
 
 
 class GCPUserRolePerms(SmartJsonClass):
@@ -132,6 +134,22 @@ class CloudSQLDatabase(SmartJsonClass):
     recov_model = Field(str, 'Recovery Model')
 
 
+class MapObject(SmartJsonClass):
+    key = Field(str, 'Key')
+    value = Field(str, 'Value')
+
+
+class SCCFinding(SmartJsonClass):
+    name = Field(str, 'Name')
+    state = Field(str, 'State', enum=SCC_FINDING_STATES)
+    category = Field(str, 'Category')
+    external_uri = Field(str, 'Information URI')
+    event_time = Field(datetime.datetime, 'Event Time')
+    create_time = Field(datetime.datetime, 'Creation Time')
+    sec_marks = ListField(MapObject, 'Security Marks')
+    sec_marks_name = Field(str, 'Security Marks Resource Name')
+
+
 # pylint: disable=too-many-instance-attributes
 class GceAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
@@ -139,12 +157,10 @@ class GceAdapter(AdapterBase, Configurable):
         device_type = Field(str, 'Asset Type', enum=list(dev.name for dev in DeviceType))
 
         # generic things
-
         creation_time_stamp = Field(datetime.datetime, 'Creation Time Stamp')
         project_id = Field(str, 'Project ID')
 
         # COMPUTE things
-
         size = Field(str, 'Google Device Size')
         image = Field(str, 'Device image')
         cluster_name = Field(str, 'GCE Cluster Name')
@@ -157,7 +173,6 @@ class GceAdapter(AdapterBase, Configurable):
         firewalls = ListField(GceFirewall, 'GCE Firewalls')
 
         # STORAGE things
-
         etag = Field(str, 'eTag')
         loc_type = Field(str, 'Location Type')
         updated = Field(datetime.datetime, 'Updated')
@@ -172,7 +187,6 @@ class GceAdapter(AdapterBase, Configurable):
         storage_objects = ListField(GCPStorageObject, 'Storage Objects', json_format=JsonArrayFormat.table)
 
         # SQL_DATABASE things
-
         self_link = Field(str, 'Resource URI')
         conn_name = Field(str, 'Connection Name',
                           description='Connection name of the Cloud SQL isntance used in connection strings')
@@ -190,6 +204,21 @@ class GceAdapter(AdapterBase, Configurable):
         inst_state = Field(str, 'State', enum=SQL_INSTANCE_STATES)
         db_settings = Field(CloudSQLSettings, 'Database Settings')
         databases = ListField(CloudSQLDatabase, 'Databases')
+
+        # SCC_ASSET things
+        resource_name_full = Field(str, 'Resource Name')
+        resource_name_relative = Field(str, 'Relative Resource Name')
+        res_props = ListField(MapObject, 'Resource Properties')
+        res_parent = Field(str, 'Resource Parent')
+        res_type = Field(str, 'Resource Type')
+        res_proj = Field(str, 'Resource Project')
+        res_owners = ListField(str, 'Resource Owners')
+        res_display_name = Field(str, 'Resource Display Name')
+        res_proj_display_name = Field(str, 'Resource Project Display Name')
+        res_parent_display_name = Field(str, 'Resource Parent Display Name')
+        scc_findings = ListField(SCCFinding, 'SCC Findings')
+        sec_marks = ListField(MapObject, 'Security Marks')
+        sec_marks_name = Field(str, 'Security Marks Resource Name')
 
     class MyUserAdapter(UserAdapter):
         project_ids = ListField(str, 'Project IDs')
@@ -215,6 +244,7 @@ class GceAdapter(AdapterBase, Configurable):
                 fetch_storage=self.__fetch_buckets,
                 fetch_roles=self.__get_roles,
                 fetch_cloud_sql=self.__fetch_cloud_sql,
+                scc_orgs=self.__scc_orgs,
                 https_proxy=client_config.get('https_proxy')
             )
             with client:
@@ -246,6 +276,8 @@ class GceAdapter(AdapterBase, Configurable):
             yield from self._query_storage_devices_by_client(client_name, client_data)
         if self.__fetch_cloud_sql:
             yield from self._query_database_devices_by_client(client_name, client_data)
+        if self.__scc_orgs:
+            yield from self._query_scc_assets_by_client(client_name, client_data)
 
     # pylint: disable=arguments-differ
     def _query_users_by_client(self,
@@ -383,6 +415,21 @@ class GceAdapter(AdapterBase, Configurable):
                     'device_data': (device_raw, auth_json['project_id'], firewalls)
                 }
 
+    @staticmethod
+    def _query_scc_assets_by_client(client_name: str,
+                                    client_data: Tuple[GoogleCloudPlatformConnection, dict]):
+        client, client_config = client_data
+        try:
+            with client:
+                for scc_asset in client.get_scc_assets():
+                    yield {
+                        'type': DeviceType.SCC_ASSET,
+                        'device_data': (scc_asset,)
+                    }
+        except Exception:
+            logger.exception(f'Failed to get scc assets for {client_name}')
+            yield {}
+
     @classmethod
     def _db_config_schema(cls) -> dict:
         return {
@@ -407,6 +454,12 @@ class GceAdapter(AdapterBase, Configurable):
                     'name': 'match_role_permissions',
                     'type': 'bool',
                     'title': 'Fetch IAM permissions for users'  # Requires iam.roles.list IAM permission
+                },
+                {
+                    'name': 'scc_orgs',
+                    'type': 'string',
+                    'title': 'Security Command Center Organizations',
+                    # 'description': 'Requires organization-level securitycenter.x.list permissions '
                 }
             ],
             'required': [
@@ -426,6 +479,7 @@ class GceAdapter(AdapterBase, Configurable):
             'fetch_bucket_objects': False,
             'match_role_permissions': False,
             'fetch_cloud_sql': False,
+            'scc_orgs': '',
         }
 
     def _on_config_update(self, config):
@@ -434,6 +488,7 @@ class GceAdapter(AdapterBase, Configurable):
         self.__fetch_cloud_sql = config['fetch_cloud_sql']
         self.__fetch_bkt_objects = config['fetch_bucket_objects']
         self.__get_roles = config['match_role_permissions']
+        self.__scc_orgs = config.get('scc_orgs', '')
 
     @staticmethod
     def _clients_schema():
@@ -468,6 +523,8 @@ class GceAdapter(AdapterBase, Configurable):
             # return self.create_storage_device(*device_data, *args, **kwargs)
         elif dev_type == DeviceType.DATABASE:
             create_device = self.create_database_device
+        elif dev_type == DeviceType.SCC_ASSET:
+            create_device = self.create_scc_asset_device
         else:
             create_device = None
         if create_device:
@@ -475,6 +532,100 @@ class GceAdapter(AdapterBase, Configurable):
         logger.warning(f'Unknown device type: {dev_type}. '
                        f'Cannot process device data {device_data}')
         return None
+
+    # pylint:disable=too-many-statements
+    def create_scc_asset_device(self, device_raw, *args, **kwargs):
+        try:
+            device = self._new_device_adapter()
+            scc_props = device_raw.get('securityCenterProperties')
+            if not isinstance(scc_props, dict):
+                logger.warning(f'Got bad scc props for asset {device_raw}, '
+                               f'expected dict and got instead {scc_props}')
+                return None
+            device_id = scc_props.get('resourceName')
+            if not device_id:
+                logger.warning(f'Bad device with no ID: {device_raw}')
+                return None
+            # generic Axonius stuff
+            device_org = device_raw.get('organization_id')
+            device.id = f'{device_org}_{device_id}'
+            device.cloud_provider = 'GCP'
+            device.name = device_raw.get('name')
+            device.cloud_id = device_id
+            if isinstance(scc_props.get('owners'), list) and scc_props.get('owners'):
+                device.owner = str(scc_props.get('owners')[0])
+                device.res_owners = list(str(owner) for owner in scc_props.get('owners'))
+            device.first_seen = parse_date(device_raw.get('createTime'))
+            device.last_seen = parse_date(device_raw.get('updateTime'))
+            # These fields are correlatable and unique to each GCP device!
+            device.resource_name_full = device_id
+            # relative name example: organizations/{organization_id}/assets/{asset_id}
+            device.resource_name_relative = device_raw.get('name')
+            # full name example: //library.googleapis.com/shelves/shelf1/books/book2
+            device.device_type = DeviceType.SCC_ASSET.name
+            device.creation_time_stamp = parse_date(device_raw.get('createTime'))
+            device.updated = parse_date(device_raw.get('updateTime'))
+            res_props_dict = device_raw.get('resourceProperties')
+            if isinstance(res_props_dict, dict):
+                res_props = list()
+                for key, value in res_props_dict.items():
+                    res_props.append(MapObject(key=key, value=value))
+                device.res_props = res_props
+            else:
+                logger.warning(f'Failed to parse resource properties of {device_id} from {res_props_dict}')
+            device.res_parent = scc_props.get('resourceParent')
+            device.res_type = scc_props.get('resourceType')
+            device.res_proj = scc_props.get('resourceProject')
+            device.res_display_name = scc_props.get('resourceDisplayName')
+            device.res_proj_display_name = scc_props.get('resourceProjectDisplayName')
+            device.res_parent_display_name = scc_props.get('resourceParentDisplayName')
+            findings_raw = device_raw.get('findings')
+            if isinstance(findings_raw, list):
+                findings_list = list()
+                for finding_raw in findings_raw:
+                    state = finding_raw.get('state')
+                    if state not in SCC_FINDING_STATES:
+                        state = None
+                        logger.warning(f'Invalid SCC Finding state: {state}')
+                    finding = SCCFinding(
+                        name=finding_raw.get('name'),
+                        state=state,
+                        category=finding_raw.get('category'),
+                        external_url=finding_raw.get('externalUri'),
+                        event_time=parse_date(finding_raw.get('eventTime')),
+                        create_time=parse_date(finding_raw.get('createTime'))
+                    )
+                    self._parse_security_marks(finding, finding_raw.get('securityMarks'))
+                    findings_list.append(finding)
+                device.scc_findings = findings_list
+            sec_marks = device_raw.get('securityMarks')
+            self._parse_security_marks(device, sec_marks)
+            device.set_raw(device_raw)
+        except Exception:
+            # remove objects to make device_raw not hueg
+            _ = device_raw.pop('findings', None)
+            logger.exception(f'Failed to create scc asset device for {device_raw}')
+            device = None
+        return device
+
+    @staticmethod
+    def _parse_security_marks(target_obj, marks_dict):
+        if not isinstance(marks_dict, dict):
+            logger.warning(f'Failed to parse security marks from {marks_dict}')
+            return
+        marks_name = marks_dict.get('name')
+        if not marks_name:
+            logger.warning(f'Failed to parse security marks from {marks_dict}')
+            return
+        marks_list = list()
+        if isinstance(marks_dict.get('marks'), dict):
+            for key, value in marks_dict.get('marks', {}).items():
+                marks_list.append(MapObject(key=key, value=value))
+        else:
+            logger.warning(f'Failed to parse security marks from {marks_dict}')
+            return
+        target_obj.sec_marks_name = marks_name
+        target_obj.sec_marks = marks_list
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def create_database_device(self, device_raw, *args, **kwargs):
