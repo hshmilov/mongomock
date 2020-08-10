@@ -31,7 +31,7 @@ from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
 from axonius.types.ssl_state import (SSLState)
-from axonius.utils.backup import verify_preshared_key
+from axonius.utils.backup import verify_preshared_key, get_filename_from_format
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.smb import SMBClient
@@ -200,9 +200,11 @@ class Plugins:
             if aws_s3_settings and aws_s3_settings.get('enabled') is True:
                 enable_backups = aws_s3_settings.get('enable_backups')
                 preshared_key = aws_s3_settings.get('preshared_key') or ''
+                filename_format = aws_s3_settings.get('filename_format') or ''
                 if enable_backups is True:
                     try:
                         verify_preshared_key(preshared_key)
+                        get_filename_from_format(filename_format)
                     except Exception as e:
                         return return_error(str(e), non_prod_error=True, http_status=400)
                 bucket_name = aws_s3_settings.get('bucket_name')

@@ -4237,6 +4237,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'string',
                             'format': 'password'
                         },
+                        {
+                            'name': 'filename_format',
+                            'title': 'Filename format',
+                            'type': 'string'
+                        }
                     ],
                     'name': 'aws_s3_settings',
                     'title': 'Amazon S3 Settings',

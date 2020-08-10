@@ -39,6 +39,19 @@ def verify_preshared_key(preshared_key: str):
                              f'{len(preshared_key)}')
 
 
+def get_filename_from_format(filename_format: str):
+    if not filename_format:
+        return None
+    time_now = datetime.datetime.utcnow()
+    attrs = ['year', 'month', 'day', 'hour', 'minute', 'second']
+    lookup_attrs = {k: getattr(time_now, k) for k in attrs}
+    try:
+        return filename_format.format(**lookup_attrs)
+    except Exception as exc:
+        logger.warning(f'Exception while getting filename')
+        raise ValueError(f'Invalid format - valid keys: {", ".join(attrs)}. Error: {exc!r}')
+
+
 def check_disk_space():
     """
     Check if there is enough space on this machine. Otherwise surface the error.
@@ -295,6 +308,8 @@ def backup_to_s3() -> int:
         aws_secret_access_key = aws_s3_settings.get('aws_secret_access_key')
         aws_bucket_name = aws_s3_settings.get('bucket_name')
         preshared_key = aws_s3_settings.get('preshared_key')
+        filename_format = aws_s3_settings.get('filename_format') or ''
+        filename_after_format = get_filename_from_format(filename_format)
 
         if (aws_access_key_id and not aws_secret_access_key) or (aws_secret_access_key and not aws_access_key_id):
             raise ValueError(f'AWS access key id / secret access key - Both or None should exist')
@@ -353,7 +368,11 @@ def backup_to_s3() -> int:
         except Exception:
             logger.exception(f'Could not get system id, setting to unknown')
             system_id = 'unknown'
-        key_name = f'axonius_backup_{system_id}_{str(datetime.datetime.now()).replace(" ", "_")}.tar.gz.gpg'
+
+        if filename_after_format:
+            key_name = filename_after_format
+        else:
+            key_name = f'axonius_backup_{system_id}_{str(datetime.datetime.now()).replace(" ", "_")}.tar.gz.gpg'
         # Final step: Upload the file to s3
         with open(f'{AXONIUS_BACKUP_FILENAME}.gpg', 'rb') as file_obj:
             upload_file_to_s3(aws_bucket_name, key_name, file_obj, aws_access_key_id, aws_secret_access_key)

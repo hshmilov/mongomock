@@ -1004,6 +1004,66 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                     }
                 )
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_25(self):
+        print(f'Updating to schema version 25 - JITA migration')
+        all_jita = list(self.db.client[CORE_UNIQUE_NAME]['configs'].find({PLUGIN_NAME: 'jita_adapter'}))
+        for jita_instance in all_jita:
+            jita_pun = jita_instance[PLUGIN_UNIQUE_NAME]
+            all_clients_for_pun = list(self.db.client[jita_pun]['clients'].find({}))
+            if not all_clients_for_pun:
+                # If there isn't even one single client, then delete the config
+                self.db.client[CORE_UNIQUE_NAME]['configs'].delete_one({PLUGIN_UNIQUE_NAME: jita_pun})
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_26(self):
+        print(f'Updating to schema version 26 - Qualys config migration')
+        self.migrate_adapter_advanced_settings_to_connection(
+            'qualys_scans_adapter',
+            'qualys_tags_white_list'
+        )
+
+    def migrate_adapter_advanced_settings_to_connection(
+            self,
+            adapter_name: str,
+            advanced_setting_key: str
+    ):
+        plugin_settings = self.db.plugins.get_plugin_settings(adapter_name)
+        all_configs = plugin_settings.configurable_configs.unique_configuration or {}
+        advanced_setting_val = all_configs.get(advanced_setting_key)
+
+        if advanced_setting_val is None:
+            return
+
+        # Get all registered plugin unique names
+        all_adapter_pun = [
+            x[PLUGIN_UNIQUE_NAME] for x in self.db.client[CORE_UNIQUE_NAME]['clients'].find(
+                {PLUGIN_NAME: adapter_name},
+                projection={PLUGIN_UNIQUE_NAME: 1}
+            )
+        ]
+
+        for adapter_plugin_unique_name in all_adapter_pun:
+            for client in self.db.client[adapter_plugin_unique_name]['clients'].find({}):
+                client_config = client.get('client_config')
+                if not client_config:
+                    continue
+
+                new_client_config = client_config.copy()
+                self.decrypt_dict(new_client_config)
+                new_client_config[advanced_setting_key] = advanced_setting_val
+                self.encrypt_dict(adapter_plugin_unique_name, new_client_config)
+                self.db.client[adapter_plugin_unique_name]['clients'].update(
+                    {
+                        '_id': client['_id']
+                    },
+                    {
+                        '$set':
+                            {
+                                'client_config': new_client_config
+                            }
+                    })
+
     def register(self, api_key=None, plugin_name=''):
         headers = {}
         params = {}

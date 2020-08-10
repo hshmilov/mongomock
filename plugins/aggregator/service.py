@@ -199,16 +199,10 @@ class AggregatorService(Triggerable, PluginBase):
                 except Exception:
                     logger.exception(f'Could not request uwsgi reload for {adapter!r}')
 
-                self._trigger_remote_plugin(adapter, 'insert_to_db', data={
+                data = self._trigger_remote_plugin(adapter, 'insert_to_db', data={
                     'client_name': client_name,
                     'check_fetch_time': check_fetch_time
-                }, blocking=False, external_thread=False)
-                data = self._wait_for_remote_plugin(
-                    adapter,
-                    'insert_to_db',
-                    timeout=60 * 60 * 48,
-                    stop_on_timeout=True
-                )
+                }, timeout=3600 * 48, stop_on_timeout=True)
                 try:
                     if data and data.content and from_json(data.content).get('min_time_check') is True:
                         logger.info(f'got min_time_check in adapter {adapter}: '
