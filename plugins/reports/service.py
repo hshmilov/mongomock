@@ -590,7 +590,7 @@ class ReportsService(Triggerable, PluginBase):
         :return: Updated Recipe in case the configuration has run
         """
         result = None
-        if trigger.period != TriggerPeriod.all and not manual:
+        if trigger.period == TriggerPeriod.never and not manual:
             return result
 
         if manual_input:

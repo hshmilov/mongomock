@@ -42,7 +42,7 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
                                              CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD,
-                                             RUN_ENFORCEMENT_CHECK_INTERVAL, RUN_ENFORCEMENT_THRESHOLD,
+                                             RUN_ENFORCEMENT_CHECK_INTERVAL,
                                              RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID,
                                              SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME)
 from axonius.consts.report_consts import TRIGGERS_FIELD
@@ -1072,7 +1072,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         # check if time matches the scheduled time
         if (current_time < scheduled_run_time or
-                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_THRESHOLD):
+                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_CHECK_INTERVAL):
             return False
 
         if trigger.period == TriggerPeriod.daily:
@@ -1097,19 +1097,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
     def get_enforcements_to_run(self):
         scheduled_enforcements = self._get_collection(REPORTS_PLUGIN_NAME, REPORTS_PLUGIN_NAME).find({
+            TRIGGERS_FIELD: {
+                '$ne': []
+            },
             f'{TRIGGERS_FIELD}.period': {
                 '$nin': [TriggerPeriod.all.name, TriggerPeriod.never.name]
             }
         }, projection={
             'name': 1,
-            f'{TRIGGERS_FIELD}': 1
+            TRIGGERS_FIELD: 1
         })
         for enforcement in scheduled_enforcements:
             try:
                 if not enforcement.get(TRIGGERS_FIELD):
                     continue
 
-                trigger = Trigger.from_dict(enforcement[TRIGGERS_FIELD])
+                trigger = Trigger.from_dict(enforcement[TRIGGERS_FIELD][0])
                 if self.should_trigger_run_enforcement(trigger):
                     yield {
                         'report_name': enforcement.get('name', ''),
@@ -1123,7 +1126,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if not enforcements_to_run:
             logger.debug('No enforcements to run, not doing anything at all')
             return
-        logger.info(f'Starting Trigger {len(enforcements_to_run)} Enforcements to Run')
+        logger.info(f'Starting to trigger {len(enforcements_to_run)} Enforcements')
 
         def triggered(*args, **kwargs):
             logger.debug(f'Enforcement has finished running')
