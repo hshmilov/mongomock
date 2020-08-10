@@ -120,8 +120,7 @@ class EntitiesPage(Page):
 
     TABLE_DATA_SLICER_TYPE_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
-    TABLE_DATA_EXPAND_CELL_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-table-container\']' \
-                                   f'/div[contains(@class, \'popup\')]//*[@class=\'table\']'
+    TABLE_DATA_EXPAND_CELL_XPATH = '//div[contains(@class, \'ant-popover\')]//*[@class=\'table\']'
     TABLE_DATA_EXPAND_CELL_BODY_XPATH = f'{TABLE_DATA_EXPAND_CELL_XPATH}/tbody'
     TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
 
@@ -209,10 +208,11 @@ class EntitiesPage(Page):
     FILTERED_ADAPTER_ICON_CSS = '.img-filtered'
 
     REMAINDER_CSS = '.x-data .array.inline .item .remainder>span'
-    TOOLTIP_CSS = '.x-tooltip'
+    TOOLTIP_CSS = '.ant-popover'
     TOOLTIP_TABLE_HEAD_CSS = f'{TOOLTIP_CSS} .x-table .table thead .clickable th'
     TOOLTIP_TABLE_DATA_CSS = f'{TOOLTIP_CSS} .x-table .table tbody .x-table-row td'
-    ADAPTERS_TOOLTIP_TABLE_CSS = f'{TOOLTIP_CSS} .table'
+    OLD_TOOLTIP_TABLE_DATA_CSS = f'.x-tooltip .x-table .table tbody .x-table-row td'
+    ADAPTERS_TOOLTIP_TABLE_CSS = f'.x-tooltip .table'
 
     ACTIVE_TAB_TABLE_ROWS = '.body .x-tabs.vertical .body .x-tab.active .x-table-row'
     ACTIVE_TAB_TABLE_ROWS_HEADERS = '.body .x-tabs.vertical .body .x-tab.active .x-table thead th'
@@ -1553,13 +1553,16 @@ class EntitiesPage(Page):
         if images:
             for index, image in enumerate(images):
                 ActionChains(self.driver).move_to_element(image).perform()
-                tooltip_data = self.get_tooltip_table_data()
+                tooltip_data = self.get_old_tooltip_table_data()
                 if tooltip_data and len(tooltip_data) == 2:
                     values.append(tooltip_data[1].text)
         return values
 
     def get_tooltip_table_head(self):
         return self.driver.find_element_by_css_selector(self.TOOLTIP_TABLE_HEAD_CSS).text
+
+    def get_old_tooltip_table_data(self):
+        return self.driver.find_elements_by_css_selector(self.OLD_TOOLTIP_TABLE_DATA_CSS)
 
     def get_tooltip_table_data(self):
         return self.driver.find_elements_by_css_selector(self.TOOLTIP_TABLE_DATA_CSS)
@@ -1574,7 +1577,7 @@ class EntitiesPage(Page):
         return self.get_coloumn_data_count_bool(col_name, generic_col=generic_col)
 
     def wait_close_column_details_popup(self):
-        self.wait_for_element_absent_by_css('.details-table-container .popup .content .table')
+        self.wait_for_element_absent_by_css('.ant-popover .content .table')
 
     def find_query_header(self):
         return self.driver.find_element_by_css_selector('.x-query .x-query-state .header')

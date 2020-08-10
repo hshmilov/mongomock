@@ -19,6 +19,7 @@
           />
         </XTooltip>
       </div>
+
       <div class="details-table-container">
         <XIcon
           v-if="showExpand"
@@ -27,26 +28,29 @@
           :type="expandData ? 'left-circle' : 'right-circle'"
           @click.native.stop="toggleCell"
         />
-        <div
-          ref="popup"
-          class="popup"
-          :class="{ top: position.top, left: position.left }"
-          @click.stop=""
+        <APopover
+          v-if="expandData"
+          placement="bottom"
+          :get-popup-container="getPopupContainer"
+          :destroy-tooltip-on-hide="true"
+          :visible="expandData"
         >
-          <div
-            v-if="expandData"
-            class="content"
-          >
-            <XTable v-bind="detailsTable">
-              <template #default="slotProps">
-                <XTableData
-                  v-bind="slotProps"
-                  :module="module"
-                />
-              </template>
-            </XTable>
-          </div>
-        </div>
+          <template slot="content">
+            <div
+              class="content"
+            >
+              <XTable v-bind="detailsTable">
+                <template #default="slotProps">
+                  <XTableData
+                    v-bind="slotProps"
+                    :module="module"
+                  />
+                </template>
+              </XTable>
+            </div>
+          </template>
+          <span>&nbsp;</span>
+        </APopover>
       </div>
     </div>
     <div
@@ -79,16 +83,17 @@ import { GET_CONNECTION_LABEL } from '@store/getters';
 import XIcon from '@axons/icons/Icon';
 import XTable from '@axons/tables/Table.vue';
 import XTableData from '@neurons/data/TableData';
-import XTooltip from '@axons/popover/Tooltip.vue';
-
+import { Popover } from 'ant-design-vue';
+import XTooltip from '../../axons/popover/Tooltip.vue';
 
 export default {
   name: 'XEntityTableData',
   components: {
     XTable,
     XTableData,
-    XTooltip,
     XIcon,
+    XTooltip,
+    APopover: Popover,
   },
   props: {
     module: {
@@ -178,7 +183,7 @@ export default {
     adaptersDetailsWithClientIdList() {
       return this.getFilteredAdapters.concat().map((adapter, index) => ({
         pluginName: [adapter],
-        clientId: this.data['meta_data.client_used'] !== undefined ? this.data['meta_data.client_used'][index]: '',
+        clientId: this.data['meta_data.client_used'] !== undefined ? this.data['meta_data.client_used'][index] : '',
       })).sort((a, b) => ((a.pluginName[0] > b.pluginName[0]) ? 1 : -1));
     },
     adaptersDetailsData() {
@@ -273,15 +278,12 @@ export default {
   methods: {
     toggleCell() {
       this.expandData = !this.expandData;
-      if (this.expandData) {
-        this.$nextTick(() => {
-          const boundingBox = this.$refs.popup.getBoundingClientRect();
-          this.position = {
-            top: this.position.top || Boolean(boundingBox.bottom > window.innerHeight - 80),
-            left: this.position.left || Boolean(boundingBox.right > window.innerWidth - 24),
-          };
-        });
-      }
+    },
+    getPopupContainer() {
+      return this.$el.closest('.table');
+    },
+    getPopupContainerAdapter() {
+      return this.$el.querySelector('.x-data');
     },
     onHoverData() {
       if (!this.isAdaptersField) {
@@ -299,48 +301,13 @@ export default {
 <style lang="scss">
   .x-data {
     display: flex;
+    position: relative;
 
     .details-table-container {
       min-width: 24px;
-      position: relative;
 
       .x-icon:hover {
         color: $theme-orange;
-      }
-      .popup {
-        overflow: visible;
-        position: absolute;
-        width: min-content;
-        z-index: 200;
-        cursor: default;
-
-        &.top {
-          bottom: 100%;
-        }
-        &.left {
-          right: 0;
-        }
-
-        .content {
-          background-color: $theme-white;
-          box-shadow: $popup-shadow;
-          padding: 4px;
-          border-radius: 4px;
-          max-height: 30vh;
-          animation: horizontal-fade .6s ease-in;
-
-          @keyframes horizontal-fade {
-            from {
-              transform: translateX(-100%);
-              opacity: 0;
-            }
-          }
-
-          .x-table {
-            width: min-content;
-            max-height: calc(30vh - 8px);
-          }
-        }
       }
     }
 
