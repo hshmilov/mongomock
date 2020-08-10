@@ -75,6 +75,12 @@ DISCOVERY_REPEAT_ON = 'repeat_on'
 DISCOVERY_REPEAT_EVERY = 'repeat_every'
 DISCOVERY_RESEARCH_DATE_TIME = 'system_research_date_time'
 LAST_DISCOVERY_TIME = 'last_discovery_time'
+HISTORY_REPEAT_TYPE = 'conditional'
+HISTORY_REPEAT_EVERY_LIFECYCLE = 'historical_every_lifecycle'
+HISTORY_REPEAT_EVERY = 'historical_schedule_date'
+HISTORY_REPEAT_WEEKDAYS = 'historical_schedule_weekdays'
+HISTORY_REPEAT_RECURRENCE = 'historical_schedule_recurrence'
+HISTORY_REPEAT_ON = 'repeat_on'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'
@@ -179,6 +185,7 @@ X_UI_USER_SOURCE = 'x-ui-user-source'
 
 PARALLEL_ADAPTERS = ['cisco_adapter', 'esx_adapter']
 THREAD_SAFE_ADAPTERS = ['esx_adapter']
+WEEKDAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
 
 # Defaults
 DEFAULT_SOCKET_READ_TIMEOUT = 5

@@ -19,7 +19,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify
 
-from axonius.adapter_base import AdapterBase, WEEKDAYS
+from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, ADAPTER_PLUGIN_TYPE
 from axonius.consts.gui_consts import RootMasterNames
@@ -35,13 +35,16 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          AGGREGATOR_PLUGIN_NAME)
+                                          AGGREGATOR_PLUGIN_NAME, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
+                                          HISTORY_REPEAT_EVERY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
+                                          HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
                                              CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD,
                                              RUN_ENFORCEMENT_CHECK_INTERVAL, RUN_ENFORCEMENT_THRESHOLD,
-                                             RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID)
+                                             RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID,
+                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME)
 from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
@@ -275,7 +278,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.__system_research_weekdays = config['discovery_settings']['system_research_weekdays']
         self.__system_research_mode = config['discovery_settings']['conditional']
 
-        history_settings = config['discovery_settings']['history_settings']
+        history_settings = config['history_retention_settings']
         if history_settings['enabled'] and history_settings['max_days_to_save'] > 0:
             self.__max_days_to_save = history_settings['max_days_to_save']
         else:
@@ -287,7 +290,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         logger.info(f'Setting research recurrence to: {self.__system_research_date_recurrence}')
 
         scheduler = getattr(self, '_research_phase_scheduler', None)
-        self.__save_history = bool(config['discovery_settings']['save_history'])
+        self.__save_history = bool(config['history_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME])
 
         # first config load, no reschedule
         if not scheduler:
@@ -402,37 +405,95 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'title': 'Tag reimaged devices',
                             'type': 'bool',
                             'required': True
-                        },
-                        {
-                            'name': 'save_history',
-                            'title': 'Enable daily historical snapshot',
-                            'type': 'bool',
-                            'required': True
-                        },
-                        {
-                            'name': 'history_settings',
-                            'title': 'Historical Data Retention Settings',
-                            'type': 'array',
-                            'items': [
-                                {
-                                    'name': 'enabled',
-                                    'title': 'Enable historical data retention',
-                                    'type': 'bool'
-                                },
-                                {
-                                    'name': 'max_days_to_save',
-                                    'title': 'Historical data retention period (days)',
-                                    'type': 'integer'
-                                }
-                            ],
-                            'required': ['enabled', 'days']
                         }
                     ],
+
                     'name': 'discovery_settings',
                     'title': 'Discovery Settings',
                     'type': 'array',
                     'required': ['conditional', 'system_research_rate',
-                                 'save_history', 'constant_alerts', 'analyse_reimage']
+                                 'constant_alerts', 'analyse_reimage']
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable scheduled historical snapshot',
+                            'type': 'bool',
+                            'required': True
+                        },
+                        {
+                            'name': HISTORY_REPEAT_TYPE,
+                            'title': 'Historical snapshot schedule '
+                                     '(data will be saved for first discovery on each day)',
+                            'enum': [
+                                {
+                                    'name': HISTORY_REPEAT_EVERY_LIFECYCLE,
+                                    'title': 'Every discovery cycle'
+                                },
+                                {
+                                    'name': HISTORY_REPEAT_EVERY,
+                                    'title': 'Every x days'
+                                },
+                                {
+                                    'name': HISTORY_REPEAT_WEEKDAYS,
+                                    'title': 'Days of week'
+                                }
+                            ],
+                            'type': 'string'
+                        },
+                        {
+                            'name': HISTORY_REPEAT_EVERY,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': HISTORY_REPEAT_RECURRENCE,
+                                    'title': 'Repeat scheduled historical snapshot every (days)',
+                                    'type': 'number',
+                                    'min': 1
+                                }
+                            ],
+                            'required': ['historical_schedule_recurrence']
+                        },
+                        {
+                            'name': HISTORY_REPEAT_WEEKDAYS,
+                            'type': 'array',
+                            'required': [HISTORY_REPEAT_ON],
+                            'items': [
+                                {
+                                    'name': HISTORY_REPEAT_ON,
+                                    'title': 'Repeat scheduled historical snapshot on',
+                                    'type': 'array',
+                                    'items': {
+                                        'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
+                                        'type': 'string'
+                                    }
+                                }
+                            ]
+                        },
+                    ],
+                    'name': 'history_settings',
+                    'title': 'Historical Snapshot Scheduling Settings',
+                    'type': 'array',
+                    'required': ['enabled', 'conditional']
+                },
+                {
+                    'name': 'history_retention_settings',
+                    'title': 'Historical Snapshot Retention Settings',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': 'enabled',
+                            'title': 'Enable historical snapshot retention',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'max_days_to_save',
+                            'title': 'Historical snapshot retention period (days)',
+                            'type': 'integer'
+                        }
+                    ],
+                    'required': ['enabled', 'max_days_to_save']
                 }
             ],
             'type': 'array',
@@ -452,15 +513,24 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     DISCOVERY_RESEARCH_DATE_TIME: '13:00',
                     DISCOVERY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
                 },
-                'history_settings': {
-                    'enabled': True,
-                    'max_days_to_save': 180
-                },
-                'save_history': True,
                 'constant_alerts': False,
                 'analyse_reimage': False,
                 'conditional': 'system_research_rate'
-            }
+            },
+            'history_settings': {
+                'enabled': True,
+                HISTORY_REPEAT_EVERY: {
+                    HISTORY_REPEAT_RECURRENCE: 1
+                },
+                HISTORY_REPEAT_WEEKDAYS: {
+                    HISTORY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
+                },
+                HISTORY_REPEAT_TYPE: HISTORY_REPEAT_EVERY_LIFECYCLE,
+            },
+            'history_retention_settings': {
+                'enabled': True,
+                'max_days_to_save': 180
+            },
         }
 
     def configure_correlation_scheduler(self):
@@ -723,7 +793,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.error(f'Failed running post-correlation phase', exc_info=True)
 
             try:
-                if self.__save_history:
+                history_config, last_history_date = self.get_history_config()
+                if self.__save_history and self.should_save_history(history_config, last_history_date):
                     # Save history.
                     _change_subphase(ResearchPhases.Save_Historical)
                     free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
@@ -777,6 +848,33 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             if adapter[PLUGIN_NAME] in names:
                 yield adapter
+
+    @staticmethod
+    def should_save_history(history_saving_config: dict, last_history: datetime) -> bool:
+        """
+        Check if we should save historical devices data
+        :param history_saving_config: history saving config
+        :param last_history: last history date
+        :return: True if we should save history data
+        """
+        if not history_saving_config:
+            return True
+
+        if history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_EVERY_LIFECYCLE:
+            return True
+
+        if history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_WEEKDAYS:
+            today = datetime.today().strftime('%A').lower()
+            saved_weekdays = (history_saving_config.get(HISTORY_REPEAT_WEEKDAYS) or {}).get(HISTORY_REPEAT_ON) or []
+            if today in saved_weekdays:
+                return True
+        elif history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_EVERY:
+            if not last_history:
+                return True
+            saved_recurrence = (history_saving_config.get(HISTORY_REPEAT_EVERY) or {}).get(HISTORY_REPEAT_RECURRENCE, 1)
+            if (datetime.now() - last_history).days >= saved_recurrence:
+                return True
+        return False
 
     # pylint: disable=too-many-return-statements
     @staticmethod
@@ -1106,6 +1204,25 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         }
         self._run_blocking_request(AGGREGATOR_PLUGIN_NAME, 'clean_db', timeout=3600 * 6,
                                    data=data)
+
+    def get_history_config(self):
+        """
+        Get history config from database
+        :return: history config, last saved history date
+        """
+        try:
+            plugin_settings = self.plugins.get_plugin_settings(self.plugin_name)
+            history_config = (plugin_settings.configurable_configs[SCHEDULER_CONFIG_NAME] or {}) \
+                .get('history_settings') if plugin_settings else {}
+
+            last_history = self.historical_devices_db_view.find_one(filter={},
+                                                                    sort=[('accurate_for_datetime', -1)],
+                                                                    projection={'accurate_for_datetime': 1})
+            last_history_date = last_history.get('accurate_for_datetime') if last_history else None
+            return history_config, last_history_date
+        except Exception as e:
+            logger.exception(f'Error while checking for historical data: {e}')
+        return {}, None
 
     def _run_historical_phase(self, max_days_to_save):
         """

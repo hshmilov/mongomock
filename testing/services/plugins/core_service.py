@@ -12,6 +12,7 @@ import requests
 from pymongo.collection import Collection
 from pymongo import UpdateOne
 
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
@@ -19,7 +20,9 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     PASSWORD_MANGER_ENUM, CYBERARK_DOMAIN, CYBERARK_CERT_KEY, PASSWORD_MANGER_THYCOTIC_SS_VAULT, THYCOTIC_SS_HOST, \
     THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID, \
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
-    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON
+    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON, HISTORY_REPEAT_EVERY, \
+    HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE, \
+    HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS
 
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
     CLIENT_ID, LEGACY_VAULT_PROVIDER
@@ -1022,6 +1025,34 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             'qualys_scans_adapter',
             'qualys_tags_white_list'
         )
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_verison_27(self):
+        print(f'Updating to schema version 27 - historical schedule')
+        configurable_configs = self.db.plugins.system_scheduler.configurable_configs
+        if not configurable_configs[SCHEDULER_CONFIG_NAME]:
+            # no scheduler config yet, first run
+            return
+        discovery_settings = configurable_configs[SCHEDULER_CONFIG_NAME].get('discovery_settings', {})
+        history_enabled = discovery_settings.pop('save_history', True)
+        history_retention_settings = discovery_settings.pop('history_settings', {})
+        history_settings = {
+            'enabled': history_enabled,
+            HISTORY_REPEAT_EVERY: {
+                HISTORY_REPEAT_RECURRENCE: 1
+            },
+            HISTORY_REPEAT_WEEKDAYS: {
+                HISTORY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
+            },
+            HISTORY_REPEAT_TYPE: HISTORY_REPEAT_EVERY_LIFECYCLE,
+        }
+        new_config = {
+            'discovery_settings': discovery_settings,
+            'history_retention_settings': history_retention_settings,
+            'history_settings': history_settings
+        }
+
+        configurable_configs[SCHEDULER_CONFIG_NAME] = new_config
 
     def migrate_adapter_advanced_settings_to_connection(
             self,

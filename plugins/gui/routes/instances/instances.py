@@ -217,7 +217,7 @@ class Instances:
         :return: list of nodes, with or without remaining_snapshot_days field.
         """
         config = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
-        history_settings = config['discovery_settings']['history_settings']
+        history_settings = config['history_retention_settings']
         max_days_configured = history_settings.get('max_days_to_save')
         if history_settings.get('enabled') and max_days_configured >= 0:
             for node in nodes:

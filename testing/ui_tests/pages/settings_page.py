@@ -159,6 +159,7 @@ class SettingsPage(Page):
     DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Every x days'
     DISCOVERY_SCHEDULE_WEEKDAYS_TEXT = 'Days of week'
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
+    HISTORY_ENABLED_CHECKBOX = '//*[contains(text(),\'Enable scheduled historical snapshot\')]'
 
     MIN_PASSWORD_LENGTH_ID = 'password_length'
     MIN_UPPERCASE_CHARS_ID = 'password_min_uppercase'
@@ -1755,7 +1756,8 @@ class SettingsPage(Page):
 
     def save_daily_historical_snapshot(self, enable=True):
         self.switch_to_page()
-        toggle = self.driver.find_element_by_id('save_history')
+        label = self.driver.find_element_by_xpath(self.HISTORY_ENABLED_CHECKBOX).text
+        toggle = self.find_checkbox_by_label(label)
         self.click_toggle_button(toggle, make_yes=enable)
         self.save_and_wait_for_toaster()
 

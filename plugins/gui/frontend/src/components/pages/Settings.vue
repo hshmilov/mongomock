@@ -423,7 +423,7 @@ export default {
         this.updateSystemConfig({
           data: {
             global: {
-              historyEnabled: _get(this.schedulerSettings, 'config.discovery_settings.save_history', false),
+              historyEnabled: _get(this.schedulerSettings, 'config.history_settings.enabled', false),
             },
           },
         });

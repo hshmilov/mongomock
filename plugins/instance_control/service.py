@@ -360,7 +360,7 @@ class InstanceControlService(Triggerable, PluginBase):
                 logger.info('Getting master snapshots stats')
                 retention_days = None
                 config = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
-                history_settings = config['discovery_settings']['history_settings']
+                history_settings = config['history_retention_settings']
                 if history_settings.get('enabled') and history_settings.get('max_days_to_save') > 0:
                     retention_days = history_settings.get('max_days_to_save')
 

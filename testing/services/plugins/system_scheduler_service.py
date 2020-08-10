@@ -7,6 +7,7 @@ from retrying import retry
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION, AXONIUS_SETTINGS_DIR_NAME
 from axonius.consts.scheduler_consts import (Phases, SchedulerState,
                                              SCHEDULER_SAVE_HISTORY_CONFIG_NAME, SCHEDULER_CONFIG_NAME)
+from axonius.db_migrations import db_migration
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR
 from services.plugin_service import PluginService, API_KEY_HEADER
 from services.system_service import SystemService
@@ -109,97 +110,87 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
         super()._migrate_db()
         self._run_all_migrations()
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):
         return
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_2(self):
         print('upgrade to schema 2')
-        try:
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
-            current_config = config_collection.find_one({
+        config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+        current_config = config_collection.find_one({
+            'config_name': SCHEDULER_CONFIG_NAME
+        })
+        if not current_config:
+            print('No config present - continue')
+            return
+
+        current_config = current_config.get('config')
+        if not current_config:
+            print(f'Weird config - continue ({current_config})')
+            return
+
+        system_research_rate = current_config.get(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME,
+                                                  DEAFULT_SYSTEM_RESEARCH_RATE)
+        save_history = current_config.get(SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
+                                          DEFAULT_SYSTEM_SAVE_HISTORY)
+
+        config_collection.replace_one(
+            {
                 'config_name': SCHEDULER_CONFIG_NAME
-            })
-            if not current_config:
-                print('No config present - continue')
-                return
-
-            current_config = current_config.get('config')
-            if not current_config:
-                print(f'Weird config - continue ({current_config})')
-                return
-
-            system_research_rate = current_config.get(DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME,
-                                                      DEAFULT_SYSTEM_RESEARCH_RATE)
-            save_history = current_config.get(SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
-                                              DEFAULT_SYSTEM_SAVE_HISTORY)
-
-            config_collection.replace_one(
-                {
-                    'config_name': SCHEDULER_CONFIG_NAME
-                },
-                {
-                    'config_name': SCHEDULER_CONFIG_NAME,
-                    'config': {
-                        'discovery_settings': {
-                            DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME: system_research_rate,
-                            SCHEDULER_SAVE_HISTORY_CONFIG_NAME: save_history
-                        }
+            },
+            {
+                'config_name': SCHEDULER_CONFIG_NAME,
+                'config': {
+                    'discovery_settings': {
+                        DEAFULT_SYSTEM_RESEARCH_RATE_ATTRIB_NAME: system_research_rate,
+                        SCHEDULER_SAVE_HISTORY_CONFIG_NAME: save_history
                     }
                 }
-            )
+            }
+        )
 
-        except Exception as e:
-            print(f'Exception while upgrading scheduler db to version 2. Details: {e}')
-        finally:
-            print('Upgraded system scheduler to version 2')
-            self.db_schema_version = 2
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_3(self):
         print('upgrade to schema 3')
-        try:
-            config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
-            config_match = {
-                'config_name': SCHEDULER_CONFIG_NAME
-            }
-            current_config = config_collection.find_one(config_match)
-            if not current_config:
-                print('No config present - continue')
-                return
+        config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+        config_match = {
+            'config_name': SCHEDULER_CONFIG_NAME
+        }
+        current_config = config_collection.find_one(config_match)
+        if not current_config:
+            print('No config present - continue')
+            return
 
-            current_config = current_config.get('config')
-            if not current_config:
-                print(f'Weird config - continue ({current_config})')
-                return
+        current_config = current_config.get('config')
+        if not current_config:
+            print(f'Weird config - continue ({current_config})')
+            return
 
-            current_config = current_config.get('discovery_settings')
+        current_config = current_config.get('discovery_settings')
 
-            if not current_config:
-                print(f'Weird discovery_settings - continue ({current_config})')
-                return
+        if not current_config:
+            print(f'Weird discovery_settings - continue ({current_config})')
+            return
 
-            system_research_date_time = current_config.get(DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN,
-                                                           DEAFULT_SYSTEM_RESEARCH_DATE_TIME)
+        system_research_date_time = current_config.get(DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN,
+                                                       DEAFULT_SYSTEM_RESEARCH_DATE_TIME)
 
-            config_collection.update_one(config_match,
-                                         {
-                                             '$set': {
-                                                 f'config.discovery_settings.'
-                                                 f'{DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN}': {
-                                                     DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME:
-                                                         system_research_date_time,
-                                                     DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME:
-                                                     DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE
-                                                 }
+        config_collection.update_one(config_match,
+                                     {
+                                         '$set': {
+                                             f'config.discovery_settings.'
+                                             f'{DEFAULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME_MAIN}': {
+                                                 DEAFULT_SYSTEM_RESEARCH_DATE_ATTRIB_NAME:
+                                                     system_research_date_time,
+                                                 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE_ATTRIB_NAME:
+                                                 DEAFULT_SYSTEM_RESEARCH_DATE_RECURRENCE
                                              }
                                          }
-                                         )
+                                     }
+                                     )
 
-        except Exception as e:
-            print(f'Exception while upgrading scheduler db to version 3. Details: {e}')
-        finally:
-            print('Upgraded system scheduler to version 3')
-            self.db_schema_version = 3
-
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_4(self):
         print(f'Upgrade to schema 4 - Save history')
         config_collection = self.db.get_collection(self.plugin_name, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)

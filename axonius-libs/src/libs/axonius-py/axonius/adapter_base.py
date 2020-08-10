@@ -44,7 +44,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_U
     SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, \
     DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, INSTANCE_CONTROL_PLUGIN_NAME, \
     GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
-    CSV_IP_LOCATION_FILE
+    CSV_IP_LOCATION_FILE, WEEKDAYS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -61,7 +61,6 @@ from axonius.utils.threading import timeout_iterator
 from axonius.mock.adapter_mock import AdapterMock
 
 logger = logging.getLogger(f'axonius.{__name__}')
-WEEKDAYS = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:

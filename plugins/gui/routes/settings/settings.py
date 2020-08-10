@@ -58,7 +58,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
                 'passwordManagerEnabled': self._vault_settings['enabled'],
                 'customerId': self.node_id,
-                'historyEnabled': (history_setting['discovery_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME]
+                'historyEnabled': (history_setting['history_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME]
                                    if history_setting else False)
             }
         })
