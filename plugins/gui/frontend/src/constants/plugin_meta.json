@@ -743,6 +743,11 @@
     "link": "https://docs.axonius.com/docs/bluecat-enterprise-dns",
     "description": "BlueCat Enterprise DNS connects all disparate DNS and DHCP with centralized management of all clients and critical assets."
   },
+  "extreme_networks_extreme_control_adapter": {
+    "title": "Extreme Networks ExtremeControl - BETA",
+    "link": "https://docs.axonius.com/docs/extreme-networks-extremecontrol",
+    "description": "Extreme Networks ExtremeControl is a Network Access Control (NAC) solution that enables role-based access controls and reporting on user activity across all devices."
+  },
   "logrhythm_adapter": {
     "title": "LogRhythm",
     "link": "https://docs.axonius.com/docs/logrhythm",

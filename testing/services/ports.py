@@ -284,6 +284,7 @@ DOCKER_PORTS = {
     'ansible-tower-adapter':            10000,
     'cisco-stealthwatch-adapter':       10001,
     'arista-eos-adapter':               10002,
+    'extreme-networks-extreme-control-adapter': 10003,
     'men-and-mice-adapter':             10004,
     'edfs-csv-adapter':                 10005,
     'logmein-adapter':                  10006,
