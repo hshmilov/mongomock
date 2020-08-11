@@ -173,6 +173,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
 
         for page in self._paginated_get(base_url, url_params={'project': project_id}, force_full_url=True):
             if 'items' not in page:
+                if page == {'kind': 'storage#buckets'}:
+                    logger.info(f'No buckets in project {project_id}')
+                    continue
                 raise ValueError(f'Bad response while getting buckets: {page}')
             for item in page['items']:
                 item['projectId'] = project_id
@@ -191,6 +194,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
         bucket_url = f'{BUCKETS_BASE_URL}/{bucket_id}/o'
         for page in self._paginated_get(bucket_url, force_full_url=True):
             if 'items' not in page:
+                if page == {'kind': 'storage#objects'}:
+                    logger.debug(f'No objects in bucket {bucket_id}')
+                    continue
                 raise ValueError(f'Bad response while getting objects from bucket {bucket_id}: {page}')
             yield from page['items']
 
@@ -204,11 +210,12 @@ class GoogleCloudPlatformConnection(RESTConnection):
         :return: Yield dictionaries representing storage buckets.
         """
         if isinstance(project_id, list):
-            projects = [{'projectId': x} for x in project_id]
+            projects = list([{'projectId': x} for x in project_id])
         else:
-            projects = [{'projectId': project_id}] if project_id is not None else self.get_project_list()
-        for project in projects:
+            projects = [{'projectId': project_id}, ] if project_id is not None else list(self.get_project_list())
+        for i, project in enumerate(projects):
             project_id = project['projectId']
+            logger.info(f'Storage: Handling project {i}/{len(projects)} - {project_id}')
             try:
                 yield from self._get_buckets_list(project_id, get_objects=get_bucket_objects)
             except Exception as e:
@@ -230,11 +237,12 @@ class GoogleCloudPlatformConnection(RESTConnection):
         :return:  Yield dictionaries representing database instances
         """
         if isinstance(project_id, list):
-            projects = [{'projectId': x} for x in project_id]
+            projects = list([{'projectId': x} for x in project_id])
         else:
-            projects = [{'projectId': project_id}] if project_id is not None else self.get_project_list()
-        for project in projects:
+            projects = [{'projectId': project_id}, ] if project_id is not None else list(self.get_project_list())
+        for i, project in enumerate(projects):
             project_id = project['projectId']
+            logger.info(f'Databases: Handling project {i}/{len(projects)} - {project_id}')
             try:
                 # XXX Plug more database types HERE!
                 if self.__fetch_cloud_sql:

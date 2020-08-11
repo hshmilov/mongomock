@@ -255,7 +255,7 @@ class GceAdapter(AdapterBase, Configurable):
                     try:
                         self.__predefined_roles = list(client.get_predefined_roles())
                     except Exception:
-                        logger.exception(f'Failed to fetch roles! Make sure permissions are correct.')
+                        logger.warning(f'Failed to fetch roles. Make sure permissions are correct.', exc_info=True)
                         self.__predefined_roles = list()
                 return client, client_config
         except Exception as e:
@@ -285,14 +285,16 @@ class GceAdapter(AdapterBase, Configurable):
                                client_data: Tuple[GoogleCloudPlatformConnection, dict]):
         client, client_dict = client_data
         with client:
-            for project in client.get_project_list():
+            all_projects = list(client.get_project_list())
+            for i, project in enumerate(all_projects):
                 try:
                     project_id = project.get('projectId')
+                    logger.info(f'Users: handling project {i}/{len(all_projects)} - {project_id}')
                     all_iam_data = list(client.get_user_list(project_id))
                     try:
                         role_data = list(client.get_project_roles(project_id)) if self.__get_roles else []
                     except Exception:
-                        logger.exception(f'Failed to get roles for project {project_id}')
+                        logger.warning(f'Failed to get roles for project {project_id}')
                         role_data = list()
                     yield all_iam_data, role_data, project
                 except Exception:
@@ -402,6 +404,8 @@ class GceAdapter(AdapterBase, Configurable):
                     message = f'Problem with project {project}: {str(e)}'
                     if 'error may be an authentication issue' in str(e):
                         logger.warning(message)
+                    elif 'Compute Engine API has not been used in project' in str(e):
+                        logger.warning(f'Problem with project {project}: Compute API not enabled')
                     else:
                         logger.warning(message, exc_info=True)
         except Exception:
@@ -833,8 +837,11 @@ class GceAdapter(AdapterBase, Configurable):
                 logger.warning(f'Expected a list of objects for device {device_id}, '
                                f'got instead {device_raw.get("x_objects")}')
                 device_raw['x_objects'] = []
-            device.object_count = len(device_raw.get('x_objects'))
-
+            storage_object_metadata = device_raw.get('x_objects')
+            device.object_count = len(storage_object_metadata)
+            # Trim object metadata to prevent super huge data
+            if storage_object_metadata:
+                device_raw['x_objects'] = storage_object_metadata[:10]
             for object_raw in device_raw.get('x_objects'):
                 try:
                     device.storage_objects.append(GCPStorageObject(
@@ -1164,7 +1171,7 @@ class GceAdapter(AdapterBase, Configurable):
                     for role in user_info.get('roles'):
                         role_dict = self._find_user_role(role, roles_per_project)
                         if not (role_dict and isinstance(role_dict, dict)):
-                            logger.warning(f'Failed to get permission details for role {role}')
+                            logger.debug(f'Failed to get permission details for role {role}')
                             continue
                         try:
                             if not user.roles_perms:
