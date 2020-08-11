@@ -1287,7 +1287,7 @@ class PluginBase(Configurable, Feature, ABC):
         all_plugins_with_custom_connection_discovery_enabled = self.plugins.get_plugin_names_with_config(
             DISCOVERY_CONFIG_NAME,
             {
-                CONNECTION_DISCOVERY: True
+                f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
             }
         )
         try:

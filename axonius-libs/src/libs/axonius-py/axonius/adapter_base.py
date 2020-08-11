@@ -2075,7 +2075,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': ENABLE_CUSTOM_DISCOVERY,
-                            'title': 'Enable custom discovery schedule',
+                            'title': 'Enable adapter custom scheduling',
                             'type': 'bool'
                         },
                         {
@@ -2147,12 +2147,21 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'name': ADAPTER_DISCOVERY,
                     'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE,
                                  DISCOVERY_REPEAT_RATE],
+                    'title': 'Custom Scheduling',
                     'type': 'array'
                 },
                 {
+                    'items': [
+                        {
+                            'name': ENABLE_CUSTOM_DISCOVERY,
+                            'title': 'Enable custom discovery schedule configuration for each adapter connection',
+                            'type': 'bool'
+                        }
+                    ],
                     'name': CONNECTION_DISCOVERY,
-                    'title': 'Enable separate custom discovery schedule for each adapter connection',
-                    'type': 'bool'
+                    'title': 'Connection Custom Scheduling',
+                    'type': 'array',
+                    'required': [ENABLE_CUSTOM_DISCOVERY],
                 }
             ],
             'required': [
@@ -2260,7 +2269,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     DISCOVERY_RESEARCH_DATE_TIME: '13:00',
                 }
             },
-            CONNECTION_DISCOVERY: False
+            CONNECTION_DISCOVERY: {
+                ENABLE_CUSTOM_DISCOVERY: False,
+            }
         }
 
     @classmethod

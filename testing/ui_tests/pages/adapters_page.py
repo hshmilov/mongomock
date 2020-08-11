@@ -34,7 +34,7 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY = 'Test Reachability'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=enabled]+div'
-    CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=connection_discovery]+div'
+    CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS = '.item_connection_discovery [for=enabled]+div'
     REPEAT_DAYS = 'repeat_every'
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'

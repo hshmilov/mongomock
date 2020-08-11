@@ -495,8 +495,11 @@ class Plugins:
             except Exception:
                 logger.exception(f'Failed deleting last fetch on discovery change')
 
-            old_connection_discovery_enabled = current_discovery.get(CONNECTION_DISCOVERY, False)
-            if not config_to_set.get(CONNECTION_DISCOVERY, False) and old_connection_discovery_enabled:
+            old_connection_discovery_enabled = current_discovery.get(CONNECTION_DISCOVERY, {})\
+                .get(ENABLE_CUSTOM_DISCOVERY, False)
+            new_connection_discovery_enabled = config_to_set.get(CONNECTION_DISCOVERY,  {})\
+                .get(ENABLE_CUSTOM_DISCOVERY, False)
+            if not new_connection_discovery_enabled and old_connection_discovery_enabled:
                 #  When disabling connection discovery on updater level, we need to remove settings
                 #  from all configured clients.
                 all_plugin_unique_names = [
