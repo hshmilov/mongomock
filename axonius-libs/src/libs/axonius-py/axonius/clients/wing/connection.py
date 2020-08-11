@@ -65,7 +65,7 @@ class WingConnection(RESTConnection):
         self._session_refresh = None
         self._clear_cookie()
         try:
-            response = self._get('act/login', use_basic_auth=True)
+            response = self._get('act/login', do_basic_auth=True)
             response_data = self._extract_response_data(response)
             if not isinstance(response_data, dict):
                 raise RESTException(f'Bad response data. Expected dict, got: {type(response_data)}')
