@@ -26,3 +26,19 @@ CLOUDFRONT_RESTRICTION_TYPE = ['blacklist', 'whitelist', 'none']
 PRICE_CLASS = ['PriceClass_100', 'PriceClass_200', 'PriceClass_All']
 HTTP_VERSION = ['http1.1', 'http2']
 ALIAS_RECORDALS_STATUS = ['APPROVED', 'SUSPENDED', 'PENDING']
+
+# s3
+BUCKET_ACL = ['private', 'public-read', 'public-read-write', 'authenticated-read']
+OBJECT_ACL = ['private', 'public-read', 'public-read-write', 'authenticated-read',
+              'aws-exec-read', 'bucket-owner-read', 'bucket-owner-full-control']
+OBJECT_STORAGE_CLASS = ['STANDARD', 'REDUCED_REDUNDANCY', 'STANDARD_IA',
+                        'ONEZONE_IA', 'INTELLIGENT_TIERING', 'GLACIER', 'DEEP_ARCHIVE']
+SERVER_SIDE_ENCRYPTION = ['AES256', 'aws:kms']
+
+# configuration schema items
+ADAPTER_NAME = 'aws_adapter'
+AWS_ACCESS_KEY_ID_NAME = 'aws_access_key_id'
+AWS_SECRET_ACCESS_KEY_NAME = 'aws_secret_access_key'
+AWS_USE_IAM = 'aws_use_iam'
+AWS_S3_BUCKET_NAME = 's3_bucket'
+AWS_S3_KEY_NAME = 's3_key'

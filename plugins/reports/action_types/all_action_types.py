@@ -64,6 +64,7 @@ from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
 from reports.action_types.base.create_cherwell_computer import CherwellCreateComputerAction
 from reports.action_types.base.update_cherwell_computer import CherwellUpdateComputerAction
 from reports.action_types.base.create_jira_asset import CreateJiraAssetAction
+from reports.action_types.alert.send_json_to_s3 import SendJsonToS3
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'update_cherwell_computer': CherwellUpdateComputerAction,
@@ -128,5 +129,6 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'send_csv_to_scp': SendCsvToScp,
     'qualys_add_tag': QualysAddTag,
     'qualys_remove_tag': QualysRemoveTag,
-    'opsgenie_create_alert': OpsgenieCreateAlert
+    'opsgenie_create_alert': OpsgenieCreateAlert,
+    'send_json_to_s3': SendJsonToS3,
 }

@@ -29,8 +29,10 @@ from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, 
     AWS_ENDPOINT_FOR_REACHABILITY_TEST, REGION_NAME, GET_ALL_REGIONS, \
     AWS_SECRET_ACCESS_KEY, USE_ATTACHED_IAM_ROLE, ROLES_TO_ASSUME_LIST, \
     PROXY, ACCOUNT_TAG, ADVANCED_CONFIG
+from aws_adapter.consts import AWS_ACCESS_KEY_ID_NAME
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.aws.s3_client import S3Client
 from axonius.clients.aws.aws_clients import get_boto3_session, \
     parse_roles_to_assume_file, parse_aws_advanced_config, AWS_MFA_SERIAL_NUMBER, AWS_MFA_TOTP_CODE
 from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, \
@@ -41,6 +43,7 @@ from axonius.consts.adapter_consts import DEFAULT_PARALLEL_COUNT
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
+from axonius.plugin_base import return_error, add_rule
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -799,6 +802,57 @@ class AwsAdapter(AdapterBase, Configurable):
             except Exception:
                 pass
             yield user
+
+    # pylint: disable=too-many-return-statements, inconsistent-return-statements, no-else-return
+    @add_rule('send_json_to_s3', methods=['POST'])
+    def send_json_to_s3(self):
+        ec_error_msg = 'Failure'
+
+        if self.get_method() != 'POST':
+            return return_error(
+                f'Method not allowed: {self.get_method()}', 405)
+
+        # pull the data over from send_json_to_s3 ec action
+        try:
+            ec_data = self.get_request_data_as_object()
+            if not isinstance(ec_data, dict):
+                return ec_error_msg, 400
+        except Exception as err:
+            logger.exception(f'Unable to get enforcement center data: {str(err)}')
+            return ec_error_msg, 400
+
+        for client_id, client_config in self._clients.items():
+            # setup the s3 client with the adapter credentials
+            if client_config.get(AWS_ACCESS_KEY_ID) != ec_data.get('account_id_for_upload'):
+                continue
+
+            try:
+                client = S3Client(
+                    access_key=client_config.get(AWS_ACCESS_KEY_ID_NAME),
+                    secret_key=client_config.get(AWS_SECRET_ACCESS_KEY),
+                    use_instance_role=client_config.get(USE_ATTACHED_IAM_ROLE),
+                    region=client_config.get('region_name')
+                )
+            except Exception as err:
+                logger.exception(f'Unable to create an S3 client: {str(err)}')
+                return ec_error_msg, 400
+
+            try:
+                if isinstance(client, S3Client):
+                    try:
+                        client.send_data_to_s3(data=ec_data, data_type='json')
+                        return 'Success', 200
+                    except Exception as err:
+                        logger.exception(f'Unable to send Enforcement Center '
+                                         f'data to S3 using {client.access_key}')
+                        raise
+                else:
+                    logger.warning(f'Improperly formed S3 client. Expected '
+                                   f'an S3Client, got {type(client)}: '
+                                   f'{str(client)}')
+            except Exception as err:
+                logger.exception(f'Unable to send data to S3.')
+                return ec_error_msg, 400
 
     def _on_config_update(self, config):
         logger.info(f'Loading AWS config: {config}')

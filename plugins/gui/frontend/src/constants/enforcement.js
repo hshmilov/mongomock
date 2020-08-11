@@ -176,6 +176,9 @@ export const actionsMeta = {
     send_csv_to_s3: {
         title: 'Send CSV to Amazon S3'
     },
+    send_json_to_s3: {
+        title: 'Send JSON to Amazon S3'
+    },
     automox_install_update: {
         title: 'Automox Install Update'
     },
@@ -249,7 +252,7 @@ export const actionsMeta = {
     },
     notify: {
         title: 'Notify',
-        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'send_to_webhook', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3', 'send_csv_to_scp']
+        items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'send_to_webhook', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3', 'send_json_to_s3', 'send_csv_to_scp']
     },
     axonius: {
         title: 'Axonius Utilities',

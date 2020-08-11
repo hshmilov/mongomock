@@ -23,6 +23,7 @@ AWS_MFA_SERIAL_NUMBER = 'serial_number'
 AWS_MFA_TOTP_CODE = 'totp_code'
 MAX_GET_SESSION_TOKEN_RETRIES = 3
 TIME_TO_SLEEP_BETWEEN_RETRIES_IN_SECONDS = 63   # 1 minute for totp code to re-generate, 3 seconds for safety
+PAGE_NUMBER_FLOOD_PROTECTION = 9000
 
 
 def get_session_token_with_totp(sts_client, aws_mfa_details: dict, aws_config: Config, identity: str) -> dict:
@@ -274,3 +275,40 @@ def get_boto3_client_by_session(
 ):
     aws_config = Config(proxies={'https': https_proxy}) if https_proxy else None
     return session.client(client_name, region_name=region_name.lower(), config=aws_config)
+
+
+def get_paginated_continuation_token_api(func):
+    """
+    This should be in utils.py, but it needs to be accessed also by the
+    enforcement center (which cannot reach the aws_adapter code), so it
+    is here in aws_clients.py. This is similar to the other pagination
+    methods except it uses a NextContinuationToken instead of the standard
+    ContinuationToken. For functions that have not parameters, wrap this
+    in a functools call. If there are parameters, wrap it in functools.partial.
+    """
+    continuation_token_name = None
+    next_continuation_token = None
+    page_number = 0
+
+    while page_number < PAGE_NUMBER_FLOOD_PROTECTION:
+        page_number += 1
+        if next_continuation_token:
+            result = func(**{continuation_token_name: next_continuation_token})
+        else:
+            result = func()
+
+        yield result
+
+        if result.get('NextContinuationToken'):
+            continuation_token_name = 'NextContinuationToken'
+        elif result.get('nextContinuationToken'):
+            continuation_token_name = 'nextContinuationToken'
+
+        if continuation_token_name:
+            next_continuation_token = result.get(continuation_token_name)
+        if not next_continuation_token:
+            break
+
+    if page_number == PAGE_NUMBER_FLOOD_PROTECTION:
+        logger.critical('AWS Pagination (Continuation Token): Reached '
+                        'page flood protection count')

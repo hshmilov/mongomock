@@ -29,6 +29,15 @@ EC2_ACTION_REQUIRED_ENTITIES = ['internal_axon_id', 'adapters.plugin_name', 'ada
 AWS_EC2_INSTANCE_STATES = {'pending', 'running', 'shutting-down', 'terminated', 'stopping', 'stopped'}
 EC2_CONTAINER_DEVICE_TYPES = ['ECS', 'EKS']
 
+AWS_S3_BUCKET_NAME = 'bucket_name'
+AWS_S3_KEY_NAME = 's3_key'
+ACTION_CONFIG_PARENT_TAG = 'parent_tag'
+ACTION_CONFIG_USE_ADAPTER = 'use_adapter'
+AWS_REGION_NAME = 'region_name'
+
+# enforcement center
+DEFAULT_S3_EC_OBJECT_KEY = 'axonius-enforcement-center-_data'
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -142,6 +151,11 @@ class AwsConnection():
 
 
 class AWSActionUtils():
+    GENERAL_DEFAULT_CONFIG = {
+        AWS_ACCESS_KEY_ID: '',
+        AWS_SECRET_ACCESS_KEY: '',
+        AWS_USE_IAM: False,
+    }
 
     @staticmethod
     def config_schema() -> dict:
