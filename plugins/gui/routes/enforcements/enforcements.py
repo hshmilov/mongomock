@@ -304,7 +304,9 @@ class Enforcements(Tasks):
             'configuration_name': enforcement[TRIGGERS_FIELD][0]['name'],
             'manual': True
         }, priority=True, blocking=False)
-        return ''
+        return jsonify({
+            'name': enforcement['name']
+        })
 
     @gui_route_logged_in('<entity_type>/custom', methods=['POST'], enforce_permissions=False, enforce_api_key=True)
     def enforce_entity_custom_data(self, entity_type):
