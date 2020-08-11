@@ -11,8 +11,11 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class TwistlockConnection(RESTConnection):
     """ rest client for Twistlock adapter """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix='api/v1',
+    def __init__(self, *args, tenant_name=None,
+                 **kwargs):
+        if not tenant_name:
+            tenant_name = ''
+        super().__init__(*args, url_base_prefix=f'{tenant_name}/api/v1',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'}, **kwargs)
 

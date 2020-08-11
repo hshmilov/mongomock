@@ -84,7 +84,8 @@ class TwistlockAdapter(AdapterBase):
         try:
             with TwistlockConnection(domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
                                      username=client_config['username'], password=client_config['password'],
-                                     https_proxy=client_config.get('https_proxy')
+                                     https_proxy=client_config.get('https_proxy'),
+                                     tenant_name=client_config.get('tenant_name')
                                      ) as connection:
                 return connection
         except RESTException as e:
@@ -118,6 +119,11 @@ class TwistlockAdapter(AdapterBase):
                 {
                     'name': 'domain',
                     'title': 'Twistlock Domain',
+                    'type': 'string'
+                },
+                {
+                    'name': 'tenant_name',
+                    'title': 'Tenant Name',
                     'type': 'string'
                 },
                 {
