@@ -20,11 +20,15 @@
       you must enable the <strong>Use Tunnel to connect to source</strong> checkbox in the
       <strong>Adapter Configuration</strong> tab of the
       <XButton
+        v-if="canOpenAdvancedSettings"
         type="link"
         @click="openAdvanceSettings"
       >
         Advanced Settings
       </XButton>
+      <span v-else>
+        Advanced Settings
+      </span>
       for this adapter.
     </div>
     <div
@@ -73,22 +77,27 @@ export default {
     },
     useTunnelSetting: {
       type: Boolean,
-      default: true,
+      default: undefined,
     },
   },
   computed: {
     showConfigureTunnel() {
       return (this.status === tunnelConnectionStatuses.neverConnected
-              || (this.status === tunnelConnectionStatuses.disconnected && !this.useTunnelSetting));
+              || (this.status === tunnelConnectionStatuses.disconnected
+              && this.useTunnelSetting === false));
     },
     showConfigureUseTunnel() {
-      return this.status === tunnelConnectionStatuses.connected && !this.useTunnelSetting;
+      return this.status === tunnelConnectionStatuses.connected && this.useTunnelSetting === false;
     },
     showTunnelError() {
       return this.status === tunnelConnectionStatuses.disconnected && this.useTunnelSetting;
     },
     canGoToTunnelSettings() {
       return this.$can(this.$permissionConsts.categories.Settings,
+        this.$permissionConsts.actions.Update);
+    },
+    canOpenAdvancedSettings() {
+      return this.$can(this.$permissionConsts.categories.Adapters,
         this.$permissionConsts.actions.Update);
     },
   },
