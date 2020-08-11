@@ -111,26 +111,61 @@ class ArsenalAdapter(AdapterBase, Configurable):
             device.id = device_id + '_' + (device_raw.get('serialNumber') or '')
             device.device_serial = device_raw.get('serialNumber')
             device.asset_type = device_raw.get('type')
+            ips = []
             try:
-                ips_opinions_raw = (device_raw.get('ips') or {}).get('opinions') or {}
-                for ips_values_raw in ips_opinions_raw.values():
-                    if ips_values_raw.get('values'):
-                        device.add_nic(ips=ips_values_raw.get('values'))
+                ips_expected = (device_raw.get('ips') or {}).get('expected')
+                if isinstance(ips_expected, list):
+                    ips = ips_expected
+                else:
+                    # if expected exists, don't go to opinions
+                    ips_opinions_raw = (device_raw.get('ips') or {}).get('opinions') or {}
+                    for ips_values_raw in ips_opinions_raw.values():
+                        if ips_values_raw.get('values'):
+                            ips.extend(ips_values_raw.get('values'))
             except Exception:
                 logger.exception(f'Problem getting ips for {device_raw}')
-            hostname = None
+
+            macs = []
+            try:
+                tags = device_raw.get('tags') or []
+                if isinstance(tags, list):
+                    for tag in tags:
+                        if tag.startswith('mac.'):
+                            macs.append(tag[4:])
+                        elif tag.startswith('bmc_mac.'):
+                            macs.append(tag[len('bmc_mac.'):])
+            except Exception:
+                logger.exception(f'Problem getting macs')
+
+            device.add_ips_and_macs(macs=list(set(macs)), ips=list(set(ips)))
+
+            all_hostnames = []
             try:
                 hostnames_opinions_raw = (device_raw.get('hostNames') or {}).get('opinions') or {}
                 for hostname_values_raw in hostnames_opinions_raw.values():
                     if hostname_values_raw.get('values'):
-                        hostname = hostname_values_raw.get('values')[0]
-                        device.hostnames.extend(
-                            [hostname_raw for hostname_raw in hostname_values_raw.get('values') if hostname_raw])
+                        all_hostnames.extend(
+                            [hostname_raw for hostname_raw in hostname_values_raw.get('values') if hostname_raw]
+                        )
             except Exception:
                 logger.exception(f'Problem getting hostnames for {device_raw}')
 
+            device.hostnames = all_hostnames
+
+            hostname = None
+            try:
+                expected_hostnames = (device_raw.get('hostNames') or {}).get('expected')
+                if expected_hostnames and isinstance(expected_hostnames, list):
+                    hostname = expected_hostnames[0]
+                else:
+                    if all_hostnames:
+                        hostname = all_hostnames[-1]
+            except Exception:
+                logger.exception(f'Problem getting expected hostnames')
+
             if hostname:
                 device.hostname = hostname
+                device.id += f'_{hostname}'
             else:
                 device.name = device_raw.get('serialNumber')
 
