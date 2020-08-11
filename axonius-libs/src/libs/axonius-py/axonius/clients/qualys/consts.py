@@ -17,6 +17,7 @@ VERIFY_SSL = 'verify_ssl'
 HTTPS_PROXY = 'https_proxy'
 AGENT_DEVICE = 'agent_device'
 SCAN_DEVICE = 'scan_device'
+QUALYS_TAGS_WHITELIST = 'qualys_tags_white_list'
 
 UNSCANNED_IP_URL_PREFIX = 'api/2.0/fo/asset/ip'
 HOST_URL_PREFIX = 'api/2.0/fo/asset/host'

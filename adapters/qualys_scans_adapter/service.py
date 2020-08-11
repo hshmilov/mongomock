@@ -153,6 +153,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def get_connection(self, client_config):
         date_filter = None
+
         if self._last_seen_timedelta:
             now = datetime.datetime.now(datetime.timezone.utc)
             date_filter = (now - self._last_seen_timedelta).replace(microsecond=0).isoformat()
@@ -181,7 +182,12 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            qualys_tags_white_list = \
+                list(set(  # To avoid duplicated
+                    client_config.get(consts.QUALYS_TAGS_WHITELIST).split(','))) \
+                if client_config.get(consts.QUALYS_TAGS_WHITELIST) \
+                else None
+            return (self.get_connection(client_config), qualys_tags_white_list)
         except Exception as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config[consts.QUALYS_SCANS_DOMAIN], str(e)
@@ -193,8 +199,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
+        client_data, qualys_tags_white_list = client_data
         with client_data:
-            yield from client_data.get_device_list()
+            yield from [(device_raw, qualys_tags_white_list) for device_raw in client_data.get_device_list()]
 
     @staticmethod
     def _clients_schema():
@@ -209,6 +216,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
+                {'name': consts.QUALYS_TAGS_WHITELIST, 'title': 'Qualys Tags Whitelist', 'type': 'string'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'}
             ],
             'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],
@@ -216,9 +224,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         }
 
     def _refetch_device(self, client_id, client_data, device_id):
+        client_data, qualys_tags_white_list = client_data
         with client_data:
             device_raw = client_data.get_device_id_data(device_id)
-        return self._create_agent_device(device_raw, self.__qualys_tags_white_list)
+        return self._create_agent_device(device_raw, qualys_tags_white_list)
 
     @classmethod
     def parse_qid_info(cls, csv_path=consts.QUALYS_QID_TO_CVE_CSV):
@@ -468,14 +477,19 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             return None
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, device_type in devices_raw_data:
+        for (device_raw_data, qualys_tags_white_list) in devices_raw_data:
+            if len(device_raw_data) == 2:
+                device_raw, device_type = device_raw_data
+            else:
+                logger.error(f'Got bad device raw data. Expected 2-tuple, got instead: {device_raw_data}')
+                continue
             if device_type == UNSCANNED_IP_TYPE and self.__fetch_unscanned_ips:
                 device = self._create_unscanned_ips(device_raw, self._new_device_adapter())
             elif device_type == INVENTORY_TYPE and self.__fetch_from_inventory:
                 # noinspection PyTypeChecker
                 device = self._create_inventory_device(device_raw, self._new_device_adapter())
             else:
-                device = self._create_agent_device(device_raw, self.__qualys_tags_white_list)
+                device = self._create_agent_device(device_raw, qualys_tags_white_list)
 
             if device:
                 yield device
@@ -818,11 +832,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'type': 'integer',
                 },
                 {
-                    'name': 'qualys_tags_white_list',
-                    'type': 'string',
-                    'title': 'Qualys tags whitelist'
-                },
-                {
                     'name': 'fetch_vulnerabilities_data',
                     'type': 'bool',
                     'title': 'Fetch vulnerabilities data'
@@ -878,7 +887,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'max_retries': consts.MAX_RETRIES,
             'devices_per_page': consts.DEVICES_PER_PAGE,
             'fetch_vulnerabilities_data': True,
-            'qualys_tags_white_list': None,
             'fetch_from_inventory': False,
             'use_dns_host_as_hostname': False,
             'fetch_unscanned_ips': False,
@@ -914,8 +922,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__max_retries = config.get('max_retries', consts.MAX_RETRIES)
         self.__retry_sleep_time = config.get('max_retries', consts.RETRY_SLEEP_TIME)
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
-        self.__qualys_tags_white_list = config.get('qualys_tags_white_list').split(',') \
-            if config.get('qualys_tags_white_list') else None
         self.__fetch_from_inventory = config.get('fetch_from_inventory', False)
         self.__use_dns_host_as_hostname = config.get('use_dns_host_as_hostname', False)
         self.__fetch_report = config.get('fetch_report', False)
