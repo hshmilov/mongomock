@@ -211,7 +211,8 @@ def ova_vhd(args, notify):
                 subprocess.run(['ovftool', '--targetType=ova', vmx_path, args.output], check=True)
 
         if args.vhdx_output:
-            subprocess.run(['qemu-img', 'convert', '-f', 'vmdk', '-O', 'vhdx', vmdk, args.vhdx_output])
+            subprocess.run(['qemu-img', 'convert', '-f', 'vmdk', '-O', 'vhdx', vmdk, args.vhdx_output],
+                           check=True)
     notify({'name': args.name, 'subcommand': 'ova', 'step': 'finish'})
 
 
@@ -281,7 +282,7 @@ def local_installer_path(args, notify):
         with tempfile.TemporaryDirectory() as temporary_directory:
             installer_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
             temporary_local_installer = pathlib.Path(temporary_directory).joinpath(installer_name)
-            subprocess.run(['curl', url, '-o', temporary_local_installer])
+            subprocess.run(['curl', url, '-o', temporary_local_installer], check=True)
             yield temporary_local_installer
 
 
@@ -296,7 +297,7 @@ def local_qcow3_path(args):
         with tempfile.TemporaryDirectory() as temporary_directory:
             qcow3_name = pathlib.PosixPath(urllib.parse.urlparse(url).path).name
             temporary_local_qcow3 = pathlib.Path(temporary_directory).joinpath(qcow3_name)
-            subprocess.run(['curl', url, '-o', temporary_local_qcow3])
+            subprocess.run(['curl', url, '-o', temporary_local_qcow3], check=True)
             yield temporary_local_qcow3
 
 
