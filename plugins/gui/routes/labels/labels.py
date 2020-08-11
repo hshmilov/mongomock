@@ -171,6 +171,12 @@ class Labels:
             'audit.custom_discovery.clean': 'Custom Discovery Clean',
             'audit.custom_discovery.clean.template': 'Custom Discovery clean for \'{adapter}\'',
 
+            'audit.connection_custom_discovery': 'Custom Discovery',
+            'audit.connection_custom_discovery.fetch': 'Custom Discovery Fetch',
+            'audit.connection_custom_discovery.fetch.template': 'Custom Discovery fetch for \'{adapter}\' '
+                                                                'with connection ID {client_id}',
+            'audit.connection_custom_discovery.clean': 'Custom Discovery Clean',
+            'audit.connection_custom_discovery.clean.template': 'Custom Discovery clean for \'{adapter}\'',
 
             'audit.getting_started': 'Getting Started',
             'audit.getting_started.complete_phase': 'Getting Started Phase Completed',

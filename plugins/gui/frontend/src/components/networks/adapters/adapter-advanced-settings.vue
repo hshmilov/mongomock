@@ -108,7 +108,7 @@ export default {
       .item_repeat_every input {
         width: 200px;
       }
-      
+
       .ant-form-item .repeat_on_select {
         width: 400px;
       }

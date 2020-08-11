@@ -1,8 +1,8 @@
 """
 Get access to important utilities of core
 """
-from typing import List, Optional
-
+from typing import List, Optional, Tuple, Dict
+import re
 from pymongo import MongoClient
 
 from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, GUI_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, \
@@ -26,12 +26,29 @@ class AxoniusPlugins:
         """
         Get plugin names that contain specific config. e.g.
 
-        get_plugin_names_with_config('DiscoverySchema', {'enabled': True, 'o': True}) == ['aws_adapter', 'esx_adapter']
+        get_plugin_names_with_config('DiscoverySchema',
+        {'adapter_discovery.enabled': True, 'o': True}) == ['aws_adapter', 'esx_adapter']
         """
         return self.configurable_configs_general.get_plugin_names_with_config(config_name, config)
 
     def get_plugin_settings(self, plugin_name: str):
         return PluginSettings(self.__db, plugin_name)
+
+    def get_plugin_config_and_schema(self, config_name: str, plugin_unique_name: str) -> Tuple[Dict, Dict]:
+        """
+        :param config_name: the plugin's config name. e.g DiscoverySchema
+        :param plugin_unique_name: str
+        :return: return plugin schema and config
+        """
+        if re.search(r'_(\d+)$', plugin_unique_name):
+            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+        else:
+            plugin_name = plugin_unique_name
+
+        schema = self.get_plugin_settings(plugin_name).config_schemas[config_name]
+        config = self.get_plugin_settings(plugin_name).configurable_configs[config_name]
+
+        return config, schema
 
 
 class AxoniusPlugin:

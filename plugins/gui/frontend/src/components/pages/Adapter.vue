@@ -22,16 +22,16 @@
               @click="removeConnection"
             >Delete</XButton>
             <XButton
-              type="primary"
               id="new_connection"
+              type="primary"
               :disabled="!canAdd"
               @click="configConnection('new')"
             >Add Connection</XButton>
           </template>
           <XTable
-            type="primary"
             slot="table"
             v-model="selectedServersModel"
+            type="primary"
             :fields="tableFields"
             :on-click-row="canUpdate ? configConnection : undefined"
             :data="adapterClients"
@@ -71,6 +71,7 @@
             && serverModal.serverData && serverModal.uuid && serverModal.open"
           size="lg"
           class="config-server"
+          :class="{'fixed-size': connectionDiscoveryEnabled}"
           @close="toggleServerModal"
           @confirm="saveServer"
         >
@@ -90,54 +91,51 @@
                 <XIcon type="question-circle" />Help
               </XButton>
             </XTitle>
-            <div
-              v-if="serverModal.error"
-              class="server-error"
-            >
-              <XIcon
-                family="symbol"
-                type="error"
-              />
-              <div class="error-text">
-                {{ serverModal.error }}
-              </div>
-            </div>
-            <XForm
-              v-model="serverModal.serverData"
-              :schema="adapterSchema"
-              :api-upload="uploadFileEndpoint"
+            <template v-if="connectionDiscoveryEnabled">
+              <ATabs
+                default-active-key="1"
+                :centered="true"
+                :animated="false"
+              >
+                <TabPane
+                  key="1"
+                  tab="Connection Configuration"
+                >
+                  <XAdapterClientConnection
+                    v-model="serverModal"
+                    :adapter-schema="adapterSchema"
+                    :error="connectionLabelError"
+                    :require-connection-label="requireConnectionLabel"
+                    :adapter-id="adapterId"
+                    @errorUpdate="updateErrorLabel"
+                    @validate="validateServer"
+                  />
+                </TabPane>
+                <TabPane
+                  key="2"
+                  tab="Scheduling Configuration"
+                >
+                  <div class="discovery-configuration">
+                    <XForm
+                      v-model="serverModal.serverData.connection_discovery"
+                      :schema="connectionDiscoverySchema"
+                      :error="connectionLabelError"
+                      @validate="validateConnectionDiscovery"
+                    />
+                  </div>
+                </TabPane>
+              </ATabs>
+            </template>
+            <XAdapterClientConnection
+              v-else
+              v-model="serverModal"
+              :adapter-schema="adapterSchema"
               :error="connectionLabelError"
-              :passwords-vault-enabled="isPasswordVaultEnabled"
-              @submit="saveServer"
+              :require-connection-label="requireConnectionLabel"
+              :adapter-id="adapterId"
+              @errorUpdate="updateErrorLabel"
               @validate="validateServer"
             />
-            <div class="double-column">
-              <div>
-                <label for="connectionLabel">
-                  Connection Label
-                  <div
-                    v-if="!requireConnectionLabel"
-                    class="hint"
-                  >optional</div>
-                </label>
-                <input
-                  id="connectionLabel"
-                  v-model="serverModal.connectionLabel"
-                  type="text"
-                  :class="{ 'error-border': showConnectionLabelBorder }"
-                  :maxlength="50"
-                  @input="onConnectionLabelInput"
-                  @blur="onConnectionLabelBlur"
-                >
-              </div>
-              <XInstancesSelect
-                id="serverInstance"
-                v-model="serverModal.instanceId"
-                :render-label="true"
-                render-label-text="Choose Instance"
-                :hide-in-one-option="true"
-              />
-            </div>
           </div>
           <template slot="footer">
             <XButton
@@ -145,15 +143,15 @@
               @click="toggleServerModal"
             >Cancel</XButton>
             <XButton
-              type="primary"
               id="test_reachability"
-              :disabled="!serverModal.valid || !connectionLabelValid"
+              type="primary"
+              :disabled="!serverModal.valid || !serverModal.connectionValid || !connectionLabelValid"
               @click="testServer"
             >Test Reachability</XButton>
             <XButton
-              type="primary"
               id="save_server"
-              :disabled="!serverModal.valid || !connectionLabelValid"
+              type="primary"
+              :disabled="!serverModal.valid || !serverModal.connectionValid || !connectionLabelValid"
               @click="saveServer"
             >Save and Connect</XButton>
           </template>
@@ -191,6 +189,7 @@
 <script>
 import { mapActions, mapGetters, mapState } from 'vuex';
 import _get from 'lodash/get';
+import _set from 'lodash/set';
 import XIcon from '@axons/icons/Icon';
 import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
@@ -210,16 +209,16 @@ import {
   SAVE_ADAPTER_CLIENT,
   TEST_ADAPTER_SERVER,
   LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
+  LOAD_ADAPTER_CONFIG,
 } from '@store/modules/adapters';
 import XForm from '@neurons/schema/Form.vue';
 import XAdapterAdvancedSettings from '@networks/adapters/adapter-advanced-settings.vue';
-import { Icon } from 'ant-design-vue';
-
+import { Icon, Tabs as ATabs } from 'ant-design-vue';
 
 import { tunnelConnectionStatuses } from '@constants/settings';
 import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
-import { XInstancesSelect } from '../axons/inputs/dynamicSelects';
+import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
 
 export default {
   name: 'XAdapter',
@@ -232,11 +231,13 @@ export default {
     XButton,
     XTitle,
     XToast,
-    XInstancesSelect,
     AIcon: Icon,
     XIcon,
     XAdapterAdvancedSettings,
     XAdapterTunnelConnectionMessage,
+    ATabs,
+    TabPane: ATabs.TabPane,
+    XAdapterClientConnection,
   },
   data() {
     return {
@@ -261,6 +262,7 @@ export default {
       deleting: false, // whether or not the modal for deleting confirmation is displayed
       deleteEntities: false, // if 'deleting = true' and deleting was confirmed this means that
       // also the entities of the associated users should be deleted
+      connectionDiscoverySchema: null,
     };
   },
   computed: {
@@ -283,6 +285,16 @@ export default {
       },
       tunnelStatus(state) {
         return _get(state, 'dashboard.lifecycle.data.tunnelStatus', tunnelConnectionStatuses.notAvailable);
+      },
+      connectionDiscoveryEnabled(state) {
+        return _get(state.settings,
+          `configurable.${this.adapterId}.DiscoverySchema.config.connection_discovery`,
+          false) || this.adapterConnectionDiscoveryEnabled;
+      },
+      defaultConnectionDiscovery(state) {
+        return _get(state.settings,
+          `configurable.${this.adapterId}.DiscoverySchema.config.adapter_discovery`,
+          {});
       },
     }),
     connectionLabelValid() {
@@ -372,8 +384,8 @@ export default {
         ...this.adapterSchema.items.filter((field) => (field.type !== 'file' && field.format !== 'password')),
       ];
     },
-    uploadFileEndpoint() {
-      return `adapters/${this.adapterId}/${this.serverModal.instanceId}`;
+    isSpecificConnectionDiscoverySet() {
+      return _get(this.serverModal, 'serverData.connection_discovery.enabled', null);
     },
   },
   watch: {
@@ -384,18 +396,34 @@ export default {
        */
       this.setDefaultInstance();
     },
+    isSpecificConnectionDiscoverySet(value, oldValue) {
+      if (value && oldValue === false) {
+        /**
+         *  Settings the current adapter default settings when
+         *  enabling connection discovery for the first time.
+         */
+        _set(this.serverModal, 'serverData.connection_discovery', {
+          ...this.defaultConnectionDiscovery,
+          enabled: true,
+        });
+      }
+    },
   },
   async created() {
     this.fetchConfig();
     this.hintAdapterUp(this.adapterId);
     await this.lazyFetchAdapters();
-    const { settings } = await this.fetchAdapterConnections(this.adapterId);
+    const { settings, connectionDiscoverySchema } = await this.fetchAdapterConnections(this.adapterId);
     this.useTunnelSetting = settings.connect_via_tunnel;
+    this.connectionDiscoverySchema = connectionDiscoverySchema;
+    await this.loadAdapterConfig({
+      pluginId: this.adapterId,
+      configName: 'DiscoverySchema',
+    });
     this.loading = false;
     await this.lazyFetchConnectionLabels();
     this.setDefaultInstance();
   },
-
   methods: {
     ...mapActions({
       fetchAdapterConnections: FETCH_ADAPTER_CONNECTIONS,
@@ -407,6 +435,7 @@ export default {
       hintAdapterUp: HINT_ADAPTER_UP,
       fetchConfig: FETCH_SYSTEM_CONFIG,
       lazyFetchConnectionLabels: LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
+      loadAdapterConfig: LOAD_ADAPTER_CONFIG,
     }),
     openHelpLink() {
       window.open(this.adapterLink, '_blank');
@@ -414,10 +443,14 @@ export default {
     configConnection(clientId) {
       this.message = '';
       this.serverModal.valid = true;
+      this.serverModal.connectionValid = true;
       if (clientId === 'new') {
         this.serverModal = {
           ...this.serverModal,
-          serverData: {},
+          serverData: {
+            client_config: {},
+            connection_discovery: { enabled: false },
+          },
           serverName: 'New Server',
           uuid: clientId,
           error: '',
@@ -427,7 +460,15 @@ export default {
         const client = this.adapterClients.find((c) => c.uuid === clientId);
         this.serverModal = {
           ...this.serverModal,
-          serverData: { ...client.client_config },
+          serverData: {
+            client_config: {
+              ...client.client_config,
+            },
+            connection_discovery: {
+              ...this.defaultConnectionDiscovery,
+              ...client.connection_discovery,
+            },
+          },
           instanceIdPrev: client.node_id,
           instanceId: client.node_id,
           serverName: client.client_id,
@@ -438,7 +479,7 @@ export default {
         };
         if (client.error && client.error !== '' && client.error.includes('_vault_error')) {
           const { field, error } = parseVaultError(client.error);
-          this.serverModal.serverData[field].error = error;
+          this.serverModal.serverData.client_config[field].error = error;
           this.serverModal.error = error;
         }
       }
@@ -467,20 +508,15 @@ export default {
     },
     validateServer(valid) {
       this.serverModal.valid = valid;
-
       if (!valid) {
         this.connectionLabelError = '';
       }
     },
-    onConnectionLabelInput() {
-      if (this.requireConnectionLabel && this.serverModal.connectionLabel) {
-        this.showConnectionLabelBorder = false;
-        this.connectionLabelError = '';
-      }
+    validateConnectionDiscovery(valid) {
+      this.serverModal.connectionValid = valid;
     },
-    onConnectionLabelBlur() {
-      this.showConnectionLabelBorder = !this.connectionLabelValid;
-      this.connectionLabelError = this.connectionLabelValid ? '' : 'Connection Label is required';
+    updateErrorLabel(value) {
+      this.connectionLabelError = value;
     },
     saveServer() {
       this.message = 'Connecting to Server...';
@@ -753,5 +789,32 @@ export default {
     #connectionLabel.error-border {
       border: 1px solid $indicator-error;
     }
+
+    .discovery-configuration > .x-form > .x-array-edit .list {
+      grid-template-columns: 1fr;
+
+      .item_repeat_every input {
+        width: 200px;
+      }
+
+      .item_system_research_rate input {
+        width: 200px;
+      }
+
+      .ant-form-item .repeat_on_select {
+        width: 400px;
+      }
+    }
+
+    .configuration .item_system_research_rate input {
+      width: 200px;
+    }
+
+    .fixed-size {
+      .modal-body {
+        height: 500px;
+      }
+    }
+
   }
 </style>

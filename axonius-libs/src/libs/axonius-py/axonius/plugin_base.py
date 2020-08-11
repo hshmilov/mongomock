@@ -101,8 +101,9 @@ from axonius.consts.plugin_consts import (
     CYBERARK_CERT_KEY, CYBERARK_DOMAIN, CYBERARK_PORT, UPDATE_CLIENTS_STATUS,
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
-    TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY,
-    NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS, PASSWORD_EXPIRATION_DAYS)
+    TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
+    ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS,
+    PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -1275,17 +1276,68 @@ class PluginBase(Configurable, Feature, ABC):
             in self.core_configs_collection.find(filter_)
         }
 
-    def filter_out_custom_discovery_adapters(self, adapters: List[dict]):
+    def filter_out_custom_discovery_adapters(self, adapters: List[dict], job_name: str) -> Tuple[Dict, List[str]]:
         all_plugins_with_custom_discovery_enabled = self.plugins.get_plugin_names_with_config(
             DISCOVERY_CONFIG_NAME,
             {
-                ENABLE_CUSTOM_DISCOVERY: True
+                f'{ADAPTER_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
             }
         )
 
-        for adapter in adapters:
-            if not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
-                yield adapter
+        all_plugins_with_custom_connection_discovery_enabled = self.plugins.get_plugin_names_with_config(
+            DISCOVERY_CONFIG_NAME,
+            {
+                CONNECTION_DISCOVERY: True
+            }
+        )
+        try:
+            for adapter in adapters:
+                if (not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled) and\
+                        (not adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled):
+                    yield adapter, None
+                if job_name == 'clean_db':
+                    total_clients_without_custom_discovery =\
+                        self.get_adapter_number_of_clients_without_custom_discovery(adapter[PLUGIN_UNIQUE_NAME])
+                    # If all adapter clients, has a custom discovery set up, the adapter should be cleaned up upon
+                    # global discovery because it won't be triggered on custom adapter discovery job trigger.
+                    if total_clients_without_custom_discovery == 0:
+                        yield adapter, None
+                    # If not all clients has custom discovery, the adapter should be cleaned only if it's not has
+                    # custom discovery configured.
+                    elif (total_clients_without_custom_discovery > 0) and\
+                            (not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled):
+                        yield adapter, None
+                else:
+                    if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
+                        # Get all adapters connections, without custom discovery set up.
+                        clients = self.get_adapter_clients_without_custom_discovery(adapter[PLUGIN_UNIQUE_NAME])
+                        if clients.count() > 0 and\
+                                not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
+                            yield adapter, [client[CLIENT_ID] for client in clients]
+                        elif not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
+                            # if adapter has no connection with custom discovery, trigger it
+                            # only if the adapter doesn't have custom discovery configured.
+                            yield adapter, None
+        except Exception as e:
+            logger.exception(f'Error while filtering out adapters: {str(e)}')
+
+    def get_adapter_number_of_clients_without_custom_discovery(self, adapter_unique_name: str) -> List[Dict]:
+        """
+        :param adapter_unique_name: Adapter unique name
+        :return: Returns the amount of clients in adapter
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({
+            f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': False
+        })
+
+    def get_adapter_clients_without_custom_discovery(self, adapter_unique_name: str) -> List[Dict]:
+        """
+        :param adapter_unique_name: Adapter unique name
+        :return: Returns the amount of clients in adapter
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].find({
+            f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': False
+        }, projection={CLIENT_ID: 1})
 
     @singlethreaded()
     @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=10), lock=threading.Lock())

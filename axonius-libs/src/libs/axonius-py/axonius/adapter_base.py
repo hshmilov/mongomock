@@ -42,9 +42,10 @@ from axonius import adapter_exceptions
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
     SYSTEM_SCHEDULER_PLUGIN_NAME, NODE_ID, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, \
-    DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_RESEARCH_DATE_TIME, INSTANCE_CONTROL_PLUGIN_NAME, \
-    GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
-    CSV_IP_LOCATION_FILE, WEEKDAYS
+    DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE, DISCOVERY_RESEARCH_DATE_TIME,\
+    INSTANCE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
+    CSV_IP_LOCATION_FILE, CONNECTION_DISCOVERY, CONNECTION_DISCOVERY_SCHEMA_NAME, WEEKDAYS, \
+    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -106,6 +107,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         self._update_clients_schema_in_db(self._clients_schema())
         self._update_discovery_schema()
+        self._update_client_connection_discovery_schema()
         self._set_clients_ids()
         # If set, we do not re-evaluate the clients connections
         should_not_refresh_clients = self.plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS]
@@ -137,6 +139,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     @__last_fetch_time.setter
     def __last_fetch_time(self, val: datetime):
         self.plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME] = val
+
+    @property
+    def __connection_last_fetch_time(self, client_id) -> Optional[datetime]:
+        return self._clients_collection.find_one({
+            CLIENT_ID: client_id
+        }, projection={f'{CONNECTION_DISCOVERY}.{LAST_FETCH_TIME}': 1})
 
     def _on_config_update(self, config):
         logger.info(f'Loading AdapterBase config: {config}')
@@ -256,7 +264,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 try:
                     for client in configured_clients:
                         # client id from DB not sent to verify it is updated
-                        self._add_client(client['client_config'], client['_id'])
+                        self._add_client(client['client_config'], client.get(CONNECTION_DISCOVERY),
+                                         client.get(LAST_FETCH_TIME), client['_id'])
                 except Exception:
                     logger.exception('Error while loading clients from config')
                     if blocking:
@@ -392,7 +401,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         }
 
     # pylint: disable=R1710,too-many-branches
-    def _handle_insert_to_db_async(self, client_name, check_fetch_time, log_fetch=True):
+    def _handle_insert_to_db_async(self, client_name, check_fetch_time, log_fetch=True,
+                                   connection_custom_discovery=False, connection_saved=False):
         """
         Handles all asymmetric fetching of devices data, by creating a threadpool to handle each fetch in a
         different thread, please notice that it only fetches the data asynchronously but parse in synchronously.
@@ -402,24 +412,34 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         data = {}
         try:
             if self.plugin_name in THREAD_SAFE_ADAPTERS:
-                return (yield from self._handle_insert_to_db_async_thread_safe(client_name, check_fetch_time,
-                                                                               log_fetch=log_fetch))
+                return (
+                    yield from self._handle_insert_to_db_async_thread_safe(
+                        client_name, check_fetch_time, log_fetch=log_fetch,
+                        connection_custom_discovery=connection_custom_discovery,
+                        connection_saved=connection_saved))
             if isinstance(client_name, list):
                 for client in client_name:
-                    data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
-                                                                             parse_after_fetch=True,
-                                                                             log_fetch=log_fetch)]
+                    data[client] = [x['raw'] for x in self.insert_data_to_db(
+                        client, check_fetch_time=check_fetch_time,
+                        parse_after_fetch=True,
+                        log_fetch=log_fetch,
+                        connection_custom_discovery=connection_custom_discovery)]
             elif client_name is None:
                 # Probably realtime adapter with system_scheduler trigger
                 for client in self._clients:
-                    data[client] = [x['raw'] for x in self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
-                                                                             parse_after_fetch=True,
-                                                                             log_fetch=log_fetch)]
+                    data[client] = [x['raw'] for x in self.insert_data_to_db(
+                        client, check_fetch_time=check_fetch_time,
+                        parse_after_fetch=True,
+                        log_fetch=log_fetch,
+                        connection_custom_discovery=connection_custom_discovery)]
             else:
-                data[client_name] = [x['raw'] for x in self.insert_data_to_db(client_name,
-                                                                              check_fetch_time=check_fetch_time,
-                                                                              parse_after_fetch=True,
-                                                                              log_fetch=log_fetch)]
+                data[client_name] = [x['raw'] for x in self.insert_data_to_db(
+                    client_name,
+                    check_fetch_time=check_fetch_time,
+                    parse_after_fetch=True,
+                    log_fetch=log_fetch,
+                    connection_custom_discovery=connection_custom_discovery,
+                    connection_saved=connection_saved)]
             time_before_query = datetime.now()
             results = list(concurrent_multiprocess_yield([y for x in data for y in data[x] if y[0]],
                                                          DEFAULT_PARALLEL_COUNT))
@@ -459,7 +479,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # pylint: disable=W0631
             logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
-    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time, log_fetch=True):
+    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time, log_fetch=True,
+                                               connection_custom_discovery=False, connection_saved=False):
         data = {}
         finished = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_ASYNC_FETCH_WORKERS) as executor:
@@ -467,7 +488,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 if isinstance(client_name, list):
                     for client in client_name:
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
-                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
+                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch,
+                                             connection_custom_discovery=connection_custom_discovery)] = client
                 elif client_name is None:
                     # Probably realtime adapter with system_scheduler trigger
                     for client in self._clients:
@@ -475,7 +497,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                              parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
                 else:
                     data[executor.submit(self.insert_data_to_db, client_name, check_fetch_time=check_fetch_time,
-                                         parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client_name
+                                         parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch,
+                                         connection_custom_discovery=connection_custom_discovery,
+                                         connection_saved=connection_saved)] = client_name
 
                 # Wait until all fetches finish
                 for client in concurrent.futures.as_completed(data):
@@ -511,6 +535,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # pylint: disable=too-many-nested-blocks
         if job_name == 'insert_to_db':
             client_name = post_json and post_json.get('client_name')
+            connection_custom_discovery = post_json and post_json.get('connection_custom_discovery')
+            connection_saved = post_json and post_json.get('connection_saved', False)
             if self._connect_via_tunnel:
                 res = self._trigger_remote_plugin(
                     INSTANCE_CONTROL_PLUGIN_NAME,
@@ -546,8 +572,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                'users_count': 0
                                }
                         fetch_start_time = datetime.utcnow()
-                        for client, result in self._handle_insert_to_db_async(client_name, check_fetch_time,
-                                                                              log_fetch=log_fetch):
+                        for client, result in self._handle_insert_to_db_async(
+                                client_name, check_fetch_time, log_fetch=log_fetch,
+                                connection_custom_discovery=connection_custom_discovery,
+                                connection_saved=connection_saved):
                             if result != '':
                                 result = json.loads(result)
                                 res['devices_count'] += result['devices_count']
@@ -562,7 +590,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         res = to_json(res)
                     else:
                         res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
-                                                     log_fetch=log_fetch)
+                                                     log_fetch=log_fetch,
+                                                     connection_custom_discovery=connection_custom_discovery,
+                                                     connection_saved=connection_saved)
                 except adapter_exceptions.AdapterException:
                     logger.warning(f'Failed inserting data for client '
                                    f'{str(client_name)}', exc_info=True)
@@ -829,7 +859,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False,
-                          parse_after_fetch: bool = False, thread_safe: bool = False, log_fetch=True):
+                          parse_after_fetch: bool = False, thread_safe: bool = False,
+                          log_fetch=True, connection_custom_discovery=False, connection_saved=False):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
@@ -856,10 +887,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                          'warning')
             return to_json({'devices_count': 0, 'users_count': 0, 'min_time_check': True})
 
-        self.__last_fetch_time = current_time
+        # If this trigger is from custom connection discovery, need to update fetch_time.
+        if connection_custom_discovery or connection_saved:
+            if not client_name:
+                logger.exception(f'Can\'t trigger custom connection discovery without client name.')
+            else:
+                self.update_adapter_client_connection_fetch_time(client_name, current_time)
+        elif not connection_saved:
+            self.__last_fetch_time = current_time
+
         if client_name:
             devices_count = 0
             users_count = 0
+
             try:
                 if log_fetch:
                     self._log_activity_adapter_client_fetch_start(client_name)
@@ -990,6 +1030,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
                 request_data = self.get_request_data_as_object()
                 client_config = request_data['connection']
+                client_connection_discovery = request_data.get(CONNECTION_DISCOVERY)
+                last_fetch_time = request_data.get(LAST_FETCH_TIME)
                 if not client_config:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, metric_value='invalid client')
                     return return_error('Invalid client')
@@ -1001,7 +1043,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                metric_value=f'{err_msg} - {e if os.environ.get("PROD") == "false" else ""}')
                     logger.warning(f'{err_msg}', exc_info=True)
                     return return_error(err_msg)
-                add_client_result = self._add_client(client_config, connection_label=request_data.get(CONNECTION_LABEL))
+                add_client_result = self._add_client(client_config, client_connection_discovery, last_fetch_time,
+                                                     connection_label=request_data.get(CONNECTION_LABEL))
                 if not add_client_result:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                metric_value=f'_add_client failed for {client_id}')
@@ -1012,7 +1055,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 else:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                metric_value=add_client_result)
-                self.__last_fetch_time = None
+
+                adapter_custom_discovery = self.plugin_settings.configurable_configs\
+                    .discovery_configuration[ADAPTER_DISCOVERY][ENABLE_CUSTOM_DISCOVERY]
+
+                if not (adapter_custom_discovery or client_connection_discovery):
+                    self.__last_fetch_time = None
                 return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
@@ -1049,18 +1097,22 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 logger.info(f'No connected client {client_id} to remove')
             return '', 200
 
-    def _write_client_to_db(self, client_id, client_config, status, error_msg, upsert=True):
+    def _write_client_to_db(self, client_id, client_config, client_connection_discovery, last_fetch_time,
+                            status, error_msg, upsert=True):
         if client_id is not None:
             logger.info(f'Updating new client status in db - {status}. client id: {client_id}')
             return self._clients_collection.replace_one({'client_id': client_id},
                                                         {'client_id': client_id,
                                                          'client_config': client_config,
+                                                         CONNECTION_DISCOVERY: client_connection_discovery,
+                                                         LAST_FETCH_TIME: last_fetch_time,
                                                          'status': status,
                                                          'error': error_msg},
                                                         upsert=upsert)
         return None
 
-    def _add_client(self, client_config: dict, object_id=None, new_client=True, connection_label=None):
+    def _add_client(self, client_config: dict, client_connection_discovery: dict=None, last_fetch_time=None,
+                    object_id=None, new_client=True, connection_label=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
@@ -1077,10 +1129,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         error_msg = None
         encrypted_client_config = copy.deepcopy(client_config)
         self._encrypt_client_config(encrypted_client_config)
+
+        if not client_connection_discovery:
+            client_connection_discovery = self._connection_discovery_schema_default()
+
         try:
             client_id = self._get_client_id(client_config)
             # Writing initial client to db
-            res = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=new_client)
+            res = self._write_client_to_db(client_id, encrypted_client_config, client_connection_discovery,
+                                           last_fetch_time, status, error_msg, upsert=new_client)
             if res.matched_count == 0 and not new_client:
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
@@ -1102,7 +1159,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             logger.error(f'Got error while handling client {id_for_log} - '
                          f'possibly compliance problem with schema.')
 
-        result = self._write_client_to_db(client_id, encrypted_client_config, status, error_msg, upsert=False)
+        result = self._write_client_to_db(client_id, encrypted_client_config, client_connection_discovery,
+                                          last_fetch_time, status, error_msg, upsert=False)
         if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
@@ -2014,8 +2072,104 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         return {
             'items': [
                 {
+                    'items': [
+                        {
+                            'name': ENABLE_CUSTOM_DISCOVERY,
+                            'title': 'Enable custom discovery schedule',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_TYPE,
+                            'title': 'Repeat scheduled discovery',
+                            'enum': [
+                                {
+                                    'name': DISCOVERY_REPEAT_RATE,
+                                    'title': 'Every x hours'
+                                },
+                                {
+                                    'name': DISCOVERY_REPEAT_EVERY_DAY,
+                                    'title': 'Every x days'
+                                },
+                                {
+                                    'name': DISCOVERY_REPEAT_ON_WEEKDAYS,
+                                    'title': 'Days of week'
+                                }
+                            ],
+                            'type': 'string'
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_RATE,
+                            'title': 'Repeat scheduled discovery every (hours)',
+                            'type': 'number',
+                            'max': 24 * 365  # Up to a year
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_EVERY_DAY,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': DISCOVERY_REPEAT_EVERY,
+                                    'title': 'Repeat scheduled discovery every (days)',
+                                    'type': 'number'
+                                },
+                                {
+                                    'name': DISCOVERY_RESEARCH_DATE_TIME,
+                                    'title': 'Scheduled discovery time',
+                                    'type': 'string',
+                                    'format': 'time'
+                                }
+                            ],
+                            'required': [DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY]
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_ON_WEEKDAYS,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': DISCOVERY_REPEAT_ON,
+                                    'title': 'Repeat scheduled discovery on',
+                                    'type': 'array',
+                                    'items': {
+                                        'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
+                                        'type': 'string'
+                                    }
+                                },
+                                {
+                                    'name': DISCOVERY_RESEARCH_DATE_TIME,
+                                    'title': 'Scheduled discovery time',
+                                    'type': 'string',
+                                    'format': 'time'
+                                },
+                            ],
+                            'required': [DISCOVERY_REPEAT_ON, DISCOVERY_RESEARCH_DATE_TIME]
+                        }
+                    ],
+                    'name': ADAPTER_DISCOVERY,
+                    'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE,
+                                 DISCOVERY_REPEAT_RATE],
+                    'type': 'array'
+                },
+                {
+                    'name': CONNECTION_DISCOVERY,
+                    'title': 'Enable separate custom discovery schedule for each adapter connection',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                ADAPTER_DISCOVERY,
+                CONNECTION_DISCOVERY
+            ],
+            'type': 'array',
+            'pretty_name': 'Discovery Configuration',
+        }
+
+    @classmethod
+    def _connection_discovery_schema(cls) -> dict:
+        return {
+            'items': [
+                {
                     'name': ENABLE_CUSTOM_DISCOVERY,
-                    'title': 'Enable custom discovery schedule',
+                    'title': 'Enable custom scheduling',
                     'type': 'bool'
                 },
                 {
@@ -2023,55 +2177,107 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'title': 'Repeat scheduled discovery',
                     'enum': [
                         {
-                            'name': DISCOVERY_REPEAT_EVERY,
+                            'name': DISCOVERY_REPEAT_RATE,
+                            'title': 'Every x hours'
+                        },
+                        {
+                            'name': DISCOVERY_REPEAT_EVERY_DAY,
                             'title': 'Every x days'
                         },
                         {
-                            'name': DISCOVERY_REPEAT_ON,
+                            'name': DISCOVERY_REPEAT_ON_WEEKDAYS,
                             'title': 'Days of week'
                         }
                     ],
                     'type': 'string'
                 },
                 {
-                    'name': DISCOVERY_REPEAT_EVERY,
-                    'title': 'Repeat scheduled discovery every (days)',
-                    'type': 'number'
+                    'name': DISCOVERY_REPEAT_RATE,
+                    'title': 'Repeat scheduled discovery every (hours)',
+                    'type': 'number',
+                    'max': 24 * 365  # Up to a year
                 },
                 {
-                    'name': DISCOVERY_REPEAT_ON,
-                    'title': 'Repeat scheduled discovery on',
+                    'name': DISCOVERY_REPEAT_EVERY_DAY,
                     'type': 'array',
-                    'items': {
-                        'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
-                        'type': 'string'
-                    }
+                    'items': [
+                        {
+                            'name': DISCOVERY_REPEAT_EVERY,
+                            'title': 'Repeat scheduled discovery every (days)',
+                            'type': 'number'
+                        },
+                        {
+                            'name': DISCOVERY_RESEARCH_DATE_TIME,
+                            'title': 'Scheduled discovery time',
+                            'type': 'string',
+                            'format': 'time'
+                        }
+                    ],
+                    'required': [DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY]
                 },
                 {
-                    'name': DISCOVERY_RESEARCH_DATE_TIME,
-                    'title': 'Scheduled discovery time',
-                    'type': 'string',
-                    'format': 'time'
+                    'name': DISCOVERY_REPEAT_ON_WEEKDAYS,
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': DISCOVERY_REPEAT_ON,
+                            'title': 'Repeat scheduled discovery on',
+                            'type': 'array',
+                            'items': {
+                                'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
+                                'type': 'string'
+                            }
+                        },
+                        {
+                            'name': DISCOVERY_RESEARCH_DATE_TIME,
+                            'title': 'Scheduled discovery time',
+                            'type': 'string',
+                            'format': 'time'
+                        },
+                    ],
+                    'required': [DISCOVERY_REPEAT_ON, DISCOVERY_RESEARCH_DATE_TIME]
                 }
             ],
-            'pretty_name': 'Discovery Configuration',
-            'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_TYPE,
-                         DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_ON],
+            'pretty_name': 'Connection Discovery Configuration',
+            'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE,
+                         DISCOVERY_REPEAT_RATE],
             'type': 'array'
         }
 
     @classmethod
     def _discovery_schema_default(cls) -> dict:
         return {
-            ENABLE_CUSTOM_DISCOVERY: False,
-            DISCOVERY_RESEARCH_DATE_TIME: '13:00',
-            DISCOVERY_REPEAT_TYPE: DISCOVERY_REPEAT_EVERY,
-            DISCOVERY_REPEAT_EVERY: 1,
-            DISCOVERY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
+            ADAPTER_DISCOVERY: {
+                ENABLE_CUSTOM_DISCOVERY: False,
+                DISCOVERY_REPEAT_RATE: 12,
+                DISCOVERY_REPEAT_TYPE: DISCOVERY_REPEAT_EVERY_DAY,
+                DISCOVERY_REPEAT_EVERY_DAY: {
+                    DISCOVERY_REPEAT_EVERY: 1,
+                    DISCOVERY_RESEARCH_DATE_TIME: '13:00',
+                },
+                DISCOVERY_REPEAT_ON_WEEKDAYS: {
+                    DISCOVERY_REPEAT_ON: [day.lower() for day in WEEKDAYS],
+                    DISCOVERY_RESEARCH_DATE_TIME: '13:00',
+                }
+            },
+            CONNECTION_DISCOVERY: False
+        }
+
+    @classmethod
+    def _connection_discovery_schema_default(cls) -> dict:
+        return {
+            ENABLE_CUSTOM_DISCOVERY: False
         }
 
     def _update_discovery_schema(self):
         self.update_schema(DISCOVERY_CONFIG_NAME, self._discovery_schema(), self._discovery_schema_default())
+
+    def _update_client_connection_discovery_schema(self):
+        """
+        Updating the generic db schema of connection discovery settings.
+        :return:
+        """
+        self.plugin_settings.generic_schemas[CONNECTION_DISCOVERY_SCHEMA_NAME] = self._connection_discovery_schema()
 
     def _log_activity_connection_failure(self, client_id: str, connection_exception: Exception):
         """
@@ -2139,3 +2345,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         except Exception:
             logger.exception(f'Error logging audit for client name {client_name}')
+
+    def update_adapter_client_connection_fetch_time(self, client_id: str, fetch_time: datetime):
+        """
+            :param client_id Client connection id
+            :param fetch_time
+            :return: Returns the amount of clients in adapter
+        """
+        return self._clients_collection.update_one(
+            {
+                'client_id': client_id
+            },
+            {
+                '$set': {
+                    f'{LAST_FETCH_TIME}': fetch_time
+                }
+            })

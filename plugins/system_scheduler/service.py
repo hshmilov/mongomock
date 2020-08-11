@@ -7,7 +7,7 @@ from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Set, Dict, Iterator, List
+from typing import Set, Dict, Iterator, List, Tuple
 from dateutil import tz
 import requests
 
@@ -18,10 +18,11 @@ from apscheduler.triggers.base import BaseTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify
+from promise import Promise
 
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import LAST_FETCH_TIME, ADAPTER_PLUGIN_TYPE
+from axonius.consts.adapter_consts import LAST_FETCH_TIME, ADAPTER_PLUGIN_TYPE, CLIENT_ID
 from axonius.consts.gui_consts import RootMasterNames
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
@@ -35,7 +36,9 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          AGGREGATOR_PLUGIN_NAME, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
+                                          AGGREGATOR_PLUGIN_NAME, DISCOVERY_REPEAT_RATE, CONNECTION_DISCOVERY,
+                                          ADAPTER_DISCOVERY, DISCOVERY_REPEAT_ON_WEEKDAYS,
+                                          DISCOVERY_REPEAT_EVERY_DAY, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
                                           HISTORY_REPEAT_EVERY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
                                           HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS)
 from axonius.consts.plugin_subtype import PluginSubtype
@@ -78,7 +81,7 @@ class SystemSchedulerResearchMode(Enum):
     weekdays = 'system_research_weekdays'
 
 
-# pylint: disable=invalid-name, too-many-instance-attributes, too-many-branches, too-many-statements, no-member
+# pylint: disable=invalid-name, too-many-instance-attributes, too-many-branches, too-many-statements, no-member, too-many-lines
 class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
@@ -880,20 +883,38 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     @staticmethod
     def should_run_custom_discovery(discovery_config: dict, last_discovery: datetime) -> bool:
         """
-        Check if the given adapter should be triggered by the given discovery config
+        Check if the given adapter/client should be triggered by the given discovery config
         :param discovery_config: adapter custom discovery settings
-        :param last_discovery: last time the adapter was triggered
-        :return: True if we should trigger adapter fetch
+        :param last_discovery: last time the adapter/client was triggered
+        :return: True if we should trigger adapter/client fetch
         """
+        current_time = datetime.now().time()
+        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_RATE:
+            if not last_discovery:
+                return True
+            if int(((datetime.now() - last_discovery).seconds / 3600)) ==\
+                    discovery_config.get(DISCOVERY_REPEAT_RATE, 12):
+                return True
+            return False
+
+        discovery_type_config = None
+        run_on_weekdays = False
+        run_repeat_every_day = False
+        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_ON_WEEKDAYS:
+            run_on_weekdays = True
+            discovery_type_config = discovery_config.get(DISCOVERY_REPEAT_ON_WEEKDAYS)
+        elif discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_EVERY_DAY:
+            run_repeat_every_day = True
+            discovery_type_config = discovery_config.get(DISCOVERY_REPEAT_EVERY_DAY)
+
         # Check custom discovery time
         try:
             scheduled_custom_discovery_time = \
-                datetime.strptime(discovery_config.get(DISCOVERY_RESEARCH_DATE_TIME), '%H:%M').time()
+                datetime.strptime(discovery_type_config.get(DISCOVERY_RESEARCH_DATE_TIME), '%H:%M').time()
         except ValueError:
-            logger.error(f'Error parsing discovery time: {discovery_config.get(DISCOVERY_RESEARCH_DATE_TIME)}')
+            logger.error(f'Error parsing discovery time: {discovery_type_config.get(DISCOVERY_RESEARCH_DATE_TIME)}')
             return False
 
-        current_time = datetime.now().time()
         # its too early
         if current_time < scheduled_custom_discovery_time:
             return False
@@ -903,46 +924,116 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             return False
 
         # Check for weekday
-        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_ON:
+        if run_on_weekdays:
             today = datetime.today().strftime('%A').lower()
-            if today in discovery_config.get(DISCOVERY_REPEAT_ON, []):
+            if today in discovery_type_config.get(DISCOVERY_REPEAT_ON_WEEKDAYS, []):
                 if not last_discovery:
                     return True
                 if (datetime.now() - last_discovery).days > 0:
                     return True
 
         # Check for day diff
-        elif discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_EVERY:
+        elif run_repeat_every_day:
             if not last_discovery:
                 return True
-            if (datetime.now() - last_discovery).days == discovery_config.get(DISCOVERY_REPEAT_EVERY, 1):
+            if (datetime.now() - last_discovery).days == discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
                 return True
         return False
 
-    def get_custom_discovery_adapters(self) -> Iterator[dict]:
+    def get_custom_discovery_adapters(self) -> Iterator[Tuple[dict, List[Tuple[Tuple[Dict, bool]]]]]:
         """
         Get adapters that has custom discovery settings and should be triggered right now
-        :return:
+        :return: an iterator of Tuples, which contains the adapter, and it's clients that should be triggered
+        at this time (with custom discovery). Each client in the List, is a tuple of (Client, custom_discovery_set)
         """
         all_plugins_with_custom_discovery_enabled = self.plugins.get_plugin_names_with_config(
             DISCOVERY_CONFIG_NAME,
             {
-                ENABLE_CUSTOM_DISCOVERY: True
+                f'{ADAPTER_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
             }
         )
 
-        for adapter in self.core_configs_collection.find():
-            try:
-                if adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
-                    plugin_settings = self.plugins.get_plugin_settings(adapter[PLUGIN_NAME])
-                    config = plugin_settings.configurable_configs.discovery_configuration
+        all_plugins_with_custom_connection_discovery_enabled = self.plugins.get_plugin_names_with_config(
+            DISCOVERY_CONFIG_NAME,
+            {
+                CONNECTION_DISCOVERY: True
+            }
+        )
 
-                    if config:
-                        last_adapter_fetch_time = plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
-                        if self.should_run_custom_discovery(config, last_adapter_fetch_time):
-                            yield adapter
-            except Exception:
-                logger.exception(f'Error getting adapter {adapter[PLUGIN_UNIQUE_NAME]} custom discovery settings')
+        def _handle_connection_discovery(_adapter: Dict, adapter_config: Dict, _plugin_settings: Dict,
+                                         _should_trigger_adapter: bool) -> Tuple[Dict, List[Dict], List[Dict]]:
+            """
+            Function to filter which of the adapter's clients should be triggered.
+            :param _adapter: the adapter object.
+            :param adapter_config: The adapter's config from core db.
+            :param _plugin_settings: the adapter's plugin_settings object. (self.plugin_settings)
+            :param _should_trigger_adapter: is the adapter should be triggered now (with its custom discovery)
+            :return: first element of the tuple is the adapter, second - a list of clients with custom discovery
+            configured and last the clients which should be triggered along with the adapter discovery configurations.
+            """
+            # remove adapter that has clients with custom discovery, so we won't trigger twice.
+            if _adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
+                all_plugins_with_custom_discovery_enabled.remove(_adapter[PLUGIN_NAME])
+            _clients = self.get_adapter_clients(_adapter[PLUGIN_UNIQUE_NAME])
+
+            adapter_discovery_enabled = adapter_config.get(ENABLE_CUSTOM_DISCOVERY, False)
+            custom_discovery_clients_to_trigger = []
+            adapter_discovery_clients_to_trigger = []
+
+            for client in _clients:
+                _config = client.get(CONNECTION_DISCOVERY, {})
+                connection_discovery_enabled = _config.get(ENABLE_CUSTOM_DISCOVERY, False)
+
+                if connection_discovery_enabled:
+                    last_fetch_time = client.get(LAST_FETCH_TIME)
+                    if self.should_run_custom_discovery(_config, last_fetch_time):
+                        custom_discovery_clients_to_trigger.append((client, True))
+                elif adapter_discovery_enabled and _should_trigger_adapter:
+                    adapter_discovery_clients_to_trigger.append((client, False))
+
+            # All the adapter's clients will be triggered one by one.
+            # ￿So clients with custom discovery, won't be triggered twice.
+            if custom_discovery_clients_to_trigger or adapter_discovery_clients_to_trigger:
+                yield _adapter, custom_discovery_clients_to_trigger, adapter_discovery_clients_to_trigger
+
+        def _get_adapter_discovery_config(_adapter: Dict) -> Tuple[Dict, Dict]:
+            """
+            :param _adapter: the adapter doc from db
+            :return: Tuple of adapter's plugin_settings object and config from core db.
+            """
+            _plugin_settings = self.plugins.get_plugin_settings(_adapter[PLUGIN_NAME])
+            return _plugin_settings, _plugin_settings.configurable_configs.discovery_configuration[ADAPTER_DISCOVERY]
+
+        # pylint: disable=too-many-nested-blocks
+        if all_plugins_with_custom_discovery_enabled or all_plugins_with_custom_connection_discovery_enabled:
+            for adapter in self.core_configs_collection.find():
+                if (adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled) or\
+                        (adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled):
+                    should_trigger_adapter = False
+                    plugin_settings, config = _get_adapter_discovery_config(adapter)
+                    last_adapter_fetch_time = plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
+                    if self.should_run_custom_discovery(config, last_adapter_fetch_time):
+                        should_trigger_adapter = True
+
+                    num_of_clients_to_trigger = 0
+                    if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
+                        try:
+                            num_of_clients_to_trigger = self.get_adapter_clients_config_with_custom_discovery_count(
+                                adapter[PLUGIN_UNIQUE_NAME])
+                            if num_of_clients_to_trigger > 0:
+                                yield from _handle_connection_discovery(adapter,
+                                                                        config,
+                                                                        plugin_settings,
+                                                                        should_trigger_adapter)
+                        except Exception:
+                            logger.exception(
+                                f'Error filtering adapter {adapter[PLUGIN_UNIQUE_NAME]} custom connection discovery')
+                    if num_of_clients_to_trigger == 0 and adapter[PLUGIN_NAME]\
+                            in all_plugins_with_custom_discovery_enabled and should_trigger_adapter:
+                        yield adapter, None, None
+
+        else:
+            return []
 
     def __get_all_adapters(self):
         yield from self.core_configs_collection.find(
@@ -957,6 +1048,23 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: Returns the amount of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({})
+
+    def get_adapter_clients_config_with_custom_discovery_count(self, adapter_unique_name: str) -> List[Dict]:
+        """
+        :param adapter_unique_name: Adapter unique name
+        :return: Returns the amount of clients in adapter
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({
+            f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
+        })
+
+    def get_adapter_clients(self, adapter_unique_name: str) -> List[Dict]:
+        """
+        :param adapter_unique_name: Adapter unique name
+        :return: Returns the amount of clients in adapter
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION]\
+            .find({}, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1})
 
     def __check_adapter_clients_status(self):
         """
@@ -1030,36 +1138,117 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception('Error triggering realtime adapters')
         logger.debug('Finished RT cycle')
 
+    @staticmethod
+    def __promise_callback_wrapper(f, **kwargs):
+
+        def wrapper(*args):
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    def __trigger_specific_client(self, _adapter: Dict, _client: Dict, custom_discovery: bool):
+
+        def _specific_adapter_resolve_callback(*args, **kwargs):
+            _client_id = kwargs.get('client_id')
+            _custom_discovery = kwargs.get('connection_custom_discovery')
+            if _custom_discovery:
+                logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
+                             f'client: {_client_id} after custom discovery trigger.')
+            else:
+                logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
+                             f'client: {_client_id}')
+
+        def _specific_adapter_reject_callback(err, **kwargs):
+            _client_id = kwargs.get('client_id', {})
+            logger.exception(f'Failed fetching from {_client_id}', exc_info=err)
+
+        def _trigger_client(resolve, _):
+            try:
+                self._async_trigger_remote_plugin(_adapter[PLUGIN_UNIQUE_NAME], 'insert_to_db', data={
+                    'client_name': _client['client_id'],
+                    'connection_custom_discovery': custom_discovery
+                }).then(did_fulfill=self.__promise_callback_wrapper(_specific_adapter_resolve_callback,
+                                                                    client_id=_client['client_id'],
+                                                                    connection_custom_discovery=custom_discovery),
+                        did_reject=self.__promise_callback_wrapper(_specific_adapter_reject_callback,
+                                                                   client_id=_client['client_id'])) \
+                    .then(did_fulfill=resolve, did_reject=resolve)
+            except Exception:
+                logger.exception('Error triggering custom discovery adapter client')
+                resolve()
+
+        return Promise(_trigger_client)
+
     def __run_custom_discovery_adapters(self):
         adapters_to_call = list(self.get_custom_discovery_adapters())
         if not adapters_to_call:
             logger.debug('No adapters to call, not doing anything at all')
             return
-        logger.info('Starting Custom Discovery cycle')
+        logger.info(f'Starting Custom Discovery cycle with {len(adapters_to_call)} adapters: {adapters_to_call}')
 
         def inserted_to_db(*args, **kwargs):
-            logger.debug(f'{adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data')
+            _adapter = kwargs.get('adapter', {})
+            logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data')
             self._request_gui_dashboard_cache_clear()
             self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Clean, {
-                'adapter': adapter[PLUGIN_NAME]
+                'adapter': _adapter[PLUGIN_NAME]
             })
-            self._run_cleaning_phase([adapter[PLUGIN_UNIQUE_NAME]])
+            self._run_cleaning_phase([_adapter[PLUGIN_UNIQUE_NAME]])
             self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
             self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
             self._request_gui_dashboard_cache_clear()
 
-        def rejected(err):
-            logger.exception(f'Failed fetching from {adapter[PLUGIN_UNIQUE_NAME]}', exc_info=err)
+        def connection_custom_discovery_inserted_to_db(*args, **kwargs):
+            _adapter = kwargs.get('adapter', {})
+            logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} clients has finished fetching data')
+
+            self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
+            self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+            self._request_gui_dashboard_cache_clear()
+
+        def rejected(err, **kwargs):
+            _adapter = kwargs.get('adapter', {})
+            logger.exception(f'Failed fetching from {_adapter[PLUGIN_UNIQUE_NAME]}', exc_info=err)
 
         try:
-            adapter = {}
-            for adapter in adapters_to_call:
-                self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
-                    'adapter': adapter[PLUGIN_NAME]
-                })
-                self._async_trigger_remote_plugin(adapter[PLUGIN_UNIQUE_NAME],
-                                                  'insert_to_db').then(did_fulfill=inserted_to_db,
-                                                                       did_reject=rejected)
+            clients_trigger_promises = []
+            for adapter, clients_with_discovery, clients_without_discovery in adapters_to_call:
+                # When adapter has at least one connection with custom discovery enabled, all connections
+                # will be triggered separately so clients won't be triggered twice.
+                if clients_with_discovery or clients_without_discovery:
+                    logger.debug('triggering clients custom discovery')
+                    if clients_with_discovery:
+                        for client, custom_discovery_configured in clients_with_discovery:
+                            self.log_activity(AuditCategory.ConnectionCustomDiscovery, AuditAction.Fetch, {
+                                'adapter': adapter[PLUGIN_NAME],
+                                'client_id': client['client_id']
+                            })
+                            clients_trigger_promises.append(self.__trigger_specific_client(adapter, client, True))
+
+                    if clients_without_discovery:
+                        self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
+                            'adapter': adapter[PLUGIN_NAME]
+                        })
+                        for client, custom_discovery_configured in clients_without_discovery:
+                            clients_trigger_promises.append(self.__trigger_specific_client(adapter, client, False))
+
+                    # run clean phase only if adapter has custom discovery time configured, otherwise
+                    # just finalize trigger.
+                    # Wrapping with lambdas, to make a closure with the loop params.
+                    Promise.all(clients_trigger_promises).then(
+                        (lambda _adapter, _clients_without_discovery:
+                         lambda _: inserted_to_db(adapter=_adapter) if _clients_without_discovery
+                         else connection_custom_discovery_inserted_to_db(adapter=_adapter))
+                        (adapter, clients_without_discovery))
+                else:
+                    logger.debug('triggering adapter custom discovery')
+                    self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
+                        'adapter': adapter[PLUGIN_NAME]
+                    })
+                    # pylint: disable=line-too-long
+                    self._async_trigger_remote_plugin(adapter[PLUGIN_UNIQUE_NAME], 'insert_to_db')\
+                        .then(did_fulfill=self.__promise_callback_wrapper(inserted_to_db, adapter=adapter),
+                              did_reject=self.__promise_callback_wrapper(rejected, adapter=adapter))
         except Exception:
             logger.exception('Error triggering custom discovery adapters')
         logger.info('Finished Custom Discovery cycle')

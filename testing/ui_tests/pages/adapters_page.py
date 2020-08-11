@@ -2,6 +2,7 @@ import re
 import time
 from collections import namedtuple
 from copy import copy
+from datetime import datetime, timedelta
 import pytest
 
 from selenium.common.exceptions import NoSuchElementException
@@ -33,6 +34,7 @@ class AdaptersPage(EntitiesPage):
     TEST_CONNECTIVITY = 'Test Reachability'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=enabled]+div'
+    CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=connection_discovery]+div'
     REPEAT_DAYS = 'repeat_every'
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
@@ -64,6 +66,10 @@ class AdaptersPage(EntitiesPage):
     EDIT_INSTANCE_XPATH = '//div[@title=\'{instance_name}\']/parent::td/parent::tr'
     INSTANCE_DROPDOWN_CSS_SELECTED = '#serverInstance div.trigger-text'
     INSTANCE_DROPDOWN_CSS = '.x-dropdown #serverInstance'
+
+    CLIENT_DISCOVERY_CONFIGURATIONS_TAB = '//div[text()=\'Scheduling Configuration\']'
+    CLIENT_DISCOVERY_CONFIGURATIONS_FORM_CSS = '.ant-tabs-content .discovery-configuration'
+    CLIENT_DISCOVERY_ENABLED_CSS = '.discovery-configuration #enabled'
 
     INPUT_TYPE_PWD_VALUE = '********'
 
@@ -174,6 +180,9 @@ class AdaptersPage(EntitiesPage):
 
     def check_custom_discovery_schedule(self):
         self.driver.find_element_by_css_selector(self.CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
+
+    def check_custom_connection_discovery_schedule(self):
+        self.driver.find_element_by_css_selector(self.CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
 
     def change_custom_discovery_interval(self, days):
         self.fill_text_field_by_element_id(self.REPEAT_DAYS, days)
@@ -548,3 +557,62 @@ class AdaptersPage(EntitiesPage):
 
     def update_csv_connection_label(self, file_name, update_label):
         self.update_server_connection_label(CSV_NAME, 'File name', file_name, update_label)
+
+    @staticmethod
+    def set_discovery_time(minutes):
+        current_utc = datetime.utcnow()
+        timepicker_input = current_utc + timedelta(minutes=minutes)
+        return timepicker_input.time().strftime('%I:%M%p').lower()
+
+    def toggle_adapters_discovery_configurations(self, adapter_name, discovery_time=None, discovery_interval=None,
+                                                 toggle_connection=False):
+        self.switch_to_page()
+        self.wait_for_spinner_to_end()
+        self.click_adapter(adapter_name)
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        self.click_advanced_settings()
+        time.sleep(1.5)
+        self.click_discovery_configuration()
+        self.check_custom_discovery_schedule()
+        if toggle_connection:
+            self.check_custom_connection_discovery_schedule()
+
+        if discovery_time and discovery_interval:
+            self.fill_schedule_date(self.set_discovery_time(2))
+            self.change_custom_discovery_interval(1)
+        self.save_advanced_settings()
+
+    def toggle_adapters_connection_discovery(self, adapter_name):
+        self.switch_to_page()
+        self.wait_for_spinner_to_end()
+        self.click_adapter(adapter_name)
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        self.click_advanced_settings()
+        time.sleep(1.5)
+        self.click_discovery_configuration()
+        self.check_custom_connection_discovery_schedule()
+        time.sleep(1)
+        self.save_advanced_settings()
+
+    def toggle_adapter_client_connection_discovery(self, adapter_name, client_position, discovery_time,
+                                                   discovery_interval):
+        self.switch_to_page()
+        self.wait_for_spinner_to_end()
+        self.click_adapter(adapter_name)
+        self.wait_for_spinner_to_end()
+        self.wait_for_table_to_load()
+        self.click_edit_server(client_position)
+        self.wait_for_element_present_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB)
+        self.driver.find_element_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB).click()
+        self.wait_for_element_present_by_css(self.CLIENT_DISCOVERY_CONFIGURATIONS_FORM_CSS)
+        time.sleep(1)
+        self.driver.find_element_by_css_selector(self.CLIENT_DISCOVERY_ENABLED_CSS).click()
+        time.sleep(1)
+
+        if discovery_time and discovery_interval:
+            self.fill_schedule_date(self.set_discovery_time(2))
+            self.change_custom_discovery_interval(1)
+
+        self.click_save()

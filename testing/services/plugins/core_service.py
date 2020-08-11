@@ -20,9 +20,10 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     PASSWORD_MANGER_ENUM, CYBERARK_DOMAIN, CYBERARK_CERT_KEY, PASSWORD_MANGER_THYCOTIC_SS_VAULT, THYCOTIC_SS_HOST, \
     THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID, \
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
-    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON, HISTORY_REPEAT_EVERY, \
-    HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE, \
+    ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON, DISCOVERY_CONFIG_NAME, \
+    HISTORY_REPEAT_EVERY, HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE, \
     HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS
+
 
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
     CLIENT_ID, LEGACY_VAULT_PROVIDER
@@ -32,6 +33,7 @@ from axonius.entities import EntityType
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils import datetime
 from axonius.utils.encryption.mongo_encrypt import MONGO_MASTER_KEY_SIZE
+from axonius.modules.plugin_settings import Consts
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
@@ -1027,7 +1029,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         )
 
     @db_migration(raise_on_failure=False)
-    def _update_schema_verison_27(self):
+    def _update_schema_version_27(self):
         print(f'Updating to schema version 27 - historical schedule')
         configurable_configs = self.db.plugins.system_scheduler.configurable_configs
         if not configurable_configs[SCHEDULER_CONFIG_NAME]:
@@ -1053,6 +1055,32 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         }
 
         configurable_configs[SCHEDULER_CONFIG_NAME] = new_config
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_28(self):
+        print(f'Updating to schema version 28 - Update adapters discovery schema conditional new value')
+
+        self.db.client[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].update_many(
+            {
+                'config_name': DISCOVERY_CONFIG_NAME,
+                'config.adapter_discovery.conditional': 'repeat_every'
+            },
+            {
+                '$set': {
+                    'config.adapter_discovery.conditional': 'system_research_date'
+                }
+            })
+
+        self.db.client[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].update_many(
+            {
+                'config_name': DISCOVERY_CONFIG_NAME,
+                'config.adapter_discovery.conditional': 'repeat_on'
+            },
+            {
+                '$set': {
+                    'config.adapter_discovery.conditional': 'system_research_weekdays'
+                }
+            })
 
     def migrate_adapter_advanced_settings_to_connection(
             self,

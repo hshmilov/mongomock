@@ -44,6 +44,7 @@ from services.weave_service import WeaveService
 from test_helpers.exceptions import DockerException
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from test_helpers.log_tester import LogTester
+from axonius.consts.adapter_consts import LAST_FETCH_TIME, CLIENT_ID
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
@@ -369,8 +370,12 @@ class PluginService(WeaveService):
         :return: the config or None
         """
         # This prevents pytest from actually referencing the last line if the class was not yet initialized
+        print(f'self.plugin_name {self.plugin_name}')
         _ = self.unique_name
         return self.db.plugins.get_plugin_settings(self.plugin_name).configurable_configs[conf_name]
+
+    def get_plugin_settings_keyval(self):
+        return self.db.plugins.get_plugin_settings(self.plugin_name).plugin_settings_keyval
 
     def set_configurable_config(self, conf_name: str, specific_key: str, value=None):
         """
@@ -582,3 +587,8 @@ class AdapterService(PluginService):
             'client_name': client_name,
             'check_fetch_time': check_fetch_time
         })
+
+    def get_client_fetch_time(self, client_id):
+        return self.db.client[self.unique_name]['clients'].find_one({
+            CLIENT_ID: client_id
+        }, projection={LAST_FETCH_TIME: 1})

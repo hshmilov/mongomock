@@ -12,7 +12,8 @@ from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
-                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL)
+                                          STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
+                                          DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME)
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
@@ -89,7 +90,6 @@ class Adapters(Connections):
     @gui_route_logged_in('<plugin_name>/connections', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters))
     def get_adapter_connections_data(self, plugin_name):
-
         return jsonify(self._get_adapter_connections_data(plugin_name))
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
@@ -153,7 +153,7 @@ class Adapters(Connections):
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapter_advanced_config_schema(self, adapter_unique_name):
         db_connection = self._get_db_connection()
-        return self.__extract_configs_and_schemas(db_connection, adapter_unique_name)
+        return self.__extract_configs_and_schemas(adapter_unique_name)
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _get_adapter_connections_data(self, plugin_name):
@@ -196,6 +196,8 @@ class Adapters(Connections):
                 continue
 
             client_configuration_schema = self._get_plugin_schemas(adapter[PLUGIN_NAME]).get('schema')
+            client_connection_discovery_schema = self.plugins.get_plugin_settings(
+                adapter[PLUGIN_NAME]).generic_schemas[CONNECTION_DISCOVERY_SCHEMA_NAME]
 
             # skip clients not properly configured or missing schema.
             if not client_configuration_schema:
@@ -218,7 +220,12 @@ class Adapters(Connections):
 
                 clients_result.append(client)
 
-        return {'schema': schema, 'clients': clients_result, 'settings': settings}
+        return {
+            'schema': schema,
+            'clients': clients_result,
+            'connectionDiscoverySchema': client_connection_discovery_schema,
+            'settings': settings
+        }
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters(self):
@@ -277,8 +284,7 @@ class Adapters(Connections):
                 'clients': clients,
                 NODE_ID: adapter[NODE_ID],
                 NODE_NAME: node_name,
-                'config': self.__extract_configs_and_schemas(db_connection,
-                                                             adapter_name)
+                'config': self.__extract_configs_and_schemas(adapter_name)
             })
 
         adapters = defaultdict(list)
@@ -333,7 +339,8 @@ class Adapters(Connections):
             self._async_trigger_remote_plugin(adapter_unique_name,
                                               'insert_to_db',
                                               data={
-                                                  'client_name': client_id
+                                                  'client_name': client_id,
+                                                  'connection_saved': True,
                                               }).then(did_fulfill=inserted_to_db,
                                                       did_reject=rejected)
 
@@ -362,15 +369,12 @@ class Adapters(Connections):
         written_file = self.db_files.upload_file(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    def __extract_configs_and_schemas(self, db_connection, plugin_unique_name):
+    def __extract_configs_and_schemas(self, plugin_unique_name):
         """
         Gets the configs and configs schemas in a nice way for a specific plugin
         """
 
-        if re.search(r'_(\d+)$', plugin_unique_name):
-            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
-        else:
-            plugin_name = plugin_unique_name
+        plugin_name = self._get_plugin_name(plugin_unique_name)
 
         plugin_data = {}
         schemas = self.plugins.get_plugin_settings(plugin_name).config_schemas.get_all()
@@ -391,6 +395,11 @@ class Adapters(Connections):
             }
         return plugin_data
 
+    def _get_adapter_connection_discovery_config_and_schema(self, plugin_unique_name):
+        schema, config = self.plugins.get_plugin_config_and_schema(DISCOVERY_CONFIG_NAME, plugin_unique_name)
+        config = clear_passwords_fields(config, schema)
+        return config, schema
+
     @gui_route_logged_in('<adapter_name>/<config_name>', methods=['POST'], enforce_trial=False,
                          activity_params=['adapter_name', 'config_name'])
     def update_adapter(self, adapter_name, config_name):
@@ -403,3 +412,35 @@ class Adapters(Connections):
         return json.dumps({
             'config_name': config_schema.get('pretty_name', '')
         }) if config_schema else ''
+
+    @gui_route_logged_in('<plugin_name>/<config_name>', methods=['GET'], enforce_trial=False)
+    def get_plugin_configs(self, plugin_name, config_name):
+        """
+        Get a specific config on a specific plugin
+        """
+        plugin_name = self._get_plugin_name(plugin_name)
+        config, schema = self._get_plugin_configs(config_name, plugin_name)
+
+        return jsonify({
+            'config': config,
+            'schema': schema
+        })
+
+    def _get_plugin_configs(self, config_name, plugin_name):
+        plugin_name = self._get_plugin_name(plugin_name)
+        schema = self.plugins.get_plugin_settings(plugin_name).config_schemas[config_name]
+        config = clear_passwords_fields(
+            self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name],
+            schema
+        )
+
+        return config, schema
+
+    @staticmethod
+    def _get_plugin_name(plugin_unique_name):
+        if re.search(r'_(\d+)$', plugin_unique_name):
+            plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+        else:
+            plugin_name = plugin_unique_name
+
+        return plugin_name

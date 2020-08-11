@@ -26,7 +26,9 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           EXECUTION_PLUGIN_NAME, RESET_PASSWORD_LINK_EXPIRATION,
                                           RESET_PASSWORD_SETTINGS, STATIC_ANALYSIS_SETTINGS,
                                           DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME,
-                                          DISCOVERY_RESEARCH_DATE_TIME)
+                                          DISCOVERY_RESEARCH_DATE_TIME, CONNECTION_DISCOVERY, ENABLE_CUSTOM_DISCOVERY,
+                                          CLIENTS_COLLECTION, ADAPTER_DISCOVERY, DISCOVERY_REPEAT_TYPE,
+                                          DISCOVERY_REPEAT_RATE)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -375,12 +377,23 @@ class Plugins:
         """
         # If the settings we not changed, don't do anything
         if current_config and config_to_set:
-            if current_config.get(DISCOVERY_RESEARCH_DATE_TIME) == config_to_set.get(DISCOVERY_RESEARCH_DATE_TIME):
-                return
+            current_config = current_config.get(ADAPTER_DISCOVERY)
+            config_to_set = config_to_set.get(ADAPTER_DISCOVERY)
+            discovery_type = current_config.get(DISCOVERY_REPEAT_TYPE)
 
-        # Otherwise if the settings have changed somehow (whether thery are entirely new or they replace existing
+            if discovery_type == DISCOVERY_REPEAT_RATE:
+                if current_config.get(DISCOVERY_REPEAT_RATE) == \
+                        config_to_set.get(DISCOVERY_REPEAT_RATE):
+                    return
+            else:
+                current_config = current_config.get(discovery_type, {})
+                config_to_set = config_to_set.get(discovery_type, {})
+                if current_config.get(DISCOVERY_RESEARCH_DATE_TIME) == config_to_set.get(DISCOVERY_RESEARCH_DATE_TIME):
+                    return
+
+        # Otherwise if the settings have changed somehow (whether they are entirely new or they replace existing
         # settings) delete the last fetch time.
-        del self.plugins.get_plugin_settings(plugin_name).plugin_settings_keyval[LAST_FETCH_TIME]
+        self.plugins.get_plugin_settings(plugin_name).plugin_settings_keyval[LAST_FETCH_TIME] = None
 
     def _update_plugin_config(self, plugin_name, config_name, config_to_set):
         """
@@ -399,6 +412,20 @@ class Plugins:
                 self._delete_last_fetch_on_discovery_change(plugin_name, current_discovery, config_to_set)
             except Exception:
                 logger.exception(f'Failed deleting last fetch on discovery change')
+
+            old_connection_discovery_enabled = current_discovery.get(CONNECTION_DISCOVERY, False)
+            if not config_to_set.get(CONNECTION_DISCOVERY, False) and old_connection_discovery_enabled:
+                #  When disabling connection discovery on updater level, we need to remove settings
+                #  from all configured clients.
+                all_plugin_unique_names = [
+                    x['plugin_unique_name'] for x in self.core_configs_collection.find(
+                        {
+                            'plugin_name': plugin_name,
+                        }
+                    )
+                ]
+                for plugin_unique_name in all_plugin_unique_names:
+                    self._clean_connection_discovery_from_adapter_clients(plugin_unique_name)
 
         self.plugins.get_plugin_settings(plugin_name).configurable_configs[config_name] = config_to_set
 
@@ -445,3 +472,19 @@ class Plugins:
     @gui_route_logged_in('<plugin_name>/upload_file', methods=['POST'], skip_activity=True)
     def plugins_upload_file(self, plugin_name):
         return self._upload_file(plugin_name)
+
+    def _clean_connection_discovery_from_adapter_clients(self, adapter_unique_name: str):
+        """
+        :param adapter_unique_name: Adapter unique name
+        """
+        return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].update_many(
+            {
+                f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
+            },
+            {
+                '$set': {
+                    CONNECTION_DISCOVERY: {
+                        ENABLE_CUSTOM_DISCOVERY: False
+                    }
+                }
+            })

@@ -13,6 +13,7 @@ class Consts:
     AllConfigurableConfigs = 'all_configurable_configs'
     AllConfigurableConfigsSchemas = 'all_configurable_configs_schemas'
     AllAdapterClientConfigsSchemas = 'all_adapter_client_schemas'
+    AllAdapterClientGenericConfigsSchemas = 'all_adapter_client_generic_schemas'
     ConfigName = 'config_name'
     Config = 'config'
     Schema = 'schema'
@@ -38,6 +39,7 @@ class PluginSettings:
         self.configurable_configs = ConfigurableConfigs(self.__db, self.__plugin_name)
         self.config_schemas = ConfigurableConfigsSchemas(self.__db, self.__plugin_name)
         self.plugin_settings_keyval = PluginSettingsKeyVal(self.__db, self.__plugin_name)
+        self.generic_schemas = ConfigurableGenericSchemas(self.__db, self.__plugin_name)
 
     @property
     def adapter_client_schema(self):
@@ -270,6 +272,55 @@ class ConfigurableConfigsSchemas:
         return {
             x[Consts.ConfigName]: x.get(Consts.Schema) or {}
             for x in self.__db[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigsSchemas].find(
+                {PLUGIN_NAME: self.__plugin_name}
+            )
+        }
+
+    def __getitem__(self, index):
+        return self.__get(str(index))
+
+    def __setitem__(self, key, value: dict):
+        assert isinstance(value, dict), f'Config Schema must be a dict. Got {str(value)}'
+        self.__set(str(key), value)
+
+
+class ConfigurableGenericSchemas:
+
+    def __init__(self, db: MongoClient, plugin_name: str):
+        self.__db = db
+        self.__plugin_name = plugin_name
+
+    def __get(self, config_name: str) -> Optional[dict]:
+        schema = self.__db[CORE_UNIQUE_NAME][Consts.AllAdapterClientGenericConfigsSchemas].find_one(
+            {
+                PLUGIN_NAME: self.__plugin_name,
+                Consts.ConfigName: config_name
+            }
+        )
+
+        if schema:
+            return schema.get(Consts.Schema)
+
+        return None
+
+    def __set(self, config_name: str, schema: dict):
+        self.__db[CORE_UNIQUE_NAME][Consts.AllAdapterClientGenericConfigsSchemas].replace_one(
+            {
+                PLUGIN_NAME: self.__plugin_name,
+                Consts.ConfigName: config_name
+            },
+            {
+                PLUGIN_NAME: self.__plugin_name,
+                Consts.ConfigName: config_name,
+                Consts.Schema: schema
+            },
+            upsert=True
+        )
+
+    def get_all(self) -> dict:
+        return {
+            x[Consts.ConfigName]: x.get(Consts.Schema) or {}
+            for x in self.__db[CORE_UNIQUE_NAME][Consts.AllAdapterClientGenericConfigsSchemas].find(
                 {PLUGIN_NAME: self.__plugin_name}
             )
         }

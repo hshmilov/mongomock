@@ -1,11 +1,11 @@
 import concurrent.futures
 import logging
-import threading
 import time
 from datetime import datetime, timedelta
 from enum import Enum, auto
+import threading
 from threading import Thread
-from typing import List
+from typing import List, Tuple, Dict
 
 import pymongo
 from pymongo.errors import CollectionInvalid, BulkWriteError
@@ -127,38 +127,50 @@ class AggregatorService(Triggerable, PluginBase):
         for entity_type in EntityType:
             self._insert_indexes_entity(entity_type=entity_type)
 
-    def _request_insertion_from_adapters_async(self, adapters):
+    def _request_insertion_from_adapters_async(self, adapters_unique_name: str,
+                                               adapters_clients: List[Dict[str, List[str]]]) -> Tuple[str, Dict]:
         """
         Handles all the requests to different adapters to fetch the clients data
-        :param adapters: list of adapter clients
-        :return: yields client of each adapter and its final data count
+        :param adapters_unique_name: list of adapters unique name to trigger.
+        :param adapters_clients: List of objects, where key is adapter unique_name
+        and the value is the list of the adapter's clients to trigger.
+        :return: yields adapter unique name of each adapter and its final data count
         """
-        clients = {adapter_clients: [db_results['client_id'] for adapter_clients in adapters for
-                                     db_results in
-                                     self._get_db_connection()[adapter_clients]['clients'].find(projection={
-                                         'client_id': True,
-                                         '_id': False
-                                     })] for adapter_clients in adapters}
+        def get_adapter_clients(_adapter_unique_name):
+            if not adapters_clients.get(_adapter_unique_name):
+                return self._get_db_connection()[_adapter_unique_name]['clients'].find(projection={
+                    'client_id': True,
+                    '_id': False
+                })
+            return adapters_clients.get(_adapter_unique_name)
+
+        clients = {
+            adapter_unique_name: [db_results['client_id']
+                                  for adapter_unique_name in adapters_unique_name
+                                  for db_results in get_adapter_clients(adapter_unique_name)
+                                  ]
+            for adapter_unique_name in adapters_unique_name
+        }
         if clients and self._notify_on_adapters is True:
             self.create_notification(
-                f'Starting to fetch device for {"".join(adapters)}')
+                f'Starting to fetch device for {" ".join(adapters_unique_name)}')
         check_fetch_time = True
-        for adapter_clients in adapters:
-            data = self._trigger_remote_plugin(adapter_clients, 'insert_to_db', data={
-                'client_name': clients[adapter_clients],
+        for adapter_unique_name in adapters_unique_name:
+            data = self._trigger_remote_plugin(adapter_unique_name, 'insert_to_db', data={
+                'client_name': clients.get(adapter_unique_name, []),
                 'check_fetch_time': check_fetch_time
             })
             try:
                 if data.content and from_json(data.content).get('min_time_check') is True:
-                    logger.info(f'got min_time_check in adapter {adapter_clients}: '
+                    logger.info(f'got min_time_check in adapter {adapter_unique_name}: '
                                 f'The minimum time between fetches hasn\'t been reached yet.')
                     break
             except Exception:
                 logger.exception(f'Error parsing json data, content is: {data.content}')
             check_fetch_time = False
-            yield adapter_clients, from_json(data.content)
+            yield adapter_unique_name, from_json(data.content)
 
-    def _request_insertion_from_adapters(self, adapter):
+    def _request_insertion_from_adapters(self, adapter, clients):
         """Get mapped data from all devices.
 
         Returned from the Adapter/Plugin.
@@ -172,14 +184,17 @@ class AggregatorService(Triggerable, PluginBase):
                         The client is the DC name that returned this device
 
         :param str adapter: The address of the adapter (url)
+        :param List clients: list of clients to execute fetch for.
         """
+        def get_adapter_clients():
+            return [x['client_id'] for x
+                    in self._get_db_connection()[adapter]['clients'].find(projection={
+                        'client_id': True,
+                        '_id': False
+                    })]
+
         data = None
-        clients = [x['client_id']
-                   for x
-                   in self._get_db_connection()[adapter]['clients'].find(projection={
-                       'client_id': True,
-                       '_id': False
-                   })]
+        clients = clients or get_adapter_clients()
         if clients and self._notify_on_adapters is True:
             self.create_notification(f'Starting to fetch device for {adapter}')
         check_fetch_time = True
@@ -250,9 +265,9 @@ class AggregatorService(Triggerable, PluginBase):
             col.aggregate([
                 {'$project': {'_id': 0}},
                 {
-                    "$addFields": {
-                        "accurate_for_datetime": {
-                            "$literal": date
+                    '$addFields': {
+                        'accurate_for_datetime': {
+                            '$literal': date
                         }
                     }
                 },
@@ -314,48 +329,48 @@ class AggregatorService(Triggerable, PluginBase):
         self._drop_old_historic_collections(entity_type)
         threads = [
             Thread(target=self.call_safe_collection_transfer,
-                   args=(from_db.aggregate, [{
-                       "$project": {
-                           "_id": 0
-                       }},
-                       {
-                           "$addFields": {
-                               "accurate_for_datetime": {
-                                   "$literal": now
-                               },
-                               "short_axon_id": {
-                                   "$substrCP": [
-                                       "$internal_axon_id", 0, 1
-                                   ]
-                               }
-                           }
-                   },
-                       {
-                           "$merge": to_db.name
-                   }
-                   ],)),
+                   args=(from_db.aggregate,
+                         [{
+                             '$project': {
+                                 '_id': 0
+                             }
+                         }, {
+                             '$addFields': {
+                                 'accurate_for_datetime': {
+                                     '$literal': now
+                                 },
+                                 'short_axon_id': {
+                                     '$substrCP': [
+                                         '$internal_axon_id', 0, 1
+                                     ]
+                                 }
+                             }
+                         }, {
+                             '$merge': to_db.name
+                         }])),
             Thread(target=self.call_safe_collection_transfer,
                    args=(raw_from_db.aggregate, [
                        {
-                           "$project": {
-                               "_id": 0
+                           '$project': {
+                               '_id': 0
                            }
                        },
                        {
-                           "$addFields": {
-                               "accurate_for_datetime": {
-                                   "$literal": now
+                           '$addFields': {
+                               'accurate_for_datetime': {
+                                   '$literal': now
                                }
                            }
                        },
                        {
-                           "$merge": raw_to_db.name
+                           '$merge': raw_to_db.name
                        }
                    ],)),
             Thread(target=self._create_daily_historic_collection,
                    args=(entity_type, from_db, now)
                    )
         ]
+        # pylint: disable=expression-not-assigned
         [t.start() for t in threads]
         [t.join() for t in threads]
         try:
@@ -372,11 +387,11 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception:
             logger.critical(f'history transfer func {aggregate_func} failed', exc_info=True)
 
-    def get_adapters_data(self, post_json: dict) -> List[dict]:
+    def get_adapters_data(self, post_json: dict, job_name: str) -> List[Tuple[dict, List]]:
         """
         Get adapters data from list of plugin unique names or mongo filters
         :param post_json: trigger post json data
-        :return: adapters data
+        :return: list of tuples where first element is adapter and second is client_ids to trigger.
         """
         if post_json and post_json.get('adapters'):
             adapters_list = post_json.pop('adapters', [])
@@ -385,20 +400,23 @@ class AggregatorService(Triggerable, PluginBase):
                     '$in': adapters_list
                 }
             }
-            adapters = self.get_available_plugins_from_core_uncached(adapters_filter).values()
+            adapters = [(adapter, None) for adapter in
+                        self.get_available_plugins_from_core_uncached(adapters_filter).values()]
         else:
             adapters = self.get_available_plugins_from_core_uncached(post_json).values()
-            adapters = list(self.filter_out_custom_discovery_adapters(adapters))
+            adapters = list(self.filter_out_custom_discovery_adapters(adapters, job_name))
         return adapters
 
     # pylint: disable=inconsistent-return-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clean_db':
-            adapters = self.get_adapters_data(post_json)
+            # No need for clients data for clean phase.
+            adapters = self.get_adapters_data(post_json, job_name)
+            adapters = [adapter for adapter, _ in adapters]
             self._clean_db_devices_from_adapters(adapters)
             return
         if job_name == 'fetch_filtered_adapters':
-            adapters = self.get_adapters_data(post_json)
+            adapters = self.get_adapters_data(post_json, job_name)
         elif job_name == 'save_history':
             now = datetime.utcnow()
             return {
@@ -410,8 +428,11 @@ class AggregatorService(Triggerable, PluginBase):
             adapters = self.get_available_plugins_from_core_uncached({
                 PLUGIN_UNIQUE_NAME: job_name
             }).values()
+            # making adapters to match get_adapters_data return value - List[Tuple]
+            # as we need to have clients to filter later on.
+            adapters = [(adapter, None) for adapter in adapters]
 
-        logger.debug(f'Fetching from registered adapters = {adapters}')
+        logger.debug(f'Fetching from registered adapters and clients = {adapters}')
 
         return self._fetch_data_from_adapters(adapters, run_identifier)
 
@@ -467,13 +488,14 @@ class AggregatorService(Triggerable, PluginBase):
         except Exception as e:
             logger.exception(f'Getting devices from all adapters failed, adapters = {current_adapters}. {repr(e)}')
 
-    def _fetch_data_from_adapters(self, current_adapters, run_identifier: RunIdentifier):
+    # pylint: disable=too-many-branches
+    def _fetch_data_from_adapters(self, current_adapters: List[Tuple[dict, List]], run_identifier: RunIdentifier):
         """ Function for fetching devices from adapters.
-
         This function runs on all the received adapters and in a different thread fetches all of them.
+        @:param current_adapters: List of tuples of adapters and its relevant clients to trigger.
         """
         known_adapters_status = {}
-        for adapter in current_adapters:
+        for adapter, _ in current_adapters:
             known_adapters_status[adapter[PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Pending.name
         run_identifier.update_status(known_adapters_status)
 
@@ -487,33 +509,34 @@ class AggregatorService(Triggerable, PluginBase):
             # let's add jobs for all adapters
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._aggregation_max_workers) as executor:
                 num_of_adapters_to_fetch = len(current_adapters)
-                for adapter in current_adapters:
+                for adapter, clients in current_adapters:
                     if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
                         # This is not an adapter, not running
                         num_of_adapters_to_fetch -= 1
                         continue
 
                     elif parallel_fetch and adapter.get('plugin_name') in PARALLEL_ADAPTERS:
-                        async_adapters[adapter.get('plugin_name')].append(adapter[PLUGIN_UNIQUE_NAME])
+                        async_adapters[adapter.get('plugin_name')].append((adapter[PLUGIN_UNIQUE_NAME], clients))
                         continue
 
                     futures_for_adapter[executor.submit(
                         self._save_data_from_adapters, adapter[PLUGIN_UNIQUE_NAME],
-                        run_identifier, known_adapters_status)] = adapter
+                        run_identifier, known_adapters_status, clients)] = adapter
 
                 if parallel_fetch:
-                    for async_adapter_clients in async_adapters.values():
-                        if not async_adapter_clients:
+                    for async_adapter_tuples in async_adapters.values():
+                        if not async_adapter_tuples:
                             continue
                         futures_for_adapter[executor.submit(
-                            self._save_data_from_parallel_adapters, async_adapter_clients,
-                            run_identifier)] = async_adapter_clients
+                            self._save_data_from_parallel_adapters, async_adapter_tuples,
+                            run_identifier)] = async_adapter_tuples
 
                 for future in concurrent.futures.as_completed(futures_for_adapter):
                     try:
                         if isinstance(futures_for_adapter[future], list):
-                            for client in futures_for_adapter[future]:
-                                known_adapters_status[client] = AdapterStatuses.Done.name
+                            for async_adapter_tuple in futures_for_adapter[future]:
+                                adapter_unique_name = async_adapter_tuple[0]
+                                known_adapters_status[adapter_unique_name] = AdapterStatuses.Done.name
                         else:
                             known_adapters_status[futures_for_adapter[future]
                                                   [PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Done.name
@@ -531,38 +554,45 @@ class AggregatorService(Triggerable, PluginBase):
 
         return known_adapters_status
 
-    def _save_data_from_parallel_adapters(self, adapters, run_identifier):
+    def _save_data_from_parallel_adapters(self, adapters: List[Tuple[str, List]], run_identifier):
         """
         Responsible to update all the adapters status and pass it them all to the insertion function (and of course
         log everything going on).
-        :param adapters: list of adapters to update their status
+        :param adapters: list Tuples of adapters to update their status and the relevant clients to trigger.
         :param run_identifier: The run identifier to save date to triggerable_history
         """
         start_time = time.time()
-        run_identifier.update_status({adapter_name: AdapterStatuses.Fetching.name for adapter_name in adapters})
+        adapter_unique_names = [adapter for adapter, _ in adapters]
+        adapters_clients = {
+            adapter_unique_name: clients
+            for adapter_unique_name, clients in adapters
+        }
+        run_identifier.update_status({adapter_name: AdapterStatuses.Fetching.name for
+                                      adapter_name in adapter_unique_names})
 
-        logger.info(f'Starting to fetch device for {"".join(adapters)}')
+        logger.info(f'Starting to fetch device for {"".join(adapter_unique_names)}')
         try:
-            data = self._request_insertion_from_adapters_async(adapters)
-            for client_name, devices_per_client in data:
-                logger.info(f'Got {devices_per_client} for clients under adapter {"".join(client_name)}')
+            data = self._request_insertion_from_adapters_async(adapter_unique_names, adapters_clients)
+            for adapter_unique_names, devices_per_client in data:
+                logger.info(f'Got {devices_per_client} for clients under adapter {"".join(adapter_unique_names)}')
 
         except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            logger.warning(f'adapters {"".join(adapters)} might be offline. Reason {str(e)}')
+            logger.warning(f'adapters {"".join(adapter_unique_names)} might be offline. Reason {str(e)}')
         except Exception as e:
             logger.exception(f'Thread {threading.current_thread()} encountered error: {str(e)}')
             raise
 
-        logger.info(f'Finished for {"".join(adapters)} took {time.time() - start_time} seconds')
+        logger.info(f'Finished for {"".join(adapter_unique_names)} took {time.time() - start_time} seconds')
 
-    def _save_data_from_adapters(self, adapter_unique_name, run_identifier, known_adapters_status):
+    def _save_data_from_adapters(self, adapter_unique_name, run_identifier, known_adapters_status, clients):
         """
         Requests from the given adapter to insert its devices into the DB.
         :param str adapter_unique_name: The unique name of the adapter
         :param RunIdentifier run_identifier: The run identifier to save date to triggerable_history
         :param dict known_adapters_status: The statuses dict to change and save
+        :param List clients: list of clients to execute fetch for.
         """
 
         start_time = time.time()
@@ -571,7 +601,7 @@ class AggregatorService(Triggerable, PluginBase):
 
         logger.info(f'Starting to fetch device for {adapter_unique_name}')
         try:
-            data = self._request_insertion_from_adapters(adapter_unique_name)
+            data = self._request_insertion_from_adapters(adapter_unique_name, clients)
             for client_name, devices_per_client in data:
                 logger.info(f'Got {devices_per_client} for client {client_name} in {adapter_unique_name}')
 
@@ -648,6 +678,7 @@ class AggregatorService(Triggerable, PluginBase):
             count = 0
             for device in self.devices_db.find({}):
                 internal_axon_id = device.get('internal_axon_id')
+                #pylint: disable=consider-using-set-comprehension
                 correct_adapter_list_length = len(set([adapter[PLUGIN_NAME] for adapter in device.get('adapters', [])]))
                 to_fix.append(pymongo.operations.UpdateOne(
                     {'internal_axon_id': internal_axon_id},
@@ -675,14 +706,24 @@ class AggregatorService(Triggerable, PluginBase):
             to_fix = []
             internal_axon_id = None
             count = 0
-            for device in self.devices_db.find({
-                'tags': {
-                    '$elemMatch': {'$and': [
-                        {'name': 'wmi_adapter_0'},
-                        {'data.hostname': {'$exists': True}}
-                    ]
-                    }}
-            }):
+            for device in self.devices_db.find(
+                    {
+                        'tags': {
+                            '$elemMatch': {
+                                '$and': [
+                                    {
+                                        'name': 'wmi_adapter_0'
+                                    },
+                                    {
+                                        'data.hostname':
+                                            {
+                                                '$exists': True
+                                            }
+                                    }
+                                ]
+                            }
+                        }
+                    }):
                 try:
                     internal_axon_id = device.get('internal_axon_id')
                     try:

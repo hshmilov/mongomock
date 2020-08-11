@@ -3,6 +3,7 @@ import _size from 'lodash/size';
 import _get from 'lodash/get';
 import { pluginMeta } from '../../constants/plugin_meta';
 import { REQUEST_API } from '../actions';
+import { CHANGE_PLUGIN_CONFIG } from '@store/modules/settings';
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP';
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS';
@@ -21,6 +22,7 @@ export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT';
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER';
 export const ARCHIVE_CLIENT = 'ARCHIVE_CLIENT';
 export const REMOVE_CLIENT = 'REMOVE_CLIENT';
+export const LOAD_ADAPTER_CONFIG = 'LOAD_ADAPTER_CONFIG'
 
 export const UPDATE_EXISTING_CLIENT = 'UPDATE_EXISTING_CLIENT';
 export const ADD_NEW_CLIENT = 'ADD_NEW_CLIENT';
@@ -272,7 +274,8 @@ export const adapters = {
       const client = {
         client_id: payload.clientId,
         adapterId: payload.adapterId,
-        client_config: serverData,
+        client_config: serverData.client_config,
+        connection_discovery: serverData.connection_discovery,
         connectionLabel: payload.connectionLabel,
         uuid: isNewClient ? uniqueTmpId : payload.uuid,
         status: 'warning',
@@ -291,7 +294,8 @@ export const adapters = {
             method: isNewClient ? 'PUT' : 'POST',
             data: {
               adapter: payload.adapterId,
-              connection: payload.serverData,
+              connection: payload.serverData.client_config,
+              connection_discovery: serverData.connection_discovery,
               connection_label: payload.connectionLabel,
               instance: newAssociatedInstance.node_id,
               instance_prev: instanceIdPrev,
@@ -301,7 +305,8 @@ export const adapters = {
           commit(UPDATE_EXISTING_CLIENT, {
             client_id: response.data.client_id,
             adapterId: payload.adapterId,
-            client_config: payload.serverData,
+            client_config: serverData.client_config,
+            connection_discovery: serverData.connection_discovery,
             uuidToSwap: isNewClient ? uniqueTmpId : payload.uuid,
             uuid: response.data.id,
             status: response.data.status,
@@ -328,7 +333,7 @@ export const adapters = {
         rule: 'adapters/connections/test',
         method: 'post',
         data: {
-          connection: payload.serverData,
+          connection: payload.serverData.client_config,
           instance: payload.instanceName,
           adapter: payload.adapterId,
         },
@@ -382,6 +387,19 @@ export const adapters = {
         return Promise.resolve();
       }
       return dispatch(FETCH_ADAPTERS_CLIENT_LABELS);
+    },
+    [LOAD_ADAPTER_CONFIG]({ dispatch }, payload) {
+      /*
+          Call API to save given config to adapters by the given adapters unique name
+       */
+      if (!payload || !payload.pluginId || !payload.configName) return null;
+
+      const rule = `adapters/${payload.pluginId}/${payload.configName}`;
+      return dispatch(REQUEST_API, {
+        rule,
+        type: CHANGE_PLUGIN_CONFIG,
+        payload,
+      });
     },
   },
   getters: {

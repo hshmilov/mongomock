@@ -6,7 +6,7 @@ from multiprocessing.pool import ThreadPool
 from flask import (request, jsonify)
 from bson import ObjectId
 
-from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL
+from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL, LAST_FETCH_TIME
 from axonius.consts.gui_consts import (FeatureFlagsNames)
 from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID)
 from axonius.plugin_base import return_error, EntityType
@@ -137,6 +137,7 @@ class Connections:
         if not connection_data.get('connection'):
             return return_error('Connection data is required', 400)
         client_config = connection_from_db['client_config']
+        connection_data[LAST_FETCH_TIME] = connection_from_db.get(LAST_FETCH_TIME)
         self._decrypt_client_config(client_config)
         could_fill_passwords = self._validate_fill_unchanged_passwords(adapter_unique_name, client_id,
                                                                        connection_data['connection'], client_config)
