@@ -19,7 +19,8 @@ from axonius.consts.adapter_consts import LAST_FETCH_TIME, AVAILABLE_CSV_LOCATIO
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
-                                       RootMasterNames, GUI_CONFIG_NAME, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES)
+                                       RootMasterNames, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES,
+                                       IDENTITY_PROVIDERS_CONFIG)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
@@ -348,7 +349,7 @@ class Plugins:
             log_metric(logger, GettingStartedMetric.FEATURE_ENABLED_SETTING,
                        metric_value=getting_started_feature_enabled)
 
-        elif plugin_name == 'gui' and config_name == GUI_CONFIG_NAME:
+        elif plugin_name == 'gui' and config_name == IDENTITY_PROVIDERS_CONFIG:
             user_settings_permission = self.get_user_permissions().get(PermissionCategory.Settings)
             if not user_settings_permission.get(PermissionAction.GetUsersAndRoles) and \
                     not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
