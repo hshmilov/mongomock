@@ -1,10 +1,11 @@
 import datetime
 
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.smart_json_class import SmartJsonClass
 
 
-class MicrosoftKmsDeviceInstance(DeviceAdapter):
+class ProductData(SmartJsonClass):
     product_name = Field(str, 'Product Name')
     product_version = Field(str, 'Prodcut Version')
     last_updated = Field(datetime.datetime, 'Last Updated')
@@ -13,3 +14,7 @@ class MicrosoftKmsDeviceInstance(DeviceAdapter):
     application_id = Field(str, 'Application Id')
     product_key_id = Field(str, 'Product Key Id')
     product_description = Field(str, 'Product Description')
+
+
+class MicrosoftKmsDeviceInstance(DeviceAdapter):
+    products_data = ListField(ProductData, 'Products')

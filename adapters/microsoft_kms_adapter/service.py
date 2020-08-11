@@ -10,7 +10,7 @@ from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.adapter_exceptions import ClientConnectionException
 from microsoft_kms_adapter import consts
 from microsoft_kms_adapter.client_id import get_client_id
-from microsoft_kms_adapter.structures import MicrosoftKmsDeviceInstance
+from microsoft_kms_adapter.structures import MicrosoftKmsDeviceInstance, ProductData
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -114,36 +114,21 @@ class MicrosoftKmsAdapter(AdapterBase, Configurable):
         }
 
     @staticmethod
-    def _fill_microsoft_kms_device_fields(device_raw: dict, device: MyDeviceAdapter):
+    def create_product_data(device_raw: dict):
+        product_data = ProductData()
         try:
-            device.product_version = device_raw.get('ProductVersion')
-            device.last_updated = parse_date(device_raw.get('LastUpdated'))
-            device.last_action_status = device_raw.get('LastActionStatus')
-            device.product_name = device_raw.get('ProductName')
-            device.sku = device_raw.get('Sku')
-            device.application_id = device_raw.get('ApplicationId')
-            device.product_key_id = device_raw.get('ProductKeyId')
-            device.product_description = device_raw.get('ProductDescription')
+            product_data.product_version = device_raw.get('ProductVersion')
+            product_data.last_updated = parse_date(device_raw.get('LastUpdated'))
+            product_data.last_action_status = device_raw.get('LastActionStatus')
+            product_data.product_name = device_raw.get('ProductName')
+            product_data.sku = device_raw.get('Sku')
+            product_data.application_id = device_raw.get('ApplicationId')
+            product_data.product_key_id = device_raw.get('ProductKeyId')
+            product_data.product_description = device_raw.get('ProductDescription')
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
-
-    def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        try:
-            device_id = device_raw.get('FullyQualifiedDomainName')
-            if device_id is None:
-                logger.warning(f'Bad device with no ID {device_raw}')
-                return None
-            device.id = device_id
-            device.hostname = device_id
-
-            self._fill_microsoft_kms_device_fields(device_raw, device)
-
-            device.set_raw(device_raw)
-
-            return device
-        except Exception:
-            logger.exception(f'Problem with fetching MicrosoftKms Device for {device_raw}')
             return None
+        return product_data
 
     def _parse_raw_data(self, devices_raw_data):
         """
@@ -151,16 +136,26 @@ class MicrosoftKmsAdapter(AdapterBase, Configurable):
         :param devices_raw_data: the raw data we get.
         :return:
         """
+        device_data_dict = dict()
         for device_raw in devices_raw_data:
             if not device_raw:
                 continue
             try:
                 # noinspection PyTypeChecker
-                device = self._create_device(device_raw, self._new_device_adapter())
-                if device:
-                    yield device
+                device_id = device_raw.get('FullyQualifiedDomainName')
+                if device_id not in device_data_dict:
+                    device_data_dict[device_id] = []
+                product_data = self.create_product_data(device_raw)
+                if product_data:
+                    device_data_dict[device_id].append(product_data)
             except Exception:
                 logger.exception(f'Problem with fetching MicrosoftKms Device for {device_raw}')
+        for device_id, products_data in device_data_dict.items():
+            device = self._new_device_adapter()
+            device.id = device_id
+            device.hostname = device_id
+            device.products_data = products_data
+            yield device
 
     @classmethod
     def adapter_properties(cls):

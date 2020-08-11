@@ -15,7 +15,7 @@ class CentrifyConnection(RESTConnection):
         self._app_id = app_id
         self._scope = scope
         super().__init__(*args, url_base_prefix='',
-                         headers={'Content-Type': 'application/json',
+                         headers={'Content-Type': 'application/json', 'X-CENTRIFY-NATIVE-CLIENT': 'true',
                                   'Accept': 'application/json'},
                          **kwargs)
         self._token = None  # auth token
@@ -96,7 +96,7 @@ class CentrifyConnection(RESTConnection):
         # Intentionally not wrapped in try/except, exceptions handled in get_user_list()
         apps_response = self._post(URL_APPS, url_params=url_params)
         if isinstance(apps_response.get('Result'), dict):
-            result = apps_response.get('Apps')
+            result = apps_response.get('Result')
             apps = result.get('Apps')
             if apps and isinstance(apps, dict):  # in case there's only one app result
                 apps = [apps]
@@ -107,7 +107,7 @@ class CentrifyConnection(RESTConnection):
                 error_id = result.get('ErrorID')
                 raise RESTException(f'{error_id}: {message}')
         # If we got here then we didn't return apps, log a warning
-        logger.warning(f'Failed to get apps for {user_uuid}. Response was: {apps_response}')
+        logger.debug(f'Failed to get apps for {user_uuid}. Response was: {apps_response}')
         return None
 
     def get_user_list(self):
@@ -131,7 +131,7 @@ class CentrifyConnection(RESTConnection):
                 try:
                     user_result['x_apps'] = self._get_user_apps(uuid)  # inject apps data
                 except Exception as e:
-                    logger.warning(f'Failed to get application data for {user_result}: {str(e)}')
+                    logger.debug(f'Failed to get application data for {user_result}: {str(e)}', exc_info=True)
                 yield user_result
         except RESTException as err:
             logger.exception(str(err))

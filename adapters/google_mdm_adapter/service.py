@@ -174,9 +174,12 @@ class GoogleMdmAdapter(AdapterBase):
             logger.warning(f"Device {str(raw_device_data)} has no id")
             return
         device.set_raw(raw_device_data)
+        model = raw_device_data.get('model')
+        device_model = model
+        device.device_model = device_model
         os = raw_device_data.get('os')
         device_type = raw_device_data.get('type')
-        device.figure_os((os or '') + ' ' + (device_type or ''))
+        device.figure_os((os or '') + ' ' + (device_type or '') + ' ' + (device_model or ''))
         emails = raw_device_data.get('email')
         primary_email = None
         if isinstance(emails, list):
@@ -184,9 +187,6 @@ class GoogleMdmAdapter(AdapterBase):
             primary_email = emails[0]
         elif isinstance(emails, str):
             device.emails = emails
-        model = raw_device_data.get('model')
-        device_model = model
-        device.device_model = device_model
         if isinstance(raw_device_data.get('managedAccountIsOnOwnerProfile'), bool):
             device.managed_account_is_on_owner_profile = raw_device_data.get('managedAccountIsOnOwnerProfile')
         device.device_model_family = device_type

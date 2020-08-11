@@ -149,6 +149,7 @@ class BluecatConnection(RESTConnection):
                                 # Optimize
                                 if len(dns_name_raw) == 1:
                                     device_raw['dns_name'] = dns_name_raw[0].get('name')
+                                    yield device_raw
                                     continue
 
                                 # Otherwise if we have more than 1 in the list, we have to find the real one

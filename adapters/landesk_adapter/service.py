@@ -89,7 +89,7 @@ class LandeskAdapter(AdapterBase):
                                                            '"Computer"."Software"."Package"."Name"</Column>'
                                                            '</Columns>')['MachineData']['ValuePair']
                     for sw_dict in sw_raw:
-                        device_raw['sw_raw'].append(sw_dict.get('Value'))
+                        device_raw['sw_raw'].append(sw_dict['Value'])
                 except Exception:
                     logger.debug(f'Problem with sw ', exc_info=True)
                 yield device_raw
