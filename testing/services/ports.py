@@ -173,6 +173,7 @@ DOCKER_PORTS = {
     'hp-nnmi-adapter':                  6057,
     'wsus-adapter':                     6058,
     'rapid7-nexpose-warehouse-adapter': 6059,
+    'net-app-adapter':                  6060,
     'sonic-wall-adapter':               6064,
     'netskope-adapter':                 6065,
     'guardium-adapter':                 6070,
