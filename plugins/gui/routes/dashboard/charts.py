@@ -364,9 +364,11 @@ class Charts:
 
         if not chart:
             return return_error(f'No chart by the id {str(panel_id)}', 400)
-        personal_space = self._dashboard_spaces_collection.find_one({'type': DASHBOARD_SPACE_TYPE_PERSONAL},
-                                                                    {'_id': 1})
-        if personal_space.get('_id') == destination_space_id:
+        personal_space = self._dashboard_spaces_collection.find_one(
+            {'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+             'user_id': get_connected_user_id()},
+            {'_id': 1})
+        if personal_space and personal_space.get('_id') == destination_space_id:
             return return_error(f'Can not move panels to {personal_space.get("name")}', 400)
 
         if self.restrict_space_action_by_user_role(ObjectId(destination_space_id)):

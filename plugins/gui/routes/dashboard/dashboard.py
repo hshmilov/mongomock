@@ -94,12 +94,30 @@ class Dashboard(Charts, Notifications):
 
         :return:
         """
+        personal_space_filter = {
+            '$and': [
+                {'type': DASHBOARD_SPACE_TYPE_PERSONAL},
+                {'user_id': get_connected_user_id()}
+            ]
+        }
+        public_spaces_with_roles_filter = {
+            '$and': [
+                {
+                    '$or': [
+                        {'public': {'$in': [None, True]}},
+                        {'roles': str(self.get_user_role_id())}
+                    ]
+                },
+                {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
+            ]
+        }
+        all_public_spaces_filter = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
         spaces_filter = filter_archived({
             '$or': [
-                {'public': {'$in': [None, True]}},
-                {'roles': str(self.get_user_role_id())}
+                personal_space_filter,
+                public_spaces_with_roles_filter if not self.is_admin_user() else all_public_spaces_filter
             ]
-        } if not self.is_admin_user() else {})
+        })
         spaces = [{
             'uuid': str(space['_id']),
             'name': space['name'],
@@ -285,20 +303,17 @@ class Dashboard(Charts, Notifications):
         :return:
         """
         logger.debug('Getting dashboard')
-        personal_space = self._dashboard_spaces_collection.find_one({
-            'type': DASHBOARD_SPACE_TYPE_PERSONAL
-        }, {'_id': 1})
-        if not personal_space:
+        all_personal_spaces = self._dashboard_spaces_collection.find({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL}, {'_id': 1})
+        if not list(all_personal_spaces):
             logger.critical('Missing personal space')
             return return_error('Missing personal space', 400)
 
-        personal_id = personal_space['_id']
+        all_personal_spaces_ids = [space['_id'] for space in all_personal_spaces]
         filter_spaces = {
             'space': {
                 '$in': [ObjectId(space_id) for space_id in space_ids]
-            } if space_ids else {
-                '$ne': personal_id
-            },
+            } if space_ids else {'$nin': all_personal_spaces_ids},
             'name': {
                 '$ne': None
             },
@@ -307,14 +322,18 @@ class Dashboard(Charts, Notifications):
             }
         }
         if not exclude_personal:
-            filter_spaces = {
-                '$or': [{
-                    'space': personal_id,
-                    'user_id': {
-                        '$in': ['*', get_connected_user_id()]
-                    }
-                }, filter_spaces]
-            }
+            personal_space = self._dashboard_spaces_collection.find_one({
+                'type': DASHBOARD_SPACE_TYPE_PERSONAL, 'user_id': get_connected_user_id()}, {'_id': 1})
+            if personal_space:
+                personal_id = personal_space['_id']
+                filter_spaces = {
+                    '$or': [{
+                        'space': personal_id,
+                        'user_id': {
+                            '$in': ['*', get_connected_user_id()]
+                        }
+                    }, filter_spaces]
+                }
         for dashboard in self._dashboard_collection.find(
                 filter=filter_archived(filter_spaces),
                 skip=skip,
@@ -508,9 +527,15 @@ class Dashboard(Charts, Notifications):
                                                                  PermissionCategory.Charts),
                          activity_params=[SPACE_NAME], proceed_and_set_access=True)
     def reorder_dashboard_space_panels(self, space_id, no_access):
-
         if no_access and not request.get_json().get('private'):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        if no_access:
+            space = self._dashboard_spaces_collection.find_one({
+                '_id': ObjectId(space_id)
+            }, projection={'type': 1})
+            if not space or space.get('type') != DASHBOARD_SPACE_TYPE_PERSONAL:
+                return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         panels_order = self.get_request_data_as_object().get('panels_order')
         space = self._dashboard_spaces_collection.find_one_and_update({

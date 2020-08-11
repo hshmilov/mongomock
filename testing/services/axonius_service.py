@@ -342,10 +342,10 @@ class AxoniusService:
         return self.db.gui_reports_config_collection()
 
     def get_dashboard_spaces_db(self):
-        return self.db.gui_dashboard_spaces_collection()
+        return self.db.gui_dashboard_spaces_collection
 
     def get_dashboard_db(self):
-        return self.db.gui_dashboard_collection()
+        return self.db.gui_dashboard_collection
 
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)

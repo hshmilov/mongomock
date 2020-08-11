@@ -1044,7 +1044,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             })
 
     def _update_dashboards_views(self, entity_to_views):
-        dashboards_update = self.db.gui_dashboard_collection().find({
+        dashboards_update = self.db.gui_dashboard_collection.find({
             'config': {
                 '$ne': None
             }
@@ -1063,7 +1063,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                     config['intersecting'] = [entity_to_views[entity].get(name) for name in config['intersecting']]
                 elif config.get('view'):
                     config['view'] = entity_to_views[entity].get(config['view'])
-            self.db.gui_dashboard_collection().update_one({
+            self.db.gui_dashboard_collection.update_one({
                 '_id': dashboard['_id']
             }, {
                 '$set': {
@@ -1293,6 +1293,15 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             {},  # all users
             {'$set': {'password_last_updated': datetime.utcnow()}}
         )
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_42(self):
+        """
+        create a personal space for each user with it's current personal panels
+        :return:
+        """
+        print('Upgrade to schema 42')
+        self._migrate_personal_spaces()
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """
@@ -1913,3 +1922,38 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             self.set_identity_providers_settings(identity_providers_config)
 
             self.set_gui_settings(gui_config)
+
+    def _migrate_personal_spaces(self):
+        dashboards = list(self.db.gui_dashboard_spaces_collection.find({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL
+        }))
+
+        def add_personal_space(user_id, panels_order):
+            space_result = self.db.gui_dashboard_spaces_collection.insert_one({
+                'name': DASHBOARD_SPACE_PERSONAL,
+                'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+                'user_id': user_id,
+                'panels_order': panels_order
+            })
+            return space_result.inserted_id
+
+        if len(dashboards) == 1:
+            all_personal_panels_order = dashboards[0].get('panels_order')
+            users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
+            for user in users_collection.find():
+                current_user_id = user.get('_id')
+                all_user_panels = self.db.gui_dashboard_collection.find(
+                    {'user_id': current_user_id,
+                     '_id': {'$in': [ObjectId(panel_id) for panel_id in all_personal_panels_order]}},
+                    {'_id': 1})
+                user_panels_ids = [str(panel['_id']) for panel in all_user_panels]
+                user_panels_order_ids = []
+                # Order the panels as they where in the original personal dashboard
+                for panel_id in all_personal_panels_order:
+                    if panel_id in user_panels_ids:
+                        user_panels_order_ids.append(panel_id)
+                space_id = add_personal_space(current_user_id, user_panels_order_ids)
+                # Update the panels with the new personal dashboards
+                self.db.gui_dashboard_collection.update_many(
+                    {'_id': {'$in': [ObjectId(panel_id) for panel_id in user_panels_ids]}},
+                    {'$set': {'space': space_id}})

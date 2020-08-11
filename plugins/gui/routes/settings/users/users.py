@@ -10,7 +10,8 @@ from passlib.hash import bcrypt
 
 from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED,
-                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES, PREDEFINED_FIELD)
+                                       UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES, PREDEFINED_FIELD,
+                                       DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE,
@@ -214,7 +215,15 @@ class Users:
                 and assignment_rule_match_found:
             user[ROLE_ID] = ObjectId(role_id)
             self._users_collection.update_one(match_user, {'$set': {ROLE_ID: user[ROLE_ID]}})
+        self._add_personal_space(user.get('_id'))
         return user
+
+    def _add_personal_space(self, user_id):
+        self._dashboard_spaces_collection.insert_one({
+            'name': DASHBOARD_SPACE_PERSONAL,
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': user_id
+        })
 
     # pylint: disable=too-many-return-statements
     def _check_password_validity(self, password):

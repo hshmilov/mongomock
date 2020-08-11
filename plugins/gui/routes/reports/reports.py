@@ -22,7 +22,7 @@ from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_GENERATE_PDF_THREAD_ID,
                                        EXEC_REPORT_THREAD_ID,
-                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD, DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD)
@@ -384,7 +384,8 @@ class Reports:
                 else None
             generator_params['default_sort'] = self._system_settings['defaultSort']
             generator_params['saved_view_count_func'] = self._get_entity_count
-            generator_params['spaces'] = self._dashboard_spaces_collection.find(filter_archived())
+            generator_params['spaces'] = self._dashboard_spaces_collection.find(filter_archived(
+                {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}))
             system_config = self.system_collection.find_one({'type': 'server'}) or {}
             server_name = str(self._saml_login.get('axonius_external_url') or '').strip()
             if server_name:

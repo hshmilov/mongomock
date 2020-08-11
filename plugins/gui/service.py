@@ -194,8 +194,8 @@ class GuiService(Triggerable,
             # User doesn't exist, this must be the installation process
             default_user = self.DEFAULT_USER
             default_user['role_id'] = owner_role.get('_id')
-            self._users_collection.update({'user_name': 'admin'}, default_user, upsert=True)
-
+            admin_result = self._users_collection.insert_one(default_user)
+            self._add_personal_space(admin_result.inserted_id)
         alt_user = self._users_collection.find_one({'user_name': AXONIUS_USER_NAME})
         if alt_user is None:
             owner_role = self._roles_collection.find_one({
@@ -203,8 +203,8 @@ class GuiService(Triggerable,
             })
             alternatice_user = self.ALTERNATIVE_USER
             alternatice_user['role_id'] = owner_role.get('_id')
-            self._users_collection.update({'user_name': AXONIUS_USER_NAME},
-                                          alternatice_user, upsert=True)
+            axonius_user_result = self._users_collection.insert_one(alternatice_user)
+            self._add_personal_space(axonius_user_result.inserted_id)
 
         alt_user = self._users_collection.find_one({'user_name': AXONIUS_RO_USER_NAME})
         if alt_user is None:
@@ -213,8 +213,8 @@ class GuiService(Triggerable,
             })
             alternative_user_ro = self.ALTERNATIVE_RO_USER
             alternative_user_ro['role_id'] = owner_ro_role.get('_id')
-            self._users_collection.update({'user_name': AXONIUS_RO_USER_NAME},
-                                          alternative_user_ro, upsert=True)
+            axonius_ro_user_result = self._users_collection.insert_one(alternative_user_ro)
+            self._add_personal_space(axonius_ro_user_result.inserted_id)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
