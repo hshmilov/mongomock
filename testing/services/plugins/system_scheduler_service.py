@@ -81,6 +81,22 @@ class SystemSchedulerService(PluginService, SystemService, UpdatablePluginMixin)
                                             f'{str(response.content)}'
         return response
 
+    def trigger_azure_backup(self):
+        response = requests.get(
+            f'{self.req_url}/trigger_azure_backup', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
+        return response
+
+    def trigger_root_master_azure_restore(self):
+        response = requests.get(
+            f'{self.req_url}/trigger_root_master_azure_restore', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: ' \
+                                            f'{str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
+        return response
+
     @retry(stop_max_attempt_number=300, wait_fixed=1000)
     def wait_for_scheduler(self, is_scheduler_at_rest: bool):
         """

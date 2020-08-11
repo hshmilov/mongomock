@@ -61,7 +61,8 @@ from axonius.types.enforcement_classes import TriggerPeriod, Trigger
 from axonius.utils.backup import backup_to_s3, backup_to_external
 from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.files import get_local_config_file
-from axonius.utils.root_master.root_master import root_master_restore_from_s3, root_master_restore_from_smb
+from axonius.utils.root_master.root_master import root_master_restore_from_s3, \
+    root_master_restore_from_smb, root_master_restore_from_azure
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -238,6 +239,22 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
     @staticmethod
     def trigger_root_master_smb_restore():
         return str(root_master_restore_from_smb())
+
+    @add_rule('trigger_azure_backup')
+    def trigger_azure_backup_external(self):
+        return jsonify({'result': str(self.trigger_azure_backup())})
+
+    @staticmethod
+    def trigger_azure_backup():
+        return str(backup_to_external(services=['azure']))
+
+    @add_rule('trigger_root_master_azure_restore')
+    def trigger_root_master_azure_restore_external(self):
+        return jsonify({'result': str(self.trigger_root_master_azure_restore())})
+
+    @staticmethod
+    def trigger_root_master_azure_restore():
+        return str(root_master_restore_from_azure())
 
     @add_rule('state', should_authenticate=False)
     def get_state(self):
@@ -727,6 +744,26 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     logger.critical(f'Could not complete Root Master cycle (SMB)')
                     return  # do not continue the rest of the cycle
 
+            # pylint: disable=no-else-return
+            elif (self.feature_flags_config().get(RootMasterNames.root_key)
+                  or {}).get(RootMasterNames.azure_enabled):
+                try:
+                    logger.info(f'Root Master Mode enabled - Restoring from '
+                                f'Azure blob storage instead of fetch')
+                    response = root_master_restore_from_azure()
+                    self._request_gui_dashboard_cache_clear()
+
+                    _change_subphase(ResearchPhases.Post_Correlation)
+                    post_correlation_plugins = [plugin for plugin in
+                                                self._get_plugins(PluginSubtype.PostCorrelation)
+                                                if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
+                    if post_correlation_plugins:
+                        self._run_plugins(post_correlation_plugins)
+                        self._request_gui_dashboard_cache_clear()
+
+                except Exception:
+                    logger.critical(f'Could not complete Root Master cycle (Azure)')
+                    return  # do not continue the rest of the cycle
             try:
                 # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
                 self.request_remote_plugin('wait/execute', REPORTS_PLUGIN_NAME)
@@ -838,6 +875,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     threading.Thread(target=backup_to_s3).start()
                 elif self._smb_settings.get('enabled') and self._smb_settings.get('enable_backups'):
                     threading.Thread(target=backup_to_external, args=(['smb'],)).start()
+                elif self._azure_storage_settings.get('enabled') and self._azure_storage_settings.get('enable_backups'):
+                    threading.Thread(target=backup_to_external, args=(['azure'],)).start()
             except Exception:
                 logger.exception(f'Could not run backup phase')
 

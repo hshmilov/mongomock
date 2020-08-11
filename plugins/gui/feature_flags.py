@@ -215,6 +215,11 @@ class FeatureFlags(Configurable):
                             'type': 'bool',
                         },
                         {
+                            'name': RootMasterNames.azure_enabled,
+                            'title': 'Enable Root Master Mode (Azure)',
+                            'type': 'bool',
+                        },
+                        {
                             'name': RootMasterNames.delete_backups,
                             'title': 'Delete Backups After Parse',
                             'type': 'bool',
@@ -223,6 +228,7 @@ class FeatureFlags(Configurable):
                     'required': [
                         RootMasterNames.enabled,
                         RootMasterNames.SMB_enabled,
+                        RootMasterNames.azure_enabled,
                         RootMasterNames.delete_backups,
                     ],
                 },
@@ -289,6 +295,7 @@ class FeatureFlags(Configurable):
             RootMasterNames.root_key: {
                 RootMasterNames.enabled: False,
                 RootMasterNames.SMB_enabled: False,
+                RootMasterNames.azure_enabled: False,
                 RootMasterNames.delete_backups: False,
             },
             ParallelSearch.root_key: {

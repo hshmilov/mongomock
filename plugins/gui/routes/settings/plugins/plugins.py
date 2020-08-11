@@ -2,6 +2,7 @@ import csv
 import logging
 import re
 import json
+from tempfile import NamedTemporaryFile
 
 import copy
 from codecs import BOM_UTF8
@@ -13,6 +14,7 @@ import requests
 from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
+from axonius.clients.azure.utils import AzureBlobStorageClient, CONTAINER_NAME_PATTERN
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, AVAILABLE_CSV_LOCATION_FIELDS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
@@ -251,6 +253,86 @@ class Plugins:
                 except Exception as e:
                     logger.exception(f'Error connecting to SMB: {str(e)}')
                     return return_error(f'Error connecting to SMB: {str(e)}', 400)
+
+            # azure root master backup/restore
+            azure_settings = config_to_set.get('azure_storage_settings')
+            if isinstance(azure_settings, dict):
+                if azure_settings and azure_settings.get('enabled') is True:
+                    enable_backups = azure_settings.get('enable_backups')
+                    container_name = azure_settings.get('storage_container_name')
+                    connection_string = azure_settings.get('connection_string')
+                    preshared_key = azure_settings.get('azure_preshared_key') or ''
+
+                    if enable_backups is True:
+                        try:
+                            verify_preshared_key(preshared_key)
+                        except Exception as e:
+                            return return_error(str(e), http_status=400)
+
+                    if container_name and re.match(CONTAINER_NAME_PATTERN,
+                                                   container_name):
+                        # read/write test
+                        try:
+                            azure_storage_client = AzureBlobStorageClient(
+                                connection_string=connection_string,
+                                container_name=container_name
+                            )
+                        except Exception as err:
+                            logger.exception(
+                                f'Unable to instantiate an Azure storage client')
+                            return return_error(
+                                f'Error on read/write to Azure blob storage: '
+                                f'{str(err)}', 400)
+
+                        with NamedTemporaryFile() as blob_name:
+                            try:
+                                upload_status = azure_storage_client.block_upload_blob(
+                                    container_name=container_name,
+                                    blob_name=blob_name.name
+                                )
+                                if upload_status:
+                                    try:
+                                        delete_status = azure_storage_client.delete_blob(
+                                            container_name=container_name,
+                                            blob_name=blob_name.name
+                                        )
+                                        if not delete_status:
+                                            logger.warning(
+                                                f'Unable to delete a test file '
+                                                f'from Azure storage'
+                                            )
+                                    except Exception as err:
+                                        logger.exception(
+                                            f'Failed deleting test file '
+                                            f'{blob_name.name} from {container_name}: '
+                                            f'{str(err)}', exc_info=True)
+                                        # fallthrough (not a show stopper)
+                                else:
+                                    message = f'Unable to upload a test file ' \
+                                              f'to Azure storage'
+                                    logger.warning(message)
+                                    return return_error(f'{message}', 400)
+                            except Exception as e:
+                                message = f'Failed test file creation, please ' \
+                                          f'make sure Axonius has sufficient ' \
+                                          f'Read-Write permissions.'
+                                logger.exception(f'{message} {str(e)}')
+                                return return_error(
+                                    f'{message}: {str(err)}', 400)
+                    else:
+                        message = f'The container name may only contain ' \
+                                  f'lowercase letters, numbers, and hyphens, ' \
+                                  f'and must begin with a letter or a number. ' \
+                                  f'Each hyphen must be preceded and followed ' \
+                                  f'by a non-hyphen character. The name must ' \
+                                  f'also be between 3 and 63 characters long: ' \
+                                  f'{str(container_name)}'
+                        logger.warning(message)
+                        return return_error(f'{message}', 400)
+            else:
+                logger.warning(f'Malformed Azure storage settings. Expected a '
+                               f'dict, got {type(azure_settings)}:'
+                               f'{str(azure_settings)}')
 
             getting_started_conf = config_to_set.get(GETTING_STARTED_CHECKLIST_SETTING)
             getting_started_feature_enabled = getting_started_conf.get('enabled')

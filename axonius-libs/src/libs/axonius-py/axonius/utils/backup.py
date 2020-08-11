@@ -4,12 +4,16 @@ import io
 import json
 import logging
 import os
+import re
 import subprocess
 import tarfile
 
+from time import strftime
 from funcy import chunks
 
 from axonius.clients.aws.utils import upload_file_to_s3
+from axonius.clients.azure.utils import AzureBlobStorageClient, \
+    CONTAINER_NAME_PATTERN, AzureBlob, AzureBlobContainer
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.utils.host_utils import get_free_disk_space
@@ -19,7 +23,8 @@ from axonius.utils.smb import SMBClient
 logger = logging.getLogger(f'axonius.{__name__}')
 
 DISK_SPACE_FREE_GB_MANDATORY = 15
-AXONIUS_BACKUP_FILENAME = 'axonius_backup.tar.gz'
+STRFTIME_FORMAT = '%Y%m%d-%H%m%s'
+AXONIUS_BACKUP_FILENAME = f'axonius-backup-{strftime(STRFTIME_FORMAT)}.tar.gz'
 BYTES_TO_GIGABYTES = 1024 ** 3
 RETURN_SUCCESS_CODE = 0
 RETURN_FAILURE_CODE = 1
@@ -109,7 +114,7 @@ def add_cursor_to_tar(tar_obj: tarfile, cursor_obj: PluginBase.Instance, entity_
     logger.info(f'Finished adding cursors to tar file')
 
 
-#pylint: disable=protected-access
+# pylint: disable=protected-access
 def create_tar_file():
     """ Create a compressed tar archive of the update file. """
     with tarfile.open(AXONIUS_BACKUP_FILENAME, 'w:gz') as tar:
@@ -188,7 +193,13 @@ def backup_to_external(services: list) -> int:
             except Exception:
                 logger.exception(f'Backup to SMB failed.')
                 return_code = RETURN_FAILURE_CODE
-
+        if 'azure' in services:
+            try:
+                return_code = backup_to_azure()
+                logger.info(f'Backup to Azure finished')
+            except Exception as err:
+                logger.exception(f'Backup to Azure failed: {str(err)}')
+                return_code = RETURN_FAILURE_CODE
     except Exception as err:
         logger.exception(f'General backup failure: {err}')
         return_code = RETURN_FAILURE_CODE
@@ -382,6 +393,191 @@ def backup_to_s3() -> int:
         logger.info(f'Backup to s3: Finished')
     except Exception as e:
         logger.exception(f'Backup to s3: {str(e)}')
+        return_code = RETURN_FAILURE_CODE
+    finally:
+        try:
+            if os.path.exists(AXONIUS_BACKUP_FILENAME):
+                os.unlink(AXONIUS_BACKUP_FILENAME)
+                logger.info(f'Unlinking {AXONIUS_BACKUP_FILENAME}')
+        except Exception:
+            logger.exception(f'Unable to unlink {AXONIUS_BACKUP_FILENAME}')
+        try:
+            if os.path.exists(f'{AXONIUS_BACKUP_FILENAME}.gpg'):
+                os.unlink(f'{AXONIUS_BACKUP_FILENAME}.gpg')
+                logger.info(f'Unlinking {AXONIUS_BACKUP_FILENAME}.gpg')
+        except Exception:
+            logger.exception(f'Unable to unlink {AXONIUS_BACKUP_FILENAME}.gpg')
+
+    return return_code
+
+
+# pylint: disable=too-many-return-statements
+def backup_to_azure() -> int:
+    logger.info('Backup to Azure: Starting.')
+
+    return_code = RETURN_FAILURE_CODE
+
+    # make sure setup is correct and complete
+    try:
+        azure_storage_settings = PluginBase.Instance._azure_storage_settings.copy()
+        if not isinstance(azure_storage_settings, dict):
+            raise ValueError(
+                f'Malformed Azure storage settings. Expected a dict, got '
+                f'{type(azure_storage_settings)}: {str(azure_storage_settings)}')
+
+        if not azure_storage_settings.get('enabled'):
+            raise ValueError(
+                f'Azure backup settings are not enabled: {azure_storage_settings}')
+
+        if not azure_storage_settings.get('enable_backups'):
+            raise ValueError(f'Azure backups are not enabled')
+
+    except Exception:
+        logger.exception(f'Unable to get Azure settings from PluginBase')
+        raise
+
+    # create the tar file with cursors
+    try:
+        create_tar_file()
+    except Exception as err:
+        logger.exception(f'Unable to create tar file for Azure storage '
+                         f'backup: {str(err)}')
+        raise
+
+    # this may be a string or None
+    preshared_key = azure_storage_settings.get('azure_preshared_key')
+
+    # Check the PSK to make sure it conforms to known standard/strength
+    if isinstance(preshared_key, str):
+        verify_preshared_key(preshared_key)
+    else:
+        if preshared_key is not None:
+            raise ValueError(f'Malformed Azure backup pre-shared key. Expected a '
+                             f'str, got {type(preshared_key)}: {str(preshared_key)}')
+
+    # encrypt the tar file
+    try:
+        status = encrypt_tar_file(preshared_key)
+    except Exception:
+        logger.exception(f'GPG encryption failed. Stopping.')
+        return RETURN_FAILURE_CODE
+
+    connection_string = azure_storage_settings.get('connection_string')
+    if not isinstance(connection_string, str):
+        logger.warning(
+            f'Azure connection string not found: {str(connection_string)}')
+        return RETURN_FAILURE_CODE
+
+    container_name = azure_storage_settings.get('storage_container_name')
+    if not isinstance(container_name, str):
+        logger.warning(
+            f'Container name not found: {str(container_name)}')
+        return RETURN_FAILURE_CODE
+
+    if not re.match(CONTAINER_NAME_PATTERN, container_name):
+        logger.warning(
+            f'The container name may only contain lowercase '
+            f'letters, numbers, and hyphens, and must begin with a letter '
+            f'or a number. Each hyphen must be preceded and followed by a '
+            f'non-hyphen character. The name must also be between 3 and 63 '
+            f'characters long: {str(container_name)}')
+        return RETURN_FAILURE_CODE
+
+    # create the azure client
+    try:
+        azure_storage_client = AzureBlobStorageClient(
+            connection_string=connection_string,
+            container_name=container_name
+        )
+        if not isinstance(azure_storage_client, AzureBlobStorageClient):
+            raise ValueError(
+                f'Malformed Azure storage client. Expected an '
+                f'AzureBlobStorageClient, got {type(azure_storage_client)}: '
+                f'{str(azure_storage_client)}')
+    except Exception:
+        logger.exception(f'Unable to instantiate an Azure storage client')
+        return RETURN_FAILURE_CODE
+
+    # check to see if container exists
+    blob_containers = list()
+    try:
+        azure_storage_client.get_blob_containers()
+        for container in azure_storage_client.blob_containers:
+            if isinstance(container, AzureBlobContainer):
+                blob_containers.append(container.name)
+            else:
+                logger.warning(f'Malformed Azure storage container. Expected an '
+                               f'AzureBlobContainer, got {type(container)}: '
+                               f'{str(container)}')
+        logger.debug(f'Found these Azure storage containers: {str(blob_containers)}')
+    except Exception as err:
+        logger.exception(f'Unable to fetch Azure blob containers: {str(err)}')
+
+    if container_name not in blob_containers:
+        # if the container doesn't exist, create it
+        logger.info(f'Azure blob container does not exist. Creating '
+                    f'{container_name}')
+        try:
+            response = azure_storage_client.create_blob_container(
+                container_name=container_name
+            )
+            if not response:
+                logger.warning(
+                    f'Azure blob container ({container_name}) creation failed.')
+                return RETURN_FAILURE_CODE
+        except Exception as err:
+            logger.exception(f'Unable to create Azure blob container '
+                             f'{container_name}: {str(err)}')
+            return RETURN_FAILURE_CODE
+
+    # find all existing blobs in this container
+    blobs = list()
+    try:
+        azure_storage_client.get_blobs(container_name=container_name)
+        for blob in azure_storage_client.blobs[container_name]:
+            if isinstance(blob, AzureBlob):
+                blobs.append(blob.name)
+            else:
+                logger.warning(f'Malformed blob. Expected an AzureBlob, got '
+                               f'{type(blob)}: {str(blob)}')
+                continue
+        logger.debug(f'Found these blobs in Azure storage {container_name}: {blobs}')
+    except Exception as err:
+        logger.exception(f'Unable to get blobs from Azure storage container '
+                         f'{container_name}: {str(err)}')
+        return RETURN_FAILURE_CODE
+
+    if f'{AXONIUS_BACKUP_FILENAME}.gpg' in blobs:
+        try:
+            status = azure_storage_client.delete_blob(
+                container_name=container_name,
+                blob_name=f'{AXONIUS_BACKUP_FILENAME}.gpg')
+            if not status:
+                logger.warning(f'Unable to delete {AXONIUS_BACKUP_FILENAME}.gpg '
+                               f'from Azure storage {container_name}')
+                # fallthrough
+        except Exception as err:
+            logger.exception(
+                f'Unable to delete existing blob '
+                f'(f"{AXONIUS_BACKUP_FILENAME}.gpg") from {container_name}: '
+                f'{str(err)}')
+            # fallthrough
+
+    try:
+        logger.info(f'Started backup to Azure storage {container_name}')
+        upload_status = azure_storage_client.block_upload_blob(
+            container_name=container_name,
+            blob_name=f'{AXONIUS_BACKUP_FILENAME}.gpg'
+        )
+        if upload_status:
+            logger.info(f'Backup to Azure Storage {container_name} finished')
+            return_code = RETURN_SUCCESS_CODE
+        else:
+            logger.warning(f'Backup to Azure Storage {container_name} failed')
+            return RETURN_FAILURE_CODE
+    except Exception as err:
+        logger.exception(f'Upload of "{AXONIUS_BACKUP_FILENAME}.gpg" to '
+                         f'Azure storage {container_name} failed: {str(err)}')
         return_code = RETURN_FAILURE_CODE
     finally:
         try:

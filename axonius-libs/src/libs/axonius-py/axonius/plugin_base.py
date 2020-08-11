@@ -3279,6 +3279,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._vault_settings = config['vault_settings']
         self._aws_s3_settings = config.get('aws_s3_settings') or {}
         self._smb_settings = config.get('smb_settings') or {}
+        self._azure_storage_settings = config.get('azure_storage_settings') or {}
         self._global_ssl = config.get('global_ssl') or {}
         self._ssl_trust_settings = config.get('ssl_trust_settings') or {}
         self._static_analysis_settings = config.get(STATIC_ANALYSIS_SETTINGS) or {}
@@ -4391,6 +4392,44 @@ class PluginBase(Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': 'enabled',
+                            'title': 'Enable Azure Storage Integration',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'enable_backups',
+                            'title': 'Enable Backups to Azure Storage',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': 'storage_container_name',
+                            'title': 'Storage Container Name',
+                            'type': 'string'
+                        },
+                        {
+                            'name': 'connection_string',
+                            'title': 'Connection String',
+                            'type': 'string',
+                            'format': 'password'
+                        },
+                        {
+                            'name': 'azure_preshared_key',
+                            'title': 'Backup Encryption Passphrase',
+                            'type': 'string',
+                            'format': 'password'
+                        },
+                    ],
+                    'name': 'azure_storage_settings',
+                    'title': 'Azure Storage Settings',
+                    'type': 'array',
+                    'required': ['enabled',
+                                 'enable_backups',
+                                 'storage_container_name',
+                                 'connection_string']
+                },
+                {
+                    'items': [
+                        {
+                            'name': 'enabled',
                             'title': 'Enable advanced API settings',
                             'type': 'bool'
                         },
@@ -4580,6 +4619,13 @@ class PluginBase(Configurable, Feature, ABC):
                 'password': None,
                 'preshared_key': None,
                 'use_nbns': False,
+            },
+            'azure_storage_settings': {
+                'enabled': False,
+                'enable_backups': False,
+                'storage_container_name': None,
+                'connection_string': None,
+                'azure_preshared_key': None,
             },
             'api_settings': {
                 'enabled': False,

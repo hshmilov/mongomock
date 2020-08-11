@@ -21,6 +21,7 @@ from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.utils.host_utils import get_free_disk_space
 from axonius.utils.backup import verify_preshared_key
+from axonius.clients.azure.utils import AzureBlobStorageClient
 
 logger = logging.getLogger(f'axonius.{__name__}')
 DISK_SPACE_FREE_GB_MANDATORY = 15
@@ -554,6 +555,211 @@ def root_master_restore_from_smb():
                     os.unlink(RESTORE_FILE)
     except Exception:
         logger.exception(f'Root Master Mode: Could not restore from SMB')
+    finally:
+        if os.path.exists(RESTORE_FILE_GPG):
+            os.unlink(RESTORE_FILE_GPG)
+        if os.path.exists(RESTORE_FILE):
+            os.unlink(RESTORE_FILE)
+
+    # this is to provide a value to Flask so it doesn't HTTP 500
+    return 0
+
+
+def root_master_restore_from_azure():
+    """
+    Gets an update file of devices & users & fields and loads this to the memory
+    """
+    # 1. Check if there is enough memory left to parse this
+    # 2. Store the file on the disk. Extract it using the preshared key.
+    # 3. load each file to the memory, and parse it (Has to be single threaded) while not in a cycle.
+    #    This can also be async.
+    try:
+        root_master_settings = (PluginBase.Instance.feature_flags_config().get(
+            RootMasterNames.root_key) or {})
+        # Verify root master settings
+        if not root_master_settings.get(RootMasterNames.azure_enabled):
+            raise ValueError(f'Error - Root Master (Azure) mode is not enabled')
+
+        delete_backups = root_master_settings.get(
+            RootMasterNames.delete_backups) or False
+
+        # Check if there is enough space on this machine. Otherwise stop the process
+        free_disk_space_in_bytes = get_free_disk_space()
+        free_disk_space_in_gb = free_disk_space_in_bytes / BYTES_TO_GIGABYTES
+        if free_disk_space_in_gb < DISK_SPACE_FREE_GB_MANDATORY:
+            message = f'Error - only {free_disk_space_in_gb}gb is left on disk, ' \
+                      f'while {DISK_SPACE_FREE_GB_MANDATORY} is required'
+            raise ValueError(message)
+
+        azure_settings = PluginBase.Instance._azure_storage_settings.copy()
+
+        if not azure_settings.get('enabled'):
+            raise ValueError(f'Azure integration is not enabled.')
+
+        if not azure_settings.get('enable_backups'):
+            raise ValueError(f'Azure Backups are not enabled.')
+
+        if azure_settings.get('storage_container_name'):
+            storage_container_name = azure_settings.get('storage_container_name')
+        else:
+            raise ValueError(f'Azure blob storage container name is not set.')
+
+        if azure_settings.get('connection_string'):
+            connection_string = azure_settings.get('connection_string')
+        else:
+            raise ValueError(f'Azure connection string is not set.')
+
+        # Check the PSK to make sure it conforms to known standard/strength
+        preshared_key = azure_settings.get('azure_preshared_key')
+
+        # Check the PSK to make sure it conforms to known standard/strength
+        if isinstance(preshared_key, str):
+            verify_preshared_key(preshared_key)
+        else:
+            if preshared_key is not None:
+                raise ValueError(
+                    f'Malformed Azure backup pre-shared key. Expected a '
+                    f'str, got {type(preshared_key)}: {str(preshared_key)}')
+
+        try:
+            azure_storage_client = AzureBlobStorageClient(
+                connection_string=connection_string,
+                container_name=storage_container_name
+            )
+        except Exception:
+            logger.exception(f'Unable to create an Azure blob storage client')
+            raise
+
+        # fetch the existing filenames in the container
+        blobs = list()
+        try:
+            azure_storage_client.get_blobs(container_name=storage_container_name)
+            for blob in azure_storage_client.blobs[storage_container_name]:
+                blobs.append(blob.name)
+        except BaseException:
+            logger.exception(f'Unable to get Azure storage blobs from '
+                             f'{storage_container_name}')
+            raise
+
+        root_master_config = PluginBase.Instance._get_collection(
+            'root_master_config', 'core')
+
+        # get a list of all files we haven't parsed yet
+        parsed_smb_files = [parsed_file_document['key'] for parsed_file_document
+                            in root_master_config.find({'type': 'parsed_file'})]
+
+        # figure out what's new
+        new_azure_files = [blob for blob in blobs if blobs not in parsed_smb_files] or []
+        logger.info(f'New Azure files found: {",".join(new_azure_files)}')
+
+        # remove any existing restore files
+        if os.path.exists(RESTORE_FILE_GPG):
+            os.unlink(RESTORE_FILE_GPG)
+        if os.path.exists(RESTORE_FILE):
+            os.unlink(RESTORE_FILE)
+
+        # For each file, download the file, parse it, set in DB and delete
+        for azure_file in new_azure_files:
+            try:
+                azure_storage_client.block_download_blob(
+                    container_name=storage_container_name,
+                    blob_name=azure_file)
+                logger.info(f'Download complete: {azure_file}, Decrypting')
+            except Exception as err:
+                logger.exception(f'Unable to download {azure_file} from Azure: '
+                                 f'{str(err)}')
+                raise
+
+            # decrypt
+            try:
+                subprocess.check_call([
+                    'gpg', '--output', RESTORE_FILE,
+                    '--passphrase', preshared_key,
+                    '--decrypt', azure_file
+                ])
+                file_size_in_mb = round(
+                    os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
+                logger.info(f'Decrypt Complete: {azure_file}. '
+                            f'File size: {file_size_in_mb}mb')
+                os.unlink(azure_file)
+            except Exception as err:
+                logger.exception(f'Unable to decrypt the file: {azure_file}: '
+                                 f'{str(err)}')
+                raise
+
+            try:
+                logger.info(f'Parsing {RESTORE_FILE}')
+                with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
+                    for member in tar_file.getmembers():
+                        try:
+                            if member.name.startswith('devices_'):
+                                root_master_parse_entities(
+                                    EntityType.Devices, tar_file.extractfile(
+                                        member).read(), azure_file
+                                )
+                            elif member.name.startswith('users_'):
+                                root_master_parse_entities(
+                                    EntityType.Users, tar_file.extractfile(
+                                        member).read(), azure_file
+                                )
+                            elif member.name.startswith('raw_devices_'):
+                                root_master_parse_entities_raw(
+                                    EntityType.Devices,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('raw_users_'):
+                                root_master_parse_entities_raw(
+                                    EntityType.Users,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('fields_devices_'):
+                                root_master_parse_entities_fields(
+                                    EntityType.Devices,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith('fields_users_'):
+                                root_master_parse_entities_fields(
+                                    EntityType.Users,
+                                    tar_file.extractfile(member).read())
+                            elif member.name.startswith(
+                                    'adapter_client_labels_'):
+                                root_master_parse_adapter_client_labels(
+                                    tar_file.extractfile(member).read())
+                            else:
+                                logger.warning(f'found member {member.name}'
+                                               f' - no parsing known')
+                        except Exception:
+                            logger.exception(
+                                f'Could not parse member {member.name}')
+
+                os.unlink(RESTORE_FILE)
+
+                # Delete from share if necessary
+                if delete_backups:
+                    logger.info(f'Deleting {azure_file} from Azure '
+                                f'storage {storage_container_name}')
+                    try:
+                        azure_storage_client.delete_blob(
+                            container_name=storage_container_name,
+                            blob_name=azure_file
+                        )
+                    except Exception as err:
+                        logger.exception(f'Could not delete {azure_file} '
+                                         f'from {storage_container_name}: '
+                                         f'{str(err)}')
+
+                # Set in db as parsed
+                root_master_config.insert_one({'type': 'parsed_file',
+                                               'key': azure_file})
+                logger.info(f'Parsing of {azure_file} complete.')
+            except Exception as err:
+                logger.exception(f'File download/parse failed: {azure_file}: '
+                                 f'{str(err)}')
+            finally:
+                if os.path.exists(RESTORE_FILE_GPG):
+                    os.unlink(RESTORE_FILE_GPG)
+                if os.path.exists(RESTORE_FILE):
+                    os.unlink(RESTORE_FILE)
+    except Exception as err:
+        logger.exception(f'Root Master Mode - Could not restore from Azure: '
+                         f'{str(err)}')
     finally:
         if os.path.exists(RESTORE_FILE_GPG):
             os.unlink(RESTORE_FILE_GPG)

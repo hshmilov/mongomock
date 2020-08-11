@@ -73,8 +73,10 @@ def usage():
     {name} disable_client_evaluation [adapter_name] - 'e.g. aws_adapter'. disable client evaluation for the next run
     {name} s3_backup - Trigger s3 backup
     {name} smb_backup - Trigger SMB backup
+    {name} azure_backup - Trigger Azure backup
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     {name} root_master_smb_restore - Trigger 'Root Master mode' SMB restore
+    {name} root_master_azure_restore - Trigger 'Root Master mode' Azure restore
     {name} compliance run (aws/azure) - Run Compliance Report
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
@@ -280,11 +282,17 @@ def main():
     elif component == 'smb_backup':
         ss.trigger_smb_backup()
 
+    elif component == 'azure_backup':
+        ss.trigger_azure_backup()
+
     elif component == 'root_master_s3_restore':
         ss.trigger_root_master_s3_restore()
 
     elif component == 'root_master_smb_restore':
         ss.trigger_root_master_smb_restore()
+
+    elif component == 'root_master_azure_restore':
+        ss.trigger_root_master_azure_restore()
 
     elif component == 'db':
         if action == 'rf':
