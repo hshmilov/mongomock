@@ -1027,8 +1027,6 @@ class EntitiesPage(Page):
         context_element = self.wait_for_element_present_by_css('.save-query-dialog')
         self.click_button(text='Save', context=context_element)
         self.wait_for_element_absent_by_css(self.QUERY_MODAL_OVERLAY)
-        if query_name is not None:
-            self.wait_for_element_present_by_text(query_name)
 
     def reset_query(self):
         self.click_button('Reset')
