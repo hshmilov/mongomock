@@ -76,7 +76,7 @@ class SettingsPage(Page):
     SAML_IDP = 'idp_name'
     SAML_METADATA = 'metadata_url'
     SAML_AXONIUS_EXTERNAL_URL = 'axonius_external_url'
-    HISTORY_GATHERED = 'Enable daily historical snapshot'
+    HISTORY_GATHERED = 'Enable scheduled historical snapshot'
     DC_ADDRESS = 'dc_address'
     GROUP_CN = 'group_cn'
     SINGLE_ADAPTER_VIEW = 'Use single adapter view'
