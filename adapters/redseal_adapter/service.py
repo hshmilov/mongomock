@@ -200,7 +200,18 @@ class RedsealAdapter(AdapterBase, Configurable):
                         interface = arp_text_list[2]
                     device.arp_data.append(ArpData(mac=mac, ip=ip, interface=interface))
                 except Exception:
-                    continue
+                    try:
+                        format_mac(arp_text_list[3])
+                        if not is_ipaddr(arp_text_list[1]):
+                            continue
+                        mac = arp_text_list[3]
+                        ip = arp_text_list[1]
+                        interface = None
+                        if len(arp_text_list) > 5:
+                            interface = arp_text_list[5]
+                        device.arp_data.append(ArpData(mac=mac, ip=ip, interface=interface))
+                    except Exception:
+                        continue
         except Exception:
             logger.exception('Problem with arp data')
         device.set_raw(raw_device_data)
