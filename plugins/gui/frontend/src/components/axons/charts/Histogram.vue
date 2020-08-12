@@ -69,7 +69,6 @@
 </template>
 
 <script>
-import { formatPercentage } from '@constants/utils';
 import { pluginMeta } from '@constants/plugin_meta';
 import XPaginator from '../layout/Paginator.vue';
 import XChartTooltip from './ChartTooltip.vue';
@@ -139,7 +138,7 @@ export default {
         return {};
       }
 
-      const { portion, value } = this.hoveredItem;
+      const { percentage, value } = this.hoveredItem;
       let { name } = this.hoveredItem;
       name = pluginMeta[name] ? pluginMeta[name].title : name;
       return {
@@ -149,7 +148,7 @@ export default {
         },
         body: {
           value,
-          percentage: formatPercentage(portion),
+          percentage,
         },
       };
     },

@@ -90,10 +90,9 @@
             :is="chartView"
             v-if="chart.view && !isChartEmpty(chart)"
             v-show="!showLoading"
-            :data="chart.data"
+            :data="chartData"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
             @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
-            @legend-data-modified="onlegendDataModified"
           />
           <div
             v-if="isTimelinePartialData"
@@ -186,6 +185,7 @@ import XChartLegend from '../../axons/charts/ChartLegend.vue';
 import PanelActions from './PanelActions.vue';
 import XStacked from '../../axons/charts/Stacked.vue';
 import XAdapterHistogram from '../../axons/charts/AdapterHistogram.vue';
+import { formatPercentage } from '@constants/utils';
 import {
   ChartTypesEnum, ChartViewEnum, ChartComponentByViewEnum,
 } from '../../../constants/dashboard';
@@ -307,12 +307,31 @@ export default {
       }
       return '';
     },
+    chartData() {
+      return this.chart.data.map((item, index) => {
+        if (Array.isArray(item)) {
+          return item;
+        }
+        let { name } = item;
+        if (item.remainder) {
+          name = (name === 'ALL') ? `Remainder of all ${item.module}` : `Remainder of: ${name}`;
+        }
+        const percentage = formatPercentage(item.portion);
+        return {
+          ...item,
+          index,
+          name,
+          percentage,
+          class: this.getItemClass(item, index),
+        };
+      });
+    },
     attachedCardData() {
       if (this.showLegend) {
         return {
           cardClass: 'legend',
           component: 'XChartLegend',
-          data: this.chart.data,
+          data: this.chartData,
         };
       }
       if (this.showTrend) {
@@ -444,9 +463,6 @@ export default {
       this.showLegend = false;
       this.showTrend = false;
     },
-    onlegendDataModified(legendData) {
-      this.legendData = legendData;
-    },
     onLegendItemClick(itemIndex) {
       this.linkToQueryResults(itemIndex, this.chart.historical);
     },
@@ -485,6 +501,20 @@ export default {
     },
     getPastDateFromTimeframe() {
       return Date.now() - this.chart.config.timeframe.count * 1000 * 60 * 60 * 24;
+    },
+    getItemClass(item, index) {
+      if (this.chart.view !== ChartViewEnum.pie) {
+        return '';
+      }
+      const { data } = this.chart;
+      if (index === 1 && data.length === 2 && data[0].remainder) {
+        return `indicator-fill-${Math.ceil(item.portion * 4)}`;
+      }
+      const modIndex = (index % 10) + 1;
+      if (item.intersection) {
+        return `fill-intersection-${modIndex - 1}-${modIndex + 1}`;
+      }
+      return `pie-fill-${modIndex}`;
     },
   },
 };

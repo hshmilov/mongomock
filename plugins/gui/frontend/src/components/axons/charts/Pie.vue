@@ -72,7 +72,6 @@
 
 <script>
 import _sumBy from 'lodash/sumBy';
-import { formatPercentage } from '@constants/utils';
 import XChartTooltip from './ChartTooltip.vue';
 
 export default {
@@ -103,23 +102,9 @@ export default {
     tooManyValues() {
       return this.data.length > 100;
     },
-    processedData() {
-      const processData = this.data.map((item, index) => {
-        const { portion, remainder } = item;
-        const modifiedItem = item;
-        modifiedItem.index = index;
-        modifiedItem.percentage = formatPercentage(portion);
-        modifiedItem.name = remainder ? this.getRemainderLabel(modifiedItem) : modifiedItem.name;
-        modifiedItem.class = this.getItemClass(item, index);
-        return modifiedItem;
-      });
-
-      this.$emit('legend-data-modified', processData);
-      return processData;
-    },
     slices() {
       let cumulativePortion = 0;
-      return this.processedData.map((slice) => {
+      return this.data.map((slice) => {
         // Starting slice at the end of previous one, and ending after percentage defined for item
         const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion);
         cumulativePortion += slice.portion / 2;
@@ -143,7 +128,7 @@ export default {
       }
       const {
         percentage, name, remainder, intersection, value, class: colorClass,
-      } = this.processedData[this.inHover];
+      } = this.data[this.inHover];
       let tooltip;
       if (intersection) {
         tooltip = this.getIntersectionTooltip(name, value, percentage, colorClass);
@@ -159,16 +144,6 @@ export default {
     },
   },
   methods: {
-    getItemClass(item) {
-      if (this.data.length === 2 && item.index === 1 && this.data[0].remainder) {
-        return `indicator-fill-${Math.ceil(item.portion * 4)}`;
-      }
-      const modIndex = (item.index % 10) + 1;
-      if (item.intersection) {
-        return `fill-intersection-${modIndex - 1}-${modIndex + 1}`;
-      }
-      return `pie-fill-${modIndex}`;
-    },
     getNormalTooltip(name, value, percentage, colorClass) {
       return {
         header: {
@@ -202,9 +177,9 @@ export default {
           percentage,
         },
         additionalData: [{
-          ...this.processedData[this.inHover - 1],
+          ...this.data[this.inHover - 1],
         }, {
-          ...this.processedData[this.inHover + 1],
+          ...this.data[this.inHover + 1],
         }],
       };
     },
@@ -217,13 +192,6 @@ export default {
     onClick(index) {
       if (this.readOnly) return;
       this.$emit('click-one', index);
-    },
-    getRemainderLabel(item) {
-      if (item.name === 'ALL') {
-        // No base query
-        return `Remainder of all ${item.module}`;
-      }
-      return `Remainder of: ${item.name}`;
     },
   },
 };
