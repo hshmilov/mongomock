@@ -28,6 +28,8 @@ class CounterActAdapter(AdapterBase):
         wifi_ap_name = Field(str, 'Wifi AP Name')
         wifi_bssid = Field(str, 'Wifi BSSID')
         wifi_client_auth = Field(str, 'Wifi Client Auth')
+        sw_hostname = Field(str, 'Switch Hostname')
+        sw_port_desc = Field(str, 'Switch Port Description')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -195,6 +197,10 @@ class CounterActAdapter(AdapterBase):
                                     device.wifi_ap_name = field_raw_data.get('value')
                                 elif field_raw_name == 'wifi_bssid':
                                     device.wifi_bssid = field_raw_data.get('value')
+                                elif field_raw_name == 'sw_hostname':
+                                    device.sw_hostname = field_raw_data.get('value')
+                                elif field_raw_name == 'sw_port_desc':
+                                    device.sw_port_desc = field_raw_data.get('value')
                                 elif field_raw_name == 'wifi_client_auth':
                                     device.wifi_client_auth = field_raw_data.get('value')
                                 elif field_raw_name == 'in-group':
