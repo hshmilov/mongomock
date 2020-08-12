@@ -2110,7 +2110,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                 {
                                     'name': DISCOVERY_REPEAT_EVERY,
                                     'title': 'Repeat scheduled discovery every (days)',
-                                    'type': 'number'
+                                    'type': 'integer'
                                 },
                                 {
                                     'name': DISCOVERY_RESEARCH_DATE_TIME,
@@ -2213,7 +2213,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         {
                             'name': DISCOVERY_REPEAT_EVERY,
                             'title': 'Repeat scheduled discovery every (days)',
-                            'type': 'number'
+                            'type': 'integer'
                         },
                         {
                             'name': DISCOVERY_RESEARCH_DATE_TIME,

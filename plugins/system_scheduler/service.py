@@ -381,7 +381,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                 {
                                     'name': 'system_research_date_recurrence',
                                     'title': 'Repeat scheduled discovery every (days)',
-                                    'type': 'number'
+                                    'type': 'integer'
                                 },
                                 {
                                     'name': 'system_research_date_time',
@@ -469,7 +469,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                 {
                                     'name': HISTORY_REPEAT_RECURRENCE,
                                     'title': 'Repeat scheduled historical snapshot every (days)',
-                                    'type': 'number',
+                                    'type': 'integer',
                                     'min': 1
                                 }
                             ],
@@ -928,13 +928,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: True if we should trigger adapter/client fetch
         """
         current_time = datetime.now().time()
+        #
         if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_RATE:
             if not last_discovery:
                 return True
-            if int(((datetime.now() - last_discovery).seconds / 3600)) ==\
-                    discovery_config.get(DISCOVERY_REPEAT_RATE, 12):
-                return True
-            return False
+
+            diff = (datetime.now() - last_discovery).seconds
+            repeat_rate = discovery_config.get(DISCOVERY_REPEAT_RATE, 12) * 3600
+            # too early
+            if diff < repeat_rate:
+                return False
+            return True
 
         discovery_type_config = None
         run_on_weekdays = False

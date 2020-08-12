@@ -219,7 +219,7 @@ export default {
           required: ['period_recurrence', 'period_time'],
           items: [{
             name: 'period_recurrence',
-            type: 'number',
+            type: 'integer',
             title: 'Scheduled run every (days)',
             min: 1,
           }, this.timeSchema],
