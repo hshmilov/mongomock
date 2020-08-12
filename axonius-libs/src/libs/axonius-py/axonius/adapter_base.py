@@ -2075,7 +2075,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'items': [
                         {
                             'name': ENABLE_CUSTOM_DISCOVERY,
-                            'title': 'Enable adapter custom scheduling',
+                            'title': 'Enable custom scheduling of discovery for this adapter',
                             'type': 'bool'
                         },
                         {
@@ -2147,14 +2147,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'name': ADAPTER_DISCOVERY,
                     'required': [ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE,
                                  DISCOVERY_REPEAT_RATE],
-                    'title': 'Custom Scheduling',
+                    'title': 'Adapter Custom Scheduling',
                     'type': 'array'
                 },
                 {
                     'items': [
                         {
                             'name': ENABLE_CUSTOM_DISCOVERY,
-                            'title': 'Enable custom discovery schedule configuration for each adapter connection',
+                            'title': 'Enable custom scheduling of discovery per adapter connection',
                             'type': 'bool'
                         }
                     ],

@@ -928,7 +928,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: True if we should trigger adapter/client fetch
         """
         current_time = datetime.now().time()
-        #
+
+        # Check for every X hours.
         if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_RATE:
             if not last_discovery:
                 return True
@@ -969,17 +970,18 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         # Check for weekday
         if run_on_weekdays:
             today = datetime.today().strftime('%A').lower()
-            if today in discovery_type_config.get(DISCOVERY_REPEAT_ON_WEEKDAYS, []):
+            if today in discovery_type_config.get(DISCOVERY_REPEAT_ON, []):
                 if not last_discovery:
                     return True
-                if (datetime.now() - last_discovery).days > 0:
+                if time_diff(current_time, last_discovery.time()).seconds > CUSTOM_DISCOVERY_THRESHOLD:
                     return True
 
         # Check for day diff
         elif run_repeat_every_day:
             if not last_discovery:
                 return True
-            if (datetime.now() - last_discovery).days == discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
+            if (datetime.today().toordinal() - last_discovery.toordinal()) ==\
+                    discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
                 return True
         return False
 
@@ -1030,9 +1032,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if connection_discovery_enabled:
                     last_fetch_time = client.get(LAST_FETCH_TIME)
                     if self.should_run_custom_discovery(_config, last_fetch_time):
-                        custom_discovery_clients_to_trigger.append((client, True))
+                        custom_discovery_clients_to_trigger.append(client)
                 elif adapter_discovery_enabled and _should_trigger_adapter:
-                    adapter_discovery_clients_to_trigger.append((client, False))
+                    adapter_discovery_clients_to_trigger.append(client)
 
             # All the adapter's clients will be triggered one by one.
             # ￿So clients with custom discovery, won't be triggered twice.
@@ -1222,12 +1224,28 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         return Promise(_trigger_client)
 
+    @staticmethod
+    def _get_clients_id(_clients):
+        if _clients:
+            return [client[CLIENT_ID] for client in _clients]
+        return None
+
     def __run_custom_discovery_adapters(self):
         adapters_to_call = list(self.get_custom_discovery_adapters())
         if not adapters_to_call:
-            logger.debug('No adapters to call, not doing anything at all')
+            logger.debug('Custom Discovery: No adapters to call, not doing anything at all')
             return
-        logger.info(f'Starting Custom Discovery cycle with {len(adapters_to_call)} adapters: {adapters_to_call}')
+
+        def _prepare_adapters_log(adapters):
+            return [
+                (_adapter[PLUGIN_UNIQUE_NAME],
+                 self._get_clients_id(_clients_with_discovery),
+                 self._get_clients_id(_clients_without_discovery))
+                for _adapter, _clients_with_discovery, _clients_without_discovery in adapters
+            ]
+
+        logger.info(f'Starting Custom Discovery cycle with {len(adapters_to_call)}'
+                    f' adapters: {_prepare_adapters_log(adapters_to_call)}')
 
         def inserted_to_db(*args, **kwargs):
             _adapter = kwargs.get('adapter', {})
@@ -1261,7 +1279,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if clients_with_discovery or clients_without_discovery:
                     logger.debug('triggering clients custom discovery')
                     if clients_with_discovery:
-                        for client, custom_discovery_configured in clients_with_discovery:
+                        for client in clients_with_discovery:
                             self.log_activity(AuditCategory.ConnectionCustomDiscovery, AuditAction.Fetch, {
                                 'adapter': adapter[PLUGIN_NAME],
                                 'client_id': client['client_id']
@@ -1272,7 +1290,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
                             'adapter': adapter[PLUGIN_NAME]
                         })
-                        for client, custom_discovery_configured in clients_without_discovery:
+                        for client in clients_without_discovery:
                             clients_trigger_promises.append(self.__trigger_specific_client(adapter, client, False))
 
                     # run clean phase only if adapter has custom discovery time configured, otherwise

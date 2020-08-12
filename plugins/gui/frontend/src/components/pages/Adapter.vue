@@ -289,7 +289,7 @@ export default {
       },
       connectionDiscoveryEnabled(state) {
         return _get(state.settings,
-          `configurable.${this.adapterId}.DiscoverySchema.config.connection_discovery`,
+          `configurable.${this.adapterId}.DiscoverySchema.config.connection_discovery.enabled`,
           false) || this.adapterConnectionDiscoveryEnabled;
       },
       defaultConnectionDiscovery(state) {
