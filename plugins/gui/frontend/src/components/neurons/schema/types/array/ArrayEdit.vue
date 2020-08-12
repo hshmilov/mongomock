@@ -55,6 +55,7 @@
                   @input="(value) => dataChanged(value, item.name)"
                   @validate="onValidate"
                   @remove-validate="onRemoveValidate"
+                  :wrapping-class="wrappingClass"
                 />
               </XTypeWrap>
               <XButton
@@ -159,6 +160,10 @@ export default {
     useVault: {
       type: Boolean,
       default: false,
+    },
+    wrappingClass: {
+      type: String,
+      default: null,
     },
   },
   data() {
@@ -362,7 +367,8 @@ export default {
       this.dragging = false;
     },
     getPopupContainer() {
-      return document.querySelector('.x-array-edit');
+      const selector = this.wrappingClass ? `.${this.wrappingClass} .x-array-edit` : '.x-array-edit';
+      return document.querySelector(selector);
     },
   },
 };

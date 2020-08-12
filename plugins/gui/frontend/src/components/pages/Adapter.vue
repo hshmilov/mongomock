@@ -120,6 +120,7 @@
                       v-model="serverModal.serverData.connection_discovery"
                       :schema="connectionDiscoverySchema"
                       :error="connectionLabelError"
+                      wrapping-class="discovery-configuration"
                       @validate="validateConnectionDiscovery"
                     />
                   </div>
@@ -790,19 +791,23 @@ export default {
       border: 1px solid $indicator-error;
     }
 
-    .discovery-configuration > .x-form > .x-array-edit .list {
-      grid-template-columns: 1fr;
+    .discovery-configuration {
+      padding-left: 5px;
 
-      .item_repeat_every input {
-        width: 200px;
-      }
+      > .x-form > .x-array-edit .list {
+        grid-template-columns: 1fr;
 
-      .item_system_research_rate input {
-        width: 200px;
-      }
+        .item_repeat_every input {
+          width: 200px;
+        }
 
-      .ant-form-item .repeat_on_select {
-        width: 400px;
+        .item_system_research_rate input {
+          width: 200px;
+        }
+
+        .ant-form-item .repeat_on_select {
+          width: 400px;
+        }
       }
     }
 

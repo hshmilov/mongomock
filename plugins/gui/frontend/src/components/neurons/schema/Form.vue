@@ -13,6 +13,7 @@
       :list-collapsible="listCollapsible"
       @validate="onValidate"
       @remove-validate="onRemoveValidate"
+      :wrapping-class="wrappingClass"
     />
     <XPasswordPolicyRequirements v-if="showPasswordPolicy" />
     <div
@@ -87,6 +88,10 @@ export default {
     showPasswordPolicy: {
       type: Boolean,
       default: false,
+    },
+    wrappingClass: {
+      type: String,
+      default: null,
     },
   },
   data() {
