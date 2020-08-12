@@ -607,6 +607,7 @@ class TenableVulnerability(SmartJsonClass):
     first_seen = Field(datetime.datetime, 'First Seen')
     last_seen = Field(datetime.datetime, 'Last Seen')
     last_mitigated = Field(datetime.datetime, 'Last Mitigated')
+    has_been_mitigated = Field(bool, 'Mitigated')
 
 
 class TenableSource(SmartJsonClass):
