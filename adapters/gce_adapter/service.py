@@ -358,10 +358,16 @@ class GceAdapter(AdapterBase, Configurable):
                                          client_data: Tuple[GoogleCloudPlatformConnection, dict]):
         client, client_config = client_data
         auth_json = json.loads(self._grab_file_contents(client_config['keypair_file']))
+        if self.__fetch_bkt_objects is False:
+            bucket_objects_limit = 0
+        elif isinstance(self.__fetch_bkt_objects, bool) and self.__fetch_bkt_objects:
+            bucket_objects_limit = 1000
+        else:
+            bucket_objects_limit = self.__fetch_bkt_objects
         try:
             with client:
                 try:
-                    for bucket in client.get_storage_list(get_bucket_objects=self.__fetch_bkt_objects):
+                    for bucket in client.get_storage_list(bucket_objects_limit=bucket_objects_limit):
                         yield {
                             'type': DeviceType.STORAGE,
                             'device_data': (bucket,)
@@ -370,7 +376,7 @@ class GceAdapter(AdapterBase, Configurable):
                     logger.warning(f'Failed to get storage devices for all projects. '
                                    f'Attempting alternate...',
                                    exc_info=True)
-                    for bucket in client.get_storage_list(get_bucket_objects=self.__fetch_bkt_objects,
+                    for bucket in client.get_storage_list(bucket_objects_limit=bucket_objects_limit,
                                                           project_id=auth_json['project_id']):
                         yield {
                             'type': DeviceType.STORAGE,
@@ -452,8 +458,8 @@ class GceAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_bucket_objects',
-                    'type': 'bool',
-                    'title': 'Fetch Object metadata in Google Cloud Storage buckets'
+                    'type': 'integer',
+                    'title': 'Fetch Object metadata in Google Cloud Storage buckets (0: disabled, max supported: 1000)'
                 },
                 {
                     'name': 'match_role_permissions',
@@ -470,7 +476,7 @@ class GceAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_cloud_sql',
                 'fetch_buckets',
-                'fetch_bucket_objects',
+                # 'fetch_bucket_objects',
                 'match_role_permissions'
             ],
             'pretty_name': 'Google Cloud Platform configuration',
@@ -481,7 +487,7 @@ class GceAdapter(AdapterBase, Configurable):
     def _db_config_default(cls) -> dict:
         return {
             'fetch_buckets': False,
-            'fetch_bucket_objects': False,
+            'fetch_bucket_objects': 0,
             'match_role_permissions': False,
             'fetch_cloud_sql': False,
             'scc_orgs': '',
@@ -491,7 +497,7 @@ class GceAdapter(AdapterBase, Configurable):
         logger.info(f'Loading GCP config: {config}')
         self.__fetch_buckets = config['fetch_buckets']
         self.__fetch_cloud_sql = config['fetch_cloud_sql']
-        self.__fetch_bkt_objects = config['fetch_bucket_objects']
+        self.__fetch_bkt_objects = config.get('fetch_bucket_objects', 0)
         self.__get_roles = config['match_role_permissions']
         self.__scc_orgs = config.get('scc_orgs', '')
 

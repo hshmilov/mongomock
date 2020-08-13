@@ -70,15 +70,26 @@ class GoogleCloudPlatformConnection(RESTConnection):
 
     def _paginated_request(self, method, *args, **kwargs):
         self.refresh_token()
+        page = 0  # for extra logs
+        items = 0  # for extra logs
+        logger.debug(f'Paginated request for {args}, {kwargs}')  # added extra logs
         resp = self._do_request(method, *args, **kwargs)
         # logger.debug(f'Got response: {resp}')
+        if isinstance(resp, dict) and resp.get('items'):  # added extra logs
+            items += len(resp.get('items'))  # for extra logs
+            logger.debug(f'Yielding next {items} items')  # added extra logs
         yield resp
         while resp.get('nextPageToken'):
+            page += 1  # for extra logs
             url_params = kwargs.pop('url_params', None) or {}
             url_params['pageToken'] = resp.get('nextPageToken')
             kwargs['url_params'] = url_params
             self.refresh_token()
             resp = self._do_request(method, *args, **kwargs)
+            logger.debug(f'Fetching page {page}')  # added extra logs
+            if isinstance(resp, dict) and resp.get('items'):  # added extra logs
+                items += len(resp.get('items'))  # for extra logs
+                logger.debug(f'Yielding next {items} items')  # added extra logs
             yield resp
 
     def _paginated_get(self, *args, **kwargs):
@@ -168,7 +179,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 sql_instance['databases'] = list()
             yield sql_instance
 
-    def _get_buckets_list(self, project_id: str, get_objects: bool = True):
+    def _get_buckets_list(self, project_id: str, object_limit: int = 1000):
         base_url = BUCKETS_BASE_URL
 
         for page in self._paginated_get(base_url, url_params={'project': project_id}, force_full_url=True):
@@ -179,9 +190,9 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 raise ValueError(f'Bad response while getting buckets: {page}')
             for item in page['items']:
                 item['projectId'] = project_id
-                if get_objects:
+                if object_limit > 0:
                     try:
-                        item['x_objects'] = list(self._get_bucket_objects(item['id']))
+                        item['x_objects'] = list(self._get_bucket_objects(item['id'], limit=object_limit))
                     except Exception as e:
                         message = f'Failed to get objects for {item.get("id")}: {str(e)}'
                         logger.warning(message)
@@ -190,21 +201,26 @@ class GoogleCloudPlatformConnection(RESTConnection):
                     item['x_objects'] = []
                 yield item
 
-    def _get_bucket_objects(self, bucket_id: str):
+    def _get_bucket_objects(self, bucket_id: str, limit: int = 1000):
         bucket_url = f'{BUCKETS_BASE_URL}/{bucket_id}/o'
-        for page in self._paginated_get(bucket_url, force_full_url=True):
+        url_params = {
+            'maxResults': limit,
+            'projection': 'full'
+        }
+        for page in self._paginated_get(bucket_url, force_full_url=True, url_params=url_params):
             if 'items' not in page:
                 if page == {'kind': 'storage#objects'}:
                     logger.debug(f'No objects in bucket {bucket_id}')
                     continue
                 raise ValueError(f'Bad response while getting objects from bucket {bucket_id}: {page}')
             yield from page['items']
+            break  # only fetch a single page!
 
-    def get_storage_list(self, get_bucket_objects=True, project_id=None):  # , paginated=False):
+    def get_storage_list(self, bucket_objects_limit=1000, project_id=None):  # , paginated=False):
         """
         Get storage buckets for each project.
         If ``get_bucket_objects`` is set, then also get the objects for each bucket.
-        :param get_bucket_objects: Optional. Set to True to get storage objects for each bucket.
+        :param bucket_objects_limit: Optional. Set to True to get storage objects for each bucket.
         :param project_id: Optional. Get buckets only for this project_id (or a list of project_ids)
                By default, fetch buckets for all projects.
         :return: Yield dictionaries representing storage buckets.
@@ -217,7 +233,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
             project_id = project['projectId']
             logger.info(f'Storage: Handling project {i}/{len(projects)} - {project_id}')
             try:
-                yield from self._get_buckets_list(project_id, get_objects=get_bucket_objects)
+                yield from self._get_buckets_list(project_id, object_limit=bucket_objects_limit)
             except Exception as e:
                 message = f'Failed to get buckets and info for project {project_id}: {str(e)}'
                 if 'Unknown project id: 0' in str(e):
@@ -255,8 +271,11 @@ class GoogleCloudPlatformConnection(RESTConnection):
                               f'The project may have been deleted or the user may be unauthorized ' \
                               f'for this project.'
                     logger.warning(message, exc_info=False)
+                elif 'API has not been used in project' in str(e):
+                    message = f'Database API not enabled for project {project_id}'
+                    logger.warning(message)
                 else:
-                    logger.exception(message)
+                    logger.warning(message, exc_info=True)
                 continue
 
     def get_device_list(self):
