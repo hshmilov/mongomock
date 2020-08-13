@@ -466,7 +466,7 @@ export default {
               ...client.client_config,
             },
             connection_discovery: {
-              ...this.defaultConnectionDiscovery,
+              ...this.getAdapterCurrentSchedulingConfig(),
               ...client.connection_discovery,
             },
           },
@@ -485,6 +485,12 @@ export default {
         }
       }
       this.toggleServerModal();
+    },
+    getAdapterCurrentSchedulingConfig() {
+      if (this.connectionDiscoveryEnabled) {
+        return this.defaultConnectionDiscovery;
+      }
+      return {};
     },
     removeConnection() {
       this.deleting = true;
@@ -587,8 +593,10 @@ export default {
         pluginId: this.adapterId,
         configName,
         config,
-      }).then(() => {
+      }).then(async () => {
         this.message = 'Adapter configuration saved';
+        // Fetching updated connections.
+        await this.fetchAdapterConnections(this.adapterId);
         setTimeout(() => {
           this.message = '';
         }, 5000);

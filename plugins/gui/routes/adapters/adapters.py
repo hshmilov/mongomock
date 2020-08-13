@@ -409,6 +409,7 @@ class Adapters(Connections):
             return response
 
         config_schema = self.plugins.get_plugin_settings(adapter_name).config_schemas[config_name]
+        self._get_adapter_connections_data.clean_cache()
         return json.dumps({
             'config_name': config_schema.get('pretty_name', '')
         }) if config_schema else ''
