@@ -424,7 +424,7 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _set_gb(device, device_raw, key, attr):
-        value = device_raw.get('key')
+        value = device_raw.get(key)
         src = {'value': value, 'key': key, 'attr': attr}
         pvalue = tanium.tools.calc_gb(value=value, src=src)
 
