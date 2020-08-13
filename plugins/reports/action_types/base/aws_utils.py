@@ -36,7 +36,7 @@ ACTION_CONFIG_USE_ADAPTER = 'use_adapter'
 AWS_REGION_NAME = 'region_name'
 
 # enforcement center
-DEFAULT_S3_EC_OBJECT_KEY = 'axonius-enforcement-center-_data'
+DEFAULT_S3_EC_OBJECT_KEY = 'axonius-enforcement-center-data'
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

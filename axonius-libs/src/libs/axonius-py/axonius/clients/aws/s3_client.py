@@ -13,7 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 BUCKET_ACL = ['private', 'public-read', 'public-read-write', 'authenticated-read']
 OBJECT_STORAGE_CLASS = ['STANDARD', 'REDUCED_REDUNDANCY', 'STANDARD_IA',
                         'ONEZONE_IA', 'INTELLIGENT_TIERING', 'GLACIER', 'DEEP_ARCHIVE']
-STRFTIME_FORMAT = '%Y_%m_%d_%H_%M_%S'
+STRFTIME_FORMAT = '%Y-%m-%d-%H-%M-%S'
 
 
 class S3Client:  # pylint: disable=too-many-instance-attributes

@@ -13,6 +13,7 @@ from reports.action_types.base.aws_utils import AWSActionUtils, \
     AWS_USE_IAM, AWS_S3_BUCKET_NAME, AWS_S3_KEY_NAME, ADAPTER_NAME, \
     AWS_REGION_NAME
 
+
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
@@ -23,17 +24,17 @@ class SendJsonToS3(ActionTypeAlert):
             'items': [
                 {
                     'name': ACTION_CONFIG_USE_ADAPTER,
-                    'title': 'Use stored credentials from the AWS adapter',
+                    'title': 'Use credentials from the AWS adapter',
                     'type': 'bool',
                 },
                 {
                     'name': AWS_ACCESS_KEY_ID,
-                    'title': 'Access Key ID',
+                    'title': 'AWS Access Key ID',
                     'type': 'string'
                 },
                 {
                     'name': AWS_SECRET_ACCESS_KEY,
-                    'title': 'Secret Access Key',
+                    'title': 'AWS Secret Access Key',
                     'type': 'string',
                     'format': 'password'
                 },
@@ -41,7 +42,7 @@ class SendJsonToS3(ActionTypeAlert):
                     'name': AWS_USE_IAM,
                     'title': 'Use attached IAM role',
                     'description': 'Use the IAM role attached to this instance instead of using the secret/access keys',
-                    'type': 'bool'
+                    'type': 'bool',
                 },
                 {
                     'name': AWS_S3_BUCKET_NAME,
@@ -67,6 +68,7 @@ class SendJsonToS3(ActionTypeAlert):
             'required': [
                 ACTION_CONFIG_USE_ADAPTER,
                 AWS_ACCESS_KEY_ID,
+                AWS_USE_IAM,
                 AWS_S3_BUCKET_NAME,
                 'append_datetime',
                 'overwrite_existing_file'
@@ -79,8 +81,16 @@ class SendJsonToS3(ActionTypeAlert):
     @staticmethod
     def default_config() -> dict:
         default_config = AWSActionUtils.GENERAL_DEFAULT_CONFIG.copy()
-        default_config[ACTION_CONFIG_PARENT_TAG] = None
-        default_config[ACTION_CONFIG_USE_ADAPTER] = False
+        default_config.update({
+            ACTION_CONFIG_USE_ADAPTER: False,
+            AWS_ACCESS_KEY_ID: None,
+            AWS_SECRET_ACCESS_KEY: None,
+            AWS_USE_IAM: False,
+            AWS_S3_BUCKET_NAME: None,
+            AWS_S3_KEY_NAME: None,
+            'append_datetime': False,
+            'overwrite_existing_file': False
+        })
         return add_node_default(default_config)
 
     # pylint: disable=protected-access, too-many-statements, no-else-return
