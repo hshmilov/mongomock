@@ -1,3 +1,4 @@
+import ipaddress
 import datetime
 import logging
 
@@ -145,6 +146,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def _create_wifi_device(self, device_raw):
         device = self._new_device_adapter()
         device.device_type = WIFI_DEVICE
@@ -156,6 +158,20 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
             mac = device_raw.get('MAC')
             if not mac:
                 mac = None
+            try:
+                got_exclude_cidr = False
+                if self.__cidr_exclude_list and device_raw.get('IPAddress'):
+                    ip = device_raw.get('IPAddress')
+                    for cidr_block in self.__cidr_exclude_list:
+                        try:
+                            if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr_block):
+                                got_exclude_cidr = True
+                        except Exception:
+                            pass
+                    if got_exclude_cidr:
+                        return None
+            except Exception:
+                pass
             ips = device_raw.get('IPAddress').split(',') if device_raw.get('IPAddress') else None
             if mac or ips:
                 device.add_nic(mac, ips)
@@ -184,6 +200,20 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         if self.__fetch_mac_ipam and not device_raw.get('MAC') and not device_raw.get('DhcpClientName'):
             return None
         device.id = (device_raw.get('MAC') or '') + '_' + (device_raw.get('DisplayName') or '')
+        try:
+            got_exclude_cidr = False
+            if self.__cidr_exclude_list and device_raw.get('IPAddress'):
+                ip = device_raw.get('IPAddress')
+                for cidr_block in self.__cidr_exclude_list:
+                    try:
+                        if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr_block):
+                            got_exclude_cidr = True
+                    except Exception:
+                        pass
+                if got_exclude_cidr:
+                    return None
+        except Exception:
+            pass
         ips = [device_raw.get('IPAddress')] if device_raw.get('IPAddress') else None
         device.hostname = device_raw.get('DhcpClientName')
         device.last_seen = parse_date(device_raw.get('LeaseExpires'))
@@ -195,13 +225,26 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
         device.set_raw(device_raw)
         return device
 
-    @staticmethod
-    def _create_lan_device(device_raw, lan_dict):
+    def _create_lan_device(self, device_raw, lan_dict):
         if not device_raw.get('MACAddress'):
             logger.warning(f'Bad device with no ID {device_raw}')
             return
         mac = device_raw.get('MACAddress')
         ips = device_raw.get('IPAddress')
+        try:
+            got_exclude_cidr = False
+            if self.__cidr_exclude_list and device_raw.get('IPAddress'):
+                ip = device_raw.get('IPAddress')
+                for cidr_block in self.__cidr_exclude_list:
+                    try:
+                        if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr_block):
+                            got_exclude_cidr = True
+                    except Exception:
+                        pass
+                if got_exclude_cidr:
+                    return
+        except Exception:
+            pass
         if (mac, ips) not in lan_dict:
             lan_dict[(mac, ips)] = []
         node_id = device_raw.get('NodeID')
@@ -282,6 +325,20 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
 
             mac_addresses = raw_device_data.get('MacAddresses') or []
             ip_address = raw_device_data.get('IPAddress') or []
+            try:
+                got_exclude_cidr = False
+                if self.__cidr_exclude_list and raw_device_data.get('IPAddress'):
+                    ip = raw_device_data.get('IPAddress')
+                    for cidr_block in self.__cidr_exclude_list:
+                        try:
+                            if ipaddress.ip_address(ip) in ipaddress.ip_network(cidr_block):
+                                got_exclude_cidr = True
+                        except Exception:
+                            pass
+                    if got_exclude_cidr:
+                        return None
+            except Exception:
+                pass
             device.device_manufacturer = raw_device_data.get('Vendor')
             device.add_ips_and_macs(mac_addresses, ip_address)
             sw_list = raw_device_data.get('sw_list')
@@ -368,6 +425,11 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                     'name': 'fetch_mac_ipam',
                     'title': 'Fetch IPAM only if MAC address exists',
                     'type': 'bool'
+                },
+                {
+                    'name': 'cidr_exclude_list',
+                    'title': 'CIDR exclude list',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -382,9 +444,11 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_ipam': False,
-            'fetch_mac_ipam': False
+            'fetch_mac_ipam': False,
+            'cidr_exclude_list': None
         }
 
     def _on_config_update(self, config):
         self.__fetch_ipam = config['fetch_ipam']
         self.__fetch_mac_ipam = config['fetch_mac_ipam']
+        self.__cidr_exclude_list = config['cidr_exclude_list'].split(',') if config.get('cidr_exclude_list') else None

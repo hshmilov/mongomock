@@ -57,6 +57,8 @@ class SendEmailToEntities(ActionTypeBase):
             'adapters.data.project_ids': 1,
             'adapters.data.account_tag': 1,
             'adapters.data.aws_account_alias': 1,
+            'tags.data.mail': 1,
+            'tags.data.email': 1,
             'tags.data.last_used_users_mail_association': 1,
             'internal_axon_id': 1
         })
