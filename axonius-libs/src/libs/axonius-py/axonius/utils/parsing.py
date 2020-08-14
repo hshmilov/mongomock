@@ -17,6 +17,7 @@ from types import FunctionType
 from typing import Callable, NewType, List, Iterable, Optional
 
 import pytz
+from cpe import CPE
 
 import axonius
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE
@@ -250,6 +251,10 @@ def figure_out_windows_dist(s):
     return dist_name.strip()
 
 
+def parse_cpe_string(cpe):
+    return figure_out_os(f'{cpe.get_product()} {cpe.get_vendor()} {cpe.get_target_hardware()}')
+
+
 def figure_out_os(s):
     """
     Gives something like this
@@ -275,8 +280,14 @@ def figure_out_os(s):
     orig_s = s
     s = s.strip().lower().replace('®', '')
 
+    try:
+        return parse_cpe_string(CPE(s))
+    except Exception:
+        # Probably not CPE string
+        pass
+
     makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'Win64']
-    makes_32bit = ['32-bit', 'x86']
+    makes_32bit = ['32-bit', 'x86', 'x32']
 
     is_windows_server = False
     bitness = None
