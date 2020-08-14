@@ -120,6 +120,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         resolvable_hostname = ListField(str, 'Resolvable Hostnames')
 
     class MyUserAdapter(UserAdapter, ADEntity):
+        ad_service_principal_name = ListField(str, "AD Service Principal Name")
         user_managed_objects = ListField(str, "AD User Managed Objects")
         user_account_control = Field(int, 'User Account Control')
         account_lockout = Field(bool, "Account Lockout")
@@ -765,6 +766,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 if user.id in parsed_users_ids:
                     continue
                 parsed_users_ids.append(user.id)
+                service_principal_name = user_raw.get("servicePrincipalName")
+                if not isinstance(service_principal_name, list):
+                    service_principal_name = [str(service_principal_name)]
+                user.ad_service_principal_name = service_principal_name
 
                 user.user_sid = user_raw.get('objectSid')
                 user.mail = user_raw.get("mail")

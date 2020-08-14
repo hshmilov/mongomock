@@ -60,6 +60,8 @@ class NessusCsvAdapter(ScannerAdapterBase):
 
     # pylint:disable=arguments-differ
     def _parse_raw_data(self, raw_data):
+        if raw_data is None:
+            return
         if 'Host' not in raw_data.fieldnames:
             logger.error(f'Bad fields names{str(raw_data.fieldnames)}')
             raise GetDevicesError(f'Bad fields names{str(raw_data.fieldnames)}')
