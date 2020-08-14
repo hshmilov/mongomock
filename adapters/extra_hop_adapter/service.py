@@ -83,7 +83,8 @@ class ExtraHopAdapter(AdapterBase):
                 {
                     'name': 'apikey',
                     'title': 'API Key',
-                    'type': 'string'
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': 'verify_ssl',
