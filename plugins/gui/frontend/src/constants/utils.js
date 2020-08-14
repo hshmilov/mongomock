@@ -3,7 +3,7 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import utc from 'dayjs/plugin/utc';
 import _padStart from 'lodash/padStart';
 import { DEFAULT_DATE_FORMAT } from '../store/modules/constants';
-import { ChartTypesEnum } from './dashboard'
+import { ChartTypesEnum } from './dashboard';
 
 dayjs.extend(isoWeek);
 dayjs.extend(utc);

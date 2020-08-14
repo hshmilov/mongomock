@@ -219,8 +219,9 @@ export default {
         && view.colFilters && !_isEqual(colFilters, view.colFilters);
       const colExcludedAdaptersDiff = colExcludedAdapters
         && view.colExcludedAdapters && !_isEqual(colExcludedAdapters, view.colExcludedAdapters);
-      return view
-      && (filterDiff || fieldsDiff || sortDiff || colFiltersDiff || colExcludedAdaptersDiff);
+      const metaDiff = query.meta !== undefined && view.query.meta !== undefined && !_isEqual(query.meta, view.query.meta);
+      return view && (filterDiff || fieldsDiff || sortDiff
+              || colFiltersDiff || colExcludedAdaptersDiff || metaDiff);
     },
     status() {
       if (this.enforcement) return '';

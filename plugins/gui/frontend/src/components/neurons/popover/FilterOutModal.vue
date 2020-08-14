@@ -78,8 +78,7 @@ export default {
             expressions,
             meta,
             this.view.query.onlyExpressionsFilter);
-          const recompile = false;
-          const resultFilters = queryBuilder.compileQuery(recompile);
+          const resultFilters = queryBuilder.compileQuery();
           this.updateView({
             module: this.module,
             view: {

@@ -116,7 +116,6 @@ export default {
         return this.query.filter;
       },
       set(filter) {
-        const prevFilter = this.query.filter;
         const queryMeta = {
           ...this.query.meta,
           enforcementFilter: this.enforcementFilter,
@@ -148,6 +147,11 @@ export default {
       this.$router.push({ path: `/${this.module}/query/saved` });
     },
     onValid() {
+      this.$nextTick(() => {
+        if (!this.query.search && this.query.filter) {
+          this.updateQuery(this.query, false);
+        }
+      });
       this.filterValid = true;
       this.$emit('done');
     },
@@ -197,7 +201,7 @@ export default {
 
         // Only if the user selected a predefined query
         // It can be either from the devices/users queries or from the saved queries page
-        if (this.selectedView && this.isPredefined) {
+        if (this.selectedView && this.isPredefined && (!queryMeta.filterOutExpression || !queryMeta.filterOutExpression.value)) {
           // If this is the first time recompiling this query, and a pre-existing filter was chosen,
           // We set the newly recompiled filter as our original one.
           // Otherwise we take the existing one
