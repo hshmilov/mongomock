@@ -27,7 +27,7 @@ class BigfixInventoryConnection(RESTConnection):
         self._get('sam/v2/computers?columns[]=id&columns[]=bigfix_id&columns[]=computer_group_id&columns[]=name&'
                   'columns[]=dns_name&columns[]=ip_address&columns[]=os&columns[]=os_type&columns[]=first_seen&'
                   'columns[]=last_seen&columns[]=is_deleted&columns[]=deletion_date&columns[]=is_managed_by_vm_manager&'
-                  f'token={self._apikey}&limit={DEVICE_PER_PAGE}&offset=0')
+                  f'token={self._apikey}&limit=100&offset=0')
 
     # pylint: disable=too-many-nested-blocks
     def _get_sw_dict(self):
