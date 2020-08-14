@@ -201,7 +201,14 @@ class DesktopCentralAdapter(AdapterBase):
                         pass
                     device.shipping_date = parse_date(computer_hardware_summary.get('shipping_date'))
                     device.warranty_expiry_date = parse_date(computer_hardware_summary.get('warranty_expiry_date'))
-
+                    computer_network_adapter_summary = sum_raw.get('computer_network_adapter_summary')
+                    if not isinstance(computer_network_adapter_summary, list):
+                        computer_network_adapter_summary = []
+                    for nic_raw in computer_network_adapter_summary:
+                        try:
+                            device.add_ips_and_macs(macs=nic_raw.get('mac_address'), ips=nic_raw.get('ip_address'))
+                        except Exception:
+                            logger.exception(f'Problem with nic {nic_raw}')
                 except Exception:
                     logger.exception(f'Problem with sum raw {device_raw}')
                 device.hostname = device_raw.get('fqdn_name', device_raw.get('full_name'))
