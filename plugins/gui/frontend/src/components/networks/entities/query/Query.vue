@@ -147,11 +147,6 @@ export default {
       this.$router.push({ path: `/${this.module}/query/saved` });
     },
     onValid() {
-      this.$nextTick(() => {
-        if (!this.query.search && this.query.filter) {
-          this.updateQuery(this.query, false);
-        }
-      });
       this.filterValid = true;
       this.$emit('done');
     },
