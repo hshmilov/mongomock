@@ -1882,7 +1882,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
         clients = list(self._clients_collection.find())
-        with concurrent.futures.ThreadPoolExecutor(10) as executor:
+        with concurrent.futures.ThreadPoolExecutor(15) as executor:
             futures = []
             for client in clients:
                 client_config = client.get('client_config')

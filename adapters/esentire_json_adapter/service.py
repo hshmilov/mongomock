@@ -36,7 +36,7 @@ class EsentireJsonAdapter(ScannerAdapterBase):
             file_name, file_data = load_remote_data(client_config)
 
             json_data = from_json(file_data)
-            if not isinstance(json_data, dict):
+            if not isinstance(json_data, list):
                 raise ValueError(f'Invalid response found: {json_data}')
 
             return file_name, json_data

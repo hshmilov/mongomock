@@ -84,6 +84,7 @@ def parse_roles_to_assume_file(file_contents: str) -> Tuple[Dict[str, Dict], Lis
     failed_arns = []
     final_dict = dict()
     pattern = re.compile('^arn:aws:iam::[0-9]+:role\/.*')  # pylint: disable=anomalous-backslash-in-string
+    pattern2 = re.compile('^arn:aws-us-gov:iam::[0-9]+:role\/.*')  # pylint: disable=anomalous-backslash-in-string
 
     if file_contents.strip().startswith('['):
         try:
@@ -117,7 +118,7 @@ def parse_roles_to_assume_file(file_contents: str) -> Tuple[Dict[str, Dict], Lis
     for role_arn in final_dict:
         # A role must look like 'arn:aws:iam::[account_id]:role/[name_of_role]
         # https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
-        if not pattern.match(role_arn):
+        if not pattern.match(role_arn) and not pattern2.match(role_arn):
             failed_arns.append(role_arn)
 
     return final_dict, failed_arns
