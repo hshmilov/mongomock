@@ -196,6 +196,7 @@ class SettingsPage(Page):
     USE_S3_INTEGRATION = 'Enable Amazon S3 integration'
     USE_S3_BACKUP = 'Enable backup to Amazon S3'
     USE_ROOT_MASTER = 'Enable Root Master Mode'
+    USE_PARALLEL_FETCH = 'Enable Parallel Adapters Fetch'
 
     FOOTER_ERROR_CSS = '.ant-drawer-body__footer .indicator-error--text'
 
@@ -1639,6 +1640,10 @@ class SettingsPage(Page):
     def toggle_root_master(self, toggle_value):
         self.wait_for_element_present_by_text(self.USE_ROOT_MASTER)
         toggle = self.find_checkbox_by_label(self.USE_ROOT_MASTER)
+        self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
+
+    def toggle_parallel_fetch(self, toggle_value):
+        toggle = self.find_checkbox_by_label(self.USE_PARALLEL_FETCH)
         self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
 
     def set_s3_integration_settings_enabled(self):
