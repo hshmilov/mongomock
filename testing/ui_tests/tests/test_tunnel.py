@@ -12,7 +12,7 @@ from test_helpers.log_tester import LogTester
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, GUI_LOG_PATH
 
-EMAIL_LIST_ID = 'tunnel_email_recipients'
+EMAIL_LIST_ID = 'emailList'
 SUCCESS_TUNNEL_TOASTER = 'Tunnel settings saved successfully'
 TEST_EMAIL = 'Im@Here.com'
 
@@ -110,7 +110,7 @@ class TestTunnel(TestBase):
 
     def _add_email_recipient(self, email):
         element = self.settings_page.find_element_by_xpath(
-            '//div[@id=\'tunnel_email_recipients\']//input[@type=\'text\']')
+            f'//div[@id=\'{EMAIL_LIST_ID}\']//input[@type=\'text\']')
         self.settings_page.fill_text_by_element(element, email)
         self.settings_page.key_down_enter(element)
 
