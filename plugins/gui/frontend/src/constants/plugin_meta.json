@@ -1386,7 +1386,7 @@
   "logmein_adapter": {
     "title": "LogMeIn Central - BETA",
     "link": "https://docs.axonius.com/docs/logmein-central",
-    "description": "LogMeIn Central is a cloud-based endpoint management solution for monitoring and management of the endpoint infrastructure."
+    "description": "LogMeIn Central is a cloud-based endpoint management solution that enables monitoring and management of endpoint infrastructure."
   },
   "json_file_adapter": {
     "title": "JSON File",

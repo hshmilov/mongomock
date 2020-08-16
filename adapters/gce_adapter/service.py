@@ -479,7 +479,7 @@ class GceAdapter(AdapterBase, Configurable):
                 # 'fetch_bucket_objects',
                 'match_role_permissions'
             ],
-            'pretty_name': 'Google Cloud Platform configuration',
+            'pretty_name': 'Google Cloud Platform Configuration',
             'type': 'array'
         }
 

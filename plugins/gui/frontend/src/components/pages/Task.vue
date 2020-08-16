@@ -135,7 +135,7 @@ export default {
         }, {
           name: 'view', title: 'Triggered Query Name', type: 'string',
         }, {
-          name: 'period', title: 'Trigger Recurrence', type: 'string',
+          name: 'period', title: 'Trigger Schedule', type: 'string',
         }, {
           name: 'condition', title: 'Triggered Conditions', type: 'string',
         }],

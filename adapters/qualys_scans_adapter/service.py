@@ -215,8 +215,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {'name': consts.QUALYS_SCANS_DOMAIN, 'title': 'Qualys Cloud Platform Domain', 'type': 'string'},
                 {'name': consts.USERNAME, 'title': 'User Name', 'type': 'string'},
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
-                {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': consts.QUALYS_TAGS_WHITELIST, 'title': 'Qualys Tags Whitelist', 'type': 'string'},
+                {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'}
             ],
             'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],

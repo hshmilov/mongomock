@@ -579,7 +579,8 @@ class AwsAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [
-                GET_ALL_REGIONS
+                GET_ALL_REGIONS,
+                USE_ATTACHED_IAM_ROLE
             ],
             'type': 'array'
         }
