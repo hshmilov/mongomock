@@ -455,7 +455,9 @@ class Triggerable(Feature, ABC):
                                                      post_json=post_json, db_state=state, reschedulable=reschedulable)
         if blocking:
             try:
+                logger.info(f'Waiting for promise')
                 Promise.wait(promise, timeout)
+                logger.info(f'Promise is fulfilled. Continuing')
             except Exception as e:
                 if e.args == ('Timeout',):
                     logger.info(f'Timeout on {job_state}')

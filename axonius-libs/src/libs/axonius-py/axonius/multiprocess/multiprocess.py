@@ -85,6 +85,7 @@ def kill_ids(pids: list):
         logger.exception(f'Could not kill pids {pids}')
 
 
+# pylint: disable=no-member,protected-access
 def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]], parallel_count):
     """
     Gets a list of functions to execute. Assumes each function returns a generator.
@@ -96,6 +97,8 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
     logger.info(f'Found {len(to_execute)} functions to execute, with {parallel_count} processes')
     manager = multiprocessing.Manager()
     queue_instance = manager.Queue()
+
+    logger.info(f'Multiprocessing.Manager is in pid {manager._process.pid}')
 
     results = []
 
@@ -135,10 +138,14 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
                 logger.critical(f'Error while yielding results from concurrent_multiprocess_yield', exc_info=True)
         except BaseException as e:
             # pylint: disable=protected-access
-            threading.Thread(target=kill_ids, args=(pool._processes.keys(), ), daemon=True).start()
             # pylint: enable=protected-access
             logger.exception(f'Got event {str(e).strip()!r} event. Stopping')
             return []
+        finally:
+            all_pids = []
+            all_pids.extend(pool._processes.keys())
+            all_pids.append(manager._process.pid)
+            threading.Thread(target=kill_ids, args=(all_pids,), daemon=True).start()
 
     return results
 
