@@ -11,6 +11,7 @@ import success from './success';
 import summary from './summary';
 import troffy from './troffy';
 import user from './user';
+import api from './api';
 import warning from './warning';
 import stacked from './stacked';
 import verticalDots from './verticaldots';
@@ -30,6 +31,7 @@ export default {
   summary,
   troffy,
   user,
+  api,
   warning,
   stacked,
   verticalDots,

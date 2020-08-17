@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 from passlib.hash import bcrypt
-from flask import jsonify
+from flask import jsonify, session
 
 from axonius.consts.gui_consts import USERS_PREFERENCES_COLUMNS_FIELD
 from axonius.consts.plugin_consts import PASSWORD_NO_MEET_REQUIREMENTS_MSG
@@ -29,7 +29,7 @@ class Account:
         :return:
         """
         post_data = self.get_request_data_as_object()
-        user = self.get_session.get('user')
+        user = session.get('user')
         if not user or not user.get('password'):
             return return_error('Not logged in', 401)
         if not bcrypt.verify(post_data.get('old', ''), user['password']):

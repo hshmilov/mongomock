@@ -52,7 +52,7 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
-                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, Signup)
+                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -1066,28 +1066,31 @@ class GuiService(Triggerable,
             if user and (not role_id or d['user'].get('_id') in user_ids):
                 d['user'] = None
 
-    @property
-    def get_session(self):
-        return session
+    @staticmethod
+    def set_session_user(user):
+        session['user'] = user
 
     @property
     def get_user(self):
-        return self.get_session.get('user', {}) or {}
+        return session.get('user', {}) or {}
 
     def is_admin_user(self):
         return is_role_admin(self.get_user)
+
+    def is_api_user(self):
+        return self.get_user.get(IS_API_USER)
 
     def is_axonius_user(self):
         return is_axonius_role(self.get_user)
 
     def get_user_permissions(self):
-        permissions = self.get_session.get('user', {}).get('permissions', {})
+        permissions = session.get('user', {}).get('permissions', {})
         if not permissions and g.api_user_permissions:
             permissions = g.api_user_permissions
         return permissions
 
     def get_user_role_id(self) -> ObjectId:
-        return self.get_session.get('user', {}).get('role_id', '')
+        return session.get('user', {}).get('role_id', '')
 
     @property
     def saml_settings_file_path(self):
@@ -1104,4 +1107,7 @@ class GuiService(Triggerable,
     def log_activity_user_default(self, category: str, action: str, params: Dict[str, str] = None):
         if self.is_axonius_user():
             return
-        super().log_activity_default(category, action, params, AuditType.User, get_connected_user_id())
+        audit_type = AuditType.User
+        if self.is_api_user():
+            audit_type = AuditType.Api
+        super().log_activity_default(category, action, params, audit_type, get_connected_user_id())

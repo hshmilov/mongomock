@@ -308,7 +308,8 @@ class Enforcements(Tasks):
             'name': enforcement['name']
         })
 
-    @gui_route_logged_in('<entity_type>/custom', methods=['POST'], enforce_permissions=False, enforce_api_key=True)
+    @gui_route_logged_in('<entity_type>/custom', methods=['POST'], enforce_permissions=False,
+                         support_internal_api_key=True)
     def enforce_entity_custom_data(self, entity_type):
         """
         See self._entity_custom_data

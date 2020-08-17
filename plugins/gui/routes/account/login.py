@@ -19,7 +19,7 @@ from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH, PREDEFINED_FIELD, IS_AXONIUS_ROLE,
+from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH,
                                        PREDEFINED_ROLE_RESTRICTED, IDENTITY_PROVIDERS_CONFIG, EMAIL_ADDRESS,
                                        EMAIL_DOMAIN, LDAP_GROUP, ASSIGNMENT_RULE_TYPE, ASSIGNMENT_RULE_VALUE,
                                        ASSIGNMENT_RULE_ROLE_ID, ASSIGNMENT_RULE_KEY,
@@ -34,9 +34,9 @@ from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import bytes_image_to_base64
-from axonius.utils.permissions_helper import deserialize_db_permissions, is_axonius_role
+from axonius.utils.permissions_helper import is_axonius_role
 from gui.logic.filter_utils import filter_archived
-from gui.logic.login_helper import has_customer_login_happened
+from gui.logic.login_helper import has_customer_login_happened, get_user_for_session
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.users_helper import beautify_user_entry
 from gui.okta_login import try_connecting_using_okta
@@ -70,7 +70,7 @@ class Login:
         Get current user or login
         :return:
         """
-        user = self.get_session.get('user')
+        user = session.get('user')
         if user is None:
             return return_error('Not logged in', 401)
         if 'pic_name' not in user:
@@ -82,7 +82,7 @@ class Login:
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'enabled'):
             user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
-                if not (os.environ.get('HOT') == 'true' or self.get_session.permanent) else 0
+                if not (os.environ.get('HOT') == 'true' or session.permanent) else 0
         return jsonify(beautify_user_entry(user)), 200
 
     @gui_route_logged_in('login', methods=['POST'], enforce_session=False,
@@ -186,13 +186,10 @@ class Login:
             logger.info('First customer login occurred.')
             LOGGED_IN_MARKER_PATH.touch()
         logger.info(f'permission: {role_from_db["name"]}')
-        user['permissions'] = deserialize_db_permissions(role_from_db['permissions'])
-        user['role_name'] = role_from_db['name']
-        user[PREDEFINED_FIELD] = role_from_db.get(PREDEFINED_FIELD)
-        user[IS_AXONIUS_ROLE] = role_from_db.get(IS_AXONIUS_ROLE)
-        self.get_session['user'] = user
+        user = get_user_for_session(user, role_from_db)
+        self.set_session_user(user)
         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-        self.get_session.permanent = remember_me
+        session.permanent = remember_me
         self._update_user_last_login(user)
         if not is_axonius_role(role_from_db):
             self._log_activity_login()
@@ -296,7 +293,7 @@ class Login:
             return return_error('Okta login is disabled', 400)
         oidc = try_connecting_using_okta(okta_settings)
         if oidc is not None:
-            self.get_session['oidc_data'] = oidc
+            session['oidc_data'] = oidc
             # Notice! If you change the first parameter, then our CURRENT customers will have their
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
@@ -602,14 +599,14 @@ class Login:
         Clears session, logs out
         :return:
         """
-        user = self.get_session.get('user')
+        user = session.get('user')
         if user:
             username = user.get('user_name')
             source = user.get('source')
             first_name = user.get('first_name')
             logger.info(f'User {username}, {source}, {first_name} has logged out')
             self.log_activity_user(AuditCategory.UserSession, AuditAction.Logout)
-        self.get_session['user'] = None
-        self.get_session['csrf-token'] = None
-        self.get_session.clear()
+        self.set_session_user(None)
+        session['csrf-token'] = None
+        session.clear()
         return redirect('/', code=302)

@@ -48,3 +48,4 @@ class AuditType(Enum):
     User = 'user'
     Info = 'info'
     Error = 'error'
+    Api = 'api'

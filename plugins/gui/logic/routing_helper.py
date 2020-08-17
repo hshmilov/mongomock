@@ -8,7 +8,7 @@ from flask import (request, session)
 
 from axonius.plugin_base import limiter, ratelimiting_settings
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, CSRF_TOKEN_LENGTH, EXCLUDED_CSRF_ENDPOINTS,
-                                       SKIP_ACTIVITY_ARG, ACTIVITY_PARAMS_ARG)
+                                       SKIP_ACTIVITY_ARG, ACTIVITY_PARAMS_ARG, USERS_COLLECTION, ROLES_COLLECTION)
 from axonius.consts.metric_consts import ApiMetric, SystemMetric
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import PluginBase, return_error, random_string
@@ -18,9 +18,10 @@ from axonius.utils.permissions_helper import (PermissionCategory,
                                               PermissionAction,
                                               PermissionValue,
                                               is_axonius_role)
+from gui.logic.login_helper import get_user_for_session
 from gui.okta_login import OidcData
 
-# pylint: disable=keyword-arg-before-vararg,invalid-name,redefined-builtin,too-many-instance-attributes
+# pylint: disable=keyword-arg-before-vararg,invalid-name,redefined-builtin,too-many-instance-attributes, no-member, protected-access
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -31,7 +32,7 @@ def session_connection(func,
                        enforce_session=True,
                        enforce_permissions=True,
                        proceed_and_set_access=False,
-                       enforce_api_key=False):
+                       support_internal_api_key=False):
     """
     Decorator stating that the view requires the user to be connected
     And also to validate the csrf token and generate
@@ -47,15 +48,24 @@ def session_connection(func,
     :param proceed_and_set_access: Skip error logging in case there are missing permissions
     If set to true, the decorator won't generate an error but instead sends an argument "no_access" to the
     wrapped function, and the error handling should be done there instead.
-    :param enforce_api_key: use the api key instead of the session login
+    :param support_internal_api_key: use only the api key instead of the session login - for plugin connections
     :return:
     """
     # pylint: disable=too-many-return-statements, too-many-branches
 
     def wrapper(self, *args, **kwargs):
-        enforce_by_api_key = enforce_api_key and request.headers.get('x-api-key')
-        if enforce_session and not enforce_by_api_key:
-            user = session.get('user') if session else None
+        is_api_key_internal = support_internal_api_key and request.headers.get('x-api-key')
+        is_api_user = False
+        if enforce_session and not is_api_key_internal:
+            user = None
+            if request.headers.get('api-key') and request.headers.get('api-secret'):
+                user = check_auth_api_key(request.headers['api-key'], request.headers['api-secret'])
+                if user:
+                    PluginBase.Instance.set_session_user(user)
+                    is_api_user = True
+            elif session and session.get('user'):
+                user = session['user']
+
             if user is None:
                 return return_error('Not logged in', 401)
 
@@ -79,7 +89,9 @@ def session_connection(func,
 
         # We handle only submitted forms with session, therefore only POST, PUT, DELETE, PATCH are in our interest
         # Dont check CSRF during frontend debug
-        if not (request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE') or not session):
+        if not (request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+                or not (session and session.get('user')))\
+                and not is_api_user:
             try:
                 csrf_token_header = request.headers.get('X-CSRF-TOKEN', None)
                 if 'csrf-token' in session:
@@ -98,7 +110,7 @@ def session_connection(func,
                 session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
                 return return_error(str(e), non_prod_error=True, http_status=403)
 
-        log_request()
+        log_request(is_api_user)
         now = time.time()
         try:
             return func(self, *args, **kwargs)
@@ -108,10 +120,13 @@ def session_connection(func,
     return wrapper
 
 
-def log_request():
+def log_request(api_request):
     method = request.method
-    if method != 'GET':
-        log_metric(logger, ApiMetric.REQUEST_PATH, remove_ids(request.path), method=method)
+    cleanpath = remove_ids(request.path)
+    if api_request:
+        log_metric(logger, ApiMetric.PUBLIC_REQUEST_PATH, cleanpath, method=method)
+    elif method != 'GET':
+        log_metric(logger, ApiMetric.REQUEST_PATH, cleanpath, method=method)
 
 
 def log_request_duration(start_time):
@@ -198,9 +213,11 @@ class gui_category_add_rules:
             if not required_permission and (permission_category or permission_section):
                 # If rule is defined as a permission, use it
                 # Otherwise, request.method of the call will be used
-                permission_action = PermissionAction(current_args.rule) if PermissionAction.has_value(
-                    current_args.rule) else None
-                required_permission = PermissionValue.get(permission_action, permission_category, permission_section)
+                required_permission = PermissionValue.get(
+                    PermissionAction(current_args.rule) if PermissionAction.has_value(
+                        current_args.rule) else None,
+                    permission_category,
+                    permission_section)
 
             def session_connection_permissions(*args, **kwargs):
                 return session_connection(*args, **kwargs,
@@ -209,11 +226,11 @@ class gui_category_add_rules:
                                           enforce_session=current_args.enforce_session,
                                           enforce_permissions=current_args.enforce_permissions,
                                           proceed_and_set_access=current_args.proceed_and_set_access,
-                                          enforce_api_key=current_args.enforce_api_key)
+                                          support_internal_api_key=current_args.support_internal_api_key)
 
             methods = current_args.kwargs.get('methods') or ('GET',)
             fn = add_rule_custom_authentication(custom_rule, session_connection_permissions,
-                                                current_args.enforce_api_key,
+                                                current_args.support_internal_api_key,
                                                 methods=methods)
             # Defining a new name that includes the rul for the method
             # in case there are more than 1 method with the same name
@@ -223,8 +240,8 @@ class gui_category_add_rules:
             new_function.__name__ = new_function_name
             if current_args.enforce_session and not current_args.kwargs.get(SKIP_ACTIVITY_ARG):
 
-                activity_category = original_cls.rule if not base_rule else f'{base_rule}.{original_cls.rule}'.replace(
-                    '/', '.')
+                activity_category = original_cls.rule if not base_rule else f'{base_rule}.{original_cls.rule}' \
+                    .replace('/', '.')
                 new_function = log_activity_rule(current_args.rule,
                                                  activity_category,
                                                  current_args.kwargs.get(ACTIVITY_PARAMS_ARG))(new_function)
@@ -277,7 +294,7 @@ class gui_route_logged_in:
                  enforce_session=True,
                  enforce_permissions=True,
                  proceed_and_set_access=False,
-                 enforce_api_key=False,
+                 support_internal_api_key=False,
                  limiter_key_func=None,
                  shared_limit_scope=None,
                  *args, **kwargs):
@@ -292,7 +309,8 @@ class gui_route_logged_in:
         :param proceed_and_set_access: Should the error reporting be skipped in case there are missing permissions.
         If set to true, the decorator won't generate an error but instead sends an argument "no_access" to the
         wrapped function, and the error handling should be done there instead.
-        :param enforce_api_key: Should this endpoint work when the caller use the api key instead on session
+        :param support_internal_api_key: Should this endpoint work
+        when the internal caller use the api key instead on session
         :param args:
         :param kwargs:
         """
@@ -302,7 +320,7 @@ class gui_route_logged_in:
         self.enforce_session = enforce_session
         self.enforce_permissions = enforce_permissions
         self.proceed_and_set_access = proceed_and_set_access
-        self.enforce_api_key = enforce_api_key
+        self.support_internal_api_key = support_internal_api_key
         self.limiter_key_func = limiter_key_func
         self.shared_limit_scope = shared_limit_scope
         self.args = args
@@ -363,6 +381,25 @@ def check_permissions(user_permissions: dict,
         if not current_category or (not current_category.get(required_permission.Action)):
             return False
     return True
+
+
+def check_auth_api_key(api_key, api_secret):
+    """
+    This function is called to check if an api key and secret match
+    """
+    users_collection = PluginBase.Instance._get_collection(USERS_COLLECTION)
+    roles_collection = PluginBase.Instance._get_collection(ROLES_COLLECTION)
+
+    user_from_db = users_collection.find_one({
+        'api_key': api_key,
+        'api_secret': api_secret
+    })
+
+    if not user_from_db:
+        return None
+
+    role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
+    return get_user_for_session(user_from_db, role, is_api_user=True)
 
 
 def get_permissions_action_category(permissions: dict,
