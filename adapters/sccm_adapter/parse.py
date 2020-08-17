@@ -447,7 +447,8 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             logger.warning(f'Problem getting query bios', exc_info=True)
         query_main = _wrap_query_with_resource_id(consts.SCCM_MAIN_QUERY, device_id)
         devices_raw_query = list(client_data.query(query_main))
-        for device_raw in devices_raw_query:
+        for device_raw_original in devices_raw_query:
+            device_raw = device_raw_original.copy()
             device_raw['sccm_server'] = client_data.server
             device_raw['os_data'] = os_dict.get(device_raw.get('ResourceID'))
             device_raw['computer_data'] = computer_dict.get(device_raw.get('ResourceID'))

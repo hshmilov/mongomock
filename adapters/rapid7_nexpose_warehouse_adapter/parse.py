@@ -1,12 +1,14 @@
 import logging
 from collections import defaultdict
+from typing import Tuple
 
+from axonius.clients.postgres.connection import PostgresConnection
 from rapid7_nexpose_warehouse_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-def _get_vulnerabilities_by_asset_id(connection):
+def _get_vulnerabilities_by_asset_id(connection) -> Tuple[dict, dict]:
     try:
         vulnerabilities_counter = 0
         vulnerabilities = {}
@@ -18,20 +20,23 @@ def _get_vulnerabilities_by_asset_id(connection):
                 vulnerabilities[vulnerability.get('vulnerability_id')] = vulnerability
 
         for asset_vulnerability in connection.query(consts.ASSET_VULNERABILITIES_QUERY):
-            if (isinstance(asset_vulnerability, dict) and
-                    asset_vulnerability.get('vulnerability_id') and
-                    asset_vulnerability.get('asset_id')):
-                if vulnerabilities.get(asset_vulnerability.get('vulnerability_id')):
-                    vulnerabilities_counter += 1
-                    asset_vulnerabilities[asset_vulnerability.get('asset_id')].append(
-                        vulnerabilities.get(asset_vulnerability.get('vulnerability_id')))
+            if not isinstance(asset_vulnerability, dict):
+                continue
+
+            vulnerability_id = asset_vulnerability.get('vulnerability_id')
+            asset_id = asset_vulnerability.get('asset_id')
+
+            if not vulnerability_id or not asset_id:
+                continue
+
+            asset_vulnerabilities[asset_id].append(vulnerability_id)
 
         logger.debug(
             f'Fetching from vulnerabilities table completed successfully, total of {vulnerabilities_counter}')
-        return asset_vulnerabilities
+        return asset_vulnerabilities, vulnerabilities
     except Exception:
         logger.warning(f'Failed getting vulnerabilities', exc_info=True)
-        return {}
+        return {}, {}
 
 
 def _get_tags(connection):
@@ -183,10 +188,20 @@ def _get_devices_info(client_data):
         return {}
 
 
+# pylint: disable=too-many-nested-blocks
 def _build_device_info(devices_info: dict, device: dict, asset_id: str):
     try:
-        if isinstance(devices_info.get('vulnerabilities'), dict) and devices_info.get('vulnerabilities'):
-            device['extra_vulnerabilities'] = devices_info.get('vulnerabilities').get(asset_id) or []
+        try:
+            device['extra_vulnerabilities'] = []
+            if isinstance(devices_info.get('vulnerabilities'), tuple):
+                asset_vulnerabilities, vulnerabilities = devices_info.get('vulnerabilities')
+                if isinstance(asset_vulnerabilities, dict) and isinstance(vulnerabilities, dict):
+                    for vuln_id in (asset_vulnerabilities.get(asset_id) or []):
+                        vuln_data = vulnerabilities.get(vuln_id)
+                        if vuln_data and isinstance(vuln_data, dict):
+                            device['extra_vulnerabilities'].append(vuln_data)
+        except Exception:
+            logger.exception(f'Problem parsing vulnerabilities')
 
         if isinstance(devices_info.get('users'), dict) and devices_info.get('users'):
             device['extra_users'] = devices_info.get('users').get(asset_id) or []
@@ -212,7 +227,25 @@ def _build_device_info(devices_info: dict, device: dict, asset_id: str):
         logger.exception('Failed building device info')
 
 
-def _query_devices_by_client_rapid7_warehouse(client_config, client_data):
+def get_rapid7_warehouse_connection(client_config):
+    connection = PostgresConnection(
+        host=client_config['server'],
+        port=int(client_config.get('port')),
+        username=client_config['username'],
+        password=client_config['password'],
+        db_name=client_config.get('database'))
+
+    connection.set_credentials(username=client_config['username'],
+                               password=client_config['password'])
+    with connection:
+        connection.set_devices_paging(consts.DEVICE_PAGINATION)
+        for _ in connection.query(consts.ASSET_QUERY):
+            break
+    return connection
+
+
+def _query_devices_by_client_rapid7_warehouse(client_config):
+    client_data = get_rapid7_warehouse_connection(client_config)
     with client_data:
         client_data.set_devices_paging(consts.DEVICE_PAGINATION)
         devices_info = _get_devices_info(client_data)
@@ -223,6 +256,8 @@ def _query_devices_by_client_rapid7_warehouse(client_config, client_data):
             if isinstance(device, dict) and client_config['drop_only_ip_devices']:
                 if not device.get('mac_address') and not device.get('host_name'):
                     continue
+
             if isinstance(device, dict) and device.get('asset_id'):
-                _build_device_info(devices_info, device, device.get('asset_id'))
-            yield device
+                device_to_yield = device.copy()
+                _build_device_info(devices_info, device_to_yield, device_to_yield.get('asset_id'))
+                yield device_to_yield

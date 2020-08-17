@@ -26,7 +26,9 @@ TIME_TO_SLEEP_BETWEEN_RETRIES_IN_SECONDS = 63   # 1 minute for totp code to re-g
 PAGE_NUMBER_FLOOD_PROTECTION = 9000
 
 
-def get_session_token_with_totp(sts_client, aws_mfa_details: dict, aws_config: Config, identity: str) -> dict:
+def get_session_token_with_totp(
+        sts_client, aws_mfa_details: dict, aws_config: Config, identity: str, region_name: str
+) -> dict:
     # Since we have multiple roles that are trying to re-create the same boto3 session using AWS MFA, and since AWS
     # allows using the TOTP only once in a minute, we have to sync the session between the different processes,
     # otherwise, each role assumption would take 1 min at least.
@@ -42,7 +44,7 @@ def get_session_token_with_totp(sts_client, aws_mfa_details: dict, aws_config: C
                 aws_secret_access_key=aws_mfa_latest_dict['Credentials']['SecretAccessKey'],
                 aws_session_token=aws_mfa_latest_dict['Credentials']['SessionToken']
             )
-            current_session.client('sts', config=aws_config).get_caller_identity()
+            current_session.client('sts', config=aws_config, region_name=region_name).get_caller_identity()
             return aws_mfa_latest_dict
         except Exception:
             logger.debug(f'Could not use latest aws mfa dict, will try to generate on our own')
@@ -141,10 +143,10 @@ def get_assumed_session(
     session_credentials = RefreshableCredentials.create_from_metadata(
         metadata=functools.partial(
             boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
-            aws_config, external_id, aws_mfa_details)(),
+            aws_config, region_name, external_id, aws_mfa_details)(),
         refresh_using=functools.partial(
             boto3_role_credentials_metadata_maker, role_arn, aws_access_key_id, aws_secret_access_key,
-            aws_config, external_id, aws_mfa_details),
+            aws_config, region_name, external_id, aws_mfa_details),
         method='sts-assume-role'
     )
     role_session = get_session()
@@ -158,6 +160,7 @@ def boto3_role_credentials_metadata_maker(
         aws_access_key_id: str = None,
         aws_secret_access_key: str = None,
         aws_config: Config = None,
+        region_name: str = None,
         external_id: str = None,
         aws_mfa_details: Optional[dict] = None
 ):
@@ -173,10 +176,12 @@ def boto3_role_credentials_metadata_maker(
         aws_secret_access_key=aws_secret_access_key
     )
 
-    sts_client = current_session.client('sts', config=aws_config)
+    sts_client = current_session.client('sts', config=aws_config, region_name=region_name)
 
     if aws_mfa_details:
-        new_aws_mfa_creds = get_session_token_with_totp(sts_client, aws_mfa_details, aws_config, aws_access_key_id)
+        new_aws_mfa_creds = get_session_token_with_totp(
+            sts_client, aws_mfa_details, aws_config, aws_access_key_id, region_name
+        )
 
         current_session = boto3.Session(
             aws_access_key_id=new_aws_mfa_creds['Credentials']['AccessKeyId'],
@@ -184,7 +189,7 @@ def boto3_role_credentials_metadata_maker(
             aws_session_token=new_aws_mfa_creds['Credentials']['SessionToken']
         )
 
-        sts_client = current_session.client('sts', config=aws_config)
+        sts_client = current_session.client('sts', config=aws_config, region_name=region_name)
 
     params = {
         'RoleArn': role_arn,
@@ -254,9 +259,11 @@ def get_boto3_session(
         )
 
         if aws_mfa_details:
-            sts_client = session.client('sts', config=aws_config)
+            sts_client = session.client('sts', config=aws_config, region_name=sts_region_name)
 
-            new_aws_mfa_creds = get_session_token_with_totp(sts_client, aws_mfa_details, aws_config, aws_access_key_id)
+            new_aws_mfa_creds = get_session_token_with_totp(
+                sts_client, aws_mfa_details, aws_config, aws_access_key_id, sts_region_name
+            )
 
             session = boto3.Session(
                 aws_access_key_id=new_aws_mfa_creds['Credentials']['AccessKeyId'],
