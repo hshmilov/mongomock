@@ -159,6 +159,9 @@ class UserToken:
             'user_id': user_id,
             'type': 'reset_password'
         })
+        if not user_token:
+            return return_error('token error', 400)
+
         user = self._users_collection.find_one({'_id': user_id})
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         server_name = system_config.get('server_name', 'localhost')
