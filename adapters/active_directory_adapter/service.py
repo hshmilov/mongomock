@@ -993,6 +993,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
             logger.debug("Resolve Hosts Addr Thread: Resolving is disabled, not continuing")
             return
 
+        if not list(self._clients.keys()):
+            logger.debug(f'No clients for this plugin unique name, thus not resolving')
+            return
+
         with self._resolving_thread_lock:
             pending_filter = {DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name}
             hosts_count = self.__devices_data_db.count_documents(pending_filter)
@@ -1030,6 +1034,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         """
         if self.__resolving_enabled is False:
             logger.debug("Resolve Change Status Thread: Resolving is disabled, not continuing")
+            return
+
+        if not list(self._clients.keys()):
+            logger.debug(f'No clients for this plugin unique name. Deleting old data and returning')
+            with self._resolving_thread_lock:
+                self.__devices_data_db.drop()
             return
 
         with self._resolving_thread_lock:

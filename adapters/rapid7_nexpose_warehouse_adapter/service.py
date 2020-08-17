@@ -8,10 +8,10 @@ from axonius.adapter_base import AdapterProperty
 from axonius.clients.rest.connection import RESTConnection
 from axonius.fields import Field
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
-from axonius.clients.postgres.connection import PostgresConnection
 from axonius.adapter_exceptions import ClientConnectionException
 from rapid7_nexpose_warehouse_adapter.client_id import get_client_id
-from rapid7_nexpose_warehouse_adapter.parse import _query_devices_by_client_rapid7_warehouse
+from rapid7_nexpose_warehouse_adapter.parse import _query_devices_by_client_rapid7_warehouse, \
+    get_rapid7_warehouse_connection
 from rapid7_nexpose_warehouse_adapter.structures import Rapid7NexposeWarehouseDeviceInstance, RapidAsset, RapidPolicy, \
     RapidService, RapidTag, RapidVulnerability, RapidUserAccount, RapidGroupAccount
 
@@ -47,24 +47,10 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
         return RESTConnection.test_reachability(client_config.get('server'),
                                                 port=client_config.get('port'))
 
-    @staticmethod
-    def get_connection(client_config):
-        connection = PostgresConnection(
-            host=client_config['server'],
-            port=int(client_config.get('port')),
-            username=client_config['username'],
-            password=client_config['password'],
-            db_name=client_config.get('database'))
-
-        connection.set_credentials(username=client_config['username'],
-                                   password=client_config['password'])
-        with connection:
-            pass  # check that the connection credentials are valid
-        return connection
-
     def _connect_client(self, client_config):
         try:
-            return self.get_connection(client_config)
+            get_rapid7_warehouse_connection(client_config)
+            return client_config
         except Exception:
             message = f'Error connecting to client host: {client_config["server"]}  ' \
                       f'database: ' \
@@ -72,7 +58,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
-    def _query_devices_by_client(self, client_name, client_data: PostgresConnection):
+    def _query_devices_by_client(self, client_name, client_data: dict):
         """
         Get all devices from a specific  domain
 
@@ -81,14 +67,12 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
-        client_config = self._get_client_config_by_client_id(client_name)
         _ = (yield from concurrent_multiprocess_yield(
             [
                 (
                     _query_devices_by_client_rapid7_warehouse,
                     (
-                        client_config,
-                        client_data
+                        client_data,
                     ),
                     {}
                 )
