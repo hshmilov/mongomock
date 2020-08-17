@@ -187,6 +187,10 @@ class DashboardPage(BasePage):
         return self.driver.find_element_by_xpath(
             self.PANEL_BY_NAME_XPATH.format(panel_name=title))
 
+    def get_dashboard_card_id(self, title):
+        card = self.get_card(title)
+        return card.get_attribute('id')
+
     def get_lifecycle_tooltip(self):
         return self.driver.find_element_by_css_selector(self.LIFECYCLE_TOOLTIP_CSS)
 
@@ -1143,6 +1147,10 @@ class DashboardPage(BasePage):
             # Good, indeed missing
             return True
         return False
+
+    def get_space_id(self, index=0):
+        space_header = self.find_space_header(index)
+        return space_header.get_attribute('id')
 
     def select_space_by_name(self, space_name):
         space = self.find_space_header_by_title(space_name)

@@ -1486,6 +1486,10 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def deactivate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
 
+    def reorder_dashboard(self, dashboard_id, payload, *vargs, **kwargs):
+        return self.post(f'dashboard/reorder/{dashboard_id}', data=json.dumps(payload),
+                         session=self._session, *vargs, **kwargs)
+
     def get_api_key(self):
         return self.get('settings/api_key', session=self._session).json()
 
