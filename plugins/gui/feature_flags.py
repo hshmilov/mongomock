@@ -239,7 +239,7 @@ class FeatureFlags(Configurable):
                     'items': [
                         {
                             'name': ParallelSearch.enabled,
-                            'title': 'Enable Parallel Adapters Fetch',
+                            'title': 'Enabled',
                             'type': 'bool'
                         }
                     ],
