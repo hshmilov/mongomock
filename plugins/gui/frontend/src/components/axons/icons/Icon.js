@@ -34,12 +34,20 @@ export default {
       return svgIconLense(categories);
     },
   },
-  render() {
+  render(h) {
+    const createElement = h;
     let props = { ...this.$props };
     if (this.family) {
       props = _omit(props, 'type');
       _set(props, 'component', this.getCustomSVGIcon(this.family, this.type));
     }
-    return <AIcon { ...{ props } } class="x-icon"/>;
+    return createElement(
+      'AIcon',
+      {
+        class: 'x-icon',
+        props: { ...props },
+        on: { ...this.$listeners },
+      },
+    );
   },
 };

@@ -244,7 +244,6 @@ export default {
 
 <style lang="scss">
 @import "../assets/scss/styles";
-@import "../assets/scss/custom_styles";
 
 #app {
   height: 100vh;
