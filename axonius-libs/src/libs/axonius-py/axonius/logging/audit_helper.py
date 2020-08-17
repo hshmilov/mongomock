@@ -10,6 +10,7 @@ class AuditCategory(Enum):
     ConnectionCustomDiscovery = 'connection_custom_discovery'
     GettingStarted = 'getting_started'
     Adapters = 'adapters'
+    AdaptersConnections = 'adapters.connections'
     Reports = 'reports'
     Enforcements = 'enforcements'
     Tunnel = 'tunnel'

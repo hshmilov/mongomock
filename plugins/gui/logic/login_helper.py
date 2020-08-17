@@ -68,6 +68,27 @@ def has_unchanged_password_value(value: object) -> bool:
     return False
 
 
+def remove_password_fields(schema, data: dict):
+    """
+    :param schema: schema used to look for password field type
+    :param data: data from which password field will be removed
+    :return: data object
+    """
+    if not isinstance(data, dict):
+        raise ValueError('data type must be a dict ')
+
+    if schema['type'] == 'array':
+        for schema_item in schema.get('items'):
+            if isinstance(schema_item, dict):
+                if schema_item.get('type') == 'array' and data.get(schema_item['name']):
+                    remove_password_fields(schema_item, data.get(schema_item['name']))
+                if schema_item.get('format') == 'password':
+                    data.pop(schema_item['name'], None)
+    else:
+        if schema.get('format') == 'password':
+            data.pop(schema['name'], None)
+
+
 def get_user_for_session(user_from_db, role_from_db, is_api_user: bool = False):
     user = copy.deepcopy(user_from_db)
     user['permissions'] = deserialize_db_permissions(role_from_db['permissions'])

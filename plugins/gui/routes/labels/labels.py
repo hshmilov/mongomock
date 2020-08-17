@@ -231,7 +231,9 @@ class Labels:
             'audit.adapters.connections.put.template':
                 'Added new connection for adapter \'{adapter}\' with connection ID {client_id}',
             'audit.adapters.connections.post': 'Edit Connection',
-            'audit.adapters.connections.post.template': 'Edited adapter \'{adapter}\' with connection ID {client_id}',
+            'audit.adapters.connections.post.template': 'Edited adapter \'{adapter}\' with connection ID {client_id}.'
+                                                        ' Old configuration:{current_client_info}.'
+                                                        ' New configuration:{updated_client_info}',
             'audit.adapters.connections.delete': 'Delete Connection',
             'audit.adapters.connections.delete.template': 'Deleted adapter \'{adapter}\' '
                                                           'with connection ID {client_id}',

@@ -2,17 +2,19 @@
 import logging
 import time
 import json
+import copy
 from multiprocessing.pool import ThreadPool
 from flask import (request, jsonify)
 from bson import ObjectId
 
 from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL, LAST_FETCH_TIME
 from axonius.consts.gui_consts import (FeatureFlagsNames)
-from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID)
+from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY)
+from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error, EntityType
 from axonius.utils.gui_helpers import (entity_fields)
 from axonius.utils.threading import run_and_forget
-from gui.logic.login_helper import refill_passwords_fields, has_unchanged_password_value
+from gui.logic.login_helper import refill_passwords_fields, has_unchanged_password_value, remove_password_fields
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -50,7 +52,7 @@ class Connections:
         instance_id = request_data.pop('instance', self.node_id)
         return self._test_connection(adapter_name, instance_id, request_data.get('connection', {}))
 
-    @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], activity_params=['adapter', 'client_id'])
+    @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], skip_activity=True)
     def update_connection(self, connection_id):
         request_data = self.get_request_data_as_object()
         if not request_data or 'adapter' not in request_data:
@@ -121,7 +123,6 @@ class Connections:
         })
         if not connection_from_db:
             return return_error('Server is already gone, please try again after refreshing the page')
-
         client_id = connection_from_db['client_id']
         if request.method == 'DELETE' and request.args.get('deleteEntities', False):
             self._remove_connection_assets(adapter_name, client_id)
@@ -132,6 +133,10 @@ class Connections:
             self._adapters_v2.clean_cache()
             self.clients_labels.clean_cache()
             self._get_adapter_connections_data.clean_cache()
+            self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'delete', {
+                'adapter': adapter_name,
+                CLIENT_ID: client_id,
+            })
             return json.dumps({'client_id': client_id}), 200
 
         if not connection_data.get('connection'):
@@ -145,9 +150,53 @@ class Connections:
         if not could_fill_passwords and should_reenter_credentials:
             return return_error('Changing connection details requires re-entering credentials', 400)
 
+        # for audit must get before old connection delete.
+        client_label = self.adapter_client_labels_db.find_one({
+            CLIENT_ID: client_id,
+            PLUGIN_UNIQUE_NAME: adapter_unique_name,
+            NODE_ID: prev_instance_id or instance_id
+        }, {CONNECTION_LABEL: 1})
+
         self.request_remote_plugin('clients/' + connection_id, adapter_unique_name, method='delete')
         if prev_instance_id != instance_id:
             adapter_unique_name = self._get_adapter_unique_name(adapter_name, instance_id)
+
+        # Audit client configuration changes
+        try:
+            adapter_schema = self._get_plugin_schemas(adapter_name).get('schema')
+
+            # only audit discovery details in case it enabled
+            def get_discovery_details(discovery: dict) -> dict:
+                return discovery if discovery['enabled'] is True else {'enabled': False}
+
+            def get_client_info(connection, label, discovery, instance):
+                return {
+                    'Connection': self._audit_remove_password_fields(adapter_schema, connection),
+                    CONNECTION_LABEL: label or '',
+                    'Discovery': get_discovery_details(discovery),
+                    'Instance_id': instance
+                }
+
+            # object to be updated
+            current_client_info = get_client_info(client_config,
+                                                  client_label.get(CONNECTION_LABEL) if client_label else None,
+                                                  connection_from_db[CONNECTION_DISCOVERY],
+                                                  prev_instance_id or instance_id)
+            # object post updated
+            updated_client_info = get_client_info(connection_data['connection'],
+                                                  connection_data[CONNECTION_LABEL],
+                                                  connection_data[CONNECTION_DISCOVERY],
+                                                  instance_id)
+
+            self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'post', {
+                'adapter': adapter_name,
+                CLIENT_ID: client_id,
+                'current_client_info': json.dumps(current_client_info) or '',
+                'updated_client_info': json.dumps(updated_client_info) or ''
+            })
+
+        except Exception:
+            logger.exception('failed to audit adapter client connection changes')
 
         self._adapters.clean_cache()
         self._adapters_v2.clean_cache()
@@ -288,3 +337,15 @@ class Connections:
             return False
         # return True if the new client id equals to client_id in the db
         return get_client_id_response.text == client_id
+
+    @staticmethod
+    def _audit_remove_password_fields(adapter_schema: dict, client_config: dict) -> dict:
+        """
+        remove from client config field type password
+        :param adapter_schema:
+        :param client_config:
+        :return: a clone of client config which is cleaned from passwords fields
+        """
+        audit_client_config = copy.deepcopy(client_config)
+        remove_password_fields(adapter_schema, audit_client_config)
+        return audit_client_config
