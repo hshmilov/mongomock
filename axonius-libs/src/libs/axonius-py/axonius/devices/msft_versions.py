@@ -4,8 +4,11 @@ https://axonius.atlassian.net/browse/PROD-1223
 parse MSFT release version ( NT XX.XX ) format to windows version format (i.e Server 2019, Server 2012 R2 ,10, 8.1 XP)
 
 sample :  Windows NT Workstation 5.1  -- >  XP
-
 """
+import re
+
+
+WINDOWS_VERSION_REGEX = r'\d+(?:\.\d+)+'
 
 WORKSTATION_VERSIONS = {
     '4.0': '95',
@@ -38,7 +41,8 @@ def parse_msft_release_version(os_string):
 
     versions = SERVER_VERSIONS if 'server' in os_string else WORKSTATION_VERSIONS
     for rls_ver, win_ver in versions.items():
-        if rls_ver in os_string:
+        matched_version = re.findall(WINDOWS_VERSION_REGEX, os_string)
+        if matched_version and matched_version[0].startswith(rls_ver):
             if isinstance(win_ver, dict):
                 for build, ver in win_ver.items():
                     return ver if build in os_string else win_ver.get('default')
