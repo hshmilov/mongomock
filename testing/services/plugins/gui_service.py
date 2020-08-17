@@ -1946,16 +1946,21 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
             users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
             for user in users_collection.find():
                 current_user_id = user.get('_id')
-                all_user_panels = self.db.gui_dashboard_collection.find(
-                    {'user_id': current_user_id,
-                     '_id': {'$in': [ObjectId(panel_id) for panel_id in all_personal_panels_order]}},
-                    {'_id': 1})
-                user_panels_ids = [str(panel['_id']) for panel in all_user_panels]
                 user_panels_order_ids = []
-                # Order the panels as they where in the original personal dashboard
-                for panel_id in all_personal_panels_order:
-                    if panel_id in user_panels_ids:
-                        user_panels_order_ids.append(panel_id)
+                if all_personal_panels_order:
+                    all_user_panels = self.db.gui_dashboard_collection.find({
+                        'user_id': current_user_id,
+                        '_id': {
+                            '$in': [ObjectId(panel_id) for panel_id in all_personal_panels_order]
+                        }
+                    }, {
+                        '_id': 1
+                    })
+                    user_panels_ids = [str(panel['_id']) for panel in all_user_panels]
+                    # Order the panels as they where in the original personal dashboard
+                    for panel_id in all_personal_panels_order:
+                        if panel_id in user_panels_ids:
+                            user_panels_order_ids.append(panel_id)
                 space_id = add_personal_space(current_user_id, user_panels_order_ids)
                 # Update the panels with the new personal dashboards
                 self.db.gui_dashboard_collection.update_many(
