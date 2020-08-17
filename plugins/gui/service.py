@@ -100,6 +100,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 SAML_SETTINGS_FILE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'config', 'saml_settings.json'))
 DEFAULT_AWS_TEST_USER = 'admin2'
 DEFAULT_AWS_TEST_PASSWORD = '$2b$12$GE1DJiMkTLh.5VW6iICUr.oR5yVIXgA5vFK1FF2dkHzoNYMYyKecO'
+SUPPORTED_API_VERSIONS = ['4.0']
 
 
 class GuiService(Triggerable,
@@ -227,7 +228,10 @@ class GuiService(Triggerable,
             })
 
     def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__), *args, requested_unique_plugin_name=GUI_PLUGIN_NAME, **kwargs)
+        super().__init__(get_local_config_file(__file__), *args,
+                         requested_unique_plugin_name=GUI_PLUGIN_NAME,
+                         supported_api_versions=SUPPORTED_API_VERSIONS,
+                         **kwargs)
         self.__all_sessions = {}
         self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False

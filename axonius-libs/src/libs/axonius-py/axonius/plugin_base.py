@@ -270,6 +270,11 @@ def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
             logger.debug(f'Rule={rule} request={request}')
 
             try:
+                # pylint: disable=protected-access
+                if self._get_api_version() and request.headers.get('Accept-Version'):
+                    accept_version = request.headers.get('Accept-Version').upper().replace('V', '')
+                    if accept_version not in self.supported_api_versions:
+                        return return_error('HTTP Version Not Supported', 505)
                 if should_authenticate:
                     # finding the api key
                     if request.headers.get('x-api-key') not in self.authorized_api_keys():
@@ -392,7 +397,11 @@ class PluginBase(Configurable, Feature, ABC):
     # Use the data we have from the core.
 
     # pylint: disable=too-many-branches, too-many-locals, too-many-statements
-    def __init__(self, config_file_path: str, *args, core_data=None, requested_unique_plugin_name=None, **kwargs):
+    def __init__(self, config_file_path: str, *args,
+                 core_data=None,
+                 requested_unique_plugin_name=None,
+                 supported_api_versions=None,
+                 **kwargs):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -433,6 +442,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
         self.nodes_metadata_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['nodes_metadata']
+        self.supported_api_versions = supported_api_versions
         try:
             self._current_feature_flag_config = self.feature_flags_config() or {}
         except TypeError:
@@ -1581,6 +1591,11 @@ class PluginBase(Configurable, Feature, ABC):
     def get_supported_features(self):
         return jsonify(self.supported_features)
 
+    def _get_api_version(self):
+        if self.supported_api_versions:
+            return self.supported_api_versions[-1]
+        return None
+
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
         """ /version - Get the version of the app.
@@ -1593,6 +1608,9 @@ class PluginBase(Configurable, Feature, ABC):
                           'plugin': self.version,
                           NODE_ID: self.node_id,
                           'axonius-libs': self.lib_version}
+
+        if self._get_api_version():
+            version_object['api_version'] = self._get_api_version()
 
         return jsonify(version_object)
 
