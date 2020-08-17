@@ -325,7 +325,7 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             'fetch_host_facts': True,
             'fetch_host_packages': True,
             'hosts_chunk_size': consts.DEVICE_PER_PAGE,
-            'async_chunk': consts.ASYNC_CHUNKS,
+            'async_chunks': consts.ASYNC_CHUNKS,
         }
 
     def _on_config_update(self, config):
