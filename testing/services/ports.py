@@ -239,6 +239,7 @@ DOCKER_PORTS = {
     'auvik-adapter':                    9950,
     'microsoft-kms-adapter':            9951,
     'remediant-secureone-adapter':      9952,
+    'checkmarx-adapter':                9953,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,

@@ -111,6 +111,7 @@ def is_only_host_adapter(adapter_device):
                                               'hp_nnmi_adapter',
                                               'sal_adapter',
                                               'snipeit_adapter',
+                                              'checkmarx_adapter',
                                               'druva_adapter']):
         return True
     try:
