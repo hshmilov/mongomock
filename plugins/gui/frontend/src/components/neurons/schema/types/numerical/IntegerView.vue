@@ -4,12 +4,14 @@
     :class="[data.class, data.staticClass]"
     :style="data.staticStyle"
     v-bind="data.attrs"
+    v-on="listeners"
   >{{ parseInt(props.value) }}</div>
   <div
     v-else
     :class="[data.class, data.staticClass]"
     :style="data.staticStyle"
     v-bind="data.attrs"
+    v-on="listeners"
   >&nbsp;</div>
 </template>
 <script>
