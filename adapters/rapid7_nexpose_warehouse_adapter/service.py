@@ -202,43 +202,15 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                         rapid_vulnerability.pci_failures = vulnerability.get('pci_failures')
                         rapid_vulnerability.risk_score = _parse_float(vulnerability.get('risk_score'))
                         rapid_vulnerability.cvss_vector = vulnerability.get('cvss_vector')
-                        rapid_vulnerability.cvss_access_vector = vulnerability.get('cvss_access_vector')
-                        rapid_vulnerability.cvss_access_complexity = vulnerability.get('cvss_access_complexity')
-                        rapid_vulnerability.cvss_authentication = vulnerability.get('cvss_authentication')
-                        rapid_vulnerability.cvss_confidentiality_impact = vulnerability.get(
-                            'cvss_confidentiality_impact')
-                        rapid_vulnerability.cvss_integrity_impact = vulnerability.get('cvss_integrity_impact')
-                        rapid_vulnerability.cvss_availability_impact = vulnerability.get('cvss_availability_impact')
                         rapid_vulnerability.cvss_score = _parse_float(vulnerability.get('cvss_score'))
                         rapid_vulnerability.pci_adjusted_cvss_score = _parse_float(
                             vulnerability.get('pci_adjusted_cvss_score'))
-                        rapid_vulnerability.cvss_exploit_score = _parse_float(
-                            vulnerability.get('cvss_exploit_score'))
-                        rapid_vulnerability.cvss_impact_score = _parse_float(
-                            vulnerability.get('cvss_impact_score'))
-                        rapid_vulnerability.pci_special_notes = vulnerability.get('pci_special_notes')
                         rapid_vulnerability.denial_of_service = vulnerability.get('denial_of_service')
                         rapid_vulnerability.exploits = vulnerability.get('exploits')
-                        rapid_vulnerability.exploit_skill_level = vulnerability.get('exploit_skill_level')
                         rapid_vulnerability.malware_kits = vulnerability.get('malware_kits')
                         rapid_vulnerability.malware_popularity = vulnerability.get('malware_popularity')
                         rapid_vulnerability.cvss_v3_vector = vulnerability.get('cvss_v3_vector')
-                        rapid_vulnerability.cvss_v3_attack_vector = vulnerability.get('cvss_v3_attack_vector')
-                        rapid_vulnerability.cvss_v3_attack_complexity = vulnerability.get('cvss_v3_attack_complexity')
-                        rapid_vulnerability.cvss_v3_privileges_required = vulnerability.get(
-                            'cvss_v3_privileges_required')
-                        rapid_vulnerability.cvss_v3_user_interaction = vulnerability.get('cvss_v3_user_interaction')
-                        rapid_vulnerability.cvss_v3_scope = vulnerability.get('cvss_v3_scope')
-                        rapid_vulnerability.cvss_v3_confidentiality_impact = vulnerability.get(
-                            'cvss_v3_confidentiality_impact')
-                        rapid_vulnerability.cvss_v3_integrity_impact = vulnerability.get('cvss_v3_integrity_impact')
-                        rapid_vulnerability.cvss_v3_availability_impact = vulnerability.get(
-                            'cvss_v3_availability_impact')
                         rapid_vulnerability.cvss_v3_score = _parse_float(vulnerability.get('cvss_v3_score'))
-                        rapid_vulnerability.cvss_v3_impact_score = _parse_float(
-                            vulnerability.get('cvss_v3_impact_score'))
-                        rapid_vulnerability.cvss_v3_exploit_score = _parse_float(
-                            vulnerability.get('cvss_v3_exploit_score'))
 
                         rapid_vulnerabilities.append(rapid_vulnerability)
             device.rapid_vulnerabilities = rapid_vulnerabilities
@@ -255,9 +227,9 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                     if isinstance(tag, dict):
                         rapid_tag = RapidTag()
 
-                        rapid_tag.id = tag.get('id')
+                        rapid_tag.id = tag.get('tag_id')
                         rapid_tag.name = tag.get('name')
-                        rapid_tag.type_ = tag.get('type_')
+                        rapid_tag.type_ = tag.get('type')
                         rapid_tag.source = tag.get('source')
                         rapid_tag.created = parse_date(tag.get('created'))
                         rapid_tag.risk_modifier = _parse_float(tag.get('risk_modifier'))
@@ -328,10 +300,10 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                     if isinstance(policy, dict):
                         rapid_policy = RapidPolicy()
 
-                        rapid_policy.id = policy.get('id')
+                        rapid_policy.id = policy.get('policy_id')
                         rapid_policy.benchmark_id = policy.get('benchmark_id')
-                        rapid_policy.name = policy.get('name')
-                        rapid_policy.version = policy.get('version')
+                        rapid_policy.name = policy.get('policy_name')
+                        rapid_policy.version = policy.get('policy_version')
                         rapid_policy.title = policy.get('title')
                         rapid_policy.description = policy.get('description')
                         rapid_policy.unscored_rules = policy.get('unscored_rules')
