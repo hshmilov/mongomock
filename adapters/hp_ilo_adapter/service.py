@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import int_or_none
 from hp_ilo_adapter.connection import HpIloConnection
 from hp_ilo_adapter.client_id import get_client_id
 from hp_ilo_adapter.structures import HPILOInstance
@@ -106,10 +107,7 @@ class HpIloAdapter(AdapterBase):
             device_instance.sku = device_raw.get('SKU')
             device_instance.system_type = device_raw.get('SystemType')
 
-            if device_raw.get('Status'):
-                device_instance.health = device_raw.get('Status').get('Health')
-
-            if device_raw.get('HostCorrelation'):
+            if isinstance(device_raw.get('HostCorrelation'), dict):
                 device_instance.host_fqdn = device_raw.get('HostCorrelation').get('HostFQDN')
                 device_instance.host_correlation_name = device_raw.get('HostCorrelation').get('HostName')
 
@@ -118,10 +116,11 @@ class HpIloAdapter(AdapterBase):
 
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
         try:
-            if not device_raw.get('Id') and not device_raw.get('SerialNumber'):
+            device_id = device_raw.get('Id')
+            if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_raw.get('Id') + '_' + device_raw.get('SerialNumber')
+            device.id = str(device_raw.get('Id')) + '_' + (device_raw.get('SerialNumber') or '')
 
             device.bios_version = device_raw.get('BiosVersion')
             device.hostname = device_raw.get('HostName')
@@ -132,15 +131,16 @@ class HpIloAdapter(AdapterBase):
             device.name = device_raw.get('Name')
             device.description = device_raw.get('Description')
 
-            if device_raw.get('HostCorrelation'):
+            if isinstance(device_raw.get('HostCorrelation'), dict):
                 device.add_ips_and_macs(ips=device_raw.get('HostCorrelation').get('IPAddress'),
                                         mac=device_raw.get('HostCorrelation').get('HostMACAddress'))
 
-            if device_raw.get('Memory'):
-                device.total_physical_memory = device_raw.get('Memory').get('TotalSystemMemoryGB')
+            if isinstance(device_raw.get('MemorySummary'), dict):
+                device.total_physical_memory = int_or_none(device_raw.get('MemorySummary').get('TotalSystemMemoryGiB'))
 
             if device_raw.get('ProcessorSummary'):
-                device.total_number_of_physical_processors = device_raw.get('ProcessorSummary').get('Count')
+                device.total_number_of_physical_processors = int_or_none(
+                    device_raw.get('ProcessorSummary').get('Count'))
 
             self._fill_hp_ilo_fields(device_raw, device)
 

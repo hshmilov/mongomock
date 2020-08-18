@@ -1,6 +1,6 @@
-DEVICE_PER_PAGE = 200
 MAX_NUMBER_OF_DEVICES = 2000000
 
-REST_API_AUTH = 'session'
-REST_API_TOTAL_DEVICES = 'Total'
-REST_API_PATH = '/rest/v1/Systems'
+DEFAULT_TOKEN_EXPIRATION = 1800
+
+API_AUTH_SUFFIX = 'redfish/v1/SessionService/Sessions/'
+SYSTEM_API_SUFFIX = 'redfish/v1/Systems'
