@@ -212,9 +212,8 @@ export default {
     fetchGlobalData() {
       this.featchFeatureFlags();
       this.fetchConstants();
-
+      this.fetchConfig();
       if (!this.isExpired) {
-        this.fetchConfig();
         this.fetchFirstHistoricalDate();
         this.fetchAllowedDates();
         if (this.$isAdmin()) {
