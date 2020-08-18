@@ -41,8 +41,8 @@ class DashboardPage(BasePage):
     NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new .x-button'
     NEW_CARD_WIZARD_OVERLAY_CSS = '.x-modal .x-chart-wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
-    INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = '#intersectingFirst > div'
-    INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = '#intersectingSecond > div'
+    INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = 'div#intersectingFirst'
+    INTERSECTION_CHART_SECOND_QUERY_DROP_DOWN_CSS = 'div#intersectingSecond'
     WIZARD_OPTIONS_CSS = 'div.x-select-options > div.x-select-option'
     CHART_WIZARD_CSS = '.x-chart-wizard'
     CHART_MODULE_DROP_DOWN_CSS = '.x-chart-wizard .x-select.x-select-symbol'
@@ -119,8 +119,8 @@ class DashboardPage(BasePage):
     CARD_FIELD_CSS = '.x-select-typed-field .x-select-trigger .placeholder'
     COMPARISON_CARD_1ST_CHILD_MODLUE_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.x-select-symbol'
     COMPARISON_CARD_2ND_CHILD_MODULE_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.x-select-symbol'
-    COMPARISON_CARD_1ST_QUERY_CSS = 'div:nth-child(1) > div.x-dropdown.x-select.view-name'
-    COMPARISON_CARD_2ND_QUERY_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.view-name'
+    COMPARISON_CARD_1ST_QUERY_CSS = '.view:nth-child(1) .view-name'
+    COMPARISON_CARD_2ND_QUERY_CSS = '.view:nth-child(2) .view-name'
     CARD_SPINNER_CSS = '.chart-spinner'
     NO_DATA_FOUND_SPINNER_CSS = '.no-data-found'
     LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
@@ -479,8 +479,11 @@ class DashboardPage(BasePage):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
         self.wait_for_card_spinner_to_end()
 
-    def add_comparison_card_view(self, module, query):
+    def click_add_view(self):
         self.click_button('+', context=self.driver.find_element_by_css_selector(self.CHART_WIZARD_CSS))
+
+    def add_comparison_card_view(self, module, query):
+        self.click_add_view()
         views_list = self.get_views_list()
         self.select_chart_wizard_module(module, views_list[2])
         self.select_chart_view_name(query, views_list[2])
@@ -495,6 +498,7 @@ class DashboardPage(BasePage):
         if view_name:
             self.select_chart_view_name(view_name)
         self.select_intersection_chart_first_query(first_query)
+        self.click_add_view()
         self.select_intersection_chart_second_query(second_query)
         self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
         self.click_card_save()
@@ -1266,12 +1270,14 @@ class DashboardPage(BasePage):
         assert select.text == self.CHART_QUERY_FIELD_DEFAULT
 
     def assert_compression_chart_first_query_field_default(self):
-        select = self.driver.find_element_by_css_selector(self.COMPARISON_CARD_1ST_QUERY_CSS)
-        assert select.text == self.CHART_QUERY_DEFAULT
+        views_container = self.driver.find_element_by_css_selector(self.SELECT_VIEWS_CSS)
+        view_select = views_container.find_element_by_css_selector(self.COMPARISON_CARD_1ST_QUERY_CSS)
+        assert view_select.text == self.CHART_QUERY_DEFAULT
 
     def assert_compression_chart_second_query_field_default(self):
-        select = self.driver.find_element_by_css_selector(self.COMPARISON_CARD_2ND_QUERY_CSS)
-        assert select.text == self.CHART_QUERY_DEFAULT
+        views_container = self.driver.find_element_by_css_selector(self.SELECT_VIEWS_CSS)
+        view_select = views_container.find_element_by_css_selector(self.COMPARISON_CARD_2ND_QUERY_CSS)
+        assert view_select.text == self.CHART_QUERY_DEFAULT
 
     def assert_segmentation_chart_query_field_default(self):
         select = self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_CSS)
@@ -1286,7 +1292,6 @@ class DashboardPage(BasePage):
         try:
             self.toggle_chart_wizard_module()
             self.assert_intersection_chart_first_query_default()
-            self.assert_intersection_chart_secound_query_default()
         finally:
             self.click_card_cancel()
 

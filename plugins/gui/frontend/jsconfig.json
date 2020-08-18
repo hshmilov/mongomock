@@ -15,7 +15,7 @@
           "@store/*": ["./src/store/*"],
           "@mixins/*": ["./src/mixins/*"],
           "@constants/*": ["./src/constants/*"],
-
+          "@directives/*": ["./src/directives/*"],
       }
     },
     "exclude": ["node_modules"]

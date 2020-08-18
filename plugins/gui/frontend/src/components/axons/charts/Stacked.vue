@@ -3,6 +3,7 @@
     <XChartTooltip
       :header="tooltipDetails.header"
       :body="tooltipDetails.body"
+      :style-object="tooltipDetails.styleObject"
     >
       <div
         slot="tooltipActivator"
@@ -51,7 +52,9 @@
         </div>
         <div>
           <div class="separator" />
-          <div class="stacked-total">Total {{totalValue}}</div>
+          <div class="stacked-total">
+            Total {{ totalValue }}
+          </div>
           <XPaginator
             :from.sync="dataFrom"
             :to.sync="dataTo"
@@ -67,9 +70,11 @@
 <script>
 import _get from 'lodash/get';
 
+import { formatPercentage } from '@constants/utils';
 import XPaginator from '../layout/Paginator.vue';
 import XChartTooltip from './ChartTooltip.vue';
-import { formatPercentage } from '@constants/utils';
+import defaultChartsColors from '../../../constants/colors';
+import { getVisibleTextColor } from '@/helpers/colors';
 
 export default {
   name: 'XStacked',
@@ -83,6 +88,10 @@ export default {
       type: Number,
       default: 5,
     },
+    chartConfig: {
+      type: Object,
+      required: true,
+    },
   },
   data() {
     return {
@@ -94,6 +103,7 @@ export default {
       },
       dataFrom: 1,
       dataTo: this.limit,
+      defaultChartsColors,
     };
   },
   computed: {
@@ -137,16 +147,26 @@ export default {
       return this.intersectionGroups.reduce((maxValue, currentGroup) => (
         currentGroup.value > maxValue ? currentGroup.value : maxValue), 0);
     },
+
     tooltipDetails() {
       if (!this.hover.intersection) {
         return {};
       }
-      const { value } = this.hover.intersection;
+      const { value, intersectionIndex } = this.hover.intersection;
       const intersectionName = this.hover.intersection.name;
       const headerClass = `tooltip-header-content ${this.getColorClass(this.hover.intersection.intersectionIndex)}`;
 
       const { name } = this.hover.group;
       const groupValue = this.hover.group.value;
+
+      // Styles for pre-defined chart colors.
+
+      const tooltipStyles = {
+        backgroundColor: this.getIntersectingColor(intersectionIndex),
+        fill: this.getIntersectingColor(intersectionIndex),
+        color: getVisibleTextColor(this.getIntersectingColor(intersectionIndex)),
+      };
+
 
       return {
         header: {
@@ -158,6 +178,7 @@ export default {
           value,
           percentage: formatPercentage(value / groupValue),
         },
+        styleObject: tooltipStyles,
       };
     },
   },
@@ -180,9 +201,17 @@ export default {
     getColorClass(intersectionIndex) {
       return `pie-fill-${this.pieFillArray[intersectionIndex]}`;
     },
+    getIntersectingColor(index) {
+      if (this.chartConfig.intersecting_colors && this.chartConfig.intersecting_colors[index]) {
+        return this.chartConfig.intersecting_colors[index];
+      }
+      return this.defaultChartsColors.matrixColor[index];
+    },
     getSliceStyle(intersection) {
       return {
         width: `${this.getSliceWidth(intersection.value)}px`,
+        backgroundColor: this.getIntersectingColor(intersection.intersectionIndex),
+        fill: this.getIntersectingColor(intersection.intersectionIndex),
       };
     },
     getSliceWidth(sliceValue) {
@@ -233,11 +262,11 @@ export default {
               min-width: 6px;
               cursor: pointer;
               padding: 0 2px;
-              opacity: 0.8;
+              opacity: 1;
               transition: opacity ease-in 0.4s;
 
               &.hovered {
-                opacity: 1;
+                opacity: 0.8;
               }
 
               .tooltip-invoker {

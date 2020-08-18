@@ -115,6 +115,7 @@ class TestDashboardActions(TestBase):
         with self.dashboard_page.edit_and_assert_chart(card, ['61', '39'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_intersection_chart_first_query(self.NON_LOCAL_USERS_QUERY_NAME)
+            self.dashboard_page.click_add_view()
             self.dashboard_page.select_intersection_chart_second_query(self.AD_ADMINS_QUERY_NAME)
 
         with self.dashboard_page.edit_and_assert_chart(card, ['50', '50'], self.dashboard_page.PIE_CHART_TYPE):

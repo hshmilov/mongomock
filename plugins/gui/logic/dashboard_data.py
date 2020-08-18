@@ -109,24 +109,29 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
 
     data = []
     total = 0
-    for view in views:
+    # for view in views:
+    for i, _ in enumerate(views):
         # Can be optimized by taking all names in advance and querying each module's collection once
         # But since list is very short the simpler and more readable implementation is fine
-        entity_name = view.get('entity', EntityType.Devices.value)
+        entity_name = _.get('entity', EntityType.Devices.value)
         entity = EntityType(entity_name)
-        view_dict = find_view_by_id(entity, view['id'])
+        view_dict = find_view_by_id(entity, _['id'])
         if not view_dict:
             continue
 
+        data_item_color = _.get('chart_color', None)
+
         data_item = {
-            'view_id': view['id'],
+            'view_id': _['id'],
             'name': view_dict['name'],
             'view': view_dict['view'],
             'module': entity_name,
-            'value': 0
+            'value': 0,
+            'chart_color': data_item_color,
+            'index_in_config': i
         }
         # extract data_collection, and build filter
-        for_date = view.get('for_date')
+        for_date = _.get('for_date')
         #  if we got a date we will add the accurate for datetime to the data_item result
         if for_date:
             data_item['accurate_for_datetime'] = for_date
@@ -155,6 +160,8 @@ def fetch_chart_intersect(
         _: ChartViews,
         entity: EntityType,
         base, intersecting,
+        base_color=None,
+        intersecting_colors=None,
         for_date=None) -> Optional[List]:
     """
     This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
@@ -164,6 +171,8 @@ def fetch_chart_intersect(
     :param entity:
     :param base:
     :param intersecting: List of 1 or 2 views
+    :param base_color: The base query color
+    :param intersecting_colors: The intersecting queries colors
     :param for_date: Data will be fetched and calculated according to what is stored on this date
     :return: List of result portions for the query executions along with their names. First represents Parent query.
              If 1 child, second represents Child intersecting with Parent.
@@ -527,7 +536,8 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
 # pylint: disable=too-many-arguments
 def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, sort, value_filter: list = None,
                         include_empty: bool = False, for_date=None,
-                        selected_sort_by=None, selected_sort_order=None, timeframe=None, show_timeline=None) -> List:
+                        selected_sort_by=None, selected_sort_order=None, timeframe=None, show_timeline=None,
+                        chart_color=None) -> List:
     """
     Perform aggregation which matching given view's filter and grouping by given fields, in order to get the
     number of results containing each available value of the field.
@@ -1190,6 +1200,7 @@ def fetch_chart_matrix(
         sort,
         selected_sort_by=None,
         selected_sort_order=None,
+        intersecting_colors=None,
         for_date=None,) -> Optional[List]:
 
     # Query and data collections according to given parent's module
@@ -1257,7 +1268,8 @@ def fetch_chart_matrix(
 
 
 def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, selected_view, sort,
-                                selected_sort_by=None, selected_sort_order=None, for_date=None):
+                                selected_sort_by=None, selected_sort_order=None, for_date=None,
+                                chart_colors=None):
     # Query and data collections according to given parent's module
     data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
     adapters_metadata = get_adapters_metadata()

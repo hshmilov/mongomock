@@ -1,11 +1,14 @@
 <template>
   <div class="x-chart-compare">
     <h5>Select queries for comparison:</h5>
+
     <XSelectViews
       v-model="selectedViews"
       :entities="entities"
       :view-options="viewOptions"
       :min="1"
+      :chart-view="chartView"
+      :default-chart-colors="viewDefaultColors"
     />
 
     <XChartSortSelector
@@ -16,6 +19,7 @@
       :sort-type.sync="sortType"
       :sort-order.sync="sortOrder"
     />
+
 
   </div>
 </template>
@@ -31,6 +35,7 @@ import {
   ChartSortTypeEnum, ChartViewEnum,
 } from '../../../../constants/dashboard';
 import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
+import defaultChartsColors from '../../../../constants/colors';
 
 const dashboardView = { entity: '', id: '' };
 export default {
@@ -44,6 +49,7 @@ export default {
       ChartSortTypeEnum,
       ChartSortOrderEnum,
       ChartSortOrderLabelEnum,
+      defaultChartsColors,
     };
   },
   computed: {
@@ -89,6 +95,12 @@ export default {
     },
     showSortOptions() {
       return this.chartView === ChartViewEnum.histogram;
+    },
+    viewDefaultColors() {
+      if (this.chartView && this.chartView === ChartViewEnum.pie) {
+        return this.defaultChartsColors.pieColors;
+      }
+      return [];
     },
   },
   watch: {

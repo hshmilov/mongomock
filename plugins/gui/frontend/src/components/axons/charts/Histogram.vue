@@ -2,6 +2,7 @@
   <XChartTooltip
     :header="tooltipDetails.header"
     :body="tooltipDetails.body"
+    :style-object="tooltipDetails.styleObject"
   >
     <div
       slot="tooltipActivator"
@@ -29,22 +30,29 @@
               <div :style="{width: calculateBarWidth(item.value) + 'px'}">
                 <div
                   class="bar growing-x"
+                  :style="getBarStyle(item)"
                   :name="item.name"
-                  @mouseover="hoveredItem = item"
+                  @mouseover="hoveredItem = {...item, index}"
                   @mouseout="hoveredItem = null"
                 />
               </div>
-              <div v-if="!item.htmlContent" class="quantity">
+              <div
+                v-if="!item.htmlContent"
+                class="quantity"
+              >
                 {{ item.value }}
               </div>
-              <div v-else class="quantity" v-html="item.htmlContent">
-              </div>
+              <div
+                v-else
+                class="quantity"
+                v-html="item.htmlContent"
+              />
             </div>
           </div>
           <div
             v-if="!condensed"
             class="item-title"
-            @mouseover="hoveredItem = item"
+            @mouseover="hoveredItem = {...item, index}"
             @mouseout="hoveredItem = null"
           >{{ item.name }}</div>
         </div>
@@ -71,7 +79,10 @@
 <script>
 import { pluginMeta } from '@constants/plugin_meta';
 import XPaginator from '../layout/Paginator.vue';
+import { ChartTypesEnum } from '../../../constants/dashboard';
 import XChartTooltip from './ChartTooltip.vue';
+import { getVisibleTextColor } from '@/helpers/colors';
+import { formatPercentage } from '@constants/utils';
 
 export default {
   name: 'XHistogram',
@@ -92,6 +103,14 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    chartConfig: {
+      type: Object,
+      default: () => {},
+    },
+    metric: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -133,23 +152,45 @@ export default {
       }
       return this.data.slice(this.dataFrom - 1, this.dataTo);
     },
+    segmentColor() {
+      return this.chartConfig.chart_color || undefined;
+    },
     tooltipDetails() {
       if (!this.hoveredItem) {
         return {};
       }
+      const {
+        portion,
+        value,
+        chart_color: chartColor,
+        name,
+      } = this.hoveredItem;
 
-      const { percentage, value } = this.hoveredItem;
-      let { name } = this.hoveredItem;
-      name = pluginMeta[name] ? pluginMeta[name].title : name;
+      let styleObject = {};
+      // design for Query Segmentation
+      if (this.metric === ChartTypesEnum.segment && this.segmentColor) {
+        styleObject = {
+          backgroundColor: this.segmentColor,
+          color: getVisibleTextColor(this.segmentColor),
+        };
+      }
+      // design for Query Comparison
+      if (this.metric === ChartTypesEnum.compare && chartColor) {
+        styleObject = {
+          backgroundColor: chartColor,
+          color: getVisibleTextColor(chartColor),
+        };
+      }
       return {
         header: {
           class: 'tooltip-header-content pie-fill-1',
-          name,
+          name: pluginMeta[name] ? pluginMeta[name].title : name,
         },
         body: {
           value,
-          percentage,
+          percentage: formatPercentage(portion),
         },
+        styleObject,
       };
     },
     totalValue() {
@@ -174,7 +215,19 @@ export default {
       if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
         this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit));
       }
-    }
+    },
+    getBarStyle(item) {
+      // design for Query Segmentation
+      if (this.metric === ChartTypesEnum.segment && this.segmentColor) {
+        return { backgroundColor: this.segmentColor };
+      }
+      // design for Query Comparison
+      if (this.metric === ChartTypesEnum.compare
+         && this.chartConfig.views && item.chart_color) {
+        return { backgroundColor: item.chart_color };
+      }
+      return {};
+    },
   },
 };
 </script>
@@ -215,10 +268,12 @@ export default {
 
         .bar {
           height: 20px;
-          background-color: rgba($grey-2, 0.4);
+          opacity: 1;
+          background-color: #D3D7DA;
 
           &:hover {
-            background-color: $grey-2;
+            opacity: 0.8;
+            /* background-color: $grey-2; */
           }
         }
 
@@ -258,7 +313,7 @@ export default {
         cursor: default;
 
         .bar:hover {
-          background-color: rgba($grey-2, 0.4);
+          /* background-color: rgba($grey-2, 0.4); */
         }
       }
     }
@@ -276,7 +331,7 @@ export default {
 
         .bar {
           height: 8px;
-          background-color: rgba($grey-2, 0.8);
+          background-color: #D3D7DA;
         }
 
         .quantity {
@@ -288,7 +343,7 @@ export default {
       }
 
       &.disabled .histogram-item .bar:hover {
-        background-color: rgba($grey-2, 0.8);
+        background-color: #D3D7DA;
       }
     }
 

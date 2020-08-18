@@ -11,15 +11,13 @@
     "@pages": "${workspaceRoot}/src/components/pages",
     "@api": "${workspaceRoot}/src/api",
     "@store": "${workspaceRoot}/src/store",
-    "@constants": "${workspaceRoot}/src/constants"
+    "@constants": "${workspaceRoot}/src/constants",
+    "@directives": "${workspaceRoot}/src/directives",
   },
   "eslint.validate": [
     "javascript",
     "javascriptreact",
-    {
-      "language": "vue",
-      "autoFix": false
-    }
+    "vue",
  ],
  "search.exclude": {
    "**/dist": true

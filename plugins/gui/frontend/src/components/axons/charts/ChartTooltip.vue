@@ -7,8 +7,16 @@
       <template slot="header">
         <div
           class="header-content"
-          :class="header.class"
+          :class="{[header.class]: header.class, 'header-content--intersecting': header.intersecting}"
+          :style="headerContentStyle"
         >
+
+          <div
+            v-if="header.intersecting"
+            :class="{[header.class]: header.class, 'intersection-indicator': header.intersecting}"
+            :style="intersectingIndicatorStyle"
+          />
+
           <div class="name">
             {{ header.name }}
           </div>
@@ -39,8 +47,8 @@
           <span class="percentage">{{ body.percentage }}</span>
         </div>
         <div
-          v-for="item in additionalData"
-          :key="item.name"
+          v-for="(item,index) in additionalData"
+          :key="`${item.name}_${index}`"
           class="body-content"
         >
           <div class="body-component-name">
@@ -79,6 +87,10 @@ export default {
       type: Array,
       default: () => ([]),
     },
+    styleObject: {
+      type: Object,
+      default: () => {},
+    },
   },
   data() {
     return {
@@ -89,6 +101,12 @@ export default {
     isVisible() {
       const tooltipData = { ...this.header, ...this.body, ...this.additionalData };
       return this.show && !_isEmpty(tooltipData);
+    },
+    headerContentStyle() {
+      return this.header.intersecting ? null : this.styleObject;
+    },
+    intersectingIndicatorStyle() {
+      return this.styleObject;
     },
   },
   methods: {
@@ -150,6 +168,23 @@ export default {
 
         &.pie-fill-1 {
           color: $theme-black;
+        }
+
+        &.header-content--intersecting {
+          align-items: center;
+          background: #fff;
+          color: #000;
+          padding: 0 15px 0 0;
+          opacity: 1;
+          border-bottom: 1px solid #DEDEDE;
+        }
+
+        .intersection-indicator {
+          width: 15px;
+          height: 100%;
+          min-height: 35px;
+          margin-right: 10px;
+          content: ' ';
         }
       }
 

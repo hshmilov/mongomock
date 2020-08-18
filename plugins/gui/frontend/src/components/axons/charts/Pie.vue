@@ -3,6 +3,7 @@
     class="x-pie"
     :class="{disabled: readOnly}"
   >
+
     <div
       v-if="tooManyValues"
       class="pie-unavailable"
@@ -12,34 +13,20 @@
       :header="tooltipDetails.header"
       :body="tooltipDetails.body"
       :additional-data="tooltipDetails.additionalData"
+      :style-object="tooltipDetails.styleObject"
+      :intersecting="tooltipDetails.intersecting"
     >
       <svg
         slot="tooltipActivator"
         viewBox="-1 -1 2 2"
         @mouseout="inHover = -1"
       >
-        <defs>
-          <linearGradient id="intersection-2-4">
-            <stop
-              class="pie-stop-2"
-              offset="0%"
-            />
-            <template v-for="n in 9">
-              <stop
-                :class="`pie-stop-${!(n % 2) ? 4 : 2}`"
-                :offset="`${n}0%`"
-              />
-              <stop
-                :class="`pie-stop-${!(n % 2) ? 2 : 4}`"
-                :offset="`${n}0%`"
-              />
-            </template>
-            <stop
-              class="pie-stop-4"
-              offset="100%"
-            />
-          </linearGradient>
-        </defs>
+        <XIntersectionSlice
+          :chartId="chartId"
+          :includesIntersectionColors="false"
+          :intersecting-colors="customIntersectingColors"
+        />
+
         <g
           v-for="(slice, index) in slices"
           :key="index"
@@ -49,11 +36,13 @@
         >
           <path
             :d="slice.path"
+            :style="slice.sliceColorStyle"
             :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"
           />
           <text
             v-if="showPercentageText(slice.portion)"
             class="scaling"
+            :style="getTextColor(slice)"
             text-anchor="middle"
             :x="slice.middle.x"
             :y="slice.middle.y"
@@ -72,12 +61,20 @@
 
 <script>
 import _sumBy from 'lodash/sumBy';
+import _get from 'lodash/get';
+import { formatPercentage } from '@constants/utils';
+import defaultChartsColors from '@constants/colors';
 import XChartTooltip from './ChartTooltip.vue';
+import XIntersectionSlice from './IntersectionSlice.vue';
+import { getVisibleTextColor } from '@/helpers/colors';
+import { ChartTypesEnum } from '../../../constants/dashboard';
+import { getItemIndex, getLegendItemColorClass, getRemainderSliceLabel } from '@/helpers/dashboard';
 
 export default {
   name: 'XPie',
   components: {
     XChartTooltip,
+    XIntersectionSlice,
   },
   props: {
     data: {
@@ -92,19 +89,54 @@ export default {
       type: Boolean,
       default: false,
     },
+    metric: {
+      type: String,
+      default: '',
+    },
+    chartConfig: {
+      type: Object,
+      default: () => {},
+    },
+    chartId: {
+      type: String,
+      required: true,
+    },
   },
   data() {
     return {
       inHover: -1,
+      defaultChartsColors,
     };
   },
   computed: {
     tooManyValues() {
       return this.data.length > 100;
     },
+    processedData() {
+      const processData = this.data.map((item, index) => {
+        const { portion, remainder, chart_color: chartColor } = item;
+
+        let pieSliceColorIndex = this.getItemIndex(item, this.metric);
+        pieSliceColorIndex = pieSliceColorIndex < 0 ? index : pieSliceColorIndex;
+        const colorClassname = this.getLegendItemColorClass(pieSliceColorIndex, item);
+        const sliceColorStyle = this.getPieSliceStyleObject(colorClassname, chartColor);
+
+        return {
+          ...item,
+          index,
+          class: colorClassname,
+          percentage: formatPercentage(portion),
+          name: remainder ? getRemainderSliceLabel(item) : item.name,
+          sliceColorStyle,
+          chartColor,
+        };
+      });
+
+      return processData;
+    },
     slices() {
       let cumulativePortion = 0;
-      return this.data.map((slice) => {
+      return this.processedData.map((slice) => {
         // Starting slice at the end of previous one, and ending after percentage defined for item
         const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion);
         cumulativePortion += slice.portion / 2;
@@ -126,9 +158,11 @@ export default {
       if (!this.data || this.data.length === 0 || this.inHover === -1) {
         return {};
       }
+      const hoveredItem = this.processedData[this.inHover];
       const {
-        percentage, name, remainder, intersection, value, class: colorClass,
-      } = this.data[this.inHover];
+        percentage, name, remainder, intersection, value, class: colorClass, chartColor,
+      } = hoveredItem;
+
       let tooltip;
       if (intersection) {
         tooltip = this.getIntersectionTooltip(name, value, percentage, colorClass);
@@ -137,13 +171,83 @@ export default {
       } else {
         tooltip = this.getNormalTooltip(name, value, percentage, colorClass);
       }
-      return tooltip;
+
+      const styleObject = this.getPieSliceStyleObject(colorClass, chartColor);
+      let pieSliceColorIndex = this.getItemIndex(hoveredItem, this.metric);
+      pieSliceColorIndex = pieSliceColorIndex < 0 ? this.inHover : pieSliceColorIndex;
+
+      styleObject.color = getVisibleTextColor(chartColor || styleObject.fill || defaultChartsColors.pieColors[pieSliceColorIndex % 10]);
+
+      return {
+        ...tooltip,
+        styleObject,
+      };
     },
     totalValue() {
       return _sumBy(this.data, (slice) => slice.value) || 0;
     },
+    customIntersectingColors() {
+      return _get(this.chartConfig, 'intersecting_colors', []);
+    },
+    styleObject() {
+      // If colors defined - mapping it into new style object
+      let styleObject = {};
+      if (this.metric === ChartTypesEnum.intersect) {
+        styleObject = {};
+      }
+      return styleObject;
+    },
+  },
+  created() {
+    this.getItemIndex = getItemIndex.bind(this);
+    this.getLegendItemColorClass = getLegendItemColorClass.bind(this);
   },
   methods: {
+    getPieSliceStyleObject(sliceClassname, sliceColor) {
+      if (sliceColor) {
+        return {
+          backgroundColor: sliceColor,
+          fill: sliceColor,
+        };
+      }
+
+      const baseColor = this.chartConfig.base_color || this.defaultChartsColors.pieColors[0];
+
+      const firstIntersectionColor = this.customIntersectingColors[0] || this.defaultChartsColors.intersectingColors[0];
+      const secondIntersectionColor = this.customIntersectingColors[1] || this.defaultChartsColors.intersectingColors[1];
+      if (sliceClassname === 'fill-intersection-2-3') {
+        return {
+          fill: this.customIntersectingColors.length ? `url(#defined-colors-${this.chartId})` : 'intersection-2-3',
+          background: `repeating-linear-gradient(45deg, ${firstIntersectionColor}, 
+              ${firstIntersectionColor} 4px, ${secondIntersectionColor} 4px, ${secondIntersectionColor} 8px)`,
+        };
+      }
+      if (sliceClassname === 'pie-fill-1') {
+        return {
+          fill: baseColor,
+          backgroundColor: baseColor,
+        };
+      }
+      if (sliceClassname === 'pie-fill-2') {
+        return {
+          fill: firstIntersectionColor,
+          backgroundColor: firstIntersectionColor,
+        };
+      }
+      if (sliceClassname === 'pie-fill-3') {
+        return {
+          fill: secondIntersectionColor,
+          backgroundColor: secondIntersectionColor,
+        };
+      }
+      if (sliceClassname.includes('indicator-fill-') && this.customIntersectingColors[0]) {
+        return {
+          fill: firstIntersectionColor,
+          backgroundColor: firstIntersectionColor,
+        };
+      }
+      return {};
+    },
     getNormalTooltip(name, value, percentage, colorClass) {
       return {
         header: {
@@ -175,6 +279,7 @@ export default {
           name: 'Intersection',
           value,
           percentage,
+          intersecting: true,
         },
         additionalData: [{
           ...this.data[this.inHover - 1],
@@ -192,6 +297,22 @@ export default {
     onClick(index) {
       if (this.readOnly) return;
       this.$emit('click-one', index);
+    },
+    getTextColor(slice) {
+      // If defined color by index
+      const savedSliceColor = slice.chart_color;
+      if (savedSliceColor) {
+        return {
+          color: getVisibleTextColor(savedSliceColor),
+          fill: getVisibleTextColor(savedSliceColor),
+        };
+      }
+      const sliceColorStyle = this.getPieSliceStyleObject(slice.class);
+      const sliceBgColor = _get(sliceColorStyle, 'backgroundColor');
+      return sliceBgColor ? {
+        color: getVisibleTextColor(sliceBgColor),
+        fill: getVisibleTextColor(sliceBgColor),
+      } : {};
     },
   },
 };
@@ -222,11 +343,11 @@ export default {
         cursor: pointer;
 
         path {
-            opacity: 0.8;
+            opacity: 1;
             transition: opacity ease-in 0.4s;
 
             &.in-hover {
-                opacity: 1;
+                opacity: 0.8;
             }
         }
 

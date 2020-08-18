@@ -47,22 +47,32 @@
         class="intersection-query-row"
       >
         <label>Intersecting query</label>
-        <XSelect
-          :value="intersectingItem"
-          :options="viewOptions(entity, intersectingItem)"
-          :searchable="true"
-          placeholder="query..."
-          @input="(view) => updateIntersecting(index, view)"
-        />
-        <XButton
-          v-if="index > 0"
-          type="link"
-          @click="removeIntersecting(index)"
-        >x</XButton>
+        <div class="grid-span2 field-with-colors-bar">
+          <XSelect
+            :value="intersectingItem"
+            class="queryField"
+            :options="viewOptions(entity, intersectingItem)"
+            :searchable="true"
+            placeholder="query..."
+            @input="(view) => updateIntersecting(index, view)"
+          />
+          <XColorPicker
+            :value="intersectingColors[index] || defaultChartsColors.matrixColor[index]"
+            class="color-picker-container"
+            :preset-colors="defaultChartsColors.pieColors"
+            @input="updateIntersectingColor(index, $event)"
+          />
+          <XButton
+            v-if="index > 0"
+            type="link"
+            @click="removeIntersecting(index)"
+          >x</XButton>
+        </div>
+
       </div>
       <XButton
-        id="add-intersecting-query"
         v-if="!hasMaxViews"
+        id="add-intersecting-query"
         type="light"
         @click="addIntersecting"
       >+</XButton>
@@ -79,11 +89,15 @@
 
 <script>
 import _get from 'lodash/get';
+import _take from 'lodash/take';
+import _uniq from 'lodash/uniq';
+import XColorPicker from '@axons/inputs/ColorPicker.vue';
 import XButton from '../../../axons/inputs/Button.vue';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import chartMixin from './chart';
 import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
+import defaultChartsColors from '../../../../constants/colors';
 
 import {
   ChartSortTypeEnum,
@@ -93,12 +107,13 @@ import {
 export default {
   name: 'XChartMatrix',
   components: {
-    XButton, XSelect, XSelectSymbol, XChartSortSelector,
+    XButton, XSelect, XSelectSymbol, XChartSortSelector, XColorPicker,
   },
   mixins: [chartMixin],
   data() {
     return {
       max: 3,
+      defaultChartsColors,
     };
   },
   computed: {
@@ -107,6 +122,7 @@ export default {
         entity: '',
         base: [''],
         intersecting: [''],
+        intersecting_colors: [],
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
@@ -160,6 +176,19 @@ export default {
         this.config = { ...this.config, intersecting: [...intersecting] };
       },
     },
+    intersectingColors: {
+      get() {
+        const savedIntersectingColors = this.config.intersecting_colors || [];
+        if (savedIntersectingColors.length) {
+          const uniqColorsSet = _uniq([...savedIntersectingColors, ...defaultChartsColors.matrixColor]);
+          return _take(uniqColorsSet, this.intersecting.length);
+        }
+        return _take(defaultChartsColors.matrixColor, this.intersecting.length);
+      },
+      set(colors) {
+        this.config = { ...this.config, intersecting_colors: [...colors] };
+      },
+    },
     hasMaxViews() {
       if (!this.max) return false;
       return this.intersecting.length === this.max;
@@ -175,6 +204,7 @@ export default {
         entity,
         base: [''],
         intersecting: [''],
+        intersecting_colors: [],
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
       };
     },
@@ -196,16 +226,28 @@ export default {
       });
     },
     removeIntersecting(index) {
-      this.intersecting.splice(index, 1);
-      this.intersecting = [...this.intersecting];
+      this.config = {
+        ...this.config,
+        intersecting: this.intersecting.filter((item, i) => i !== index),
+        intersecting_colors: this.intersectingColors.filter((item, i) => i !== index),
+      };
     },
     addIntersecting() {
-      this.intersecting = [...this.intersecting, ''];
+      const newIntersecting = [...this.intersecting, ''];
+      this.config = {
+        ...this.config,
+        intersecting: [...newIntersecting],
+      };
     },
     updateIntersecting(index, view) {
       this.intersecting = this.intersecting.map((item, ind) => {
         if (ind === index) return view;
         return item;
+      });
+    },
+    updateIntersectingColor(index, color) {
+      this.intersectingColors = this.intersectingColors.map((item, i) => {
+        if (index === i) { return color; } return item;
       });
     },
     validate() {
@@ -251,6 +293,7 @@ export default {
       label {
         align-self: center;
         margin-right: 15px;
+        min-width: 8em;
       }
 
       .x-dropdown  {
@@ -266,5 +309,18 @@ export default {
     .sort-container {
       margin-top: 0;
     }
+
+  .field-with-colors-bar {
+    display: flex;
+    flex-grow: 1;
+    max-width: 427px;
+
+    .x-dropdown{
+      max-width: calc(100% - 114px);
+    }
+    .color-picker-container {
+      margin-left: 5px;
+    }
   }
+}
 </style>

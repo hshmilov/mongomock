@@ -18,7 +18,7 @@ $grey-dient: linear-gradient($grey-1, $theme-white);
 
 /* Indicator Colours */
 $indicator-error: #E74C3C;
-$indicator-warning: #FFA600;
+$indicator-warning: #FFA600;;
 $indicator-info: #3498DB;
 $indicator-success: #2ECC71;
 $indicator-dangerous: #FA6400;
@@ -39,16 +39,16 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
 /* Pie Colours */
 
 $pie-colours: (
-  #E5E5E5,
-  #3498DB,
-  #7893E9,
-  #B688E6,
+  #D3D7DA,
+  #096DD9,
+  #8ABA11,
+  #FFD666,
   #EB7AD0,
-  #FF6FAA,
-  #FF747C,
-  #FFA600,
-  #E74C3C,
-  #2ECC71,
+  #003A8B,
+  #43AA8A,
+  #324353,
+  #5B8C00,
+  #9254DE,
 );
 
 /* Borders and Shadows */

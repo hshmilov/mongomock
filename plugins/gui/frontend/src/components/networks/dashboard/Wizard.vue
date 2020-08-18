@@ -89,6 +89,7 @@
 import { mapActions, mapGetters, mapState } from 'vuex';
 import XIcon from '@axons/icons/Icon';
 import { formatDate, getTimeZoneDiff } from '@constants/utils';
+
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
 
@@ -107,7 +108,11 @@ import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../../store/modules
 import { DASHBOARD_CREATED } from '../../../constants/getting-started';
 import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
-import { ChartViewEnum, ChartTypesEnum, SpaceTypesEnum, ChartWizardComponentByMetricEnum, ChartIconByViewEnum } from '../../../constants/dashboard';
+import {
+  ChartViewEnum,
+  ChartTypesEnum, SpaceTypesEnum, ChartWizardComponentByMetricEnum,
+  ChartIconByViewEnum,
+} from '../../../constants/dashboard';
 
 const dashboard = {
   metric: '', view: '', name: '', config: null,
@@ -261,7 +266,7 @@ export default {
       return this.saveDashboard({
         data: this.dashboardData,
         space: this.space,
-      }).then((res) => {
+      }).then(() => {
         // complete milestone here
         this.completeMilestone({ milestoneName: DASHBOARD_CREATED });
       });

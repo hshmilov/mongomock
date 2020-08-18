@@ -8,6 +8,7 @@
         v-for="(columnValue, index) in columnValues"
         :key="index"
         :class="columnValue.class"
+        :style="{...columnValue.style}"
         :title="columnValue.value"
         @click="columnValue.onClick"
       >
@@ -27,6 +28,10 @@
 
 <script>
 
+import { formatPercentage } from '@constants/utils';
+import { ChartTypesEnum } from '@constants/dashboard';
+import defaultChartsColors from '@constants/colors';
+import { getItemIndex, getLegendItemColorClass, getRemainderSliceLabel } from '@/helpers/dashboard';
 import XPaginator from '../layout/Paginator.vue';
 
 export default {
@@ -35,11 +40,30 @@ export default {
   props: {
     data: {
       type: Array,
-      default: () => ([]),
+      default: () => {},
+    },
+    baseColor: {
+      type: String,
+      default: undefined,
+    },
+    intersectingColors: {
+      type: Array,
+      default: () => [],
     },
     pageSize: {
       type: Number,
       default: 10,
+    },
+    chartId: {
+      type: String,
+      required: true,
+    },
+    chartMetric: {
+      type: String,
+      required: true,
+      validator(value) {
+        return [...Object.values(ChartTypesEnum)].indexOf(value) > -1;
+      },
     },
   },
   data() {
@@ -67,29 +91,87 @@ export default {
     },
     columnValues() {
       const result = [];
-      return this.pageData.reduce((columnValues, legendItem) => {
+      return this.pageData.reduce((columnValues, legendItem, index) => {
+        const { portion, remainder, value, name } = legendItem;
+        let legendItemColorIndex = this.getItemIndex(legendItem, this.chartMetric);
+        legendItemColorIndex = legendItemColorIndex < 0 ? index : legendItemColorIndex;
+        const colorClassname = this.getLegendItemColorClass(legendItemColorIndex, legendItem);
         columnValues.push({
           value: '',
-          class: ['column-color', legendItem.class],
+          class: ['column-color', colorClassname],
+          style: this.getLegentItemColorStyle({ chartColor: legendItem.chart_color, colorClassname }),
           onClick: () => {},
         });
         columnValues.push({
-          value: legendItem.name,
+          value: remainder ? getRemainderSliceLabel(legendItem) : name,
           class: 'column-name',
-          onClick: () => this.$emit('on-item-click', legendItem.index),
+          onClick: () => this.$emit('on-item-click', index),
         });
         columnValues.push({
-          value: legendItem.value,
+          value,
           class: 'column-value',
           onClick: () => {},
         });
         columnValues.push({
-          value: legendItem.percentage || '(0%)',
+          value: formatPercentage(portion) || '(0%)',
           class: 'column-percentage',
           onClick: () => {},
         });
         return columnValues;
       }, result);
+    },
+  },
+  created() {
+    this.getItemIndex = getItemIndex.bind(this);
+    this.getLegendItemColorClass = getLegendItemColorClass.bind(this);
+  },
+  methods: {
+    getLegentItemColorStyle({ chartColor, colorClassname }) {
+      if (chartColor) {
+        return {
+          fill: chartColor,
+          backgroundColor: chartColor,
+        };
+      }
+      const [selectedFirstIntersectingColor, selectedSecondIntersectingColor] = this.intersectingColors;
+      if (colorClassname === 'pie-fill-1') {
+        return {
+          fill: this.baseColor,
+          backgroundColor: this.baseColor,
+        };
+      }
+      if (colorClassname === 'pie-fill-2' && selectedFirstIntersectingColor) {
+        return {
+          fill: selectedFirstIntersectingColor,
+          backgroundColor: selectedFirstIntersectingColor,
+        };
+      }
+      if (colorClassname === 'pie-fill-3' && selectedSecondIntersectingColor) {
+        return {
+          fill: selectedSecondIntersectingColor,
+          backgroundColor: selectedSecondIntersectingColor,
+        };
+      }
+
+      if (colorClassname === 'fill-intersection-2-3') {
+        const firstIntersectionColor = selectedFirstIntersectingColor || defaultChartsColors.intersectingColors[0];
+        const secondIntersectionColor = selectedSecondIntersectingColor || defaultChartsColors.intersectingColors[1];
+
+        return {
+          fill: `url(#defined-colors-${this.chartId})`,
+          background: `repeating-linear-gradient(45deg, ${firstIntersectionColor}, 
+                ${firstIntersectionColor} 4px,
+                 ${secondIntersectionColor} 4px,
+                  ${secondIntersectionColor} 8px)`,
+        };
+      }
+      if (colorClassname.includes('indicator-fill-') && selectedFirstIntersectingColor) {
+        return {
+          fill: selectedFirstIntersectingColor,
+          backgroundColor: selectedFirstIntersectingColor,
+        };
+      }
+      return {};
     },
   },
 };

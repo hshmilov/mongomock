@@ -10,6 +10,7 @@
 
 <script>
 import { GChart } from 'vue-google-charts';
+import defaultChartColors from '@constants/colors';
 
 export default {
   name: 'XLine',
@@ -23,6 +24,15 @@ export default {
       type: Boolean,
       required: false,
     },
+    chartConfig: {
+      type: Object,
+      default: () => {},
+    },
+  },
+  data() {
+    return {
+      defaultChartColors,
+    };
   },
   computed: {
     processedData() {
@@ -41,12 +51,21 @@ export default {
         }),
       ];
     },
+    chartColors() {
+      if (this.chartConfig && this.chartConfig.views[0]) {
+        return this.chartConfig.views.map(
+          (item, i) => (item.chart_color ? item.chart_color
+            : this.defaultChartColors.lineColors[i]),
+        );
+      }
+      return this.defaultChartColors.lineColors;
+    },
     chartOptions() {
       return {
         chartArea: {
           width: '100%', height: '80%',
         },
-        colors: ['#15C59E', '#1593C5', '#8A32BB'],
+        colors: this.chartColors,
         vAxis: {
           textPosition: 'in',
           textStyle: {

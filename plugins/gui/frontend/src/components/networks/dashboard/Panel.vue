@@ -13,8 +13,9 @@
       >
         <Component
           :is="attachedCardData.component"
-          v-if="attachedCardData.data.length"
-          :data="attachedCardData.data"
+          v-if="attachedCardData.props.data.length"
+          :chart-id="chart.uuid"
+          v-bind="attachedCardData.props"
           @on-item-click="onLegendItemClick"
         />
         <div
@@ -90,7 +91,10 @@
             :is="chartView"
             v-if="chart.view && !isChartEmpty(chart)"
             v-show="!showLoading"
-            :data="chartData"
+            :data="chart.data"
+            :chart-id="chart.uuid"
+            :chart-config="chart.config"
+            :metric="chart.metric"
             @click-one="(queryInd) => linkToQueryResults(queryInd, chart.historical)"
             @fetch="(skip) => fetchChartData(chart.uuid, skip, chart.historical)"
           />
@@ -155,7 +159,6 @@
             </VIcon>
           </div>
         </div>
-        <div class="right-padding" />
       </div>
     </div>
   </div>
@@ -185,7 +188,6 @@ import XChartLegend from '../../axons/charts/ChartLegend.vue';
 import PanelActions from './PanelActions.vue';
 import XStacked from '../../axons/charts/Stacked.vue';
 import XAdapterHistogram from '../../axons/charts/AdapterHistogram.vue';
-import { formatPercentage } from '@constants/utils';
 import {
   ChartTypesEnum, ChartViewEnum, ChartComponentByViewEnum,
 } from '../../../constants/dashboard';
@@ -307,38 +309,26 @@ export default {
       }
       return '';
     },
-    chartData() {
-      return this.chart.data.map((item, index) => {
-        if (Array.isArray(item)) {
-          return item;
-        }
-        let { name } = item;
-        if (item.remainder) {
-          name = (name === 'ALL') ? `Remainder of all ${item.module}` : `Remainder of: ${name}`;
-        }
-        const percentage = formatPercentage(item.portion);
-        return {
-          ...item,
-          index,
-          name,
-          percentage,
-          class: this.getItemClass(item, index),
-        };
-      });
-    },
     attachedCardData() {
       if (this.showLegend) {
         return {
           cardClass: 'legend',
           component: 'XChartLegend',
-          data: this.chartData,
+          props: {
+            data: this.chart.data,
+            baseColor: this.chart.config.base_color,
+            intersectingColors: this.chart.config.intersecting_colors,
+            chartMetric: this.chart.metric,
+          },
         };
       }
       if (this.showTrend) {
         return {
           cardClass: 'trend',
           component: 'XLine',
-          data: this.chart.linkedData,
+          props: {
+            data: this.chart.linkedData,
+          },
         };
       }
       return null;
@@ -502,20 +492,6 @@ export default {
     getPastDateFromTimeframe() {
       return Date.now() - this.chart.config.timeframe.count * 1000 * 60 * 60 * 24;
     },
-    getItemClass(item, index) {
-      if (this.chart.view !== ChartViewEnum.pie) {
-        return '';
-      }
-      const { data } = this.chart;
-      if (index === 1 && data.length === 2 && data[0].remainder) {
-        return `indicator-fill-${Math.ceil(item.portion * 4)}`;
-      }
-      const modIndex = (index % 10) + 1;
-      if (item.intersection) {
-        return `fill-intersection-${modIndex - 1}-${modIndex + 1}`;
-      }
-      return `pie-fill-${modIndex}`;
-    },
   },
 };
 </script>
@@ -582,10 +558,6 @@ export default {
     }
   }
 
-  .right-padding {
-    flex: 1;
-  }
-
   .card-container-outer {
     border: none;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
@@ -607,6 +579,7 @@ export default {
         display: flex;
 
         .x-card {
+          height: auto;
           width: 50%;
           display: flex;
           justify-content: space-between;

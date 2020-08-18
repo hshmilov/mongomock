@@ -15,11 +15,19 @@
       class="view-name grid-span2"
     />
     <label>Segment by</label>
-    <XSelectTypedField
-      v-model="fieldName"
-      :options="fieldOptions"
-      class="grid-span2"
-    />
+    <div class="grid-span2 field-with-colors-bar">
+      <XSelectTypedField
+        v-model="fieldName"
+        :options="fieldOptions"
+      />
+      <XColorPicker
+        v-if="chartView === ChartViewEnum.histogram"
+        v-model="chartColor"
+        class="color-picker-container"
+        :preset-colors="defaultChartsColors.segmentation"
+      />
+    </div>
+
     <template>
       <label class="filter-by-label">Filter by</label>
       <XFilterContains
@@ -57,7 +65,6 @@
       :sort-type.sync="sortType"
       :sort-order.sync="sortOrder"
     />
-
   </div>
 </template>
 
@@ -67,10 +74,12 @@ import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import _cloneDeep from 'lodash/cloneDeep';
 import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
+import XColorPicker from '@axons/inputs/ColorPicker.vue';
+import defaultChartsColors from '@constants/colors';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import XSelectTypedField from '../../../neurons/inputs/SelectTypedField.vue';
-import XSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue'
+import XSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue';
 import XFilterContains from '../../../neurons/schema/query/FilterContains.vue';
 import XCheckbox from '../../../axons/inputs/Checkbox.vue';
 import chartMixin from './chart';
@@ -86,13 +95,17 @@ import {
 import {
   ChartSortTypeEnum,
   ChartSortOrderEnum,
-  ChartSortOrderLabelEnum, ChartViewEnum,
+  ChartSortOrderLabelEnum,
+  ChartViewEnum,
 } from '../../../../constants/dashboard';
 import XChartSortSelector from '../../../neurons/inputs/ChartSortSelector.vue';
 
-const initConfigFilter = [{
-  name: '', value: '',
-}];
+const initConfigFilter = [
+  {
+    name: '',
+    value: '',
+  },
+];
 
 const defaultTimeframe = {
   type: TimelineTimeframesTypesEnum.relative,
@@ -109,6 +122,7 @@ export default {
     XCheckbox,
     XFilterContains,
     XChartSortSelector,
+    XColorPicker,
     XSelectTimeframe,
   },
   mixins: [chartMixin],
@@ -117,6 +131,8 @@ export default {
       ChartSortTypeEnum,
       ChartSortOrderEnum,
       ChartSortOrderLabelEnum,
+      ChartViewEnum,
+      defaultChartsColors,
     };
   },
   computed: {
@@ -133,7 +149,17 @@ export default {
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
         show_timeline: false,
         timeframe: { ...defaultTimeframe },
+        chart_color: defaultChartsColors.segmentation[0],
       };
+    },
+    chartColor: {
+      get() {
+        const color = this.config.chart_color || defaultChartsColors.segmentation[0];
+        return color;
+      },
+      set(color) {
+        this.config = { ...this.config, chart_color: color };
+      },
     },
     entity: {
       get() {
@@ -323,6 +349,7 @@ export default {
         sort: { sort_by: ChartSortTypeEnum.value, sort_order: ChartSortOrderEnum.desc },
         show_timeline: false,
         timeframe: defaultTimeframe,
+        chart_color: defaultChartsColors.segmentation[0],
       };
     },
     isFieldFilterable(field) {
@@ -345,7 +372,12 @@ export default {
     align-self: flex-start;
     margin-top: 14px;
   }
-
+  .field-with-colors-bar{
+    display: flex;
+    .color-picker-container{
+      margin-left: 5px;
+    }
+  }
   .segment-timeline-timeframe {
     .x-select-timeframe_config--limited {
       margin-top: auto;
