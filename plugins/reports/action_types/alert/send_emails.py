@@ -75,6 +75,11 @@ class SendEmailsAction(ActionTypeAlert):
                     'limit': 500
                 },
                 {
+                    'name': 'send_only_custom',
+                    'type': 'bool',
+                    'title': 'Email to include custom message only'
+                },
+                {
                     'name': 'emailList',
                     'title': 'Recipients',
                     'type': 'array',
@@ -106,6 +111,7 @@ class SendEmailsAction(ActionTypeAlert):
             'required': [
                 'emailList',
                 'sendDeviceCSV',
+                'send_only_custom',
                 'sendDevicesChangesCSV'
             ],
             'type': 'array'
@@ -119,6 +125,7 @@ class SendEmailsAction(ActionTypeAlert):
             'emailListCC': [],
             'sendDevicesCSV': False,
             'sendDevicesChangesCSV': False,
+            'Email to include custom message only': False,
             'emailBody': ''
         }
 
@@ -188,65 +195,69 @@ class SendEmailsAction(ActionTypeAlert):
 
             # attach it
             email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=image_cid)
-
-        reason = self._get_trigger_description()
-        period = self.__get_period_description()
-
-        html_sections = []
-        prev_result_count = 0
-        if self._run_configuration.result:
-            prev_result_count = self._run_configuration.result_count
-
-        query_link = self._generate_query_link()
-
-        html_sections.append(REPORTS_TEMPLATES['header'].render({'subject': self._report_data['name']}))
-        html_sections.append(REPORTS_TEMPLATES['second_header'].render(
-            {'query_link': query_link, 'reason': reason, 'period': period, 'query': self.trigger_view_name}))
-        if self._config.get('emailBody'):
-            html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
-                'body_text': self._config['emailBody'].replace('\n', '\n<br>')
-            }))
-        html_sections.append(REPORTS_TEMPLATES['calc_area'].render({
-            'prev': prev_result_count,
-            'added': added_result_count,
-            'removed': removed_result_count,
-            'sum': len(self._internal_axon_ids)
-        }))
-        images_cid = {}
-        projection = {
-            'adapters': 1
-        }
-        if self._entity_type == EntityType.Devices:
-            projection['specific_data.data.hostname'] = 1
-        elif self._entity_type == EntityType.Users:
-            projection['specific_data.data.username'] = 1
-
-        if self.trigger_view_from_db:
-            results = perform_saved_view_converted(self._entity_type, self.trigger_view_from_db, projection, limit=10)
+        if self._config.get('send_only_custom'):
+            mail_content = self._config.get('emailBody') or ''
+            email.send(mail_content.replace('\n', '\n<br>'))
         else:
-            results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters,
-                                   excluded_adapters=excluded_adapters)
+            reason = self._get_trigger_description()
+            period = self.__get_period_description()
 
-        self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
-        if added_result_count > 0:
-            results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters,
-                                   excluded_adapters=excluded_adapters)
-            self.__create_table_in_email(email, results, html_sections, images_cid,
-                                         f'Top 5 new {self._entity_type} in query')
-        if removed_result_count > 0:
-            results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
-                                   projection, self._entity_type, field_filters=field_filters,
-                                   excluded_adapters=excluded_adapters)
+            html_sections = []
+            prev_result_count = 0
+            if self._run_configuration.result:
+                prev_result_count = self._run_configuration.result_count
 
-            self.__create_table_in_email(email, results, html_sections, images_cid,
-                                         f'Top 5 {self._entity_type} removed from query')
+            query_link = self._generate_query_link()
 
-        html_data = REPORTS_TEMPLATES['report'].render(
-            {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
+            html_sections.append(REPORTS_TEMPLATES['header'].render({'subject': self._report_data['name']}))
+            html_sections.append(REPORTS_TEMPLATES['second_header'].render(
+                {'query_link': query_link, 'reason': reason, 'period': period, 'query': self.trigger_view_name}))
+            if self._config.get('emailBody'):
+                html_sections.append(REPORTS_TEMPLATES['custom_body'].render({
+                    'body_text': self._config['emailBody'].replace('\n', '\n<br>')
+                }))
+            html_sections.append(REPORTS_TEMPLATES['calc_area'].render({
+                'prev': prev_result_count,
+                'added': added_result_count,
+                'removed': removed_result_count,
+                'sum': len(self._internal_axon_ids)
+            }))
+            images_cid = {}
+            projection = {
+                'adapters': 1
+            }
+            if self._entity_type == EntityType.Devices:
+                projection['specific_data.data.hostname'] = 1
+            elif self._entity_type == EntityType.Users:
+                projection['specific_data.data.username'] = 1
 
-        email.send(html_data)
+            if self.trigger_view_from_db:
+                results = perform_saved_view_converted(self._entity_type, self.trigger_view_from_db,
+                                                       projection, limit=10)
+            else:
+                results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
+                                       projection, self._entity_type, field_filters=field_filters,
+                                       excluded_adapters=excluded_adapters)
+
+            self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
+            if added_result_count > 0:
+                results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
+                                       projection, self._entity_type, field_filters=field_filters,
+                                       excluded_adapters=excluded_adapters)
+                self.__create_table_in_email(email, results, html_sections, images_cid,
+                                             f'Top 5 new {self._entity_type} in query')
+            if removed_result_count > 0:
+                results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
+                                       projection, self._entity_type, field_filters=field_filters,
+                                       excluded_adapters=excluded_adapters)
+
+                self.__create_table_in_email(email, results, html_sections, images_cid,
+                                             f'Top 5 {self._entity_type} removed from query')
+
+            html_data = REPORTS_TEMPLATES['report'].render(
+                {'query_link': query_link, 'image_cid': image_cid[1:-1], 'content': ''.join(html_sections)})
+
+            email.send(html_data)
         self._plugin_base.log_activity(AuditCategory.Reports, AuditAction.Trigger, {
             'name': self._report_data['name']
         }, AuditType.Info)
