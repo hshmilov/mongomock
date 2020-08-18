@@ -158,16 +158,9 @@ class KolideAdapter(AdapterBase):
                     f'Couldn\'t add cpu: manufacturer: {device_raw.get("cpu_brand")},'
                     f' cores: {device_raw.get("cpu_logical_cores")}, architecture: {architecture}, Error: {str(e)}')
 
-            try:
-                device.add_connected_hardware(name=device_raw.get('hardware_model'),
-                                              manufacturer=device_raw.get('hardware_vendor'),
-                                              hw_id=device_raw.get('hardware_serial'))
-            except Exception as e:
-                logger.warning(
-                    f'Couldn\'t add hardware: name: {device_raw.get("hardware_model")},'
-                    f' manufacturer: {device_raw.get("hardware_vendor")}, '
-                    f'hw_id: {device_raw.get("hardware_serial")}, Error: {str(e)}')
-
+            device.device_model = device_raw.get('hardware_model')
+            device.device_manufacturer = device_raw.get('hardware_vendor')
+            device.device_serial = device_raw.get('hardware_serial')
             device.figure_os(device_raw.get('os_version'))
 
             ip = device_raw.get('primary_ip') if is_valid_ip(device_raw.get('primary_ip')) else None
