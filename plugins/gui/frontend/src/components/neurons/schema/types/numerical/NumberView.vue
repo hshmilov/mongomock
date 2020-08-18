@@ -4,12 +4,14 @@
     :class="[data.class, data.staticClass]"
     :style="data.staticStyle"
     v-bind="data.attrs"
+    v-on="listeners"
   >{{ props.value.toFixed(2) }}</div>
   <div
     v-else
     :class="[data.class, data.staticClass]"
     :style="data.staticStyle"
     v-bind="data.attrs"
+    v-on="listeners"
   >&nbsp;</div>
 </template>
 
