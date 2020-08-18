@@ -239,7 +239,11 @@ class Charts:
         dashboard_data = dict(self.get_request_data_as_object())
         dashboard_data.pop('private', None)
 
-        old_chart = self._dashboard_collection.find_one(filter={'_id': panel_id}, projection={'space': 1})
+        old_chart = self._dashboard_collection.find_one({
+            '_id': panel_id
+        }, {
+            'space': 1, 'config': 1
+        })
         if self.restrict_space_action_by_user_role(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
@@ -274,10 +278,9 @@ class Charts:
                     '$unset': {'linked_dashboard': 1}
                 })
         # we clean the cache of the updated config, in the next request the chart data will be refreshed
-        chart_sort_config = new_chart['config'].get('sort', {}) or {}
-        generate_dashboard.clean_cache(
-            [panel_id, chart_sort_config.get('sort_by', None), chart_sort_config.get('sort_order', None)])
-        generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+        if new_chart['config'] != old_chart['config']:
+            generate_dashboard.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
+            generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
 
         return jsonify({
             SPACE_NAME: space.get('name', ''),
