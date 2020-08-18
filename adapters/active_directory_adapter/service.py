@@ -739,7 +739,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 logger.exception(f'Could not exclude sensitive fields')
             try:
                 user = self._new_user_adapter()
-
                 self._parse_generic_ad_raw_data(user, user_raw)
 
                 username = user_raw.get("sAMAccountName")
@@ -875,15 +874,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.last_name = user_raw.get('sn')
                 user.employee_id = user_raw.get('employeeID')
                 user.employee_number = user_raw.get('employeeNumber')
-                user.employee_type = user_raw.get('employeeType')
+                user.employee_type = user_raw.get('employeeType') or user_raw.get('amdocs-employee-type-code')
                 user.mobile = user_raw.get('mobile')
                 try:
                     user.company = user_raw.get('company')
                     user.company_code = user_raw.get('companyCode')
                     user.cost_center = user_raw.get('costCenter')
                     user.cost_center_description = user_raw.get('costCenterDescription')
-                    user.division = user_raw.get('division')
-                    user.division_code = user_raw.get('divisionCode')
+                    user.division = user_raw.get('division') or user_raw.get('amdocs-division')
+                    user.division_code = user_raw.get('divisionCode') or user_raw.get('amdocs-division-code')
                     user.se_business_role = user_raw.get('sEbusinessRole')
                     user.se_business_unit_name = user_raw.get('sEbusinessUnitName')
                     user.sw_hw_segment = user_raw.get('sEHWSegment')

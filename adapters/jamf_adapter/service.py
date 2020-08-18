@@ -499,6 +499,13 @@ class JamfAdapter(AdapterBase, Configurable):
                         if active_directory_status.lower().startswith('centrify: '):
                             active_directory_status = active_directory_status[len('centrify: '):]
                         device.domain = active_directory_status
+                    try:
+                        services_names = ((device_raw.get('software') or {}).get('running_services')
+                                          or {}).get('name', [])
+                        for service_name in services_names:
+                            device.add_service(display_name=service_name)
+                    except Exception:
+                        logger.exception(f'Problem with services')
 
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
                     profiles = (device_raw.get('configuration_profiles') or {}).get('configuration_profile', [])

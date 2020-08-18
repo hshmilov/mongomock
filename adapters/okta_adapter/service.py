@@ -116,7 +116,12 @@ class OktaAdapter(AdapterBase, Configurable):
                 user.last_seen = parse_date(user_raw.get('last_login'))
                 user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_created = parse_date(user_raw.get('created'))
-                user.mail = profile.get('email')
+                mail = profile.get('email')
+                user.mail = mail
+                if self.__email_domain_whitelist and mail and '@' in str(mail):
+                    domain_email = mail.lower().split('@')[-1]
+                    if domain_email not in self.__email_domain_whitelist:
+                        continue
                 user.employee_id = profile.get('employeeNumber')
                 user.hire_date = parse_date(profile.get('hire_date'))
                 user.username = profile.get('login') or user.mail
@@ -257,7 +262,8 @@ class OktaAdapter(AdapterBase, Configurable):
             'fetch_apps': False,
             'fetch_factors': False,
             'fetch_logs': False,
-            'parallel_requests': 75
+            'parallel_requests': 75,
+            'email_domain_whitelist': None
         }
 
     def _on_config_update(self, config):
@@ -265,3 +271,5 @@ class OktaAdapter(AdapterBase, Configurable):
         self.__parallel_requests = config['parallel_requests']
         self.__fetch_factors = config.get('fetch_factors')
         self.__fetch_logs = config.get('fetch_logs')
+        self.__email_domain_whitelist = config['email_domain_whitelist'].lower().split(',') \
+            if config.get('email_domain_whitelist') else None

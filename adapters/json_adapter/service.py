@@ -107,12 +107,14 @@ class JsonAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f'Failed to parse json entity: {json_dict}')
                     continue
-        else:
+        elif isinstance(json_data, dict):
             try:
                 yield self._prepare_entity_dict(json_data, client_config), file_name
             except Exception:
                 logger.exception(f'Failed to parse json entity: {json_data}')
                 raise
+        else:
+            raise Exception('JSON is not list or dict')
 
     @staticmethod
     def _prepare_entity_dict(json_dict, client_config):
