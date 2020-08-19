@@ -1,4 +1,6 @@
 import logging
+import re
+from collections import defaultdict
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -8,6 +10,7 @@ from axonius.utils.parsing import int_or_none
 from hp_ilo_adapter.connection import HpIloConnection
 from hp_ilo_adapter.client_id import get_client_id
 from hp_ilo_adapter.structures import HPILOInstance
+from hp_ilo_adapter.consts import MAC_IPV4_REGEX, MAC_IPV6_REGEX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -114,6 +117,7 @@ class HpIloAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed parsing HP ILO instance info for device {device_raw}')
 
+    # pylint: disable=too-many-nested-blocks, too-many-branches
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('Id')
@@ -138,9 +142,33 @@ class HpIloAdapter(AdapterBase):
             if isinstance(device_raw.get('MemorySummary'), dict):
                 device.total_physical_memory = int_or_none(device_raw.get('MemorySummary').get('TotalSystemMemoryGiB'))
 
-            if device_raw.get('ProcessorSummary'):
+            if isinstance(device_raw.get('ProcessorSummary'), dict):
                 device.total_number_of_physical_processors = int_or_none(
                     device_raw.get('ProcessorSummary').get('Count'))
+
+            try:
+                if isinstance(device_raw.get('Boot'), dict) and isinstance(
+                        device_raw.get('Boot').get('UefiTargetBootSourceOverride@Redfish.AllowableValues'), list):
+                    ips_by_macs = defaultdict(set)
+                    for boot_info in device_raw.get('Boot').get('UefiTargetBootSourceOverride@Redfish.AllowableValues'):
+                        if isinstance(boot_info, str):
+                            res_ipv4 = re.findall(MAC_IPV4_REGEX, boot_info)
+                            for mac, ipv4 in res_ipv4:
+                                ips_by_macs[mac].add(ipv4)
+
+                            res_ipv6 = re.findall(MAC_IPV6_REGEX, boot_info)
+                            for mac, ipv6 in res_ipv6:
+                                ips_by_macs[mac].add(ipv6)
+
+                    for mac, ips in ips_by_macs.items():
+                        try:
+                            ips = list(ips)
+                            device.add_nic(mac=mac,
+                                           ips=ips)
+                        except Exception:
+                            logger.exception(f'Failed adding nic for {mac}, {ips}')
+            except Exception:
+                logger.exception(f'Failed adding nics for {device_raw.get("Boot")}')
 
             self._fill_hp_ilo_fields(device_raw, device)
 
