@@ -1336,6 +1336,11 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
+        asset = asset.upper()
+        if asset.startswith('MAC-') or asset.startswith('MAC_'):
+            asset = 'MAC' + asset[4:]
+        if asset.startswith('MACMBP-') or asset.startswith('MACMBP_'):
+            asset = 'MACMBP' + asset[7:]
         if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in BAD_ASSETS:
             return asset
         return asset.split('.')[0].lower().strip()
@@ -1390,6 +1395,10 @@ def normalize_hostname(adapter_data):
         final_hostname = final_hostname.replace(' ', '-')
         final_hostname = final_hostname.replace('\'', '')
         final_hostname = final_hostname.replace('’', '')
+        if final_hostname.startswith('MAC-') or final_hostname.startswith('MAC_'):
+            final_hostname = 'MAC' + final_hostname[4:]
+        if final_hostname.startswith('MACMBP-') or final_hostname.startswith('MACMBP_'):
+            final_hostname = 'MACMBP' + final_hostname[7:]
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
         if is_valid_ip(final_hostname):
