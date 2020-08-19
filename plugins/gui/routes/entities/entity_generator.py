@@ -7,7 +7,7 @@ from flask import (jsonify,
                    make_response, request)
 
 from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT, FeatureFlagsNames
-from axonius.plugin_base import EntityType
+from axonius.plugin_base import EntityType, return_error
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (historical, paginated,
                                        filtered_entities, sorted_endpoint,
@@ -195,8 +195,12 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             :param search:      a string to filter the data
             :return:            Response containing csv data, that can be downloaded into a csv file
             """
-            csv_string = entity_data_field_csv(self.entity_type, entity_id, field_name,
-                                               mongo_sort, history, search_term=search)
+            try:
+                csv_string = entity_data_field_csv(self.entity_type, entity_id, field_name,
+                                                   mongo_sort, history, search_term=search)
+            except Exception:
+                logger.error('Failed to generate csv from field', exc_info=True)
+                return return_error('Failed to generate csv from field', 400)
             output = make_response(
                 (codecs.BOM_UTF8 * 2) + csv_string.getvalue().encode('utf-8'))
             timestamp = datetime.now().strftime(FILE_NAME_TIMESTAMP_FORMAT)

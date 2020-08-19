@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import logging
+from collections import Iterable
 from datetime import datetime
 from typing import Generator, List
 from uuid import uuid4
@@ -305,6 +306,12 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
 
     if search_term:
         def search_term_in_row_value(field_value):
+            # pylint: disable=unidiomatic-typecheck
+            if not isinstance(field_value, Iterable) and type(search_term) == type(field_value):
+                return search_term == field_value
+            # pylint: disable=unidiomatic-typecheck
+            if not isinstance(field_value, Iterable) and type(search_term) != type(field_value):
+                return False
             return (search_term in field_value or
                     isinstance(field_value, list) and any(search_term in str(s) for s in field_value))
 
