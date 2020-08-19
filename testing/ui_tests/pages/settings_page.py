@@ -1793,7 +1793,7 @@ class SettingsPage(Page):
         return valid_users[0]
 
     def wait_for_tunnel_disconnected_modal(self):
-        self.wait_for_element_present_by_css('.tunnel-modal')
+        self.wait_for_element_present_by_css('.tunnel-modal', is_displayed=True)
 
     def close_tunnel_disconnected_modal(self):
         self.wait_for_element_present_by_css('.ant-modal-close-x').click()
