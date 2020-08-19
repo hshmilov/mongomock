@@ -1303,6 +1303,79 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         print('Upgrade to schema 42')
         self._migrate_personal_spaces()
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_43(self):
+        print('Upgrade to schema 43')
+        personal_spaces = self.db.gui_dashboard_spaces_collection.find({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': {
+                '$exists': True
+            }
+        })
+        for space in personal_spaces:
+            if not space.get('_id') or not space.get('panels_order'):
+                continue
+            users_panels = [ObjectId(panel_id) for panel_id in space['panels_order']]
+            self.db.gui_dashboard_collection.update_many({
+                '_id': {
+                    '$in': users_panels
+                }
+            }, {
+                '$set': {
+                    'space': space['_id']
+                }
+            })
+
+        def add_personal_space(user_id, panels_order):
+            space_result = self.db.gui_dashboard_spaces_collection.insert_one({
+                'name': DASHBOARD_SPACE_PERSONAL,
+                'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+                'user_id': user_id,
+                'panels_order': panels_order
+            })
+            return space_result.inserted_id
+
+        dashboards = list(self.db.gui_dashboard_spaces_collection.find({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': {
+                '$exists': False
+            }
+        }))
+        if len(dashboards) == 1:
+            all_personal_panels_order = dashboards[0].get('panels_order')
+            users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
+            for user in users_collection.find():
+                current_user_id = user.get('_id')
+                if self.db.gui_dashboard_spaces_collection.find_one({'user_id': current_user_id}):
+                    continue
+
+                user_panels_order_ids = []
+                if all_personal_panels_order:
+                    all_user_panels = self.db.gui_dashboard_collection.find({
+                        'user_id': current_user_id,
+                        '_id': {
+                            '$in': [ObjectId(panel_id) for panel_id in all_personal_panels_order]
+                        }
+                    }, {
+                        '_id': 1
+                    })
+                    user_panels_ids = [str(panel['_id']) for panel in all_user_panels]
+                    # Order the panels as they where in the original personal dashboard
+                    for panel_id in all_personal_panels_order:
+                        if panel_id in user_panels_ids:
+                            user_panels_order_ids.append(panel_id)
+                space_id = add_personal_space(current_user_id, user_panels_order_ids)
+                # Update the panels with the new personal dashboards
+                self.db.gui_dashboard_collection.update_many({
+                    '_id': {
+                        '$in': [ObjectId(panel_id) for panel_id in user_panels_order_ids]
+                    }
+                }, {
+                    '$set': {
+                        'space': space_id
+                    }
+                })
+
     def _update_default_locked_actions_legacy(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -1964,5 +2037,5 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                 space_id = add_personal_space(current_user_id, user_panels_order_ids)
                 # Update the panels with the new personal dashboards
                 self.db.gui_dashboard_collection.update_many(
-                    {'_id': {'$in': [ObjectId(panel_id) for panel_id in user_panels_ids]}},
+                    {'_id': {'$in': [ObjectId(panel_id) for panel_id in user_panels_order_ids]}},
                     {'$set': {'space': space_id}})
