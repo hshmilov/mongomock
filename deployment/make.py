@@ -160,7 +160,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     images.append(axonius_system.pull_container_alpine(pull, show_print=False))
     images.extend(axonius_system.pull_weave_images(pull, show_print=False))
     print_state(f'Building all images')
-    images.append(axonius_system.build_libs(rebuild, base_image_tag=tag, show_print=False))
+    images.append(axonius_system.build_libs(rebuild, image_tag=tag, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]
     adapters = [name for name, variable in axonius_system.get_all_adapters()]
     standalone_services = ['mockingbird']
@@ -171,7 +171,8 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
         services = [name for name in services if name not in exclude]
         adapters = [name for name in adapters if name not in exclude]
         standalone_services = [name for name in standalone_services if name not in exclude]
-    images.extend(axonius_system.build(True, adapters, services, standalone_services, 'prod' if prod else '', rebuild))
+    images.extend(axonius_system.build(True, adapters, services, standalone_services, 'prod' if prod else '', rebuild,
+                                       image_tag=tag))
     images.sort()
     return images
 

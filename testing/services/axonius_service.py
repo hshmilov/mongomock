@@ -707,7 +707,7 @@ class AxoniusService:
             base_image = f'{base_image}:{tag}'
         return self._pull_image(base_image, repull, show_print)
 
-    def build_libs(self, rebuild=False, base_image_tag=None, show_print=True):
+    def build_libs(self, rebuild=False, image_tag=None, show_print=True):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         image_exists = image_name in output
@@ -717,15 +717,15 @@ class AxoniusService:
             return image_name
         runner = ParallelRunner()
         args = ['docker', 'build', '.', '-t', image_name]
-        if base_image_tag:
-            args.extend(['--build-arg', f'BASE_IMAGE_TAG={base_image_tag}'])
+        if image_tag:
+            args.extend(['--build-arg', f'BASE_IMAGE_TAG={image_tag}'])
         runner.append_single('axonius-libs', args,
                              cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
         assert runner.wait_for_all() == 0
         return image_name
 
     def build(self, system, adapter_names, plugin_names, standalone_services_names,
-              mode='', rebuild=False, hard=False, async=True):
+              mode='', rebuild=False, hard=False, async=True, image_tag=None):
         to_build = [self.get_adapter(name) for name in adapter_names] + \
                    [self.get_plugin(name) for name in plugin_names] + \
                    [self.get_standalone_service(name) for name in standalone_services_names]
@@ -741,7 +741,7 @@ class AxoniusService:
                 images.append(service.image)
                 if not rebuild and service.get_image_exists():
                     continue
-                service.build(mode, runner)
+                service.build(mode, runner, image_tag=image_tag)
                 time.sleep(1)  # We are getting resource busy. we suspect this is due parallel build storm
             assert runner.wait_for_all() == 0
         else:
@@ -749,7 +749,7 @@ class AxoniusService:
                 images.append(service.image)
                 if not rebuild and service.get_image_exists():
                     continue
-                service.build(mode)
+                service.build(mode, image_tag=image_tag)
         return images
 
     @staticmethod

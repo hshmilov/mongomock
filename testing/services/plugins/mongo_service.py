@@ -181,6 +181,13 @@ class MongoService(SystemService, WeaveService):
     COPY mongod.conf /etc/mongod.conf
     RUN chmod 600 /docker-entrypoint-initdb.d/*
     RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/*
+    """[1:] if not kwargs or kwargs.get('image_tag', '') != 'fed' else f"""
+    FROM axonius/mongo_fed
+
+    COPY docker-entrypoint-initdb.d/* /docker-entrypoint-initdb.d/
+    COPY mongod.conf /etc/mongod.conf
+    RUN chmod 600 /docker-entrypoint-initdb.d/*
+    RUN chown mongodb:mongodb /docker-entrypoint-initdb.d/*
     """[1:]
 
     @property

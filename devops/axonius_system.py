@@ -90,7 +90,7 @@ def system_entry_point(args):
     parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'weave_recover'])
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
-    parser.add_argument('--build-tag', type=str, default='', help='Build Tag, will be used as base-image tag')
+    parser.add_argument('--image-tag', type=str, default='', help='Image Tag, will be used as Dockerfile image tag')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
     parser.add_argument('--hard', action='store_true', default=False,
@@ -160,16 +160,16 @@ def system_entry_point(args):
     if args.pull_base_image or args.rebuild_libs:
         assert args.mode in ('up', 'build')
 
-    if args.build_tag:
-        assert BuildModes.has_value(args.build_tag), f'unknown build tag: {args.build_tag}'
-        args.build_tag = args.build_tag.lower()
+    if args.image_tag:
+        assert BuildModes.has_value(args.image_tag), f'unknown build tag: {args.image_tag}'
+        args.image_tag = args.image_tag.lower()
 
     if args.saas:
         args.env.append(f'{AXONIUS_SAAS_VAR_NAME}=TRUE')
 
     if args.mode in ('up', 'build'):
-        axonius_system.pull_base_image(args.pull_base_image, tag=args.build_tag)
-        axonius_system.build_libs(rebuild=args.rebuild_libs or args.build_tag != '', base_image_tag=args.build_tag)
+        axonius_system.pull_base_image(args.pull_base_image, tag=args.image_tag)
+        axonius_system.build_libs(rebuild=args.rebuild_libs or args.image_tag != '', image_tag=args.image_tag)
 
     standalone_services = []
     if is_demo_instance():
@@ -200,7 +200,8 @@ def system_entry_point(args):
             adapters_to_raise = []
 
         # Optimization - async build first
-        axonius_system.build(True, adapters_to_raise, args.services, [], 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(True, adapters_to_raise, args.services, [], 'prod' if args.prod else '', args.rebuild,
+                             image_tag=args.image_tag)
         print('finished building')
 
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db,

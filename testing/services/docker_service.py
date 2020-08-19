@@ -379,6 +379,9 @@ class DockerService(AxonService):
         dockerfile_path = os.path.join(self.service_dir, 'Dockerfile')
         if os.path.isfile(dockerfile_path):
             dockerfile = open(dockerfile_path, 'r').read()
+        elif kwargs.get('image_tag', None):
+            dockerfile = self.get_dockerfile(docker_internal_env_vars=docker_internal_env_vars,
+                                             image_tag=kwargs.get('image_tag', None))
         else:
             dockerfile = self.get_dockerfile(docker_internal_env_vars=docker_internal_env_vars)
 
