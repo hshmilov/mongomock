@@ -1,3 +1,4 @@
+import json
 import logging
 
 from axonius.consts import report_consts
@@ -112,7 +113,12 @@ class CherwellIncidentAction(ActionTypeAlert):
                     'name': 'status',
                     'title': 'Status',
                     'type': 'string'
-                }
+                },
+                {
+                    'name': 'extra_fields',
+                    'title': 'Additional fields',
+                    'type': 'string'
+                },
             ],
             'required': [
                 'verify_ssl',
@@ -138,6 +144,7 @@ class CherwellIncidentAction(ActionTypeAlert):
             'incident_description': None,
             'service': None,
             'source': None,
+            'extra_fields': None,
             'category': None,
             'subcategory': None,
             'short_description': None,
@@ -151,7 +158,7 @@ class CherwellIncidentAction(ActionTypeAlert):
     def _create_cherwell_incident(self, description,
                                   customer_display_name, status,
                                   service, priority, source,
-                                  category, subcategory, incident_type, short_description):
+                                  category, subcategory, incident_type, short_description, extra_fields=None):
         adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         cherwell_dict = {'description': description,
                          'customer_display_name': customer_display_name,
@@ -164,6 +171,14 @@ class CherwellIncidentAction(ActionTypeAlert):
                          'short_description': short_description,
                          'status': status
                          }
+        cherwell_dict['extra_fields'] = {}
+        try:
+            if extra_fields:
+                extra_fields_dict = json.loads(extra_fields)
+                if isinstance(extra_fields_dict, dict):
+                    cherwell_dict['extra_fields'].update(extra_fields_dict)
+        except Exception:
+            logger.exception(f'Problem parsing extra fields')
         if self._config['use_adapter'] is True:
             response = self._plugin_base.request_remote_plugin('create_incident', adapter_unique_name, 'post',
                                                                json=cherwell_dict)
@@ -209,6 +224,7 @@ class CherwellIncidentAction(ActionTypeAlert):
                                                  status=self._config.get('status'),
                                                  subcategory=self._config.get('subcategory'),
                                                  incident_type=self._config.get('incident_type'),
-                                                 short_description=self._config.get('short_description')
+                                                 short_description=self._config.get('short_description'),
+                                                 extra_fields=self._config.get('extra_fields'),
                                                  )
         return AlertActionResult(not message, message or 'Success')

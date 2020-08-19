@@ -107,9 +107,10 @@ class CherwellConnection(RESTConnection):
     def get_user_list(self):
         yield from self._get_full_data_from_ob_id(self._get_bus_ob_id('Customer'))
 
+    # pylint: disable=too-many-branches, too-many-nested-blocks
     def create_incident(self, cherwell_connection):
         self.__number_of_new_incidents += 1
-        logger.info(f'Updating Cherwell computer num {self.__number_of_new_incidents}')
+        logger.info(f'Updating Cherwell incident num {self.__number_of_new_incidents}')
         try:
             bus_ob_id = INCIDENT_BUS_OB_OD
             bus_ob_rec_id = ''
@@ -185,6 +186,30 @@ class CherwellConnection(RESTConnection):
                                    'fieldId': '5eb3234ae1344c64a19819eda437f18d',
                                    'value': cherwell_connection.get('status')
                                    })
+            if cherwell_connection.get('extra_fields'):
+                try:
+                    extended_fields_dict = dict()
+                    extra_fields = cherwell_connection.get('extra_fields')
+                    template = self._get_bus_object_template(bus_ob_id)
+                    for field_data in template['fields']:
+                        if not field_data.get('name'):
+                            continue
+                        extended_fields_dict[field_data['name']] = (field_data.get('fieldId'),
+                                                                    field_data.get('displayName'))
+                    for key, value in extra_fields.items():
+                        try:
+                            if not extended_fields_dict.get(key):
+                                continue
+                            field_id, display_name = extended_fields_dict.get(key)
+                            fields_raw.append({'value': value,
+                                               'name': key,
+                                               'displayName': display_name,
+                                               'dirty': True,
+                                               'fieldId': field_id})
+                        except Exception:
+                            logging.exception(f'Problem with key {key}')
+                except Exception:
+                    logging.exception(f'Problem with extra fields')
             body_params = {'busObId': bus_ob_id,
                            'busObRecId': bus_ob_rec_id,
                            'busObPublicId': bus_ob_public_id,
@@ -192,13 +217,13 @@ class CherwellConnection(RESTConnection):
                            'cacheScope': '',
                            'fields': fields_raw,
                            'persist': True}
-            device_raw = self._post('api/V1/savebusinessobject',
-                                    body_params=body_params)
-            return True, device_raw
+            self._post('api/V1/savebusinessobject',
+                       body_params=body_params)
+            return True
         except Exception:
             logger.exception(f'Exception while creating incident for '
                              f'num {self.__number_of_new_computers} with connection dict {cherwell_connection}')
-            return False, None
+            return False
 
     # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def update_cherwell_computer(self, cherwell_connection):
