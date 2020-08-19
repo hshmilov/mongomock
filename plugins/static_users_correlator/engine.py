@@ -166,6 +166,14 @@ def compare_ad_upn(adapter_data1, adapter_data2):
     return False
 
 
+def ad_upn_do_not_contradict(adapter_data1, adapter_data2):
+    ad_upn_1 = get_ad_upn(adapter_data1)
+    ad_upn_2 = get_ad_upn(adapter_data2)
+    if not ad_upn_1 or not ad_upn_2 or ad_upn_1 == ad_upn_2:
+        return True
+    return False
+
+
 def compare_ad_upn_mail(adapter_data1, adapter_data2):
     ad_upn_1_mail = get_ad_upn_mail(adapter_data1)
     ad_upn_2_mail = get_ad_upn_mail(adapter_data2)
@@ -271,7 +279,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                           [get_ad_upn_mail],
                                           [compare_ad_upn_mail],
                                           [],
-                                          [],
+                                          [ad_upn_do_not_contradict],
                                           {'Reason': 'They have the same ad upn mail'},
                                           CorrelationReason.StaticAnalysis)
 
