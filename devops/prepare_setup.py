@@ -27,7 +27,7 @@ def setup_args():
         Any adapter will be built when explicitly raised if it was not built before.
         ''')
     parser.add_argument('--dev', action='store_true', default=False, help='Dev Mode')
-    parser.add_argument('--build-tag', type=str, default='', help='Build Tag, will be used as base-image tag')
+    parser.add_argument('--image-tag', type=str, default='', help='Image Tag, will be used as Dockerfile image tag')
 
     try:
         args, _ = parser.parse_known_args()
@@ -52,8 +52,8 @@ def main():
 
     # build
     build_cmd = ['./axonius.sh', 'system', 'build', all_flag, '--prod', '--hard', '--yes-hard', '--rebuild-libs']
-    if args.build_tag:
-        build_cmd.extend(['--build-tag', args.build_tag])
+    if args.image_tag:
+        build_cmd.extend(['--image-tag', args.image_tag])
     runner.append_single(
         'system',
         safe_run_bash(build_cmd)
