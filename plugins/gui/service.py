@@ -803,7 +803,11 @@ class GuiService(Triggerable,
                         mtls_config_file.write(f'ssl_verify_client {mutual_tls_state};')
                     # Restart Openresty (NGINX)
                     subprocess.check_call(['openresty', '-s', 'reload'])
-                    os.unlink(MUTUAL_TLS_CA_PATH)
+                    try:
+                        os.unlink(MUTUAL_TLS_CA_PATH)
+                    except FileNotFoundError:
+                        # Already deleted is fine in case ca_certificate has value
+                        pass
                     logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
             except Exception:
                 logger.exception(f'Can not delete mutual tls settings')
