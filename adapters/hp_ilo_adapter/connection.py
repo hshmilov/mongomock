@@ -92,7 +92,7 @@ class HpIloConnection(RESTConnection):
         try:
             total_devices = 0
 
-            response = self._get(SYSTEM_API_SUFFIX, do_basic_auth=True)
+            response = self._get(SYSTEM_API_SUFFIX)
             if not (isinstance(response, dict) and
                     isinstance(response.get('Members'), list)):
                 logger.error(f'Received invalid response while trying to connect. {response}')
@@ -108,7 +108,7 @@ class HpIloConnection(RESTConnection):
                     if member_url.startswith('/'):
                         member_url = member_url[1:]
 
-                member_data = self._get(member_url, do_basic_auth=True)
+                member_data = self._get(member_url)
                 if isinstance(member_data, dict):
                     yield member_data
                     total_devices += 1
