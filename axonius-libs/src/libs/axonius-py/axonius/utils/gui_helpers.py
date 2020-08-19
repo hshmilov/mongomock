@@ -994,7 +994,8 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                         last_seen = _adapter['last_seen']
 
                 # Second priority is active-directory data
-                if (val != '' and last_seen is not None and
+                # pylint: disable=too-many-boolean-expressions
+                if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
                         (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
                         (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
                     val_changed_by_ad = False
