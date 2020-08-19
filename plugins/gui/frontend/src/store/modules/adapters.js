@@ -261,10 +261,11 @@ export const adapters = {
         return Promise.resolve();
       }
       const { serverData, instanceId, instanceIdPrev } = payload;
-
       const newAssociatedInstance = getters.getInstancesMap.get(instanceId || instanceIdPrev);
+      const oldAssociatedInstance = instanceIdPrev ? getters.getInstancesMap.get(instanceIdPrev) : '';
       const isNewClient = payload.uuid === 'new';
       const uniqueTmpId = isNewClient ? shortid.generate() : null;
+      const isInstanceMode = getters.getInstancesMap.size > 1;
 
       // why is that? the status can be changed, and the client can be added,
       // right after the API response with the status 200
@@ -299,6 +300,10 @@ export const adapters = {
               connection_label: payload.connectionLabel,
               instance: newAssociatedInstance.node_id,
               instance_prev: instanceIdPrev,
+              instance_name: newAssociatedInstance ? newAssociatedInstance.node_name : '' ,
+              instance_prev_name: !isNewClient && oldAssociatedInstance
+                ? oldAssociatedInstance.node_name : undefined,
+              is_instances_mode: isInstanceMode,
             },
           });
 
@@ -339,13 +344,16 @@ export const adapters = {
         },
       });
     },
-    [ARCHIVE_CLIENT]({ dispatch, commit }, payload) {
+    [ARCHIVE_CLIENT]({ dispatch, commit, getters }, payload) {
       const {
         adapterId, serverId: clientId, deleteEntities, nodeId,
       } = payload;
       if (!adapterId || !clientId) {
         return Promise.resolve();
       }
+      const instance = getters.getInstancesMap.get(nodeId);
+      const isInstanceMode = getters.getInstancesMap.size > 1;
+
       let param = '';
       if (deleteEntities) {
         param = '?deleteEntities=True';
@@ -356,6 +364,8 @@ export const adapters = {
         data: {
           adapter: adapterId,
           instance: nodeId,
+          instance_name: instance ? instance.node_name : '',
+          is_instances_mode: isInstanceMode,
           connection: null,
         },
       }).then((response) => {

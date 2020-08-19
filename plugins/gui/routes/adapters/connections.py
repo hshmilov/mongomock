@@ -1,4 +1,5 @@
-# pylint: disable=no-member,cell-var-from-loop,access-member-before-definition
+# pylint: disable=no-member,cell-var-from-loop,access-member-before-definition,too-many-locals
+
 import logging
 import time
 import json
@@ -8,7 +9,7 @@ from flask import (request, jsonify)
 from bson import ObjectId
 
 from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL, LAST_FETCH_TIME
-from axonius.consts.gui_consts import (FeatureFlagsNames)
+from axonius.consts.gui_consts import (FeatureFlagsNames, IS_INSTANCES_MODE, INSTANCE_NAME, INSTANCE_PREV_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error, EntityType
@@ -23,7 +24,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_section_add_rules('connections')
 class Connections:
 
-    @gui_route_logged_in(methods=['PUT'], activity_params=['adapter', 'client_id'])
+    @gui_route_logged_in(methods=['PUT'], skip_activity=True)
     def add_connection(self):
         """
         Save and query assets for given connection data
@@ -41,7 +42,17 @@ class Connections:
             return return_error('Adapter name and connection data are required', 400)
         adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
-        return self._add_connection(adapter_name, instance_id, request_data)
+        is_instance_mode = request_data.pop(IS_INSTANCES_MODE, False)
+        instance_name = request_data.pop(INSTANCE_NAME, '')
+        client_data, code = self._add_connection(adapter_name, instance_id, request_data)
+
+        if code == 200:
+            try:
+                client_id = json.loads(client_data).get(CLIENT_ID, '')
+                self.log_activity_user_connection('put', adapter_name, client_id, instance_name, is_instance_mode)
+            except Exception:
+                logger.exception(f'error in audit message loading client_id from json client data {client_data}')
+        return client_data, code
 
     @gui_route_logged_in('test', methods=['POST'], skip_activity=True)
     def test_connection(self):
@@ -60,7 +71,12 @@ class Connections:
         adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
         instance_id_prev = request_data.pop('instance_prev', None)
-        return self._update_connection(connection_id, adapter_name, instance_id, instance_id_prev, request_data)
+        is_instance_mode = request_data.pop(IS_INSTANCES_MODE, False)
+        instance_name = request_data.pop(INSTANCE_NAME, '')
+        instance_prev_name = request_data.pop(INSTANCE_PREV_NAME, '')
+
+        return self._update_connection(connection_id, adapter_name, instance_id, instance_id_prev, request_data,
+                                       is_instance_mode, instance_name, instance_prev_name)
 
     @gui_route_logged_in('labels', methods=['GET'], enforce_permissions=False)
     def adapters_client_labels(self) -> list:
@@ -113,7 +129,8 @@ class Connections:
             logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
 
-    def _update_connection(self, connection_id, adapter_name, instance_id, prev_instance_id, connection_data):
+    def _update_connection(self, connection_id, adapter_name, instance_id, prev_instance_id,
+                           connection_data, is_instance_mode=False, instance_name='', instance_prev_name=''):
         try:
             adapter_unique_name = self._get_adapter_unique_name(adapter_name, prev_instance_id or instance_id)
         except Exception:
@@ -133,10 +150,7 @@ class Connections:
             self._adapters_v2.clean_cache()
             self.clients_labels.clean_cache()
             self._get_adapter_connections_data.clean_cache()
-            self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'delete', {
-                'adapter': adapter_name,
-                CLIENT_ID: client_id,
-            })
+            self.log_activity_user_connection('delete', adapter_name, client_id, instance_name, is_instance_mode)
             return json.dumps({'client_id': client_id}), 200
 
         if not connection_data.get('connection'):
@@ -190,7 +204,8 @@ class Connections:
 
             self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'post', {
                 'adapter': adapter_name,
-                CLIENT_ID: client_id,
+                CLIENT_ID: self._audit_get_client_with_node_name(client_id, is_instance_mode,
+                                                                 instance_prev_name or instance_name),
                 'current_client_info': json.dumps(current_client_info) or '',
                 'updated_client_info': json.dumps(updated_client_info) or ''
             })
@@ -349,3 +364,26 @@ class Connections:
         audit_client_config = copy.deepcopy(client_config)
         remove_password_fields(adapter_schema, audit_client_config)
         return audit_client_config
+
+    @staticmethod
+    def _audit_get_client_with_node_name(client_id: str, is_instance_mode: bool, audit_instance_name: str) -> str:
+        return f'{client_id} Node: {audit_instance_name}' if is_instance_mode else client_id
+
+    def log_activity_user_connection(self, action: str, adapter_name: str, client_id: str,
+                                     instance_name: str, is_instance_mode: bool):
+        """
+        audit client connection in case system at instances mode add to client_id the node name
+        :param action: PUT,POST,DELETE
+        :param adapter_name: the adapter name
+        :param client_id: adapter client connection id
+        :param instance_name: the node name map to node_id
+        :param is_instance_mode: true if there are node connection,
+        :return:
+        """
+        try:
+            self.log_activity_user_default(AuditCategory.AdaptersConnections.value, action, {
+                'adapter': adapter_name,
+                CLIENT_ID: self._audit_get_client_with_node_name(client_id, is_instance_mode, instance_name)
+            })
+        except Exception:
+            logger.exception(f'error in audit message with client_id {client_id}')

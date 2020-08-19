@@ -45,7 +45,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_U
     DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE, DISCOVERY_RESEARCH_DATE_TIME,\
     INSTANCE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
     CSV_IP_LOCATION_FILE, CONNECTION_DISCOVERY, CONNECTION_DISCOVERY_SCHEMA_NAME, WEEKDAYS, \
-    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS
+    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS, NODE_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -58,6 +58,7 @@ from axonius.utils.datetime import parse_date
 from axonius.utils.json import to_json
 from axonius.utils.mm import delayed_trigger_gc
 from axonius.utils.parsing import get_exception_string
+from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import timeout_iterator
 from axonius.mock.adapter_mock import AdapterMock
 
@@ -2309,7 +2310,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         except Exception:
             error = 'fatal error during client connection'
-
+        client_id = self._audit_get_client_with_node_name(client_id)
         self.log_activity(AuditCategory.Adapters, AuditAction.Failure, {
             'adapter': self.plugin_name,
             'client_id': client_id,
@@ -2331,6 +2332,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         log audit for adapter client fetch start
         """
         try:
+            # clean cache to have cycle with latest node metadata
+            self._node_name_by_id.clean_cache()
+            client_name = self._audit_get_client_with_node_name(client_name)
             self.log_activity(AuditCategory.Adapters, AuditAction.Start, {
                 'adapter': self.plugin_name,
                 'client_id': client_name or ''
@@ -2345,6 +2349,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         log audit for adapter client fetch ( devices and users ) summary
         """
         try:
+            client_name = self._audit_get_client_with_node_name(client_name)
             duration = str(datetime.utcnow() - fetch_start_time).split('.')[0]
             self.log_activity(AuditCategory.Adapters, AuditAction.Complete, {
                 'adapter': self.plugin_name,
@@ -2372,3 +2377,23 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     f'{LAST_FETCH_TIME}': fetch_time
                 }
             })
+
+    @rev_cached(ttl=3600 * 4)
+    def _node_name_by_id(self) -> dict:
+        """
+        cache nodes instances: map id to name to be used by adapter audit msgs
+        :return: dic
+        """
+        return {node.get(NODE_ID): node.get(NODE_NAME) for node in
+                self.nodes_metadata_collection.find({}, {NODE_ID: 1, NODE_NAME: 1})}
+
+    def _audit_get_client_with_node_name(self, client_id: str) -> str:
+        """
+        when system have nodes setup then include node name in audit log
+        :param client_id: client_id
+        :return: connection + node name
+        """
+        if len(self._node_name_by_id()) > 1:
+            node_name = self._node_name_by_id().get(self.node_id, '')
+            return f'{client_id} Node: {node_name}'
+        return client_id

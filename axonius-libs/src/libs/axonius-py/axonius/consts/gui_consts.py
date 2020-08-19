@@ -394,6 +394,9 @@ ACTIVITY_PARAMS_ARG = 'activity_params'
 SKIP_ACTIVITY_ARG = 'skip_activity'
 ACTIVITY_PARAMS_COUNT = 'count'
 ACTIVITY_PARAMS_NAME = 'name'
+IS_INSTANCES_MODE = 'is_instances_mode'
+INSTANCE_NAME = 'instance_name'
+INSTANCE_PREV_NAME = 'instance_prev_name'
 
 
 class SortType(Enum):
