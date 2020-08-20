@@ -85,7 +85,7 @@ export default {
       machineIP: '',
       connectionKey: '',
       isSidePanelVisible: false,
-      sidePanelInstance: null,
+      sidePanelInstance: {},
     };
   },
   computed: {
