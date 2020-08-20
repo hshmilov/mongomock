@@ -70,7 +70,6 @@ class DevicesPage(EntitiesPage):
                         'Preferred MAC Address', 'Preferred IPs']
     VALUE_OS_WINDOWS = 'Windows'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'
-    MULTI_LINE_CSS = 'div.x-data-table.multiline'
     FILTER_HOSTNAME = 'specific_data.data.hostname == regex("{filter_value}", "i")'
     FILTER_OS = 'specific_data.data.os.type == "{os}"'
     UNMANAGED_QUERY = 'not (specific_data.data.adapter_properties == \"Agent\") ' \
@@ -117,9 +116,6 @@ class DevicesPage(EntitiesPage):
     @property
     def root_page_css(self):
         return 'li#devices.x-nav-item'
-
-    def check_if_table_is_multi_line(self):
-        self.wait_for_element_present_by_css(self.MULTI_LINE_CSS)
 
     def check_if_adapter_tab_not_exist(self):
         with pytest.raises(NoSuchElementException):

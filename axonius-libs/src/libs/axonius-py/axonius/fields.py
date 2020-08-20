@@ -213,10 +213,6 @@ class JsonStringFormat(JsonFormat):
     version = auto()
 
 
-class JsonNumericFormat(JsonFormat):
-    percentage = auto()
-
-
 class JsonArrayFormat(JsonFormat):
     table = auto()
     calendar = auto()

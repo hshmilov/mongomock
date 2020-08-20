@@ -74,11 +74,6 @@ class TestPrepareGlobalSettings(TestBase):
         self.settings_page.click_save_identity_providers_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
-        self.settings_page.click_gui_settings()
-        self.settings_page.set_single_adapter_checkbox(make_yes=True)
-        self.settings_page.click_save_gui_settings()
-        self.settings_page.wait_for_saved_successfully_toaster()
-
     def test_saml_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_identity_providers_settings()

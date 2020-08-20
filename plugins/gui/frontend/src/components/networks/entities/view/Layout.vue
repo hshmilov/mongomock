@@ -12,7 +12,6 @@
       v-show="!loading"
     >
       <x-tab
-        v-if="!singleAdapter"
         id="specific"
         key="specific"
         title="Adapter Connections"
@@ -29,7 +28,6 @@
         id="generic"
         key="generic"
         title="Aggregated"
-        :selected="singleAdapter"
       >
         <x-entity-general
           :module="module"
@@ -111,7 +109,6 @@ import xEntityNotes from './Notes.vue';
 import xEntityTasks from './Tasks.vue';
 import xEntityTags from './Tags.vue';
 
-import { SINGLE_ADAPTER } from '../../../../store/getters';
 import { SELECT_DATA_CURRENT } from '../../../../store/mutations';
 import {
   FETCH_DATA_CURRENT, FETCH_DATA_CURRENT_TASKS, FETCH_DATA_HYPERLINKS, LAZY_FETCH_DATA_FIELDS,
@@ -154,9 +151,6 @@ export default {
       hyperlinks(state) {
         return state[this.module].hyperlinks.data;
       },
-    }),
-    ...mapGetters({
-      singleAdapter: SINGLE_ADAPTER,
     }),
     permissionCategory() {
       return getEntityPermissionCategory(this.module);

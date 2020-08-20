@@ -102,30 +102,6 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
             wait_until(_check_installed_software, check_return_value=True, total_timeout=60 * 3)
 
-    def test_multi_table_and_single_adapter_view(self):
-        try:
-            self.settings_page.switch_to_page()
-            self.base_page.run_discovery()
-            self.settings_page.click_gui_settings()
-            self.settings_page.wait_for_spinner_to_end()
-            self.settings_page.set_single_adapter_checkbox()
-            self.settings_page.set_table_multi_line_checkbox()
-            self.settings_page.click_save_gui_settings()
-            self.settings_page.wait_for_toaster(self.settings_page.SAVED_SUCCESSFULLY_TOASTER)
-            self.devices_page.switch_to_page()
-            self.devices_page.wait_for_table_to_load()
-            self.devices_page.check_if_table_is_multi_line()
-            self.devices_page.click_row()
-            # if its not exist than single adapter is working
-            self.devices_page.check_if_adapter_tab_not_exist()
-        finally:
-            self.settings_page.switch_to_page()
-            self.settings_page.click_gui_settings()
-            self.settings_page.wait_for_spinner_to_end()
-            self.settings_page.set_single_adapter_checkbox(make_yes=False)
-            self.settings_page.set_table_multi_line_checkbox(make_yes=False)
-            self.settings_page.click_save_gui_settings()
-
     def test_devices_advanced_basic(self):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()

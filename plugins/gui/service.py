@@ -839,16 +839,6 @@ class GuiService(Triggerable,
                             'enum': [20, 50, 100]
                         },
                         {
-                            'name': 'singleAdapter',
-                            'title': 'Use single adapter view',
-                            'type': 'bool'
-                        },
-                        {
-                            'name': 'multiLine',
-                            'title': 'Use table multi line view',
-                            'type': 'bool'
-                        },
-                        {
                             'name': 'defaultSort',
                             'title': 'When no column sort is applied, sort by count of adapters',
                             'type': 'bool'
@@ -909,32 +899,9 @@ class GuiService(Triggerable,
                             ],
                             'required': ['enabled', 'timeout', 'disable_remember_me'],
                             'type': 'array'
-                        },
-                        {
-                            'name': 'percentageThresholds',
-                            'title': 'Percentage Fields Severity Scopes',
-                            'type': 'array',
-                            'items': [
-                                {
-                                    'name': 'error',
-                                    'title': 'Poor under:',
-                                    'type': 'integer'
-                                },
-                                {
-                                    'name': 'warning',
-                                    'title': 'Average under:',
-                                    'type': 'integer'
-                                },
-                                {
-                                    'name': 'success',
-                                    'title': 'Good under:',
-                                    'type': 'integer'
-                                }
-                            ],
-                            'required': ['error', 'warning', 'success']
                         }
                     ],
-                    'required': ['refreshRate', 'defaultNumOfEntitiesPerPage', 'singleAdapter', 'multiLine',
+                    'required': ['refreshRate', 'defaultNumOfEntitiesPerPage',
                                  'defaultSort', 'autoQuery', 'exactSearch', 'requireConnectionLabel',
                                  'defaultColumnLimit', 'datetime_format'],
                     'name': SYSTEM_SETTINGS,
@@ -986,19 +953,11 @@ class GuiService(Triggerable,
                     'timeout': 1440
                 },
                 'datetime_format': 'YYYY-MM-DD',
-                'singleAdapter': False,
-                'multiLine': False,
                 'defaultSort': True,
                 'autoQuery': True,
                 'exactSearch': True,
                 'requireConnectionLabel': False,
-                ''
-                'defaultColumnLimit': 2,
-                'percentageThresholds': {
-                    'error': 40,
-                    'warning': 60,
-                    'success': 100,
-                }
+                'defaultColumnLimit': 2
             },
             'mutual_tls_settings': {
                 'enabled': False,

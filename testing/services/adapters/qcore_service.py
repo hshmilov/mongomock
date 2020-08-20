@@ -17,8 +17,6 @@ class QcoreService(AdapterService):
 
         axonius_service.set_system_settings({
             "refreshRate": 1,
-            "singleAdapter": True,
-            "multiLine": True
         })
 
         axonius_service.set_research_rate(0.0001)

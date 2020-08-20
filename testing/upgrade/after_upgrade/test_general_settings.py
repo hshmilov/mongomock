@@ -51,8 +51,6 @@ class TestGeneralSettings(TestBase):
         self.settings_page.click_gui_settings()
         self.settings_page.wait_for_spinner_to_end()
 
-        assert self.settings_page.get_single_adapter_checkbox()
-
         self.settings_page.click_identity_providers_settings()
         self.settings_page.wait_for_spinner_to_end()
 

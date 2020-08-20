@@ -1,7 +1,7 @@
 <template>
   <div
     class="x-data-table"
-    :class="{ multiline, searchable }"
+    :class="{ searchable }"
   >
     <XTableWrapper
       :title="tableTitle"
@@ -237,12 +237,6 @@ export default {
                   || !state.configuration.data
                   || !state.configuration.data.system) return 0;
         return state.configuration.data.system.refreshRate;
-      },
-      multiline(state) {
-        if (!state.configuration
-                  || !state.configuration.data
-                  || !state.configuration.data.system) return 0;
-        return state.configuration.data.system.multiLine;
       },
       defaultNumOfEntitiesPerPage(state) {
         if (!state.configuration
@@ -605,19 +599,6 @@ export default {
       display: flex;
       align-items: center;
       margin-left: 12px;
-    }
-
-    &.multiline .x-table-row .array {
-      display: block;
-      height: auto;
-
-      .item {
-        margin-right: 0;
-      }
-    }
-
-    .x-cross .first, .x-cross .second {
-      top: 0px;
     }
 
     .x-pagination {

@@ -80,14 +80,14 @@ export const getDataSchemaList = (state) => (module) => {
   const fields = state[module].fields.data;
   if (!fields.generic || !fields.generic.length) return [];
 
-  let allFieldsList = [CONNECTION_LABEL_SCHEMA, ...fields.generic];
-  if (fields.specific) {
-    allFieldsList = Object.entries(fields.specific).reduce((aggregatedList, [specificName, currentList]) => {
-      currentList.map((field) => field.logo = (singleAdapter(state) ? undefined : specificName));
-      return aggregatedList.concat(currentList);
-    }, allFieldsList);
+  const genericFieldsList = [CONNECTION_LABEL_SCHEMA, ...fields.generic];
+  if (!fields.specific) {
+    return genericFieldsList;
   }
-  return allFieldsList;
+  const addFieldLogo = (logo) => (field) => ({ ...field, logo });
+  return Object.entries(fields.specific)
+    .reduce((fieldsList, [specificName, currentList]) => fieldsList
+      .concat(currentList.map(addFieldLogo(specificName))), genericFieldsList);
 };
 
 export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME';
@@ -95,12 +95,6 @@ export const getDataSchemaByName = (state) => (module) => getDataSchemaList(stat
   map[schema.name] = schema;
   return map;
 }, {});
-
-export const SINGLE_ADAPTER = 'SINGLE_ADAPTER';
-export const singleAdapter = (state) => {
-  if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return false;
-  return state.configuration.data.system.singleAdapter;
-};
 
 export const AUTO_QUERY = 'AUTO_QUERY';
 export const autoQuery = (state) => {
