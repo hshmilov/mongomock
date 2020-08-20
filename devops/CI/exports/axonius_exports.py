@@ -232,8 +232,9 @@ def s3_upload(args, notify):
         local_path = getattr(args, key)
         if local_path:
             try_upload_to_s3(s3_client, local_path, bucket, s3_key)
+            md5_sum = subprocess.check_output(args=['md5sum', '-b', local_path]).split()[0].decode('ascii')
             url = urllib.parse.urljoin(f'https://{bucket}.s3-accelerate.amazonaws.com', s3_key)
-            notify({'name': args.name, 'subcommand': 's3_upload', f's3_{key}': url})
+            notify({'name': args.name, 'subcommand': 's3_upload', f's3_{key}': url, f's3_{key}_md5sum': md5_sum})
     notify({'name': args.name, 'subcommand': 's3_upload', 'step': 'finished'})
 
 

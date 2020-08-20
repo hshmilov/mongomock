@@ -525,6 +525,7 @@
             ["Git Hash", export_data_or_empty('git_hash')],
             ["Last Modified", export_data_or_empty('date')],
             ["Download Link", export_data_or_empty('download_link')],
+            ["Download Link MD5", export_data_or_empty('s3_ova_md5sum')],
             ["Installer Download Link", export_data_or_empty('installer_download_link')],
             ["AMI ID", export_data_or_empty('ami_id')],
             ["GCE Name", export_data_or_empty('gce_name')],
