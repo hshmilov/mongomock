@@ -49,6 +49,7 @@ DIR_MAP = {
 # The following line contains commands that we run before each new test. we are going to append more commands
 # to it later, hence we have ./prepare_python_env.sh (for these commands)
 FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; ./clean_dockers.sh; '
+SETUP_NGINX_CONF_FILES_CMD = 'python3 /home/ubuntu/cortex/testing/test_helpers/nginx_config_helper.py'
 MAX_SECONDS_FOR_ONE_JOB = 60 * 240  # no job (test / bunch of jobs) should take more than that
 MAX_SECONDS_FOR_THREAD_POOL = 60 * 260  # Just an extra caution for a timeout
 TC = TeamcityHelper()
@@ -102,7 +103,7 @@ def tp_execute(list_of_execs: List[Tuple[Callable, Tuple, Dict, object]], tp_ins
 
 class InstanceManager:
     def __init__(self, cloud, instance_type, number_of_instances, image_tag=None,
-                 base_image_name=DEFAULT_BASE_IMAGE_NAME):
+                 base_image_name=DEFAULT_BASE_IMAGE_NAME, log_response_body=False):
         self.cloud = cloud
         self.instance_type = instance_type
         self.number_of_instances = number_of_instances
@@ -111,6 +112,7 @@ class InstanceManager:
         self.__builds = Builds()
         self.__group_name = None
         self.__image_tag = image_tag
+        self.log_response_body = log_response_body
 
         execute(f'rm -rf {ARTIFACTS_DIR_ABSOLUTE}')
         if not os.path.exists(ARTIFACTS_DIR_ABSOLUTE):
@@ -240,6 +242,16 @@ class InstanceManager:
 
         print(f'Source code copying complete, installing Axonius..')
         execute('rm cortex.tar')
+
+        if self.log_response_body:
+            # Setting up testing nginx configs for logging http responses
+            overall_time, ret = self.__ssh_execute(base_instance,
+                                                   'Adding to nginx configs',
+                                                   SETUP_NGINX_CONF_FILES_CMD,
+                                                   append_ts=False,
+                                                   return_times=True)
+            with TC.block(f'Finished adding to nginx configs on {base_instance.id}, took {overall_time} seconds'):
+                print(ret)
 
         # init host.
         init_host_cmd = 'cd /home/ubuntu/cortex/; sudo ./devops/scripts/host_installation/init_host.sh'
@@ -522,6 +534,9 @@ def main():
     parser.add_argument('--pytest-single-args', nargs='*', help='Extra single args to pass to pytest, with a - prefix.')
     parser.add_argument('--base-image-name', type=str, default=DEFAULT_BASE_IMAGE_NAME,
                         help='Name of the base image to create test instances from.')
+    parser.add_argument('--log-response-body', type=str, default='No',
+                        help='Should response body be logged (makes the test slower)? (Yes/No)',
+                        choices=['yes', 'no', 'Yes', 'No'])
 
     try:
         args = parser.parse_args()
@@ -554,7 +569,7 @@ def main():
 
     if args.action == 'run':
         instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances, args.image_tag,
-                                           args.base_image_name)
+                                           args.base_image_name, args.log_response_body.lower() == 'yes')
         try:
             instance_manager.prepare_all(group_name)
             print(f'Is running under teamcity: {TC.is_in_teamcity()}')
