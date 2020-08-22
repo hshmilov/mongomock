@@ -317,6 +317,8 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                                 all_properties[device_property_split[0]] = '='.join(device_property_split[1:])
 
                         for name, value in all_properties.items():
+                            if name and name.lower() == 'lastseendate':
+                                device.last_seen = parse_date(value)
                             put_dynamic_field(device, f'Bluecat_property_{name}', value, f'bluecat_property.{name}')
                 except Exception:
                     pass

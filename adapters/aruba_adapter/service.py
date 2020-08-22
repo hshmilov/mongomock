@@ -3,15 +3,15 @@ import logging
 
 
 from aruba_adapter import arubaapi
-from aruba_adapter.connection import ArubaConnection
+from aruba_adapter.connection import ArubaConnection, ArubaOsCxConnection
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import format_mac
+from axonius.utils.parsing import format_mac, parse_bool_from_raw, int_or_none
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,6 +33,12 @@ class ArubaAdapter(AdapterBase):
         ssid = Field(str, 'SSID')
         wifi_phone_number = Field(str, 'Phone Number')
         wifi_notes = Field(str, 'Notes')
+        never_ageout = Field(bool, 'Never Ageout')
+        selected = Field(bool, 'Selected')
+        denied = Field(bool, 'Denied')
+        aruba_ports_info = ListField(str, 'Ports Info')
+        from_field = Field(str, 'From')
+        inactivity_timeout = Field(int, 'Inactivity Timeout')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -51,7 +57,14 @@ class ArubaAdapter(AdapterBase):
         if not port:
             port = None
         try:
-            if str(port) != '443':
+            if client_config.get('is_ox_cx'):
+                connection = ArubaOsCxConnection(domain=client_config['domain'],
+                                                 port=port,
+                                                 username=client_config.get('username'),
+                                                 password=client_config.get('password'),
+                                                 verify_ssl=client_config.get('verify_ssl'))
+                session_type = 'os_cx'
+            elif str(port) != '443':
                 if not port:
                     port = 4343
                 ssl = client_config['ssl'] if 'ssl' in client_config else True
@@ -82,7 +95,7 @@ class ArubaAdapter(AdapterBase):
             if session_type == 'basic_aruba':
                 for device_raw in list(session.cli('show arp').get('T1', []))[1:]:
                     yield device_raw, session_type
-            if session_type == 'airwave':
+            if session_type in ['airwave', 'os_cx']:
                 for device_raw in session.get_device_list():
                     yield device_raw, session_type
 
@@ -207,6 +220,24 @@ class ArubaAdapter(AdapterBase):
         device.set_raw({'data': device_data_list})
         return device
 
+    def _create_device_os_cx(self, device_raw):
+        device = self._new_device_adapter()
+        from_raw = device_raw.get('from') or ''
+        mac = device_raw.get('mac_addr') or ''
+        device.id = from_raw + ' ' + mac
+        device.add_nic(mac=mac)
+        device.selected = parse_bool_from_raw(device_raw.get('selected'))
+        device.denied = parse_bool_from_raw(device_raw.get('denied'))
+        device.never_ageout = parse_bool_from_raw(device_raw.get('never_ageout'))
+        try:
+            device.aruba_ports_info = list(device_raw.get('port').keys())
+        except Exception:
+            pass
+        device.from_field = device_raw.get('from')
+        device.inactivity_timeout = int_or_none(device_raw.get('inactivity_timeout'))
+        device.set_raw(device_raw)
+        return device
+
     def _parse_raw_data(self, devices_raw_data):
         mac_set = set()
         for device_raw, session_type in devices_raw_data:
@@ -217,6 +248,10 @@ class ArubaAdapter(AdapterBase):
                         yield device
                 if session_type == 'airwave':
                     device = self._create_device_airwave(device_raw, mac_set)
+                    if device:
+                        yield device
+                if session_type == 'os_cx':
+                    device = self._create_device_os_cx(device_raw)
                     if device:
                         yield device
             except Exception:
@@ -247,6 +282,11 @@ class ArubaAdapter(AdapterBase):
                     'format': 'port'
                 },
                 {
+                    'name': 'is_ox_cx',
+                    'type': 'bool',
+                    'title': 'Is OS CX device'
+                },
+                {
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string'
@@ -271,6 +311,7 @@ class ArubaAdapter(AdapterBase):
             'required': [
                 'domain',
                 'username',
+                'is_ox_cx',
                 'password',
                 'ssl',
                 'verify_ssl'

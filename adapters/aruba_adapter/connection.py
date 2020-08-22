@@ -51,3 +51,55 @@ class ArubaConnection(RESTConnection):
                 yield device_raw
             except Exception:
                 logger.exception(f'Problem at record')
+
+
+class ArubaOsCxConnection(RESTConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, url_base_prefix='rest/v10.04',
+                         headers={'Content-Type': 'application/json',
+                                  'Accept': 'application/json'},
+                         **kwargs)
+
+    def _connect(self):
+        try:
+            self._post('login',
+                       url_params={'username': self._username, 'password': self._password},
+                       use_json_in_response=False)
+        except Exception as e:
+            if 'session limit' in str(e):
+                raise RESTException('Got to session limit')
+            if '401' in str(e):
+                raise RESTException('Bad Credentials')
+            raise
+        self._get('system/vlans')
+
+    def get_device_list(self):
+        try:
+            self._post('login',
+                       url_params={'username': self._username, 'password': self._password},
+                       use_json_in_response=False)
+        except Exception as e:
+            if 'session limit' in str(e):
+                raise RESTException('Got to session limit')
+            if '401' in str(e):
+                raise RESTException('Bad Credentials')
+            raise
+        vlans = list(self._get('system/vlans').keys())
+        for vlan in vlans:
+            try:
+                macs_raw = self._get(f'system/vlans/{vlan}/macs?attributes=*')
+                for mac_raw in macs_raw:
+                    try:
+                        yield self._get(f'system/vlans/{vlan}/macs/{mac_raw}')
+                    except Exception:
+                        logger.exception(f'Problem with mac {mac_raw}')
+            except Exception:
+                logger.exception(f'Problem with vlan {vlan}')
+        self._post('logout', use_json_in_response=False)
+
+    def close(self):
+        try:
+            self._post('logout', use_json_in_response=False)
+        except Exception:
+            pass
+        self._session = None

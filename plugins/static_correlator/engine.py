@@ -112,6 +112,7 @@ def is_only_host_adapter(adapter_device):
                                               'sal_adapter',
                                               'snipeit_adapter',
                                               'checkmarx_adapter',
+                                              'iboss_cloud_adapter',
                                               'druva_adapter']):
         return True
     try:
