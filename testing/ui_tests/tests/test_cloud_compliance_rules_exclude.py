@@ -1,3 +1,5 @@
+import pytest
+
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from ui_tests.tests.ui_test_base import TestBase
@@ -8,6 +10,7 @@ from services.plugins.compliance_service import ComplianceService
 
 class TestCloudComplianceRules(TestBase):
 
+    @pytest.mark.skip('AX-8855')
     def test_compliance_rules_exclude(self):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()

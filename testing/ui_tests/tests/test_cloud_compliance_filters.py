@@ -20,6 +20,7 @@ class TestCloudComplianceFilters(TestBase):
     AZURE_CATEGORY_FILTER = 'Networking'
     AZURE_EMPTY_RULE_FILTER = '1.3 Ensure that there are no guest users'
 
+    @pytest.mark.skip('AX_8855')
     def test_compliance_filters(self):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
