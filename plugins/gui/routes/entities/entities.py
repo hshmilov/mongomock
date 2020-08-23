@@ -280,7 +280,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
 
         # Now handling POST and DELETE - they determine if the label is an added or removed one
         entities_and_labels = self.get_request_data_as_object()
-        if not entities_and_labels.get('entities'):
+        if not isinstance(entities_and_labels.get('entities'), dict):
             return return_error('Cannot label entities without list of entities.', 400)
         if not entities_and_labels.get('labels'):
             return return_error('Cannot label entities without list of labels.', 400)
