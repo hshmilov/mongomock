@@ -3331,10 +3331,14 @@ class PluginBase(Configurable, Feature, ABC):
             pass
 
         current_syslog = getattr(self, '_syslog_settings', None)
-        if current_syslog != config['syslog_settings']:
+        updated_syslog = config['syslog_settings']
+        if current_syslog != updated_syslog:
             logger.info('new syslog settings arrived')
-            self.__create_syslog_handler(config['syslog_settings'])
-            self._syslog_settings = config['syslog_settings']
+            try:
+                self._create_syslog_handler(updated_syslog)
+            except Exception:
+                logger.exception(f'Failed setting up syslog handler with settings: {updated_syslog}')
+            self._syslog_settings = updated_syslog
         else:
             self._syslog_settings = current_syslog
 
@@ -3409,44 +3413,40 @@ class PluginBase(Configurable, Feature, ABC):
     # pylint: enable=too-many-branches
     # pylint: enable=too-many-statements
 
-    def __create_syslog_handler(self, syslog_settings: dict):
+    def _create_syslog_handler(self, syslog_settings: dict):
         """
         Replaces the syslog handler used with the provided
         """
-        try:
-            # No syslog handler defined yet or settings changed.
-            # We should replace the current handler with a new one.
-            logger.info(f'Initializing new handler to syslog logger (deleting old if exist) from {syslog_settings}')
-            syslog_port = syslog_settings.get('syslogPort') or 6514
-            if not isinstance(syslog_port, int):
-                raise TypeError(f'Syslog port is not an integer')
+        # No syslog handler defined yet or settings changed.
+        # We should replace the current handler with a new one.
+        logger.info(f'Initializing new handler to syslog logger (deleting old if exist) from {syslog_settings}')
+        syslog_port = syslog_settings.get('syslogPort') or 6514
+        if not isinstance(syslog_port, int):
+            raise TypeError(f'Syslog port is not an integer')
 
-            syslog_logger = logging.getLogger('axonius.syslog')
-            syslog_logger.handlers = []  # Removing all previous handlers
-            # Making a new handler with most up to date settings
-            use_ssl = SSLState[syslog_settings['use_ssl']]
-            if use_ssl != SSLState.Unencrypted:
-                cert_file = self._grab_file_contents(syslog_settings.get('cert_file'))
-                ssl_kwargs = dict(
-                    cert_reqs=ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE,
-                    ssl_version=ssl.PROTOCOL_TLS,
-                    ca_certs=cert_file.name if cert_file else None
-                )
-
-                syslog_handler = TLSSysLogHandler(address=(syslog_settings['syslogHost'],
-                                                           syslog_port),
-                                                  facility=logging.handlers.SysLogHandler.LOG_DAEMON,
-                                                  ssl_kwargs=ssl_kwargs)
-            else:
-                syslog_handler = logging.handlers.SysLogHandler(
-                    address=(syslog_settings['syslogHost'],
-                             syslog_settings.get('syslogPort',
-                                                 logging.handlers.SYSLOG_UDP_PORT)),
-                    facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-            syslog_handler.setLevel(logging.INFO)
-            syslog_logger.addHandler(syslog_handler)
-        except Exception:
-            logger.exception(f'Failed setting up syslog handler, no syslog handler has been set up, {syslog_settings}')
+        syslog_logger = logging.getLogger('axonius.syslog')
+        syslog_logger.handlers = []  # Removing all previous handlers
+        # Making a new handler with most up to date settings
+        use_ssl = SSLState[syslog_settings['use_ssl']]
+        if use_ssl != SSLState.Unencrypted:
+            cert_file = self._grab_file_contents(syslog_settings.get('cert_file'))
+            ssl_kwargs = dict(
+                cert_reqs=ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE,
+                ssl_version=ssl.PROTOCOL_TLS,
+                ca_certs=cert_file.name if cert_file else None
+            )
+            syslog_handler = TLSSysLogHandler(address=(syslog_settings['syslogHost'],
+                                                       syslog_port),
+                                              facility=logging.handlers.SysLogHandler.LOG_DAEMON,
+                                              ssl_kwargs=ssl_kwargs)
+        else:
+            syslog_handler = logging.handlers.SysLogHandler(
+                address=(syslog_settings['syslogHost'],
+                         syslog_settings.get('syslogPort',
+                                             logging.handlers.SYSLOG_UDP_PORT)),
+                facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+        syslog_handler.setLevel(logging.INFO)
+        syslog_logger.addHandler(syslog_handler)
 
     def update_ssl_ciphers(self):
         # Generate ECDH self signed certificate

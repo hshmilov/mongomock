@@ -180,6 +180,17 @@ class Plugins:
                     logger.exception(message)
                     return return_error(message, 400)
 
+            syslog_settings = config_to_set.get('syslog_settings')
+            if syslog_settings and syslog_settings.get('enabled') is True:
+                try:
+                    if not syslog_settings.get('syslogHost'):
+                        return return_error('Host is required to connect to syslog server')
+                    self._create_syslog_handler(syslog_settings)
+                except Exception:
+                    message = f'Could not connect to syslog server "{syslog_settings["syslogHost"]}"'
+                    logger.exception(message)
+                    return return_error(message, 400)
+
             proxy_settings = config_to_set.get(PROXY_SETTINGS)
             if not self.is_proxy_allows_web(proxy_settings):
                 return return_error(PROXY_ERROR_MESSAGE, 400)
