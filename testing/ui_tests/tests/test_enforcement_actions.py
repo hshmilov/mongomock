@@ -42,9 +42,11 @@ AD_ESX_AND_JSON_QUERY = '(adapters == "active_directory_adapter") and (adapters 
                         'or (adapters == "json_file_adapter")'
 AD_ESX_AND_JSON_QUERY_NAME = 'ESX, AD AND JSON'
 AD_QUERY = 'adapters == "active_directory_adapter"'
-AD_QUERY_NAME = 'AD Only'
-AD_ONLY_QUERY = '(adapters == "active_directory_adapter") and not (adapters == "esx_adapter")'
-JSON_ONLY_QUERY = 'adapters == "json_file_adapter"'
+AD_ONLY_QUERY_NAME = 'AD Only'
+AD_QUERY_NAME = 'All AD'
+AD_ONLY_QUERY = '(adapters == "active_directory_adapter") and (adapters == size(1))'
+AD_MULTIPLE_QUERY = '(adapters == "active_directory_adapter") and (adapters == size(2))'
+JSON_ONLY_QUERY = '(adapters == "json_file_adapter") and (adapters == size(1))'
 
 CUSTOM_TAG = 'superTag'
 FIRST_TAG = 'First Tag'
@@ -224,40 +226,69 @@ class TestEnforcementActions(TestBase):
             self.devices_page.switch_to_page()
             self.devices_page.fill_filter(query)
             self.devices_page.enter_search()
-            self.enforcements_page.wait_for_table_to_load()
+            self.enforcements_page.wait_for_table_to_be_responsive()
             tagged_check_result = self.devices_page.get_first_row_tags() == UNTAG_UNQUERIED
             assert tagged_check_result == tagged
-            self.adapters_page.add_json_server(esx_json_file_mock_devices)
+        self.adapters_page.add_json_server(esx_json_file_mock_devices)
+        self.devices_page.switch_to_page()
+        self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
 
-            self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
-            self.enforcements_page.switch_to_page()
-            self.enforcements_page.wait_for_table_to_load()
-            self.enforcements_page.click_new_enforcement()
-            self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.check_scheduling()
-            self.enforcements_page.select_saved_view(AD_QUERY_NAME)
-            self.enforcements_page.save_trigger()
-            self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
-                                                    should_delete_unqueried=True)
-            self.enforcements_page.click_save_button()
-            self.base_page.run_discovery()
+        self.enforcements_page.create_tag_enforcement(ENFORCEMENT_CHANGE_NAME, AD_QUERY_NAME, ENFORCEMENT_CHANGE_NAME,
+                                                      tag=UNTAG_UNQUERIED, save=False, number_of_runs=1,
+                                                      should_delete_unqueried=True)
 
-            _check_query_result_is_tagged(AD_QUERY, True)
-            _check_query_result_is_tagged(JSON_ONLY_QUERY, False)
+        # Wait for task to finish
 
-            self.devices_page.run_filter_and_save(AD_ESX_AND_JSON_QUERY_NAME, AD_ESX_AND_JSON_QUERY)
+        self.devices_page.switch_to_page()
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_until_enforcement_task_completion()
 
-            self.enforcements_page.switch_to_page()
-            self.enforcements_page.wait_for_spinner_to_end()
-            self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.select_saved_view(AD_ESX_AND_JSON_QUERY_NAME)
-            self.enforcements_page.save_trigger()
-            self.enforcements_page.click_run_button()
-            _check_query_result_is_tagged(AD_ONLY_QUERY, False)
-            _check_query_result_is_tagged(JSON_ONLY_QUERY, True)
-            self.adapters_page.clean_adapter_servers(ESX_NAME, delete_associated_entities=True)
+        _check_query_result_is_tagged(AD_MULTIPLE_QUERY, True)
+        _check_query_result_is_tagged(AD_QUERY, True)
+        _check_query_result_is_tagged(JSON_ONLY_QUERY, False)
+        _check_query_result_is_tagged(AD_ONLY_QUERY, True)
+
+        self.devices_page.run_filter_and_save(AD_ONLY_QUERY_NAME, AD_ONLY_QUERY)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(AD_ONLY_QUERY_NAME)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
+                                                   should_delete_unqueried=False, new_tag=False)
+
+        # Run and wait for task to finish
+        self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_until_enforcement_task_completion()
+
+        _check_query_result_is_tagged(AD_QUERY, True)
+        _check_query_result_is_tagged(AD_MULTIPLE_QUERY, True)
+
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
+        self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(AD_ONLY_QUERY_NAME)
+        self.enforcements_page.save_trigger()
+        self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
+                                                   should_delete_unqueried=True, new_tag=False)
+        # Run and wait for task to finish
+        self.enforcements_page.click_run_button()
+        self.enforcements_page.wait_for_task_in_progress_toaster()
+        self.enforcements_page.click_tasks_button()
+        self.enforcements_page.wait_until_enforcement_task_completion()
+
+        _check_query_result_is_tagged(AD_QUERY, False)
+        _check_query_result_is_tagged(AD_MULTIPLE_QUERY, False)
+        _check_query_result_is_tagged(AD_ONLY_QUERY, True)
+
+        self.adapters_page.restore_json_client()
 
     @flaky(max_runs=3)
     def test_tag_entities(self):

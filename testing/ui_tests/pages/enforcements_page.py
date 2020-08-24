@@ -197,26 +197,27 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.2)
         self.find_element_by_text(Action.send_csv_to_s3.value).click()
 
-    def tag_entities(self, name, tag, new_action=False, should_delete_unqueried=False):
+    def tag_entities(self, name, tag, new_action=False, should_delete_unqueried=False, new_tag=True):
         """
         Creates an "Add Tag" action to enforcement.
         :param name: Action name
         :param tag: Tag name
         :param new_action: Whether this is a new action.
-        :param should_delete_unqueried: Whether the "Remove tag from entities not found in the Saved Query results"
+        :param should_delete_unqueried: Whether the "Remove tag from entities not found in the Saved Query results".
         checkbox should be checked
+        :param new_tag: Whether this is a newly generated tag or an old one.
         """
         # add new tag ( type name in the input and click on the create new option )
         self.wait_for_action_config()
         if new_action:
             self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
+        selected_option_css_selector = self.DROPDOWN_NEW_OPTION_CSS if new_tag else self.DROPDOWN_SELECTED_OPTION_CSS
         self.select_option(
-            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, self.DROPDOWN_NEW_OPTION_CSS, tag
+            self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, selected_option_css_selector, tag
         )
-        if should_delete_unqueried:
-            self.click_toggle_button(
-                self.find_checkbox_by_label('Remove tag from entities not found in the Saved Query results'),
-                make_yes=should_delete_unqueried)
+        should_delete_unqueried_checkbox = self.find_checkbox_by_label(
+            'Remove this tag from entities not found in the Saved Query results')
+        self.click_toggle_button(should_delete_unqueried_checkbox, make_yes=should_delete_unqueried)
         self.click_button(self.SAVE_BUTTON)
         self.wait_for_element_present_by_text(name)
 
@@ -267,9 +268,11 @@ class EnforcementsPage(EntitiesPage):
     def get_tag_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.DROPDOWN_TAGS_VALUE_CSS).text
 
-    def change_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, should_delete_unqueried=False):
+    def change_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, should_delete_unqueried=False,
+                            new_tag=True):
         self.driver.find_element_by_xpath(self.ACTION_BY_NAME_XPATH.format(action_name=name)).click()
-        self.tag_entities(name, tag, should_delete_unqueried=should_delete_unqueried)
+        self.tag_entities(name, tag, should_delete_unqueried=should_delete_unqueried,
+                          new_tag=new_tag)
 
     def fill_tag_all_text(self, tag_text):
         self.fill_text_field_by_element_id('tagAllName', tag_text)
@@ -721,13 +724,14 @@ class EnforcementsPage(EntitiesPage):
                                tag=DEFAULT_TAG_NAME,
                                number_of_runs=0,
                                action_cond=MAIN_ACTION_TEXT,
-                               save=True):
+                               save=True,
+                               should_delete_unqueried=False):
         self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
         self.select_trigger()
         self.check_scheduling()
         self.select_saved_view(enforcement_view)
         self.save_trigger()
-        self.add_tag_entities(name, tag, action_cond)
+        self.add_tag_entities(name, tag, action_cond, should_delete_unqueried=should_delete_unqueried)
         if number_of_runs:
             for _ in range(number_of_runs):
                 self.click_run_button()
