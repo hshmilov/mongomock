@@ -100,7 +100,7 @@ def session_connection(func,
                             csrf_token != csrf_token_header:
                         return return_error('Bad CSRF-Token', 403)
                     # Success token comparison or first session after login, no token twice
-                    if session['user'] is not None:
+                    if session['user'] is not None and request.path.strip('/') not in EXCLUDED_CSRF_ENDPOINTS:
                         session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
                 # This should never happen to authenticated user with active session...
                 else:
