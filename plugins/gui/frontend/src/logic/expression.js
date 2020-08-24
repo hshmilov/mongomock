@@ -40,7 +40,7 @@ const Expression = function (expression, condition, isFirst) {
       filterStack.push('(');
       bracketWeight -= 1;
     }
-    if (expression.not) {
+    if (expression.not && expression.context !== 'CMP') {
       filterStack.push('not ');
     }
     if (expression.context) {
@@ -51,7 +51,10 @@ const Expression = function (expression, condition, isFirst) {
       } else if (expression.context === 'CMP' && expression.value !== '') {
         switch (expression.compOp) {
           case 'equals':
-            filterStack.push(`${expression.field} == ${expression.value}`);
+            if (expression.not)
+              filterStack.push(`${expression.field} != ${expression.value}`);
+            else
+              filterStack.push(`${expression.field} == ${expression.value}`);
             break;
           case '>':
             filterStack.push(`${expression.field} > ${expression.value}`);
