@@ -1277,7 +1277,8 @@ def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, sele
     view_query_config = {'query': {'filter': '', 'expressions': []}}
     base_queries = []
     if selected_view:
-        view_query_config = find_view_by_id(entity, selected_view).get('view')
+        view = find_view_by_id(entity, selected_view) or {}
+        view_query_config = view.get('view')
         if not view_query_config or not view_query_config.get('query'):
             return None
         base_queries = [parse_filter(view_query_config['query']['filter'], for_date)]
