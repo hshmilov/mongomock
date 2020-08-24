@@ -264,7 +264,9 @@ DEFAULT_{capital_adapter_name}_PORT = 1433
 DEFAULT_{capital_adapter_name}_DATABASE = 'CIS_CMDB'
 DRIVER = 'driver'
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
-{capital_adapter_name}_QUERY = 'Select * from Computers'
+
+# TODO: Must insert specific columns fields in the query, Its forbidden to query *
+{capital_adapter_name}_QUERY = 'Select (AUTOADAPTER) from Computers'
 '''
     else:
         template = \

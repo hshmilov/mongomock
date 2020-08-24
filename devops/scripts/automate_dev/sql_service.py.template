@@ -72,7 +72,13 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
         # AUTOADAPTER - implement _query_devices_by_client
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
-            yield from client_data.query(consts.{only_capital_adapter_name}_QUERY)
+            # TODO: We want to make SQL connection as short as possible, therefore query should get all the info in one time
+            # TODO: In order to avoid data duplication which will be held in the memory we copy once every device_raw_original
+            devices_raw_query = list(client_data.query(consts.{only_capital_adapter_name}_QUERY))
+            for device_raw_original in devices_raw_query:
+                device_raw = device_raw_original.copy()
+
+                yield device_raw
 
     @staticmethod
     # pylint: disable=arguments-differ
