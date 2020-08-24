@@ -2,6 +2,8 @@ import json
 import logging
 import re
 
+from typing import Optional, Tuple, List
+
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.plugin_base import PluginBase
@@ -285,21 +287,22 @@ class CiscoIseERSConnection(RESTConnection):
         json_res = self._to_json(resp.text)
         try:
             json_res = self.get_ns(self._to_json(resp.text), 'searchResult')
-            if resp.status_code == 200 and int(json_res['@total']) > 1:
-                result['response'] = [(i['@name'], i['@id']) for i in self.get_ns(json_res, 'resources')['resource']]
-                result['success'] = True
+            if resp.status_code == 200:
+                resource_name_and_ids: List[Tuple[Optional[str], str]] = []
+                resources_raw = self.get_ns(json_res, 'resources')['resource']
+                if isinstance(resources_raw, dict):
+                    resources_raw = [resources_raw]
+                if isinstance(resources_raw, list):
+                    for resource in resources_raw:
+                        if not (isinstance(resource, dict) and resource.get('@id')):
+                            logger.warning(f'got invalid resource: {resource}')
+                            continue
+                        # Note: @name used to be mandatory but is actually not required by the implementation
+                        resource_name_and_ids.append((resource.get('@name'), resource['@id']))
 
-            elif resp.status_code == 200 and int(json_res['@total']) == 1:
-                result['response'] = [
-                    (self.get_ns(json_res, 'resources')['resource']['@name'],
-                     self.get_ns(json_res, 'resources')['resource']['@id'])
-                ]
+                logger.debug(f'Got {len(resource_name_and_ids)}/{json_res.get("@total")} devices on page {page}')
                 result['success'] = True
-
-            elif resp.status_code == 200 and int(json_res['@total']) == 0:
-                result['success'] = True
-                result['response'] = []
-
+                result['response'] = resource_name_and_ids
             else:
                 response = self.get_ns(self._to_json(resp.text), 'ersResponse')
                 result['response'] = response['messages']['message']['title']
