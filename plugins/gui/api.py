@@ -593,7 +593,7 @@ class APIMixin:
 
         :return: dict
         """
-        return jsonify(self._get_system_lifecycle())
+        return jsonify(self._lifecycle())
 
     @api_add_rule(
         rule='system/discover/start',

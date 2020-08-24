@@ -414,12 +414,12 @@ class Dashboard(Charts, Notifications):
         # pylint: disable=no-member
         res = self.request_remote_plugin('trigger_state/execute', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if not res or res.status_code != 200:
-            return return_error('Scheduler not responding', 500)
+            raise RuntimeError('Scheduler not responding')
         execution_state = res.json()
         if 'state' not in execution_state:
             message = f'Scheduler failed with message: {execution_state.get("message", "")}'
             logger.error(message)
-            return return_error(message, 500)
+            raise RuntimeError(message)
         is_running = execution_state['state'] == TriggerStates.Triggered.name
         del res, execution_state
 
@@ -511,11 +511,7 @@ class Dashboard(Charts, Notifications):
          - Portion of work remaining for the current sub-phase
          - The time next cycle is scheduled to run
         """
-        return jsonify(self._get_system_lifecycle())
-
-    def _get_system_lifecycle(self):
-        """Added for public API support."""
-        return self._lifecycle()
+        return jsonify(self._lifecycle())
 
     ################################################
     #           REORDER
