@@ -133,3 +133,4 @@ tabulate==0.8.7
 pyotp==2.3.0
 msrest==0.6.17
 cpe==1.2.1
+aiodnsresolver==0.0.140
