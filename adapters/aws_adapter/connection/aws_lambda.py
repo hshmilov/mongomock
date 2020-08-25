@@ -27,7 +27,7 @@ def query_devices_by_client_by_source_lambda(client_data: dict) -> dict:
                     except Exception as e:
                         if 'the resource you requested does not exist' in str(e).lower():
                             # This is a legitimate error, not all lambda's have functions
-                            continue
+                            pass
                         if not did_policy_exception_appear:
                             logger.exception(f'Could not get policy for function {function_arn}')
                             did_policy_exception_appear = True
