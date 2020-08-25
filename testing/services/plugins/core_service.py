@@ -22,8 +22,9 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
     ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON, DISCOVERY_CONFIG_NAME, \
     HISTORY_REPEAT_EVERY, HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE, \
-    HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS
-
+    HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, ADAPTER_DISCOVERY, \
+    DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE, DISCOVERY_RESEARCH_DATE_TIME, \
+    DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS
 
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
     CLIENT_ID, LEGACY_VAULT_PROVIDER
@@ -1081,6 +1082,46 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                     'config.adapter_discovery.conditional': 'system_research_weekdays'
                 }
             })
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_29(self):
+        print(f'Updating to schema version 29')
+        configs_to_fix = self.db.client[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].find(
+            {
+                'config_name': DISCOVERY_CONFIG_NAME,
+            })
+        for discovery_config in configs_to_fix:
+            config = discovery_config.get('config', {})
+            # we need to fix this config
+            if ENABLE_CUSTOM_DISCOVERY in config:
+                plugin_name = discovery_config.get(PLUGIN_NAME)
+                repeat_type = config.get(DISCOVERY_REPEAT_TYPE)
+                # migration 28
+                if repeat_type == 'repeat_every':
+                    repeat_type = 'system_research_date'
+                if repeat_type == 'repeat_on':
+                    repeat_type = 'system_research_weekdays'
+
+                new_config = {
+                    ADAPTER_DISCOVERY: {
+                        ENABLE_CUSTOM_DISCOVERY: config.get(ENABLE_CUSTOM_DISCOVERY, False),
+                        DISCOVERY_REPEAT_TYPE: repeat_type,
+                        DISCOVERY_REPEAT_EVERY_DAY: {
+                            DISCOVERY_REPEAT_EVERY: config.get(DISCOVERY_REPEAT_EVERY, 1),
+                            DISCOVERY_RESEARCH_DATE_TIME: config.get(DISCOVERY_RESEARCH_DATE_TIME, '13:00'),
+                        },
+                        DISCOVERY_REPEAT_RATE: 12,
+                        DISCOVERY_REPEAT_ON_WEEKDAYS: {
+                            DISCOVERY_REPEAT_ON: config.get(DISCOVERY_REPEAT_ON, [day.lower() for day in WEEKDAYS]),
+                            DISCOVERY_RESEARCH_DATE_TIME: config.get(DISCOVERY_RESEARCH_DATE_TIME, '13:00'),
+                        }
+                    },
+                    CONNECTION_DISCOVERY: {
+                        ENABLE_CUSTOM_DISCOVERY: False
+                    }
+                }
+                self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = \
+                    new_config
 
     def migrate_adapter_advanced_settings_to_connection(
             self,
