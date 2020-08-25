@@ -57,7 +57,22 @@ class MongoService(SystemService, WeaveService):
 
     @property
     def max_allowed_memory(self):
-        return None
+        customer_conf = get_customer_conf_json()
+        max_allowed_memory_config = (customer_conf.get('docker_max_allowed_memory_percent') or {}).get('mongo')
+        if max_allowed_memory_config:
+            magentaprint(f'Custom mongo ram limitation: {max_allowed_memory_config}')
+        else:
+            max_allowed_memory_config = 0.75
+
+        if not isinstance(max_allowed_memory_config, float) or not (0 < max_allowed_memory_config <= 1):
+            raise ValueError(f'Invalid max_allowed_memory_config: {max_allowed_memory_config}')
+
+        if max_allowed_memory_config == 1:
+            return None
+
+        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
+        total_memory = int(total_memory * 0.75)  # We want mongodb to always catch 75% of ram.
+        return total_memory
 
     @property
     def memory_swappiness(self) -> Optional[int]:
