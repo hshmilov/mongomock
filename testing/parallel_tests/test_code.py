@@ -123,13 +123,15 @@ def _print_times_and_files(mapped_values):
         print(f'{key[3]} : {key[0]}')
 
 
-def _get_unexpected_pylint_state(is_success_expected):
-    files_to_map = [
+def get_unexpected_pylint_state(is_success_expected, page=0, total_number_of_pages=1):
+    all_files_to_map = [
         file_name
         for file_name
         in _get_all_pylint_files()
         if (file_name in _get_pylint_exempt()) != is_success_expected
     ]
+    page_size = int(len(all_files_to_map) / total_number_of_pages) + 1
+    files_to_map = all_files_to_map[page * page_size:(page + 1) * page_size]
     # We do this in order to be able to kill the forks using KeyboardInterrupt
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     process_pool = multiprocessing.Pool(NUMBER_OF_PROCESSES)
@@ -137,6 +139,8 @@ def _get_unexpected_pylint_state(is_success_expected):
     try:
         # we do this hassle because we can't pickle lambdas
         func = _is_pylint_ok_expected_true if is_success_expected else _is_pylint_ok_expected_false
+        print(f'files_to_map, page {page}, total {total_number_of_pages}')
+        print(files_to_map)
         res = process_pool.map_async(func, files_to_map)  # return tuple
         mapped_values = res.get(60 * TIMEOUT_MINUTES)
     except KeyboardInterrupt:
@@ -154,17 +158,9 @@ def _get_unexpected_pylint_state(is_success_expected):
 
 class TestCode:
     @staticmethod
-    def test_no_broken_pylint_files():
-        """Test that every file besides the ones in the exempt list pass pylint"""
-        broken_files_list = _get_unexpected_pylint_state(is_success_expected=True)
-        invalid_files = bool(broken_files_list)
-        assert not invalid_files, \
-            'Broken files found: {}'.format('\n'.join([':'.join(file_desc) for file_desc in broken_files_list]))
-
-    @staticmethod
     def test_no_proper_files_in_exempt_list():
         """Test that every file in the exempt list does not pass pylint"""
-        exempted_proper_files = _get_unexpected_pylint_state(
+        exempted_proper_files = get_unexpected_pylint_state(
             is_success_expected=False)
         invalid_files = bool(exempted_proper_files)
         assert not invalid_files, 'Proper files found in exempt list: Please remove {} from {}'.format(

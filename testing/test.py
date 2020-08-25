@@ -6,6 +6,7 @@ import datetime
 import glob
 import io
 import socket
+import random
 import sys
 import os
 import subprocess
@@ -501,12 +502,15 @@ class InstanceManager:
 
 def get_list_of_tests_in_path(path, extra_args):
     # 5 means that no tests were collected (documented pytest feature.)
-    output, _ = execute(f'pytest --collect-only {extra_args}', cwd=path, allowed_return_codes={0, 5})
+    output, _ = execute(f'pytest --collect-only {extra_args} -q', cwd=path, allowed_return_codes={0, 5})
 
-    # we have to extract the path, this will look like:
-    # <Module 'plugins/static_users_correlator/tests/test_static_users_correlator.py'>
-    modules_raw = [line[9:-2] for line in output.splitlines() if line.startswith('<Module ')]
-    return modules_raw
+    # Each line is a test case, in pytest format.
+    modules_raw = {line.split('::')[0] for line in output.splitlines() if '::' in line and
+                   'test_code_pylint' not in line}
+
+    functions_raw = {line for line in output.splitlines() if 'test_code_pylint' in line}
+
+    return list(modules_raw) + list(functions_raw)
 
 
 def main():
@@ -599,7 +603,7 @@ def main():
                     for test_module in parallel_tests:
                         print(test_module)
 
-                priority_tests_parallel = ['test_code.py', 'test_ad.py', 'test_carbonblack_defense.py',
+                priority_tests_parallel = ['test_ad.py', 'test_carbonblack_defense.py',
                                            'test_crowd_strike.py',
                                            'test_sentinelone.py', 'test_aws.py',
                                            'test_service_now.py', 'test_cybereason.py',
@@ -607,7 +611,11 @@ def main():
                                            'test_tenable_io.py',
                                            'test_ansible_tower.py',
                                            'test_symantec_ccs.py', 'test_cisco_meraki.py',
+                                           'test_benchmark_correlation.py', 'test_code.py',
+                                           'test_eset.py', 'test_azure.py', 'test_forcepoint_csv.py'
                                            ]
+
+                random.shuffle(parallel_tests)
 
                 for t in reversed(priority_tests_parallel):
                     if t not in parallel_tests:

@@ -9,16 +9,10 @@ from services.axonius_service import get_service
 
 class ParallelTestsRunner(ParallelRunner):
     def append_test_pattern(self, paths, extra_flags, **kwargs):
-        files = []
-        for path in paths:
-            if os.path.isfile(path):
-                files.append(path)
-            else:
-                for file in glob.glob(path):
-                    files.append(file)
+        files = list(paths)
 
         for file in sorted(files):
-            test_case_name = os.path.basename(file).split('.')[0]
+            test_case_name = os.path.basename(file).split('.')[0] if '::' not in file else file.split('::')[-1]
             args = ['python3', '-u', os.path.join(os.path.abspath(os.path.dirname(__file__)), 'run_pytest.py')]
             if extra_flags:
                 args.extend(extra_flags)

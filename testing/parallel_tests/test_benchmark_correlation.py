@@ -35,5 +35,8 @@ def test_correlation_benchmark():
 
     time_took = time.time() - now
 
-    if time_took > 5 * 60:
+    # This test usually takes around 5 minutes when it is running alone
+    # But, when running with some other tests with more data, it takes more time.
+    # We just test that it isn't really long (quadratic).
+    if time_took > 10 * 60:
         raise TimeoutError()
