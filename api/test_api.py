@@ -2,6 +2,7 @@
 # This is a common procedure with pylint and is disabled by default.
 # pylint: disable=unused-import, too-many-statements, too-many-locals, redefined-outer-name, too-many-branches
 # pylint: disable=no-name-in-module, import-error, invalid-name, global-statement
+import time
 import logging
 import traceback
 from multiprocessing.pool import ThreadPool
@@ -68,8 +69,10 @@ def test_api_in_parallel(axonius_system):
                 # we don't need to run more tests since we already failed
                 return
             logger.info(f'Calling api function "{name}"')
+            start_time = time.time()
             callback = getattr(client, name)
             callback()
+            logger.info(f'Finished calling function "{name}" in "{time.time() - start_time}" seconds.')
             logger.info('\n\n')
         except Exception:
             ERROR = True
