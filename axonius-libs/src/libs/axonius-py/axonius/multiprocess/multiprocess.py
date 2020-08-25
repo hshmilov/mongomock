@@ -41,6 +41,7 @@ def multiprocess_yield_wrapper(func: Tuple[Callable, Tuple, Dict], m_queue: mult
         m_queue.put(None)
 
 
+# pylint: disable=no-member,protected-access,too-many-branches
 def kill_ids(pids: list):
     # Waiting before we immediately start causes process hangs to not happen, probably because
     # there are less race-conditions. do not remove!
@@ -56,6 +57,8 @@ def kill_ids(pids: list):
                     logger.info(f'sent SIGTERM to {pid}')
                 else:
                     logger.info(f'pid {pid} not running')
+            except psutil._exceptions.NoSuchProcess:
+                pass
             except Exception:
                 logger.exception(f'Could not SIGTERM pid {pid}')
 
@@ -70,6 +73,8 @@ def kill_ids(pids: list):
                     logger.info(f'sent SIGKILL to {pid}')
                 else:
                     logger.info(f'pid {pid} not running')
+            except psutil._exceptions.NoSuchProcess:
+                pass
             except Exception:
                 logger.exception(f'Could not SIGKILL pid {pid}')
 
@@ -79,6 +84,8 @@ def kill_ids(pids: list):
                 proc = psutil.Process(pid)
                 if proc.is_running():
                     logger.critical(f'Could not kill pid {pid} - process might be stuck!')
+            except psutil._exceptions.NoSuchProcess:
+                pass
             except Exception:
                 logger.exception(f'Could not query pid {pid}')
     except Exception:
@@ -137,8 +144,6 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
             except Exception:
                 logger.critical(f'Error while yielding results from concurrent_multiprocess_yield', exc_info=True)
         except BaseException as e:
-            # pylint: disable=protected-access
-            # pylint: enable=protected-access
             logger.exception(f'Got event {str(e).strip()!r} event. Stopping')
             return []
         finally:

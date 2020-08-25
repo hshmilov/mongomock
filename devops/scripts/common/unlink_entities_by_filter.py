@@ -64,7 +64,7 @@ def main():
         if entities_unlinked % (10 * ENTITIES_TO_UNLINK_CHUNKS) == 0:
             now = datetime.datetime.now().strftime('%H:%M:%S')
             print(f'[{now}] Finished {entities_unlinked} / {count_of_entities} '
-                  f'({round(entities_unlinked / count_of_entities, 2)}%)')
+                  f'({round(entities_unlinked / count_of_entities, 2) * 100}%)')
 
     print(f'Done')
     return 0

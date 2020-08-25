@@ -2001,7 +2001,8 @@ class PluginBase(Configurable, Feature, ABC):
                                 logger.warning(f'Duplicate key error on {entity_type}, {parsed_to_insert}',
                                                exc_info=True)
                             except OperationFailure:
-                                logger.critical(f'Operational failure on {entity_type}, {parsed_to_insert}')
+                                logger.critical(f'Operational failure on {entity_type}, {parsed_to_insert}',
+                                                exc_info=True)
             except Exception as e:
                 logger.exception(f'insert_data_to_db failed, exception: {str(e)}')
                 raise

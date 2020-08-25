@@ -288,7 +288,9 @@ class CsvAdapter(AdapterBase):
 
                 # OS is a special case, instead of getting the first found column we take all of them and combine them
                 if 'os' in fields:
-                    os_raw = '_'.join([device_raw.get(os_column) for os_column in fields['os']])
+                    os_raw = '_'.join(
+                        [device_raw.get(os_column) for os_column in fields['os'] if device_raw.get(os_column)]
+                    )
                     try:
                         device.figure_os(os_raw)
                     except Exception:

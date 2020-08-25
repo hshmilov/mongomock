@@ -29,7 +29,7 @@ class BoxPlatformAdapter(AdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyUserAdapter(UserAdapter):
         modified = Field(datetime.datetime, 'User Last Modified')
-        language = Field(str, 'Language')
+        user_language = Field(str, 'Language')
         timezone = Field(str, 'Timezone')
         space_amount = Field(int, 'Available Space (Bytes)')
         space_used = Field(int, 'Space Used (Bytes)')
@@ -180,7 +180,7 @@ class BoxPlatformAdapter(AdapterBase):
                 user.modified = parse_date(user_raw.get('modified_at'))
             except Exception:
                 logger.warning(f'Failed to parse modified date for {user_raw}')
-            user.language = user_raw.get('language')
+            user.user_language = user_raw.get('language')
             user.timezone = user_raw.get('timezone')
             user.space_amount = self._parse_int(user_raw.get('space_amount'))
             user.space_used = self._parse_int(user_raw.get('space_used'))

@@ -56,6 +56,12 @@ class SmartJsonClassMetaclass(type):
         assert len(set([field.name for field in fields])) == len(fields), \
             'Found duplicate field names, did you define two fields with the same name?'
 
+        # Some field names are illegal.
+        # "language" - illegal because of "text" indexing:
+        # https://stackoverflow.com/questions/50071593/pymongo-language-override-unsupported-c-when-creating-index
+        illegal_names = [field.name for field in fields if field.name.lower() in ['language']]
+        assert not illegal_names, f'Found illegal field names: {",".join(illegal_names)}'
+
         # Check if we have the same title in this current object. If the title is None, then it doesn't matter.
         field_titles_that_are_not_none = [field.title for field in fields if field.title]
         assert len(set(field_titles_that_are_not_none)) == len(field_titles_that_are_not_none), \

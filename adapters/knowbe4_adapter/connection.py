@@ -1,4 +1,5 @@
 import logging
+import time
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -32,6 +33,7 @@ class Knowbe4Connection(RESTConnection):
         if not isinstance(resposne, list):
             return
         yield from resposne
+        errors = 0
         while resposne and (page * DEVICE_PER_PAGE) < MAX_NUMBER_OF_DEVICES:
             try:
                 page += 1
@@ -45,6 +47,10 @@ class Knowbe4Connection(RESTConnection):
                 yield from resposne
             except Exception:
                 logger.exception(f'Problem with url {url} at page {page}')
+                errors += 1
+                if errors > 5:
+                    raise
+                time.sleep(10)
 
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_user_list(self):

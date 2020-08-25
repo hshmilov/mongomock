@@ -46,7 +46,7 @@ class Knowbe4UserInstance(UserAdapter):
     archived_at = Field(datetime.datetime, 'Archived At')
     employee_start_date = Field(datetime.datetime, 'Employee Start Date')
     comment = Field(str, 'Comment')
-    language = Field(str, 'Language')
+    user_language = Field(str, 'Language')
     organization = Field(str, 'Organization')
     joined_on = Field(datetime.datetime, 'Joined On')
     aliases = ListField(str, 'Aliases')

@@ -162,7 +162,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.__correlation_lock.acquire(False):
             try:
                 logger.info(f'Running correlation')
-                self._run_plugins(self._get_plugins(PluginSubtype.Correlator))
+                self._run_plugins(self._get_plugins(PluginSubtype.Correlator), 72 * 3600)
                 logger.info(f'Done running correlation')
                 return True
             finally:
@@ -1404,7 +1404,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 in registered_plugins.values()
                 if plugin['plugin_subtype'] == plugin_subtype.value]
 
-    def _run_plugins(self, plugins_to_run: list):
+    def _run_plugins(self, plugins_to_run: list, timeout=24 * 3600):
         """
         Trigger execute asynchronously in filtered plugins.
         :param plugin_subtype: A plugin_subtype to filter.
@@ -1420,7 +1420,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             try:
                 self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                             blocking=blocking,
-                                            timeout=24 * 3600, stop_on_timeout=True)
+                                            timeout=timeout, stop_on_timeout=True)
             except ConnectionError:
                 # DNS record is missing, let dns watchdog time to reset all the dns records
                 logger.warning(f'Failed triggering {plugin[PLUGIN_NAME]} retrying in 80 seconds')
@@ -1428,7 +1428,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 try:
                     self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                                 blocking=blocking,
-                                                timeout=24 * 3600, stop_on_timeout=True)
+                                                timeout=timeout, stop_on_timeout=True)
                 except ConnectionError:
                     logger.critical(f'Failed triggering {plugin[PLUGIN_NAME]} probably '
                                     f'container is down for some reason')

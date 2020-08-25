@@ -125,7 +125,7 @@ class Knowbe4Adapter(AdapterBase):
                 user.aliases = aliases
             user.joined_on = parse_date(user_raw.get('joined_on'))
             user.organization = user_raw.get('organization')
-            user.language = user_raw.get('language')
+            user.user_language = user_raw.get('language')
             user.comment = user_raw.get('comment')
             user.employee_start_date = parse_date(user_raw.get('employee_start_date'))
             user.archived_at = parse_date(user_raw.get('archived_at'))

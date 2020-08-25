@@ -39,6 +39,13 @@ def test_regular_usage():
     } == device.get_fields_info()
 
 
+def test_illegal_names():
+    with pytest.raises(AssertionError) as e:
+        class MyIllegalDeviceTest(SmartJsonClass):
+            language = Field(str, 'str1')
+    assert 'illegal field names' in str(e.value) and 'language' in str(e.value)
+
+
 def test_empty_lists():
     device = create_smart_json_class()
     device.tags = []

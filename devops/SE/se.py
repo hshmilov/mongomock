@@ -14,6 +14,7 @@ from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint, greenprint, blueprint
 from axonius.entities import EntityType
+from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
@@ -81,7 +82,8 @@ def usage():
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     {name} ru [container-name] - Recover uwsgi
-    {name} kill [adapters]
+    {name} kill [adapters / wd] - kill all adapters / kill all watchdogs
+    {name} tc [run/stop] Run tunnel (mongo & core) to core 
     '''
 
 
@@ -557,6 +559,20 @@ def main():
             subprocess.check_call(
                 kill_command, shell=True, cwd=ROOT_DIR
             )
+        elif what_to_kill == 'wd':
+            kill_command = 'kill -9 `ps aux | grep python | grep watchdog | awk \'{print $2}\'`'
+            subprocess.check_call(
+                kill_command, shell=True, cwd=ROOT_DIR
+            )
+        else:
+            print(usage())
+            return -1
+
+    elif component == 'tc':
+        if action == 'run':
+            run_tunnel_for_adapters_register()
+        elif action == 'stop':
+            stop_tunnel_for_adapters_register()
         else:
             print(usage())
             return -1
