@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import List
 from bson import ObjectId
 
@@ -34,6 +35,19 @@ def filter_by_name(names, additional_filter=None):
     if additional_filter and additional_filter != {}:
         return {'$and': [base_names, additional_filter]}
     return base_names
+
+
+def filter_by_date_range(from_date: datetime, to_date: datetime, additional_filter=None):
+    """
+    Returns a filter that filters in objects by date range
+    :param from_date: the earliest date to filter
+    :param to_date: the latest date to filter
+    :param additional_filter: optional - allows another filter to be made
+    """
+    base_range = {'timestamp': {'$gte': from_date, '$lt': to_date}}
+    if additional_filter and additional_filter != {}:
+        return {'$and': [base_range, additional_filter]}
+    return base_range
 
 
 def filter_by_ids(ids: List[str]):

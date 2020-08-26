@@ -3,7 +3,7 @@ const path = require('path');
 const { VueLoaderPlugin } = require('vue-loader');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-// import AntdDayjsWebpackPlugin from 'antd-dayjs-webpack-plugin';
+const AntdDayjsWebpackPlugin = require('antd-dayjs-webpack-plugin');
 
 module.exports = (env) => ({
   entry: {
@@ -51,7 +51,7 @@ module.exports = (env) => ({
     },
   },
   plugins: [
-    // new AntdDayjsWebpackPlugin(),
+    new AntdDayjsWebpackPlugin(),
     new VueLoaderPlugin(),
     new CleanWebpackPlugin(['dist']),
     new HtmlWebpackPlugin({

@@ -25,13 +25,28 @@ export default {
       },
       colFilters: {},
       historical: null,
+      queryStrings: {
+        date_from: null,
+        date_to: null,
+      },
     },
   },
   actions: {
     [FETCH_CSV]({ dispatch, state }) {
+      const params = [];
       const search = _get(state, 'view.query.search', '');
+      if (search) {
+        params.push(`search=${search}`);
+      }
+      const queryStrings = _get(state, 'view.queryStrings', {});
+      Object.keys(queryStrings)
+        .filter((item) => queryStrings[item])
+        .forEach((key) => {
+          params.push(`${key}=${queryStrings[key]}`);
+        });
+
       return dispatch(REQUEST_API, {
-        rule: `settings/audit/csv?search=${search}`,
+        rule: `settings/audit/csv?${params.join('&')}`,
       }).then((response) => downloadFile('csv', response));
     },
   },

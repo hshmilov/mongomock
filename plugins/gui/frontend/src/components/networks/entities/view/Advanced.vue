@@ -13,8 +13,17 @@
       :module="stateLocation"
       :fields="fields"
       :static-data="getMergedData()"
-      :searchable="true"
     >
+      <template
+        #search="{ onSearch, tableTitle, tableModule, tableView }"
+      >
+        <XTableSearchFilters
+          :module="tableModule"
+          :view="tableView"
+          :search-placeholder="tableTitle"
+          @search="onSearch"
+        />
+      </template>
       <template slot="actions">
         <XButton
           type="link"
@@ -37,14 +46,15 @@ import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { SET_MERGED_DATA_BY_ID } from '@store/modules/devices';
-import XTable from '../../../neurons/data/Table.vue';
-import XButton from '../../../axons/inputs/Button.vue';
+import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
+import XTable from '@neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
 import mergedData from '../../../../logic/mergeData';
 
 export default {
   name: 'XEntityAdvanced',
   components: {
-    XTable, XButton, PulseLoader,
+    XTable, XButton, PulseLoader, XTableSearchFilters,
   },
   props: {
     index: {
@@ -147,8 +157,7 @@ export default {
 </script>
 
 <style lang="scss">
-  .x-entity-advanced {
-    height: calc(100% - 30px);
-  }
-
+.x-entity-advanced {
+  height: 100%;
+}
 </style>

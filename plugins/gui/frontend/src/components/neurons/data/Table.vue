@@ -1,7 +1,6 @@
 <template>
   <div
     class="x-data-table"
-    :class="{ searchable }"
   >
     <XTableWrapper
       :title="tableTitle"
@@ -9,17 +8,15 @@
       :loading="loading || fetching || showTableSpinner"
       :error="content.error"
     >
-      <div
-        v-if="searchable"
-        slot="search"
-        class="header"
-      >
-        <XSearchInput
-          v-model="searchValue"
-          :placeholder="`Search ${tableTitle}...`"
-          @keyup.enter.native="onConfirmSearch"
+      <template slot="search">
+        <slot
+          name="search"
+          :on-search="onConfirmSearch"
+          :table-title="tableTitle"
+          :table-module="module"
+          :table-view="view"
         />
-      </div>
+      </template>
       <div
         v-if="selectionCount"
         slot="state"
@@ -131,7 +128,7 @@ import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
 import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '@store/mutations';
 import { FETCH_DATA_CONTENT } from '@store/actions';
-import XSearchInput from '../inputs/SearchInput.vue';
+import _capitalize from 'lodash/capitalize';
 import XTableWrapper from '../../axons/tables/TableWrapper.vue';
 import XTable from '../../axons/tables/Table.vue';
 import XTableData from './TableData';
@@ -140,7 +137,10 @@ import XButton from '../../axons/inputs/Button.vue';
 export default {
   name: 'XDataTable',
   components: {
-    XTableWrapper, XTable, XTableData, XButton, XSearchInput,
+    XTableWrapper,
+    XTable,
+    XTableData,
+    XButton,
   },
   props: {
     module: {
@@ -190,10 +190,6 @@ export default {
     staticSort: {
       type: Boolean,
       default: true,
-    },
-    searchable: {
-      type: Boolean,
-      default: false,
     },
     multipleRowSelection: {
       type: Boolean,
@@ -255,7 +251,7 @@ export default {
     },
     tableTitle() {
       if (this.title) return this.title;
-      return this.module.charAt(0).toUpperCase() + this.module.slice(1).toLowerCase();
+      return _capitalize(this.module);
     },
     content() {
       if (this.staticData && !this.moduleState.content) return { fetching: false };
@@ -375,25 +371,8 @@ export default {
         return value;
       }], [this.view.sort && this.view.sort.desc ? 'desc' : 'asc']);
     },
-    searchValue: {
-      get() {
-        return this.view.query.search;
-      },
-      set(search) {
-        this.updateView({
-          module: this.module,
-          view: {
-            page: 0,
-            query: {
-              filter: '',
-              search,
-            },
-          },
-        });
-        if (this.staticData) {
-          this.resetScrollPosition();
-        }
-      },
+    searchValue() {
+      return this.view.query.search;
     },
     searchValueLower() {
       return this.searchValue.toLowerCase();
@@ -501,7 +480,7 @@ export default {
           this.loading = false;
         }
       }).catch(() => {
-        this.loading = false
+        this.loading = false;
       });
     },
     onClickSize(size) {
@@ -583,22 +562,18 @@ export default {
 
 <style lang="scss">
   .x-data-table {
-    height: calc(100% - 66px);
-
-    .header {
-      .x-search-input {
-        display: block;
-      }
-    }
-
-    &.searchable .x-table{
-      height: calc(100% - 75px);
-    }
+    height: 100%;
 
     .selection {
       display: flex;
       align-items: center;
       margin-left: 12px;
+    }
+
+    .refresh-data {
+      .x-button {
+        padding: 0 5px;
+      }
     }
 
     .x-pagination {
@@ -658,6 +633,16 @@ export default {
           top: -20px;
         }
       }
+    }
+  }
+  .x-query {
+    ~ .x-data-table {
+      height: calc(100% - 64px);
+    }
+  }
+  .x-search-input {
+    ~ .x-data-table {
+      height: calc(100% - 30px);
     }
   }
 </style>

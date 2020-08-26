@@ -8,8 +8,18 @@
       endpoint="settings/audit"
       title="Items"
       :fields="fields"
-      :searchable="true"
     >
+      <template
+        #search="{ onSearch, tableTitle, tableModule, tableView }"
+      >
+        <XTableSearchFilters
+          :module="tableModule"
+          :search-placeholder="tableTitle"
+          :view="tableView"
+          enable-date-search
+          @search="onSearch"
+        />
+      </template>
       <template #actions>
         <XButton
           type="link"
@@ -31,15 +41,15 @@ import { mapActions } from 'vuex';
 import { FETCH_CSV } from '@store/modules/audit';
 
 import { Icon } from 'ant-design-vue';
-import XPage from '../axons/layout/Page.vue';
-import XTable from '../neurons/data/Table.vue';
-import XButton from '../axons/inputs/Button.vue';
-
+import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
+import XPage from '@axons/layout/Page.vue';
+import XTable from '@neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XAudit',
   components: {
-    XPage, XTable, XButton, AIcon: Icon,
+    XPage, XTable, XButton, AIcon: Icon, XTableSearchFilters,
   },
   data() {
     return {

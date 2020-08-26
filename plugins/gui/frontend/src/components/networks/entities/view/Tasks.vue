@@ -4,9 +4,18 @@
     :module="module"
     :fields="actionFields.items"
     :static-data="processedTasks"
-    :searchable="true"
     id-field="action_id"
   >
+    <template
+      #search="{ onSearch, tableTitle, tableModule, tableView }"
+    >
+      <XTableSearchFilters
+        :module="tableModule"
+        :view="tableView"
+        :search-placeholder="tableTitle"
+        @search="onSearch"
+      />
+    </template>
     <template slot="actions">
       <XButton
         type="link"
@@ -15,7 +24,7 @@
         @click="exportCSV"
       >
         <template v-if="exportInProgress">
-          <AIcon type="loading" />Exporting...
+          <XIcon type="loading" />Exporting...
         </template>
         <template v-else>Export CSV</template>
       </XButton>
@@ -25,16 +34,18 @@
 
 <script>
 import { mapActions } from 'vuex';
-import XTable from '../../../neurons/data/Table.vue';
-import XButton from '../../../axons/inputs/Button.vue';
+import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
+import XIcon from '@axons/icons/Icon';
+import XTable from '@neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
 
-import { actionsMeta } from '../../../../constants/enforcement';
-import { FETCH_DATA_CONTENT_CSV } from '../../../../store/actions';
+import { actionsMeta } from '@constants/enforcement';
+import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 
 export default {
   name: 'XEntityTasks',
   components: {
-    XTable, XButton,
+    XTable, XButton, XTableSearchFilters, XIcon,
   },
   props: {
     entityType: {

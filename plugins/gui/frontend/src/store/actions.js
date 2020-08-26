@@ -143,6 +143,13 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
     if (view.historical) {
       params.push(`history=${encodeURIComponent(view.historical)}`);
     }
+    if (view.queryStrings) {
+      Object.keys(view.queryStrings)
+        .filter((item) => view.queryStrings[item])
+        .forEach((key) => {
+          params.push(`${key}=${view.queryStrings[key]}`);
+        });
+    }
 
     dispatch(REQUEST_API, {
       rule: `${path}/count?${params.join('&')}`,
@@ -202,6 +209,13 @@ const createPostContentRequest = (state, payload) => {
     }
     if (view.colExcludedAdapters) {
       params.excluded_adapters = view.colExcludedAdapters;
+    }
+    if (view.queryStrings) {
+      Object.keys(view.queryStrings)
+        .filter((item) => view.queryStrings[item])
+        .forEach((key) => {
+          params[key] = view.queryStrings[key];
+        });
     }
   }
 

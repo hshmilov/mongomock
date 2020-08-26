@@ -9,9 +9,10 @@ import pymongo
 from flask import (jsonify, make_response)
 
 from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT
-from axonius.utils.gui_helpers import (paginated, search_filter)
+from axonius.utils.gui_helpers import (paginated, search_filter, historical_range)
 from axonius.utils.serial_csv.constants import DTFMT
 from gui.logic.db_helpers import translate_user_id_to_details
+from gui.logic.filter_utils import filter_by_date_range
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 
 # pylint: disable=no-member,inconsistent-return-statements
@@ -24,16 +25,26 @@ class Audit:
 
     @paginated()
     @search_filter()
+    @historical_range()
     @gui_route_logged_in()
-    def get_audit(self, limit: int, skip: int, search: str):
+    def get_audit(self, limit: int, skip: int, search: str, from_date: datetime, to_date: datetime):
         if not search:
-            limited_activity_logs = self._fetch_audit().skip(skip).limit(limit)
+            limited_activity_logs = self._fetch_audit(from_date, to_date).skip(skip).limit(limit)
             return jsonify([self._format_activity(activity) for activity in limited_activity_logs])
 
-        return jsonify(self._get_activities_formatted_filtered(search)[skip:(skip + limit)])
+        return jsonify(self._get_activities_formatted_filtered(search, from_date, to_date)[skip:(skip + limit)])
 
-    def _fetch_audit(self):
-        return self._audit_collection.find().sort([('timestamp', pymongo.DESCENDING)])
+    def _fetch_audit(self, from_date: datetime, to_date: datetime):
+        audit_filter = {}
+        if from_date and to_date:
+            audit_filter = filter_by_date_range(from_date, to_date)
+        return self._audit_collection.find(filter=audit_filter).sort([('timestamp', pymongo.DESCENDING)])
+
+    def _count_audit(self, from_date: datetime, to_date: datetime):
+        audit_filter = {}
+        if from_date and to_date:
+            audit_filter = filter_by_date_range(from_date, to_date)
+        return self._audit_collection.count_documents(audit_filter)
 
     def _format_activity(self, activity: dict, format_date=False) -> dict:
         """
@@ -87,10 +98,10 @@ class Audit:
             for field, processor in audit_field_to_processor.items()
         }
 
-    def _get_activities_formatted_filtered(self, search, format_date=False):
+    def _get_activities_formatted_filtered(self, search, from_date: datetime, to_date: datetime, format_date=False):
         search = search.lower().strip()
         matching_activities = []
-        for activity in self._fetch_audit():
+        for activity in self._fetch_audit(from_date, to_date):
             formatted_activity = self._format_activity(activity, format_date)
             stringified_activity = ','.join([value for value
                                              in formatted_activity.values() if isinstance(value, str)]).lower()
@@ -100,20 +111,22 @@ class Audit:
         return matching_activities
 
     @search_filter()
+    @historical_range()
     @gui_route_logged_in('count')
-    def get_audit_count(self, search):
+    def get_audit_count(self, search, from_date: datetime, to_date: datetime):
         """
         :return: filtered users collection size (without axonius users)
         """
         if not search:
-            return jsonify(self._audit_collection.count_documents({}))
+            return jsonify(self._count_audit(from_date, to_date))
 
-        return jsonify(len(self._get_activities_formatted_filtered(search)))
+        return jsonify(len(self._get_activities_formatted_filtered(search, from_date, to_date)))
 
     @search_filter()
+    @historical_range()
     @gui_route_logged_in('csv')
-    def get_audit_csv(self, search):
-        csv_audit_data = self._get_activities_formatted_filtered(search, format_date=True)
+    def get_audit_csv(self, search, from_date: datetime, to_date: datetime):
+        csv_audit_data = self._get_activities_formatted_filtered(search, from_date, to_date, format_date=True)
         csv_string = io.StringIO()
         dw = csv.DictWriter(csv_string, ['type', 'date', 'user', 'action', 'category', 'message'])
         dw.writeheader()
