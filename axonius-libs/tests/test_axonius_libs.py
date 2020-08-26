@@ -4,11 +4,13 @@ from axonius.utils.parsing import figure_out_os
 def test_figure_out_os():
     assert figure_out_os('Microsoft Windows Server 2016 (64-bit)') == {'type': 'Windows', 'distribution': 'Server 2016',
                                                                        'bitness': 64,
+                                                                       'type_distribution': 'Windows Server 2016',
                                                                        'is_windows_server': True,
                                                                        'os_str':
                                                                            'Microsoft Windows '
                                                                            'Server 2016 (64-bit)'.lower()}
     assert figure_out_os('Canonical, Ubuntu, 16.04 LTS') == {'type': 'Linux', 'distribution': 'Ubuntu',
+                                                             'type_distribution': 'Linux Ubuntu',
                                                              'bitness': None,
                                                              'os_str': 'Canonical, Ubuntu, 16.04 LTS'.lower()}
     assert figure_out_os('iphone') == {'type': 'iOS', 'distribution': None, 'bitness': None,

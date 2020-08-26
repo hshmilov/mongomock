@@ -27,6 +27,7 @@ class JamfLocation(SmartJsonClass):
     real_name = Field(str, 'Real Name')
     room = Field(str, 'Room')
     username = Field(str, 'Username')
+    position = Field(str, 'Position')
 
 
 class JamfSite(SmartJsonClass):
@@ -289,6 +290,8 @@ class JamfAdapter(AdapterBase, Configurable):
                                 'email_address') if jamf_location_raw.get('email_address') else None,
                             phone_number=jamf_location_raw.get(
                                 'phone_number') if jamf_location_raw.get('phone_number') else None,
+                            position=jamf_location_raw.get(
+                                'position') if jamf_location_raw.get('position') else None,
                             real_name=jamf_location_raw.get(
                                 'real_name') if jamf_location_raw.get('real_name') else None,
                             room=jamf_location_raw.get('room') if jamf_location_raw.get('room') else None,

@@ -408,6 +408,8 @@ def figure_out_os(s):
                    'os_str': s}
     if os_type == 'Windows':
         return_dict['is_windows_server'] = is_windows_server
+    if os_type and distribution:
+        return_dict['type_distribution'] = os_type + ' ' + distribution
     return return_dict
 
 

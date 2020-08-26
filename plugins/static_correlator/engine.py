@@ -508,7 +508,8 @@ def cb_defense_basic_id_condradict(adapter_device1, adapter_device2):
 
 
 def force_mac_adapters(adapter_device):
-    return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter', 'aws_adapter']
+    return adapter_device.get('plugin_name') in ['sentinelone_adapter', 'carbonblack_defense_adapter', 'aws_adapter',
+                                                 'nexpose_adapter']
 
 # pylint: disable=global-statement
 

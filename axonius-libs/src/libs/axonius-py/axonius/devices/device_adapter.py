@@ -176,6 +176,7 @@ class DeviceAdapterOS(SmartJsonClass):
                            'Netscaler']
     )
     distribution = Field(str, 'Distribution')
+    type_distribution = Field(str, 'Type and Distribution')
     is_windows_server = Field(bool, 'Is Windows Server')
     os_str = Field(str, 'Full OS String')
     bitness = Field(int, 'Bitness', enum=[32, 64])
