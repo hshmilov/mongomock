@@ -104,7 +104,7 @@ class EntitiesPage(Page):
     TABLE_CELL_HOVER_REMAINDER_CSS = 'tbody .x-table-row.clickable:nth-child({row_index}) td:nth-child({cell_index}) ' \
                                      '.x-data .x-slice .remainder'
     TABLE_DATA_ROWS_TEXT_CSS = '.x-data > div'
-    TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom\')]'
+    TABLE_SCHEMA_CUSTOM = '//div[contains(@class, \'x-schema-custom__content\')]'
     TABLE_FIELD_ROWS_XPATH_WITH_IDS = '//div[contains(@class, \'x-tabs\')]//div[contains(@class, \'x-tab active\')]'\
                                       '//div[@class=\'x-table\']//tr[@class=\'x-table-row\' and @id]'
     TABLE_PAGE_SIZE_XPATH = '//div[@class=\'x-pagination\']/div[@class=\'x-sizes\']/div[text()=\'{page_size_text}\']'

@@ -77,18 +77,19 @@ class TestEnforcementExecution(TestBase):
             assert any(RUN_CMD_ACTION_NAME.lower().replace(' ', '_') in name for name in vertical_tabs), \
                 'Different vertical tabs than excepted'
             custom_execution_data = self.devices_page.get_all_custom_data()
-            assert len(custom_execution_data) == 5
+            assert len(custom_execution_data) == 4
 
             # Check file existence
-            dir_contents, after_dir = custom_execution_data[0].split(
+            command_output = custom_execution_data[1]
+            dir_contents, after_dir = command_output.split(
                 f'\n{self.enforcements_page.FIRST_ENFORCEMENT_EXECUTION_DIR_SEPERATOR}')
             assert full_first_file_name in dir_contents  # the file has to be there
             assert full_second_file_name in dir_contents  # the file has to be there
-            before_dir, dir_contents = custom_execution_data[0].split(
+            before_dir, dir_contents = command_output.split(
                 f'\n{self.enforcements_page.SECOND_ENFORCEMENT_EXECUTION_DIR_SEPERATOR}')
             assert full_first_file_name not in dir_contents  # the file was deleted, shouldn't be there
             assert full_second_file_name not in dir_contents  # the file was deleted, shouldn't be there
 
             # Check file contents
-            assert FIRST_FILE_CONTENTS in custom_execution_data[0]
-            assert SECOND_FILE_CONTENTS in custom_execution_data[0]
+            assert FIRST_FILE_CONTENTS in command_output
+            assert SECOND_FILE_CONTENTS in command_output
