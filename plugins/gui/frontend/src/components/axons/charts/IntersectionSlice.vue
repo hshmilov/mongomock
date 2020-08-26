@@ -4,15 +4,21 @@
       :id="intersectingColors.length ? `defined-colors-${chartId}` : 'intersection-2-3'"
     >
       <stop
-        class="pie-stop-2"
-        :style="firstIntersectionStyle"
+        class="pie-stop-3"
+        :style="secondIntersectionStyle"
         offset="0%"
       />
       <template v-for="n in 9">
         <stop
-          :key="`pie-stop-${n}`"
+          :key="n"
           :class="`pie-stop-${(n % 2) ? 2 : 3}`"
           :style="(n % 2) ? secondIntersectionStyle : firstIntersectionStyle"
+          :offset="`${n}0%`"
+        />
+        <stop
+          :key="n * 10"
+          :class="`pie-stop-${(n % 2) ? 3 : 2}`"
+          :style="(n % 2) ? firstIntersectionStyle : secondIntersectionStyle"
           :offset="`${n}0%`"
         />
       </template>

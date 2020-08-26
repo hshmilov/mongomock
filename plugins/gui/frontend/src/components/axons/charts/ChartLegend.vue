@@ -194,7 +194,6 @@ export default {
         height: 16px;
         width: 16px;
         border-radius: 4px;
-        opacity: 0.8;
       }
 
       .column-name {
