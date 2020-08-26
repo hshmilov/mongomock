@@ -12,6 +12,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.clients.fresh_service.consts import IMPACT_DICT
+from axonius.plugin_base import add_rule, return_error
 from fresh_service_adapter.client_id import get_client_id
 
 
@@ -42,6 +43,28 @@ class FreshServiceAdapter(AdapterBase, Configurable):
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
+
+    @add_rule('create_ticket', methods=['POST'])
+    def create_ticket(self):
+        if self.get_method() != 'POST':
+            return return_error('Medhod not supported', 405)
+        fresh_service_dict = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                with conn:
+                    group_name = None
+                    try:
+                        group_name = fresh_service_dict.pop('group_name', None)
+                    except Exception:
+                        pass
+                    success = success or conn.create_ticket(fresh_service_dict, group_name=group_name)
+                    if success is True:
+                        return '', 200
+            except Exception:
+                logger.exception(f'Could not connect to {client_id}')
+        return 'Failure', 400
 
     @staticmethod
     def get_connection(client_config):

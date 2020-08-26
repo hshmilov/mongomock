@@ -3,6 +3,7 @@ import logging
 from axonius.consts import report_consts
 from axonius.clients.fresh_service.connection import FreshServiceConnection
 from axonius.types.enforcement_classes import AlertActionResult
+from reports.action_types.action_type_base import add_node_selection, add_node_default
 from reports.action_types.action_type_alert import ActionTypeAlert
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -15,6 +16,10 @@ FRESH_SERVICE_PRIORITY = {
 }
 
 
+ADAPTER_NAME = 'fresh_service_adapter'
+# pylint: disable=W0212
+
+
 class FreshServiceIncidentAction(ActionTypeAlert):
     """
     Creates an incident in the fresh_service account
@@ -22,8 +27,13 @@ class FreshServiceIncidentAction(ActionTypeAlert):
 
     @staticmethod
     def config_schema() -> dict:
-        return {
+        schema = {
             'items': [
+                {
+                    'name': 'use_adapter',
+                    'title': 'Use stored credentials from the Fresh Service adapter',
+                    'type': 'bool'
+                },
                 {
                     'name': 'domain',
                     'title': 'Freshservice domain',
@@ -70,7 +80,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                     'name': 'priority',
                     'title': 'Priority',
                     'type': 'string',
-                    'enum': FRESH_SERVICE_PRIORITY.keys()
+                    'enum': list(FRESH_SERVICE_PRIORITY.keys())
                 },
                 {
                     'name': 'group_name',
@@ -79,16 +89,17 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                 }
             ],
             'required': [
-                'domain', 'apikey', 'priority', 'verify_ssl',
+                'use_adapter', 'priority', 'verify_ssl',
                 'description_default', 'ticket_email',
                 'incident_description', 'subject',
             ],
             'type': 'array'
         }
+        return add_node_selection(schema)
 
     @staticmethod
     def default_config() -> dict:
-        return {
+        return add_node_default({
             'description_default': False,
             'incident_description': None,
             'domain': None,
@@ -98,10 +109,12 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             'priority': 'low',
             'verify_ssl': True,
             'ticket_email': None,
-            'group_name': None
-        }
+            'group_name': None,
+            'use_adapter': False
+        })
 
-    def _create_fresh_service_incident(self, description, subject, ticket_email, priority, group_name):
+    def _create_fresh_service_incident(self, description, subject, ticket_email, priority, group_name,
+                                       adapter_unique_name):
         fresh_service_dict = {'subject': subject,
                               'description': description,
                               'email': ticket_email,
@@ -109,6 +122,11 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                               'status': 2
                               }
         try:
+            if self._config.get('use_adapter') is True:
+                fresh_service_dict['group_name'] = group_name
+                response = self._plugin_base.request_remote_plugin('create_ticket', adapter_unique_name, 'post',
+                                                                   json=fresh_service_dict)
+                return response.text
             if not self._config.get('domain') or not self._config.get('apikey'):
                 return 'Missing Parameters For Connection'
             fresh_service_connection = FreshServiceConnection(domain=self._config['domain'],
@@ -123,6 +141,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             return f'Got exception creating fresh_service incident: {str(e)}'
 
     def _run(self) -> AlertActionResult:
+        adapter_unique_name = self._plugin_base._get_adapter_unique_name(ADAPTER_NAME, self.action_node_id)
         if not self._internal_axon_ids:
             return AlertActionResult(False, 'No Data')
         old_results_num_of_devices = len(self._internal_axon_ids) + len(self._removed_axon_ids) - \
@@ -141,5 +160,6 @@ class FreshServiceIncidentAction(ActionTypeAlert):
                                                       subject=self._config['subject'],
                                                       priority=FRESH_SERVICE_PRIORITY.get(self._config['priority']),
                                                       ticket_email=self._config['ticket_email'],
-                                                      group_name=self._config.get('group_name'))
+                                                      group_name=self._config.get('group_name'),
+                                                      adapter_unique_name=adapter_unique_name)
         return AlertActionResult(not message, message or 'Success')

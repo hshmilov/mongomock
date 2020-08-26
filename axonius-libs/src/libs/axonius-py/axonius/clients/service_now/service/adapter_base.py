@@ -750,6 +750,8 @@ class ServiceNowAdapterBase(AdapterBase):
                     device.last_seen = max(sys_updated_on, last_discovered)
                 elif last_discovered or sys_updated_on:
                     device.last_seen = last_discovered or sys_updated_on
+                if device_raw.get('u_last_seen'):
+                    device.last_seen = device_raw.get('u_last_seen')
                 device.created_at = parse_date((device_raw.get('sys_created_on')))
                 device.created_by = device_raw.get('sys_created_by')
             except Exception:

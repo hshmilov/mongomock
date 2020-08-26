@@ -44,6 +44,8 @@ def parse_msft_release_version(os_string):
         matched_version = re.findall(WINDOWS_VERSION_REGEX, os_string)
         if matched_version and matched_version[0].startswith(rls_ver):
             if isinstance(win_ver, dict):
+                if '2016' in os_string or '2019' in os_string:
+                    return None
                 for build, ver in win_ver.items():
                     return ver if build in os_string else win_ver.get('default')
             return win_ver

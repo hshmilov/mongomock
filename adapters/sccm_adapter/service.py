@@ -331,6 +331,8 @@ class SccmAdapter(AdapterBase, Configurable):
                         if not isinstance(guard_compliance_data, dict):
                             guard_compliance_data = {}
                         guard_compliance_state = guard_compliance_data.get('ComplianceState')
+                        if isinstance(guard_compliance_state, int):
+                            guard_compliance_state = str(guard_compliance_state)
                         if guard_compliance_state == '1':
                             device.guard_compliance_state = 'Compliant'
                         elif guard_compliance_state == '3':

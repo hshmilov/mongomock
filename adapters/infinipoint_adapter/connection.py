@@ -33,7 +33,7 @@ class InfinipointConnection(RESTConnection):
             'pageSize': DEVICE_PER_PAGE,
             'page': page,
             'sortBy': [
-                'count'
+                'host'
             ],
             'sortDirection': [
                 'DESC'
