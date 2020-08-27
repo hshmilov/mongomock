@@ -53,6 +53,7 @@ class TestEmailEnforce(TestBase):
             }
         ))
 
+    @pytest.mark.skip('Will probably fixed on AX-7472')
     def test_email_enforce_with_changed_columns(self):
         self._test_email_enforce(dict(
             query=self.devices_page.VALUE_OS_WINDOWS,
