@@ -76,6 +76,9 @@ TANIUM_SQ_ADAPTER = 'Tanium Interact'
 TANIUM_DISCOVERY_ADAPTER = 'Tanium Discover'
 TANIUM_ASSET_ADAPTER = 'Tanium Asset'
 
+OKTA_ADAPTER = 'okta_adapter'
+OKTA_ADAPTER_NAME = 'Okta'
+
 WINDOWS_QUERY_NAME = 'Windows Operating System'
 LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'

@@ -1637,6 +1637,10 @@ class SettingsPage(Page):
         toggle = self.find_checkbox_by_label(self.USE_S3_INTEGRATION)
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
 
+    def set_s3_integration_settings_disabled(self):
+        toggle = self.find_checkbox_by_label(self.USE_S3_INTEGRATION)
+        self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
+
     def set_s3_backup_settings_enabled(self, make_yes=True):
         toggle = self.find_checkbox_by_label(self.USE_S3_BACKUP)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)

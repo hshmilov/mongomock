@@ -15,6 +15,7 @@ class CompliancePage(Page):
     TITLE_PASSED_CSS = 'div[title="Passed"]'
     SCORE_VALUE_CSS = 'span.score-value'
     ENFORCE_MENU_BUTTON = 'Enforce'
+    ENFORCE_BY_MAIL_BUTTON_ID = 'cis_send_mail'
     ENFORCEMENTS_FEATURE_LOCK_TIP_CSS = '.x-enforcements-feature-lock-tip'
     ENFORCE_MENU_DROPDOWN_CSS = '.x-enforcement-menu'
     SCORE_RULES_MODAL_CSS = '.x-compliance-active-rules'
@@ -24,6 +25,7 @@ class CompliancePage(Page):
     ACCOUNTS_FILTER_DROPDOWN_CSS = '.accounts-filter .x-combobox'
     ACCOUNTS_FILTER_OPTIONS_CSS = '.v-select-list .v-list-item'
     FAILED_ONLY_FILTER_CSS = 'button[label=\'Failed only\']'
+    AGGREGATED_VIEW_FILTER_CSS = 'button[label=\'Aggregated view\']'
 
     FILTER_ROW_XPATH = '//div[contains(@class, \'v-select-list\')]//div[contains(@class, \'v-list\')]//' \
                        'div[contains(@class, \'v-list-item\')]//' \
@@ -39,6 +41,11 @@ class CompliancePage(Page):
     ACCOUNT_FIELD = 'Results (Failed/Checked)'
     AWS_DEFAULT_RULES_NUMBER = 43
     AZURE_DEFAULT_RULES_NUMBER = 76
+
+    COMPLIANCE_MAIL_ENFORCE_MODAL_CSS = '.x-modal compliance_email_dialog'
+    EMAIL_SUBJECT_ID = 'mailSubject'
+    EMAIL_AWS_ADMINS_ID = 'accountAdmins'
+    EMAIL_SEND_BUTTON_CSS = '.modal-footer .ant-btn-primary'
 
     @property
     def url(self):
@@ -157,6 +164,10 @@ class CompliancePage(Page):
         self.driver.find_element_by_css_selector(self.FAILED_ONLY_FILTER_CSS).click()
         self.wait_for_table_to_load()
 
+    def toggle_aggregated_view(self):
+        self.driver.find_element_by_css_selector(self.AGGREGATED_VIEW_FILTER_CSS).click()
+        self.wait_for_table_to_load()
+
     def assert_default_number_of_rules(self):
         #  asserts the count, to the default number of rules currently defined in cac.
         return self.get_total_rules_count() == self.AWS_DEFAULT_RULES_NUMBER
@@ -169,3 +180,28 @@ class CompliancePage(Page):
         self.driver.find_element_by_css_selector(self.CIS_SELECT_CSS).click()
         self.driver.find_element_by_xpath(self.CIS_OPTION_XPATH.format(cis_title=title)).click()
         self.wait_for_table_to_be_responsive()
+
+    def open_email_dialog(self):
+        self.click_enforce_menu()
+        self.driver.find_element_by_id(self.ENFORCE_BY_MAIL_BUTTON_ID).click()
+        self.wait_for_table_to_be_responsive()
+
+    def wait_for_email_modal(self):
+        self.wait_for_element_present_by_css(self.COMPLIANCE_MAIL_ENFORCE_MODAL_CSS)
+
+    def fill_enforce_by_mail_form(self, name, recipient=None, body=None, send_to_admins=False):
+        self.fill_text_field_by_element_id(self.EMAIL_SUBJECT_ID, name)
+        if recipient:
+            self.fill_text_field_by_css_selector('.md-input', recipient, context=self.find_field_by_label('Recipients'))
+            elem = self.find_field_by_label('Recipients').find_element_by_css_selector('.md-input')
+            self.key_down_enter(elem)
+        if body:
+            custom_message_element = self.driver.find_element_by_xpath(
+                self.DIV_BY_LABEL_TEMPLATE.format(label_text='Custom message (up to 500 characters)')
+            )
+            self.fill_text_field_by_tag_name('textarea', body, context=custom_message_element)
+            assert custom_message_element.find_element_by_tag_name('textarea').get_attribute('value') == body[:500]
+        if send_to_admins:
+            self.driver.find_element_by_id(self.EMAIL_AWS_ADMINS_ID).click()
+        self.driver.find_element_by_css_selector(self.EMAIL_SEND_BUTTON_CSS).click()
+        self.wait_for_spinner_to_end()

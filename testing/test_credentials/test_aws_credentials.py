@@ -17,6 +17,12 @@ EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY = 'hVczouTBZwP2o465urtMKRMXtIdbVfAZzp0aVY
 AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID = 'AKIA3V3ZN7E5MN5XEH7B'
 AWS_DEV_3_TESTING_BUCKET_RW_SECRET_ACCESS_KEY = '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'
 
+AWS_AX_DEV2_READONLY_ACCESS_KEY = 'AKIA34TVV3UB66YCCAUB'
+AWS_AX_DEV2_READONLY_SECRET_ACCESS_KEY = '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'
+
+AWS_AX_DEV3_READONLY_ACCESS_KEY = 'AKIA3V3ZN7E5MIRFMY7P'
+AWS_AX_DEV3_READONLY_SECRET_ACCESS_KEY = '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'
+
 # client details with ids
 client_details = [
     ({
@@ -40,9 +46,22 @@ client_details = [
             'file.txt',
             'arn:aws:iam::817364327683:role/AxoniusDevRole, arn:aws:iam::802876684602:role/Axonius-Readonly-Role'
         )
-    }, [US_EAST_1_EKS_NODE_ID, US_EAST_1_TEST_1_AWS_DEV_2_ROLE_TEST, US_EAST_1_TEST_1_AWS_DEV_3_ROLE_TEST])
+    }, [US_EAST_1_EKS_NODE_ID, US_EAST_1_TEST_1_AWS_DEV_2_ROLE_TEST, US_EAST_1_TEST_1_AWS_DEV_3_ROLE_TEST]),
+    ({
+        "aws_access_key_id": AWS_AX_DEV2_READONLY_ACCESS_KEY,
+        "aws_secret_access_key": AWS_AX_DEV2_READONLY_SECRET_ACCESS_KEY,
+        "region_name": "us-east-2",
+        "get_all_regions": False
+    }, []),
+    ({
+        "aws_access_key_id": AWS_AX_DEV3_READONLY_ACCESS_KEY,
+        "aws_secret_access_key": AWS_AX_DEV3_READONLY_SECRET_ACCESS_KEY,
+        "region_name": "us-east-2",
+        "get_all_regions": False
+    }, []),
 ]
 
+# pylint: disable=invalid-name
 client_ec2_with_proxy = client_details[0][0].copy()
 client_ecs_with_proxy = client_details[1][0].copy()
 client_ec2_with_proxy['proxy'] = f"{PROXY_IP}:{PROXY_PORT}"

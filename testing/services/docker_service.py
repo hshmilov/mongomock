@@ -505,7 +505,7 @@ class DockerService(AxonService):
         :param folder_path: the absolute path inside the container.
         :return: the contents
         """
-        p = subprocess.Popen(['docker', 'exec', self.container_name, 'ls', folder_path],
+        p = subprocess.Popen(['docker', 'exec', self.container_name, 'ls', '-t', folder_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
             (out, err) = p.communicate(timeout=60)

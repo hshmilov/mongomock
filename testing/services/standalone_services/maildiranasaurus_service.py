@@ -52,7 +52,7 @@ class MaildiranasaurusService(SmtpService):
 
     def get_mail_folder(self):
         mail_name, _, _ = self.get_folder_content_from_container('/tmp/mail_dir/new')
-        file_name = mail_name.decode('utf-8').strip()
+        file_name = mail_name.decode('utf-8').split('\n')[:-1][0]
         out, _, _ = self.get_file_contents_from_container(f'/tmp/mail_dir/new/{file_name}')
         assert out
 

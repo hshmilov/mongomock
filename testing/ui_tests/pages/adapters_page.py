@@ -175,6 +175,10 @@ class AdaptersPage(EntitiesPage):
         self.find_element_by_text('Discovery Configuration').click()
         time.sleep(1.5)
 
+    def click_aws_advanced_configuration(self):
+        self.find_element_by_text('AWS Configuration').click()
+        time.sleep(1.5)
+
     def fill_schedule_date(self, text):
         self.fill_text_field_by_css_selector(self.CUSTOM_DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
 

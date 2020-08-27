@@ -242,6 +242,13 @@ class TestGlobalSettings(TestBase):
         self.settings_page.fill_s3_preshared_key(passphrase)
         self.settings_page.save_and_wait_for_toaster()
 
+    def _disable_s3_integration(self):
+        self.settings_page.switch_to_page()
+        self.settings_page.click_global_settings()
+        self.settings_page.wait_for_spinner_to_end()
+        self.settings_page.set_s3_integration_settings_disabled()
+        self.settings_page.save_and_wait_for_toaster()
+
     def test_s3_backup(self):
         local_dir = _get_backup_files_local_dir()
         self.s3_passphrase = self._generate_random_passphrase()
@@ -281,6 +288,7 @@ class TestGlobalSettings(TestBase):
                 validate_data(self.axonius_system.get_devices_db(), devices_file_name)
                 validate_data(self.axonius_system.get_users_db(), users_file_name)
             finally:
+                self._disable_s3_integration()
                 remove_s3_backup_file(file_name)
                 shutil.rmtree(local_dir)
         else:
@@ -377,6 +385,7 @@ class TestGlobalSettings(TestBase):
 
             finally:
                 # Add adapters credentials for other tests.
+                self._disable_s3_integration()
                 self._toggle_root_master(False)
                 self.adapters_page.add_server(ad_client1_details)
                 self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
