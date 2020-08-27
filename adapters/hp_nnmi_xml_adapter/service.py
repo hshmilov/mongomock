@@ -194,22 +194,42 @@ class HpNnmiXmlAdapter(AdapterBase):
 
             # parse extended attributes
             ext_attrs_raw = device_raw.get('extendedAttributes')
-            ext_attrs = list()
-            if isinstance(ext_attrs_raw, dict):
-                attrs_list = ext_attrs_raw.get('attribute') or []
-                for attr_name, attr_val in attrs_list:
-                    try:
-                        ext_attrs.append(ExtendedAttribute(name=attr_name, val=attr_val))
-                    except Exception:
-                        logger.warning(f'Failed to parse extended attribute from {attr_name}: {attr_val}')
-            if ext_attrs:
-                device.ext_attrs = ext_attrs
+            try:
+                ext_attrs = self._parse_extended_attributes(ext_attrs_raw)
+                if ext_attrs:
+                    device.ext_attrs = ext_attrs
+            except Exception as e:
+                logger.warning(f'Failed to parse extended attributes for device {device_id}: {str(e)}')
+                logger.debug(f'Failed to parse extended attributes for {device_raw}', exc_info=True)
 
             device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with fetching HpNnmi Device for {device_raw}')
             return None
+
+    @staticmethod
+    def _parse_extended_attributes(ext_attrs_raw):
+        ext_attrs = list()
+        if isinstance(ext_attrs_raw, dict):
+            attrs_raw = ext_attrs_raw.get('attribute') or []
+            if isinstance(attrs_raw, dict):
+                attrs_raw = [attrs_raw]
+            if attrs_raw and isinstance(attrs_raw, list):
+                for attr_raw_dict in attrs_raw:
+                    if not isinstance(attr_raw_dict, dict):
+                        logger.warning(f'Unable to parse extended attribute: expected dict, '
+                                       f'got {attr_raw_dict} instead.')
+                        continue
+                    attr_name = attr_raw_dict.get('name')
+                    attr_val = attr_raw_dict.get('value')
+                    try:
+                        ext_attrs.append(ExtendedAttribute(name=attr_name, val=attr_val))
+                    except Exception:
+                        logger.warning(f'Failed to parse extended attribute from {attr_name}: {attr_val}')
+            else:
+                logger.warning(f'Failed to parse extended attributes from {attrs_raw}')
+        return ext_attrs
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
