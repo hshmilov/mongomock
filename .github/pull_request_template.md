@@ -10,6 +10,7 @@ Specify a one-line description of what this PR is doing
 - [ ] Make sure you wrote tests for the code you changed or added. If you are in a rush, open an Automatic Test ticket and make yourself the assignee.
 - [ ] Make sure tests are passing. If some of the tests are flaky and it's not your fault, ask a team leader to merge your PR.
 - [ ] If your changes are relevant in upgrade, run upgrade tests manually as well. Add a link to a passing build here.
+- [ ] Review given in accordance with the [Code Review Guide](https://axonius.atlassian.net/wiki/spaces/AX/pages/1627914241/How+to+Code+Review)
 
 ### Product Checklist
 
