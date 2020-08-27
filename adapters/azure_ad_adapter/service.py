@@ -10,19 +10,31 @@ from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from azure_ad_adapter.connection import AUTHORITY_HOST_URL, AzureAdClient
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 AZURE_AD_DEVICE_TYPE = 'Azure AD'
 INUTE_DEVICE_TYPE = 'Intune'
 
 INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS = 90
 DAYS_TO_WARN_BEFORE_INTUNE_EXPIRY = 14
+
+
+class EmailActivity(SmartJsonClass):
+    is_deleted = Field(bool, 'Deleted')
+    deleted_date = Field(datetime.datetime, 'Deleted Date')
+    send_count = Field(int, 'Send Count')
+    receive_count = Field(int, 'Receive Count')
+    read_count = Field(int, 'Read Count')
+    report_date = Field(datetime.datetime, 'Report Date')
+    report_period = Field(int, 'Report Period')
+    product_license = Field(str, 'License')
 
 
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
@@ -59,6 +71,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
         ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time)')
         is_resource_account = Field(bool, 'Is Resource Account')
         user_type = Field(str, 'User Type', enum=['Member', 'Guest'])
+        # This data is collected from Office 365.
+        email_activity = Field(EmailActivity, 'Email Activity')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -85,7 +99,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                        allow_fetch_mfa=self.__allow_fetch_mfa,
                                        parallel_count=self.__parallel_count,
                                        async_retry_time=self.__async_retry_time,
-                                       async_retry_max=self.__async_retries_max
+                                       async_retry_max=self.__async_retries_max,
+                                       email_activity_period=self.__email_activity_period
                                        )
             auth_code = client_config.get(AZURE_AUTHORIZATION_CODE)
             refresh_tokens_db = self._get_collection('refresh_tokens')
@@ -110,9 +125,9 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                     self.create_notification(
                                         title='Azure AD Adapter: Intune token is about to expire',
                                         content=f'The Azure AD Intune token for tenant {tenant_id!r} '
-                                        f'has been generated on {generation_time}, and is '
-                                        f'by default valid for {INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS} '
-                                        f'days. It is about to expire in {days_until_expire} days',
+                                                f'has been generated on {generation_time}, and is '
+                                                f'by default valid for {INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS} '
+                                                f'days. It is about to expire in {days_until_expire} days',
                                         threshold_settings=(f'azure-ad-intune-token-{tenant_id}', 60 * 24)
                                     )
                             except Exception:
@@ -136,7 +151,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                         if 'expired' in str(e).lower():
                             if self.__do_not_fail_on_intune:
                                 notification_content = f'Intune token for tenant {tenant_id!r} has expired, ' \
-                                    f'Azure AD adapter is not fetching Intune data'
+                                                       f'Azure AD adapter is not fetching Intune data'
                                 self.create_notification(
                                     f'Azure AD Adapter: Intune token expired',
                                     content=notification_content,
@@ -202,7 +217,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'name': AZURE_AD_CLOUD_ENVIRONMENT,
                     'title': 'Cloud Environment',
                     'type': 'string',
-                    'enum': ['Global', 'China'],    # if you add something here, change azure_cis_account_report.py
+                    'enum': ['Global', 'China'],  # if you add something here, change azure_cis_account_report.py
                     'default': 'Global'
                 },
                 {
@@ -525,6 +540,19 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 if isinstance(is_resource_account, bool):
                     user.is_resource_account = is_resource_account
 
+                if isinstance(raw_user_data.get('extra_email_activity'), dict):
+                    email_activity = raw_user_data.get('extra_email_activity')
+                    email_activity_object = EmailActivity()
+                    email_activity_object.is_deleted = parse_bool_from_raw(email_activity.get('Is Deleted'))
+                    email_activity_object.deleted_date = parse_date(email_activity.get('Deleted Date'))
+                    email_activity_object.send_count = int_or_none(email_activity.get('Send Count'))
+                    email_activity_object.receive_count = int_or_none(email_activity.get('Receive Count'))
+                    email_activity_object.read_count = int_or_none(email_activity.get('Read Count'))
+                    email_activity_object.report_date = parse_date(email_activity.get('Report Refresh Date'))
+                    email_activity_object.report_period = int_or_none(email_activity.get('Report Period'))
+                    email_activity_object.product_license = email_activity.get('Assigned Products')
+                    user.email_activity = email_activity_object
+
                 # set raw
                 user.set_raw(raw_user_data)
                 yield user
@@ -577,12 +605,21 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'name': 'async_error_sleep_time',
                     'title': 'Time in seconds to wait between retries of parallel requests',
                     'type': 'integer'
-                }
+                },
+                {
+                    'name': 'email_activity_period',
+                    'title': 'Fetch email activity from Office 365 in the last X days',
+                    'type': 'integer',
+                    'enum': [0, 7, 30, 90, 180],
+                    'description': 'The adapter will fetch email activity from Office 365 from the'
+                                   ' last amount of days specified here.'
+                },
+
             ],
             'required': [
                 'allow_beta_api',
                 'allow_fetch_mfa',
-                'do_not_fail_on_intune'
+                'do_not_fail_on_intune',
             ],
             'pretty_name': 'Azure AD Configuration',
             'type': 'array'
@@ -597,7 +634,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
             'parallel_count': 10,
             'retry_max': 3,
             'async_error_sleep_time': 3,
-            'do_not_fail_on_intune': False
+            'do_not_fail_on_intune': False,
+            'email_activity_period': 0
         }
 
     def _on_config_update(self, config):
@@ -612,3 +650,4 @@ class AzureAdAdapter(AdapterBase, Configurable):
         self.__parallel_count = config['parallel_count']
         self.__async_retry_time = config['async_error_sleep_time']
         self.__do_not_fail_on_intune = config.get('do_not_fail_on_intune') or False
+        self.__email_activity_period = config.get('email_activity_period', 0)

@@ -1,3 +1,4 @@
+import csv
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -11,21 +12,22 @@ from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 AUTHORITY_HOST_URL = 'https://login.microsoftonline.com'
 CHINA_AUTHORITY_HOST_URL = 'https://login.partner.microsoftonline.cn'
 GRAPH_API_URL = 'https://graph.microsoft.com'
 GRAPH_API_PREFIX_BETA = '/beta'
 GRAPH_API_PREFIX_BASE = '/v1.0'
 CHINA_GRAPH_API_URL = 'https://microsoftgraph.chinacloudapi.cn'
-AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'    # legacy api required for azure ad b2c
+AZURE_AD_GRAPH_API_URL = 'https://graph.windows.net'  # legacy api required for azure ad b2c
 CHINA_AZURE_AD_GRAPH_API_URL = 'https://graph.chinacloudapi.cn'
+EMAIL_ACTIVITY_URL = 'https://graph.microsoft.com/v1.0/reports/getEmailActivityUserDetail(period=\'{period}\')'
 TEMPLATE_AUTHZ_URL = 'https://login.windows.net/{tenant_id}/oauth2/authorize?response_type=code&client_id={client_id}' \
                      '&redirect_uri=https://localhost&state=after-auth&resource=https://graph.microsoft.com' \
                      '&prompt=admin_consent'
-DEFAULT_EXPIRATION_IN_SECONDS = 60 * 20     # 20 min
+DEFAULT_EXPIRATION_IN_SECONDS = 60 * 20  # 20 min
 MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP = 20000
 LOG_DEVICES_COUNT = 50
+DEFAULT_EMAIL_ACTIVITY_PERIOD = 0
 USERS_ATTRIBUTES = [
     'accountEnabled',
     'city',
@@ -89,6 +91,7 @@ class AzureAdClient(RESTConnection):
                  parallel_count=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
                  async_retry_time=ASYNC_ERROR_SLEEP_TIME,
                  async_retry_max=MAX_ASYNC_RETRIES,
+                 email_activity_period=DEFAULT_EMAIL_ACTIVITY_PERIOD,
                  **kwargs):
         self._parallel_count = parallel_count
         self._async_retry_time = async_retry_time
@@ -100,6 +103,7 @@ class AzureAdClient(RESTConnection):
         self._tenant_id = tenant_id
         self._refresh_token = None
         self._is_azure_ad_b2c = is_azure_ad_b2c
+        self._email_activity_period = email_activity_period
 
         logger.info(f'Creating Azure AD with tenant {tenant_id} and client id {client_id}. '
                     f'B2C: {bool(is_azure_ad_b2c)} azure_region: {azure_region}')
@@ -343,6 +347,11 @@ class AzureAdClient(RESTConnection):
                     logger.exception(f'Failed to parse response for request {request_dict}')
                     continue
 
+        if self._email_activity_period:
+            user_statistics = self._get_users_from_office_365()
+            for user_pn in user_by_user_pn:
+                user_by_user_pn[user_pn]['extra_email_activity'] = user_statistics.get(user_pn)
+
         yield from user_by_user_pn.values()
 
     def _iter_graph_users(self):
@@ -352,6 +361,29 @@ class AzureAdClient(RESTConnection):
         # These two lines commented out due to bug in MS Graph API BETA, as of 4 JUN 2020
         # We have to specify the attributes, "*" is not supported.
         yield from self._paged_get(f'users?$select={",".join(attrs)}')
+
+    def _get_users_from_office_365(self):
+        email_activities = {}
+        try:
+            response = self._get(EMAIL_ACTIVITY_URL.format(period=f'D{self._email_activity_period}'),
+                                 use_json_in_response=False)
+            response = response.replace('\ufeff'.encode('UTF-8'), b'')
+            reader = csv.reader(response.decode('UTF-8').splitlines())
+            headers = next(reader, None)
+            if not isinstance(headers, list):
+                logger.error(f'Error while getting headers from Office365 response: {response}')
+                return {}
+            for row in reader:
+                email_activity = {}
+                for header, value in zip(headers, row):
+                    email_activity[header] = value
+
+                if email_activity.get('User Principal Name'):
+                    email_activities[email_activity.get('User Principal Name')] = email_activity
+            return email_activities
+        except Exception as err:
+            logger.exception(f'Invalid request made while fetching users from office 365{str(err)}')
+            return email_activities
 
     def test_connection(self):
         self.connect()
