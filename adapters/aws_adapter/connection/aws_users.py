@@ -9,7 +9,7 @@ import boto3
 
 from aws_adapter.connection.structures import AWSMFADevice, AWSIAMAccessKey, \
     AWSTagKeyValue, AWSIAMPolicy, AWSUserAdapter, AWSUserService, \
-    AWSIAMPolicyPermission, AWSIAMPolicyPrincipal, AWSIAMPolicyCondition
+    AWSIAMPolicyPermission, AWSIAMPolicyCondition, AWSIAMPolicyTrustedEntity
 from aws_adapter.connection.utils import get_paginated_marker_api, \
     create_custom_waiter, process_attached_iam_policy, process_inline_iam_policy
 from axonius.utils.datetime import parse_date
@@ -857,6 +857,8 @@ def query_roles_by_client_for_all_sources(client_data):
                                 new_role['path'] = role_data.get('Path')
                                 new_role['role_id'] = role_data.get('RoleId')
                                 new_role['role_name'] = role_name
+                                new_role['last_activity'] = role_data.get('RoleLastUsed')
+                                new_role['tags'] = role_data.get('Tags')
                             else:
                                 logger.warning(f'Malformed raw role data. '
                                                f'Expected a dict, got '
@@ -1036,6 +1038,11 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
         role.role_max_session_duration = role_raw.get('max_session')
         role.role_path = role_raw.get('path')
 
+        last_activity = role_raw.get('last_activity') or {}
+        role.last_activity_time = parse_date(last_activity.get('LastUsedDate'))
+        role.last_activity_region = last_activity.get('Region')
+        role.tags = _parse_role_tags(role_raw)
+
         # assume role policy
         assume_role_policies = role_raw.get('assume_role_policy')
         if isinstance(assume_role_policies, list):
@@ -1047,17 +1054,18 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                             if isinstance(policy, dict):
                                 principals = list()
                                 conditions = list()
+                                trusted_entities = list()
                                 policy_principal = policy.get('principal')
                                 if isinstance(policy_principal, list):
                                     for principal in policy_principal:
                                         if isinstance(principal, tuple):
                                             principal_type, principal_name = principal
                                             try:
-                                                principal_instance = AWSIAMPolicyPrincipal(
-                                                    principal_type=principal_type,
-                                                    principal_name=principal_name
+                                                trusted_entity = AWSIAMPolicyTrustedEntity(
+                                                    type=principal_type,
+                                                    name=principal_name
                                                 )
-                                                principals.append(principal_instance)
+                                                trusted_entities.append(trusted_entity)
                                             except Exception:
                                                 if principal is not None:
                                                     logger.exception(f'Malformed policy '
@@ -1112,11 +1120,12 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                     policy_action=policy.get('actions'),
                                     policy_conditions=conditions,
                                     policy_effect=policy.get('effect'),
-                                    policy_principals=principals,
+                                    policy_principals=principals,   # Deprecated in favor of Policies trusted_entity
                                     policy_sid=policy.get('sid')
                                 )
 
                                 role_assumed_policy = AWSIAMPolicy(
+                                    trusted_entities=trusted_entities,
                                     policy_permissions=[policy_permission],
                                     policy_version=assume_role_policy.get(
                                         'version')
@@ -1234,3 +1243,21 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
         logger.exception(f'Unable to parse user role')
 
     return role
+
+
+def _parse_role_tags(role_raw: dict):
+    tags = []
+    raw_tags = role_raw.get('tags')
+    if not isinstance(raw_tags, list):
+        logger.warning(f'Got unexpected type of role tags:{str(role_raw)}')
+        raw_tags = []
+
+    for raw_tag in raw_tags:
+        if isinstance(raw_tag, dict):
+            tags.append(
+                AWSTagKeyValue(
+                    key=raw_tag.get('Key'),
+                    value=raw_tag.get('Value')
+                )
+            )
+    return tags

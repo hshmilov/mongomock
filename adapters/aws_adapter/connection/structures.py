@@ -266,6 +266,11 @@ class AWSIAMPolicyPermission(SmartJsonClass):
     policy_sid = Field(str, 'Policy SID')
 
 
+class AWSIAMPolicyTrustedEntity(SmartJsonClass):
+    type = Field(str, 'Type')
+    name = Field(str, 'Name')
+
+
 class AWSIAMPolicy(SmartJsonClass):
     policy_arn = Field(str, 'Policy ARN')
     policy_attachment_count = Field(int, 'Policy Attachment Count')
@@ -274,6 +279,7 @@ class AWSIAMPolicy(SmartJsonClass):
     policy_id = Field(str, 'Policy ID')
     policy_is_attachable = Field(bool, 'Policy Is Attachable')
     policy_name = Field(str, 'Policy Name')
+    trusted_entities = ListField(AWSIAMPolicyTrustedEntity, 'Trusted Entities')
     policy_permissions = ListField(AWSIAMPolicyPermission, 'Policy Actions')
     policy_permission_boundary_count = Field(int, 'Policy Permission Boundary Count')
     policy_type = Field(str, 'Policy Type', enum=['Managed', 'Inline', 'Group Managed'])
@@ -743,6 +749,9 @@ class AWSUserAdapter(UserAdapter, AWSAdapter):
     role_path = Field(str, 'Role Path')
     role_id = Field(str, 'Role ID')
     role_name = Field(str, 'Role Name')
+    last_activity_time = Field(datetime.datetime, 'Last Activity Time')
+    last_activity_region = Field(str, 'Last Activity Region')
+    tags = ListField(AWSTagKeyValue, 'Tags')
 
 
 class OnlyAWSDeviceAdapter(AWSAdapter):
