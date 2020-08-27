@@ -72,7 +72,8 @@
               Provision a server that meets the following network
               requirements either by direct connection or by HTTPS proxy:
               <ul class="tunnel-unordered-list">
-                <li>Access to the internet via TCP port 443.</li>
+                <li>Access to the internet via TCP port 443 from the Tunnel server.</li>
+                <li>Access to the internet via TCP port 443 from the network gateway.</li>
                 <li>
                   Access to the sources of the adapters that will be
                   connected using this tunnel.
@@ -82,19 +83,19 @@
             <li>Install <a
               href="https://releases.ubuntu.com/16.04/"
               target="_blank"
-            >Ubuntu 16.04</a> on the server.</li>
+            >Ubuntu 16.04</a> or later on the Tunnel server.</li>
             <li>
               Install the <a
                 href="https://docs.docker.com/engine/install/ubuntu/"
                 target="_blank"
               >Docker Engine</a>
-              software on the Ubuntu 16.04 server.
+              software on the Tunnel server.
             </li>
             <li>
               Click the <strong>Download Tunnel</strong>
               button below to download the installation package.
             </li>
-            <li>Copy the installation package to your server.</li>
+            <li>Copy the installation package to the Tunnel server.</li>
             <li>
               Execute the installation package as the "root" user. For example:
               <ul class="tunnel-unordered-list">
