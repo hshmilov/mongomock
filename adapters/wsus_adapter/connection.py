@@ -5,6 +5,7 @@ import logging
 from axonius.utils.json import from_json
 
 from axonius.utils.parsing import get_exception_string
+from wsus_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -160,8 +161,8 @@ class WsusWmiConnection:
     def _wrap_and_escape_pscommand(command):
         return f'powershell.exe -c {command}'.replace('|', '^|')
 
-    def _get_device_count(self):
-        command = ['powershell.exe -c (Get-WsusServer).GetComputerTargetCount()']
+    def _get_device_count(self, get_target_count_cmd: str):
+        command = [f'powershell.exe -c {get_target_count_cmd}']
         try:
             return int(next(self._get_wmi_output(command)))
         except Exception as e:
@@ -173,12 +174,15 @@ class WsusWmiConnection:
         Get devices paginated, using Select-Object powershell cmdlet
         """
 
-        count_devices = self._get_device_count()
-        get_computer_targets_cmd = '(Get-WsusServer).GetComputerTargets()'
+        count_devices = self._get_device_count(consts.PS_COMMAND_TARGET_COUNT)
         max_devices = min(count_devices, MAX_DEVICES)
         for start in range(0, max_devices, DEVICE_PER_PAGE):
-            get_targets_cmd_paged = self._paginate_pscommand(get_computer_targets_cmd, start)
-            get_summary_cmd_paged = f'({get_targets_cmd_paged}).GetUpdateInstallationSummary()'
+            get_targets_cmd_paged = self._paginate_pscommand(consts.PS_COMMAND_TARGETS, start)
+            get_summary_cmd_paged = f'{consts.PS_SUBCOMMAND_PREPARE_COMPUTER_SCOPE}; ' \
+                                    f'({get_targets_cmd_paged}).GetUpdateInstallationSummary()'
+            # Note: prepare computer scope ^^^^^^^^^^^^ must be outside the pointed parentheses scope
+            get_targets_cmd_paged = f'{consts.PS_SUBCOMMAND_PREPARE_COMPUTER_SCOPE}; ' \
+                                    f'{get_targets_cmd_paged}'
             get_targets_cmd = self._wrap_and_escape_pscommand(
                 self._pscommand_to_json(get_targets_cmd_paged))
             get_summary_cmd = self._wrap_and_escape_pscommand(
