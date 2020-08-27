@@ -1,5 +1,6 @@
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
 from services.standalone_services.smtp_service import generate_random_valid_email
+from services.standalone_services.syslog_service import SyslogService
 from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests.test_report_base import TestReportGenerationBase
 from ui_tests.tests.ui_consts import VALID_EMAIL, Reports
@@ -37,7 +38,7 @@ class TestReportSettings(TestReportGenerationBase):
         text = ' '.join(texts)
         assert Reports.test_report_with_email in text
         smtp_service = MaildiranasaurusService()
-        with smtp_service.contextmanager(take_ownership=True):
+        with smtp_service.contextmanager(take_ownership=True), SyslogService().contextmanager(take_ownership=True):
             self.settings_page.add_email_server(smtp_service.fqdn, smtp_service.port)
             self.reports_page.open_report(Reports.test_report_with_email)
             self.reports_page.click_send_email()
