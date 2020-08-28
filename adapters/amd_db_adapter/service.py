@@ -23,6 +23,13 @@ class AmdDbAdapter(AdapterBase, Configurable):
         business_unit = Field(str, 'Business Unit')
         division_name = Field(str, 'Division Name')
         account_name = Field(str, 'Account Name')
+        region = Field(str, 'Region')
+        site_display_name = Field(str, 'Site Display Name')
+        device_status = Field(str, 'Device Status')
+        subnet_name = Field(str, 'Subnet Name')
+        subnet_type = Field(str, 'Subnet Type')
+        device_type = Field(str, 'Device Type')
+        device_type_display_name = Field(str, 'Device Type Display Name')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -238,6 +245,13 @@ class AmdDbAdapter(AdapterBase, Configurable):
                     device.figure_os((device_raw.get('OSPlatform') or '') + ' ' + (device_raw.get('Comment') or ''))
                     device.vlan_id = device_raw.get('VlanID')
                     device.owner = device_raw.get('AddedByFN')
+                    device.region = device_raw.get('Region')
+                    device.site_display_name = device_raw.get('SiteDisplayName')
+                    device.device_status = device_raw.get('Status')
+                    device.subnet_name = device_raw.get('SubnetName')
+                    device.subnet_type = device_raw.get('SubnetType')
+                    device.device_type = device_raw.get('DeviceType')
+                    device.device_type_display_name = device_raw.get('DeviceTypeDisplayName')
                     device.set_raw(device_raw)
                     yield device
                 except Exception:

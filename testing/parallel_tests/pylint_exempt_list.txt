@@ -93,8 +93,8 @@ adapters/nessus_adapter/connection.py
 adapters/nessus_adapter/exceptions.py
 adapters/nessus_adapter/service.py
 adapters/nexpose_adapter/service.py
-adapters/nexpose_adapter/clients/nexpose_base_client.py
-adapters/nexpose_adapter/clients/nexpose_v2_client.py
+axonius-libs/src/libs/axonius-py/axonius/clients/nexpose/nexpose_base_client.py
+axonius-libs/src/libs/axonius-py/axonius/clients/nexpose/nexpose_v2_client.py
 adapters/observeit_adapter/service.py
 adapters/openstack_adapter/service.py
 adapters/oracle_vm_adapter/connection.py

@@ -12,7 +12,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 ADAPTERS_NAMES = {'Qualys Cloud Platform': {'name': 'qualys_scans_adapter', 'id_field': 'qualys_id'},
                   'Microsoft System Center Configuration Manager (SCCM)': {'name': 'sccm_adapter',
                                                                            'id_field': 'resource_id'},
-                  'McAfee ePolicy Orchestrator (ePO)': {'name': 'epo_adapter', 'id_field': 'name'}
+                  'McAfee ePolicy Orchestrator (ePO)': {'name': 'epo_adapter', 'id_field': 'name'},
+                  'Rapid7 Nexpose and InsightVM': {'name': 'nexpose_adapter', 'id_field': 'nexpose_id'}
                   }
 
 

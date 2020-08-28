@@ -83,6 +83,9 @@ export const actionsMeta = {
     tenable_io_add_ips_to_target_group: {
         title: 'Add IPs to Tenable.io Target Group'
     },
+    rapid7_ips_to_site: {
+        title: 'Add IPs to Rapid7 Site'
+    },
     tenable_io_create_asset: {
         title: 'Create Tenable.io Asset'
     },
@@ -224,7 +227,7 @@ export const actionsMeta = {
     },
     scan_va: {
         title: 'Update VA Coverage',
-        items: ['qualys_create_asset', 'qualys_add_tag', 'qualys_remove_tag', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset', 'tenable_io_ips_scans']
+        items: ['qualys_create_asset', 'qualys_add_tag', 'qualys_remove_tag', 'tenable_sc_add_ips_to_asset', 'tenable_io_add_ips_to_target_group', 'tenable_io_create_asset', 'tenable_io_ips_scans', 'rapid7_ips_to_site']
     },
     patch_device: {
         title: 'Patch Device',

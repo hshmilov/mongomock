@@ -1179,7 +1179,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_cloud_data],
                                       [compare_clouds],
                                       [],
-                                      [],
+                                      [customer_do_not_contradict],
                                       {'Reason': 'They are the same cloud instance'},
                                       CorrelationReason.StaticAnalysis)
 

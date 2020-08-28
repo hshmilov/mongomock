@@ -313,7 +313,7 @@ def figure_out_os(s):
         os_type = 'Cisco'
     elif 'vxworks' in s:
         os_type = 'VxWorks'
-    elif 'windows' in s or ('win' in s and 'darwin' not in s):
+    elif 'windows' in s or ('win' in s and 'darwin' not in s and 'aix' not in s and 'sidewin' not in s):
         os_type = 'Windows'
         distribution = figure_out_windows_dist(s)
         if distribution and 'server' in distribution.lower():

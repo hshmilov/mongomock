@@ -8,8 +8,9 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
-import nexpose_adapter.clients as nexpose_clients
-from nexpose_adapter.clients.nexpose_v3_client import ScanData, NexposeVuln, NexposePolicy
+from axonius.plugin_base import add_rule, return_error
+import axonius.clients.nexpose as nexpose_clients
+from axonius.clients.nexpose.nexpose_v3_client import ScanData, NexposeVuln, NexposePolicy
 from axonius.clients.rest.connection import RESTConnection
 
 PASSWORD = 'password'
@@ -151,6 +152,46 @@ class NexposeAdapter(ScannerAdapterBase):
             ],
             "type": "array"
         }
+
+    def _refetch_device(self, client_id, client_data, device_id):
+        connection, nexpose_hostname = client_data
+        asset_data = connection.get_asset_data(device_id)
+        asset_data['API'] = '3'
+        client_config = self._get_client_config_by_client_id(client_id)
+        for device in self._parse_raw_data([(asset_data, nexpose_hostname, client_config)]):
+            return device
+
+    @add_rule('add_ips_to_site', methods=['POST'])
+    def add_ips_to_asset(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        rapid7_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                try:
+                    client_config = self._get_client_config_by_client_id(client_id)
+                    num_of_simultaneous_devices = client_config.get('num_of_simultaneous_devices') or 50
+                    conn = nexpose_clients.NexposeV3Client(num_of_simultaneous_devices, host=client_config['host'],
+                                                           port=client_config['port'],
+                                                           username=client_config['username'],
+                                                           password=client_config['password'],
+                                                           verify_ssl=client_config['verify_ssl'],
+                                                           token=client_config.get('token'),
+                                                           https_proxy=client_config.get('https_proxy'),
+                                                           proxy_username=client_config.get('proxy_username'),
+                                                           proxy_password=client_config.get('proxy_password'),
+                                                           )
+                    result_status = conn.add_ips_to_site(rapid7_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
+        except Exception as e:
+            logger.exception('Got exception while adding ips to site')
+            return str(e), 400
+        return 'Failure', 400
 
     def _parse_raw_data(self, devices_raw_data):
         # We do not use data with no timestamp.

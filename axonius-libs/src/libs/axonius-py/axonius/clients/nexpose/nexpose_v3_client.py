@@ -16,7 +16,7 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_cloud
 from axonius.fields import Field, ListField
 
-from nexpose_adapter.clients.nexpose_base_client import NexposeClient
+from axonius.clients.nexpose.nexpose_base_client import NexposeClient
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -221,6 +221,32 @@ class NexposeV3Client(NexposeClient):
                     msg = f'Error while parsing request {request_id_absolute} - {raw_answer}, continuing'
                     logger.exception(msg)
 
+    def get_asset_data(self, asset_id):
+        return self._send_get_request(f'assets/{asset_id}')
+
+    def get_site_id(self, site_name):
+        sites_raw = self._send_get_request(f'sites')
+        for site_raw in sites_raw['resources']:
+            if site_raw.get('name') == site_name:
+                return site_raw['id']
+        total_pages = sites_raw['page']['totalPages']
+        page = 1
+        while page < total_pages:
+            sites_raw = self._send_get_request(f'sites', params={'page': page})
+            for site_raw in sites_raw['resources']:
+                if site_raw.get('name') == site_name:
+                    return site_raw['id']
+            page += 1
+
+    def add_ips_to_site(self, rapid7_dict):
+        site_name = rapid7_dict.get('site_name')
+        site_id = self.get_site_id(site_name)
+        ips_list = set(rapid7_dict.get('ips'))
+        ips_list.union(self._send_get_request(f'sites/{site_id}/included_targets')['addresses'])
+        ips_list = list(ips_list)
+        self._send_put_request(f'sites/{site_id}/included_targets', json=ips_list)
+        return True
+
     def _get_scans(self):
         scans_dict = dict()
         try:
@@ -365,6 +391,31 @@ class NexposeV3Client(NexposeClient):
 
         except Exception:
             logger.exception(f'Problem getting vulnerability data for device')
+
+    def _send_put_request(self, resource, params=None, json=None):
+        """
+        Sends a get request to the client (authenticated, and ssl_verified configured).
+        :param resource: The restful resource to get.
+        :param params: The params of the get request.
+        :return: The response of the get request.
+        """
+        def _parse_dedicated_url(resource):
+            return f'https://{self.host}:{self.port}/api/3/{resource}'
+
+        try:
+            headers = None
+            if self._token:
+                headers = {'Token': self._token}
+            response = requests.put(_parse_dedicated_url(resource), params=params,
+                                    proxies=self._proxies, json=json,
+                                    auth=(self.username, self.password), verify=self.verify_ssl,
+                                    timeout=(10, 300), headers=headers)
+            response.raise_for_status()
+            response = response.json()
+        except requests.HTTPError as e:
+            raise ClientConnectionException(str(e))
+
+        return response
 
     def _send_get_request(self, resource, params=None):
         """

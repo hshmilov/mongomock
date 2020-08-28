@@ -8,7 +8,7 @@ import ssl
 from axonius.adapter_exceptions import ClientConnectionException, AdapterException
 from nexpose.nexpose import NexposeSession
 from nexpose.nexpose_status import NexposeStatus
-from nexpose_adapter.clients.nexpose_base_client import NexposeClient
+from axonius.clients.nexpose.nexpose_base_client import NexposeClient
 
 
 class NexposeV2Client(NexposeClient):
