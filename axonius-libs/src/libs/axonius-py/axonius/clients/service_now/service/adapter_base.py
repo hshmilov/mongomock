@@ -898,10 +898,19 @@ class ServiceNowAdapterBase(AdapterBase):
             device.u_management_access_type = device_raw.get('u_management_access_type')
             device.u_network_zone = device_raw.get('u_network_zone')
 
-            device_compliance_exception_ids = snow_compliance_exception_ids_dict.get(str(device_id))
-            if isinstance(device_compliance_exception_ids, list):
+            # prepare compliance exception ids
+            device_compliance_exception_ids_set = set()
+            id_based_exceptions = snow_compliance_exception_ids_dict.get(str(device_id))
+            if isinstance(id_based_exceptions, list):
+                device_compliance_exception_ids_set.update(id_based_exceptions)
+            if name and isinstance(name, str):
+                name_based_exceptions = snow_compliance_exception_ids_dict.get(name.lower())
+                if isinstance(name_based_exceptions, list):
+                    device_compliance_exception_ids_set.update(name_based_exceptions)
+            # parse compliance exceptions
+            if device_compliance_exception_ids_set:
                 device_compliance_exceptions = []
-                for compliance_exception_id in device_compliance_exception_ids:
+                for compliance_exception_id in device_compliance_exception_ids_set:
                     compliance_exception_data: dict = snow_compliance_exception_data_dict.get(compliance_exception_id)
                     try:
                         if not (isinstance(compliance_exception_data, dict) and

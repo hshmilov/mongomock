@@ -37,11 +37,18 @@ MODEL_TABLE = 'cmdb_model'
 LOGICALCI_TABLE = 'u_cmdb_ci_logicalci'
 COMPLIANCE_EXCEPTION_TO_ASSET_TABLE = 'sn_compliance_m2m_policy_exception_control'
 COMPLIANCE_EXCEPTION_TO_ASSET_TABLE_FIELDS = [
-    # Note on how we connect between compliance_policy_exception with cmdb_ci asset:
+    # Note on how we connect between policy_exception with cmdb_ci asset:
     # consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE -control->
     #  'sn_compliance_control' -profile>
+    'policy_exception',
     #  'sn_grc_profile' -cmdb_ci> (cmdb_ci reference)
-    'control.profile.cmdb_ci', 'policy_exception']
+    'control.profile.cmdb_ci',
+    # OR
+    # 'sn_grc_profile' -name> (potential cmdb_ci name)
+    'control.profile.name',
+    # DEBUG fields for better context
+    'control.profile.table', ]
+
 COMPLIANCE_EXCEPTION_DATA_TABLE = 'sn_compliance_policy_exception'
 COMPLIANCE_EXCEPTION_DATA_TABLE_FIELDS = ['sys_id', 'number', 'policy.name', 'policy_statement.name',
                                           'opened_by.name', 'short_description', 'state', 'substate',

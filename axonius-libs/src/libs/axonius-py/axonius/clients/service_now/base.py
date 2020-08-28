@@ -40,7 +40,7 @@ class ServiceNowConnectionMixin(ABC):
                 for k, v in relation_dict.items()
                 if (isinstance(k, str) and k.startswith(f'{relation}.'))}
 
-    # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
     def _handle_table_result(self, table_result: dict, table_key: str, result_tables_by_key: dict):
 
         curr_table = result_tables_by_key.setdefault(table_key, dict())
@@ -119,19 +119,36 @@ class ServiceNowConnectionMixin(ABC):
                 relations_details[child_sys_id] = self._prepare_relative_dict(
                     table_result, consts.RELATIONS_TABLE_CHILD_KEY)
 
-        # Compliance Exception connections -
-        #   curr_table = {'control.profile.cmdb_ci.value': [policy_exception.value, ...]}
+        # Compliance Exception connections - (by cmdb_ci id and by profile name)
+        #   curr_table = {
+        #       'control.profile.cmdb_ci.value': [policy_exception.value, ...]
+        #       'control.profile.name': [policy_exception.value, ...]
+        #   }
         # Note: policy_exception objects are handled in the generic initial if
         elif table_key == consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE:
-            applies_to = table_result.get('control.profile.cmdb_ci')
-            if not (isinstance(applies_to, dict) and isinstance(applies_to.get('value'), str)):
-                logger.debug(f'Compliance exception missing target asset: {table_result}')
-                return
             policy_exception = table_result.get('policy_exception')
             if not (isinstance(policy_exception, dict) and isinstance(policy_exception.get('value'), str)):
                 logger.debug(f'Compliance exception missing policy_exception: {table_result}')
                 return
-            curr_table.setdefault(applies_to.get('value'), list()).append(policy_exception.get('value'))
+            policy_id = policy_exception.get('value')
+
+            # Note: a lot of devices aren't really attached to their respective cmdb_ci object but named the same as it.
+            #       policies would be attached to a device if they are attached to (in Snow) or named the same as it.
+            curr_table_keys = []
+            cmdb_ci = table_result.get('control.profile.cmdb_ci')
+            if isinstance(cmdb_ci, dict) and isinstance(cmdb_ci.get('value'), str) and cmdb_ci.get('value'):
+                curr_table_keys.append(cmdb_ci.get('value'))
+
+            profile_name = table_result.get('control.profile.name')
+            if isinstance(profile_name, str) and profile_name:
+                curr_table_keys.append(profile_name.lower())
+
+            if not curr_table_keys:
+                logger.debug(f'Compliance exception missing target asset: {table_result}')
+                return
+
+            for key in curr_table_keys:
+                curr_table.setdefault(key, list()).append(policy_id)
 
         else:
             logger.error(f'Invalid table_key encountered {table_key}')
