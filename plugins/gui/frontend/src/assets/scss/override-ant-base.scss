@@ -89,6 +89,16 @@ input[type='text'], input[type='password'], input[type='number'] {
   }
 }
 
+.ant-calendar-picker-container {
+  .ant-calendar-range {
+    .ant-calendar-time-picker-btn {
+      text-transform: capitalize;
+    }
+    .ant-calendar-ok-btn {
+      text-transform: uppercase;
+    }
+  }
+}
 /* override ant-design-vue reset css [end]*/
 
 

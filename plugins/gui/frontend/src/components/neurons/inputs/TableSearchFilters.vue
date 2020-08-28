@@ -23,6 +23,7 @@
         :default-picker-value="defaultPickerValue"
         @change="rangePickerChange"
         @ok="rangePickerOk"
+        @openChange="rangePickerOpenStatus"
       />
     </div>
   </div>
@@ -65,6 +66,7 @@ export default {
   },
   data() {
     return {
+      okClicked: false,
       dateRangeProxy: [],
       defaultPickerValue: [
         dayjs().subtract(1, 'month'),
@@ -105,10 +107,7 @@ export default {
     },
   },
   mounted() {
-    const { queryStrings } = this.view;
-    if (queryStrings && queryStrings.date_from && queryStrings.date_to) {
-      this.dateRangeProxy = [dayjs(queryStrings.date_from), dayjs(queryStrings.date_to)];
-    }
+    this.resetRangeProxy();
   },
   methods: {
     ...mapMutations({
@@ -128,9 +127,18 @@ export default {
       }
     },
     rangePickerOk(values) {
+      this.okClicked = true;
       const dates = values.map((date) => date.utc().format());
       this.updateDateSearchValues(dates[0], dates[1]);
       this.onConfirmSearch();
+    },
+    rangePickerOpenStatus(status) {
+      if (!status) {
+        if (!this.okClicked) {
+          this.resetRangeProxy();
+        }
+        this.okClicked = false;
+      }
     },
     updateDateSearchValues(dateFrom, dateTo) {
       this.updateView({
@@ -161,6 +169,14 @@ export default {
         },
       });
       this.onConfirmSearch();
+    },
+    resetRangeProxy() {
+      const { queryStrings } = this.view;
+      if (queryStrings && queryStrings.date_from && queryStrings.date_to) {
+        this.dateRangeProxy = [dayjs(queryStrings.date_from), dayjs(queryStrings.date_to)];
+      } else {
+        this.dateRangeProxy = [];
+      }
     },
   },
 };
