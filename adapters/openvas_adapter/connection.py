@@ -1,11 +1,14 @@
+import datetime
 import logging
+from collections import defaultdict
+
 import xmltodict
 
 from urllib3.util.url import parse_url
 # pylint: disable=import-error
 from gvm.protocols.latest import Gmp
 from gvm.connections import TLSConnection, SSHConnection
-from openvas_adapter.consts import GvmProtocols, MAX_NUMBER_OF_DEVICES, DEVICE_PER_PAGE
+from openvas_adapter.consts import GvmProtocols, MAX_NUMBER_OF_DEVICES, DEVICE_PER_PAGE, FILTER_DATE_FORMAT
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
@@ -24,6 +27,7 @@ class OpenvasConnection(RESTConnection):
                  port: int = None,
                  ssh_username: str = None,
                  ssh_password: str = None,
+                 timedelta: datetime.timedelta = None,
                  **kwargs,):
         """
         Create a new OpenVas Connection.
@@ -40,8 +44,6 @@ class OpenvasConnection(RESTConnection):
         self._protocol = protocol
         if protocol == GvmProtocols.SSH and not (ssh_username and ssh_password):
             raise ConnectionError('Please supply both username and password for SSH connection.')
-        self.__debug_file_assets = kwargs.pop('_debug_file_assets', None)
-        self.__debug_file_scans = kwargs.pop('_debug_file_scans', None)
         # parse host in case it's a URL and not just IP
         host = parse_url(domain).host
         super().__init__(
@@ -57,6 +59,7 @@ class OpenvasConnection(RESTConnection):
         self._ssh_password = ssh_password
         self._gvm_session = None
         self._gvm_conn = None
+        self._timedelta = timedelta
 
     @staticmethod
     def _transform(xml_input):
@@ -80,8 +83,6 @@ class OpenvasConnection(RESTConnection):
             self._gvm_conn = TLSConnection(
                 hostname=self._domain,
                 port=self._port)
-        # elif self._protocol == GvmProtocols.DEBUG:
-        #     return
         else:
             raise RESTException(f'Invalid protocol: {self._protocol}!')
         self._gvm_session = Gmp(connection=self._gvm_conn, transform=self._transform)
@@ -117,7 +118,7 @@ class OpenvasConnection(RESTConnection):
         xml_data = self._get_assets(filter=filter_str)
         response = xml_data.get('get_assets_response', xml_data)
         try:
-            total_count = int(response['asset_count']['#text'])
+            total_count = int(response['asset_count']['filtered'])  # the "#text" attribute is a complete total!
         except (KeyError, ValueError):
             logger.exception(f'Failed to get asset count from {response}!')
             raise
@@ -131,9 +132,11 @@ class OpenvasConnection(RESTConnection):
                 response = self._get_assets(filter=filter_str)
                 host_assets = response.get('asset')
                 if host_assets and not isinstance(host_assets, list):
-                    yield host_assets
-                elif host_assets:
-                    yield from host_assets
+                    host_assets = [host_assets]
+                if not host_assets:
+                    logger.info(f'Done paginating hosts')
+                    break
+                yield from host_assets
             except Exception:
                 message = f'Failed to get assets no. {first} to {first+rows}. Skipping.'
                 logger.exception(message)
@@ -148,21 +151,32 @@ class OpenvasConnection(RESTConnection):
                 remaining -= rows
 
     # pylint: disable=too-many-nested-blocks,too-many-branches
-    def _paginated_get_scan_results(self, filter_terms='', host=None):
-        if host and not filter_terms:
-            filter_terms = f'host={host}'
-        logger.info(f'Fetching scan results with filter: {filter_terms}')
-        first = 1
+    def _paginated_get_scan_results(self):
+        """
+        Paginate scan results with filter: severity>0 AND created>(now - last_seen_timedelta)
+        :return: iterable of scan results [dict, dict, ...]
+        """
+        # Build filters
+        timedelta = self._timedelta or datetime.timedelta(days=90)
+        filter_datetime = datetime.datetime.now() - timedelta
+        filter_datetime_str = filter_datetime.strftime(FILTER_DATE_FORMAT)
+        filter_terms = f'severity>0 and created>{filter_datetime_str}'
+
         filter_str = f'rows=1 {filter_terms}'
+        logger.info(f'Fetching scan results with filter: {filter_terms}')
+
+        # get a count of expected results
         xml_data = self._get_scan_results(filter=filter_str)
         response = xml_data.get('get_results_response', xml_data)
         try:
-            total_count = int(response['result_count']['#text'])
+            total_count = int(response['result_count']['filtered'])  # The "#text" attribute is a TOTAL OF ALL EVER!
         except (KeyError, ValueError):
             message = f'Failed to get scan results from {self._domain} '\
                       f'with filter {filter_str}'
             logger.exception(message)
             return
+        # Get actual results
+        first = 1
         remaining = min(total_count, MAX_NUMBER_OF_DEVICES)
         logger.info(f'Fetching OpenVAS info about {remaining} scan results')
         while remaining > 0:
@@ -175,17 +189,10 @@ class OpenvasConnection(RESTConnection):
                 # Make sure results are a list
                 if results and not isinstance(results, list):
                     results = [results]
-                # Make sure to only output results matching the host
-                # This is a double-check in case the filter didn't work right
-                if host is not None:
-                    for result in results:
-                        host_info = result.get('host')
-                        if host_info and host_info.get('#text') != host:
-                            continue
-                        yield result
-                elif results:
-                    # If there's no need to double-filter, simply output the results
-                    yield from results
+                if not results:
+                    logger.info(f'Done paginating scans')
+                    break
+                yield from results
             except Exception:
                 message = f'Failed to get results no. {first} to {first + rows}. Skipping.'
                 logger.exception(message)
@@ -201,31 +208,47 @@ class OpenvasConnection(RESTConnection):
             finally:
                 remaining -= rows
 
-    def __debug_get_device_list(self):
-        from axonius.utils.remote_file_utils import load_local_file
-        assets_file = load_local_file({'file_path': self.__debug_file_assets})
-        scans_file = load_local_file({'file_path': self.__debug_file_scans})
-        assets = xmltodict.parse(assets_file)['get_assets_response']
-        results = xmltodict.parse(scans_file)['get_results_response']
-        for asset in assets.get('asset'):
-            name = asset.get('name')
-            asset['x_scan_results'] = list()
-            for result in results.get('result'):
-                host_info = result.get('host')
-                if host_info and host_info.get('#text') == name:
-                    asset['x_scan_results'].append(result)
-            yield asset
+    def _get_scans_dict(self):
+        """
+        Get a dictionary keyed by host identifier with lists of scan results
+        Scan results are filtered by date and severity>0
+        See _paginated_get_scan_results() for exact filter conditions
+        :return: dict{host_str: [scan_dict, scan_dict, ...] }
+        """
+        result_dict = defaultdict(list)
+        for scan in self._paginated_get_scan_results():
+            try:
+                if not isinstance(scan, dict):
+                    logger.warning(f'Bad scan result. Expected dict, got {type(scan)} instead.')
+                    logger.debug(f'Bad scan result is: {scan}')
+                    continue
+                host_info = scan.get('host')
+                if isinstance(host_info, dict) and host_info.get('#text'):
+                    host = host_info.get('#text')
+                    result_dict[host].append(scan)
+                else:
+                    logger.warning(f'Invalid host info: {host_info}')
+                    continue
+            except Exception as e:
+                logger.warning(f'Error parsing scan result: got {str(e)}')
+                logger.debug(f'Error parsing scan result {scan}')
+        return result_dict
 
     def get_device_list(self):
-        # if self._protocol == GvmProtocols.DEBUG:
-        #     yield from self.__debug_get_device_list()
-        #     return
+        try:
+            scan_results = self._get_scans_dict()
+        except Exception:
+            logger.exception(f'Failed to get scan results.')
+            scan_results = {}
+
         for asset in self._paginated_get_assets():
+            if not isinstance(asset, dict):
+                logger.warning(f'Failed to yield asset. Expected dict, got {type(asset)} instead.')
+                logger.debug(f'Failed asset is: {asset}')
+                continue
             host_identifier = asset.get('name')
-            scan_filter = f'host={host_identifier}'
             try:
-                asset['x_scan_results'] = list(self._paginated_get_scan_results(
-                    filter_terms=scan_filter))
+                asset['x_scan_results'] = scan_results.get(host_identifier)
             except Exception as e:
                 message = f'Failed to parse scan results for {host_identifier}: {str(e)}'
                 logger.exception(message)

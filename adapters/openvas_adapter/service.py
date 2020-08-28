@@ -61,10 +61,9 @@ class OpenvasAdapter(AdapterBase):
             message = f'Invalid protocol: {proto_name}.'
             raise ClientConnectionException(message)
 
-    @classmethod
-    def get_connection(cls, client_config):
-        proto = cls._get_protocol(client_config)
-        port = cls._get_port(client_config)
+    def get_connection(self, client_config):
+        proto = self._get_protocol(client_config)
+        port = self._get_port(client_config)
         return OpenvasConnection(
             client_config['domain'],
             client_config['username'],
@@ -73,8 +72,7 @@ class OpenvasAdapter(AdapterBase):
             port=port,
             ssh_username=client_config.get('ssh_username'),
             ssh_password=client_config.get('ssh_password'),
-            # _debug_file_assets=client_config.get('_debug_file_assets'),
-            # _debug_file_scans=client_config.get('_debug_file_scans')
+            timedelta=self._last_seen_timedelta,
         )
 
     def _connect_client(self, client_config):
@@ -151,16 +149,6 @@ class OpenvasAdapter(AdapterBase):
                     'type': 'integer',
                     'description': 'Port (Default: 22 for SSH, 9390 for TLS)'
                 },
-                # {
-                #     'name': '_debug_file_assets',
-                #     'title': 'DEBUG asset file',
-                #     'type': 'file',
-                # },
-                # {
-                #     'name': '_debug_file_scans',
-                #     'title': 'DEBUG scans file',
-                #     'type': 'file',
-                # },
             ],
             'required': [
                 'domain',
@@ -303,14 +291,17 @@ class OpenvasAdapter(AdapterBase):
 
             # Finally, scan details!!!
             scan_details = device_raw.pop('x_scan_results', [])
-            for scan in scan_details:
-                try:
-                    device.scan_results.append(
-                        OpenvasScanResult.from_dict(scan)
-                    )
-                except Exception as e:
-                    message = f'Failed to parse scan details for {device.id}: Scan {to_json(scan)}'
-                    logger.warning(message, exc_info=True)
+            if scan_details and isinstance(scan_details, list):
+                for scan in scan_details:
+                    try:
+                        device.scan_results.append(
+                            OpenvasScanResult.from_dict(scan)
+                        )
+                    except Exception as e:
+                        message = f'Failed to parse scan details for {device.id}: Scan {to_json(scan)}'
+                        logger.warning(message, exc_info=True)
+            else:
+                logger.info(f'No scan details or scan detail is bad type: {type(scan_details)} for device {name}')
 
             # Aaaaand now finally the raw thingamajig
             device.set_raw(from_json(to_json(device_raw)))
