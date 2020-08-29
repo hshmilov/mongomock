@@ -54,7 +54,6 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_search()
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row()
-            self.devices_page.wait_for_spinner_to_end()
             self.devices_page.click_general_tab()
 
             # Test export csv of Network Interfaces
@@ -109,7 +108,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.query_json_adapter()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_general_tab()
 
         # Test merged rows of Network Interfaces
@@ -228,7 +226,6 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_general_tab()
         self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
 

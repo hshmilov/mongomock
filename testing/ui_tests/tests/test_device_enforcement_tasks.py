@@ -18,7 +18,6 @@ class TestDeviceEnforcementTasks(EntitiesEnforcementTasksTestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.count_entities() == entity_count
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         table_data = self.devices_page.get_field_table_data_with_ids()
         assert len(table_data) == 1
@@ -34,7 +33,6 @@ class TestDeviceEnforcementTasks(EntitiesEnforcementTasksTestBase):
         self.enforcements_page.find_task_action_success(self.enforcements_page.RUN_TAG_ENFORCEMENT_NAME).click()
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         self.devices_page.click_device_enforcement_task_export_csv()
         file_content = self.get_downloaded_file_content('enforcement_tasks', '.csv')

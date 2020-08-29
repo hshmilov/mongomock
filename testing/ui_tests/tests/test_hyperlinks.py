@@ -34,7 +34,6 @@ class TestHyperlinks(TestBase):
             self.devices_page.enter_search()
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row()
-            self.devices_page.wait_for_spinner_to_end()
             # scroll down
             element = self.devices_page.driver.find_element_by_css_selector('[for=test2_hyperlinks_int]')
             self.devices_page.scroll_into_view(element, '[role=tabpanel].stresstest_adapter_0_asd-0>.x-list')

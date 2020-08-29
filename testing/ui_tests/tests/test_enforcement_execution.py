@@ -62,7 +62,6 @@ class TestEnforcementExecution(TestBase):
             self.devices_page.wait_for_table_to_load()
             assert self.devices_page.count_entities() == 1
             self.devices_page.click_row()
-            self.devices_page.wait_for_spinner_to_end()
             self.devices_page.click_enforcement_tasks_tab()
             table_data = self.devices_page.get_field_table_data_with_ids()
             assert len(table_data) == 1

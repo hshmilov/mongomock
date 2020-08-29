@@ -1,8 +1,15 @@
-from services.adapters.wmi_service import WmiService
-from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import AD_MISSING_AGENTS_QUERY_NAME, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY, \
-    WMI_ADAPTER_NAME
+from axonius.consts.gui_consts import DEFAULT_FIELDS
 from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
+from services.adapters.csv_service import CsvService
+from services.adapters.wmi_service import WmiService
+from test_credentials.test_csv_credentials import CSV_FIELDS
+from test_helpers.file_mock_credentials import FileForCredentialsMock
+from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import (AD_MISSING_AGENTS_QUERY_NAME, CSV_NAME,
+                                      CSV_PLUGIN_NAME,
+                                      DEVICES_SEEN_IN_LAST_7_DAYS_QUERY,
+                                      LABEL_CLIENT_WITH_SAME_ID,
+                                      WMI_ADAPTER_NAME, JSON_ADAPTER_NAME)
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -52,6 +59,69 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
         # Check 5
         self._check_csv_config_after_export()
+
+    def test_devices_column_filter(self):
+        host_name = 'CB First'
+        asset_name = 'DCNY1'
+
+        with CsvService().contextmanager(take_ownership=True):
+            # CSV
+
+            client_details = {
+                'user_id': 'user',
+                LABEL_CLIENT_WITH_SAME_ID: FileForCredentialsMock(
+                    'csv_name',
+                    ','.join(CSV_FIELDS) +
+                    f'\n{asset_name},Serial1,Windows,,Office,02:11:24.485Z 02:11:24.485Z,10.0.2.99')
+            }
+            self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details)
+
+            self.base_page.run_discovery()
+            self.devices_page.switch_to_page()
+
+            # link devices so we'll have 3 adapters connected to one device
+            self.devices_page.click_row_checkbox(1, make_yes=True)
+            self.devices_page.click_row_checkbox(2, make_yes=True)
+            self.devices_page.open_link_dialog()
+            self.devices_page.confirm_link()
+
+            # filter hostname column, assert its tooltip
+            self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE,
+                                            filter_list=[{'include': False, 'term': 'test'}])
+            self.devices_page.click_expand_cell(row_index=1, cell_index=5)
+            tooltips_rows = self.devices_page.get_expand_cell_column_data(self.devices_page.FIELD_HOSTNAME_TITLE,
+                                                                          self.devices_page.FIELD_HOSTNAME_TITLE)
+            assert tooltips_rows == [asset_name, host_name]
+            self.devices_page.click_expand_cell(row_index=1, cell_index=5)
+
+            # filter asset name column, assert its tooltip
+            self.devices_page.filter_column(self.devices_page.FIELD_ASSET_NAME, adapter_list=[JSON_ADAPTER_NAME])
+            self.devices_page.click_expand_cell(row_index=1, cell_index=4)
+            tooltips_rows = self.devices_page.get_expand_cell_column_data(self.devices_page.FIELD_ASSET_NAME,
+                                                                          self.devices_page.FIELD_ASSET_NAME)
+            assert tooltips_rows == [asset_name, asset_name]
+            self.devices_page.click_expand_cell(row_index=1, cell_index=4)
+
+            table_first_row_data = self.devices_page.get_all_data_proper()[0]
+            assert table_first_row_data['Host Name'] == host_name
+            assert table_first_row_data['Asset Name'] == asset_name
+
+            # remove network interfaces: IPs to avoid +x remainder that doesn't match the csv
+            remove_network_ips = {'specific_data.data.network_interfaces.ips': [{'include': False, 'term': ''}]}
+            self.devices_page.filter_column(self.devices_page.FIELD_NETWORK_INTERFACES_IPS,
+                                            filter_list=[{'include': False, 'term': ''}])
+
+            excluded_adapters = {'specific_data.data.name': ['json_file_adapter']}
+            field_filters = {'specific_data.data.hostname': [{'include': False, 'term': 'test'}, remove_network_ips]}
+
+            result = self.devices_page.generate_csv('devices', DEFAULT_FIELDS,
+                                                    excluded_adapters=excluded_adapters, field_filters=field_filters)
+
+            self.devices_page.assert_csv_match_ui_data(result)
+
+            self.adapters_page.clean_adapter_servers(CSV_NAME, True)
+
+        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
 
     def _check_default_csv_config(self):
         self.devices_page.switch_to_page()

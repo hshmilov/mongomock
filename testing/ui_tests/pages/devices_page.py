@@ -266,14 +266,12 @@ class DevicesPage(EntitiesPage):
 
     def find_general_data_table_link(self, table_title):
         self.click_row()
-        self.wait_for_spinner_to_end()
         self.click_general_tab()
         self.click_tab(table_title)
         return self.driver.find_element_by_css_selector('.x-entity-general .x-tab.active .x-table .x-table-row td a')
 
     def find_general_data_basic_link(self, field_title):
         self.click_row()
-        self.wait_for_spinner_to_end()
         self.click_general_tab()
         # Wait while animation of list expansion
         time.sleep(1)

@@ -34,7 +34,6 @@ class TestDeviceEnforcementTaskSort(TestBase):
         self.devices_page.execute_saved_query(WINDOWS_QUERY_NAME)
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         table_info = self.devices_page.get_field_table_data_with_ids()
         assert len(table_info) == 3

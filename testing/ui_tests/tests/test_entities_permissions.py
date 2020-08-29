@@ -429,7 +429,6 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         self.devices_page.search_enforcement_tasks_search_input(enforcement_set_id)
         assert self.devices_page.get_enforcement_tasks_count() == 1
@@ -444,7 +443,6 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         self.enforcements_page.find_task_action_success(self.RUN_TAG_ENFORCEMENT_NAME).click()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         table_data = self.devices_page.get_field_table_data_with_ids()
         assert len(table_data) == 1
@@ -455,7 +453,6 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         self.devices_page.click_enforcement_tasks_tab()
         self.assert_device_enforcement_task(enforcement_set_id)
 

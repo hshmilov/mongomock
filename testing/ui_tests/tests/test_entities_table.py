@@ -13,7 +13,6 @@ class TestEntitiesTable(TestBase):
         entities_page.enter_search()
         entities_page.wait_for_table_to_load()
         entities_page.click_row()
-        entities_page.wait_for_spinner_to_end()
         entities_page.click_advanced_view()
         assert entities_page.find_element_by_text(expected_advanced_text)
         entities_page.click_basic_view()

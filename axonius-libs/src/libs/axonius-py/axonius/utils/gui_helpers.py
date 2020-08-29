@@ -1078,12 +1078,17 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                         break
                     else:
                         val = ''
+
             if isinstance(val, list) and isinstance(val[0], list):
-                field_to_value[preferred_field] = val[0]
-            elif isinstance(val, list):
-                field_to_value[preferred_field] = val
-            else:
-                field_to_value[preferred_field] = [val]
+                val = val[0]
+            elif not isinstance(val, list):
+                val = [val]
+
+            if field_filters and field_filters.get(preferred_field):
+                val = [item for item in val if is_filter_in_value(item, field_filters[preferred_field])]
+
+            field_to_value[preferred_field] = val
+
         except Exception as e:
             logger.exception(f'Problem in merging preferred fields: {e}')
             continue

@@ -473,7 +473,6 @@ class TestDashboard(TestBase):
         self.dashboard_page.wait_for_table_to_load()
         device_id = self.devices_page.find_first_id()
         self.devices_page.click_row()
-        self.devices_page.wait_for_spinner_to_end()
         assert device_id in self.driver.current_url
         hostname = self.devices_page.get_value_for_label_in_device_page(self.devices_page.FIELD_HOSTNAME_TITLE)
         assert hostname == 'EC2AMAZ-61GTBER.TestDomain.test'

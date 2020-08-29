@@ -142,7 +142,6 @@ class EntitiesPage(Page):
 
     SAVE_QUERY_ID = 'query_save'
     SAVE_QUERY_NAME_SELECTOR = '.name-input'
-    SAVE_QUERY_PRIVATE_CHECKBOX_XPATH = '//label[normalize-space()=\'Private query\']'
     SAVE_QUERY_PRIVATE_CHECKBOX_ID = 'private_query_checkbox'
     SAVE_QUERY_DESCRIPTION_SELECTOR = '.save-query-dialog textarea'
     SAVE_QUERY_SAVE_BUTTON_ID = 'query_save_confirm'
@@ -257,6 +256,15 @@ class EntitiesPage(Page):
     ENTITIES_ACTIONS_DROPDOWN_CSS = '.ant-dropdown-menu'
 
     SAFEGUARD_MODAL_CSS = '.x-modal'
+
+    COLUMN_FILTER_MODAL = '#column_filter .ant-modal'
+    EXCLUDE_ADAPTER_FILTER_COMBOBOX = '.exclude-adapter__select'
+    EXCLUDE_ADAPTER_FILTER_INPUT = '.ant-select-search__field'
+    CLEAR_COLUMN_FILTER_MODAL = '#column_filter .clear'
+    SAVE_COLUMN_FILTER_MODAL = '#column_filter .ant-btn-primary'
+    COLUMN_FILTER_TERM_INCLUDE_BUTTON = '#column_filter .filter:last-child .include'
+    COLUMN_FILTER_TERM_INPUT = '#column_filter .filter:last-child input'
+    COLUMN_FILTER_TERM_ADD_TERM = '#column_filter .addFilter'
 
     @property
     def url(self):
@@ -739,19 +747,46 @@ class EntitiesPage(Page):
         header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
         ActionChains(self.driver).move_to_element(header).perform()
         header.find_element_by_css_selector('.filter').click()
+        self.wait_for_element_present_by_css(self.COLUMN_FILTER_MODAL)
+
+    def toggle_exclude_adapters_combobox(self, displayed=True):
+        self.driver.find_element_by_css_selector(self.EXCLUDE_ADAPTER_FILTER_COMBOBOX).click()
+        wait_until(lambda:
+                   self.driver.find_element_by_css_selector(self.ANT_SELECT_MENU_ITEM_CSS).is_displayed() == displayed)
+
+    def clear_column_filter_modal(self):
+        self.driver.find_element_by_css_selector(self.CLEAR_COLUMN_FILTER_MODAL).click()
 
     def save_column_filter_modal(self):
-        self.driver.find_element_by_css_selector('#column_filter .ant-btn-primary').click()
+        self.driver.find_element_by_css_selector(self.SAVE_COLUMN_FILTER_MODAL).click()
+        self.wait_for_table_to_be_responsive()
 
-    def filter_column(self, col_name, filter_list):
+    def add_filter_column_filter_modal(self):
+        self.driver.find_element_by_css_selector(self.COLUMN_FILTER_TERM_ADD_TERM).click()
+
+    def fill_filter_column_filter_modal(self, filter_obj):
+        if not filter_obj.get('include', True):
+            self.driver.find_element_by_css_selector(self.COLUMN_FILTER_TERM_INCLUDE_BUTTON).click()
+        self.fill_text_field_by_css_selector(self.COLUMN_FILTER_TERM_INPUT, filter_obj.get('term', ''))
+
+    def add_exclude_adapters_combobox(self, text):
+        self.fill_text_field_by_css_selector(self.EXCLUDE_ADAPTER_FILTER_INPUT, text)
+        self.driver.find_element_by_css_selector(self.ANT_SELECT_MENU_ITEM_CSS).click()
+
+    def filter_column(self, col_name: str = '', filter_list: list = None, adapter_list: list = None):
         self.open_column_filter_modal(col_name)
-        for index, filter_dict in enumerate(filter_list):
-            if index > 1:
-                self.driver.find_element_by_css_selector('#column_filter .addFilter').click()
-            self.fill_text_field_by_css_selector('#column_filter .filter:last-child input', filter_dict['term'])
+        self.clear_column_filter_modal()
+        if filter_list:
+            for index, filter_dict in enumerate(filter_list):
+                if index > 1:
+                    self.add_filter_column_filter_modal()
+                self.fill_filter_column_filter_modal(filter_dict)
+        if adapter_list:
+            self.toggle_exclude_adapters_combobox(displayed=True)
+            for adapter in adapter_list:
+                self.add_exclude_adapters_combobox(adapter)
+            self.toggle_exclude_adapters_combobox(displayed=False)
         self.save_column_filter_modal()
-        self.wait_for_modal_close()
-        self.wait_for_table_to_load()
 
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)
@@ -1243,7 +1278,8 @@ class EntitiesPage(Page):
         resp.close()
         return csrf_token
 
-    def generate_csv(self, entity_type, fields, filters, delimiter=None, max_rows=None):
+    def generate_csv(self, entity_type, fields: list, filters=None, excluded_adapters: list = None,
+                     field_filters: list = None, delimiter: str = None, max_rows: int = None):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
@@ -1251,7 +1287,12 @@ class EntitiesPage(Page):
         session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
         result = session.post(f'https://127.0.0.1/api/{entity_type}/csv',
-                              json={'fields': fields, 'filter': filters, 'delimiter': delimiter, 'max_rows': max_rows},
+                              json={'fields': fields,
+                                    'filter': filters,
+                                    'excluded_adapters': excluded_adapters,
+                                    'field_filters': field_filters,
+                                    'delimiter': delimiter,
+                                    'max_rows': max_rows},
                               timeout=CSV_TIMEOUT
                               )
         content = result.content
@@ -1418,7 +1459,6 @@ class EntitiesPage(Page):
             self.enter_search()
         self.wait_for_table_to_load()
         self.click_row()
-        self.wait_for_spinner_to_end()
         self.click_notes_tab()
 
     def load_custom_data(self, entities_filter=None):
@@ -1428,7 +1468,6 @@ class EntitiesPage(Page):
             self.enter_search()
         self.wait_for_table_to_load()
         self.click_row()
-        self.wait_for_spinner_to_end()
         self.click_custom_data_tab()
 
     def get_entity_id(self):
