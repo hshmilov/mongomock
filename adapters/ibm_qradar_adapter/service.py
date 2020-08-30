@@ -40,7 +40,9 @@ class IbmQradarAdapter(AdapterBase):
                                          https_proxy=client_config.get('https_proxy'),
                                          proxy_username=client_config.get('proxy_username'),
                                          proxy_password=client_config.get('proxy_password'),
-                                         token=client_config['token'])
+                                         username=client_config.get('username'),
+                                         password=client_config.get('password'),
+                                         token=client_config.get('token'))
         with connection:
             pass  # check that the connection credentials are valid
         return connection
@@ -82,6 +84,17 @@ class IbmQradarAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': 'token',
                     'title': 'API Token',
                     'type': 'string',
@@ -111,7 +124,6 @@ class IbmQradarAdapter(AdapterBase):
             ],
             'required': [
                 'domain',
-                'token',
                 'verify_ssl'
             ],
             'type': 'array'
@@ -189,7 +201,15 @@ class IbmQradarAdapter(AdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
 
-            device.hostname = device_raw.get('name')
+            hostname = device_raw.get('name')
+            try:
+                if isinstance(hostname, str) and '@' in hostname:
+                    hostname = hostname.split('@')[-1] or hostname
+                    hostname = hostname.strip()
+            except Exception:
+                logger.warning(f'Failed splitting hostname {hostname}, filling full hostname')
+            device.hostname = hostname
+
             device.description = device_raw.get('description')
             enabled = parse_bool_from_raw(device_raw.get('enabled'))
             if isinstance(enabled, bool):

@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -13,7 +14,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class IbmQradarConnection(RESTConnection):
     """ rest client for IbmQradar adapter """
 
-    def __init__(self, *args, token: str, **kwargs):
+    def __init__(self, *args, token: Optional[str] = None, **kwargs):
         super().__init__(*args, url_base_prefix=API_PREFIX,
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
@@ -21,11 +22,11 @@ class IbmQradarConnection(RESTConnection):
         self._token = token
 
     def _connect(self):
-        if not self._token:
-            raise RESTException('No token')
-
         try:
-            self._session_headers['SEC'] = self._token
+            if self._token:
+                self._session_headers['SEC'] = self._token
+            elif not (self._username and self._password):
+                raise RESTException('No Credentials')
 
             extra_headers = {
                 'Range': 'items=0-1'
@@ -34,6 +35,18 @@ class IbmQradarConnection(RESTConnection):
 
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
+
+    def _get(self, *args, **kwargs):
+        """
+        Overriding _get for default using token / basic_auth
+        Authentication method is determined yb the user
+        :param args: args for RESTConnection._get()
+        :param kwargs: kwargs for RESTConnection._get()
+        :return: see RESTConnection._get()
+        """
+        # Use basic auth if no token was provided
+        do_basic_auth = not bool(self._token)
+        return super()._get(*args, do_basic_auth=do_basic_auth, **kwargs)
 
     def _get_log_source_extra_info(self, obj_type: str, suffix: str):
         log_sources_extra_info = {}

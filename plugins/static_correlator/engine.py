@@ -114,7 +114,8 @@ def is_only_host_adapter(adapter_device):
                                               'snipeit_adapter',
                                               'checkmarx_adapter',
                                               'iboss_cloud_adapter',
-                                              'druva_adapter']):
+                                              'druva_adapter',
+                                              'ibm_qradar_adapter']):
         return True
     try:
         if adapter_device.get('plugin_name') == 'active_directory_adapter' and \
