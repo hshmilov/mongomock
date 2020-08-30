@@ -212,7 +212,9 @@ export const adapters = {
       // Fetch all adapters, according to given filter
       let param = '';
       if (payload && payload.filter) {
-        param = `?filter=${JSON.stringify(payload.filter)}`;
+        param = `?filter=${JSON.stringify(payload.filter)}&api_format=false`;
+      } else {
+        param = '?api_format=false';
       }
       return dispatch(REQUEST_API, {
         rule: `adapters${param}`,
@@ -285,16 +287,13 @@ export const adapters = {
       };
 
       commit(isNewClient ? ADD_NEW_CLIENT : UPDATE_EXISTING_CLIENT, client);
-
-      const baseRulePath = 'adapters/connections';
-
       return new Promise(async (resolve, reject) => {
+        const baseRulePath = `adapters/${payload.adapterId}/connections`;
         try {
           const response = await dispatch(REQUEST_API, {
             rule: isNewClient ? baseRulePath : `${baseRulePath}/${payload.uuid}`,
             method: isNewClient ? 'PUT' : 'POST',
             data: {
-              adapter: payload.adapterId,
               connection: payload.serverData.client_config,
               connection_discovery: serverData.connection_discovery,
               connection_label: payload.connectionLabel,
@@ -335,7 +334,7 @@ export const adapters = {
       }
 
       return dispatch(REQUEST_API, {
-        rule: 'adapters/connections/test',
+        rule: `adapters/${payload.adapterId}/connections/test`,
         method: 'post',
         data: {
           connection: payload.serverData.client_config,
@@ -359,7 +358,7 @@ export const adapters = {
         param = '?deleteEntities=True';
       }
       return dispatch(REQUEST_API, {
-        rule: `adapters/connections/${clientId}${param}`,
+        rule: `adapters/${adapterId}/connections/${clientId}${param}`,
         method: 'DELETE',
         data: {
           adapter: adapterId,
@@ -387,7 +386,7 @@ export const adapters = {
     },
     [FETCH_ADAPTERS_CLIENT_LABELS]({ dispatch }) {
       return dispatch(REQUEST_API, {
-        rule: 'adapters/connections/labels',
+        rule: 'adapters/labels',
         type: SET_ADAPTERS_CLIENT_LABELS,
       });
     },

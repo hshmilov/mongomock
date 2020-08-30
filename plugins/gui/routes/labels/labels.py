@@ -220,23 +220,24 @@ class Labels:
                                                 '\'{adapter}\' with connection ID {client_id}. Duration: {duration}',
             'audit.adapters.start': 'Fetch Started',
             'audit.adapters.start.template':
-                'Fetch for adapter \'{adapter}\' with connection ID \'{client_id} started.',
+                'Fetch for adapter \'{adapter}\' with connection ID \'{client_id}\' started.',
             'audit.adapters.clean': 'Cleanup',
             'audit.adapters.clean.template': 'Removed {count} {asset} from adapter \'{adapter}\'',
             'audit.adapters.post': 'Edit Advanced Settings',
             'audit.adapters.post.template': 'Edited {config_name} for adapter {adapter_name}',
 
-            'audit.adapters.connections': 'Adapters',
-            'audit.adapters.connections.put': 'Add Connection',
-            'audit.adapters.connections.put.template':
-                'Added new connection for adapter \'{adapter}\' with connection ID {client_id}',
-            'audit.adapters.connections.post': 'Edit Connection',
-            'audit.adapters.connections.post.template': 'Edited adapter \'{adapter}\' with connection ID {client_id}.'
-                                                        ' Old configuration:{current_client_info}.'
-                                                        ' New configuration:{updated_client_info}',
-            'audit.adapters.connections.delete': 'Delete Connection',
-            'audit.adapters.connections.delete.template': 'Deleted adapter \'{adapter}\' '
-                                                          'with connection ID {client_id}',
+            'audit.adapters.<adapter_name>.connections': 'Adapters',
+            'audit.adapters.<adapter_name>.connections.put': 'Add Connection',
+            'audit.adapters.<adapter_name>.connections.put.template':
+                'Added new connection for adapter \'{adapter_name}\' with connection ID {client_id}',
+            'audit.adapters.<adapter_name>.connections.post': 'Edit Connection',
+            'audit.adapters.<adapter_name>.connections.post.template':
+                'Edited adapter \'{adapter_name}\' with connection ID {client_id}.'
+                ' Old configuration:{current_client_info}.'
+                ' New configuration:{updated_client_info}',
+            'audit.adapters.<adapter_name>.connections.delete': 'Delete Connection',
+            'audit.adapters.<adapter_name>.connections.delete.template': 'Deleted adapter \'{adapter_name}\' '
+                                                                         'with connection ID {client_id}',
 
             'audit.adapters.failure': 'Connection Failure',
             'audit.adapters.failure.template':

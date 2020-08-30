@@ -1022,7 +1022,7 @@ class APIMixin:
             default_sort=self._system_settings.get('defaultSort'),
             include_details=request_data.get('include_details', False),
             history_date=history_date,
-        )
+        )[0]
 
         assets = list(assets)
         page_meta = get_page_metadata(skip=skip, limit=limit, number_of_assets=asset_count)
@@ -1458,8 +1458,7 @@ class APIMixin:
         Expected values: a list of internal axon ids, the action name, and the action command.
         :return:
         """
-        actions = ['deploy', 'shell', 'upload_file']
-        return jsonify(actions)
+        return jsonify(self._get_actions())
 
     ############
     # ADAPTERS #

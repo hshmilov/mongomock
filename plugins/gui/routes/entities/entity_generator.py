@@ -2,6 +2,7 @@ import codecs
 import logging
 import re
 from datetime import datetime
+from itertools import islice
 
 from flask import (jsonify,
                    make_response, request)
@@ -13,19 +14,21 @@ from axonius.utils.gui_helpers import (historical, paginated,
                                        filtered_entities, sorted_endpoint,
                                        projected, filtered_fields,
                                        entity_fields, search_filter,
-                                       schema_fields as schema)
+                                       schema_fields as schema, metadata, return_api_format)
 from axonius.utils.json_encoders import iterator_jsonify
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
+from gui.logic.api_helpers import get_page_metadata
 from gui.logic.entity_data import (get_entity_data, entity_data_field_csv,
                                    entity_notes, entity_notes_update, entity_tasks_actions,
                                    entity_tasks_actions_csv)
 from gui.logic.generate_csv import get_csv_from_heavy_lifting_plugin
+from gui.logic.historical_dates import all_historical_dates
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.entities.views.views_generator import views_generator
 from gui.logic.graphql.graphql import allow_experimental, compare_results, compare_counts
 
-# pylint: disable=no-member,no-self-use
+# pylint: disable=no-member,no-self-use,too-many-arguments,too-many-statements
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -47,10 +50,64 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @sorted_endpoint()
         @projected()
         @filtered_fields()
+        @metadata()
         @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
-            PermissionAction.View, permission_category), skip_activity=True)
+            PermissionAction.View, permission_category, ), skip_activity=True)
         def get(self, limit, skip, mongo_filter, mongo_sort,
-                mongo_projection, history: datetime, field_filters, excluded_adapters):
+                mongo_projection, history: datetime,
+                field_filters,
+                excluded_adapters,
+                get_metadata: bool = True,
+                include_details: bool = False):
+            iterable, cursor_obj = self._get_entities(excluded_adapters, field_filters, history, include_details, limit,
+                                                      mongo_filter, mongo_projection, mongo_sort, skip)
+
+            if get_metadata:
+                asset_count = self._get_assets_count(
+                    entity_type=self.entity_type,
+                    mongo_filter=mongo_filter,
+                    history_date=history,
+                )
+
+                assets = list(iterable)
+                page_meta = get_page_metadata(skip=skip, limit=limit, number_of_assets=asset_count)
+                page_meta['size'] = len(assets)
+                return jsonify({'page': page_meta, 'assets': assets})
+
+            return iterator_jsonify(iterable)
+
+        @allow_experimental()
+        @historical()
+        @paginated()
+        @filtered_entities()
+        @sorted_endpoint()
+        @projected()
+        @filtered_fields()
+        @metadata()
+        @gui_route_logged_in(rule='cached', methods=['GET', 'POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category), skip_activity=True)
+        def get_cached(self, limit, skip, mongo_filter, mongo_sort,
+                       mongo_projection, history: datetime,
+                       field_filters,
+                       excluded_adapters,
+                       get_metadata: bool = True,
+                       include_details: bool = False):
+            iterable, cursor_obj = self._get_entities(excluded_adapters, field_filters, history, include_details, limit,
+                                                      mongo_filter, mongo_projection, mongo_sort, skip, use_cursor=True)
+            assets = [asset for asset in islice(iterable, limit)]
+            if get_metadata:
+                page_meta = get_page_metadata(skip=skip,
+                                              limit=limit,
+                                              number_of_assets=cursor_obj.asset_count,
+                                              number=cursor_obj.page_number)
+                page_meta['size'] = len(assets)
+                return jsonify({'page': page_meta, 'cursor': cursor_obj.cursor_id, 'assets': assets})
+
+            return iterator_jsonify(iterable)
+
+        def _get_entities(self, excluded_adapters, field_filters, history, include_details, limit, mongo_filter,
+                          mongo_projection, mongo_sort, skip, use_cursor=False):
+            request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
             # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
             mongo_sort = {x.replace('_preferred', ''): mongo_sort[x] for x in mongo_sort}
             self._save_query_to_history(
@@ -60,27 +117,30 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 limit,
                 mongo_sort,
                 mongo_projection)
-
-            iterable = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                    self.entity_type,
-                                    default_sort=self._system_settings.get(
-                                        'defaultSort'),
-                                    history_date=history,
-                                    include_details=True,
-                                    field_filters=field_filters,
-                                    excluded_adapters=excluded_adapters,
-                                    )
-
+            iterable, cursor_obj = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                                self.entity_type,
+                                                default_sort=self._system_settings.get(
+                                                    'defaultSort'),
+                                                history_date=history,
+                                                include_details=include_details,
+                                                field_filters=field_filters,
+                                                excluded_adapters=excluded_adapters,
+                                                use_cursor=use_cursor,
+                                                cursor_id=request_data.get('cursor', None)
+                                                )
             # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
             if self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
                     and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
                 iterable = list(iterable)
                 logger.info('Executing query compare async')
                 # extract request and transfer it to threaded function to compare with bandicoot
-                request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
                 GLOBAL_RUN_AND_FORGET.submit(compare_results, self.entity_type, request_data, iterable)
+            return iterable, cursor_obj
 
-            return iterator_jsonify(iterable)
+        @gui_route_logged_in('history_dates')
+        def entities_history_dates(self):
+            """Get all of the history dates that are valid for entities."""
+            return jsonify(all_historical_dates()[self.entity_type.value])
 
         @filtered_entities()
         @gui_route_logged_in(methods=['DELETE'], required_permission=PermissionValue.get(PermissionAction.Update,
@@ -171,10 +231,13 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             return self._enforce_entity(self.entity_type, mongo_filter)
 
         @historical()
+        @return_api_format()
         @gui_route_logged_in('<entity_id>', methods=['GET'])
-        def entity_generic(self, entity_id, history: datetime):
+        def entity_generic(self, entity_id, history: datetime, api_format: bool = True):
             res = get_entity_data(self.entity_type, entity_id, history)
             if isinstance(res, dict):
+                if api_format:
+                    return jsonify(self.format_entity(entity_id, res))
                 return jsonify(res)
             return res
 
@@ -270,6 +333,11 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in('manual_unlink', methods=['POST'])
         def entities_unlink(self, mongo_filter):
             return self._unlink_axonius_entities(self.entity_type, mongo_filter)
+
+        @gui_route_logged_in(rule='destroy', methods=['POST'])
+        def api_users_destroy(self):
+            """Delete all assets and optionally all historical assets."""
+            return self._destroy_assets(entity_type=self.entity_type, historical_prefix='historical_users_')
 
         @property
         def entity_type(self):

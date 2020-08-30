@@ -299,7 +299,7 @@ def get_entities(limit: int,
                  excluded_adapters: dict = None,
                  cursor_id: str = None,
                  use_cursor: bool = False,
-                 ) -> Tuple[Iterable[dict], str]:
+                 ) -> Tuple[Iterable[dict], CursorMeta]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -366,14 +366,14 @@ def get_entities(limit: int,
         history_date=history_date,
     )
 
-    return convert_entities_to_frontend_entities(
+    return (convert_entities_to_frontend_entities(
         data_list=data_list,
         projection=projection,
         ignore_errors=ignore_errors,
         include_details=include_details,
         field_filters=field_filters,
         excluded_adapters=excluded_adapters,
-    )
+    ), None)
 
 
 def perform_axonius_query(entity: EntityType,

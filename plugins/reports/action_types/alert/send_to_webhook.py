@@ -156,7 +156,7 @@ class SendWebhookAction(ActionTypeAlert):
                                                        },
                                                        self._entity_type,
                                                        field_filters=col_filters,
-                                                       excluded_adapters=excluded_adapters)
+                                                       excluded_adapters=excluded_adapters)[0]
         entities = list(entities_raw)
         entities_json = to_json(entities or None)
         final_body = (self._config.get('custom_format') or '{"entities": {$BODY}}').replace(CUSTOM_FORMAT_STRING,

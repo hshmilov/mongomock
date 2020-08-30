@@ -1503,7 +1503,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         self._session.close()
 
     def get_devices(self, *vargs, **kwargs):
-        return self.get('devices', session=self._session, *vargs, **kwargs)
+        return self.get('devices?get_metadata=false&include_details=true', session=self._session, *vargs, **kwargs)
 
     def delete_devices(self, internal_axon_ids, *vargs, **kwargs):
         return self.delete('devices', session=self._session, data={
@@ -1514,7 +1514,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.get('devices/count', session=self._session, *vargs, **kwargs)
 
     def get_users(self, *vargs, **kwargs):
-        return self.get('users', session=self._session, *vargs, **kwargs)
+        return self.get('users?get_metadata=false&include_details=true', session=self._session, *vargs, **kwargs)
 
     def get_users_count(self, *vargs, **kwargs):
         return self.get('users/count', session=self._session, *vargs, **kwargs)

@@ -3,9 +3,10 @@ from flask import (jsonify,
                    request)
 
 from axonius.plugin_base import EntityType, return_error
-from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint)
+from axonius.utils.gui_helpers import (paginated, filtered, sorted_endpoint, metadata)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.consts.gui_consts import ACTIVITY_PARAMS_COUNT, ACTIVITY_PARAMS_NAME
+from gui.logic.api_helpers import get_page_metadata
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 from gui.logic.views_data import get_views_count
 # pylint: disable=no-member
@@ -19,15 +20,27 @@ def views_generator(base_permission_category: PermissionCategory):
         @paginated()
         @filtered()
         @sorted_endpoint()
+        @metadata()
         @gui_route_logged_in('<query_type>', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
-        def get_views(self, limit, skip, mongo_filter, mongo_sort, query_type):
+        def get_views(self, limit, skip, mongo_filter, mongo_sort, query_type,
+                      get_metadata: bool = True,
+                      include_details: bool = False):
             """
             Get saved view for the entity
             :return:
             """
+            views = self._get_entity_views(self.entity_type, limit, skip, mongo_filter, mongo_sort, query_type)
+            if get_metadata:
+                assets = list(views)
+                page_meta = get_page_metadata(
+                    skip=skip,
+                    limit=limit,
+                    number_of_assets=self._get_views_count(mongo_filter))
+                page_meta['size'] = len(assets)
+                return jsonify({'page': page_meta, 'assets': assets})
             return jsonify(
-                self._get_entity_views(self.entity_type, limit, skip, mongo_filter, mongo_sort, query_type))
+                views)
 
         @gui_route_logged_in(methods=['PUT'], proceed_and_set_access=True)
         def add_entity_views(self, no_access):
@@ -109,12 +122,15 @@ def views_generator(base_permission_category: PermissionCategory):
         @filtered()
         @gui_route_logged_in('<query_type>/count', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
-        def get_devices_views_count(self, mongo_filter, query_type):
+        def get_entities_views_count(self, mongo_filter, query_type):
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
             quick = quick == 'True'
+            return str(self._get_views_count(mongo_filter, query_type, quick))
+
+        def _get_views_count(self, mongo_filter, query_type='saved', quick=False):
             mongo_filter['query_type'] = query_type
-            return str(get_views_count(self.entity_type, mongo_filter, quick=quick))
+            return get_views_count(self.entity_type, mongo_filter, quick=quick)
 
         @property
         def entity_type(self):

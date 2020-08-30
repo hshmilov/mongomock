@@ -196,7 +196,7 @@ class SlackSendMessageAction(ActionTypeAlert):
                                                            },
                                                            self._entity_type,
                                                            field_filters=col_filters,
-                                                           excluded_adapters=excluded_adapters)
+                                                           excluded_adapters=excluded_adapters)[0]
 
         if self._config.get('display') == JSON_DISPLAY:
             entities_str = ''

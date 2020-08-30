@@ -23,9 +23,10 @@ from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.gui_helpers import (add_labels_to_entities,
                                        get_entity_labels, entity_fields, get_connected_user_id,
-                                       filtered)
+                                       filtered, get_entities_count)
 from axonius.utils.mongo_escaping import escape_dict
 from gui.logic.db_helpers import beautify_db_entry
+from gui.logic.entity_data import entity_tasks
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.views_data import get_views
@@ -564,4 +565,129 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
     def actions_run(self, action_type, mongo_filter):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
+        if action_data.get('internal_axon_ids') and not action_data.get('entities'):
+            action_data['entities'] = {
+                'ids': action_data['internal_axon_ids'],
+                'include': True,
+            }
         return self.run_actions(action_data, mongo_filter)
+
+    @gui_route_logged_in('actions', required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.DevicesAssets))
+    def get_actions(self):
+        """
+        Executes a run shell command on devices.
+        Expected values: a list of internal axon ids, the action name, and the action command.
+        :return:
+        """
+        return jsonify(self._get_actions())
+
+    @staticmethod
+    def _get_actions():
+        return ['deploy', 'shell', 'upload_file']
+
+    def _get_assets_count(self, entity_type: EntityType, mongo_filter: dict, history_date: datetime) -> int:
+        """Get the count of assets matching a query.
+
+        Request body:
+            filter: str
+                default: None
+                AQL string
+                @filtered_entities parses as dict into mongo_filter arg
+            history_date: str
+                default: None
+                example: 2020-05-18T03:36:14.091000
+                datetime to get assets for
+                @historical parses into datetime obj as history_date arg
+
+        Response Body:
+            str
+
+        APIv2: needs to be proper json response
+        """
+        entity_collection, is_date_filter_required = self.get_appropriate_view(
+            historical=history_date, entity_type=entity_type
+        )
+
+        asset_count = get_entities_count(
+            entities_filter=mongo_filter,
+            entity_collection=entity_collection,
+            history_date=history_date,
+            is_date_filter_required=is_date_filter_required,
+        )
+        return asset_count
+
+    @staticmethod
+    def format_entity(entity_id, entity):
+        return {
+            'specific': entity['adapters'],
+            'generic': {
+                'basic': entity['basic'],
+                'data': entity['data'],
+                'advanced': [{
+                    'name': item['schema']['name'], 'data': item['data']
+                } for item in entity['advanced']]
+            },
+            'labels': entity['labels'],
+            'accurate_for_datetime': entity['updated'],
+            'internal_axon_id': entity_id,
+            'tasks': entity_tasks(entity_id)
+        }
+
+    def _destroy_assets(self, entity_type, historical_prefix):
+        """Delete all assets and optionally all historical assets.
+
+        Will not be usable if 'enable_destroy' is not True in system settings!
+
+        Request Body:
+            destroy: bool
+                default: False
+                Actually do the destroy - must supply True to actually perform this!
+                User Fault Protection from random access to this endpoint.
+            history: bool
+                default: False
+                Also destroy all historical data
+
+        Response Body:
+            removed: int
+                count of assets destroyed
+            removed_history: int
+                count of all historical assets destroyed
+
+        """
+        core_config, _ = self._get_plugin_configs(plugin_unique_name='core', config_name='CoreService')
+        api_settings = core_config.get('api_settings', {})
+        destroy_enabled = api_settings.get('enable_destroy', False)
+
+        if not destroy_enabled:
+            err = f'Global Settings > API Settings > Enable API Destroy Endpoints must be enabled!'
+            return return_error(error_message=err, http_status=400, additional_data={'api_settings': api_settings})
+
+        request_data = self.get_request_data_as_object()
+
+        do_destroy = request_data.get('destroy', False)
+        do_history = request_data.get('history', False)
+
+        if do_destroy is not True:
+            err = f'Must supply destroy=True!'
+            return return_error(error_message=err, http_status=400, additional_data=None)
+
+        self._stop_research_phase()
+
+        return_doc = {'removed_history': 0, 'removed': 0}
+
+        if do_history is True:
+            collection_names = self.aggregator_db_connection.list_collection_names()
+            historical_collection_names = [x for x in collection_names if x.startswith(historical_prefix)]
+
+            for historical_collection_name in historical_collection_names:
+                historical_collection = self.aggregator_db_connection[historical_collection_name]
+                return_doc['removed_history'] += historical_collection.count() or 0
+                historical_collection.drop()
+
+        collection = self._entity_db_map[entity_type]
+        return_doc['removed'] += collection.count() or 0
+        collection.drop()
+
+        self._insert_indexes_entity(entity_type=entity_type)
+        return jsonify(return_doc)

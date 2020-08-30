@@ -20,9 +20,10 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
                                        filtered, sorted_endpoint, find_view_name_by_id, find_views_by_name_match,
-                                       search_filter)
+                                       search_filter, metadata)
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.revving_cache import rev_cached
+from gui.logic.api_helpers import get_page_metadata
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.ec_helpers import extract_actions_from_ec
 from gui.logic.login_helper import clear_passwords_fields, \
@@ -141,14 +142,23 @@ class Enforcements(Tasks):
     @filtered()
     @sorted_endpoint()
     @search_filter()
+    @metadata()
     @gui_route_logged_in(methods=['GET'])
-    def get_enforcements(self, limit, skip, mongo_filter, mongo_sort, search):
+    def get_enforcements(self, limit, skip, mongo_filter, mongo_sort, search, get_metadata: bool = True,
+                         include_details: bool = False):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
 
         :return:
         """
-        return jsonify(self._get_enforcements(limit, mongo_filter, mongo_sort, skip, search=search))
+        enforcements = self._get_enforcements(limit, mongo_filter, mongo_sort, skip, search=search)
+        if get_metadata:
+            return_doc = {
+                'page': get_page_metadata(skip, limit, len(enforcements)),
+                'assets': enforcements
+            }
+            return jsonify(return_doc)
+        return jsonify(enforcements)
 
     @gui_route_logged_in(methods=['PUT'])
     def add_enforcements(self):
@@ -171,7 +181,13 @@ class Enforcements(Tasks):
 
         :return:
         """
-        return self.delete_enforcement(self.get_request_data_as_object())
+        enforcement_selection = self.get_request_data_as_object()
+        if isinstance(enforcement_selection, list):
+            enforcement_selection = {
+                'ids': enforcement_selection,
+                'include': True
+            }
+        return self.delete_enforcement(enforcement_selection)
 
     @filtered()
     @gui_route_logged_in('count')

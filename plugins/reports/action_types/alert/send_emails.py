@@ -237,19 +237,19 @@ class SendEmailsAction(ActionTypeAlert):
             else:
                 results = get_entities(10, 0, self._create_query(self._internal_axon_ids), {},
                                        projection, self._entity_type, field_filters=field_filters,
-                                       excluded_adapters=excluded_adapters)
+                                       excluded_adapters=excluded_adapters)[0]
 
             self.__create_table_in_email(email, results, html_sections, images_cid, 'Top 10 results')
             if added_result_count > 0:
                 results = get_entities(5, 0, self._create_query(self._added_axon_ids), {},
                                        projection, self._entity_type, field_filters=field_filters,
-                                       excluded_adapters=excluded_adapters)
+                                       excluded_adapters=excluded_adapters)[0]
                 self.__create_table_in_email(email, results, html_sections, images_cid,
                                              f'Top 5 new {self._entity_type} in query')
             if removed_result_count > 0:
                 results = get_entities(5, 0, self._create_query(self._removed_axon_ids), {},
                                        projection, self._entity_type, field_filters=field_filters,
-                                       excluded_adapters=excluded_adapters)
+                                       excluded_adapters=excluded_adapters)[0]
 
                 self.__create_table_in_email(email, results, html_sections, images_cid,
                                              f'Top 5 {self._entity_type} removed from query')

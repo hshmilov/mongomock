@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -19,7 +20,7 @@ from axonius.utils.gui_helpers import (accounts as accounts_filter,
                                        categories as categories_filter,
                                        failed_rules as failed_rules_filter,
                                        rules_for_score as include_rules_in_score,
-                                       email_properties, jira_properties, aggregated_view)
+                                       email_properties, jira_properties, aggregated_view, return_api_format)
 from gui.logic.entity_data import (get_export_csv, get_cloud_admin_users)
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 
@@ -64,10 +65,15 @@ class Compliance:
     @categories_filter()
     @failed_rules_filter()
     @aggregated_view()
+    @return_api_format()
     @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Compliance), skip_activity=True)
-    def compliance(self, name, method, accounts, rules, categories, failed_only, aggregated):
-        return self._get_compliance(name, method, accounts, rules, categories, failed_only, aggregated)
+    def compliance(self, name, method, accounts, rules, categories, failed_only, aggregated, api_format: bool = True):
+        response = self._get_compliance(name, method, accounts, rules, categories, failed_only, aggregated)
+        if api_format:
+            response_dict = json.loads(response.data)
+            return jsonify(response_dict.get('rules', []))
+        return response
 
     def _get_compliance(self, name, method, accounts, rules=None, categories=None, failed_only=False,
                         aggregated=True):
