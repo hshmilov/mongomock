@@ -32,7 +32,7 @@ class Audit:
             limited_activity_logs = self._fetch_audit(from_date, to_date).skip(skip).limit(limit)
             return jsonify([self._format_activity(activity) for activity in limited_activity_logs])
 
-        return jsonify(self._get_activities_formatted_filtered(search, from_date, to_date)[skip:(skip + limit)])
+        return jsonify(self._get_activities_formatted_filtered(search, from_date, to_date, skip, limit))
 
     def _fetch_audit(self, from_date: datetime, to_date: datetime):
         audit_filter = {}
@@ -98,15 +98,33 @@ class Audit:
             for field, processor in audit_field_to_processor.items()
         }
 
-    def _get_activities_formatted_filtered(self, search, from_date: datetime, to_date: datetime, format_date=False):
+    def _get_activities_formatted_filtered(self, search,
+                                           from_date: datetime, to_date: datetime,
+                                           skip: int = 0, limit: int = -1,
+                                           format_date=False):
+        """
+        Fetch the activities from the db, in given date range
+        Format each one, so it has pretty strings
+        Check if given search term is anywhere in the resulting activity
+        Check if the activity is in the range of given skip and limit
+
+        :return: Formatted activities, logged within given date range,
+                 containing the given search term, between the skip and limit
+        """
         search = search.lower().strip()
         matching_activities = []
+        match_count = 0
         for activity in self._fetch_audit(from_date, to_date):
+            if len(matching_activities) == limit:
+                break
+
             formatted_activity = self._format_activity(activity, format_date)
             stringified_activity = ','.join([value for value
                                              in formatted_activity.values() if isinstance(value, str)]).lower()
             if search in stringified_activity:
-                matching_activities.append(formatted_activity)
+                if match_count >= skip:
+                    matching_activities.append(formatted_activity)
+                match_count += 1
 
         return matching_activities
 

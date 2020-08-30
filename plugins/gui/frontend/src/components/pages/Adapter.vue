@@ -694,9 +694,6 @@ export default {
         }
         &:hover {
           box-shadow: none;
-          i {
-            color: $theme-orange;
-          }
         }
 
         .help-link {

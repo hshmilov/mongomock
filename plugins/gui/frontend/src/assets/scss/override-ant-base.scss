@@ -89,6 +89,10 @@ input[type='text'], input[type='password'], input[type='number'] {
   }
 }
 
+.ant-tabs {
+  color: unset;
+}
+
 .ant-calendar-picker-container {
   .ant-calendar-range {
     .ant-calendar-time-picker-btn {
