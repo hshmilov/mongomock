@@ -117,5 +117,5 @@ class DBMigration:
             else:
                 migration_func()
             self.db_schema_version = index
-        if self.db_schema_version != len(migrations_list):
+        if self.db_schema_version < len(migrations_list):
             raise MigrationFailure(f'Upgrade failed, db_schema_version is {self.db_schema_version}')
