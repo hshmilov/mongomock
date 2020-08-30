@@ -401,6 +401,8 @@ def figure_out_os(s):
         os_type = 'Check Point'
     elif 'netscaler' in s.lower():
         os_type = 'Netscaler'
+    elif 'chrome os' in s.lower():
+        os_type = 'Chrome OS'
 
     return_dict = {'type': os_type,
                    'distribution': distribution,
