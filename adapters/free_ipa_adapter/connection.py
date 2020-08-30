@@ -19,7 +19,6 @@ class FreeIpaConnection(RESTConnection):
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
-
         self._permanent_headers['referer'] = self._url
 
     def _connect(self):
@@ -37,20 +36,28 @@ class FreeIpaConnection(RESTConnection):
             self._post(API_LOGIN_PREFIX, body_params=body_params, extra_headers=extra_headers, use_json_in_body=False,
                        use_json_in_response=False, return_response_raw=True)
 
-            next(self._user_get(fetch_one=True), None)
-            next(self._device_get(fetch_one=True), None)
+            params = {
+                'all': True,
+                'sizelimit': 1
+            }
+            body_params = {
+                'method': HOSTS_METHOD,
+                'params': [[None], params]
+            }
+            self._post(API_JSON_PREFIX, body_params=body_params)
+
+            body_params['method'] = USERS_METHODS
+            self._post(API_JSON_PREFIX, body_params=body_params)
 
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
-    def _device_get(self, fetch_one: bool=False):
+    def _device_get(self, size_limit: int):
         try:
             params = {
-                'all': True
+                'all': True,
+                'sizelimit': size_limit
             }
-
-            if fetch_one:
-                params['sizelimit'] = 1
 
             body_params = {
                 'method': HOSTS_METHOD,
@@ -76,22 +83,21 @@ class FreeIpaConnection(RESTConnection):
             logger.exception(f'Invalid request made while paginating devices')
             raise
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, size_limit: int):
         try:
-            yield from self._device_get()
+            yield from self._device_get(size_limit)
         except RESTException as err:
             logger.exception(str(err))
             raise
 
-    def _user_get(self, fetch_one: bool=False):
+    def _user_get(self, size_limit: int):
         try:
             for method in USERS_METHODS:
                 params = {
-                    'all': True
+                    'all': True,
+                    'sizelimit': size_limit
                 }
-
-                if fetch_one:
-                    params['sizelimit'] = 1
 
                 body_params = {
                     'method': method,
@@ -117,9 +123,9 @@ class FreeIpaConnection(RESTConnection):
             logger.exception(f'Invalid request made while paginating users {str(err)}')
             raise
 
-    def get_user_list(self):
+    def get_user_list(self, size_limit: int):
         try:
-            yield from self._user_get()
+            yield from self._user_get(size_limit)
         except RESTException as err:
             logger.exception(str(err))
             raise

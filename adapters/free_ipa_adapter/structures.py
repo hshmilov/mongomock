@@ -22,3 +22,5 @@ class FreeIpaUserInstance(UserAdapter):
     street = Field(str, 'Street')
     mails = ListField(str, 'Mails')
     member_roles = ListField(str, 'Member Of Roles')
+    home_directory = Field(str, 'Home Directory')
+    principal_name = Field(str, 'Principal Name')

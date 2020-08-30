@@ -1,20 +1,25 @@
 import logging
+import re
+from datetime import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_bool_from_raw
 from free_ipa_adapter.connection import FreeIpaConnection
 from free_ipa_adapter.client_id import get_client_id
 from free_ipa_adapter.structures import FreeIpaDeviceInstance, FreeIpaUserInstance
+from free_ipa_adapter.consts import DEFAULT_SIZE_LIMIT, DOMAIN_REGEX, DATE_FORMAT
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # pylint: disable=logging-format-interpolation
 
 
-class FreeIpaAdapter(AdapterBase):
+class FreeIpaAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(FreeIpaDeviceInstance):
         pass
@@ -63,8 +68,7 @@ class FreeIpaAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific domain
 
@@ -74,11 +78,10 @@ class FreeIpaAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(size_limit=self._size_limit)
 
-    @staticmethod
     # pylint: disable=arguments-differ
-    def _query_users_by_client(client_name, client_data):
+    def _query_users_by_client(self, client_name, client_data):
         """
         Get all users from a specific domain
 
@@ -88,7 +91,7 @@ class FreeIpaAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_user_list()
+            yield from client_data.get_user_list(size_limit=self._size_limit)
 
     @staticmethod
     def _clients_schema():
@@ -157,6 +160,7 @@ class FreeIpaAdapter(AdapterBase):
             device.hostname = self._parse_list_to_str(device_raw.get('fqdn'))
             device.description = self._parse_list_to_str(device_raw.get('description'))
             device.physical_location = self._parse_list_to_str(device_raw.get('l'))
+            device.device_serial = device_raw.get('serial_number')
 
             os_string = f'{self._parse_list_to_str(device_raw.get("nsosversion")) or ""} ' \
                         f'{self._parse_list_to_str(device_raw.get("nshardwareplatform")) or ""}'
@@ -201,10 +205,13 @@ class FreeIpaAdapter(AdapterBase):
             user.street = self._parse_list_to_str(user_raw.get('street'))
             user.mails = user_raw.get('mail')
             user.member_roles = user_raw.get('memberof_rule')
+            user.home_directory = user_raw.get('homedirectory')
+            user.principal_name = user_raw.get('krbprincipalname')
 
         except Exception:
             logger.exception(f'Failed creating instance for user {user_raw}')
 
+    # pylint: disable=too-many-branches, too-many-statements
     def _create_user(self, user_raw: dict, user: MyUserAdapter):
         try:
             user_id = self._parse_list_to_str(user_raw.get('ipauniqueid'))
@@ -213,6 +220,7 @@ class FreeIpaAdapter(AdapterBase):
                 return None
             user.id = user_id + '_' + (self._parse_list_to_str(user_raw.get('displayname')) or '')
 
+            user.username = user_raw.get('uid')
             user.display_name = self._parse_list_to_str(user_raw.get('displayname'))
             user.first_name = self._parse_list_to_str(user_raw.get('givenname'))
             user.last_name = self._parse_list_to_str(user_raw.get('sn'))
@@ -222,6 +230,43 @@ class FreeIpaAdapter(AdapterBase):
             user.organizational_unit = user_raw.get('ou')
             user.groups = user_raw.get('memberof_group')
             user.user_title = self._parse_list_to_str(user_raw.get('title'))
+
+            domain = user_raw.get('dn')
+            if isinstance(domain, str):
+                domains_list = re.findall(DOMAIN_REGEX, domain)
+                if isinstance(domains_list, list) and domains_list:
+                    user.domain = '.'.join(domains_list)
+
+            has_password = parse_bool_from_raw(user_raw.get('has_password'))
+            if isinstance(has_password, bool):
+                user.password_not_required = not has_password
+
+            try:
+                last_bad_logon = user_raw.get('krblastfailedauth')
+                if isinstance(last_bad_logon, list) and last_bad_logon:
+                    last_bad_logon = last_bad_logon[0]
+                user.last_bad_logon = datetime.strptime(last_bad_logon, DATE_FORMAT)
+            except Exception:
+                if last_bad_logon is not None:
+                    logger.warning(f'Failed parsing date of last logon {last_bad_logon}', exc_info=True)
+
+            try:
+                last_logon = user_raw.get('krblastsuccessfulauth')
+                if isinstance(last_logon, list) and last_logon:
+                    last_logon = last_logon[0]
+                user.last_logon = datetime.strptime(last_logon, DATE_FORMAT)
+            except Exception:
+                if last_logon is not None:
+                    logger.warning(f'Failed parsing date of last logon {last_logon}', exc_info=True)
+
+            try:
+                last_password_change = user_raw.get('krblastpwdchange')
+                if isinstance(last_password_change, list) and last_password_change:
+                    last_password_change = last_password_change[0]
+                user.last_password_change = datetime.strptime(last_password_change, DATE_FORMAT)
+            except Exception:
+                if last_password_change is not None:
+                    logger.warning(f'Failed parsing date of last logon {last_password_change}', exc_info=True)
 
             self._fill_free_ipa_user_fields(user_raw, user)
 
@@ -252,3 +297,30 @@ class FreeIpaAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'size_limit',
+                    'title': 'Fetch size limit',
+                    'type': 'integer',
+                    'default': DEFAULT_SIZE_LIMIT
+                }
+            ],
+            'required': [
+                'size_limit'
+            ],
+            'pretty_name': 'FreeIPA Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'size_limit': DEFAULT_SIZE_LIMIT
+        }
+
+    def _on_config_update(self, config):
+        self._size_limit = config.get('size_limit') or DEFAULT_SIZE_LIMIT
