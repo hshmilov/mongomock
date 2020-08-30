@@ -133,7 +133,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Carbon Black CB Defense Domain',
+                    'title': 'VMware Carbon Black Cloud Domain',
                     'type': 'string'
                 },
                 {
@@ -324,7 +324,7 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_deregistred'
             ],
-            'pretty_name': 'Carbon Black CB Defense Configuration',
+            'pretty_name': 'Carbon Black Cloud Configuration',
             'type': 'array'
         }
 

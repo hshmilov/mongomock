@@ -91,7 +91,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Carbon Black CB Response Domain',
+                    'title': 'VMware Carbon Black EDR Domain',
                     'type': 'string'
                 },
                 {
@@ -269,7 +269,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_uninstall'
             ],
-            'pretty_name': 'Carbon Black CB Response Configuration',
+            'pretty_name': 'Carbon Black EDR Configuration',
             'type': 'array'
         }
 

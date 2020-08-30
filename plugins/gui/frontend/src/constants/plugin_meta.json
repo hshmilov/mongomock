@@ -1064,19 +1064,19 @@
     "description": "Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices."
   },
   "carbonblack_defense_adapter": {
-    "title": "Carbon Black CB Defense",
+    "title": "VMware Carbon Black Cloud (Carbon Black CB Defense)",
     "link": "https://docs.axonius.com/docs/carbon-black-cb-defense",
-    "description": "Carbon Black CB Defense includes antivirus and EDR in a cloud-delivered platform to stop malware, non-malware attacks, and ransomware. (Also Note: This adapter is also compatible with CB ThreatHunter and CB LiveOps)"
+    "description": "VMware Carbon Black Cloud (formerly Carbon Black CB Defense) is a cloud native platform delivering next-generation antivirus and endpoint detection and response. This adapter is also compatible with Carbon Black Cloud Enterprise EDR (formerly CB ThreatHunter) and Carbon Black Cloud Audit and Remediation (formerly CB LiveOps)."
   },
   "carbonblack_protection_adapter": {
-    "title": "Carbon Black CB Protection",
+    "title": "VMware Carbon Black App Control (Carbon Black CB Protection)",
     "link": "https://docs.axonius.com/docs/carbon-black-cb-protection",
-    "description": "Carbon Black CB Protection includes application control and critical infrastructure protection for critical systems and fixed-function devices in highly regulated environments."
+    "description": "VMware Carbon Black App Control (formerly Carbon Black CB Protection) protects critical systems and servers to prevent unwanted changes and ensure continuous compliance with regulatory mandates."
   },
   "carbonblack_response_adapter": {
-    "title": "Carbon Black CB Response",
+    "title": "VMware Carbon Black EDR (Carbon Black CB Response)",
     "link": "https://docs.axonius.com/docs/carbon-black-cb-response",
-    "description": "Carbon Black CB Response includes EDR and threat hunting for security operations centers and incident response teams."
+    "description": "VMware Carbon Black EDR (formerly Carbon Black CB Response) is a threat hunting and incident response solution that delivers continuous visibility in offline, air-gapped, and disconnected environments using threat intel and customizable detections."
   },
   "epo_adapter": {
     "title": "McAfee ePolicy Orchestrator (ePO)",

@@ -70,7 +70,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
             'items': [
                 {
                     'name': 'CarbonblackProtection_Domain',
-                    'title': 'Carbon Black CB Protection Domain',
+                    'title': 'VMware Carbon Black App Control Domain',
                     'type': 'string'
                 },
                 {
@@ -172,7 +172,7 @@ class CarbonblackProtectionAdapter(AdapterBase, Configurable):
                 'fetch_uninstall',
                 'devices_per_page'
             ],
-            'pretty_name': 'Carbon Black CB Protection Configuration',
+            'pretty_name': 'CB App Control Configuration',
             'type': 'array'
         }
 

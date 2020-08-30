@@ -28,7 +28,7 @@ EXPECTED_ADAPTER_LIST_LABELS = [
 ]
 
 ESX_NAME = 'VMware ESXi'
-CARBONBLACKDEFENCE_NAME = 'Carbon Black CB Defense'
+CARBONBLACKDEFENCE_NAME = 'VMware Carbon Black Cloud (Carbon Black CB Defense)'
 CARBONBLACKDEFENCE_PLUGIN_NAME = 'carbonblack_defense_adapter'
 
 # pylint: disable= too-many-statements

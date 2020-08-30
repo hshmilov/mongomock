@@ -60,10 +60,10 @@ export const actionsMeta = {
     title: 'Enrich Device Data with Web Server Information',
   },
   carbonblack_isolate: {
-    title: 'Isolate in Carbon Black CB Response',
+    title: 'Isolate in VMware Carbon Black EDR',
   },
   carbonblack_unisolate: {
-    title: 'Unisolate in Carbon Black CB Response',
+    title: 'Unisolate in VMware Carbon Black EDR',
   },
   cybereason_isolate: {
     title: 'Isolate in Cybereason Deep Detect & Respond',
@@ -84,7 +84,7 @@ export const actionsMeta = {
     title: 'Add IPs to Tenable.io Target Group',
   },
   rapid7_ips_to_site: {
-        title: 'Add IPs to Rapid7 Site'
+        title: 'Add IPs to Rapid7 InsightVM Site'
     },tenable_io_create_asset: {
     title: 'Create Tenable.io Asset',
   },
@@ -119,13 +119,13 @@ export const actionsMeta = {
     title: 'Update ServiceNow Computer',
   },
   carbonblack_defense_change_policy: {
-    title: 'Change Carbon Black CB Defense Policy',
+    title: 'Change VMware Carbon Black Cloud Policy',
   },
   carbonblack_defense_quarantine: {
-    title: 'Isolate Carbon Black CB Defense Device',
+    title: 'Isolate VMware Carbon Black Cloud Device',
   },
   carbonblack_defense_unquarantine: {
-    title: 'Unisolate Carbon Black CB Defense Device',
+    title: 'Unisolate VMware Carbon Black Cloud Device',
   },
   enable_entities: {
     title: 'Enable Users or Devices',
@@ -179,8 +179,9 @@ export const actionsMeta = {
     title: 'Send CSV to Amazon S3',
   },
   send_json_to_s3: {
-        title: 'Send JSON to Amazon S3'
-    },automox_install_update: {
+    title: 'Send JSON to Amazon S3'
+  },
+  automox_install_update: {
     title: 'Automox Install Update',
   },
   send_email_to_entities: {

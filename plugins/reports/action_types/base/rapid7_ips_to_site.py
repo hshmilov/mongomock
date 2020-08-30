@@ -26,7 +26,7 @@ class Rapid7AddIPsToSite(ActionTypeBase):
                 },
                 {
                     'name': 'host',
-                    'title': 'Rapid7 domain',
+                    'title': 'Rapid7 InsightVM domain',
                     'type': 'string'
                 },
                 {
