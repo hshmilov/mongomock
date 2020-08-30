@@ -3,7 +3,8 @@ import datetime
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from cyberark_pas_adapter.consts import API_LOGON_SUFFIX, AuthenticationMethods
+from cyberark_pas_adapter.consts import API_LOGON_SUFFIX, AuthenticationMethods, USER_LEGACY_API, USERS_API_SUFFIX, \
+    MAX_NUMBER_OF_USERS, EXTRA_LEGACY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -35,9 +36,10 @@ class CyberarkPasConnection(RESTConnection):
                 'search': self._username
             }
             self._get_token()
-            self._get('PasswordVault/api/Users', url_params=url_params)
-        except Exception:
-            raise ValueError(f'Error: Invalid response from server, please check domain or credentials')
+            self._get(USERS_API_SUFFIX, url_params=url_params)
+
+        except Exception as e:
+            raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
     def _get_token(self):
         try:
@@ -54,6 +56,7 @@ class CyberarkPasConnection(RESTConnection):
                 'Authorization': self._token.decode('utf-8').strip('"')
             }
 
+            logger.debug('Successfully Got Token')
         except Exception:
             raise ValueError(f'Error: Failed getting token, invalid request was made.')
 
@@ -62,16 +65,55 @@ class CyberarkPasConnection(RESTConnection):
             return
         self._get_token()
 
-    def _paginated_user_get(self):
+    def _get_users(self):
         try:
+            total_users = 0
+
             self._refresh_token()
-            response = self._get('PasswordVault/api/Users')
-            users = response.get('Users')
-            if users and isinstance(users, list):
-                for user in users:
-                    if user.get('id'):
-                        self._refresh_token()
-                        yield self._get(f'PasswordVault/api/Users/{user.get("id")}')
+            response = self._get(USERS_API_SUFFIX)
+            if not (isinstance(response, dict) and isinstance(response.get('Users'), list)):
+                logger.warning(f'Received invalid response while getting users {response}')
+                return
+
+            for user in response.get('Users'):
+                if not (isinstance(user, dict) and user.get('id')):
+                    logger.warning(f'Received invalid user {user}')
+                    continue
+
+                try:
+                    user_url_suffix = f'{USERS_API_SUFFIX}/{user.get("id")}'
+                    self._refresh_token()
+                    response = self._get(user_url_suffix)
+                    if isinstance(response, dict):
+                        user = response
+
+                except Exception:
+                    try:
+                        # If we fail to fetch info with the new api we will try to use legacy
+                        if not user.get('username'):
+                            logger.warning(f'Cant use legacy API, user doesnt contain username {user}')
+                        else:
+                            # This section purpose is to increase info about the user, therefor inside the else so we
+                            # will reach the yield outside the exception
+                            legacy_url_suffix = f'{USER_LEGACY_API}/{user.get("username")}'
+                            self._refresh_token()
+                            response = self._get(legacy_url_suffix)
+                            if isinstance(response, dict):
+                                user[EXTRA_LEGACY] = response
+
+                    except Exception:
+                        # Fallthrough and yield minimal data we have about the user
+                        logger.error(f'Failed getting user information by id and username: '
+                                     f'{user.get("id")} {user.get("username")}')
+
+                yield user
+                total_users += 1
+
+                if total_users >= MAX_NUMBER_OF_USERS:
+                    logger.info(f'Exceeded max number of users, {total_users} / {len(response.get("Users"))}')
+                    break
+
+            logger.info(f'Got total of {total_users}')
         except Exception as err:
             logger.exception(f'Invalid request made, {str(err)}')
             raise
@@ -81,7 +123,7 @@ class CyberarkPasConnection(RESTConnection):
 
     def get_user_list(self):
         try:
-            yield from self._paginated_user_get()
+            yield from self._get_users()
         except RESTException as err:
             logger.exception(str(err))
             raise

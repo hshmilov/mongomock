@@ -2,15 +2,15 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.connection import RESTException
+from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_bool_from_raw
 from cyberark_pas_adapter.connection import CyberarkPasConnection
 from cyberark_pas_adapter.client_id import get_client_id
 from cyberark_pas_adapter.structures import CyberarkPasUserInstance, BusinessAddress, \
     Internet, Phones, PersonDetails
-from cyberark_pas_adapter.consts import AuthenticationMethods
+from cyberark_pas_adapter.consts import AuthenticationMethods, EXTRA_LEGACY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -191,6 +191,10 @@ class CyberarkPasAdapter(AdapterBase):
             user.location = user_raw.get('location')
             user.suspended = user_raw.get('suspended')
 
+            if isinstance(user_raw.get(EXTRA_LEGACY), dict):
+                user.expired = parse_bool_from_raw(user_raw.get(EXTRA_LEGACY).get('Expired'))
+                user.agent_user = parse_bool_from_raw(user_raw.get(EXTRA_LEGACY).get('AgentUser'))
+
             # Specific type is not clear from documentation, support both str and list
             authentication_methods = user_raw.get('authenticationMethod') or []
             if isinstance(authentication_methods, str):
@@ -243,6 +247,12 @@ class CyberarkPasAdapter(AdapterBase):
             user.password_never_expires = user_raw.get('passwordNeverExpires')
             user.account_expires = parse_date(user_raw.get('expiryDate'))
             user.account_disabled = user_raw.get('enableUser')
+
+            if isinstance(user_raw.get(EXTRA_LEGACY), dict):
+                legacy_raw = user_raw.get(EXTRA_LEGACY)
+                user.account_expires = parse_date(legacy_raw.get('ExpiryDate'))
+                user.account_disabled = parse_bool_from_raw(legacy_raw.get('Disabled'))
+                user.mail = legacy_raw.get('Email')
 
             self._fill_cyberark_pas_user_fields(user_raw, user)
 

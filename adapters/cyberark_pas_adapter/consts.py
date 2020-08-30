@@ -8,7 +8,10 @@ class AuthenticationMethods(Enum):
     Radius = 'RADIUS'
 
 
-DEVICE_PER_PAGE = 200
-MAX_NUMBER_OF_DEVICES = 2000000
+MAX_NUMBER_OF_USERS = 2000000
 
 API_LOGON_SUFFIX = 'PasswordVault/API/auth/{}/Logon'
+USERS_API_SUFFIX = 'PasswordVault/api/Users'
+USER_LEGACY_API = 'PasswordVault/WebServices/PIMServices.svc/Users'
+
+EXTRA_LEGACY = 'extra_legacy'

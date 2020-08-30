@@ -46,3 +46,5 @@ class CyberarkPasUserInstance(UserAdapter):
     internet = Field(Internet, 'Internet')
     phones = Field(Phones, 'Phones')
     personal_details = Field(PersonDetails, 'Personal Details')
+    expired = Field(bool, 'Expired')
+    agent_user = Field(bool, 'Agent User')
