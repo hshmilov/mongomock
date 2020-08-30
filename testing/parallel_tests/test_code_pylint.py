@@ -2,7 +2,7 @@ import pytest
 
 import parallel_tests.test_code as _test_code
 
-_NUMBER_OF_PAGES = 12
+_NUMBER_OF_PAGES = 8
 
 
 @pytest.mark.parametrize('page', range(_NUMBER_OF_PAGES))

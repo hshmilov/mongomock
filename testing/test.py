@@ -665,10 +665,11 @@ def main():
                 jobs.update(get_integ_tests_jobs())
             if args.target in ['parallel', 'all']:
                 parallel_tests_jobs = get_parallel_tests_jobs()
-                priority_parallel = list(parallel_tests_jobs.keys())[:2]
+                priority_parallel = list(parallel_tests_jobs.keys())
                 jobs.update(parallel_tests_jobs)
-                for p in priority_parallel:
-                    jobs.move_to_end(p, last=False)
+                for (i, p) in enumerate(priority_parallel):
+                    if 'test_code_pylint' in p or i < 2:
+                        jobs.move_to_end(p, last=False)
 
             # Priority tests
             priority_tests = [
