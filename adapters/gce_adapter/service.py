@@ -25,7 +25,7 @@ from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.parsing import format_subnet
 from gce_adapter.connection import GoogleCloudPlatformConnection
 from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_REASONS, SQL_INSTANCE_TYPES, \
-    SCC_FINDING_STATES
+    SCC_FINDING_STATES, SCC_DAYS_MAX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -246,6 +246,8 @@ class GceAdapter(AdapterBase, Configurable):
                 fetch_roles=self.__get_roles,
                 fetch_cloud_sql=self.__fetch_cloud_sql,
                 scc_orgs=self.__scc_orgs,
+                scc_findings_days=self.__scc_findings_days,
+                scc_findings_filter=self.__scc_findings_filter,
                 https_proxy=client_config.get('https_proxy')
             )
             with client:
@@ -277,7 +279,7 @@ class GceAdapter(AdapterBase, Configurable):
             yield from self._query_storage_devices_by_client(client_name, client_data)
         if self.__fetch_cloud_sql:
             yield from self._query_database_devices_by_client(client_name, client_data)
-        if self.__scc_orgs:
+        if self.__scc_orgs:  # XXX When adding new device types, add them to SCC whitelist as well!
             yield from self._query_scc_assets_by_client(client_name, client_data)
 
     # pylint: disable=arguments-differ
@@ -469,8 +471,21 @@ class GceAdapter(AdapterBase, Configurable):
                 {
                     'name': 'scc_orgs',
                     'type': 'string',
-                    'title': 'Security Command Center Organizations',
+                    'title': 'Security Command Center (SCC) Organizations',
                     # 'description': 'Requires organization-level securitycenter.x.list permissions '
+                },
+                {
+                    'name': 'scc_findings_days',
+                    'type': 'integer',
+                    'title': 'Fetch SCC findings from the last X days (0: disabled, max supported: 90)',
+                    # 'description': 'Requires organization-level securitycenter.findings.list permissions '
+                },
+                {
+                    'name': 'scc_findings_filter',
+                    'type': 'string',
+                    'title': 'Custom filter expression for SCC findings',
+                    # documentation link:
+                    # https://cloud.google.com/security-command-center/docs/reference/rest/v1/organizations.sources.findings/list
                 }
             ],
             'required': [
@@ -491,6 +506,8 @@ class GceAdapter(AdapterBase, Configurable):
             'match_role_permissions': False,
             'fetch_cloud_sql': False,
             'scc_orgs': '',
+            'scc_findings_days': SCC_DAYS_MAX,
+            'scc_findings_filter': '',
         }
 
     def _on_config_update(self, config):
@@ -500,6 +517,10 @@ class GceAdapter(AdapterBase, Configurable):
         self.__fetch_bkt_objects = config.get('fetch_bucket_objects', 0)
         self.__get_roles = config['match_role_permissions']
         self.__scc_orgs = config.get('scc_orgs', '')
+        # Ensure days is between 0-90 inclusive
+        self.__scc_findings_days = max(min(
+            config.get('scc_findings_days', SCC_DAYS_MAX), SCC_DAYS_MAX), 0)
+        self.__scc_findings_filter = config.get('scc_findings_filter', '')
 
     @staticmethod
     def _clients_schema():
@@ -562,7 +583,7 @@ class GceAdapter(AdapterBase, Configurable):
             device.id = f'{device_org}_{device_id}'
             device.cloud_provider = 'GCP'
             device.name = device_raw.get('name')
-            device.cloud_id = device_id
+            device.cloud_id = device_id.split('/')[-1]
             if isinstance(scc_props.get('owners'), list) and scc_props.get('owners'):
                 device.owner = str(scc_props.get('owners')[0])
                 device.res_owners = list(str(owner) for owner in scc_props.get('owners'))
@@ -596,18 +617,21 @@ class GceAdapter(AdapterBase, Configurable):
                 for finding_raw in findings_raw:
                     state = finding_raw.get('state')
                     if state not in SCC_FINDING_STATES:
-                        state = None
                         logger.warning(f'Invalid SCC Finding state: {state}')
-                    finding = SCCFinding(
-                        name=finding_raw.get('name'),
-                        state=state,
-                        category=finding_raw.get('category'),
-                        external_url=finding_raw.get('externalUri'),
-                        event_time=parse_date(finding_raw.get('eventTime')),
-                        create_time=parse_date(finding_raw.get('createTime'))
-                    )
-                    self._parse_security_marks(finding, finding_raw.get('securityMarks'))
-                    findings_list.append(finding)
+                        state = None
+                    try:
+                        finding = SCCFinding(
+                            name=finding_raw.get('name'),
+                            state=state,
+                            category=finding_raw.get('category'),
+                            external_uri=finding_raw.get('externalUri'),
+                            event_time=parse_date(finding_raw.get('eventTime')),
+                            create_time=parse_date(finding_raw.get('createTime'))
+                        )
+                        self._parse_security_marks(finding, finding_raw.get('securityMarks'))
+                        findings_list.append(finding)
+                    except Exception:
+                        logger.warning(f'Failed to parse finding {finding_raw}', exc_info=True)
                 device.scc_findings = findings_list
             sec_marks = device_raw.get('securityMarks')
             self._parse_security_marks(device, sec_marks)
@@ -632,9 +656,7 @@ class GceAdapter(AdapterBase, Configurable):
         if isinstance(marks_dict.get('marks'), dict):
             for key, value in marks_dict.get('marks', {}).items():
                 marks_list.append(MapObject(key=key, value=value))
-        else:
-            logger.warning(f'Failed to parse security marks from {marks_dict}')
-            return
+        # removed error message, as marks could also be a single value (name: marks_name)
         target_obj.sec_marks_name = marks_name
         target_obj.sec_marks = marks_list
 

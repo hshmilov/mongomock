@@ -8,6 +8,7 @@ import google.auth.crypt
 import google.auth.jwt
 
 from axonius.clients.rest.connection import RESTConnection
+from gce_adapter.consts import DEFAULT_SCC_WHITELIST, SCC_BAD_RESOURCE, SCC_DAYS_MAX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -16,8 +17,11 @@ STORAGE_BASE_URL = 'https://www.googleapis.com/storage/v1'
 BUCKETS_BASE_URL = f'{STORAGE_BASE_URL}/b'
 IAM_BASE_URL = f'https://iam.googleapis.com'
 SCC_BASE_URL = f'https://securitycenter.googleapis.com/v1'
+SCC_PER_PAGE = 200
+MAX_NUMBER_OF_RESULTS = 2000000
 
 
+# pylint: disable=too-many-instance-attributes
 class GoogleCloudPlatformConnection(RESTConnection):
     def __init__(self,
                  service_account_file: dict,
@@ -26,6 +30,8 @@ class GoogleCloudPlatformConnection(RESTConnection):
                  fetch_storage: bool = False,
                  fetch_roles: bool = False,
                  scc_orgs: str = '',
+                 scc_findings_days: int = SCC_DAYS_MAX,
+                 scc_findings_filter: str = '',
                  **kwargs):
         super().__init__(
             *args, domain='https://cloudresourcemanager.googleapis.com',
@@ -45,6 +51,13 @@ class GoogleCloudPlatformConnection(RESTConnection):
             self.__scc_orgs = list(org.strip() for org in scc_orgs.split(','))
         elif isinstance(scc_orgs, list):
             self._scc_orgs = list(org.strip() for org in scc_orgs)
+        # days for scc findings filter:
+        # 0 is disabled
+        # 90 is max
+        # if not specified, default to 90
+        # if value is False or None, default to 0
+        self._scc_findings_days = max(min(scc_findings_days, SCC_DAYS_MAX), 0)
+        self._scc_findings_filter = scc_findings_filter
         self.__scopes = {
             'sql': ['https://www.googleapis.com/auth/sqlservice.admin'],
             'compute': ['https://www.googleapis.com/auth/cloudplatformprojects.readonly'],
@@ -52,7 +65,7 @@ class GoogleCloudPlatformConnection(RESTConnection):
                         'https://www.googleapis.com/auth/devstorage.read_only'],
             'iam': ['https://www.googleapis.com/auth/cloud-platform.read-only',
                     'https://www.googleapis.com/auth/iam'],
-            'scc': ['https://www.googleapis.com/auth/cloud-platform.read-only']
+            'scc': ['https://www.googleapis.com/auth/cloud-platform']
         }
 
     def _get_scopes(self):
@@ -302,24 +315,77 @@ class GoogleCloudPlatformConnection(RESTConnection):
             yield from page['roles']
 
     def _get_scc_sources(self, org_id):
-        for page in self._paginated_get(f'{SCC_BASE_URL}/parent=organizations/{org_id}', force_full_url=True):
+        for page in self._paginated_get(f'{SCC_BASE_URL}/organizations/{org_id}', force_full_url=True):
             if not (isinstance(page, dict) and isinstance(page.get('sources'), list)):
                 raise ValueError(f'Bad response while getting scc sources list for organization {org_id}: {page}')
             yield from page['sources']
 
     def _get_scc_findings(self, org_id, source_id='-'):
-        findings_url = f'{SCC_BASE_URL}/parent=organizations/{org_id}/sources/{source_id}/findings'
-        for page in self._paginated_get(findings_url, force_full_url=True):
+        time_filter_obj = datetime.now() - timedelta(days=self._scc_findings_days)
+        time_filter_int = int(time_filter_obj.timestamp() * 1000)
+        time_filter = f'event_time >= {time_filter_int}'
+        state_filter = '-state = "INACTIVE"'
+        filter_str = f'({time_filter}) AND ({state_filter})'
+        # Add custom filter if specified.
+        # Does not check validity of filter format.
+        # Custom filter is AND-ed with the predefined filter
+        if self._scc_findings_filter and isinstance(self._scc_findings_filter, str):
+            filter_str = f'({filter_str}) AND ({self._scc_findings_filter})'
+            logger.info(f'SCC Findings using custom filter: {self._scc_findings_filter}')
+        url_params = {
+            'pageSize': SCC_PER_PAGE,
+            'filter': filter_str,
+        }
+        findings_url = f'{SCC_BASE_URL}/organizations/{org_id}/sources/{source_id}/findings'
+        page_count = 0
+        for page in self._paginated_get(findings_url, force_full_url=True, url_params=url_params):
             if not (isinstance(page, dict) and isinstance(page.get('listFindingsResults'), list)):
                 raise ValueError(f'Bad response while getting scc findings list for source {source_id}: {page}')
+            if page_count == 0:
+                logger.info(f'Expecting {page.get("totalSize", "unknown")} findings in total')
             yield from page['listFindingsResults']
+            page_count += 1
+            if page_count * SCC_PER_PAGE >= MAX_NUMBER_OF_RESULTS:
+                logger.warning(f'Reached max results: {MAX_NUMBER_OF_RESULTS} out of total '
+                               f'{page.get("totalSize", "unknown")}')
+                break
+        logger.info(f'Got a total of {page_count} pages of findings')
 
     def _get_scc_assets(self, org_id):
-        assets_url = f'{SCC_BASE_URL}/parent=organizations/{org_id}/assets'
-        for page in self._paginated_get(assets_url, force_full_url=True):
-            if not (isinstance(page, dict) and isinstance(page.get('listAssetResults'), list)):
+        filter_match_format = '(securityCenterProperties.resource_type : "{match_string}")'
+        filter_list = [
+            filter_match_format.format(match_string=match)
+            for match in DEFAULT_SCC_WHITELIST
+        ]
+        filter_str = ' OR '.join(filter_list)
+        # Remove compute.InstanceGroup because compute.Instance is a substring of that
+        # And we don't want InstanceGroup s in the results
+        # Note the dash '-' in the filter, that's negation.
+        # Filter documentation:
+        # https://cloud.google.com/security-command-center/docs/reference/rest/v1/organizations.assets/list
+
+        filter_bad_resource = f'(-securityCenterProperties.resource_type : "{SCC_BAD_RESOURCE}")'
+        filter_str = f'({filter_str}) AND {filter_bad_resource}'
+        # XXX We want to keep the filter as short as possible because it's a url param
+        # XXX So we want to avoid making it too long.
+        url_params = {
+            'pageSize': SCC_PER_PAGE,
+            'filter': filter_str
+        }
+        assets_url = f'{SCC_BASE_URL}/organizations/{org_id}/assets'
+        page_count = 0
+        for page in self._paginated_get(assets_url, force_full_url=True, url_params=url_params):
+            if not (isinstance(page, dict) and isinstance(page.get('listAssetsResults'), list)):
                 raise ValueError(f'Bad response while getting scc assets list for org {org_id}: {page}')
-            yield from page['listAssetResults']
+            if page_count == 0:
+                logger.info(f'Expecting {page.get("totalSize", "unknown")} assets in total')
+            yield from page['listAssetsResults']
+            page_count += 1
+            if page_count * SCC_PER_PAGE >= MAX_NUMBER_OF_RESULTS:
+                logger.warning(f'Reached max results: {MAX_NUMBER_OF_RESULTS} out of total '
+                               f'{page.get("totalSize", "unknown")}')
+                break
+        logger.info(f'Got a total of {page_count} pages of assets')
 
     @staticmethod
     def _map_findings_to_resources(findings_iter):
@@ -338,15 +404,35 @@ class GoogleCloudPlatformConnection(RESTConnection):
                 continue
             res_name = finding.get('resource').get('name')
             if res_name and isinstance(res_name, str):
-                results_dict[res_name].append(finding)
+                finding_raw = finding.get('finding')
+                if finding_raw and isinstance(finding_raw, dict):
+                    results_dict[res_name].append(finding_raw)
         return results_dict
 
     def get_scc_assets(self):
         for org in self.__scc_orgs:
             logger.info(f'Fetching scc assets and findings for org {org}')
             try:
-                findings_iter = self._get_scc_findings(org)
-                findings_dict = self._map_findings_to_resources(findings_iter)
+                if self._scc_findings_days:
+                    findings_iter = self._get_scc_findings(org)
+                    findings_dict = self._map_findings_to_resources(findings_iter)
+                else:
+                    logger.info(f'Not fetching SCC findings: '
+                                f'Date filter is set to {self._scc_findings_days}')
+                    findings_dict = {}
+            except Exception as e:
+                logger.warning(f'Failed to get SCC Findings for org {org}: {str(e)}',
+                               exc_info=True)
+                findings_dict = {}
+            # Log a sample of findings for a single asset (only one asset)
+            # For debug / optimization purposes
+            for random_asset, random_asset_findings in findings_dict.items():
+                logger.info(
+                    f'Random resource {random_asset} has {len(random_asset_findings)} findings'
+                )
+                break
+            # Now fetch assets
+            try:
                 assets = self._get_scc_assets(org)
                 for asset_result in assets:
                     if not isinstance(asset_result, dict):

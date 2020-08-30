@@ -40,3 +40,14 @@ SCC_FINDING_STATES = [
     'ACTIVE',
     'INACTIVE',
 ]
+
+# XXX Add more resources here when new device types are added to the adapter
+DEFAULT_SCC_WHITELIST = [
+    'compute.Instance',  # vm
+    'storage.Bucket',  # storage device
+    'sqladmin.Instance',  # sql db
+]
+
+SCC_BAD_RESOURCE = 'compute.InstanceGroup'  # XXX Convert this to a list if absolutely necessary (keep url short)
+
+SCC_DAYS_MAX = 90
