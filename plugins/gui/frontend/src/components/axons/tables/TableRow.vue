@@ -143,14 +143,14 @@ export default {
       }
     }
 
-        &.clickable:hover {
-            cursor: pointer;
-            box-shadow: 0 2px 16px -4px $grey-4;
+    &.clickable:hover {
+      cursor: pointer;
+      background-color: rgba($theme-blue, 0.2);
 
-            .v-chip {
-              cursor: pointer;
-            }
-        }
+      .v-chip {
+        cursor: pointer;
+      }
+    }
 
     &.selected {
       background-color: rgba($theme-blue, 0.2);
