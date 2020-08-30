@@ -520,14 +520,14 @@ table {
   .md-switch-container {
     background-color: rgba($grey-4,.4);
     .md-switch-thumb {
-      background-color: $grey-4;
+      background-color: $theme-white;
     }
   }
   &.md-checked {
     .md-switch-container {
-      background-color: rgba($theme-orange,.4);
+      background-color: $theme-black;
       .md-switch-thumb {
-        background-color: $theme-orange;
+        background-color: $theme-white;
       }
     }
   }
