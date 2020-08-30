@@ -59,7 +59,8 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'airwatch_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'tanium_asset_adapter',
-                      'solarwinds_orion_adapter', 'mssql_adapter', 'symantec_adapter']
+                      'solarwinds_orion_adapter', 'mssql_adapter']
+SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
@@ -978,6 +979,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                 or (get_domain_for_correlation(x) and get_domain_for_correlation(y) and is_windows(x) and is_windows(y) and compare_domain_for_correlation(x, y)) \
                                 or x.get('plugin_name') in DANGEROUS_ADAPTERS \
                                 or y.get('plugin_name') in DANGEROUS_ADAPTERS \
+                                or (x.get('plugin_name') in SEMI_DANGEROUS_ADAPTERS and y.get('plugin_name') in SEMI_DANGEROUS_ADAPTERS) \
                                 or cb_defense_basic_id_condradict(x, y) \
                                 or 'vmware' in mac_manufacturer.lower() \
                                 or not cloud_id_do_not_contradict(x, y):
