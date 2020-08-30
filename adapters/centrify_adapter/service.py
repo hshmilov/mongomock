@@ -4,9 +4,11 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from centrify_adapter.connection import CentrifyConnection
 from centrify_adapter.client_id import get_client_id
+from centrify_adapter.consts import REDROCK_DATE_REGEX, USER_TYPE_VAULTACCOUNT, USER_TYPE_CDIRECTORY
 from centrify_adapter.structures import CentrifyUserInstance, CentrifyAccessListItem, \
     CentrifyUPData
 
@@ -151,6 +153,22 @@ class CentrifyAdapter(AdapterBase):
         except Exception:
             return None
 
+    @staticmethod
+    def _parse_date(date_str):
+        if not date_str:
+            return None
+        date_regex = REDROCK_DATE_REGEX
+        try:
+            date_match = date_regex.findall(date_str)[0]
+            date_int = int(date_match)
+            if date_int > 0:
+                return parse_date(date_int)
+            return None
+
+        except Exception as e:
+            logger.warning(f'Failed to parse date {date_str}: {str(e)}')
+        return None
+
     @classmethod
     def _fill_centrify_user_fields(cls, user_raw: dict, user: MyUserAdapter):
         try:
@@ -254,6 +272,84 @@ class CentrifyAdapter(AdapterBase):
             logger.exception(f'Problem with fetching Centrify User for {user_raw}')
             return None
 
+    @classmethod
+    def _fill_centrify_vaultaccount_user_fields(cls, user_raw: dict, user: MyUserAdapter):
+        try:
+            user.uuid = user_raw.get('ID')
+            user.active_sessions = cls._parse_int(user_raw.get('ActiveSessions'))
+            user.active_checkouts = cls._parse_int(user_raw.get('ActiveCheckouts'))
+            user.rights = user_raw.get('Rights')
+            user.healthy = user_raw.get('Healthy')
+            user.health_err = user_raw.get('HealthError')
+            user.use_wheel = cls._parse_bool(user_raw.get('UseWheel'))
+            user.is_managed = cls._parse_bool(user_raw.get('IsManaged'))
+            user.cred_type = user_raw.get('CredentialType')
+            user.cred_id = user_raw.get('CredentialId')
+            user.pwd_reset_status = user_raw.get('NeedsPasswordReset')
+            user.pwd_reset_retries = cls._parse_int(user_raw.get('PasswordResetRetryCount'))
+            user.pwd_reset_last_err = user_raw.get('PasswordResetLastError')
+            user.due_back = cls._parse_date(user_raw.get('DueBack'))
+            user.last_change = cls._parse_date(user_raw.get('LastChange'))
+            user.workflow_enabled = cls._parse_bool(user_raw.get('WorkflowEnabled'))
+            user.workflow_enabled_effective = cls._parse_bool(user_raw.get('EffectiveWorkflowEnabled'))
+            user.missing_password = cls._parse_bool(user_raw.get('MissingPassword'))
+            user.last_health_check = cls._parse_date(user_raw.get('LastHealthCheck'))
+            # And now less generic stuff
+            user.session_type = user_raw.get('SessionType')
+            user.computer_class = user_raw.get('ComputerClass')
+            user.fqdn = user_raw.get('FQDN')
+            user.owner_id = user_raw.get('OwnerID')
+            user.owner_name = user_raw.get('OwnerName')
+            user.host_uuid = user_raw.get('Host')
+            user.domain_id = user_raw.get('DomainID')
+            user.db_id = user_raw.get('DatabaseID')
+            user.resource_name = user_raw.get('Name')
+            user.device_id = user_raw.get('DeviceID')
+            user.discover_time = cls._parse_date(user_raw.get('DiscoveredTime'))
+
+        except Exception:
+            logger.exception(f'Failed creating instance for user {user_raw}')
+
+    def _create_vaultaccount_user(self, user_raw: dict, user: MyUserAdapter):
+        try:
+            user_id = user_raw.get('ID')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = user_id + '_' + (user_raw.get('Name') or '')  # Name is device or domain name, not username
+            user.username = user_raw.get('User')
+            user.display_name = user_raw.get('UserDisplayName')
+            user.mail = user_raw.get('Mail')
+            user.description = user_raw.get('Description')
+            last_password_change = self._parse_date(user_raw.get('LastChange'))
+            user.last_password_change = last_password_change
+            last_health_check = self._parse_date(user_raw.get('LastHealthCheck'))
+            if last_health_check and last_password_change:
+                user.last_seen = max(last_health_check, last_password_change)
+            else:
+                user.last_seen = last_health_check or last_password_change
+            user.user_status = user_raw.get('Status')
+            user.user_created = self._parse_date(user_raw.get('DiscoveredTime'))
+            domain_id = user_raw.get('DomainID')
+            device_fqdn = user_raw.get('FQDN')
+            device_or_domain_name = user_raw.get('Name')
+            if device_or_domain_name and not domain_id:
+                user.add_associated_device(caption=device_or_domain_name)
+                user.is_local = True
+                user.domain = device_or_domain_name or device_fqdn
+            if device_or_domain_name and domain_id:
+                user.domain = device_or_domain_name
+                user.is_local = False
+            user.is_admin = self._parse_bool(user_raw.get('IsPrivileged'))
+            self._fill_centrify_vaultaccount_user_fields(user_raw, user)
+
+            user.set_raw(user_raw)
+
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching Centrify User for {user_raw}')
+            return None
+
     # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, users_raw_data):
         """
@@ -266,7 +362,14 @@ class CentrifyAdapter(AdapterBase):
                 continue
             try:
                 # noinspection PyTypeChecker
-                user = self._create_user(user_raw, self._new_user_adapter())
+                user_type = user_raw.get('x_type')
+                if user_type == USER_TYPE_VAULTACCOUNT:
+                    user = self._create_vaultaccount_user(user_raw, self._new_user_adapter())
+                elif user_type == USER_TYPE_CDIRECTORY:
+                    user = self._create_user(user_raw, self._new_user_adapter())
+                else:
+                    logger.warning(f'Unknown user type {user_type}')
+                    user = None
                 if user:
                     yield user
             except Exception:

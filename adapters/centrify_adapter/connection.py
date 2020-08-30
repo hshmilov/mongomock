@@ -3,7 +3,9 @@ import datetime
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from centrify_adapter.consts import URL_GET_TOKEN, GRANT_TYPE_CLIENT, URL_USERS, URL_APPS
+from centrify_adapter.consts import URL_GET_TOKEN, GRANT_TYPE_CLIENT, URL_USERS, URL_APPS,\
+    QUERY_REDROCK_USERS, MAX_NUMBER_OF_DEVICES, REDROCK_MAX_PER_PAGE, USER_TYPE_VAULTACCOUNT,\
+    USER_TYPE_CDIRECTORY, URL_QUERY
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -110,7 +112,65 @@ class CentrifyConnection(RESTConnection):
         logger.debug(f'Failed to get apps for {user_uuid}. Response was: {apps_response}')
         return None
 
+    def _paginated_query(self,
+                         query_str: str = QUERY_REDROCK_USERS,
+                         limit: int = MAX_NUMBER_OF_DEVICES,
+                         per_page: int = REDROCK_MAX_PER_PAGE,
+                         result_type: str = USER_TYPE_VAULTACCOUNT):
+        limit = min(limit, MAX_NUMBER_OF_DEVICES)
+        per_page = min(REDROCK_MAX_PER_PAGE, per_page)
+        result_count = 0
+        curr_page = 0
+        query_body = {
+            'Script': query_str,
+            'args': {
+                'PageSize': per_page,
+                'Limit': limit,
+                'Caching': -1,
+                'PageNumber': curr_page,
+
+            }
+        }
+        try:
+            while result_count < limit:  # also break if this page is smaller than page_size
+                query_body['args']['PageNumber'] = curr_page
+                logger.info(f'Fetching page {curr_page} from redrock query')
+                self._renew_token_if_needed()
+                query_response = self._post(URL_QUERY, body_params=query_body)
+                if not isinstance(query_response.get('Result'), dict):
+                    raise ValueError(f'Bad query response: {query_response}')
+                results = query_response.get('Result').get('Results')
+                if not isinstance(results, list):
+                    raise ValueError(f'Bad response for redrock query, expected list: {query_response}')
+                logger.debug(f'Yielding next {len(results)} results from redrock query')
+                for result_entry in results:
+                    if not (isinstance(result_entry, dict) and isinstance(result_entry.get('Row'), dict)):
+                        logger.warning(f'Bot bad result entry from query. Expected dict with \'Row\', '
+                                       f'got: {result_entry} instead.')
+                        continue
+                    result_raw = result_entry.get('Row')
+                    result_raw['x_type'] = result_type  # inject result type
+                    yield result_entry.get('Row')
+                    result_count += 1
+                if len(results) < per_page:
+                    logger.info(f'Done paginating query results')
+                    break
+                curr_page += 1
+        except Exception as e:
+            logger.error(f'Error while paginating query results: {str(e)}')
+            logger.debug(f'Error while paginating results from redrock query. Traceback attached.', exc_info=True)
+
     def get_user_list(self):
+        try:
+            yield from self._get_cdirectory_users()
+        except Exception:
+            logger.exception(f'Failed to get CDirectory users')
+        try:
+            yield from self._paginated_query(QUERY_REDROCK_USERS, result_type=USER_TYPE_VAULTACCOUNT)
+        except Exception:
+            logger.exception(f'Failed to get users via Redrock Query')
+
+    def _get_cdirectory_users(self):
         # No pagination, unfortunately.
         # API Link: https://developer.centrify.com/reference#post_cdirectoryservice-getusers
         try:
@@ -128,6 +188,7 @@ class CentrifyConnection(RESTConnection):
                     logger.warning(f'Got bad entry in response from server: {user_result_raw}')
                     continue
                 uuid = user_result.get('Uuid')
+                user_result['x_type'] = USER_TYPE_CDIRECTORY  # inject user type
                 try:
                     user_result['x_apps'] = self._get_user_apps(uuid)  # inject apps data
                 except Exception as e:
