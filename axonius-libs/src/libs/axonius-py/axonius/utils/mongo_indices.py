@@ -21,10 +21,13 @@ def create_index_safe(collection, *args, **kwargs):
     :param args: args to pass to create_index function (see pymongo.collection.create_index)
     :param kwargs:  kwargs to pass to create_index function (see pymongo.collection.create_index)
     """
+    raise_exception = kwargs.pop('raise_exception', False)
     try:
         logger.debug(f'Creating index {args}.')
         collection.create_index(*args, **kwargs)
     except PyMongoError as e:
+        if raise_exception:
+            raise
         logger.critical(f'Exception while creating index {args}. reason: {e}')
 
 
@@ -101,6 +104,7 @@ def non_historic_indexes(db: Collection):
                                ('adapters.data.username', pymongo.TEXT),
                                ('adapters.data.mail', pymongo.TEXT),
                                ('adapters.data.network_interfaces.mac', pymongo.TEXT)],
+                          raise_exception=True,
                           background=True)
     except Exception:
         create_index_safe(db, [('adapters.data.hostname', pymongo.TEXT),

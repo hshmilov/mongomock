@@ -193,6 +193,7 @@ class Adapters(Connections):
 
         clients_result = []
         schema = None
+        client_connection_discovery_schema = {}
         for adapter in registered_adapter_instances:
 
             # adapter_unique_name is the name in which this instance registered to core
