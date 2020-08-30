@@ -7,6 +7,7 @@ from flask import (jsonify,
                    request)
 
 from axonius.consts import adapter_consts
+from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, DEACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
@@ -15,6 +16,7 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
                                           DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME)
 from axonius.plugin_base import return_error
+from axonius.utils.gui_helpers import return_api_format
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 
 from axonius.utils.revving_cache import rev_cached
@@ -45,8 +47,24 @@ class Adapters(Connections):
             return {}
         return {'schema': clients_value}
 
+    @return_api_format()
     @gui_route_logged_in(enforce_trial=False)
-    def adapters(self):
+    def adapters(self, api_format=True):
+        if api_format:
+            adapters = self._adapters()
+            for adapter_name in adapters.keys():
+                for adapter in adapters[adapter_name]:
+                    for client in adapter['clients']:
+                        client_label = self.adapter_client_labels_db.find_one({
+                            'client_id': client['client_id'],
+                            PLUGIN_NAME: adapter_name,
+                            NODE_ID: adapter[NODE_ID]
+                        }, {
+                            CONNECTION_LABEL: 1
+                        })
+                        client['client_config'][CONNECTION_LABEL] = (client_label.get(CONNECTION_LABEL, '')
+                                                                     if client_label else '')
+            return jsonify(adapters)
         return jsonify(self._adapters_v2())
 
     @gui_route_logged_in('hint_raise/<plugin_name>', methods=['POST'], required_permission=PermissionValue.get(
@@ -86,11 +104,6 @@ class Adapters(Connections):
         PermissionAction.View, PermissionCategory.Adapters))
     def get_adapter_advanced_settings_schema(self, plugin_name):
         return jsonify(self._adapter_advanced_config_schema(plugin_name))
-
-    @gui_route_logged_in('<plugin_name>/connections', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Adapters))
-    def get_adapter_connections_data(self, plugin_name):
-        return jsonify(self._get_adapter_connections_data(plugin_name))
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
     def _adapters_v2(self):
@@ -426,6 +439,31 @@ class Adapters(Connections):
             'config': config,
             'schema': schema
         })
+
+    @gui_route_logged_in('labels', methods=['GET'], enforce_permissions=False)
+    def adapters_client_labels(self) -> list:
+        """
+        :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance
+        """
+        clients_label = []
+        labels_from_db = self.adapter_client_labels_db.find({})
+        for client in labels_from_db:
+            client_id = client.get(CLIENT_ID)
+            connection_label = client.get(CONNECTION_LABEL)
+            plugin_name = client.get(PLUGIN_NAME)
+            plugin_unique_name = client.get(PLUGIN_UNIQUE_NAME)
+            if client_id and connection_label and plugin_name and plugin_unique_name:
+                clients_label.append({
+                    'client_id': client_id,
+                    'label': connection_label,
+                    'plugin_name': plugin_name,
+                    'plugin_unique_name': plugin_unique_name,
+                    'node_id': client.get(NODE_ID)
+                })
+            else:
+                logger.error(f'Invalid connection label, missing {client_id}, {connection_label}, {plugin_name}')
+
+        return jsonify(clients_label)
 
     def _get_plugin_configs(self, config_name, plugin_name):
         plugin_name = self._get_plugin_name(plugin_name)

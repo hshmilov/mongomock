@@ -172,6 +172,7 @@ export default {
         })),
         selected: this.selectedAction(condition),
         readOnly: true,
+        iconsDisabled: false,
       }));
     },
     currentActionName() {

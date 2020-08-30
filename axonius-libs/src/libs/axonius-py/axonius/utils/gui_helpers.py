@@ -23,7 +23,7 @@ from flask import request, session, g, Response
 
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
-    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS,\
+    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS, \
     HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder
 
 from axonius.entities import EntitiesNamespace
@@ -494,8 +494,8 @@ def aggregated_view():
         def actual_wrapper(self, *args, **kwargs):
             if request.method == 'POST':
                 content = self.get_request_data_as_object()
-                aggregated = content.get('aggregatedView', True)
-            return func(self, aggregated=aggregated, *args, **kwargs)
+                kwargs['aggregated'] = content.get('aggregatedView', True)
+            return func(self, *args, **kwargs)
         return actual_wrapper
     return wrap
 
@@ -604,6 +604,47 @@ def historical():
                 logger.info(f'historical for {history}')
             return func(self, history=history, *args, **kwargs)
 
+        return actual_wrapper
+
+    return wrap
+
+
+def metadata():
+    """
+    The property 'get_metadata' and 'include_details',
+    sent in the request data, is added as an argument to the decorated method
+    """
+
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+            get_metadata = get_boolean_parameter_value(data, 'get_metadata')
+            include_details = get_boolean_parameter_value(data, 'include_details')
+            if get_metadata is not None:
+                kwargs['get_metadata'] = get_metadata
+            if include_details is not None:
+                kwargs['include_details'] = include_details
+            return func(self, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def return_api_format():
+    """
+    The property 'api_format', sent in the request data, is added as an argument to the decorated method
+    """
+
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+            api_format = get_boolean_parameter_value(data, 'api_format')
+            if api_format is not None:
+                kwargs['api_format'] = api_format
+            return func(self, *args, **kwargs)
         return actual_wrapper
 
     return wrap
@@ -751,7 +792,7 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                 complicated_field = field_path.split('.')
                 # Gets all the values for the main field, for instance of the field name is os.type
                 # it will return a list of dicts like {'type': 'Windows', 'distribution': 'Server 2016'}
-                values = [[entity_adapter[complicated_field[0]],  entity_adapter['last_seen']]
+                values = [[entity_adapter[complicated_field[0]], entity_adapter['last_seen']]
                           for entity_adapter in entity_data['adapters_data'][specific_adapter]]
                 complicated_field = complicated_field[1:]
                 # Run through the complicated main field values and extract the desired information from it
@@ -976,7 +1017,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
 
                 # First priority is the latest seen Agent adapter
                 if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
-                        in _adapter and isinstance(_adapter['last_seen'], datetime)\
+                        in _adapter and isinstance(_adapter['last_seen'], datetime) \
                         and _adapter['last_seen'] > last_seen:
                     if sub_property is not None and specific_property in _adapter:
                         try:
@@ -1015,7 +1056,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                                 except Exception:
                                     sub_property_val = None
                             if tmp_val is not None and isinstance(sub_property, str) and \
-                               (sub_property_val is not None and sub_property_val != []):
+                                    (sub_property_val is not None and sub_property_val != []):
                                 val = sub_property_val
                                 last_seen = tmp_last_seen
                                 val_changed_by_ad = True
@@ -1121,7 +1162,7 @@ def _get_all_metadata_from_entity_data(entity_data):
     return all_metas
 
 
-def _get_adapter_position_in_specific_data(adapter_name,  field_name, field_value, specific_datas, default_position=0):
+def _get_adapter_position_in_specific_data(adapter_name, field_name, field_value, specific_datas, default_position=0):
     """
     search in specific data the position of the adapter client,
     this position is very important for the data to be valid,
@@ -1426,7 +1467,7 @@ def entity_fields(entity_type: EntityType):
     }]
 
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
-        + flatten_fields(generic_fields, 'specific_data.data', ['scanner'])\
+        + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) \
         + [tags_json] + preferred_json + correlation_reasons_json + has_notes_json
     fields = {
         'schema': {
@@ -1567,7 +1608,7 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
                             history_date=history,
                             ignore_errors=True,
                             field_filters=field_filters,
-                            excluded_adapters=excluded_adapters)
+                            excluded_adapters=excluded_adapters)[0]
 
     current_entity_fields = entity_fields(entity_type)
 
@@ -1815,3 +1856,12 @@ def get_adapters_metadata():
     except IOError:
         logger.error('Failed to access plugin_meta.json')
     return defaultdict(lambda: defaultdict(str))
+
+
+def get_boolean_parameter_value(data, name):
+    parameter_value = data.get(name)
+    if isinstance(parameter_value, str):
+        return parameter_value == 'true'
+    if isinstance(parameter_value, bool):
+        return parameter_value
+    return None

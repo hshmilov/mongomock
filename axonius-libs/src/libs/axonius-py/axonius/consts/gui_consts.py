@@ -179,7 +179,7 @@ PREDEFINED_ROLE_READONLY = 'Read Only User'
 PREDEFINED_ROLE_RESTRICTED_USER = 'Restricted User'
 PREDEFINED_ROLE_RESTRICTED = 'Restricted'
 IS_AXONIUS_ROLE = 'is_axonius_role'
-IS_API_USER = 'is_apu_user'
+IS_API_USER = 'is_api_user'
 NO_ACCESS_ROLE = 'No Access'
 
 ####################

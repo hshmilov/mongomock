@@ -255,6 +255,8 @@ const createPostContentRequest = (state, payload) => {
   if (payload.maxRows !== undefined) {
     params.max_rows = payload.maxRows;
   }
+  params.get_metadata = payload.getMetadata || false;
+  params.include_details = payload.includeDetails || true;
 
   return params;
 };
@@ -581,7 +583,9 @@ export const fetchDataCurrent = ({ state, dispatch, commit }, payload) => {
 
   let rule = `${payload.module}/${payload.id}`;
   if (payload.history) {
-    rule += `?history=${encodeURIComponent(payload.history)}`;
+    rule += `?history=${encodeURIComponent(payload.history)}&api_format=false`;
+  } else {
+    rule += '?api_format=false';
   }
   return dispatch(REQUEST_API, {
     rule,

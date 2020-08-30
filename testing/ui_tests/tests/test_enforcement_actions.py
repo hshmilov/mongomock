@@ -7,7 +7,7 @@ import boto3
 import pytest
 from flaky import flaky
 from retrying import retry
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import ElementNotInteractableException, StaleElementReferenceException
 
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from axonius.utils.parsing import make_dict_from_csv
@@ -166,7 +166,7 @@ class TestEnforcementActions(TestBase):
         self.settings_page.click_toggle_button(toggle, make_yes=False)
         self.settings_page.click_save_global_settings()
 
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
         self.enforcements_page.add_send_email()
         self.enforcements_page.find_missing_email_server_notification()
 
@@ -184,11 +184,11 @@ class TestEnforcementActions(TestBase):
             self.settings_page.click_save_global_settings()
 
             # switch to enforcements page
-            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME)
+            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
             self.enforcements_page.add_push_system_notification()
 
             self.enforcements_page.add_notify_syslog(action_cond=self.enforcements_page.POST_ACTIONS_TEXT)
-            self.enforcements_page.click_save_button()
+            self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME)
 
             self.base_page.run_discovery()
             syslog_expected = f'Alert - "{ENFORCEMENT_NAME}"' + \
@@ -209,12 +209,12 @@ class TestEnforcementActions(TestBase):
 
             # make another enforcement
             new_enforcement_name = f'{ENFORCEMENT_NAME} SSL'
-            self.enforcements_page.create_basic_enforcement(new_enforcement_name, MANAGED_DEVICES_QUERY_NAME)
+            self.enforcements_page.create_basic_enforcement(new_enforcement_name)
             self.enforcements_page.add_push_system_notification(f'{ENFORCEMENT_NAME} push')
 
             self.enforcements_page.add_notify_syslog(f'{ENFORCEMENT_NAME} syslog',
                                                      action_cond=self.enforcements_page.POST_ACTIONS_TEXT)
-            self.enforcements_page.click_save_button()
+            self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME)
 
             self.base_page.run_discovery()
             syslog_expected = f'Alert - "{new_enforcement_name}"' + \
@@ -234,11 +234,10 @@ class TestEnforcementActions(TestBase):
         self.devices_page.run_filter_and_save(AD_QUERY_NAME, AD_QUERY)
 
         self.enforcements_page.create_tag_enforcement(ENFORCEMENT_CHANGE_NAME, AD_QUERY_NAME, ENFORCEMENT_CHANGE_NAME,
-                                                      tag=UNTAG_UNQUERIED, save=False, number_of_runs=1,
+                                                      tag=UNTAG_UNQUERIED, number_of_runs=1,
                                                       should_delete_unqueried=True)
 
         # Wait for task to finish
-
         self.devices_page.switch_to_page()
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_be_responsive()
@@ -255,9 +254,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_be_responsive()
         self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(AD_ONLY_QUERY_NAME)
-        self.enforcements_page.save_trigger()
+        self.enforcements_page.change_trigger_view(AD_ONLY_QUERY_NAME)
         self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
                                                    should_delete_unqueried=False, new_tag=False)
 
@@ -273,9 +270,7 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_be_responsive()
         self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(AD_ONLY_QUERY_NAME)
-        self.enforcements_page.save_trigger()
+        self.enforcements_page.change_trigger_view(AD_ONLY_QUERY_NAME)
         self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, UNTAG_UNQUERIED,
                                                    should_delete_unqueried=True, new_tag=False)
         # Run and wait for task to finish
@@ -309,13 +304,12 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.fill_enforcement_name(ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.check_scheduling()
-        self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.save_trigger()
         self.enforcements_page.add_push_system_notification()
         self.enforcements_page.add_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_ALL_COMMENT,
                                                 self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.check_scheduling()
+        self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()
         self.base_page.run_discovery()
 
@@ -332,10 +326,10 @@ class TestEnforcementActions(TestBase):
         time.sleep(0.4)  # waiting for animation to finish
         self.enforcements_page.change_tag_entities(ENFORCEMENT_CHANGE_NAME, TAG_NEW_COMMENT)
         self.enforcements_page.select_trigger()
+        self.enforcements_page.click_edit_button()
         self.enforcements_page.check_conditions()
         self.enforcements_page.check_condition_added()
         self.enforcements_page.check_new_entities()
-        self.enforcements_page.save_trigger()
         self.enforcements_page.click_save_button()
 
         # the EC moves us to a page in a weird way, let's wait for it to finish
@@ -365,10 +359,6 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.wait_for_spinner_to_end()
             self.enforcements_page.fill_enforcement_name(ENFORCEMENT_NAME)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.check_scheduling()
-            self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.save_trigger()
             self.enforcements_page.add_send_email()
             recipient = generate_random_valid_email()
             customized_body = 'What a beautiful and insightful alert sent by email directly from the enforcement ' \
@@ -376,6 +366,9 @@ class TestEnforcementActions(TestBase):
                               'confident place to secure your precious network assets.'
             self.enforcements_page.fill_send_email_config('Special Customized Email', recipient,
                                                           customized_body, True)
+            self.enforcements_page.select_trigger()
+            self.enforcements_page.check_scheduling()
+            self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
             self.enforcements_page.click_save_button()
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
@@ -404,17 +397,11 @@ class TestEnforcementActions(TestBase):
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.wait_for_spinner_to_end()
             self.enforcements_page.fill_enforcement_name(ENFORCEMENT_NAME)
-            self.enforcements_page.select_trigger()
-            self.enforcements_page.check_scheduling()
-            self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-            self.enforcements_page.save_trigger()
             self.enforcements_page.add_send_email()
-            with pytest.raises(NoSuchElementException):
+            # We expect the "Save Button" to be disabled because there are missing required fields
+            with pytest.raises(ElementNotInteractableException):
                 self.enforcements_page.fill_send_email_config('Special Customized Email')
-                # Bad - means the form is valid although is is missing required fields
 
-            # Good - means the button is disabled, as wanted
-            assert self.enforcements_page.find_disabled_save_action()
         self.settings_page.remove_email_server()
 
     @pytest.mark.skip('AX-5223')
@@ -465,6 +452,7 @@ class TestEnforcementActions(TestBase):
         self.driver.find_element_by_xpath(
             self.enforcements_page.ADDED_ACTION_XPATH.format(action_name=ENFORCEMENT_TEST_NAME_2)).click()
         self.enforcements_page.wait_for_action_config()
+        self.enforcements_page.click_edit_button()
         current_selected_tag = self.enforcements_page.get_tag_dropdown_selected_value()
         assert current_selected_tag == CUSTOM_TAG
         self.enforcements_page.click_save_button()
@@ -513,16 +501,14 @@ class TestEnforcementActions(TestBase):
                 self.enforcements_page.click_new_enforcement()
                 self.enforcements_page.wait_for_spinner_to_end()
                 self.enforcements_page.fill_enforcement_name(ENFORCEMENT_NAME)
-                self.enforcements_page.select_trigger()
-                self.enforcements_page.check_scheduling()
-                self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
-                self.enforcements_page.save_trigger()
                 self.enforcements_page.add_send_csv_to_s3()
-
                 self.enforcements_page.fill_send_csv_to_s3_config('Send s3 csv',
                                                                   AXONIUS_CI_TESTS_BUCKET,
                                                                   EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
                                                                   EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY)
+                self.enforcements_page.select_trigger()
+                self.enforcements_page.check_scheduling()
+                self.enforcements_page.select_saved_view(ENFORCEMENT_CHANGE_NAME)
                 self.enforcements_page.click_save_button()
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()
@@ -701,11 +687,11 @@ class TestEnforcementActions(TestBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.fill_enforcement_name(enforcement_name)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(query)
-        self.enforcements_page.save_trigger()
         self.enforcements_page.add_push_system_notification(name=push_name)
         getattr(self.enforcements_page, tag_action)(enforcement_name, tag,
                                                     self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(query)
+        self.enforcements_page.click_save_button()
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_task_in_progress_toaster()

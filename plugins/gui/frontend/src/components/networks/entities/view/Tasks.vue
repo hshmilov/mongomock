@@ -123,7 +123,9 @@ export default {
     cannotViewEnforcementTasks() {
       return this.$cannot(this.$permissionConsts.categories.Enforcements,
         this.$permissionConsts.actions.View,
-        this.$permissionConsts.categories.Tasks);
+        this.$permissionConsts.categories.Tasks)
+        || this.$cannot(this.$permissionConsts.categories.Enforcements,
+          this.$permissionConsts.actions.View);
     },
   },
   methods: {

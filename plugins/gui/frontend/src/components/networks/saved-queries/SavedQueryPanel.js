@@ -120,6 +120,14 @@ export default {
         this.$permissionConsts.actions.Delete, this.$permissionConsts.categories.SavedQueries)
         || this.query.private;
     },
+    userCanNavigateToEnforcement() {
+      return this.$can(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Add)
+      && this.$can(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Update)
+      && this.$can(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.View);
+    },
     name: {
       get() {
         if (this.editingMode) {
@@ -368,10 +376,7 @@ export default {
             color="#fff"
             icon={mdiEyeOutline}
           />);
-        }
-        else if (this.$can(this.$permissionConsts.categories.Enforcements,
-                           this.$permissionConsts.actions.Add)
-                 && !this.query.private) {
+        } else if (this.userCanNavigateToEnforcement && !this.query.private) {
           actions.push(<x-action-item
             class="action-enforce"
             title="New Enforcement"

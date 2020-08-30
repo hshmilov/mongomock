@@ -9,6 +9,7 @@ class TestEnforcementTriggersOrder(TestEnforcementConfigBase):
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.wait_for_spinner_to_end()
         self.enforcements_page.fill_enforcement_name(self.ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.add_tag_entities()
         self.enforcements_page.select_trigger()
         self.enforcements_page.check_scheduling()
         labels = self.enforcements_page.get_all_periods_sorted()

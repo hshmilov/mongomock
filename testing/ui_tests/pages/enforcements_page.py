@@ -2,6 +2,12 @@ import os
 import time
 from typing import List, Tuple, Iterable
 from collections import namedtuple
+import pytest
+
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
 
 from axonius.clients.wmi_query import consts
 from axonius.utils.wait import wait_until
@@ -38,9 +44,12 @@ class Trigger:
 
 
 class EnforcementsPage(EntitiesPage):
-    SAVE_AND_RUN_BUTTON_TEXT = 'Save & Run'
-    SAVE_AND_EXIT_BUTTON_TEXT = 'Save & Exit'
-    EXIT_BUTTON_TEXT = 'Exit'
+    RUN_BUTTON_TEXT = 'Run'
+    SAVE_BUTTON_TEXT = 'Save'
+    DELETE_BUTTON_TEXT = 'Yes, Delete'
+    CANCEL_BUTTON_ID = 'cancel-changes'
+    EDIT_BUTTON_CSS = '.action-edit'
+    REMOVE_BUTTON_CSS = '.action-remove'
     VIEW_TASKS_BUTTON_TEXT = 'View Tasks'
     TASK_IN_PROGRESS = 'Enforcement Task is in progress'
     NEW_ENFORCEMENT_BUTTON = 'Add Enforcement'
@@ -51,12 +60,17 @@ class EnforcementsPage(EntitiesPage):
     SUCCESS_ACTIONS_TEXT = 'success actions'
     FAILURE_ACTIONS_TEXT = 'failure actions'
     POST_ACTIONS_TEXT = 'post actions'
+    SUCCESS_ACTION_BUTTON_ID = 'success_action'
+    FAILURE_ACTION_BUTTON_ID = 'failure_action'
+    POST_ACTION_BUTTON_ID = 'post_action'
+    TRIGGER_BUTTON_ID = 'trigger'
     ACTION_LIBRARY_CONTAINER_CSS = '.x-action-library'
     ACTION_CONF_CONTAINER_CSS = '.x-action-config'
     ACTION_CONF_BODY_CSS = f'{ACTION_CONF_CONTAINER_CSS} .config'
     ACTION_RESULT_CONTAINER_CSS = '.x-action-result'
     API_KEY_ID = 'apikey'
-    ACTION_BY_NAME_XPATH = '//div[contains(@class, \'x-text-box\') and child::div[text()=\'{action_name}\']]'
+    ACTION_BY_NAME_XPATH = '//div[contains(@class, \'x-text-box\') ' \
+                           'and child::div[text()[normalize-space()=\'{action_name}\']]]'
     SELECT_VIEW_ENTITY_CSS = '.base-query .x-select-symbol .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
@@ -91,7 +105,7 @@ class EnforcementsPage(EntitiesPage):
     CLICKABLE_TABLE_ROW = '.x-table-row.clickable'
     CONFIRM_REMOVE_SINGLE = 'Delete Enforcement Set'
     CONFIRM_REMOVE_MULTI = 'Delete Enforcement Sets'
-    ADDED_ACTION_XPATH = './/div[@class=\'content\' and .//text()=\'{action_name}\']'
+    ADDED_ACTION_XPATH = './/div[@class=\'content\' and .//text()[normalize-space()=\'{action_name}\']]'
 
     SPECIAL_TAG_ACTION = 'Special Tag Action'
     DEFAULT_TAG_NAME = 'Special'
@@ -111,7 +125,10 @@ class EnforcementsPage(EntitiesPage):
                                  'preceding-sibling::div[@class=\'crumb\' and .//text()=\'enforcements\'] ' \
                                  'and preceding-sibling::div[@class=\'crumb\' and .//text()=\'tasks\']]'
 
-    VIEW_TASKS_ID = 'view_tasks'
+    BREADCRUMB_ENFORCEMENT_NAME_XPATH = '//div[@class=\'header\']/*[@class=\'page-title\']/div[' \
+                                        'preceding-sibling::div[@class=\'crumb\' and ' \
+                                        './/text()=\'enforcement center\']] ' \
+
     RESULT_CSS = '.result-container'
     QUERY_TITLE_CSS = '.query-title'
 
@@ -123,6 +140,8 @@ class EnforcementsPage(EntitiesPage):
 
     RUN_TAG_ENFORCEMENT_NAME = 'Run Tag Enforcement'
     RUN_TAG_ENFORCEMENT_NAME_SECOND = 'Second Run Tag Enforcement'
+    RUN_CMD_ENFORCEMENT_NAME = 'Run Cmd Enforcement'
+    DUMMY_ENFORCEMENT_NAME = 'Dummy Enforcement'
 
     @property
     def url(self):
@@ -140,6 +159,18 @@ class EnforcementsPage(EntitiesPage):
         self.wait_for_element_present_by_text(self.NEW_ENFORCEMENT_BUTTON)
         self.find_new_enforcement_button().click()
         self.wait_for_element_present_by_css(self.TRIGGER_CONTAINER_CSS)
+
+    def get_success_actions_button(self):
+        return self.driver.find_element_by_id(self.SUCCESS_ACTION_BUTTON_ID)
+
+    def get_failure_actions_button(self):
+        return self.driver.find_element_by_id(self.FAILURE_ACTION_BUTTON_ID)
+
+    def get_post_actions_button(self):
+        return self.driver.find_element_by_id(self.POST_ACTION_BUTTON_ID)
+
+    def get_trigger_button(self):
+        return self.driver.find_element_by_id(self.TRIGGER_BUTTON_ID)
 
     def find_new_enforcement_button(self):
         return self.get_enabled_button(self.NEW_ENFORCEMENT_BUTTON)
@@ -177,7 +208,6 @@ class EnforcementsPage(EntitiesPage):
         self.add_main_action(ActionCategory.Enrichment, Action.shodan_enrichment.value)
         self.fill_action_name(action_name)
         self.fill_api_key(shodan_client_details['apikey'])
-        self.save_action()
         self.click_save_button()
         # Due to a UI bug, the screen will change again to EC table
         time.sleep(10)
@@ -185,9 +215,6 @@ class EnforcementsPage(EntitiesPage):
     def add_main_action_send_email(self, action_name, recipient, attach_csv=False):
         self.add_main_action(ActionCategory.Notify, Action.send_emails.value)
         self.fill_send_email_config(action_name, recipient=recipient, attach_csv=attach_csv)
-        self.click_save_button()
-        # Due to a UI bug, the screen will change again to EC table
-        time.sleep(10)
 
     def add_send_csv_to_s3(self):
         self.find_element_by_text(self.MAIN_ACTION_TEXT).click()
@@ -197,7 +224,7 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.2)
         self.find_element_by_text(Action.send_csv_to_s3.value).click()
 
-    def tag_entities(self, name, tag, new_action=False, should_delete_unqueried=False, new_tag=True):
+    def tag_entities(self, name, tag, new_action=False, should_delete_unqueried=False, new_tag=True, save=True):
         """
         Creates an "Add Tag" action to enforcement.
         :param name: Action name
@@ -206,6 +233,7 @@ class EnforcementsPage(EntitiesPage):
         :param should_delete_unqueried: Whether the "Remove tag from entities not found in the Saved Query results".
         checkbox should be checked
         :param new_tag: Whether this is a newly generated tag or an old one.
+        :param save: Whether the action should be saved.
         """
         # add new tag ( type name in the input and click on the create new option )
         self.wait_for_action_config()
@@ -218,8 +246,9 @@ class EnforcementsPage(EntitiesPage):
         should_delete_unqueried_checkbox = self.find_checkbox_by_label(
             'Remove this tag from entities not found in the Saved Query results')
         self.click_toggle_button(should_delete_unqueried_checkbox, make_yes=should_delete_unqueried)
-        self.click_button(self.SAVE_BUTTON)
-        self.wait_for_element_present_by_text(name)
+        if save:
+            self.click_save_button()
+            self.wait_for_element_present_by_text(name)
 
     def tag_entities_from_existing_values(self, name, tag, new_action=False, enter_key=False):
         # select tag from dropdown ( type name in the input and click on the filtered option )
@@ -239,21 +268,31 @@ class EnforcementsPage(EntitiesPage):
                 self.DROPDOWN_SELECT_OPTION_CSS.format(title=tag),
                 tag
             )
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
-    def find_tags_dropdown(self, action_cond):
+    def selected_action_library_appearing(self, action_cond):
         self.find_element_by_text(action_cond).click()
-        self.wait_for_action_library()
+        try:
+            self.driver.find_element_by_css_selector(self.ACTION_LIBRARY_CONTAINER_CSS)
+            return True
+        except NoSuchElementException:
+            return False
+
+    def select_successive_action(self, action_cond):
+        wait_until(lambda: self.selected_action_library_appearing(action_cond))
+
+    def find_tags_dropdown(self, action_cond):
+        self.select_successive_action(action_cond)
         self.find_element_by_text(ActionCategory.Utils).click()
         # Opening animation time
         time.sleep(0.2)
 
     def add_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT,
-                         should_delete_unqueried=False):
+                         should_delete_unqueried=False, save=True):
         self.find_tags_dropdown(action_cond)
         self.find_element_by_text(Action.tag.value).click()
-        self.tag_entities(name, tag, new_action=True, should_delete_unqueried=should_delete_unqueried)
+        self.tag_entities(name, tag, new_action=True, should_delete_unqueried=should_delete_unqueried, save=save)
 
     def remove_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, action_cond=MAIN_ACTION_TEXT):
         self.find_tags_dropdown(action_cond)
@@ -268,11 +307,22 @@ class EnforcementsPage(EntitiesPage):
     def get_tag_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.DROPDOWN_TAGS_VALUE_CSS).text
 
+    def click_action_by_name(self, name):
+        self.driver.find_element_by_xpath(self.ACTION_BY_NAME_XPATH.format(action_name=name)).click()
+        self.wait_for_action_config()
+
     def change_tag_entities(self, name=SPECIAL_TAG_ACTION, tag=DEFAULT_TAG_NAME, should_delete_unqueried=False,
                             new_tag=True):
         self.driver.find_element_by_xpath(self.ACTION_BY_NAME_XPATH.format(action_name=name)).click()
+        self.click_edit_button()
         self.tag_entities(name, tag, should_delete_unqueried=should_delete_unqueried,
                           new_tag=new_tag)
+
+    def change_trigger_view(self, view_name):
+        self.select_trigger()
+        self.click_edit_button()
+        self.select_saved_view(view_name)
+        self.click_save_button()
 
     def fill_tag_all_text(self, tag_text):
         self.fill_text_field_by_element_id('tagAllName', tag_text)
@@ -295,7 +345,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(action_type).click()
         self.wait_for_action_config()
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def get_action_categories(self):
@@ -360,7 +410,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(Action.create_notification.value).click()
         self.wait_for_action_config()
         self.fill_action_name(name)
-        self.get_enabled_button(self.SAVE_BUTTON).click()
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def add_run_wmi_scan(self, *regkey, name='Run WMI Scan'):
@@ -384,7 +434,7 @@ class EnforcementsPage(EntitiesPage):
         self.fill_action_name(name)
         if regkey:
             add_register_key(*regkey)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def add_custom_data(self, action_name, field_name, field_value):
@@ -400,7 +450,7 @@ class EnforcementsPage(EntitiesPage):
         self.fill_action_name(action_name)
         self.fill_text_field_by_css_selector(css_selector='input#field_name', value=field_name)
         self.fill_text_field_by_css_selector(css_selector='input#field_value', value=field_value)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
 
         # the action name appears in the Main Action slot
         self.wait_for_element_present_by_text(action_name)
@@ -412,7 +462,6 @@ class EnforcementsPage(EntitiesPage):
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
         self.add_custom_data(action_name, field_name, field_value)
-        self.click_save_button()
 
     def fill_action_name(self, name):
         self.fill_text_field_by_element_id(self.ACTION_NAME_ID, name)
@@ -434,7 +483,7 @@ class EnforcementsPage(EntitiesPage):
         self.select_option_without_search(
             f'{self.ACTION_CONF_CONTAINER_CSS} .x-dropdown.x-select', self.DROPDOWN_SELECTED_OPTION_CSS, severity
         )
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def add_deploy_software(self, name='Deploy Special Software'):
@@ -454,7 +503,7 @@ class EnforcementsPage(EntitiesPage):
                           scroll_into_view_container=self.ACTION_CONF_BODY_CSS)
         self.upload_file_by_id('0', open(exe_path, 'rb').read(), is_bytes=True)
         time.sleep(2)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def add_run_windows_command(self, name, files: List[Tuple[str, bytes]] = None):
@@ -490,7 +539,7 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id('password', CLIENT_DETAILS[consts.PASSWORD])
         self.fill_text_field_by_element_id('command_name', name)
         self.fill_text_field_by_element_id('params', param_line)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def add_ldap_attribute(self, name='Update LDAP Attribute'):
@@ -509,21 +558,12 @@ class EnforcementsPage(EntitiesPage):
         self.fill_text_field_by_element_id('attribute_name', 'info')
         self.fill_text_field_by_element_id('attribute_value', 'test123')
         time.sleep(2)
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def select_trigger(self):
         self.driver.find_element_by_css_selector(self.TRIGGER_CONTAINER_CSS).click()
         self.wait_for_element_present_by_css(self.TRIGGER_CONF_CONTAINER_CSS)
-        # Appearance animation time
-        time.sleep(0.6)
-
-    def save_trigger(self):
-        self.click_button(
-            self.SAVE_BUTTON,
-            scroll_into_view_container=self.TRIGGER_CONF_CONTAINER_CSS,
-            context=self.driver.find_element_by_css_selector(self.TRIGGER_CONF_CONTAINER_CSS),
-        )
 
     def select_saved_view(self, text, entity='Devices'):
         self.select_option_without_search(self.SELECT_VIEW_ENTITY_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, entity)
@@ -536,24 +576,50 @@ class EnforcementsPage(EntitiesPage):
     def get_selected_saved_view_name(self):
         return self.driver.find_element_by_css_selector(self.SELECT_VIEW_NAME_CSS).text
 
-    def save_action(self):
-        self.click_button(
-            self.SAVE_BUTTON,
-            scroll_into_view_container=self.ACTION_CONF_CONTAINER_CSS,
-            context=self.driver.find_element_by_css_selector(self.ACTION_CONF_CONTAINER_CSS),
-        )
-
     def click_save_button(self):
-        self.click_button(self.SAVE_AND_EXIT_BUTTON_TEXT)
-
-    def click_exit_button(self):
-        self.click_button(self.EXIT_BUTTON_TEXT)
+        self.click_button(self.SAVE_BUTTON_TEXT)
+        self.wait_for_spinner_to_end()
 
     def click_run_button(self):
-        self.click_button(self.SAVE_AND_RUN_BUTTON_TEXT)
+        self.click_button(self.RUN_BUTTON_TEXT)
 
     def get_save_button(self, context=None):
-        return self.get_button(self.SAVE_AND_RUN_BUTTON_TEXT, context=context)
+        return self.get_button(self.SAVE_BUTTON_TEXT)
+
+    def get_cancel_button(self, context=None):
+        return self.driver.find_element_by_id(self.CANCEL_BUTTON_ID)
+
+    def assert_config_panel_in_display_mode(self):
+        with pytest.raises(NoSuchElementException):
+            self.get_save_button()
+        with pytest.raises(NoSuchElementException):
+            self.get_cancel_button()
+
+    def assert_config_panel_in_edit_mode(self):
+        with pytest.raises(NoSuchElementException):
+            self.get_edit_button()
+        with pytest.raises(NoSuchElementException):
+            self.get_delete_button()
+
+    def click_edit_button(self):
+        WebDriverWait(self.driver, 2).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, self.EDIT_BUTTON_CSS))).click()
+
+    def click_delete_button(self):
+        WebDriverWait(self.driver, 2).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, self.REMOVE_BUTTON_CSS))).click()
+
+    def get_edit_button(self):
+        return self.driver.find_element_by_css_selector(self.EDIT_BUTTON_CSS)
+
+    def get_delete_button(self):
+        return self.driver.find_element_by_css_selector(self.REMOVE_BUTTON_CSS)
+
+    def edit_button_exists(self):
+        return len(self.find_elements_by_css(self.EDIT_BUTTON_CSS)) > 0
+
+    def delete_button_exists(self):
+        return len(self.find_elements_by_css(self.REMOVE_BUTTON_CSS)) > 0
 
     def wait_for_task_in_progress_toaster(self):
         self.wait_for_toaster(self.TASK_IN_PROGRESS, interval=1)
@@ -568,6 +634,12 @@ class EnforcementsPage(EntitiesPage):
 
     def is_view_tasks_button_disabled(self):
         return self.is_element_disabled(self.get_view_tasks_button())
+
+    def get_run_button(self, context=None):
+        return self.get_button(self.RUN_BUTTON_TEXT, context=context)
+
+    def is_run_button_disabled(self):
+        return self.is_element_disabled(self.get_run_button())
 
     def click_select_enforcement(self, index):
         self.click_row_checkbox(index)
@@ -614,23 +686,22 @@ class EnforcementsPage(EntitiesPage):
         self.click_new_enforcement()
         self.fill_enforcement_name(enforcement_name)
 
-    def create_basic_enforcement(self,
-                                 enforcement_name,
-                                 enforcement_view=None,
-                                 trigger=True,
-                                 schedule=True,
-                                 enforce_added=False,
-                                 save=True):
+    def create_basic_enforcement(self, enforcement_name):
         self.create_basic_empty_enforcement(enforcement_name)
-        if trigger:
-            self.select_trigger()
-            if enforce_added:
-                self.check_new_entities()
-            if schedule:
-                self.check_scheduling()
-            self.select_saved_view(enforcement_view)
-            if save:
-                self.save_trigger()
+
+    def create_trigger(self,
+                       enforcement_view=None,
+                       schedule=True,
+                       enforce_added=False,
+                       save=True):
+        self.select_trigger()
+        if enforce_added:
+            self.check_new_entities()
+        if schedule:
+            self.check_scheduling()
+        self.select_saved_view(enforcement_view)
+        if save:
+            self.click_save_button()
 
     def create_notifying_enforcement(self,
                                      enforcement_name,
@@ -639,8 +710,9 @@ class EnforcementsPage(EntitiesPage):
                                      subtracted=True,
                                      above=0,
                                      below=0):
-
-        self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
+        self.create_basic_enforcement(enforcement_name)
+        self.add_push_system_notification(enforcement_name)
+        self.create_trigger(enforcement_view, save=False)
         self.check_conditions()
         if added:
             self.check_condition_added()
@@ -652,12 +724,9 @@ class EnforcementsPage(EntitiesPage):
         if below:
             self.check_below()
             self.fill_below_value(below)
-        self.save_trigger()
-
-        self.add_push_system_notification(enforcement_name)
         self.click_save_button()
-        self.wait_for_spinner_to_end()
-        self.wait_for_table_to_load()
+        self.switch_to_page()
+        self.wait_for_table_to_be_responsive()
 
     def create_notifying_enforcement_above(self, alert_name, alert_query, above):
         self.create_notifying_enforcement(alert_name,
@@ -676,18 +745,18 @@ class EnforcementsPage(EntitiesPage):
                                           below=below)
 
     def create_deploying_enforcement(self, enforcement_name, enforcement_view):
-        self.create_basic_enforcement(enforcement_name, enforcement_view)
+        self.create_basic_enforcement(enforcement_name)
         self.add_deploy_software(enforcement_name)
-        self.click_save_button()
-        self.wait_for_table_to_load()
+        self.create_trigger(enforcement_view)
 
     def create_run_wmi_enforcement(self, *regkeys):
         self.switch_to_page()
-        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE, ENFORCEMENT_WMI_SAVED_QUERY_NAME)
+        self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_run_wmi_scan(*regkeys, name=ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
-        self.click_save_button()
-        self.wait_for_table_to_load()
+        self.create_trigger(ENFORCEMENT_WMI_SAVED_QUERY_NAME)
+        self.switch_to_page()
+        self.wait_for_table_to_be_responsive()
 
     def create_run_wmi_scan_on_each_cycle_enforcement(self):
         # First, check if we have it.
@@ -714,8 +783,8 @@ class EnforcementsPage(EntitiesPage):
         self.add_tag_entities(
             name=failure_tag_name, tag='Missing Special Deploy', action_cond=self.FAILURE_ACTIONS_TEXT
         )
-        self.click_save_button()
-        self.wait_for_table_to_load()
+        self.switch_to_page()
+        self.wait_for_table_to_be_responsive()
 
     def create_tag_enforcement(self,
                                enforcement_name,
@@ -724,22 +793,17 @@ class EnforcementsPage(EntitiesPage):
                                tag=DEFAULT_TAG_NAME,
                                number_of_runs=0,
                                action_cond=MAIN_ACTION_TEXT,
-                               save=True,
                                should_delete_unqueried=False):
-        self.create_basic_enforcement(enforcement_name, enforcement_view, save=False)
+        self.create_basic_enforcement(enforcement_name)
+        self.add_tag_entities(name, tag, action_cond, should_delete_unqueried=should_delete_unqueried)
         self.select_trigger()
         self.check_scheduling()
         self.select_saved_view(enforcement_view)
-        self.save_trigger()
-        self.add_tag_entities(name, tag, action_cond, should_delete_unqueried=should_delete_unqueried)
+        self.click_save_button()
         if number_of_runs:
             for _ in range(number_of_runs):
                 self.click_run_button()
                 self.wait_for_task_in_progress_toaster()
-        elif save:
-            self.click_save_button()
-            self.wait_for_spinner_to_end()
-            self.wait_for_table_to_load()
 
     def is_severity_selected(self, severity):
         return self.driver.find_element_by_css_selector(severity).is_selected()
@@ -800,7 +864,7 @@ class EnforcementsPage(EntitiesPage):
             attach_csv_checkbox = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Attach CSV with query results'))
             attach_csv_checkbox.find_element_by_class_name('x-checkbox').click()
-        self.get_enabled_button(self.SAVE_BUTTON).click()
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def fill_send_csv_to_s3_config(self, name, s3_bucket,
@@ -818,7 +882,7 @@ class EnforcementsPage(EntitiesPage):
             attach_iam_rols_checkbox = self.driver.find_element_by_xpath(
                 self.DIV_BY_LABEL_TEMPLATE.format(label_text='Use attached IAM role'))
             attach_iam_rols_checkbox.find_element_by_class_name('x-checkbox').click()
-        self.click_button(self.SAVE_BUTTON)
+        self.click_save_button()
         self.wait_for_element_present_by_text(name)
 
     def find_disabled_save_action(self):
@@ -888,6 +952,9 @@ class EnforcementsPage(EntitiesPage):
 
     def get_task_name(self):
         return self.find_element_by_xpath(self.BREADCRUMB_TASK_NAME_XPATH).text
+
+    def get_enforcement_name_of_view_tasks(self):
+        return self.find_element_by_xpath(self.BREADCRUMB_ENFORCEMENT_NAME_XPATH).text
 
     def click_result_redirect(self):
         element = self.driver.find_element_by_css_selector(self.RESULT_CSS)

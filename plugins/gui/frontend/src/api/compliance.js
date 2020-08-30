@@ -14,6 +14,7 @@ export const fetchCompliance = async (name, accounts, rules, categories,
     categories,
     failedOnly,
     aggregatedView,
+    api_format: false,
   };
   const res = await request(requestOptions);
   return res.data;
@@ -54,6 +55,7 @@ export const sendComplianceEmail = async (name, accounts, mailProperties, schema
     categories,
     failedOnly,
     aggregatedView,
+    api_format: false,
   };
 
   try {
@@ -94,6 +96,7 @@ export const createJiraIssue = async (name, accounts, jiraProperties, schemaFiel
       categories,
       failedOnly,
       aggregatedView,
+      api_format: false,
     },
   };
 

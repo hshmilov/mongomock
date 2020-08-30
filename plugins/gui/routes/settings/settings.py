@@ -18,6 +18,7 @@ from axonius.utils.permissions_helper import PermissionCategory, PermissionActio
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.account.account import Account
 from gui.routes.settings.audit.audit import Audit
+from gui.routes.settings.central_core.central_core import CentralCore
 from gui.routes.settings.getting_started.getting_started import GettingStarted
 from gui.routes.settings.plugins.plugins import Plugins
 from gui.routes.settings.roles.roles import Roles
@@ -32,7 +33,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 @gui_category_add_rules('settings')
-class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, UserToken, UserBulk):
+class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, UserToken, UserBulk, CentralCore):
 
     @gui_route_logged_in(methods=['GET'], enforce_permissions=False)
     def system_config(self):
@@ -321,3 +322,24 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         return jsonify({key: value
                         for key, value in self._password_policy_settings.items()
                         if key != 'enabled' and value})
+
+    @gui_route_logged_in(
+        rule='meta/about',
+        methods=['GET'],
+        enforce_permissions=False
+    )
+    def api_get_metadata(self):
+        """Get the System Settings > About tab.
+
+        GET: Returns dict with keys:
+            Build Date: str
+            Installed Version: str
+            Customer ID: str
+            api_client_version: str
+
+        :return: dict
+        """
+        obj = {}
+        obj.update(self.metadata)
+        obj['api_client_version'] = '4.0'
+        return jsonify(obj)

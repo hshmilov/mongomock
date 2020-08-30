@@ -15,12 +15,13 @@ from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.clients.azure.utils import AzureBlobStorageClient, CONTAINER_NAME_PATTERN
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, AVAILABLE_CSV_LOCATION_FIELDS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        RootMasterNames, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES,
-                                       IDENTITY_PROVIDERS_CONFIG)
+                                       IDENTITY_PROVIDERS_CONFIG, GUI_CONFIG_NAME)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
@@ -31,7 +32,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME,
                                           DISCOVERY_RESEARCH_DATE_TIME, CONNECTION_DISCOVERY, ENABLE_CUSTOM_DISCOVERY,
                                           CLIENTS_COLLECTION, ADAPTER_DISCOVERY, DISCOVERY_REPEAT_TYPE,
-                                          DISCOVERY_REPEAT_RATE)
+                                          DISCOVERY_REPEAT_RATE, CORE_UNIQUE_NAME)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
@@ -96,6 +97,34 @@ class Plugins:
             plugins_to_return.append(processed_plugin)
 
         return jsonify(plugins_to_return)
+
+    @gui_route_logged_in('<plugin_name>', methods=['GET'], enforce_trial=False)
+    def get_default_plugin_configs(self, plugin_name):
+        """
+        Get the default config of a specific plugin
+        """
+        config_name = None
+        if plugin_name == GUI_PLUGIN_NAME:
+            config_name = GUI_CONFIG_NAME
+        if plugin_name == CORE_UNIQUE_NAME:
+            config_name = CORE_CONFIG_NAME
+        if plugin_name == SYSTEM_SCHEDULER_PLUGIN_NAME:
+            config_name = SCHEDULER_CONFIG_NAME
+        return self.get_plugin_configs(plugin_name, config_name)
+
+    @gui_route_logged_in('<plugin_name>', methods=['POST'], enforce_trial=False)
+    def update_default_plugin_configs(self, plugin_name):
+        """
+        Get the default config of a specific plugin
+        """
+        config_name = None
+        if plugin_name == GUI_PLUGIN_NAME:
+            config_name = GUI_CONFIG_NAME
+        if plugin_name == CORE_UNIQUE_NAME:
+            config_name = CORE_CONFIG_NAME
+        if plugin_name == SYSTEM_SCHEDULER_PLUGIN_NAME:
+            config_name = SCHEDULER_CONFIG_NAME
+        return self.update_plugin_configs(plugin_name, config_name)
 
     @gui_route_logged_in('<plugin_name>/<config_name>', methods=['GET'], enforce_trial=False)
     def get_plugin_configs(self, plugin_name, config_name):

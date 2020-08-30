@@ -108,6 +108,7 @@ class TableRow:
 class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
     LOADING_SPINNER_CSS2 = '.v-spinner'
+    ANT_LOADING_SPINNER = '.loading-spinner'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_XPATH_TEMPLATE_WITH_SINGLE_QUOTE = \
         '//div[child::label[text()="{label_text}"]]/div[contains(@class, \'x-checkbox\')]'
@@ -867,6 +868,7 @@ class Page:
 
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS)
         self.wait_for_element_absent_by_css(self.LOADING_SPINNER_CSS2)
+        self.wait_for_element_absent_by_css(self.ANT_LOADING_SPINNER)
 
     def wait_for_table_to_load(self, retries=RETRY_WAIT_FOR_ELEMENT, interval=SLEEP_INTERVAL):
         self.wait_for_element_present_by_xpath(TABLE_SPINNER_NOT_DISPLAYED_XPATH,
@@ -990,9 +992,10 @@ class Page:
     def is_input_error(input_element):
         return 'border-error' in input_element.get_attribute('class')
 
-    def wait_for_modal_close(self):
+    def wait_for_modal_close(self, wait_for_drawer_close=True):
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
-        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
+        if wait_for_drawer_close:
+            self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def close_modal_overlay(self):
         self.find_elements_by_css(self.MODAL_OVERLAY_CSS).click()

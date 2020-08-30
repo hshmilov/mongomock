@@ -40,8 +40,10 @@ class TestEnforcementTableSort(TestEnforcementConfigBase):
         # Default sort is according to update time
         for name in sorted(enforcement_names):
             self.enforcements_page.click_enforcement(name)
+            self.enforcements_page.click_edit_button()
             self.enforcements_page.click_save_button()
-            self.enforcements_page.wait_for_table_to_load()
+            self.enforcements_page.switch_to_page()
+            self.enforcements_page.wait_for_table_to_be_responsive()
             # Make a distinct difference between each save
             time.sleep(1)
         assert self.enforcements_page.get_column_data_inline(self.FIELD_NAME) == sorted(enforcement_names, reverse=True)

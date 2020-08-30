@@ -11,11 +11,10 @@ class TestSaveQueryDeletion(TestEnforcementConfigBase):
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.fill_enforcement_name(self.ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.add_push_system_notification()
         self.enforcements_page.select_trigger()
         self.enforcements_page.check_scheduling()
         self.enforcements_page.select_saved_view(self.ENFORCEMENT_CHANGE_NAME)
-        self.enforcements_page.save_trigger()
-        self.enforcements_page.add_push_system_notification()
         self.enforcements_page.click_save_button()
 
         self.base_page.run_discovery()

@@ -161,7 +161,7 @@ class SendJsonToS3(ActionTypeAlert):
                 projection={field: 1 for field in field_list},
                 entity_type=self._entity_type,
                 field_filters=field_filters,
-                excluded_adapters=excluded_adapters))
+                excluded_adapters=excluded_adapters)[0])
 
             entities_json = to_json(entities or None)
 

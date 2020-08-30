@@ -14,6 +14,7 @@ class EntitiesEnforcementTasksTestBase(PermissionsTestBase):
                                                       'tag search test', 'tag search test')
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.execute_saved_query(custom_unmanaged_devices)
         self.devices_page.wait_for_table_to_be_responsive()
         entity_count = self.devices_page.get_table_count()

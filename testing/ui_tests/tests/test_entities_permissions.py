@@ -92,7 +92,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                 'View devices'
             ],
             'enforcements': [
-                'View Enforcement Center'
+                'View Enforcement Center',
+                'Edit Enforcement',
             ]
         }
         self.settings_page.update_role(user_role, settings_permissions, True)
@@ -229,7 +230,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                 'View users'
             ],
             'enforcements': [
-                'View Enforcement Center'
+                'View Enforcement Center',
+                'Edit Enforcement',
             ]
         }
 
@@ -421,7 +423,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         queries_page.click_query_row_by_name(query_name)
         queries_page.wait_for_side_panel()
         queries_page.get_enforce_panel_action().click()
-
+        self.enforcements_page.fill_enforcement_name(self.enforcements_page.DUMMY_ENFORCEMENT_NAME)
+        self.enforcements_page.add_tag_entities()
         self.enforcements_page.select_trigger()
         assert self.enforcements_page.get_selected_saved_view_name() == query_name
 

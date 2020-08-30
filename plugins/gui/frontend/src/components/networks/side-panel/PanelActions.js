@@ -1,7 +1,7 @@
 import Vue from 'vue'
 
 export const xActionsGroup = {
-    name: 'xActionItem',
+    name: 'XActionItem',
     render(h) {
         return (
             <ul>{this.$slots.default}</ul>
@@ -10,7 +10,7 @@ export const xActionsGroup = {
 }
 
 export const xActionItem = {
-    name: 'xActionItem',
+    name: 'XActionItem',
     props: {
         color: {
             type: String,

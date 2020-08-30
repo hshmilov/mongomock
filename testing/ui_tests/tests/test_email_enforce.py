@@ -27,7 +27,7 @@ class TestEmailEnforce(TestBase):
 
             self.base_page.run_discovery()
 
-            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, trigger=False)
+            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
             self.enforcements_page.add_main_action_send_email(ENFORCEMENT_ACTION_NAME,
                                                               recipient=recipient,
                                                               attach_csv=True)

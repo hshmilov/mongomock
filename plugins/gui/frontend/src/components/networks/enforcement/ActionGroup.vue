@@ -1,74 +1,91 @@
 <template>
-    <div class="x-action-group">
-        <template v-if="isSuccessive">
-            <XIcon
-                :type="condition"
-                family="symbol"
-                class="condition"
-            />
-            <div class="connection"></div>
-        </template>
-        <transition-group name="list" tag="div" class="group-items">
-            <x-text-box v-if="readOnly" key="new" v-bind="{id, text, selected: anySelected, removable: false, clickable: false}" />
-            <x-action v-else key="new" v-bind="{id, condition, selected: isSelected(items.length)}"
-                      @click="selectAction(items.length)" class="items-new" />
-            <x-action v-for="(data, i) in items" :key="data.name" v-bind="processAction(data, i)"
-                      @click="selectAction(i)" @remove="removeAction(i)" />
-        </transition-group>
+  <div class="x-action-group">
+    <template v-if="isSuccessive">
+      <XIcon
+        :type="condition"
+        family="symbol"
+        class="condition"
+        :class="{disabled: iconsDisabled}"
+      />
+      <div class="connection" />
+    </template>
+    <div class="group-items">
+      <XTextBox
+        v-if="readOnly"
+        key="new"
+        v-bind="{id, text, selected: anySelected, clickable: false, capitalized: true}"
+      />
+      <XAction
+        v-else
+        key="new"
+        v-bind="{id, condition, selected: isSelected(items.length), capitalized: true}"
+        class="items-new"
+        @click="selectAction(items.length)"
+      />
+      <XAction
+        v-for="(data, i) in items"
+        :key="data.name"
+        v-bind="processAction(data, i)"
+        @click="selectAction(i)"
+      />
     </div>
+  </div>
 </template>
 
 <script>
-    import XIcon from '@axons/icons/Icon';
-    import xTextBox from '../../axons/layout/TextBox.vue'
-    import xAction from './Action.vue'
+import XIcon from '@axons/icons/Icon';
+import XTextBox from '../../axons/layout/TextBox.vue';
+import XAction from './Action.vue';
 
-    export default {
-        name: 'x-action-group',
-        components: {
-            xTextBox, xAction, XIcon,
-        },
-        props: {
-            id: String,
-            items: Array,
-            condition: String,
-            selected: Number,
-            readOnly: Boolean
-        },
-        computed: {
-            isSuccessive() {
-                return this.condition !== 'main'
-            },
-            text() {
-                return `${this.condition} actions ...`
-            },
-            anySelected() {
-                return this.selected > -1 && this.selected <= this.items.length
-            },
-            empty() {
-                return !this.items.length
-            }
-        },
-        methods: {
-            processAction(data, i) {
-                return {
-                    condition: this.condition,
-                    name: data.action.action_name, title: data.name,
-                    selected: this.isSelected(i), status: data.status,
-                    readOnly: this.readOnly
-                }
-            },
-            selectAction(i) {
-                this.$emit('select', this.condition, i)
-            },
-            removeAction(i) {
-                this.$emit('remove', this.condition, i)
-            },
-            isSelected(i) {
-                return i === this.selected
-            }
-        }
-    }
+export default {
+  name: 'XActionGroup',
+  components: {
+    XTextBox, XAction, XIcon,
+  },
+  props: {
+    id: String,
+    items: Array,
+    condition: String,
+    selected: Number,
+    readOnly: Boolean,
+    iconsDisabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  computed: {
+    isSuccessive() {
+      return this.condition !== 'main';
+    },
+    text() {
+      return `${this.condition} actions`;
+    },
+    anySelected() {
+      return this.selected > -1 && this.selected <= this.items.length;
+    },
+    empty() {
+      return !this.items.length;
+    },
+  },
+  methods: {
+    processAction(data, i) {
+      return {
+        condition: this.condition,
+        name: data.action.action_name,
+        title: data.name,
+        selected: this.isSelected(i),
+        status: data.status,
+        readOnly: this.readOnly,
+      };
+    },
+    selectAction(i) {
+      this.$emit('select', this.condition, i);
+    },
+    isSelected(i) {
+      return i === this.selected;
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -94,14 +111,14 @@
             .items-new {
                 z-index: 1;
             }
-            .list-enter-active, .list-leave-active {
-                transition: all .4s;
-            }
-            .list-enter, .list-leave-to {
-                opacity: 0;
-                transform: translateY(-60px);
-                z-index: -1;
-            }
+        }
+        .disabled {
+          use {
+            fill: $grey-3;
+          }
+          g {
+            fill: $grey-3;
+          }
         }
     }
 </style>

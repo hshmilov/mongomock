@@ -1,50 +1,49 @@
 <template>
-    <div class="x-text-box" :class="{disabled: !clickable, selected}">
-        <slot name="logo" />
-        <div class="content">{{ text }}</div>
-        <x-button type="link" v-if="removable" @click.prevent.stop="remove">x</x-button>
+  <div
+    class="x-text-box"
+    :class="{disabled: !clickable, selected, capitalized}"
+  >
+    <slot name="logo" />
+    <div class="content">
+      {{ text }}
     </div>
+  </div>
 </template>
 
 <script>
-    import xButton from '../inputs/Button.vue'
-
-    export default {
-        name: 'x-text-box',
-        props: {
-            text: String,
-            selected: Boolean,
-            clickable: {
-                type: Boolean,
-                default: true
-            },
-            removable: {
-                type: Boolean,
-                default: true
-            }
-        },
-        components: {
-            xButton
-        },
-        methods: {
-            remove() {
-                this.$emit('remove')
-            }
-        }
-    }
+export default {
+  name: 'XTextBox',
+  props: {
+    text: {
+      type: String,
+      default: '',
+    },
+    selected: Boolean,
+    clickable: {
+      type: Boolean,
+      default: true,
+    },
+    capitalized: {
+      type: Boolean,
+      default: false,
+    },
+  },
+};
 </script>
 
 <style lang="scss">
     .x-text-box {
         background-color: $grey-1;
-        text-transform: capitalize;
         display: flex;
         align-items: center;
         position: relative;
-        transition: all .4s ease-in-out;
         border-radius: 24px;
-        width: 240px;
+        min-width: 240px;
+        max-width: 50ch;
         height: 48px;
+        &.capitalized {
+          text-transform: capitalize;
+        }
         &:not(.disabled) {
             cursor: pointer;
         }
@@ -53,6 +52,7 @@
         }
         .content {
             padding-left: 12px;
+            padding-right: 12px;
             text-overflow: ellipsis;
             white-space: nowrap;
             width: calc(100% - 24px);

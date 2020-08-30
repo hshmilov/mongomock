@@ -8,12 +8,13 @@ from multiprocessing.pool import ThreadPool
 from flask import (request, jsonify)
 from bson import ObjectId
 
-from axonius.consts.adapter_consts import CLIENT_ID, CONNECTION_LABEL, LAST_FETCH_TIME
+from axonius.consts.adapter_consts import LAST_FETCH_TIME, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.gui_consts import (FeatureFlagsNames, IS_INSTANCES_MODE, INSTANCE_NAME, INSTANCE_PREV_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error, EntityType
 from axonius.utils.gui_helpers import (entity_fields)
+from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.threading import run_and_forget
 from gui.logic.login_helper import refill_passwords_fields, has_unchanged_password_value, remove_password_fields
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
@@ -21,11 +22,16 @@ from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-@gui_section_add_rules('connections')
+@gui_section_add_rules('<adapter_name>/connections', permission_section=PermissionCategory.Connections)
 class Connections:
 
-    @gui_route_logged_in(methods=['PUT'], skip_activity=True)
-    def add_connection(self):
+    @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Adapters))
+    def get_adapter_connections_data(self, adapter_name):
+        return jsonify(self._get_adapter_connections_data(adapter_name))
+
+    @gui_route_logged_in(methods=['PUT'], activity_params=['adapter_name', 'client_id'], skip_activity=True)
+    def add_connection(self, adapter_name):
         """
         Save and query assets for given connection data
         Request data is expected to contain the adapter name, instance id and connection parameters
@@ -38,13 +44,19 @@ class Connections:
         }
         """
         request_data = self.get_request_data_as_object()
-        if not request_data or 'adapter' not in request_data:
+        if not request_data:
             return return_error('Adapter name and connection data are required', 400)
-        adapter_name = request_data.pop('adapter')
         instance_id = request_data.pop('instance', self.node_id)
         is_instance_mode = request_data.pop(IS_INSTANCES_MODE, False)
         instance_name = request_data.pop(INSTANCE_NAME, '')
-        client_data, code = self._add_connection(adapter_name, instance_id, request_data)
+        connection_data = request_data
+        if 'connection' not in request_data:
+            connection_label = request_data.pop('connection_label', None)
+            connection_data = {
+                'connection': connection_data,
+                'connection_label': connection_label
+            }
+        client_data, code = self._add_connection(adapter_name, instance_id, connection_data)
 
         if code == 200:
             try:
@@ -55,53 +67,42 @@ class Connections:
         return client_data, code
 
     @gui_route_logged_in('test', methods=['POST'], skip_activity=True)
-    def test_connection(self):
+    def test_connection(self, adapter_name):
         request_data = self.get_request_data_as_object()
-        if not request_data or 'adapter' not in request_data:
+        if not request_data:
             return return_error('Adapter name and connection data are required', 400)
-        adapter_name = request_data.pop('adapter')
-        instance_id = request_data.pop('instance', self.node_id)
-        return self._test_connection(adapter_name, instance_id, request_data.get('connection', {}))
+        if request_data.get('instance'):
+            instance_id = request_data.pop('instance', self.node_id)
+        else:
+            instance_id = request_data.pop('instanceName', self.node_id)
+        connection_data = request_data.get('connection', request_data)
+        return self._test_connection(adapter_name, instance_id, connection_data)
 
-    @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], skip_activity=True)
-    def update_connection(self, connection_id):
+    @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], activity_params=['adapter_name', 'client_id'],
+                         skip_activity=True)
+    def update_connection(self, adapter_name, connection_id):
         request_data = self.get_request_data_as_object()
-        if not request_data or 'adapter' not in request_data:
+        if not request_data:
             return return_error('Adapter name and connection data are required', 400)
-        adapter_name = request_data.pop('adapter')
-        instance_id = request_data.pop('instance', self.node_id)
-        instance_id_prev = request_data.pop('instance_prev', None)
         is_instance_mode = request_data.pop(IS_INSTANCES_MODE, False)
         instance_name = request_data.pop(INSTANCE_NAME, '')
-        instance_prev_name = request_data.pop(INSTANCE_PREV_NAME, '')
+        instance_id_prev = None
+        if request_data.get('connection'):
+            instance_id = request_data.pop('instance', self.node_id)
+            instance_prev_name = request_data.pop(INSTANCE_PREV_NAME, None)
+            instance_id_prev = request_data.pop('instance_prev', None)
+            connection_data = request_data
+        else:
+            instance_id = request_data.pop('instanceName', self.node_id)
+            instance_prev_name = request_data.pop('oldInstanceName', None)
+            connection_label = request_data.pop('connection_label', None)
+            connection_data = {
+                'connection': request_data,
+                'connection_label': connection_label
+            }
 
-        return self._update_connection(connection_id, adapter_name, instance_id, instance_id_prev, request_data,
+        return self._update_connection(connection_id, adapter_name, instance_id, instance_id_prev, connection_data,
                                        is_instance_mode, instance_name, instance_prev_name)
-
-    @gui_route_logged_in('labels', methods=['GET'], enforce_permissions=False)
-    def adapters_client_labels(self) -> list:
-        """
-        :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance
-        """
-        clients_label = []
-        labels_from_db = self.adapter_client_labels_db.find({})
-        for client in labels_from_db:
-            client_id = client.get(CLIENT_ID)
-            connection_label = client.get(CONNECTION_LABEL)
-            plugin_name = client.get(PLUGIN_NAME)
-            plugin_unique_name = client.get(PLUGIN_UNIQUE_NAME)
-            if client_id and connection_label and plugin_name and plugin_unique_name:
-                clients_label.append({
-                    'client_id': client_id,
-                    'label': connection_label,
-                    'plugin_name': plugin_name,
-                    'plugin_unique_name': plugin_unique_name,
-                    'node_id': client.get(NODE_ID)
-                })
-            else:
-                logger.error(f'Invalid connection label, missing {client_id}, {connection_label}, {plugin_name}')
-
-        return jsonify(clients_label)
 
     def _add_connection(self, adapter_name, instance_id, connection_data):
         adapter_unique_name = self._get_adapter_unique_name(adapter_name, instance_id)

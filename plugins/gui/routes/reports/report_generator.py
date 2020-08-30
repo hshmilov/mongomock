@@ -136,6 +136,7 @@ class ReportGenerator:
             if dashboard_charts:
                 toc_lines.append('Dashboard Charts')
                 sections.append(dashboard_charts)
+                logger.info('Report Generator, Added Dashboard Charts')
 
         # Add section for each adapter with results of its queries
         data = self.report_data.get('adapter_data')
@@ -147,6 +148,7 @@ class ReportGenerator:
 
         # Add section for saved views
         if self.report_data.get('views_data'):
+            logger.info('Report Generator, Adding views data')
             entities = [entity.name for entity in EntityType]
             entities.sort()
             for entity in entities:
@@ -716,7 +718,7 @@ class ReportGenerator:
                                                       entity_type=entity,
                                                       default_sort=self.report_params['default_sort'],
                                                       field_filters=field_filters,
-                                                      excluded_adapters=excluded_adapters)),
+                                                      excluded_adapters=excluded_adapters)[0]),
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),

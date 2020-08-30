@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 import pytest
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import ElementNotInteractableException
 from services.adapters.carbonblack_response_service import CarbonblackResponseService
 
 from axonius.consts.metric_consts import SystemMetric
@@ -52,7 +52,9 @@ class TestEnforcementNoQuery(TestBase):
         assert old_length == new_length
 
     def test_enforcement_invalid(self):
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, MANAGED_DEVICES_QUERY_NAME, save=False)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
+        self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME, save=False)
         self.enforcements_page.check_conditions()
 
         # Check negative values
@@ -62,23 +64,26 @@ class TestEnforcementNoQuery(TestBase):
         assert value == '5'
 
         # Check disallow duplicate action names
-        self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_save_button()
         duplicate_name = f'{ENFORCEMENT_NAME} Duplicate'
-        self.enforcements_page.create_basic_enforcement(duplicate_name, MANAGED_DEVICES_QUERY_NAME)
-        with pytest.raises(NoSuchElementException):
+        self.enforcements_page.create_basic_enforcement(duplicate_name)
+        with pytest.raises(ElementNotInteractableException):
             self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.key_down_tab()
         assert self.enforcements_page.find_element_by_text(DUPLICATE_ACTION_NAME_ERROR)
         self.enforcements_page.fill_action_name(f'{ENFORCEMENT_CHANGE_NAME} Duplicate')
-        self.enforcements_page.save_action()
         self.enforcements_page.click_save_button()
+        self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME)
+        self.enforcements_page.switch_to_page()
 
         # Check remove enforcement allows re-use of names
-        self.enforcements_page.wait_for_table_to_load()
+        no_duplicate_name = f'{ENFORCEMENT_NAME} No Duplicate'
+        self.enforcements_page.wait_for_table_to_be_responsive()
         self.enforcements_page.click_row_checkbox(2)
         self.enforcements_page.remove_selected_enforcements(confirm=True)
-        self.enforcements_page.create_basic_enforcement(duplicate_name, MANAGED_DEVICES_QUERY_NAME)
+        self.enforcements_page.create_basic_enforcement(no_duplicate_name)
         self.enforcements_page.add_push_system_notification(ENFORCEMENT_CHANGE_NAME)
+        self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME)
 
     def test_above_threshold(self):
         self.enforcements_page.create_notifying_enforcement_above('above 1',
@@ -115,13 +120,14 @@ class TestEnforcementNoQuery(TestBase):
                                                                    MANAGED_DEVICES_QUERY_NAME)
 
     def test_no_scheduling(self):
-        self.enforcements_page.create_basic_enforcement(
-            ENFORCEMENT_CHANGE_NAME, MANAGED_DEVICES_QUERY_NAME, schedule=False)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.add_push_system_notification()
-        self.enforcements_page.click_save_button()
+        self.enforcements_page.create_trigger(MANAGED_DEVICES_QUERY_NAME, schedule=False)
         self.base_page.run_discovery()
         time.sleep(1)
         self.notification_page.verify_amount_of_notifications(0)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
         assert '0' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
         self.enforcements_page.click_enforcement(ENFORCEMENT_CHANGE_NAME)
         self.enforcements_page.click_run_button()
@@ -162,13 +168,12 @@ class TestEnforcementNoQuery(TestBase):
             wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                                                  FAILURE_TAG_NAME,
                                                                                  FAILURE_ISOLATE_NAME),
-                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       tolerated_exceptions_list=[ElementNotInteractableException], total_timeout=60 * 5,
                        check_return_value=False)
             self.enforcements_page.click_enforcement(ENFORCEMENT_NAME)
             self.enforcements_page.add_push_notification(POST_PUSH_NAME, self.enforcements_page.POST_ACTIONS_TEXT)
-            self.enforcements_page.click_save_button()
-            self.enforcements_page.wait_for_table_to_load()
-
+            self.enforcements_page.switch_to_page()
+            self.enforcements_page.wait_for_table_to_be_responsive()
             self.base_page.run_discovery()
             self.notification_page.verify_amount_of_notifications(1)
 
@@ -182,10 +187,11 @@ class TestEnforcementNoQuery(TestBase):
         print('Finished creating saved query.')
 
         self.enforcements_page.switch_to_page()
-        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, ENFORCEMENT_CHANGE_NAME, enforce_added=True)
+        self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
         self.enforcements_page.add_tag_entities()
-        self.enforcements_page.click_save_button()
-        self.enforcements_page.wait_for_table_to_load()
+        self.enforcements_page.create_trigger(ENFORCEMENT_CHANGE_NAME, enforce_added=True)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
         print('Finished creating enforcement.')
 
         self.base_page.run_discovery()

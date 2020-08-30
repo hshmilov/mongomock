@@ -124,7 +124,7 @@ class SendHttpsLogAction(ActionTypeAlert):
                                                            },
                                                            self._entity_type,
                                                            field_filters=col_filters,
-                                                           excluded_adapters=excluded_adapters)
+                                                           excluded_adapters=excluded_adapters)[0]
 
         for entity in all_gui_entities:
             entity['alert_name'] = self._report_data['name']

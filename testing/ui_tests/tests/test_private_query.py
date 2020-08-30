@@ -96,6 +96,8 @@ class TestPrivateQuery(TestBase):
             self.devices_queries_page.SELECT_QUERY_NAME_CSS)
         self.enforcements_page.switch_to_page()
         self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.create_basic_empty_enforcement(self.enforcements_page.DUMMY_ENFORCEMENT_NAME)
+        self.enforcements_page.add_tag_entities()
         self.enforcements_page.select_trigger()
         self.devices_queries_page.assert_private_query_not_selectable(
             self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''),

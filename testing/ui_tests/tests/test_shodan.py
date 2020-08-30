@@ -28,7 +28,7 @@ class TestEnforcementActions(TestBase):
             self.adapters_page.connect_adapter(AWS_ADAPTER_NAME, aws_client_details[0][0])
             self.base_page.run_discovery()
 
-            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME, trigger=False)
+            self.enforcements_page.create_basic_enforcement(ENFORCEMENT_NAME)
             self.enforcements_page.add_main_action_shodan(SHODAN_ACTION_NAME)
 
             self.devices_page.switch_to_page()

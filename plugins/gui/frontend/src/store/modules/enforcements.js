@@ -6,6 +6,8 @@ export const SET_ENFORCEMENT = 'SET_ENFORCEMENT';
 export const SAVE_ENFORCEMENT = 'SAVE_ENFORCEMENT';
 export const FETCH_SAVED_ENFORCEMENTS = 'FETCH_SAVED_ENFORCEMENTS';
 export const UPDATE_SAVED_ENFORCEMENTS = 'UPDATE_SAVED_ENFORCEMENTS';
+export const ADD_SAVED_ENFORCEMENT = 'ADD_SAVED_ENFORCEMENT';
+export const REMOVE_SAVED_ENFORCEMENTS = 'REMOVE_SAVED_ENFORCEMENTS';
 export const REMOVE_ENFORCEMENTS = 'REMOVE_ENFORCEMENTS';
 export const RUN_ENFORCEMENT = 'RUN_ENFORCEMENT';
 export const FETCH_ACTIONS = 'FETCH_ACTIONS';
@@ -136,6 +138,27 @@ export const enforcements = {
         state.savedEnforcements.data = payload.data;
       }
     },
+    [ADD_SAVED_ENFORCEMENT](state) {
+      /*
+        If the current enforcement is being saved for the first time
+        We add its name to the saved enforcement names list
+       */
+      const savedEnforcementName = state.current.data.name;
+      if (state.savedEnforcements.data.indexOf(savedEnforcementName) === -1) {
+        state.savedEnforcements.data.push(savedEnforcementName);
+      }
+    },
+    [REMOVE_SAVED_ENFORCEMENTS](state, payload) {
+      /*
+        Remove each of the removed enforcements names from the saved enforcements list
+       */
+      const enforcementNamesToRemove = state.content.data
+        .filter((enforcement) => payload.includes(enforcement.uuid))
+        .map((enforcement) => enforcement.name);
+
+      state.savedEnforcements.data = state.savedEnforcements.data
+        .filter((enforcementName) => !enforcementNamesToRemove.includes(enforcementName));
+    },
     [UPDATE_SAVED_ACTIONS](state, payload) {
       state.savedActions.fetching = payload.fetching;
       state.savedActions.error = payload.error;
@@ -161,14 +184,15 @@ export const enforcements = {
         }
       });
     },
-    [SAVE_ENFORCEMENT]({ dispatch }, enforcement) {
+    [SAVE_ENFORCEMENT]({ dispatch, commit }, enforcement) {
       /*
           Update an existing Enforcement, if given an id, or create a new one otherwise
        */
       const handleSuccess = (id) => {
         dispatch(FETCH_DATA_CONTENT, { module: 'enforcements', skip: 0 });
-        dispatch(FETCH_ENFORCEMENT, id);
-        dispatch(FETCH_SAVED_ENFORCEMENTS);
+        dispatch(FETCH_ENFORCEMENT, id).then(() => {
+          commit(ADD_SAVED_ENFORCEMENT);
+        });
       };
 
       if (enforcement.uuid) {
@@ -193,7 +217,7 @@ export const enforcements = {
         }
       });
     },
-    [REMOVE_ENFORCEMENTS]({ dispatch }, selection) {
+    [REMOVE_ENFORCEMENTS]({ dispatch, commit }, selection) {
       /*
         Remove given selection of Enforcement.
         Expected structure is a list of ids and a flag indicating whether to include or exclude them
@@ -204,6 +228,8 @@ export const enforcements = {
         data: selection,
       }).then((response) => {
         if (response.status === 200) {
+          const removedEnforcementsIds = JSON.parse(response.config.data).ids;
+          commit(REMOVE_SAVED_ENFORCEMENTS, removedEnforcementsIds);
           dispatch(FETCH_DATA_CONTENT, { module: 'enforcements', skip: 0 });
         }
       });
