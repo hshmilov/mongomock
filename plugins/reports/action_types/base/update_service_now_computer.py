@@ -150,7 +150,7 @@ class UpdateServicenowComputerAction(ActionTypeBase):
             'adapters.plugin_unique_name': 1,
             'adapters.plugin_name': 1,
             'adapters.data.hostname': 1,
-            'adapters.data.id': 1,
+            'adapters.data.sys_id': 1,
             'adapters.data.name': 1,
             'adapters.data.class_name': 1,
             'adapters.data.os.type': 1,
@@ -186,7 +186,7 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                     data_from_adapter = from_adapter['data']
                     if from_adapter.get('plugin_name') == ADAPTER_NAME:
                         class_name = data_from_adapter.get('class_name')
-                        sys_id = data_from_adapter.get('id')
+                        sys_id = data_from_adapter.get('sys_id')
                         if class_name and sys_id:
                             snow_manufacturer = data_from_adapter.get('device_manufacturer')
                             snow_serial = data_from_adapter.get('device_serial')

@@ -274,7 +274,8 @@ class ServiceNowAdapterBase(AdapterBase):
             if not device_id:
                 logger.warning(f'Problem getting id at {device_raw}')
                 return None
-            device.id = str(device_id)
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
+            device.sys_id = str(device_id)
             device.table_type = table_type
             device.category = device_raw.get('u_category') or device_raw.get('category')
             device.u_subcategory = device_raw.get('u_subcategory')

@@ -19,12 +19,13 @@ from axonius.smart_json_class import SmartJsonClass
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from preempt_adapter.client_id import get_client_id
-from preempt_adapter.consts import QUERY_DEVICES
+from preempt_adapter.consts import QUERY_DEVICES, QUERY_USERS
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -93,6 +94,12 @@ class PreemptAdapter(AdapterBase, Configurable):
         risk_score_severity = Field(str, 'Risk Score Severity')
         risk_factors = ListField(RiskFactor, 'Risk Factors')
 
+    class MyUserAdapter(UserAdapter):
+        risk_score = Field(float, 'Risk score')
+        risk_score_severity = Field(str, 'Risk Score Severity')
+        risk_factors = ListField(RiskFactor, 'Risk Factors')
+        is_programmatic = Field(bool, 'Is Programmatic')
+
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
@@ -121,6 +128,79 @@ class PreemptAdapter(AdapterBase, Configurable):
             should_continue = page_info['hasNextPage']
             if should_continue:
                 end_cursor = page_info['endCursor']
+
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
+    def _create_user(self, user_raw):
+        try:
+            user = self._new_user_adapter()
+            user_id = user_raw.get('primaryDisplayName')
+            if user_id is None:
+                logger.warning(f'Bad user with no ID {user_raw}')
+                return None
+            user.id = user_id + '_' + (user_raw.get('secondaryDisplayName') or '')
+            last_seen = parse_date(user_raw.get('mostRecentActivity'))
+            if self.__drop_no_last_seen is True and not last_seen:
+                return None
+            user.last_seen = last_seen
+            if user_raw.get('emailAddresses') and isinstance(user_raw.get('emailAddresses'), list):
+                user.mail = user_raw.get('emailAddresses')[0]
+            accounts = user_raw.get('accounts')
+            if accounts and isinstance(accounts, list):
+                account_raw = accounts[0]
+                if isinstance(account_raw, dict):
+                    user.domain = account_raw.get('domain')
+                    user.username = account_raw.get('samAccountName')
+            risk_score = user_raw.get('riskScore')
+            if risk_score is not None:
+                try:
+                    user.risk_score = float(risk_score) * 10.0
+                except Exception as e:
+                    logger.exception(f'Cant get risk score for {user_raw}')
+            user.is_admin = user_raw.get('isAdmin')
+            user.is_programmatic = user_raw.get('isProgrammatic')
+            user.risk_score_severity = user_raw.get('riskScoreSeverity')
+            risk_factors = user_raw.get('riskFactors')
+            if not isinstance(risk_factors, list):
+                risk_factors = []
+            for factor_raw in risk_factors:
+                try:
+                    factor_type = factor_raw.get('type')
+                    factor_severiry = factor_raw.get('severity')
+                    user.risk_factors.append(RiskFactor(factor_type=factor_type, factor_severiry=factor_severiry))
+                except Exception:
+                    logger.exception(f'Problem with factor raw {factor_raw}')
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching Preempt user for {user_raw}')
+            return None
+
+    # pylint: disable=arguments-differ
+    def _parse_users_raw_data(self, users_raw_data):
+        for user_raw in users_raw_data:
+            user = self._create_user(user_raw)
+            if user:
+                yield user
+
+    # pylint: disable=arguments-differ
+    def _query_users_by_client(self, client_name, client_data):
+        """
+        Get all devices from a specific  domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        gql_client = client_data
+        query = gql(QUERY_USERS)
+
+        variables = {
+            'limit': 1000,
+            'sortOrder': 'ASCENDING',
+            'after': None
+        }
+        return self.execute_paginated_query(gql_client, query, variables)
 
     def _query_devices_by_client(self, client_name, client_data):
         """

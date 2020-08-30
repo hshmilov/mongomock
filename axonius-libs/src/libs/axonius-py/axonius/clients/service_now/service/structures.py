@@ -73,6 +73,7 @@ class SnowComplianceException(SmartJsonClass):
 
 
 class SnowDeviceAdapter(DeviceAdapter):
+    sys_id = Field(str, 'Sys Id')
     table_type = Field(str, 'Table Type')
     category = Field(str, 'Category')
     u_subcategory = Field(str, 'Subcategory')
