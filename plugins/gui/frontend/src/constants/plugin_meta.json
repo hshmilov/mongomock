@@ -1338,6 +1338,11 @@
     "link": "https://docs.axonius.com/docs/blackberry-unified-endpoint-management-uem",
     "description": "BlackBerry Unified Endpoint Management (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud."
   },
+    "onelogin_adapter": {
+    "title": "OneLogin",
+    "link": "https://docs.axonius.com/docs/onelogin",
+    "description": "OneLogin's unified access management platform centralizes access across on-prem and cloud environments to give full control, management, and security for data, devices, and users."
+  },
   "oracle_vm_adapter": {
     "title": "Oracle VM",
     "link": "https://docs.axonius.com/docs/oracle-vm",
