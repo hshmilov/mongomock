@@ -144,6 +144,8 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
             except Exception:
                 logger.critical(f'Error while yielding results from concurrent_multiprocess_yield', exc_info=True)
         except BaseException as e:
+            # pylint: disable=protected-access
+            # pylint: enable=protected-access
             logger.exception(f'Got event {str(e).strip()!r} event. Stopping')
             return []
         finally:

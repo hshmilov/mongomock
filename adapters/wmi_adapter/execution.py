@@ -1,3 +1,4 @@
+import copy
 import ipaddress
 import logging
 import os
@@ -368,6 +369,7 @@ class WmiExecutionMixIn(Triggerable):
                         'nameservers': dns_servers
                     }]
                     result = async_query_dns_list(queries, DNS_TIMEOUT)[0]
+
                     if result and result[0]:
                         resolved_hostname_ip, _ = result[0]
                         if resolved_hostname_ip:
@@ -416,10 +418,11 @@ class WmiExecutionMixIn(Triggerable):
             reachable_hostname_adapter, reachable_hostname, reachable_ip = \
                 self.get_reachable_hostname(adapters_hostnames, dns_servers=client_config.get(DNS_SERVERS) or None)
 
-            client_config[HOSTNAMES] = reachable_ip
+            job_config = copy.deepcopy(client_config)
+            job_config[HOSTNAMES] = reachable_ip
             try:
                 if adapters_hostnames[0]:
-                    self._handle_device_create_device_general(client_config, adapters_hostnames[0].meta)
+                    self._handle_device_create_device_general(job_config, adapters_hostnames[0].meta)
             except Exception:
                 logger.exception(f'Could not run create device general')
 
@@ -432,7 +435,7 @@ class WmiExecutionMixIn(Triggerable):
                 return device['internal_axon_id'], json
 
             # Running the given job
-            self._handle_device_create_device(client_config, job_name, reachable_hostname_adapter, reachable_hostname)
+            self._handle_device_create_device(job_config, job_name, reachable_hostname_adapter, reachable_hostname)
             return device['internal_axon_id'], {
                 'success': True,
                 'value': f'{job_title} success'

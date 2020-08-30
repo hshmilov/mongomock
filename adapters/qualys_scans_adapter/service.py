@@ -201,7 +201,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def _query_devices_by_client(client_name, client_data):
         client_data, qualys_tags_white_list = client_data
         with client_data:
-            yield from [(device_raw, qualys_tags_white_list) for device_raw in client_data.get_device_list()]
+            for device_raw in client_data.get_device_list():
+                yield (device_raw, qualys_tags_white_list)
 
     @staticmethod
     def _clients_schema():

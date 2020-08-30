@@ -74,7 +74,7 @@ class AddCustomDataAction(ActionTypeBase):
         if not self._internal_axon_ids:
             return []
 
-        field_type = self._config['conditional']
+        field_type = self._config.get('conditional', FIELD_TYPE_ENUM[0]['name'])
         field_content = self._config[field_type]
         field_name = self._config['field_name']
         custom_data = {
