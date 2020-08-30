@@ -1,16 +1,19 @@
 import logging
+import base64
 import ipaddress
+import json
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.connection import RESTException
+from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.devices.device_adapter import AGENT_NAMES
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_bool_from_raw
 from iboss_cloud_adapter.connection import IbossCloudConnection
 from iboss_cloud_adapter.client_id import get_client_id
 from iboss_cloud_adapter.structures import IbossCloudDeviceInstance, IbossCloudUserInstance
-from iboss_cloud_adapter.consts import NODE_DEVICE, DOMAIN_CONFIG
+from iboss_cloud_adapter.consts import NODE_DEVICE, DOMAIN_CONFIG, CLOUD_CONNECTED_DEVICE
 from iboss_cloud_adapter.structures import SubnetPolicy, NodeCollection, DeviceInstance
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -29,12 +32,6 @@ class IbossCloudAdapter(AdapterBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-
-    @staticmethod
-    def _parse_bool(value):
-        if isinstance(value, bool):
-            return value
-        return None
 
     @staticmethod
     def _get_client_id(client_config):
@@ -157,15 +154,68 @@ class IbossCloudAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed creating node collection instance for device {device_raw}')
 
+    @staticmethod
+    def _create_cloud_connected_device(device_raw: dict, instance_type: str, domain: str, device: MyDeviceAdapter):
+        try:
+            device_id = device_raw.get('agentReference')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {device_raw}')
+                return None
+            device.id = f'{str(device_id)}_{domain or ""}'
+
+            device.first_seen = parse_date(device_raw.get('firstSeen'))
+            device.last_seen = parse_date(device_raw.get('lastSeen'))
+            device.add_users(username=device_raw.get('username'))
+            device.name = device_raw.get('deviceName')
+            device.hostname = device_raw.get('deviceName')
+            device.add_agent_version(agent=AGENT_NAMES.iboss,
+                                     version=device_raw.get('agentVersion'))
+
+            try:
+                registration_info = device_raw.get('registrationInfo')
+                if registration_info:
+                    extra_info = json.loads(base64.b64decode(registration_info).decode('utf-8'))
+                    if isinstance(extra_info, dict):
+                        ip = extra_info.get('publicIpAddress')
+                        try:
+                            device.add_public_ip(ip=ip)
+                        except Exception:
+                            if ip is not None:
+                                logger.exception(f'Failed parsing public ip for {instance_type}, got {extra_info}')
+
+                        mac = extra_info.get('macAddress')
+                        ips = extra_info.get('privateIpAddress') or []
+                        if isinstance(ips, str):
+                            ips = [ips]
+                        if ip:
+                            ips.append(ip)
+                        device.add_nic(mac=mac,
+                                       ips=ips)
+
+            except Exception:
+                logger.exception(f'Failed parsing registration info base64 info of {registration_info}')
+
+            active_device = parse_bool_from_raw(device_raw.get('active'))
+            if isinstance(active_device, bool):
+                device.device_disabled = not active_device
+
+            os_string = device_raw.get('deviceType')
+            device.figure_os(os_string=os_string)
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Failed creating {instance_type} instance for device {device_raw}')
+            return None
+
     # pylint: disable=too-many-branches, too-many-statements
-    def _create_node_device(self, device_raw: dict, instance_type: str,
-                            device: MyDeviceAdapter):
+    def _create_node_device(self, device_raw: dict, instance_type: str, domain: str, device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('cloudNodeId') or device_raw.get('cloudClusterId')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
+            device.id = f'{str(device_id)}_{domain or ""}'
 
             device.name = device_raw.get('nodeName')
             device.cloud_id = device_raw.get('cloudClusterId')
@@ -237,8 +287,8 @@ class IbossCloudAdapter(AdapterBase):
 
             device_instance.group_name = device_raw.get('groupName')
             device_instance.group_number = device_raw.get('groupNumber')
-            device_instance.is_local_proxy = IbossCloudAdapter._parse_bool(device_raw.get('isLocalProxy'))
-            device_instance.is_mobile_client = IbossCloudAdapter._parse_bool(device_raw.get('isMobileClient'))
+            device_instance.is_local_proxy = parse_bool_from_raw(device_raw.get('isLocalProxy'))
+            device_instance.is_mobile_client = parse_bool_from_raw(device_raw.get('isMobileClient'))
             device_instance.note = device_raw.get('note')
             device_instance.type = instance_type
 
@@ -246,13 +296,14 @@ class IbossCloudAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed creating {instance_type} instance for device {device_raw}')
 
-    def _create_device(self, device_raw: dict, policies_by_network: dict, instance_type: str, device: MyDeviceAdapter):
+    def _create_device(self, device_raw: dict, policies_by_network: dict, instance_type: str, domain: str,
+                       device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
+            device.id = f'{str(device_id)}_{domain or ""}'
 
             device.name = device_raw.get('computerName')
             device.current_logged_user = device_raw.get('username')
@@ -292,16 +343,19 @@ class IbossCloudAdapter(AdapterBase):
         :param devices_raw_data: the raw data we get.
         :return:
         """
-        for device_raw, policies_by_network, instance_type in devices_raw_data:
+        for device_raw, policies_by_network, instance_type, domain in devices_raw_data:
             if not device_raw:
                 continue
             try:
                 if instance_type == NODE_DEVICE:
                     # noinspection PyTypeChecker
-                    device = self._create_node_device(device_raw, instance_type, self._new_device_adapter())
+                    device = self._create_node_device(device_raw, instance_type, domain, self._new_device_adapter())
+                elif instance_type == CLOUD_CONNECTED_DEVICE:
+                    device = self._create_cloud_connected_device(device_raw, instance_type, domain,
+                                                                 self._new_device_adapter())
                 else:
                     # noinspection PyTypeChecker
-                    device = self._create_device(device_raw, policies_by_network, instance_type,
+                    device = self._create_device(device_raw, policies_by_network, instance_type, domain,
                                                  self._new_device_adapter())
 
                 if device:
@@ -330,7 +384,7 @@ class IbossCloudAdapter(AdapterBase):
             user.last_name = user_raw.get('lastName')
             user.username = user_raw.get('userName')
             user.employee_type = user_raw.get('userTypeName')
-            user.is_admin = self._parse_bool(user_raw.get('fullAdmin'))
+            user.is_admin = parse_bool_from_raw(user_raw.get('fullAdmin'))
 
             self._fill_iboss_cloud_user_fields(user_raw, user)
 

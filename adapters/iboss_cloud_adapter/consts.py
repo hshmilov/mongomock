@@ -12,6 +12,7 @@ API_CLOUD_NODES_URL = 'https://www.ibosscloud.com/ibcloud/web/cloudNodes'
 STATIC_DEVICE = 'Static Device'
 DYNAMIC_DEVICE = 'Dynamic Device'
 NODE_DEVICE = 'Node Collection Device'
+CLOUD_CONNECTED_DEVICE = 'Cloud Connected Device'
 
 API_LOGIN_IDS_SUFFIX = '/json/login?ignoreAuthModule=true'
 API_STATIC_DEVICE_ENDPOINT_SUFFIX = '/json/computers/static'
@@ -21,6 +22,7 @@ API_DEVICES_ENDPOINTS = [(API_STATIC_DEVICE_ENDPOINT_SUFFIX, STATIC_DEVICE),
 
 API_USER_ENDPOINT_SUFFIX = '/json/users'
 API_LOCALSUBNETS_SUFFIX = '/json/network/localSubnets'
+API_CLOUD_CONNECTED_SUFFIX = '/ibreports/web/log/licenses'
 
 API_LOGIN_IDS = {
     'x': '',
