@@ -132,8 +132,7 @@ export default {
     .actions-container {
       @include  y-scrollbar;
       overflow: auto;
-      height: calc(100% - 36px);
-
+      height: 100%;
       .x-title {
         .md-image {
           height: 36px;

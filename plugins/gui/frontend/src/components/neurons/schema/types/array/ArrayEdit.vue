@@ -87,6 +87,7 @@
           option-filter-prop="children"
           dropdown-class-name="x-multiple-select-dropdown"
           :get-popup-container="getPopupContainer"
+          :disabled="readOnly"
         >
           <ASelectOption
             v-for="item in schema.items.enum"

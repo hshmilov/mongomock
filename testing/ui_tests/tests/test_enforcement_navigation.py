@@ -27,7 +27,7 @@ class TestEnforcementNavigation(TestBase):
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_toaster_to_end(TOASTER_TEXT)
 
-        self.adapters_page.wait_for_element_present_by_text(self.enforcements_page.SAVE_AND_RUN_BUTTON_TEXT)
+        self.adapters_page.wait_for_element_present_by_text(self.enforcements_page.RUN_BUTTON_TEXT)
         self.enforcements_page.click_tasks_button()
         self.enforcements_page.wait_for_table_to_load()
 
@@ -51,8 +51,10 @@ class TestEnforcementNavigation(TestBase):
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_toaster_to_end(TOASTER_TEXT)
 
-        self.adapters_page.wait_for_element_present_by_text(self.enforcements_page.SAVE_AND_RUN_BUTTON_TEXT)
+        self.adapters_page.wait_for_element_present_by_text(self.enforcements_page.RUN_BUTTON_TEXT)
         self.notification_page.wait_for_count(1)
+        self.enforcements_page.switch_to_page()
+        self.enforcements_page.wait_for_table_to_be_responsive()
         self.enforcements_page.click_tasks_button()
         self.enforcements_page.wait_for_table_to_load()
 

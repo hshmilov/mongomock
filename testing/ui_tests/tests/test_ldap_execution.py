@@ -18,7 +18,6 @@ class TestLDAPEnforcement(TestBase):
         self.base_page.run_discovery()
         self.enforcements_page.create_basic_empty_enforcement(CHANGE_LDAP_ATTRIBUTE_NAME)
         self.enforcements_page.add_ldap_attribute()
-        self.enforcements_page.click_save_button()
         self.enforcements_page.wait_for_table_to_load()
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()

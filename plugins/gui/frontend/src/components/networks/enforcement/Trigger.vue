@@ -1,36 +1,59 @@
 <template>
-    <div class="x-trigger" @click="$emit('click')">
-        <x-text-box v-bind="{id, text, selected, removable: false}">
-            <template slot="logo">
-                <img v-if="title" :src="require('Logos/actions/trigger.png')" class="md-image logo" />
-                <div v-else class="logo placeholder">+</div>
-            </template>
-        </x-text-box>
-    </div>
+  <div
+    class="x-trigger"
+    @click="!readOnly && $emit('click')"
+  >
+    <XTextBox v-bind="{id, text, selected, clickable: !readOnly}">
+      <template slot="logo">
+        <img
+          v-if="title"
+          :src="require('Logos/actions/trigger.png')"
+          class="md-image logo"
+        >
+        <div
+          v-else
+          class="logo placeholder"
+          :class="{disabled: readOnly}"
+        >
+          +
+        </div>
+      </template>
+    </XTextBox>
+  </div>
 </template>
 
 <script>
-    import xTextBox from '../../axons/layout/TextBox.vue'
-    import xButton from '../../axons/inputs/Button.vue'
+import XTextBox from '../../axons/layout/TextBox.vue';
 
-    export default {
-        name: 'x-trigger',
-        components: {
-            xTextBox, xButton
-        },
-        props: {
-            id: String,
-            title: String,
-            selected: Boolean
-        },
-        computed: {
-            text() {
-                if (this.title) return this.title
+export default {
+  name: 'XTrigger',
+  components: { XTextBox },
+  props: {
+    id: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    selected: {
+      type: Boolean,
+      default: false,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  computed: {
+    text() {
+      if (this.title) return this.title;
 
-                return 'Trigger'
-            }
-        }
-    }
+      return 'Trigger';
+    },
+  },
+};
 </script>
 
 <style lang="scss">
@@ -45,6 +68,9 @@
                 line-height: 48px;
                 text-align: center;
                 font-size: 36px;
+            }
+            &.placeholder.disabled {
+              background-color: $grey-3;
             }
         }
     }

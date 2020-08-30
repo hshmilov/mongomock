@@ -16,7 +16,7 @@
           <VTextField
             :value="formattedTime"
             :error="timePickerError"
-            :read-only="readOnly"
+            :readonly="readOnly"
             @change="onInput"
             v-on="on"
           />

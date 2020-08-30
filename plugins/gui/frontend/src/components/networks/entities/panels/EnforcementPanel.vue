@@ -8,58 +8,24 @@
       @close="closePanel"
     >
       <template #panelContent v-if="enforcement">
-        <AForm class="enforcement-form">
-          <AFormItem :colon="false">
-            <span slot="label">
-              Enforcement Set Name
-            </span>
-            <AInput
-              id="enforcement_name"
-              v-model="enforcement.name"
-              placeholder="Enter Enforcement Set name"
-              @focusout.stop="setEnforcementNameFocusedOut"
-            />
-          </AFormItem>
-        </AForm>
-        <XCard
-          v-if="selectedActionName"
-          key="actionConf"
-          :title="actionConfTitle"
-          :logo="actionConfLogo"
-          :reversible="true"
-          transparent
-          back-title="Action Library"
-          @back="resetActionConfig"
-        >
-          <XActionConfig
-            v-model="enforcement.actions.main"
-            :hide-save-button="true"
-            :focus-on-action-name="true"
-            @action-validity-changed="onActionValidityChanged"
-            @action-name-error="onActionNameErrorChanged"
-            @action-form-error="onActionFormErrorChanged"
-            @action-name-focused-out="onActionNameFocusedOut"
-          />
-        </XCard>
-        <XCard
-          v-else
-          key="actionLib"
-          title="Action Library"
-          transparent
-        >
-          <XActionLibrary
-            :categories="actionCategories"
-            @select="selectActionType"
-          />
-        </XCard>
+        <XEnforcementActionConfig
+          v-model="enforcement.actions.main"
+          :enforcement-name.sync="enforcement.name"
+          :selected-action-library-type="selectedActionLibraryType"
+          :focus-on-enforcement-name="false"
+          @select-action-type="selectActionType"
+          @reset-action-config="resetActionConfig"
+          @config-validity-changed="onConfigValidityChanged"
+          @config-error-message-changed="onConfigErrorMessageChanged"
+        />
       </template>
       <template #panelFooter>
         <div class="error-text">
-          {{ error }}
+          {{ errorMessage }}
         </div>
         <XButton
           type="primary"
-          :disabled="disableRun"
+          :disabled="isRunDisabled"
           @click="openEnforcementActionResult"
         >Save and Run</XButton>
       </template>
@@ -73,18 +39,12 @@
 </template>
 
 <script>
-import { Form, Input } from 'ant-design-vue';
 import { mapState, mapActions } from 'vuex';
-import _cond from 'lodash/cond';
-import _constant from 'lodash/constant';
 import _get from 'lodash/get';
 import XEnforcementActionResult from '@networks/entities/EnforcementActionResult.vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
 import XButton from '@axons/inputs/Button.vue';
-import XCard from '@axons/layout/Card.vue';
-import XActionConfig from '@networks/enforcement/ActionConfig.vue';
-import XActionLibrary from '@networks/enforcement/ActionLibrary.vue';
-import { actionCategories, actionsMeta } from '@constants/enforcement';
+import XEnforcementActionConfig from '@networks/enforcement/EnforcementActionConfig.vue';
 import { ENFORCEMENT_EXECUTED } from '@constants/getting-started';
 import { FETCH_SAVED_ENFORCEMENTS, SAVE_ENFORCEMENT } from '@store/modules/enforcements';
 import { ENFORCE_DATA } from '@store/actions';
@@ -94,14 +54,9 @@ export default {
   name: 'XEnforcementPanel',
   components: {
     XSidePanel,
-    XCard,
-    XActionConfig,
-    XActionLibrary,
     XButton,
-    AInput: Input,
-    AForm: Form,
-    AFormItem: Form.Item,
     XEnforcementActionResult,
+    XEnforcementActionConfig,
   },
   props: {
     visible: {
@@ -127,14 +82,9 @@ export default {
   data() {
     return {
       enforcement: null,
-      actionValidation: {
-        isValid: false,
-        nameError: '',
-        formError: '',
-      },
       showEnforcementActionResult: false,
-      enforcementNameFocusedOut: false,
-      actionNameFocusedOut: false,
+      isRunDisabled: true,
+      errorMessage: '',
     };
   },
   computed: {
@@ -152,35 +102,7 @@ export default {
     panelTitle() {
       return `New Enforcement (${this.selectionCount} ${this.module})`;
     },
-    actionConfTitle() {
-      if (!this.selectedActionName) return '';
-      return actionsMeta[this.selectedActionName].title;
-    },
-    actionConfLogo() {
-      if (!this.selectedActionName) return '';
-      return `actions/${this.selectedActionName}`;
-    },
-    actionCategories() {
-      return actionCategories;
-    },
-    error() {
-      return _cond([
-        [() => !this.enforcementNameFocusedOut, _constant('')],
-        [() => !this.enforcement.name, _constant('Enforcement Name is a required field')],
-        [() => this.enforcementNames.includes(this.enforcement.name),
-          _constant('Name already taken by another Enforcement')],
-        [() => !this.actionNameFocusedOut, _constant('')],
-        [() => this.actionValidation.nameError, _constant(this.actionValidation.nameError)],
-        [() => this.actionValidation.formError, _constant(this.actionValidation.formError)],
-        [() => !this.actionValidation.isValid && this.selectedActionName,
-          _constant('Action must be correctly configured for the Enforcement')],
-      ])();
-    },
-    disableRun() {
-      return Boolean(this.error) || !this.enforcementNameFocusedOut
-              || (!this.actionNameFocusedOut && !this.actionValidation.isValid);
-    },
-    selectedActionName: {
+    selectedActionLibraryType: {
       get() {
         return _get(this.enforcement, 'actions.main.action.action_name', '');
       },
@@ -193,6 +115,7 @@ export default {
     visible(isVisible) {
       if (isVisible) {
         this.resetEnforcementData('');
+        this.isRunDisabled = true;
       }
     },
   },
@@ -208,40 +131,26 @@ export default {
       fetchSavedEnforcements: FETCH_SAVED_ENFORCEMENTS,
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
+    onConfigValidityChanged(isRunDisabled) {
+      this.isRunDisabled = isRunDisabled;
+    },
+    onConfigErrorMessageChanged(errorMessage) {
+      this.errorMessage = errorMessage;
+    },
     resetActionConfig() {
-      this.actionNameFocusedOut = false;
       this.resetEnforcementData(this.enforcement.name);
     },
     resetEnforcementData(enforcementName) {
       this.enforcement = { ...this.enforcementData, name: enforcementName };
       this.enforcement.actions.main = { action: { action_name: '' }, name: '' };
-      this.actionValidation = {
-        isValid: false,
-        nameError: '',
-        formError: '',
-      };
     },
     selectActionType(name) {
-      this.selectedActionName = name;
-    },
-    onActionNameErrorChanged(actionNameError) {
-      this.actionValidation.nameError = actionNameError;
-    },
-    onActionFormErrorChanged(actionFormError) {
-      this.actionValidation.formError = actionFormError;
-    },
-    onActionValidityChanged(isValid) {
-      this.actionValidation.isValid = isValid;
-    },
-    onActionNameFocusedOut() {
-      this.actionNameFocusedOut = true;
+      this.selectedActionLibraryType = name;
     },
     closePanel(skipReset) {
       if (!skipReset) {
         this.resetEnforcementData('');
       }
-      this.enforcementNameFocusedOut = false;
-      this.actionNameFocusedOut = false;
       this.$emit('close');
     },
     enforceEntities() {
@@ -273,35 +182,19 @@ export default {
     getSidePanelContainer() {
       return document.querySelector('.x-data-table');
     },
-    setEnforcementNameFocusedOut() {
-      this.enforcementNameFocusedOut = true;
-    },
   },
 };
 </script>
 
 <style lang="scss">
-  .enforcement-panel {
+  .x-side-panel.enforcement-panel {
     .ant-drawer-body {
+      padding-top: 12px;
       &__content {
+        padding-top: 0;
+        padding-bottom: 0;
         overflow-x: hidden;
         overflow-y: hidden !important;
-        .x-card {
-          height: 100%;
-          > .header {
-            padding-bottom: 12px;
-            border-bottom: 1px solid $grey-2;
-          }
-          .x-action-config {
-            grid-template-rows: 60px calc(100% - 72px) 48px;
-          }
-        }
-        .enforcement-form {
-          border-bottom: 1px solid $grey-2;
-          .ant-input {
-            color: $grey-5;
-          }
-        }
       }
       &__footer {
         display: flex;

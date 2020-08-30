@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import ElementNotInteractableException, StaleElementReferenceException
 
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -50,7 +50,7 @@ class TestTasks(TestBase):
             wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                                                  FAILURE_TAG_NAME,
                                                                                  FAILURE_ISOLATE_NAME),
-                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       tolerated_exceptions_list=[ElementNotInteractableException], total_timeout=60 * 5,
                        check_return_value=False)
             self.base_page.run_discovery()
             self.enforcements_page.refresh()
@@ -181,7 +181,7 @@ class TestTasks(TestBase):
             wait_until(lambda: self.enforcements_page.add_deploying_consequences(ENFORCEMENT_NAME, SUCCESS_TAG_NAME,
                                                                                  FAILURE_TAG_NAME,
                                                                                  FAILURE_ISOLATE_NAME),
-                       tolerated_exceptions_list=[NoSuchElementException], total_timeout=60 * 5,
+                       tolerated_exceptions_list=[ElementNotInteractableException], total_timeout=60 * 5,
                        check_return_value=False)
 
             self.base_page.run_discovery()
@@ -230,12 +230,12 @@ class TestTasks(TestBase):
         # create new task to add custom tag to all windows based devices
         self.enforcements_page.click_new_enforcement()
         self.enforcements_page.fill_enforcement_name(enforcement_name)
-        self.enforcements_page.select_trigger()
-        self.enforcements_page.select_saved_view(query_name)
-        self.enforcements_page.save_trigger()
         self.enforcements_page.add_push_system_notification(action_name)
         self.enforcements_page.add_tag_entities(enforcement_name, CUSTOM_TAG,
                                                 self.enforcements_page.POST_ACTIONS_TEXT)
+        self.enforcements_page.select_trigger()
+        self.enforcements_page.select_saved_view(query_name)
+        self.enforcements_page.click_save_button()
         self.enforcements_page.click_run_button()
         self.enforcements_page.wait_for_task_in_progress_toaster()
         self.notification_page.wait_for_count(1)

@@ -244,7 +244,8 @@ class SettingsPage(Page):
         ],
         'enforcements': [
             'View Enforcement Center',
-            'Add Enforcement'
+            'Add Enforcement',
+            'Edit Enforcement',
         ],
         'reports': [
             'View reports',

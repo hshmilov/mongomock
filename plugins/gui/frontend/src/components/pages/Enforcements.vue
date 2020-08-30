@@ -31,7 +31,7 @@
             <XButton
               id="enforcement_new"
               type="primary"
-              :disabled="!canAdd || enforcementsLocked"
+              :disabled="!canAdd || !canUpdate || enforcementsLocked"
               @click="newEnforcement('new')"
             >Add Enforcement</XButton>
             <XButton
@@ -55,13 +55,13 @@ import { mapState, mapMutations, mapActions } from 'vuex';
 import _get from 'lodash/get';
 
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
-import XPage from '../axons/layout/Page.vue';
-import XSearch from '../neurons/inputs/SearchInput.vue';
-import XTable from '../neurons/data/Table.vue';
-import XButton from '../axons/inputs/Button.vue';
+import XPage from '@axons/layout/Page.vue';
+import XSearch from '@neurons/inputs/SearchInput.vue';
+import XTable from '@neurons/data/Table.vue';
+import XButton from '@axons/inputs/Button.vue';
 
-import { UPDATE_DATA_VIEW } from '../../store/mutations';
-import { REMOVE_ENFORCEMENTS, FETCH_ENFORCEMENT, SET_ENFORCEMENT } from '../../store/modules/enforcements';
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { REMOVE_ENFORCEMENTS, SET_ENFORCEMENT } from '@store/modules/enforcements';
 
 export default {
   name: 'XEnforcements',
@@ -132,11 +132,10 @@ export default {
       setEnforcement: SET_ENFORCEMENT,
     }),
     ...mapActions({
-      removeEnforcements: REMOVE_ENFORCEMENTS, fetchEnforcement: FETCH_ENFORCEMENT,
+      removeEnforcements: REMOVE_ENFORCEMENTS,
     }),
     navigateEnforcement(enforcementId) {
       if (this.enforcementsLocked) return;
-      this.fetchEnforcement(enforcementId);
       this.$router.push({ path: `/${this.name}/${enforcementId}` });
     },
     newEnforcement() {

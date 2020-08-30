@@ -18,6 +18,7 @@
       <div class="actions">
         <slot name="panelHeader" />
         <span
+          v-if="closeIconVisible"
           class="action-close"
           title="Close"
           @click="onClose"
@@ -77,6 +78,10 @@ export default {
       default: '',
     },
     mask: {
+      type: Boolean,
+      default: true,
+    },
+    closeIconVisible: {
       type: Boolean,
       default: true,
     },

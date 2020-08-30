@@ -4,10 +4,7 @@
     :class="actionClass"
     @click="$emit('click')"
   >
-    <XTextBox
-      v-bind="{id, text, selected, removable}"
-      @remove="onRemove"
-    >
+    <XTextBox v-bind="{id, text, selected, capitalized}">
       <template slot="logo">
         <img
           v-if="name"
@@ -44,26 +41,22 @@ export default {
     readOnly: Boolean,
     selected: Boolean,
     status: String,
+    capitalized: {
+      type: Boolean,
+      default: false,
+    },
   },
   computed: {
     text() {
       if (this.title) return this.title;
 
-      return `${this.condition} ${this.titlePrefix} ...`;
-    },
-    removable() {
-      return !this.readOnly && Boolean(this.title);
+      return `${this.condition} ${this.titlePrefix}`;
     },
     actionClass() {
       if (this.status) {
         return `action-${this.status}`;
       }
       return '';
-    },
-  },
-  methods: {
-    onRemove() {
-      this.$emit('remove');
     },
   },
 };

@@ -1,7 +1,7 @@
 <template>
   <div class="x-trigger-config">
     <div class="main">
-      <h4 class="trigger-title">
+      <h4 class="main-trigger-title">
         Saved Query
       </h4>
       <div>Select the Saved Query for the Enforcement Set to act on:</div>
@@ -103,14 +103,6 @@
         </div>
       </template>
     </div>
-    <div class="footer">
-      <XButton
-        v-if="!readOnly"
-        type="primary"
-        :disabled="disableConfirm"
-        @click="confirmTrigger"
-      >Save</XButton>
-    </div>
   </div>
 </template>
 
@@ -118,7 +110,6 @@
 import { mapState } from 'vuex';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XSelect from '@axons/inputs/select/Select.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XCheckbox from '@axons/inputs/Checkbox.vue';
 import XSelectSymbol from '@neurons/inputs/SelectSymbol.vue';
 import XForm from '@neurons/schema/Form.vue';
@@ -130,7 +121,7 @@ import { weekDays, monthDays } from '../../../constants/utils';
 export default {
   name: 'XTriggerConfig',
   components: {
-    XSelect, XButton, XCheckbox, XSelectSymbol, XSwitch, XForm,
+    XSelect, XCheckbox, XSelectSymbol, XSwitch, XForm,
   },
   mixins: [viewsMixin],
   props: {
@@ -344,14 +335,21 @@ export default {
       },
     },
   },
+  watch: {
+    showScheduling(isSchedulingShown) {
+      if (!isSchedulingShown) {
+        this.periodValid = true;
+      }
+    },
+    disableConfirm(isError) {
+      this.$emit('trigger-validity-changed', !isError);
+    },
+  },
   mounted() {
     this.showConditions = this.anyConditions;
   },
   methods: {
     validateInteger,
-    confirmTrigger() {
-      this.$emit('confirm');
-    },
     toggleScheduling() {
       this.showScheduling = !this.showScheduling;
     },
@@ -384,8 +382,13 @@ export default {
     height: 100%;
 
     .main {
+      @include  y-scrollbar;
       overflow: auto;
       height: calc(100% - 20px);
+
+      .main-trigger-title {
+        margin: 10px 0 4px 0;
+      }
 
       .trigger-title {
         margin: 24px 0 4px 0;
@@ -455,10 +458,6 @@ export default {
           margin-top: 0;
         }
       }
-    }
-
-    .footer {
-      text-align: right;
     }
   }
 </style>

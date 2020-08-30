@@ -6,24 +6,10 @@
       { title: name }]"
   >
     <XSplitBox>
-      <template slot="main">
-        <div class="header">
-          <label>Enforcement Set Name</label>
-          <input
-            v-if="id === 'new'"
-            id="enforcement_name"
-            ref="name"
-            v-model="enforcement.name"
-            type="text"
-            :disabled="userCannotChangeThisEnforcement"
-          >
-          <input
-            v-else
-            type="text"
-            :value="enforcement.name"
-            disabled
-          >
-        </div>
+      <template
+        v-if="isEnforcementInitialized"
+        #main
+      >
         <div class="body">
           <div class="body-flow">
             <XAction
@@ -31,33 +17,28 @@
               v-bind="mainAction"
               :read-only="userCannotChangeThisEnforcement"
               @click="selectActionMain"
-              @remove="removeActionMain"
             />
             <XActionGroup
               v-for="item in successiveActions"
               :key="item.condition"
               v-bind="item"
-              :read-only="userCannotChangeThisEnforcement"
+              :read-only="userCannotChangeThisEnforcement || !saved"
+              :icons-disabled="isSuccessiveActionIconDisabled(item.items)"
               @select="selectAction"
-              @remove="removeAction"
             />
             <XTrigger
               id="trigger"
               :title="trigger.name"
               :selected="trigger.selected"
-              :read-only="userCannotChangeThisEnforcement"
+              :read-only="isTriggerReadOnly"
               @click="selectTrigger(0)"
             />
           </div>
         </div>
         <div class="footer">
-          <div class="error-text">
-            {{ error }}
-          </div>
           <div>
             <XButton
-              v-if="saved"
-              id="view_tasks"
+              class="view_tasks"
               type="emphasize"
               :disabled="userCannotViewEnforcementsTasks"
               @click="viewTasks"
@@ -65,74 +46,47 @@
               View Tasks
             </XButton>
             <XButton
-              v-if="userCannotChangeThisEnforcement"
-              type="primary"
-              @click="exit"
+              class="run_enforcement"
+              type="emphasize"
+              :disabled="disableRun"
+              @click="run"
             >
-              Exit
+              Run
             </XButton>
-            <template v-else>
-              <XButton
-                type="emphasize"
-                :disabled="disableRun"
-                @click="saveRun"
-              >
-                Save & Run
-              </XButton>
-              <XButton
-                id="enforcement_save"
-                type="primary"
-                :disabled="disableSave"
-                @click="saveExit"
-              >
-                Save & Exit
-              </XButton>
-            </template>
           </div>
         </div>
       </template>
-      <XCard
-        v-if="trigger.selected"
-        slot="details"
-        key="triggerConf"
-        title="Trigger Configuration"
-        logo="adapters/axonius"
-      >
-        <XTriggerConfig
-          v-model="triggerInProcess.definition"
-          :read-only="userCannotChangeThisEnforcement"
-          @confirm="saveTrigger"
+      <template #details>
+        <XActionPanel
+          v-model="actionInProcess"
+          :visible.sync="actionPanelVisible"
+          :enforcement-name.sync="enforcement.name"
+          :actions.sync="enforcementActions"
+          :is-editing-mode.sync="actionInEditingMode"
+          :successive-actions-types="successiveActionsTypes"
+          :main-action-selected="mainActionSelected"
+          :current-selected-action-type="currentSelectedActionType"
+          :user-cannot-change-this-enforcement="userCannotChangeThisEnforcement"
+          :is-existing-enforcement="saved"
+          :action-position="actionInProcess.position"
+          @restart-action="restartAction"
+          @save-enforcement-action="saveEnforcementAction"
+          @save-deleted-action="saveDeletedAction"
+          @select-main-action="selectActionMain"
+          @select-action="selectAction"
+          @reset-enforcement-data="resetEnforcementData"
         />
-      </XCard>
-      <XCard
-        v-else-if="currentActionName"
-        slot="details"
-        key="actionConf"
-        :title="actionConfTitle"
-        :logo="actionConfLogo"
-        :reversible="currentActionReversible"
-        back-title="Action Library"
-        @back="restartAction"
-      >
-        <XActionConfig
-          v-model="actionInProcess.definition"
-          :exclude="excludedNames"
-          :include="allowedActionNames"
-          :read-only="userCannotChangeThisEnforcement"
-          @confirm="saveAction"
+        <XTriggerPanel
+          v-model="triggerInProcess"
+          :visible="triggerPanelVisible"
+          :is-editing-mode.sync="triggerInEditingMode"
+          :user-cannot-change-this-enforcement="userCannotChangeThisEnforcement"
+          :is-trigger-undefined="triggerNotDefined"
+          @save-enforcement-trigger="saveEnforcementTrigger"
+          @delete-enforcement-trigger="deleteEnforcementTrigger"
+          @select-trigger="selectTrigger"
         />
-      </XCard>
-      <XCard
-        v-else-if="actionInProcess.position"
-        slot="details"
-        key="actionLib"
-        title="Action Library"
-      >
-        <XActionLibrary
-          :categories="actionCategories"
-          @select="selectActionType"
-        />
-      </XCard>
+      </template>
     </XSplitBox>
     <XToast
       v-if="message"
@@ -142,58 +96,64 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
-
-import XPage from '../axons/layout/Page.vue';
-import XSplitBox from '../axons/layout/SplitBox.vue';
-import XCard from '../axons/layout/Card.vue';
-import XButton from '../axons/inputs/Button.vue';
-import XTrigger from '../networks/enforcement/Trigger.vue';
-import XTriggerConfig from '../networks/enforcement/TriggerConfig.vue';
-import XAction from '../networks/enforcement/Action.vue';
-import XActionGroup from '../networks/enforcement/ActionGroup.vue';
-import XActionConfig from '../networks/enforcement/ActionConfig.vue';
-import XActionLibrary from '../networks/enforcement/ActionLibrary.vue';
-import XToast from '../axons/popover/Toast.vue';
-
+import { mapActions, mapState } from 'vuex';
+import _get from 'lodash/get';
+import _cloneDeep from 'lodash/cloneDeep';
+import _isEmpty from 'lodash/isEmpty';
+import XPage from '@axons/layout/Page.vue';
+import XSplitBox from '@axons/layout/SplitBox.vue';
+import XButton from '@axons/inputs/Button.vue';
+import XTrigger from '@networks/enforcement/Trigger.vue';
+import XAction from '@networks/enforcement/Action.vue';
+import XActionGroup from '@networks/enforcement/ActionGroup.vue';
+import XToast from '@axons/popover/Toast.vue';
+import XActionPanel from '@networks/enforcement/panels/ActionPanel.vue';
+import XTriggerPanel from '@networks/enforcement/panels/TriggerPanel.vue';
 import {
-  initRecipe, initAction, initTrigger,
-  FETCH_ENFORCEMENT, SAVE_ENFORCEMENT, RUN_ENFORCEMENT,
+  FETCH_ENFORCEMENT,
   FETCH_SAVED_ENFORCEMENTS,
-} from '../../store/modules/enforcements';
-
+  initAction,
+  initRecipe,
+  initTrigger,
+  RUN_ENFORCEMENT,
+  SAVE_ENFORCEMENT,
+} from '@store/modules/enforcements';
 import {
-  successCondition, failCondition, postCondition, mainCondition, actionCategories, actionsMeta,
-} from '../../constants/enforcement';
-import { ENFORCEMENT_EXECUTED } from '../../constants/getting-started';
-import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
+  failCondition,
+  mainCondition,
+  postCondition,
+  successCondition,
+} from '@constants/enforcement';
+import { ENFORCEMENT_EXECUTED } from '@constants/getting-started';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
 
 export default {
   name: 'XEnforcement',
   components: {
     XPage,
     XSplitBox,
-    XCard,
     XButton,
     XTrigger,
-    XTriggerConfig,
     XAction,
     XActionGroup,
-    XActionConfig,
-    XActionLibrary,
     XToast,
+    XActionPanel,
+    XTriggerPanel,
   },
   data() {
     return {
       enforcement: {},
       actionInProcess: {
-        position: null, definition: null,
+        position: {}, definition: {},
       },
       triggerInProcess: {
-        position: null, definition: null,
+        position: {}, definition: {},
       },
-      allowedActionNames: [],
       message: '',
+      actionInEditingMode: false,
+      triggerInEditingMode: false,
+      actionPanelVisible: false,
+      triggerPanelVisible: false,
     };
   },
   computed: {
@@ -230,41 +190,51 @@ export default {
       return this.$cannot(this.$permissionConsts.categories.Enforcements,
         this.$permissionConsts.actions.Update);
     },
+    userCannotRunEnforcements() {
+      return this.$cannot(this.$permissionConsts.categories.Enforcements,
+        this.$permissionConsts.actions.Run);
+    },
     userCannotViewEnforcementsTasks() {
       return this.$cannot(this.$permissionConsts.categories.Enforcements,
         this.$permissionConsts.actions.View, this.$permissionConsts.categories.Tasks);
     },
-    error() {
-      if (!this.enforcement.name) {
-        return 'Enforcement Name is a required field';
-      }
-      if (!this.enforcementData.name && this.enforcementNames.includes(this.enforcement.name)) {
-        return 'Name already taken by another Enforcement';
-      }
-      if (!this.mainAction.name) {
-        return 'A Main Action is required for Enforcement';
-      }
-      return '';
+    isTriggerReadOnly() {
+      return (this.userCannotEditEnforcements && this.triggerNotDefined)
+        || !this.saved;
     },
-    disableSave() {
-      return Boolean(this.error);
+    triggerNotDefined() {
+      return !this.trigger || !this.trigger.view || !this.trigger.view.id;
     },
     disableRun() {
-      return this.disableSave || !this.trigger || !this.trigger.view || !this.trigger.view.id;
+      return this.triggerNotDefined
+        || (this.actionInEditingMode && this.actionPanelVisible)
+        || (this.triggerInEditingMode && this.triggerPanelVisible)
+        || this.userCannotRunEnforcements;
     },
-    actions() {
-      if (!this.enforcement || !this.enforcement.actions) return { ...initRecipe };
-
-      return this.enforcement.actions;
+    enforcementActions: {
+      get() {
+        if (!this.enforcement || !this.enforcement.actions) return { ...initRecipe };
+        return this.enforcement.actions;
+      },
+      set(modifiedActions) {
+        this.enforcement.actions = modifiedActions;
+      },
+    },
+    currentSelectedActionType() {
+      return _get(this.actionInProcess, 'position.condition', '');
+    },
+    mainActionSelected() {
+      return this.currentSelectedActionType === mainCondition;
     },
     mainAction() {
-      const main = this.actions[mainCondition];
+      const main = this.enforcementActions[mainCondition];
       const mainAction = {
         condition: mainCondition,
         key: mainCondition,
         selected: this.mainActionSelected,
         readOnly: this.userCannotChangeThisEnforcement,
         titlePrefix: 'action',
+        capitalized: this.isMainActionUndefined,
       };
       if (!main || !main.name) return mainAction;
       return {
@@ -273,32 +243,20 @@ export default {
         title: main.name,
       };
     },
-    mainActionSelected() {
-      return this.actionInProcess.position
-        && this.actionInProcess.position.condition === mainCondition;
+    isMainActionUndefined() {
+      return this.enforcementActions && !this.enforcementActions.main;
+    },
+    successiveActionsTypes() {
+      return [successCondition, failCondition, postCondition];
     },
     successiveActions() {
-      return [successCondition, failCondition, postCondition].map((condition) => ({
+      return this.successiveActionsTypes.map((condition) => ({
         condition,
         id: `${condition}_action`,
         selected: this.selectedAction(condition),
-        items: this.actions[condition],
+        items: this.enforcementActions[condition],
         readOnly: this.userCannotChangeThisEnforcement,
       }));
-    },
-    actionConfTitle() {
-      if (!this.currentActionName) return '';
-      return actionsMeta[this.currentActionName].title;
-    },
-    actionConfLogo() {
-      if (!this.currentActionName) return '';
-      return `actions/${this.currentActionName}`;
-    },
-    currentActionName() {
-      if (!this.actionInProcess.definition || !this.actionInProcess.definition.action
-                || !this.actionInProcess.position) return '';
-
-      return this.actionInProcess.definition.action.action_name;
     },
     trigger() {
       const selected = this.triggerInProcess.position === 0;
@@ -309,30 +267,14 @@ export default {
       if (!this.enforcement.triggers) return 0;
       return this.enforcement.triggers.length;
     },
-    actionCategories() {
-      return actionCategories;
-    },
-    excludedNames() {
-      const allNames = [successCondition, failCondition, postCondition]
-        .map((condition) => this.actions[condition]
-          .filter((action, i) => action.name
-            && (this.actionInProcess.position.condition !== condition
-              || this.actionInProcess.position.i !== i))
-          .map((action) => action.name))
-        .reduce((acc, actionNames) => acc.concat(actionNames), []);
-
-      if (!this.actions[mainCondition] || !this.actions[mainCondition].name
-                || this.actionInProcess.position.condition === mainCondition) return allNames;
-      return [...allNames, this.actions[mainCondition].name];
-    },
-    currentActionReversible() {
-      const { position } = this.actionInProcess;
-      if (!position) return false;
-      return (this.mainActionSelected && !this.mainAction.name)
-        || (!this.mainActionSelected && this.actions[position.condition].length === position.i);
+    enforcementId() {
+      return this.enforcement.uuid;
     },
     saved() {
-      return this.enforcement.uuid !== undefined;
+      return this.id !== 'new' || this.enforcementId !== undefined;
+    },
+    isEnforcementInitialized() {
+      return !_isEmpty(this.enforcement);
     },
   },
   created() {
@@ -359,27 +301,21 @@ export default {
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
     initData() {
-      this.enforcement = { ...this.enforcementData };
+      this.setEnforcementData();
       this.selectActionMain();
+      this.actionPanelVisible = true;
     },
-    async saveRun() {
-      await this.saveEnforcement(this.enforcement).then(async (response) => {
-        if (!this.enforcement.uuid) {
-          this.enforcement.uuid = response;
-        }
-        await this.runEnforcement(this.enforcement.uuid);
-        this.message = 'Enforcement Task is in progress';
-        await this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
-      });
-    },
-    saveExit() {
-      this.saveEnforcement(this.enforcement).then(() => this.exit());
+    async run() {
+      await this.runEnforcement(this.enforcementId);
+      this.displayMessage('Enforcement Task is in progress');
+      await this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
     },
     viewTasks() {
-      this.$router.push({ name: 'EnforcementTasks', params: { id: this.enforcement.uuid } });
-    },
-    exit() {
-      this.$router.push({ name: 'Enforcements' });
+      if (this.saved) {
+        this.$router.push({ name: 'EnforcementTasks', params: { id: this.enforcementId } });
+      } else {
+        this.$router.push({ name: 'Tasks' });
+      }
     },
     selectedAction(condition) {
       if (!this.actionInProcess.position
@@ -388,69 +324,98 @@ export default {
       return this.actionInProcess.position.i;
     },
     selectAction(condition, i) {
+      this.actionPanelVisible = true;
+      this.triggerPanelVisible = false;
       this.actionInProcess.position = { condition, i };
-      this.actionInProcess.definition = (this.actions[condition]
-        && this.actions[condition].length > i)
-        ? { ...this.actions[condition][i] }
+      this.actionInProcess.definition = (this.enforcementActions[condition]
+        && this.enforcementActions[condition].length > i)
+        ? { ...this.enforcementActions[condition][i] }
         : { ...initAction, action: { ...initAction.action } };
       this.triggerInProcess.position = null;
     },
     selectActionMain() {
+      this.actionPanelVisible = true;
+      this.triggerPanelVisible = false;
+      this.setActionMain();
+    },
+    setActionMain() {
       this.actionInProcess.position = { condition: mainCondition };
       this.actionInProcess.definition = (this.mainAction && this.mainAction.name)
-        ? { ...this.actions.main, action: { ...this.actions.main.action } }
+        ? { ...this.enforcementActions.main, action: { ...this.enforcementActions.main.action } }
         : { ...initAction, action: { ...initAction.action } };
       this.triggerInProcess.position = null;
     },
     restartAction() {
       this.selectAction(this.actionInProcess.position.condition, this.actionInProcess.position.i);
     },
-    removeAction(condition, i) {
-      if (this.actions[condition][i].name) {
-        this.allowedActionNames.push(this.actions[condition][i].name);
+    async saveEnforcementAction(successMessage) {
+      let enforcementIsNew = false;
+      this.setModifiedActionDefinition();
+      const newEnforcementId = await this.saveEnforcement(this.enforcement);
+      this.displayMessage(successMessage);
+      // If enforcement was created
+      if (!this.enforcementId) {
+        // 'uuid' prop needs to be reactive
+        this.$set(this.enforcement, 'uuid', newEnforcementId);
+        enforcementIsNew = true;
       }
-      this.actions[condition].splice(i, 1);
-      if (condition === this.actionInProcess.position.condition) {
-        this.selectAction(this.actionInProcess.position.condition, this.actionInProcess.position.i);
-      }
+      await this.resetEnforcementData();
+      this.selectRelevantAction(enforcementIsNew);
     },
-    removeActionMain() {
-      if (this.actions[mainCondition].name) {
-        this.allowedActionNames.push(this.actions[mainCondition].name);
-      }
-      this.actions[mainCondition] = null;
-      if (this.mainActionSelected) {
-        this.selectActionMain();
-      }
+    async saveDeletedAction(successMessage) {
+      await this.saveEnforcement(this.enforcement);
+      this.displayMessage(successMessage);
+      await this.resetEnforcementData();
     },
-    selectActionType(name) {
-      this.actionInProcess.definition.action.action_name = name;
-      this.actionInProcess.definition.action.config = null;
+    async resetEnforcementData() {
+      await this.fetchEnforcement(this.enforcementId);
+      this.setEnforcementData();
     },
-    saveAction() {
-      if (!this.actionInProcess.position) {
-        return;
-      }
+    setEnforcementData() {
+      this.enforcement = { ...this.enforcementData };
+    },
+    async saveEnforcementTrigger(successMessage) {
+      this.setModifiedTriggerDefinition();
+      await this.saveEnforcement(this.enforcement);
+      this.message = successMessage;
+      const { position } = this.triggerInProcess;
+      this.selectTrigger(position);
+    },
+    async deleteEnforcementTrigger(successMessage) {
+      this.enforcement.triggers = [];
+      await this.saveEnforcement(this.enforcement);
+      this.message = successMessage;
+    },
+    setModifiedActionDefinition() {
       const { condition } = this.actionInProcess.position;
       const { i } = this.actionInProcess.position;
       if (condition === mainCondition) {
-        this.actions[condition] = this.actionInProcess.definition;
-        this.selectTrigger(0);
-        return;
-      }
-      if (this.actions[condition].length <= i) {
-        this.actions[condition].push(this.actionInProcess.definition);
+        this.enforcementActions[condition] = this.actionInProcess.definition;
+      } else if (this.enforcementActions[condition].length <= i) {
+        this.enforcementActions[condition].push(this.actionInProcess.definition);
       } else {
-        this.actions[condition][i] = this.actionInProcess.definition;
+        this.enforcementActions[condition][i] = this.actionInProcess.definition;
       }
-      if (!this.mainAction.name) {
-        this.selectActionMain();
-        return;
+    },
+    selectRelevantAction(enforcementIsNew) {
+      const { condition } = this.actionInProcess.position;
+      const { i } = this.actionInProcess.position;
+      if (condition === mainCondition) {
+        if (enforcementIsNew) {
+          this.selectTrigger(0);
+        } else {
+          this.selectActionMain();
+        }
+      } else {
+        this.selectAction(condition, i);
       }
-      this.selectAction(condition, i + 1);
     },
     selectTrigger(i) {
-      this.actionInProcess.position = null;
+      this.actionPanelVisible = false;
+      this.triggerPanelVisible = true;
+      if (!_isEmpty(this.actionInProcess.position)) {
+        this.actionInProcess.position = {};
+      }
       if (i === undefined || i >= this.triggerCount) {
         this.triggerInProcess.position = this.triggerCount;
         this.triggerInProcess.definition = {
@@ -462,10 +427,9 @@ export default {
         return;
       }
       this.triggerInProcess.position = i;
-      this.triggerInProcess.definition = { ...this.enforcement.triggers[i] };
-      this.actionInProcess.position = null;
+      this.triggerInProcess.definition = _cloneDeep(this.enforcement.triggers[i]);
     },
-    saveTrigger() {
+    setModifiedTriggerDefinition() {
       if (this.triggerInProcess.position === null) return;
 
       const { position } = this.triggerInProcess;
@@ -474,8 +438,13 @@ export default {
       } else {
         this.enforcement.triggers[position] = this.triggerInProcess.definition;
       }
-      this.triggerInProcess.position = null;
-      this.selectAction(successCondition, 0);
+    },
+    displayMessage(message) {
+      this.message = message;
+    },
+    isSuccessiveActionIconDisabled(successiveActionItems) {
+      return (this.userCannotEditEnforcements && _isEmpty(successiveActionItems))
+        || !this.saved;
     },
   },
 };
@@ -483,18 +452,19 @@ export default {
 
 <style lang="scss">
   .x-enforcement {
+    .view_tasks {
+      width: 120px;
+    }
+    .run_enforcement {
+      width: 120px;
+    }
+    .ant-drawer > * {
+      transition: none;
+    }
     .x-split-box {
       > .main {
         display: grid;
-        grid-template-rows: 48px auto 48px;
         align-items: flex-start;
-
-        .header {
-          display: grid;
-          grid-template-columns: 1fr 2fr;
-          grid-gap: 8px;
-          align-items: center;
-        }
 
         > .body {
           overflow: auto;
@@ -511,22 +481,24 @@ export default {
         }
 
         > .footer {
-          text-align: right;
+          text-align: left;
           align-self: end;
           display: flex;
           flex-direction: column;
+          position: absolute;
+          padding: 5px 30px 0 30px;
+          bottom: 0;
+          left: 0;
+          height: 50px;
         }
       }
 
       .details {
         .x-card {
-          height: 100%;
-
           > .header {
             padding-bottom: 12px;
             border-bottom: 1px solid $grey-2;
           }
-
         }
       }
     }

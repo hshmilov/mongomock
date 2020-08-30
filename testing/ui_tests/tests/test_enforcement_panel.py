@@ -16,7 +16,6 @@ class TestEnforcementPanel(TestBase):
     ENFORCEMENT_NAME_TAKEN_ERROR = 'Name already taken by another Enforcement'
     ACTION_NAME_REQUIRED_ERROR = 'Action name is a required field'
     ACTION_NAME_TAKEN_ERROR = 'Name already taken by another saved Action'
-    ACTION_NOT_CONFIGURED_ERROR = 'Action must be correctly configured for the Enforcement'
 
     def test_enforcement_panel(self):
         """
@@ -82,22 +81,22 @@ class TestEnforcementPanel(TestBase):
     def _test_enforcement_panel_validations(self):
         self.devices_page.click_row_checkbox()
         self.devices_page.open_enforcement_panel()
-        self._assert_error_message('')
+        self._assert_no_error_message()
         self.devices_page.click_enforcement_name_field()
         self.devices_page.key_down_tab()
         self._assert_error_message(self.ENFORCEMENT_NAME_REQUIRED_ERROR)
         self.devices_page.fill_enforcement_name(self.FIRST_ENFORCEMENT_NAME)
         self._assert_error_message(self.ENFORCEMENT_NAME_TAKEN_ERROR)
         self.devices_page.fill_enforcement_name(self.DUMMY_ENFORCEMENT_NAME)
-        self._assert_error_message('')
+        self._assert_no_error_message()
         self.devices_page.open_action_tag_config()
-        self._assert_error_message('')
+        self._assert_no_error_message()
         self.devices_page.key_down_tab()
         self._assert_error_message(self.ACTION_NAME_REQUIRED_ERROR)
         self.devices_page.fill_enforcement_action_name(self.FIRST_ACTION_NAME)
         self._assert_error_message(self.ACTION_NAME_TAKEN_ERROR)
         self.devices_page.fill_enforcement_action_name(self.DUMMY_ACTION_NAME)
-        self._assert_error_message(self.ACTION_NOT_CONFIGURED_ERROR)
+        self._assert_no_error_message()
         self.devices_page.select_option(
             self.devices_page.DROPDOWN_TAGS_CSS,
             self.devices_page.DROPDOWN_TEXT_BOX_CSS, self.devices_page.DROPDOWN_NEW_OPTION_CSS, self.DUMMY_TAG
@@ -108,3 +107,7 @@ class TestEnforcementPanel(TestBase):
     def _assert_error_message(self, error_message):
         assert self.devices_page.is_enforcement_panel_save_button_disabled()
         assert self.devices_page.get_enforcement_panel_error() == error_message
+
+    def _assert_no_error_message(self):
+        assert self.devices_page.is_enforcement_panel_save_button_disabled()
+        assert self.devices_page.get_enforcement_panel_error() == ''

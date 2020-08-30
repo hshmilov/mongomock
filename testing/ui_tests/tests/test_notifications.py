@@ -18,7 +18,7 @@ class TestNotifications(TestBase):
         self.base_page.run_discovery()
         self.enforcements_page.switch_to_page()
         self.enforcements_page.create_tag_enforcement(
-            'Run Tag', MANAGED_DEVICES_QUERY_NAME, save=False)
+            'Run Tag', MANAGED_DEVICES_QUERY_NAME)
         # Adding 10 Success actions for this test Enforcement
         for count in range(10):
             self.enforcements_page.add_push_notification(
@@ -51,7 +51,7 @@ class TestNotifications(TestBase):
         self.base_page.run_discovery()
         self.enforcements_page.switch_to_page()
         self.enforcements_page.create_tag_enforcement(
-            'Run Tag', MANAGED_DEVICES_QUERY_NAME, save=False)
+            'Run Tag', MANAGED_DEVICES_QUERY_NAME)
         # Adding 10 Success actions for this test Enforcement
         for count in range(10):
             self.enforcements_page.add_push_notification(

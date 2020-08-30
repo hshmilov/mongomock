@@ -99,10 +99,9 @@ class TestGettingStarted(TestBase):
 
         # 5) create & exec ES and check if milestone has been completed
         self.enforcements_page.switch_to_page()
-        self.enforcements_page.create_basic_enforcement(enforcement_name=self.ENFORCEMENT_NAME,
-                                                        enforcement_view=self.SAVED_QUERY,
-                                                        save=True)
+        self.enforcements_page.create_basic_enforcement(enforcement_name=self.ENFORCEMENT_NAME)
         self.enforcements_page.add_push_system_notification()
+        self.enforcements_page.create_trigger(self.SAVED_QUERY)
         self.enforcements_page.click_run_button()
         self.base_page.assert_milestone_completed(page.Milestones.enforcement_executed.name)
 

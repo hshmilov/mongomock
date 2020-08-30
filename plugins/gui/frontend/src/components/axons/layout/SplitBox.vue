@@ -1,25 +1,23 @@
 <template>
-    <x-box class="x-split-box">
-        <div class="main">
-            <slot name="main" />
-        </div>
-        <div class="details">
-            <transition name="slide-fade" mode="out-in">
-                <slot name="details" />
-            </transition>
-        </div>
-    </x-box>
+  <XBox class="x-split-box">
+    <div class="main">
+      <slot name="main" />
+    </div>
+    <div class="details">
+      <slot name="details" />
+    </div>
+  </XBox>
 </template>
 
 <script>
-    import xBox from './Box.vue'
+import XBox from './Box.vue';
 
-    export default {
-        name: 'x-split-box',
-        components: {
-            xBox
-        }
-    }
+export default {
+  name: 'XSplitBox',
+  components: {
+    XBox,
+  },
+};
 </script>
 
 <style lang="scss">
@@ -36,16 +34,6 @@
         .details {
             height: 100%;
             width: calc(100% - 600px);
-            .slide-fade-enter-active {
-                transition: all .6s cubic-bezier(1.0, 0.4, 0.8, 1.0);
-            }
-            .slide-fade-leave-active {
-                transition: all .2s ease;
-            }
-            .slide-fade-enter, .slide-fade-leave-to {
-                transform: translateX(50%);
-                opacity: 0;
-            }
         }
     }
 </style>

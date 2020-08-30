@@ -48,6 +48,7 @@ class TestFeatureFlags(TestBase):
     def _try_to_add_locked_action(self):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.click_new_enforcement()
+        self.enforcements_page.fill_enforcement_name(self.enforcements_page.DUMMY_ENFORCEMENT_NAME)
         self.enforcements_page.add_generic_action(ActionCategory.Isolate, self.ACTION_TO_LOCK,
                                                   'Unlocked Action')
 
@@ -79,7 +80,7 @@ class TestFeatureFlags(TestBase):
             self.enforcements_page.click_action(self.ACTION_TO_LOCK)
             assert self.enforcements_page.find_action_library_tip('Please reach out to your Account Manager')
             self.enforcements_page.click_ok_button()
-            self.enforcements_page.wait_for_modal_close()
+            self.enforcements_page.wait_for_modal_close(wait_for_drawer_close=False)
 
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()

@@ -277,29 +277,38 @@ class ReportsService(Triggerable, PluginBase):
                 }, {
                     '$set': report_set_data
                 })
-                processed_triggers = self.__process_triggers(report_data[TRIGGERS_FIELD])
-                for trigger in processed_triggers:
-                    trigger_result = session.update_one({
-                        '_id': ObjectId(report_id),
-                        'triggers.name': trigger['name']
-                    }, {
-                        '$set': {
-                            f'triggers.$.view': trigger['view'],
-                            f'triggers.$.conditions': trigger['conditions'],
-                            f'triggers.$.run_on': trigger['run_on'],
-                            f'triggers.$.period': trigger['period'],
-                            f'triggers.$.period_time': trigger.get('period_time', None),
-                            f'triggers.$.period_recurrence': trigger.get('period_recurrence', None)
-                        }
-                    })
-                    if trigger_result.matched_count == 0:
-                        session.update_one({
-                            '_id': ObjectId(report_id)
+                if report_data[TRIGGERS_FIELD]:
+                    processed_triggers = self.__process_triggers(report_data[TRIGGERS_FIELD])
+                    for trigger in processed_triggers:
+                        trigger_result = session.update_one({
+                            '_id': ObjectId(report_id),
+                            'triggers.name': trigger['name']
                         }, {
-                            '$push': {
-                                TRIGGERS_FIELD: trigger
+                            '$set': {
+                                f'triggers.$.view': trigger['view'],
+                                f'triggers.$.conditions': trigger['conditions'],
+                                f'triggers.$.run_on': trigger['run_on'],
+                                f'triggers.$.period': trigger['period'],
+                                f'triggers.$.period_time': trigger.get('period_time', None),
+                                f'triggers.$.period_recurrence': trigger.get('period_recurrence', None)
                             }
                         })
+                        if trigger_result.matched_count == 0:
+                            session.update_one({
+                                '_id': ObjectId(report_id)
+                            }, {
+                                '$push': {
+                                    TRIGGERS_FIELD: trigger
+                                }
+                            })
+                else:
+                    session.update_one({
+                        '_id': ObjectId(report_id)
+                    }, {
+                        '$set': {
+                            TRIGGERS_FIELD: []
+                        }
+                    })
 
                 return jsonify({'modified': report_result.modified_count})
 

@@ -1,6 +1,9 @@
 <template>
   <div class="x-action-config">
-    <div class="name">
+    <div
+      v-if="!disableName"
+      class="name"
+    >
       <label
         for="action-name"
         class="name__label"
@@ -10,8 +13,6 @@
         ref="name"
         v-model="name"
         type="text"
-        :disabled="disableName"
-        :class="{disabled: disableName}"
         @focusout.stop="$emit('action-name-focused-out')"
       >
     </div>
@@ -31,57 +32,27 @@
         />
       </template>
     </div>
-    <div
-      v-if="!hideSaveButton"
-      class="actions"
-    >
-      <div class="error-text">
-        {{ nameError || formError }}
-      </div>
-      <XButton
-        v-if="!readOnly"
-        type="primary"
-        :disabled="disableConfirm"
-        @click="confirmAction"
-      >Save</XButton>
-    </div>
   </div>
 </template>
 
 <script>
-import XButton from '../../axons/inputs/Button.vue';
 import XForm from '../../neurons/schema/Form.vue';
-
 import actionsMixin from '../../../mixins/actions';
 
 export default {
   name: 'XActionConfig',
-  components: {
-    XButton, XForm,
-  },
+  components: { XForm },
   mixins: [actionsMixin],
   props: {
     value: {
       type: Object,
       default: () => ({}),
     },
-    exclude: {
-      type: Array,
-      default: () => [],
-    },
-    include: {
+    allowedActionNames: {
       type: Array,
       default: () => [],
     },
     readOnly: {
-      type: Boolean,
-      default: false,
-    },
-    hideSaveButton: {
-      type: Boolean,
-      default: false,
-    },
-    focusOnActionName: {
       type: Boolean,
       default: false,
     },
@@ -148,8 +119,8 @@ export default {
       if (this.disableName) return '';
       if (this.name === '') {
         return 'Action name is a required field';
-      } if ((this.actionNameExists(this.name) && !this.include.includes(this.name))
-                || this.exclude.includes(this.name)) {
+      }
+      if (this.actionNameExists(this.name) && !this.allowedActionNames.includes(this.name)) {
         return 'Name already taken by another saved Action';
       }
       return '';
@@ -169,10 +140,10 @@ export default {
     },
   },
   mounted() {
-    if (this.focusOnActionName) {
+    if (!this.disableName) {
       this.$refs.name.focus();
     }
-    if (this.hideSaveButton && this.nameError) {
+    if (this.nameError) {
       this.$emit('action-name-error', this.nameError);
     }
     this.nameValid = !this.nameError;
@@ -183,12 +154,7 @@ export default {
   methods: {
     validateForm(valid) {
       this.formValid = valid;
-      if (this.hideSaveButton) {
-        this.$emit('action-form-error', this.formError);
-      }
-    },
-    confirmAction() {
-      this.$emit('confirm');
+      this.$emit('action-form-error', this.formError);
     },
   },
 };
@@ -197,13 +163,11 @@ export default {
 <style lang="scss">
   .x-action-config {
     height: 100%;
-    display: grid;
-    grid-template-rows: 60px calc(100% - 108px) 48px;
-    align-items: flex-start;
 
     .name {
       display: flex;
       align-items: center;
+      margin-bottom: 24px;
 
       &__label {
         flex: 1 0 auto;
@@ -238,14 +202,6 @@ export default {
             width: 200px;
           }
         }
-      }
-    }
-
-    .actions {
-      text-align: right;
-
-      .error-text {
-        min-height: 20px;
       }
     }
   }
