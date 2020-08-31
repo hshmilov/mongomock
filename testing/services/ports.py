@@ -20,6 +20,7 @@ DOCKER_PORTS = {
     'dns-conflicts':                    5011,
     'nexpose-adapter':                  5012,
     'csv-adapter':                      5013,
+    'dns-made-easy-adapter':            5014,
     'qcore-adapter':                    5015,
     'qcore-mediator':                   5016,
     'next-think-adapter':               5017,

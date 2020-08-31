@@ -18,6 +18,11 @@
     "link": "https://docs.axonius.com/docs/firemon-security-manager",
     "description": "FireMon Security Manager is a network security solution that provides real-time visibility, control, and management for network security devices across hybrid cloud environments."
   },
+  "dns_made_easy_adapter": {
+    "title": "DNS Made Easy",
+    "link": "https://docs.axonius.com/docs/dns-made-easy",
+    "description": "DNS Made Easy offers DNS management services."
+  },
   "esentire_json_adapter": {
     "title": "esNetwork",
     "description": "eSentire's esNetwork provides network monitoring and remediation as a fully managed MDR service."
