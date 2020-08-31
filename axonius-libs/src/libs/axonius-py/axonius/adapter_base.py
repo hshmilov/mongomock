@@ -924,7 +924,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
             self._update_client_status(client_name, 'success')
         else:
-            if log_fetch:
+            if log_fetch and len(self._clients) > 0:
                 self._log_activity_adapter_client_fetch_start(client_name)
             devices_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Devices)
@@ -934,7 +934,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 self._save_data_from_plugin(*data, EntityType.Users)
                 for data
                 in self._query_data(EntityType.Users))
-            if log_fetch:
+            if log_fetch and len(self._clients) > 0:
                 self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
 
         return to_json({'devices_count': devices_count, 'users_count': users_count})
