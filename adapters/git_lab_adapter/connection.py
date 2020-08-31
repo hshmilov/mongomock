@@ -4,10 +4,13 @@ from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.utils.parsing import int_or_none
 from git_lab_adapter.consts import API_URL_PREFIX, DEVICE_PER_PAGE, MAX_PAGES_GROUPS, MAX_PAGES_PROJECTS, \
-    GROUPS_PREFIX, EXTRA_GROUPS, EXTRA_PROJECTS, MAX_NUMBER_OF_USERS, MAX_PROJECT_COUNT
+    GROUPS_PREFIX, EXTRA_GROUPS, EXTRA_PROJECTS, MAX_NUMBER_OF_USERS, MAX_PROJECT_BY_USER_COUNT, \
+    MAX_PAGES_VULNERABILTY_FINDINGS, MAX_NUMBER_OF_PROJECTS, WHITE_LIST_PROJECTS_LINKS
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # pylint: disable=logging-format-interpolation
 
@@ -48,8 +51,14 @@ class GitLabConnection(RESTConnection):
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
-    def get_device_list(self):
-        pass
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_projects_as_devices: bool = False):
+        try:
+            if fetch_projects_as_devices:
+                yield from self._paginated_get_devices()
+        except RESTException as err:
+            logger.exception(str(err))
+            raise
 
     def _get_groups_by_id(self):
         try:
@@ -197,7 +206,7 @@ class GitLabConnection(RESTConnection):
                         break
 
                     for project in response:
-                        if total_projects >= MAX_PROJECT_COUNT:
+                        if total_projects >= MAX_PROJECT_BY_USER_COUNT:
                             break
                         if isinstance(project, dict) and project.get('id'):
                             if not projects_by_id.get(project.get('id')):
@@ -323,3 +332,87 @@ class GitLabConnection(RESTConnection):
         except RESTException as err:
             logger.exception(str(err))
             raise
+
+    def _get_vulnerability_findings_by_id(self, project_id):
+        vulnerability_findings = []
+        try:
+            url_params = {
+                'page': 1,
+                'per_page': DEVICE_PER_PAGE,
+                'scope': 'all'
+            }
+
+            response = self._get(f'projects/{project_id}/vulnerability_findings', url_params=url_params,
+                                 return_response_raw=True, use_json_in_response=False)
+
+            number_of_pages = int_or_none(response.headers.get('X-Total-Pages'))
+            if not number_of_pages:
+                logger.warning(f'Could not find X-Total-Pages in response header {response}')
+                return vulnerability_findings
+
+            if number_of_pages > MAX_PAGES_VULNERABILTY_FINDINGS:
+                logger.info(
+                    f'Number of pages is bigger then max pages. number of pages: {number_of_pages},'
+                    f' max pages: {MAX_PAGES_VULNERABILTY_FINDINGS}')
+                number_of_pages = MAX_PAGES_VULNERABILTY_FINDINGS
+
+            response = response.json()
+
+            if not isinstance(response, list):
+                logger.warning(f'Received invalid response while getting users groups {response}')
+                return vulnerability_findings
+
+            # Filter out dismissed (remediated) vulnerabilities
+            vulnerability_findings.extend([vulnerability_finding for vulnerability_finding in response if
+                                           not vulnerability_finding.get('dismissal_feedback')])
+
+            for _ in range(2, number_of_pages):
+                url_params['page'] += 1
+                response = self._get(f'projects/{project_id}/vulnerability_findings', url_params=url_params)
+                if not isinstance(response, list):
+                    logger.warning(
+                        f'Received invalid response while paginating users'
+                        f' groups {response}, page number: {url_params["page"]}')
+                    continue
+
+                vulnerability_findings.extend([vulnerability_finding for vulnerability_finding in response if
+                                               not vulnerability_finding.get('dismissal_feedback')])
+        except Exception as e:
+            logger.warning(f'Error getting vulnerability findings, Error: {str(e)}')
+
+        logger.info(f'Done fetching {len(vulnerability_findings)} vulnerability findings for project {project_id}')
+        return vulnerability_findings
+
+    def _paginated_get_devices(self):
+        try:
+            number_of_projects = 0
+            # Get all groups including subgroups
+            groups_by_id = self._get_groups_by_id()
+
+            # Get all the projects (from groups and from membership)
+            membership_projects_by_id = self._get_membership_projects()
+            groups_projects_by_id = self._get_groups_projects(groups_by_id)
+            # running UPDATE - groups_project run over membership_project if have the same project id
+            # groups_projects have extra information - each project also contain all the groups he is in
+            membership_projects_by_id.update(groups_projects_by_id)
+            total_projects_by_id = membership_projects_by_id
+
+            for project_id, project in total_projects_by_id.items():
+                if number_of_projects >= MAX_NUMBER_OF_PROJECTS:
+                    break
+
+                if isinstance(project.get('_links'), dict):
+                    links = project.get('_links')
+                    links = {name: link for name, link in links.items() if name in WHITE_LIST_PROJECTS_LINKS}
+
+                    requests = [{'name': link} for link in links.values()]
+
+                    for name, response in zip(links.keys(), self._async_get(requests)):
+                        project[f'extra_{name}'] = response
+
+                project['extra_vulnerability_findings'] = self._get_vulnerability_findings_by_id(project_id)
+                number_of_projects += 1
+                yield project
+        except RESTException as err:
+            logger.exception(f'Error happened while getting projects {str(err)}')
+            return

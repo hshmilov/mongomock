@@ -7,18 +7,24 @@ from axonius.clients.rest.connection import RESTException
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import normalize_timezone_date, int_or_none
 from git_lab_adapter.connection import GitLabConnection
 from git_lab_adapter.client_id import get_client_id
 from git_lab_adapter.consts import EXTRA_GROUPS, EXTRA_PROJECTS
-from git_lab_adapter.structures import GitLabUserInstance, Project, Group
+from git_lab_adapter.structures import GitLabUserInstance, GitLabDeviceInstance, Project, Group, Statistics, \
+    Namespace, VulnerabilityFinding, VulnerabilityIdentifier, Location, Dependency
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
 
 # pylint: disable=logging-format-interpolation
 
 
 class GitLabAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
+    class MyDeviceAdapter(GitLabDeviceInstance):
+        pass
+
     class MyUserAdapter(GitLabUserInstance):
         pass
 
@@ -122,6 +128,203 @@ class GitLabAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    def _query_devices_by_client(self, client_name, client_data):
+        """
+        Get all devices from a specific domain
+
+        :param str client_name: The name of the client
+        :param obj client_data: The data that represent a connection
+
+        :return: A json with all the attributes returned from the Server
+        """
+        with client_data:
+            yield from client_data.get_device_list(fetch_projects_as_devices=self.__fetch_projects_as_devices)
+
+    # pylint: disable=too-many-statements, too-many-branches, too-many-nested-blocks
+    def _fill_git_lab_device_fields(self, device_raw: dict, device: MyDeviceAdapter):
+        try:
+            device.default_branch = device_raw.get('default_branch')
+            device.visibility = device_raw.get('visibility')
+            device.ssh_url_to_repo = device_raw.get('ssh_url_to_repo')
+            device.http_url_to_repo = device_raw.get('http_url_to_repo')
+            device.web_url = device_raw.get('web_url')
+            device.readme_url = device_raw.get('readme_url')
+            device.tag_list = device_raw.get('tag_list')
+            device.name_with_namespace = device_raw.get('name_with_namespace')
+            device.path = device_raw.get('path')
+            device.path_with_namespace = device_raw.get('path_with_namespace')
+            device.issues_enabled = self._parse_bool(device_raw.get('issues_enabled'))
+            device.open_issues_count = self._parse_bool(device_raw.get('open_issues_count'))
+            device.merge_requests_enabled = self._parse_bool(device_raw.get('merge_requests_enabled'))
+            device.jobs_enabled = self._parse_bool(device_raw.get('jobs_enabled'))
+            device.wiki_enabled = self._parse_bool(device_raw.get('wiki_enabled'))
+            device.snippets_enabled = self._parse_bool(device_raw.get('snippets_enabled'))
+            device.can_create_merge_request_in = self._parse_bool(device_raw.get('can_create_merge_request_in'))
+            device.resolve_outdated_diff_discussions = self._parse_bool(
+                device_raw.get('resolve_outdated_diff_discussions'))
+            device.container_registry_enabled = self._parse_bool(device_raw.get('container_registry_enabled'))
+            device.creator_id = self._parse_int(device_raw.get('creator_id'))
+            device.import_status = device_raw.get('import_status')
+            device.archived = self._parse_bool(device_raw.get('archived'))
+            device.avatar_url = device_raw.get('avatar_url')
+            device.shared_runners_enabled = self._parse_bool(device_raw.get('shared_runners_enabled'))
+            device.forks_count = self._parse_int(device_raw.get('forks_count'))
+            device.star_count = self._parse_int(device_raw.get('star_count'))
+            device.runners_token = device_raw.get('runners_token')
+            device.ci_default_git_depth = self._parse_int(device_raw.get('ci_default_git_depth'))
+            device.public_jobs = self._parse_bool(device_raw.get('public_jobs'))
+            device.only_allow_merge_if_pipeline_succeeds = self._parse_bool(
+                device_raw.get('only_allow_merge_if_pipeline_succeeds'))
+            device.allow_merge_on_skipped_pipeline = self._parse_bool(device_raw.get('allow_merge_on_skipped_pipeline'))
+            device.only_allow_merge_if_all_discussions_are_resolved = self._parse_bool(
+                device_raw.get('only_allow_merge_if_all_discussions_are_resolved'))
+            device.remove_source_branch_after_merge = self._parse_bool(
+                device_raw.get('remove_source_branch_after_merge'))
+            device.request_access_enabled = self._parse_bool(device_raw.get('request_access_enabled'))
+            device.merge_method = device_raw.get('merge_method')
+            device.autoclose_referenced_issues = self._parse_bool(device_raw.get('autoclose_referenced_issues'))
+            device.suggestion_commit_message = device_raw.get('suggestion_commit_message')
+            device.marked_for_deletion_on = parse_date(
+                normalize_timezone_date(device_raw.get('marked_for_deletion_on')))
+            device.approvals_before_merge = self._parse_int(device_raw.get('approvals_before_merge'))
+            device.auto_cancel_pending_pipelines = self._parse_bool(device_raw.get('auto_cancel_pending_pipelines'))
+            device.auto_devops_deploy_strategy = self._parse_bool(device_raw.get('auto_devops_deploy_strategy'))
+            device.auto_devops_enabled = self._parse_bool(device_raw.get('auto_devops_enabled'))
+            device.build_coverage_regex = device_raw.get('build_coverage_regex')
+            device.build_timeout = self._parse_int(device_raw.get('build_timeout'))
+            device.builds_access_level = device_raw.get('builds_access_level')
+            device.ci_config_path = device_raw.get('ci_config_path')
+            device.empty_repo = self._parse_bool(device_raw.get('empty_repo'))
+            device.external_authorization_classification_label = device_raw.get(
+                'external_authorization_classification_label')
+            device.forking_access_level = device_raw.get('forking_access_level')
+            device.service_desk_address = device_raw.get('service_desk_address')
+            device.service_desk_enabled = self._parse_bool(device_raw.get('service_desk_enabled'))
+
+            device.shared_with_groups = []
+            if isinstance(device_raw.get('shared_with_groups'), list):
+                for shared_group in device_raw.get('shared_with_groups'):
+                    if not isinstance(shared_group, dict):
+                        continue
+                    group = Group()
+                    group.id = shared_group.get('group_id')
+                    group.name = shared_group.get('group_name')
+                    device.shared_with_groups.append(group)
+
+            if isinstance(device_raw.get('statistics'), dict):
+                statistics = Statistics()
+                statistics.commit_count = int_or_none(device_raw.get('statistics').get('commit_count'))
+                statistics.storage_size = int_or_none(device_raw.get('statistics').get('storage_size'))
+                statistics.wiki_size = int_or_none(device_raw.get('statistics').get('wiki_size'))
+                statistics.repository_size = int_or_none(device_raw.get('statistics').get('repository_size'))
+                statistics.lfs_objects_size = int_or_none(device_raw.get('statistics').get('lfs_objects_size'))
+                statistics.job_artifacts_size = int_or_none(device_raw.get('statistics').get('job_artifacts_size'))
+                statistics.packages_size = int_or_none(device_raw.get('statistics').get('packages_size'))
+                statistics.snippets_size = int_or_none(device_raw.get('statistics').get('snippets_size'))
+                device.statistics = statistics
+
+            if isinstance(device_raw.get('namespace'), dict):
+                namespace = Namespace()
+                namespace.id = int_or_none(device_raw.get('namespace').get('id'))
+                namespace.name = device_raw.get('namespace').get('name')
+                namespace.path = device_raw.get('namespace').get('path')
+                namespace.kind = device_raw.get('namespace').get('kind')
+                namespace.full_path = device_raw.get('namespace').get('full_path')
+                device.namespace = namespace
+
+            if isinstance(device_raw.get('extra_vulnerability_findings'), list):
+                vulnerability_findings = []
+                for vulnerability_finding_raw in device_raw.get('extra_vulnerability_findings'):
+                    if not isinstance(vulnerability_finding_raw, dict):
+                        continue
+                    vulnerability_finding = VulnerabilityFinding()
+                    vulnerability_finding.name = vulnerability_finding_raw.get('name')
+                    vulnerability_finding.id = int_or_none(vulnerability_finding_raw.get('id'))
+                    vulnerability_finding.description = vulnerability_finding_raw.get('description')
+                    vulnerability_finding.confidence = vulnerability_finding_raw.get('confidence')
+                    vulnerability_finding.severity = vulnerability_finding_raw.get('severity')
+                    vulnerability_finding.solution = vulnerability_finding_raw.get('solution')
+
+                    if isinstance(vulnerability_finding_raw.get('location'), dict):
+                        location_raw = vulnerability_finding_raw.get('location')
+                        location = Location()
+                        location.file = location_raw.get('file')
+
+                        if isinstance(location_raw.get('dependency'), dict):
+                            dependency_raw = location_raw.get('dependency')
+                            dependency = Dependency()
+                            if isinstance(dependency_raw.get('package'), dict):
+                                dependency.package_name = dependency_raw.get('package').get('name')
+                            dependency.version = dependency_raw.get('version')
+
+                            location.dependency = dependency
+
+                        vulnerability_finding.location = location
+
+                    if isinstance(vulnerability_finding_raw.get('identifiers'), list):
+                        identifiers = []
+                        for identifier_raw in vulnerability_finding_raw.get('identifiers'):
+                            identifier = VulnerabilityIdentifier()
+                            identifier.name = identifier_raw.get('name')
+                            identifier.external_id = identifier_raw.get('external_id')
+                            identifier.external_type = identifier_raw.get('external_type')
+                            identifier.url = identifier_raw.get('url')
+                            identifiers.append(identifier)
+                        vulnerability_finding.identifiers = identifiers
+                    vulnerability_findings.append(vulnerability_finding)
+                device.vulnerability_findings = vulnerability_findings
+
+        except Exception:
+            logger.exception(f'Failed creating instance for device {device_raw}')
+
+    def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
+        try:
+            device_id = device_raw.get('id')
+            if device_id is None:
+                logger.warning(f'Bad device with no ID {{device_raw}}')
+                return None
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
+
+            device.description = device_raw.get('description')
+
+            if isinstance(device_raw.get('owner'), dict):
+                device.owner = device_raw.get('owner').get('username')
+
+            device.name = device_raw.get('name')
+            device.first_seen = parse_date(device_raw.get('created_at'))
+            device.last_seen = parse_date(device_raw.get('last_activity_at'))
+
+            if isinstance(device_raw.get('extra_members'), list):
+                for member in device_raw.get('extra_members'):
+                    if not isinstance(member, dict):
+                        continue
+                    device.add_users(user_sid=member.get('id'), username=member.get('username'))
+
+            self._fill_git_lab_device_fields(device_raw, device)
+
+            device.set_raw(device_raw)
+            return device
+        except Exception:
+            logger.exception(f'Problem with fetching GitLab Device for {device_raw}')
+            return None
+
+    def _parse_raw_data(self, devices_raw_data):
+        """
+        Gets raw data and yields Device objects.
+        :param devices_raw_data: the raw data we get.
+        :return:
+        """
+        for device_raw in devices_raw_data:
+            if not device_raw:
+                continue
+            try:
+                # noinspection PyTypeChecker
+                device = self._create_device(device_raw, self._new_device_adapter())
+                if device:
+                    yield device
+            except Exception:
+                logger.exception(f'Problem with fetching GitLab Device for {device_raw}')
+
     def _fill_git_lab_user_fields(self, user_raw: dict, user: MyUserAdapter):
         try:
             user.web_url = user_raw.get('web_url')
@@ -223,10 +426,16 @@ class GitLabAdapter(AdapterBase, Configurable):
                     'name': 'async_chunks',
                     'type': 'integer',
                     'title': 'Async chunks in parallel'
+                },
+                {
+                    'name': 'fetch_projects_as_devices',
+                    'type': 'bool',
+                    'title': 'Fetch projects as devices'
                 }
             ],
             'required': [
-                'async_chunks'
+                'async_chunks',
+                'fetch_projects_as_devices'
             ],
             'pretty_name': 'GitLab Configuration',
             'type': 'array'
@@ -235,8 +444,10 @@ class GitLabAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'async_chunks': 50
+            'async_chunks': 50,
+            'fetch_projects_as_devices': False
         }
 
     def _on_config_update(self, config):
         self.__async_chunks = config.get('async_chunks') or 50
+        self.__fetch_projects_as_devices = self._parse_bool(config.get('fetch_projects_as_devices')) or False
