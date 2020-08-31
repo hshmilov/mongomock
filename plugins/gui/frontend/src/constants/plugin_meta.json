@@ -1168,6 +1168,11 @@
     "link": "https://docs.axonius.com/docs/tenable-nessus-csv-file",
     "description": "Tenable Nessus CSV File Adapter imports device information from vulnerability scan data."
   },
+    "gigamon_fm_adapter": {
+    "title": "Gigamon GigaVUE-FM (Fabric Manager) - BETA",
+    "link": "https://docs.axonius.com/docs/gigamon",
+    "description": "Gigamon GigaVUE-FM (Fabric Manager) delivers management and monitoring of all physical and virtual nodes across your on-premises, virtual and public-cloud deployments."
+  },
   "esx_adapter": {
     "title": "VMware ESXi",
     "link": "https://docs.axonius.com/docs/vmware-esxi",
