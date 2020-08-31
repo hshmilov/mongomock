@@ -1,4 +1,3 @@
-from axonius.consts.gui_consts import DEFAULT_FIELDS
 from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 from services.adapters.csv_service import CsvService
 from services.adapters.wmi_service import WmiService
@@ -85,6 +84,17 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             self.devices_page.open_link_dialog()
             self.devices_page.confirm_link()
 
+            self.users_page.open_edit_columns()
+            self.devices_page.remove_columns([self.devices_page.FIELD_LAST_SEEN,
+                                              self.devices_page.FIELD_NETWORK_INTERFACES_MAC,
+                                              self.devices_page.FIELD_NETWORK_INTERFACES_IPS,
+                                              self.devices_page.FIELD_OS_TYPE,
+                                              self.devices_page.FIELD_TAGS])
+            self.devices_page.add_columns([self.devices_page.PREFERRED_HOSTNAME_FIELD])
+            self.devices_page.close_edit_columns_save_user_default()
+            self.devices_page.filter_column(self.devices_page.PREFERRED_HOSTNAME_FIELD,
+                                            filter_list=[{'include': True, 'term': 'test'}])
+
             # filter hostname column, assert its tooltip
             self.devices_page.filter_column(self.devices_page.FIELD_HOSTNAME_TITLE,
                                             filter_list=[{'include': False, 'term': 'test'}])
@@ -105,16 +115,17 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             table_first_row_data = self.devices_page.get_all_data_proper()[0]
             assert table_first_row_data['Host Name'] == host_name
             assert table_first_row_data['Asset Name'] == asset_name
+            assert table_first_row_data['Preferred Host Name'] == ''
 
             # remove network interfaces: IPs to avoid +x remainder that doesn't match the csv
             remove_network_ips = {'specific_data.data.network_interfaces.ips': [{'include': False, 'term': ''}]}
-            self.devices_page.filter_column(self.devices_page.FIELD_NETWORK_INTERFACES_IPS,
-                                            filter_list=[{'include': False, 'term': ''}])
 
             excluded_adapters = {'specific_data.data.name': ['json_file_adapter']}
             field_filters = {'specific_data.data.hostname': [{'include': False, 'term': 'test'}, remove_network_ips]}
 
-            result = self.devices_page.generate_csv('devices', DEFAULT_FIELDS,
+            fields = 'adapters,specific_data.data.name,specific_data.data.hostname,' \
+                     'specific_data.data.hostname_preferred'
+            result = self.devices_page.generate_csv('devices', fields,
                                                     excluded_adapters=excluded_adapters, field_filters=field_filters)
 
             self.devices_page.assert_csv_match_ui_data(result)

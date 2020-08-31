@@ -45,7 +45,6 @@ class Trigger:
 
 class EnforcementsPage(EntitiesPage):
     RUN_BUTTON_TEXT = 'Run'
-    SAVE_BUTTON_TEXT = 'Save'
     DELETE_BUTTON_TEXT = 'Yes, Delete'
     CANCEL_BUTTON_ID = 'cancel-changes'
     EDIT_BUTTON_CSS = '.action-edit'

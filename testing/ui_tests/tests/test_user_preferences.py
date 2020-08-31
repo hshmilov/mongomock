@@ -52,7 +52,7 @@ class TestUserPreferences(TestBase):
         entities_page.open_edit_columns()
         entities_page.remove_columns(entities_page.SYSTEM_DEFAULT_FIELDS)
         entities_page.add_columns(fields_list)
-        entities_page.close_edit_columns_save_default()
+        entities_page.close_edit_columns_save_user_default()
         self._assert_fields_match(entities_page, fields_list)
 
         self._test_view_after_refresh(entities_page, fields_list)

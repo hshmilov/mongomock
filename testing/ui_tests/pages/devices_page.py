@@ -66,7 +66,8 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
     FIELD_FIREWALL_RULES_FROM_PORT = 'Firewall Rules: From port'
     FIELD_ADAPTER_CONNECTION_LABEL = 'Adapter Connection Label'
-    PREFERRED_FIELDS = ['Preferred Host Name', 'Preferred OS Type', 'Preferred OS Distribution',
+    PREFERRED_HOSTNAME_FIELD = 'Preferred Host Name'
+    PREFERRED_FIELDS = [PREFERRED_HOSTNAME_FIELD, 'Preferred OS Type', 'Preferred OS Distribution',
                         'Preferred MAC Address', 'Preferred IPs']
     VALUE_OS_WINDOWS = 'Windows'
     TAGGING_X_DEVICE_MESSAGE = 'Tagged {number} devices!'

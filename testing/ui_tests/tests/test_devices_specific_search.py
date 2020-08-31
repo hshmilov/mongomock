@@ -78,7 +78,8 @@ class TestDevicesSpecificSearch(TestBase):
         self.devices_page.remove_columns([self.devices_page.FIELD_TAGS,
                                           self.devices_page.FIELD_HOSTNAME_TITLE])
         # save as user default
-        self.devices_page.close_edit_columns_save_default(specific_search_name=self.devices_page.FIELD_LAST_USED_USERS)
+        self.devices_page.close_edit_columns_save_user_default(
+            specific_search_name=self.devices_page.FIELD_LAST_USED_USERS)
         self.devices_page.wait_for_table_to_be_responsive()
         # assert diff current specific
         assert not specific_columns == self.devices_page.get_columns_header_text()

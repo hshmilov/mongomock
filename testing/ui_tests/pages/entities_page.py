@@ -223,8 +223,9 @@ class EntitiesPage(Page):
     QUERY_MODAL_OVERLAY = '.v-overlay'
 
     EDIT_USER_COLUMN_BUTTON_ID = 'edit_user_columns'
-    RESET_COLS_SYSTEM_BUTTON_ID = 'reset_system_default'
     RESET_COLS_USER_BUTTON_ID = 'reset_user_default'
+    RESET_COLS_SYSTEM_BUTTON_ID = 'reset_system_default'
+    EDIT_SYSTEM_COLUMNS_BUTTON_ID = 'edit_system_default'
     EDIT_COLUMNS_TEXT = 'Edit Columns'
     RESET_COLS_SYSTEM_DEFAULT_TEXT = 'Reset Columns to System Default'
     RESET_COLS_SYSTEM_SEARCH_DEFAULT_TEXT = 'Reset Columns to System Search Default'
@@ -265,6 +266,13 @@ class EntitiesPage(Page):
     COLUMN_FILTER_TERM_INCLUDE_BUTTON = '#column_filter .filter:last-child .include'
     COLUMN_FILTER_TERM_INPUT = '#column_filter .filter:last-child input'
     COLUMN_FILTER_TERM_ADD_TERM = '#column_filter .addFilter'
+
+    EDIT_COLUMNS_MODAL_TITLE = '.x-edit-columns-modal .ant-modal-title'
+    EDIT_COLUMNS_MODAL = '.x-edit-columns-modal'
+    SAVE_BUTTON_TEXT = 'Save'
+    MODAL_CONFIRM = '.ant-modal-confirm'
+    EDIT_SYSTEM_DEFAULT_TITLE = 'Edit System Default'
+    EDIT_SYSTEM_SEARCH_DEFAULT_HOSTNAME_TITLE = 'Edit System Search Default (Host Name)'
 
     @property
     def url(self):
@@ -930,10 +938,12 @@ class EntitiesPage(Page):
     def find_table_option_by_title(self, option_title):
         return self.driver.find_element_by_xpath(self.TABLE_OPTIONS_ITEM_XPATH.format(option_title=option_title))
 
-    def open_edit_columns(self):
+    def open_edit_columns(self, system_default=False):
         self.open_columns_menu()
-        self.driver.find_element_by_id(self.EDIT_USER_COLUMN_BUTTON_ID).click()
-        self.wait_for_element_present_by_css('.x-edit-columns-modal')
+        self.driver.find_element_by_id(
+            self.EDIT_SYSTEM_COLUMNS_BUTTON_ID if system_default else self.EDIT_USER_COLUMN_BUTTON_ID
+        ).click()
+        self.wait_for_element_present_by_css(self.EDIT_COLUMNS_MODAL)
 
     def select_column_adapter(self, adapter_title):
         self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,
@@ -941,15 +951,39 @@ class EntitiesPage(Page):
                            self.DROPDOWN_SELECTED_OPTION_CSS,
                            adapter_title)
 
+    def get_edit_columns_modal_title(self):
+        return self.driver.find_element_by_css_selector(self.EDIT_COLUMNS_MODAL_TITLE).text
+
     def close_edit_columns(self):
         self.click_button('Done')
 
-    def close_edit_columns_save_default(self, specific_search_name=''):
+    def close_edit_columns_save_user_default(self, specific_search_name=''):
         if specific_search_name:
             self.click_button(
                 self.SAVE_AS_USER_SEARCH_DEFAULT.format(search_name=specific_search_name))
         else:
             self.click_button(self.SAVE_AS_USER_DEFAULT)
+
+    def close_edit_columns_save_system_default(self):
+        edit_columns_modal = self.driver.find_element_by_css_selector(self.EDIT_COLUMNS_MODAL)
+        self.get_button(self.SAVE_BUTTON_TEXT, context=edit_columns_modal).click()
+
+        modal_confirm = self.driver.find_element_by_css_selector(self.MODAL_CONFIRM)
+        self.click_ant_button(self.SAVE_BUTTON_TEXT, context=modal_confirm)
+
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
+
+    def close_edit_columns_cancel_system_default(self):
+        edit_columns_modal = self.driver.find_element_by_css_selector(self.EDIT_COLUMNS_MODAL)
+        self.get_button(self.SAVE_BUTTON_TEXT, context=edit_columns_modal).click()
+
+        modal_confirm = self.driver.find_element_by_css_selector(self.MODAL_CONFIRM)
+        self.click_ant_button(self.CANCEL_BUTTON, context=modal_confirm)
+        self.wait_for_element_absent_by_css(self.MODAL_CONFIRM)
+
+        self.get_button(self.CANCEL_BUTTON, context=edit_columns_modal).click()
+
+        self.wait_for_element_absent_by_css(self.ANTD_MODAL_OVERLAY_CSS)
 
     def edit_columns(self, add_col_names: list = None, remove_col_names: list = None, adapter_title: str = None):
         self.open_edit_columns()

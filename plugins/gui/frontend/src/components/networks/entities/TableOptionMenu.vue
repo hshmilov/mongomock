@@ -42,6 +42,7 @@
         </AMenuItem>
         <AMenuItem
           v-if="canUpdateSettings"
+          id="edit_system_default"
           key="3"
           @click="() => openColumnEditor('system')"
         >

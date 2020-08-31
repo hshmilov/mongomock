@@ -332,6 +332,9 @@ class AxoniusService:
     def get_aggregator_devices_fields_db(self):
         return self.db.get_collection(self.aggregator.unique_name, 'devices_fields')
 
+    def get_system_config_db(self):
+        return self.db.get_collection(self.gui.unique_name, 'system_config')
+
     def get_users_preferences_db(self):
         return self.db.gui_users_preferences_collection()
 

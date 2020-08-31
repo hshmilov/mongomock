@@ -24,7 +24,7 @@ from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames, \
     DASHBOARD_SPACE_TYPE_CUSTOM, GUI_CONFIG_NAME, IDENTITY_PROVIDERS_CONFIG
 from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
                                           PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME,
-                                          PASSWORD_SETTINGS)
+                                          PASSWORD_SETTINGS, SYSTEM_COLUMNS_TYPE)
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
@@ -341,6 +341,7 @@ class TestBase:
         self.axonius_system.db.plugins.gui.configurable_configs.delete_config(GUI_CONFIG_NAME)
         self.axonius_system.db.plugins.gui.configurable_configs.delete_config(IDENTITY_PROVIDERS_CONFIG)
         self.axonius_system.gui.update_config()
+        self.axonius_system.get_system_config_db().delete_one({'type': SYSTEM_COLUMNS_TYPE})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url
