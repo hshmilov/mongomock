@@ -783,6 +783,11 @@
     "link": "https://docs.axonius.com/docs/kolide-fleet",
     "description": "Kolide Fleet is an open source osquery manager"
   },
+  "f5_big_iq_adapter": {
+    "title": "F5 BIG-IQ Centralized Management",
+    "link": "https://docs.axonius.com/docs/f5-big-iq-centralized-management",
+    "description": "F5 BIG-IQ Centralized Management provides centralized management, licensing, monitoring, and analytics for BIG-IP infrastructure."
+  },
   "checkpoint_r80_adapter": {
     "title": "Check Point Infinity",
     "link": "https://docs.axonius.com/docs/checkpoint-infinity",

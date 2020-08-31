@@ -327,6 +327,7 @@ DOCKER_PORTS = {
     'logicmonitor-adapter':             13385,
     'jira-adapter':                     13380,
     'sophos-cloud-optix-adapter':       13381,
+    'f5-big-iq-adapter':                13382,
     'sevone-adapter':                   13389,
     'failover-cluster-adapter':         13390,
     'nozomi-guardian-adapter':          14284,
