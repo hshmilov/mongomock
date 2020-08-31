@@ -242,6 +242,7 @@ DOCKER_PORTS = {
     'microsoft-kms-adapter':            9951,
     'remediant-secureone-adapter':      9952,
     'checkmarx-adapter':                9953,
+    'ivanti-security-controls-adapter': 9954,
     'bitlocker-adapter':                9957,
     'tunneler':                         9958,
     'office-scan-adapter':              9959,

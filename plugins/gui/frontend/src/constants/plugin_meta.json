@@ -683,6 +683,11 @@
     "link": "https://docs.axonius.com/docs/device42",
     "description": "Device42 is a cloud-based CMDB for physical, virtual, and cloud servers and containers, network components, software, services, applications, and their relationships and dependencies."
   },
+  "ivanti_security_controls_adapter": {
+    "title": "Ivanti Security Controls",
+    "link": "https://docs.axonius.com/docs/ivanti-security-controls",
+    "description": "Ivanti Security Controls is a unified IT management platform used for managing and protecting Windows-based machines, Red Hat Enterprise and CentOS Linux machines and VMware ESXi Hypervisors."
+  },
   "cisco_ise_adapter": {
     "title": "Cisco Identity Services Engine (ISE)",
     "link": "https://docs.axonius.com/docs/cisco-identity-services-engine-ise",

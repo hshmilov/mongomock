@@ -41,8 +41,8 @@ AGENTS = namedtuple('Agents', (
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium', 'malwarebytes_cloud', 'infinipoint',
-    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io', 'tripwire',
-    'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason', 'sysaid',
+    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'ivanti_sc', 'tenable_io',
+    'tripwire', 'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason', 'sysaid',
     'twistlock', 'webroot', 'aqua', 'iboss', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus', 'microfocus_sa', 'contrast',
 ))
 
@@ -64,7 +64,7 @@ AGENT_NAMES = AGENTS(
     sentinelone='SentinelOne Agent', signalsciences='Signalsciences Agent',
     sophos='Sophos Agent', symantec='Symantec SEP 14 Agent', illusive='Illusive Agent',
     symantec_cloud_workload='Symantec Cloud Agent', symantec_ee='Symantec Endpoint Encryption Agent',
-    tanium='Tanium Agent', tenable_io='Tenable io Agent', bitdefender='Bitdefender Gravity Zone Agent',
+    tanium='Tanium Agent', ivanti_sc='Ivanti SC Agent', tenable_io='Tenable io Agent', bitdefender='Bitdefender Gravity Zone Agent',
     tripwire='Tripwire Agent', truefort='TrueFort Agent', twistlock='Twistlock Agent',
     webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent', wazuh='Wazuh Agent',
     aqua='Aqua Enforcer', iboss='IBoss Agent', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
