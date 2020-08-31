@@ -76,7 +76,7 @@
     "description": "Contrast Security protects software applications against cyberattacks."
   },
   "workday_adapter": {
-    "title": "Workday - BETA",
+    "title": "Workday",
     "description": "Workday offers software solutions for financial management, human resources, and planning.",
     "link": "https://docs.axonius.com/docs/workday"
   },
@@ -1394,7 +1394,7 @@
     "description": "IBM's cloud computing platform combines platform as a service (PaaS) with infrastructure as a service (IaaS) and cloud services."
   },
   "logmein_adapter": {
-    "title": "LogMeIn Central - BETA",
+    "title": "LogMeIn Central",
     "link": "https://docs.axonius.com/docs/logmein-central",
     "description": "LogMeIn Central is a cloud-based endpoint management solution that enables monitoring and management of endpoint infrastructure."
   },

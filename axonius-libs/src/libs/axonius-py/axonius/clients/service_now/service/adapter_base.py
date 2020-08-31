@@ -136,7 +136,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_only_virtual_devices',
         'fetch_operational_status',
         'fetch_ci_relations',
-        'when_no_hostname_fallback_to_name'
+        'when_no_hostname_fallback_to_name',
         'fetch_compliance_exceptions',
         'use_exclusion_field',
     ]
