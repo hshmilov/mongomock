@@ -208,12 +208,6 @@ class MssqlAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
         try:
             user = self._new_user_adapter()
 
-            user_id = user_raw.get('id')
-            if user_id is None:
-                logger.warning(f'Bad device with no ID: {user_raw}')
-                return None
-            user.id = str(user_id) + '_' + (client_config.get('table') or '')
-
             user.table = client_config.get('table')
             user.database = client_config.get('database')
             user.server_tag = client_config.get('server_tag')

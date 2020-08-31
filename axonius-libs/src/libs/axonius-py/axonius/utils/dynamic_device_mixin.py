@@ -84,9 +84,10 @@ class DynamicDeviceMixin:
         self._fill_dynamic_obj(device=device, device_raw=device_raw,
                                fill_callable_to_norm_fields=filler_to_normalized_fields)
 
-    def fill_dynamic_user(self, user: UserAdapter, device_raw: dict):
+    def fill_dynamic_user(self, user: UserAdapter, user_raw: dict):
         # Normalized fields are the keys of csv_consts.IDENTIFIERS
         filler_to_normalized_fields = {
+            self._fill_user_id: ['id', 'username', 'name'],
             self._fill_domain: ['domain'],
             self._fill_first_name: ['first_name'],
             self._fill_last_name: ['last_name'],
@@ -95,7 +96,7 @@ class DynamicDeviceMixin:
             self._fill_username: ['username'],
         }  # type: Dict[Callable, List[str]]
 
-        self._fill_dynamic_obj(device=user, device_raw=device_raw,
+        self._fill_dynamic_obj(device=user, device_raw=user_raw,
                                fill_callable_to_norm_fields=filler_to_normalized_fields)
 
     def _fill_dynamic_obj(self, device: SmartJsonClass, device_raw: dict,
@@ -177,6 +178,16 @@ class DynamicDeviceMixin:
         if not device_id:
             raise DynamicParsingCannotProceedError('Bad device with no ID')
         device.id = device_id
+
+    def _fill_user_id(self, device: UserAdapter, **kwargs):
+        username = self._parse_username(**kwargs)
+        name = self._parse_name(**kwargs)
+
+        user_id = self._parse_id(**kwargs)
+        user_id = '_'.join(str(field) for field in [user_id, username, name] if field)
+        if not user_id:
+            raise DynamicParsingCannotProceedError('Bad device with no ID')
+        device.id = user_id
 
     def _parse_name(self, *, gen_values, **_):
         return gen_values.get('name')
