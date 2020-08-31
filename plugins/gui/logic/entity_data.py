@@ -15,8 +15,9 @@ from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
 from axonius.plugin_base import EntityType, return_error, PluginBase
 from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
-from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields, merge_entities_fields,
+from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields,
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
+from axonius.utils.merge_data import merge_entities_fields
 from axonius.utils.permissions_helper import is_role_admin
 from gui.logic.get_ec_historical_data_for_entity import (TaskData, get_all_task_data)
 
@@ -200,8 +201,10 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
     for schema in generic_fields['items']:
         if _is_table(schema):
             schema_name = f'specific_data.data.{schema["name"]}'
-            advanced_field_data = parse_entity_fields(entity, [schema_name]).get(schema_name)
+            advanced_field_data = parse_entity_fields(entity, [schema_name], add_assoc_adapter=True).get(schema_name)
             flat_schema = {**schema, 'items': flatten_fields(schema['items'])}
+            flat_schema['items'] = [{'name': 'adapters', 'type': 'array', 'title': 'Adapter Connections', 'sort': True,
+                                     'items': {'format': 'logo', 'type': 'string'}}] + flat_schema['items']
             if advanced_field_data:
                 data = list(_get_entity_actual_data(advanced_field_data, flat_schema['items']))
                 if data:
@@ -288,10 +291,10 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
     :param history_date: The date from which to retrieve the data
     :return:
     """
+
     field_name_full = f'specific_data.data.{field_name}'
-    entity = _fetch_historical_entity(entity_type, entity_id, {
-        field_name_full: 1
-    }, history_date)
+
+    entity = _fetch_historical_entity(entity_type, entity_id, history_date)
 
     # Make a flat list of all fields under requested tabular field
     fields = next(flatten_fields(field['items']) for field in get_generic_fields(entity_type)['items']
@@ -300,9 +303,15 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
         field['name']: field for field in fields
         if field.get('type') != 'array' or field.get('items').get('type') != 'array'
     }
-    entity_field_data = merge_entities_fields(
-        parse_entity_fields(entity, [field_name_full], field_filters=field_filters,
-                            excluded_adapters=excluded_adapters).get(field_name_full, []), field_by_name.keys())
+
+    entity_fields = parse_entity_fields(entity, [field_name_full], field_filters=field_filters,
+                                        excluded_adapters=excluded_adapters,
+                                        add_assoc_adapter=True).get(field_name_full, [])
+
+    field_by_name = {'adapters': {'name': 'adapters', 'type': 'array', 'title': 'Adapter Connections',
+                                  'items': {'format': 'logo', 'type': 'string'}}, **field_by_name}
+
+    entity_field_data = merge_entities_fields(entity_fields, field_by_name)
 
     if search_term:
         def search_term_in_row_value(field_value):

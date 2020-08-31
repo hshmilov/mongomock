@@ -10,7 +10,6 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 
-from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -122,7 +121,7 @@ class EntitiesPage(Page):
     TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
     TABLE_DATA_EXPAND_CELL_XPATH = '//div[contains(@class, \'ant-popover\')]//*[@class=\'table\']'
     TABLE_DATA_EXPAND_CELL_BODY_XPATH = f'{TABLE_DATA_EXPAND_CELL_XPATH}/tbody'
-    TABLE_DATA_IMG_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-data\' or @class=\'list\']//img'
+    TABLE_DATA_IMG_XPATH = './/td[@class=\'table-td-adapters\']//img'
 
     TABLE_COLUMNS_MENU_CSS = '.x-field-menu-filter'
     TABLE_ACTIONS_DELETE = 'delete'
@@ -256,6 +255,7 @@ class EntitiesPage(Page):
     ENTITIES_ACTIONS_DROPDOWN_CSS = '.ant-dropdown-menu'
 
     SAFEGUARD_MODAL_CSS = '.x-modal'
+    ADAPTERS_COLUMN = '.table-td-adapters'
 
     COLUMN_FILTER_MODAL = '#column_filter .ant-modal'
     EXCLUDE_ADAPTER_FILTER_COMBOBOX = '.exclude-adapter__select'
@@ -874,16 +874,16 @@ class EntitiesPage(Page):
                                     self.driver.find_element_by_xpath(self.TABLE_DATA_EXPAND_CELL_XPATH.format(
                                         data_position=col_position)))
 
-    def get_column_data_adapter_names(self):
-        return self.get_column_data_adapter_attribute('alt')
+    def get_column_data_adapter_names(self, parent=None):
+        return self.get_column_data_adapter_attribute(parent=parent, attribute='alt')
 
     def get_column_data_adapter_title_tooltip(self):
-        return self.get_column_data_adapter_attribute('title')
+        return self.get_column_data_adapter_attribute(attribute='title')
 
-    def get_column_data_adapter_attribute(self, attribute):
-        col_position = self.count_sort_column(ADAPTER_CONNECTIONS_FIELD)
-        return [el.get_attribute(attribute) for el in
-                self.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH.format(data_position=col_position))
+    def get_column_data_adapter_attribute(self, parent=None, attribute=None):
+        if not parent:
+            parent = self.driver
+        return [el.get_attribute(attribute) for el in parent.find_elements_by_xpath(self.TABLE_DATA_IMG_XPATH)
                 if el.get_attribute(attribute)]
 
     def get_field_table_data_with_ids(self):
@@ -1300,7 +1300,8 @@ class EntitiesPage(Page):
         session.close()
         return content
 
-    def generate_csv_field(self, entity_type, entity_id, field_name, sort, desc=False, search_text=''):
+    def generate_csv_field(self, entity_type: str, entity_id: str, field_name: str, sort: str = None,
+                           desc: bool = False, search_text: str = ''):
         session = requests.Session()
         cookies = self.driver.get_cookies()
         for cookie in cookies:
@@ -1679,13 +1680,23 @@ class EntitiesPage(Page):
     def get_adapters_popup_table_data(self):
         return self.get_table_data(self.ADAPTERS_TOOLTIP_TABLE_CSS, ['Adapters', 'Name'])
 
-    @retry(stop_max_delay=10000, wait_fixed=500)
-    def hover_over_entity_adapter_icon(self, index=0):
-        table_rows = self.get_all_table_rows_elements()
+    def hover_entity_adapter_icon(self, index=0, clickable_rows=True):
+        table_rows = self.get_all_table_rows_elements(clickable_rows=clickable_rows)
         table_row = table_rows[index]
-        icon = table_row.find_elements_by_tag_name('td')[2]
-        ActionChains(self.driver).move_to_element(icon).perform()
-        assert self.driver.find_element_by_css_selector(self.ADAPTERS_TOOLTIP_TABLE_CSS)
+        adapter_column = table_row.find_element_by_css_selector(self.ADAPTERS_COLUMN)
+        ActionChains(self.driver).move_to_element(adapter_column).perform()
+
+    def unhover_entity_adapter_icon(self):
+        tooltip = self.get_entity_adapter_tooltip_table()
+        ActionChains(self.driver).move_to_element_with_offset(tooltip, -200, -200).perform()
+
+    def get_entity_adapter_tooltip_table(self):
+        return self.driver.find_element_by_css_selector(self.ADAPTERS_TOOLTIP_TABLE_CSS)
+
+    @retry(stop_max_delay=10000, wait_fixed=500)
+    def assert_entity_adapter_tooltip_table(self, index=0, clickable_rows=True):
+        self.hover_entity_adapter_icon(index, clickable_rows)
+        assert self.get_entity_adapter_tooltip_table()
 
     def get_table_scroll_position(self):
         return self.get_scroll_position(self.TABLE_CONTAINER_CSS)

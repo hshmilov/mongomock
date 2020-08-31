@@ -882,11 +882,12 @@ class Page:
                 self.driver.find_elements_by_css_selector(self.TABLE_ROWS_CSS if clickable_rows
                                                           else self.TABLE_NON_CLICKABLE_ROWS_CSS) if elem.text]
 
-    def get_all_table_rows_elements(self, parent=None):
+    def get_all_table_rows_elements(self, parent=None, clickable_rows=True):
         if not parent:
             parent = self.driver
         return [elem for elem in
-                parent.find_elements_by_css_selector(self.TABLE_ROWS_CSS) if elem]
+                parent.find_elements_by_css_selector(self.TABLE_ROWS_CSS if clickable_rows
+                                                     else self.TABLE_NON_CLICKABLE_ROWS_CSS) if elem]
 
     def get_all_tables_counters(self):
         counters = self.driver.find_elements_by_css_selector(self.TABLE_COUNTER)

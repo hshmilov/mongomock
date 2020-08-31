@@ -7,7 +7,7 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP,
                                                     DEVICE_SUBNET)
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_ADAPTER_NAME
+from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_ADAPTER_NAME, JSON_ADAPTER_NAME
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -86,8 +86,8 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             assert f'devices/{first_id}' in self.driver.current_url
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_adapters_tab()
-            assert self.devices_page.find_vertical_tabs() == [WMI_ADAPTER_NAME,
-                                                              AD_ADAPTER_NAME,
+            assert self.devices_page.find_vertical_tabs() == [AD_ADAPTER_NAME,
+                                                              WMI_ADAPTER_NAME,
                                                               'Custom Data']
             assert self.devices_page.find_element_by_text(self.devices_page.FIELD_NETWORK_INTERFACES)
             self.devices_page.click_tab(AD_ADAPTER_NAME)
@@ -107,8 +107,10 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.base_page.run_discovery()
 
         self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER,
-                                         self.devices_page.ADVANCED_VIEW_RAW_FIELD, self.devices_page.FIELD_ASSET_NAME)
-        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, 'cn:',
+                                         JSON_ADAPTER_NAME, self.devices_page.ADVANCED_VIEW_RAW_FIELD,
+                                         self.devices_page.FIELD_ASSET_NAME)
+
+        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.AD_ADAPTER_FILTER, AD_ADAPTER_NAME, 'cn:',
                                          self.devices_page.FIELD_HOSTNAME_TITLE)
 
     def test_table_grey_out(self):

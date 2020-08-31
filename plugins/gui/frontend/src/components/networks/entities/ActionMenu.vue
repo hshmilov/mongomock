@@ -9,10 +9,9 @@
         class="action"
         :class="actionButtonClass"
         type="link"
+        icon="thunderbolt"
       >
-        <XIcon
-          type="thunderbolt"
-        />Actions</XButton>
+        Actions</XButton>
       <AMenu
         v-if="selectionCount"
         slot="overlay"

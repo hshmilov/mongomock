@@ -216,6 +216,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    sortColumnIndex: {
+      type: Number,
+      default: 0,
+    },
   },
   data() {
     return {
@@ -416,7 +420,7 @@ export default {
           module: this.module,
           view: {
             sort: {
-              field: this.fields[0].name, desc: false,
+              field: this.fields[this.sortColumnIndex].name, desc: false,
             },
             schema_fields: this.fields,
           },

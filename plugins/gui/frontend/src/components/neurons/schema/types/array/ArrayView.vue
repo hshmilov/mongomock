@@ -2,10 +2,11 @@
   <div class="x-array-view">
     <div
       v-if="schema.title === 'SEPARATOR' && dataSchemaItems.length"
-      class="separator"
+      class="subheader"
     >
-&nbsp;
+      {{ getSubheader }}
     </div>
+
     <template v-else-if="schema.title && dataSchemaItems.length">
       <XButton
         type="link"
@@ -61,6 +62,7 @@
               ref="array"
               :schema="schema"
               :value="data"
+              :index="index"
             />
             <XTableData
               v-else
@@ -107,6 +109,10 @@ export default {
       type: Object,
       default: null,
     },
+    index: {
+      type: Number,
+      default: null,
+    },
   },
   computed: {
     collapsable() {
@@ -115,6 +121,9 @@ export default {
     visibleDataSchemaItems() {
       const isItemVisible = (_, index) => !this.collapsed || (!this.isOrderedObject && index < 5);
       return this.dataSchemaItems.filter(isItemVisible);
+    },
+    getSubheader() {
+      return ['Common Fields', 'Specific Fields'][this.index];
     },
   },
   created() {
@@ -161,11 +170,12 @@ export default {
 
 <style lang="scss">
     .x-array-view {
-        .separator {
-            width: 100%;
-            height: 1px;
-            background-color: rgba($theme-orange, 0.2);
-            margin: 12px 0;
+        .subheader {
+          font-size: 18px;
+          border-bottom: 1px solid #1d222c36;
+          font-weight: bold;
+          padding-bottom: 10px;
+          margin: 10px 0;
         }
         .x-button.link.expander {
             display: inline-block;

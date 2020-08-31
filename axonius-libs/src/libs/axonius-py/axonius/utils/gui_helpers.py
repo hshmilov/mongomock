@@ -717,14 +717,17 @@ def get_entities_count(entities_filter,
     return entity_collection.count_documents(processed_filter)
 
 
-# pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
-def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapter=None):
+# pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
+def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapter=None, add_assoc_adapter=False):
     """
     Recursively expand given entity, following period separated properties of given field_path,
     until reaching the requested value
 
     :param entity_data: A nested dict representing parsed values of an entity
     :param field_path:  A path to a field ('.' separated chain of keys)
+    :param skip_unique: Skip unique logic for certain field_paths
+    :param specific_adapter: get data from only specific adapter
+    :param add_assoc_adapter: whether to return the associated adapter
     :return:
     """
     def return_field_max():
@@ -821,16 +824,20 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
             # Return value of last key in the chain
             return entity_data.get(field_path)
         # Continue recursively with value of current key and rest of path
-        return find_entity_field(entity_data.get(field_path[:first_dot]), field_path[first_dot + 1:])
+        return find_entity_field(entity_data.get(field_path[:first_dot]), field_path[first_dot + 1:],
+                                 add_assoc_adapter=add_assoc_adapter)
 
     if len(entity_data) == 1:
-        # Continue recursively on the single element in the list, with the same path
-        return find_entity_field(entity_data[0], field_path)
+        details = find_entity_field(entity_data[0], field_path)
+        if details and add_assoc_adapter:
+            return details, [entity_data[0].get('plugin_name')]
+        return details
 
     children = []
     for item in entity_data:
         # Continue recursively for current element of the list
         child_value = find_entity_field(item, field_path)
+
         if child_value is not None and child_value != '' and child_value != []:
             def new_instance(value):
                 """
@@ -873,22 +880,40 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                     return True
                 return True
 
+            def merge_with_adapter(current_list, additional_list, adapter):
+                children_without_adapters = [current_item[0] for current_item in current_list]
+                for additional_item in additional_list:
+                    if additional_item in children_without_adapters:
+                        index = children_without_adapters.index(additional_item)
+                        current_list[index] = (current_list[index][0],
+                                               list(set(current_list[index][1]).union([adapter])))
+                    else:
+                        current_list = current_list + [(additional_item, [adapter])]
+                return current_list
+
+            adapter = item.get('plugin_name')
             if isinstance(child_value, list):
                 # Check which elements of found value can be added to children
                 add = list(filter(new_instance, child_value))
                 if add:
-                    children = children + add
+                    if add_assoc_adapter:
+                        children = merge_with_adapter(children, add, adapter)
+                    else:
+                        children = children + add
 
             elif new_instance(child_value):
                 # Check if value found can be added to children
-                children.append(child_value)
+                if add_assoc_adapter:
+                    children = merge_with_adapter(children, add, adapter)
+                else:
+                    children.append(child_value)
 
     return children
 
 
 # pylint: disable=too-many-locals
 def parse_entity_fields(entity_datas, fields, include_details=False, field_filters: dict = None,
-                        excluded_adapters: dict = None):
+                        excluded_adapters: dict = None, add_assoc_adapter: bool = False):
     """
     For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
     also check for metadata
@@ -898,6 +923,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                             containing a list of values for the field per adapter that composes the entity
     :param field_filters: Filter fields' values to those that have a string including their matching filter
     :param excluded_adapters: Filter fields' values to those that are from specific adapters
+    :param add_assoc_adapter: whether to return the associated adapter
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
 
@@ -934,11 +960,19 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                                             if item['plugin_name'] not in excluded_adapters[field_path]]
 
         if field_path == CORRELATION_REASONS_FIELD:
-            val = find_entity_field(entity_data, CORRELATION_REASONS)
+            val = find_entity_field(entity_data, CORRELATION_REASONS, add_assoc_adapter=add_assoc_adapter)
         elif field_path == HAS_NOTES:
-            val = find_entity_field(entity_data, HAS_NOTES)
+            val = find_entity_field(entity_data, HAS_NOTES, add_assoc_adapter=add_assoc_adapter)
         else:
-            val = find_entity_field(entity_data, field_path)
+            val = find_entity_field(entity_data, field_path, add_assoc_adapter=add_assoc_adapter)
+        specific_adapter_name = extract_adapter_name(field_path)
+
+        if add_assoc_adapter and val:
+            if isinstance(val, tuple):
+                val = [{**item, 'adapters': val[1]} for item in val[0]]
+            elif isinstance(val, list):
+                val = [{**item[0], 'adapters': item[1]} for item in val]
+
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):
                 if isinstance(val, list):
@@ -947,6 +981,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                     val = ''
 
             field_to_value[field_path] = val
+
         if not include_details:
             continue
 
@@ -1225,47 +1260,15 @@ def _is_subjson_check_value(subset_value, superset_value):
 
 
 def is_subjson(subset, superset):
-    if subset.items() <= superset.items():
-        return True
-
-    if subset.items() > superset.items():
-        return False
-
     for key, value in subset.items():
         if key not in superset:
             return False
+        if key == 'adapters':
+            continue
 
         if not _is_subjson_check_value(value, superset[key]):
             return False
     return True
-
-
-def merge_entities_fields(entities_data, fields):
-    """
-        find all entities that are subset of other entities, and merge them.
-    """
-    results = []
-    parsed_entities_data = [parse_entity_fields(entity_data, fields) for entity_data in entities_data]
-    # Sort list values in order to check equality of content, regardless different order
-    for entity_data in parsed_entities_data:
-        for value in entity_data.values():
-            if not value or not isinstance(value, list) or isinstance(value[0], dict):
-                continue
-            value.sort()
-
-    for subset_candidate in parsed_entities_data:
-        for superset_candidate in parsed_entities_data:
-            if subset_candidate == superset_candidate:
-                continue
-
-            if is_subjson(subset_candidate, superset_candidate):
-                # Found subset
-                break
-        else:
-            # Not subset of anything append to results
-            if subset_candidate not in results:
-                results.append(subset_candidate)
-    return results
 
 
 def get_sort(view):

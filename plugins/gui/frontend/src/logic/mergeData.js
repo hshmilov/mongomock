@@ -1,4 +1,5 @@
 const mergedData = (data, schema) => {
+
   const isSubsetValue = (subsetValue, supersetValue) => {
     if (typeof (subsetValue) !== typeof (supersetValue)) return false;
     if (Array.isArray(subsetValue)) {
@@ -22,8 +23,10 @@ const mergedData = (data, schema) => {
   const isSubset = (subset, superset) => {
     let result = true;
     Object.entries(subset).forEach(([key, value]) => {
-      if (!result || (value && !superset[key]) || !isSubsetValue(value, superset[key])) {
-        result = false;
+      if (key !== 'adapters') {
+        if (!result || (value && !superset[key]) || !isSubsetValue(value, superset[key])) {
+          result = false;
+        }
       }
     });
     return result;
@@ -59,67 +62,37 @@ const mergedData = (data, schema) => {
     Object.values(excludedSet).forEach((x) => totalExcludedSet.add(x));
   });
 
-  // over all scalars (strings...) fields,
-  // group all values of the same value (and not null) and for each group that has over 1
-  // value, try to see if the whole row is also a subset or a superset,
-  // and if it does, mark them.
-  // This reduces the amount of checks we do later.
-  // This is O(n^2) where (n) is the maximal amount of identical values.
-  stringFields.forEach((schemaItem) => {
-    const fieldName = schemaItem.name;
-    const d = {};
-
-    localData.filter((x) => x !== undefined)
-      .map((val) => val[fieldName])
-      .forEach((dataItem, index) => {
-        if (totalExcludedSet.has(index)) return;
-        if (!dataItem) return;
-
-        if (d[dataItem]) {
-          d[dataItem].push(index);
-        } else {
-          d[dataItem] = [index];
-        }
-      });
-
-    Object.values(d).forEach((list) => {
-      if (list.length < 2) return;
-
-      for (let i = 0; i < list.length; i += 1) {
-        for (let j = 0; j < i; j += 1) {
-          if (!(!localData[i] || !localData[j])) {
-            if (isSubset(localData[i], localData[j])) {
-              localData[i] = undefined;
-            } else if (isSubset(localData[j], localData[i])) {
-              localData[j] = undefined;
-            }
-          }
-        }
-      }
-    });
-  });
-
   // this is the lousy part of this algorithm, it is in O(n^2)
   // where (n) = amount of row - amount of rows eliminated in previous steps
   // Goes over any unique pair and check if one is a subset of the other, and if it is,
   // hide show the subset.
   const result = Array.from(totalExcludedSet).map((index) => localData[index]);
-  localData.forEach((x, index) => {
-    if (x === undefined || totalExcludedSet.has(index)) return;
-
+  localData.forEach((subset, index) => {
+    if (subset === undefined || totalExcludedSet.has(index)) return;
     let found = false;
     for (let i = 0; i < result.length; i += 1) {
-      if (isSubset(result[i], x)) {
-        result[i] = x;
+      const superset = result[i];
+      if (superset === undefined) return;
+      let mergeAdapters = false;
+
+      if (isSubset(superset, subset)) {
+        result[i] = subset;
         found = true;
-        break;
-      } else if (isSubset(x, result[i])) {
+        mergeAdapters = true;
+      } else if (isSubset(subset, superset)) {
         found = true;
-        break;
+        mergeAdapters = true;
+      }
+
+      if (mergeAdapters) {
+        result[i].adapters = [...new Set([
+          ...superset.adapters, ...subset.adapters, ...result[i].adapters,
+        ])];
       }
     }
+
     if (!found) {
-      result.push(x);
+      result.push(subset);
     }
   });
 

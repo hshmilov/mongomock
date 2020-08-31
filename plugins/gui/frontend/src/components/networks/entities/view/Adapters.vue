@@ -13,7 +13,7 @@
         <div class="header">
           <div class="header__source">
             <template v-if="item.client_used">
-              <strong>Data From: </strong>{{ item.connectionLabel || item.client_used }}
+              <span class="data_from">Data From: </span>{{ item.connectionLabel || item.client_used }}
             </template>
           </div>
           <XButton
@@ -70,6 +70,7 @@ import {
   mapState, mapActions, mapGetters,
 } from 'vuex';
 import _get from 'lodash/get';
+import _sortBy from 'lodash/sortBy';
 import _isPlainObject from 'lodash/isPlainObject';
 import _isArray from 'lodash/isArray';
 import entityCustomData from '@mixins/entity_custom_data';
@@ -145,22 +146,11 @@ export default {
     },
     sortedSpecificData() {
       const lastSeen = new Set();
-      const res = this.adapters.filter((item) => {
+      let res = this.adapters.filter((item) => {
         if (item.hidden_for_gui) return false;
         return !(item.plugin_type && item.plugin_type.toLowerCase().includes('plugin'));
-      }).sort((first, second) => {
-        // GUI plugin (miscellaneous) always comes last
-        if (first.plugin_name === guiPluginName) return 1;
-        if (second.plugin_name === guiPluginName) return -1;
-
-        // Adapters with no last_seen field go first
-        const firstSeen = first.data[lastSeenByModule[this.module]];
-        const secondSeen = second.data[lastSeenByModule[this.module]];
-        if (!secondSeen) return 1;
-        if (!firstSeen) return -1;
-        // Turn strings into dates and subtract them to get a negative, positive, or zero value.
-        return new Date(secondSeen) - new Date(firstSeen);
-      }).map((item) => {
+      });
+      res = res.map((item) => {
         item.id = `${item.plugin_unique_name}_${item.data.id}`;
         let connectionLabel = this.getConnectionLabel(item.client_used, {
           plugin_unique_name: item.plugin_unique_name,
@@ -176,11 +166,16 @@ export default {
         lastSeen.add(item.plugin_name);
         return item;
       });
+      const guiTitle = pluginMeta[initCustomData(this.module).plugin_name].title;
+      res = _sortBy(res, (item) => {
+        if (item.pretty_name === guiTitle) return null;
+        return item.pretty_name;
+      });
       if (res.length === 0 || res[res.length - 1].plugin_name !== guiPluginName) {
         // Add initial gui adapters data
         res.push({
           ...initCustomData(this.module),
-          pretty_name: pluginMeta[initCustomData(this.module).plugin_name].title,
+          pretty_name: guiTitle,
         });
       }
       return res;
@@ -304,7 +299,7 @@ export default {
     .x-tabs .body .header {
       padding-bottom: 4px;
       margin-bottom: 12px;
-      border-bottom: 2px solid rgba($theme-orange, 0.4);
+      border-bottom: 2px solid #1d222cb3;
       display: flex;
       align-items: center;
       overflow: hidden;
@@ -314,6 +309,10 @@ export default {
         width: calc(100% - 120px);
         text-overflow: ellipsis;
         overflow: hidden;
+        .data_from {
+          font-size: 16px;
+          font-weight: bolder;
+        }
       }
     }
     .json-view-item {

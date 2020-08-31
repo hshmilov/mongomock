@@ -5,7 +5,7 @@ from selenium.common.exceptions import NoSuchElementException
 from dateutil.parser import parse as parse_date
 
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
 from test_credentials.json_file_credentials import USER_NAME_UNICODE
 
 from axonius.utils.parsing import parse_date_with_timezone
@@ -123,8 +123,11 @@ class TestUsersTable(TestEntitiesTable):
         self.base_page.run_discovery()
 
         self.check_toggle_advanced_basic(self.users_page, self.users_page.JSON_ADAPTER_FILTER,
-                                         self.users_page.ADVANCED_VIEW_RAW_FIELD, self.users_page.FIELD_USERNAME_TITLE)
-        self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER, 'name:',
+                                         JSON_ADAPTER_NAME, self.users_page.ADVANCED_VIEW_RAW_FIELD,
+                                         self.users_page.FIELD_USERNAME_TITLE)
+
+        self.check_toggle_advanced_basic(self.users_page, self.users_page.AD_ADAPTER_FILTER,
+                                         AD_ADAPTER_NAME, 'name:',
                                          self.users_page.FIELD_USERNAME_TITLE)
 
     def test_user_export_csv(self):

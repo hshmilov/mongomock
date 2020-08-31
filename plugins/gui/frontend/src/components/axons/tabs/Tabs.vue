@@ -15,6 +15,7 @@
         <XTitle
           v-if="tab.logo"
           :logo="tab.logo"
+          :title="tab.title"
         >{{ tab.title }}</XTitle>
         <div
           v-else

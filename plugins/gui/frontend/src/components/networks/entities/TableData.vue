@@ -76,6 +76,7 @@
 import _isEmpty from 'lodash/isEmpty';
 import _orderBy from 'lodash/orderBy';
 import _map from 'lodash/map';
+import _upperFirst from 'lodash/upperFirst';
 import _extend from 'lodash/extend';
 import { mapState, mapGetters } from 'vuex';
 import { pluginMeta } from '@constants/plugin_meta';
@@ -194,6 +195,7 @@ export default {
         let name = pluginMeta[adapter.pluginName[0]]
           ? pluginMeta[adapter.pluginName[0]].title
           : adapter.pluginName[0];
+        name = name.split('_').map(_upperFirst).join(' ');
         if (connectionLabel !== '') {
           name = `${name} - ${connectionLabel}`;
         }

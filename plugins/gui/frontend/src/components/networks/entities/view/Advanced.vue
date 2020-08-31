@@ -13,6 +13,7 @@
       :module="stateLocation"
       :fields="fields"
       :static-data="getMergedData()"
+      :sort-column-index="1"
     >
       <template
         #search="{ onSearch, tableTitle, tableModule, tableView }"
@@ -24,11 +25,19 @@
           @search="onSearch"
         />
       </template>
+      <template #default="slotProps">
+        <XTableData
+          :module="module"
+          v-bind="slotProps"
+        />
+      </template>
       <template slot="actions">
         <XButton
           type="link"
+          :loading="exportInProgress"
           @click="exportCSV"
-        >Export CSV
+        >
+          {{ exportInProgress ? 'Exporting...' : 'Export CSV' }}
         </XButton>
       </template>
     </XTable>
@@ -46,15 +55,16 @@ import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { SET_MERGED_DATA_BY_ID } from '@store/modules/devices';
+import XTableData from '@networks/entities/TableData.vue';
 import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
-import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
+import XTable from '../../../neurons/data/Table.vue';
 import mergedData from '../../../../logic/mergeData';
 
 export default {
   name: 'XEntityAdvanced',
   components: {
-    XTable, XButton, PulseLoader, XTableSearchFilters,
+    XTable, XButton, PulseLoader, XTableData, XTableSearchFilters,
   },
   props: {
     index: {
@@ -88,6 +98,7 @@ export default {
     return {
       searchValue: '',
       loading: false,
+      exportInProgress: false,
     };
   },
   computed: {
@@ -146,11 +157,13 @@ export default {
     isSimpleList(schema) {
       return (schema.type !== 'array' || schema.items.type !== 'array');
     },
-    exportCSV() {
-      this.fetchDataCSV({
+    async exportCSV() {
+      this.exportInProgress = true;
+      await this.fetchDataCSV({
         module: this.stateLocation,
         endpoint: `${this.module}/${this.entityId}/${this.schema.name}`,
       });
+      this.exportInProgress = false;
     },
   },
 };

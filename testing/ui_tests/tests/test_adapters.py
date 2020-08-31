@@ -163,7 +163,7 @@ class TestAdapters(TestBase):
         self.users_page.refresh()
         self.users_page.wait_for_table_to_be_responsive()
         self.users_page.run_filter_query('avidor')
-        self.users_page.hover_over_entity_adapter_icon(index=0)
+        self.users_page.assert_entity_adapter_tooltip_table(index=0)
         data = self.users_page.get_adapters_popup_table_data()
         names = [item['Name'] for item in data]
         all_is_good = True

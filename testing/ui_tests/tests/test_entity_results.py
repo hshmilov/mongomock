@@ -78,7 +78,7 @@ class TestEntityResults(TestBase):
             self.users_page.switch_to_page()
             self.users_page.wait_for_table_to_load()
             self.users_page.run_filter_query('avidor')
-            self.users_page.hover_over_entity_adapter_icon(index=0)
+            self.users_page.assert_entity_adapter_tooltip_table(index=0)
             adapters_popup_table_data = [x['Name'] for x in self.users_page.get_adapters_popup_table_data()]
             self.users_page.click_expand_row()
             adapters_expanded_data = self.users_page.get_column_data_adapter_title_tooltip()

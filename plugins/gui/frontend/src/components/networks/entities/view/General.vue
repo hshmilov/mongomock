@@ -1,27 +1,27 @@
 <template>
-  <x-tabs
+  <XTabs
     v-if="basic && basicSchema"
     :vertical="true"
     class="x-entity-general"
   >
-    <x-tab
+    <XTab
       id="basic"
       key="basic"
       title="Basic Info"
       :selected="true"
     >
-      <x-list
+      <XList
         :data="basic"
         :schema="basicSchema"
       />
-    </x-tab>
-    <x-tab
-      v-for="(item, i) in advanced"
+    </XTab>
+    <XTab
+      v-for="(item, i) in advancedSorted"
       :id="item.schema.name"
       :key="item.schema.name"
       :title="item.schema.title"
     >
-      <x-entity-advanced
+      <XEntityAdvanced
         :index="i"
         :module="module"
         :entity-id="entityId"
@@ -29,22 +29,23 @@
         :data="item.data"
         :sort="item.view.sort"
       />
-    </x-tab>
-  </x-tabs>
+    </XTab>
+  </XTabs>
 </template>
 
 <script>
+import _sortBy from 'lodash/sortBy';
 import { mapState } from 'vuex';
-import xTabs from '../../../axons/tabs/Tabs.vue';
-import xTab from '../../../axons/tabs/Tab.vue';
-import xList from '../../../neurons/schema/List.vue';
-import xEntityAdvanced from './Advanced.vue';
+import XTabs from '../../../axons/tabs/Tabs.vue';
+import XTab from '../../../axons/tabs/Tab.vue';
+import XList from '../../../neurons/schema/List.vue';
+import XEntityAdvanced from './Advanced.vue';
 
 
 export default {
   name: 'XEntityGeneral',
   components: {
-    xTabs, xTab, xList, xEntityAdvanced,
+    XTabs, XTab, XList, XEntityAdvanced,
   },
   props: {
     module: {
@@ -82,6 +83,9 @@ export default {
         return eval(hyperlinks.aggregator);
       },
     }),
+    advancedSorted() {
+      return _sortBy(this.advanced, (item) => item.schema.name);
+    },
     schemaGenericFields() {
       return this.fields.generic.filter(
         (item) => !this.excludedFields.includes(item.name),
