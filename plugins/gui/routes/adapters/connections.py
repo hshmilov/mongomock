@@ -317,6 +317,8 @@ class Connections:
         if connection_data is None:
             return return_error('Invalid client', 400)
 
+        save_and_fetch_connection = connection_data.pop('save_and_fetch', False)
+
         response = self.request_remote_plugin('clients', adapter_unique_name, 'put', json=connection_data)
         if not response:
             return return_error(f'Connection failure to adapter {adapter_unique_name}')
@@ -326,11 +328,12 @@ class Connections:
         self._get_adapter_connections_data.clean_cache()
         self.clients_labels.clean_cache()
 
-        if response.status_code == 200:
-            self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
-                                                     response.json()['client_id'], connection_data)
-        else:
-            logger.error(f'Error in client adding: {response.status_code}, {response.text}')
+        if save_and_fetch_connection:
+            if response.status_code == 200:
+                self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
+                                                         response.json()['client_id'], connection_data)
+            else:
+                logger.error(f'Error in client adding: {response.status_code}, {response.text}')
         return response.text, response.status_code
 
     def _validate_fill_unchanged_passwords(self, adapter_unique_name: str, client_id: str, data: object,

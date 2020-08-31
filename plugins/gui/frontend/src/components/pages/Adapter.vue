@@ -73,23 +73,39 @@
           class="config-server"
           :class="{'fixed-size': connectionDiscoveryEnabled}"
           @close="toggleServerModal"
-          @confirm="saveServer"
         >
           <div slot="body">
             <!-- Container for configuration of a single selected / added server -->
             <XTitle :logo="`adapters/${adapterId}`">
-              {{ title }}
+              <div class="text__inner">
+                {{ title }}
+              </div>
               <XButton
                 v-if="adapterLink"
-                slot="actions"
                 header
                 type="link"
                 class="help-link"
                 title="More information about connecting this adapter"
                 @click="openHelpLink"
               >
-                <XIcon type="question-circle" />Help
+                <XIcon
+                  type="question-circle"
+                  name="question-circle"
+                />
               </XButton>
+              <XButton
+                slot="actions"
+                type="link"
+                title="Close"
+                class="config-server__close-icon-container"
+                @click="toggleServerModal"
+              >
+                <XIcon
+                  name="close"
+                  type="close"
+                />
+              </XButton>
+
             </XTitle>
             <template v-if="connectionDiscoveryEnabled">
               <ATabs
@@ -139,22 +155,29 @@
             />
           </div>
           <template slot="footer">
-            <XButton
-              type="link"
-              @click="toggleServerModal"
-            >Cancel</XButton>
-            <XButton
-              id="test_reachability"
-              type="primary"
-              :disabled="!serverModal.valid || !serverModal.connectionValid || !connectionLabelValid"
-              @click="testServer"
-            >Test Reachability</XButton>
-            <XButton
-              id="save_server"
-              type="primary"
-              :disabled="!serverModal.valid || !serverModal.connectionValid || !connectionLabelValid"
-              @click="saveServer"
-            >Save and Connect</XButton>
+            <div class="modal-footer__top">
+              <XButton
+                id="test_reachability"
+                type="link"
+                :disabled="connectionButtonsDisabled"
+                @click="testServer"
+              >Check Network Connectivity</XButton>
+            </div>
+
+            <div class="modal-footer__bottom">
+              <XButton
+                id="save"
+                type="link"
+                :disabled="connectionButtonsDisabled"
+                @click="saveServer()"
+              >Save</XButton>
+              <XButton
+                id="save_server"
+                type="primary"
+                :disabled="connectionButtonsDisabled"
+                @click="saveServer(true)"
+              >Save and Fetch</XButton>
+            </div>
           </template>
         </XModal>
         <XModal
@@ -217,9 +240,9 @@ import XAdapterAdvancedSettings from '@networks/adapters/adapter-advanced-settin
 import { Icon, Tabs as ATabs } from 'ant-design-vue';
 
 import { tunnelConnectionStatuses } from '@constants/settings';
+import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
 import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
 import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
-import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
 
 export default {
   name: 'XAdapter',
@@ -388,6 +411,11 @@ export default {
     isSpecificConnectionDiscoverySet() {
       return _get(this.serverModal, 'serverData.connection_discovery.enabled', null);
     },
+    connectionButtonsDisabled() {
+      return !this.serverModal.valid
+       || !this.serverModal.connectionValid
+        || !this.connectionLabelValid;
+    },
   },
   watch: {
     instanceDefaultName() {
@@ -525,7 +553,7 @@ export default {
     updateErrorLabel(value) {
       this.connectionLabelError = value;
     },
-    saveServer() {
+    saveServer(fetchData = false) {
       this.message = 'Connecting to Server...';
       this.updateServer({
         adapterId: this.adapterId,
@@ -535,15 +563,16 @@ export default {
         instanceId: this.serverModal.instanceId,
         instanceIdPrev: this.serverModal.instanceIdPrev,
         uuid: this.serverModal.uuid,
+        fetchData,
       }).then((updateRes) => {
         if (this.selectedServers.includes('')) {
           this.selectedServers.push(updateRes.data.id);
           this.selectedServers = this.selectedServers.filter((selected) => selected !== '');
         }
         if (updateRes.data.status === 'error') {
-          this.message = 'Problem connecting. Review error and try again.';
+          this.message = fetchData ? 'Problem connecting. Review error and try again.' : 'Connection failed. Review error and try again';
         } else {
-          this.message = 'Connection established. Data collection initiated...';
+          this.message = fetchData ? 'Connection established. Data collection initiated...' : 'Connection successfully established';
         }
       }).catch((error) => {
         this.message = error.response.data.message;
@@ -659,7 +688,6 @@ export default {
     }
     .config-settings {
       margin-top: 64px;
-
       > .header {
         font-weight: 300;
         text-align: left;
@@ -668,7 +696,7 @@ export default {
           font-size: 20px;
         }
         &:hover .setting_cog {
-          color: $theme-orange;
+           color: $theme-orange;
         }
         span {
               vertical-align: top;
@@ -683,6 +711,13 @@ export default {
     }
 
     .config-server {
+      &__close-icon-container {
+        padding-right: 0;
+        color:rgba(0, 0, 0, 0.45);
+        &:hover {
+          color:rgba(0, 0, 0, 0.25);
+        }
+      }
       .x-title {
         display: flex;
         margin-bottom: 24px;
@@ -697,16 +732,48 @@ export default {
         }
 
         .help-link {
-          padding-right: 0;
+          padding: 0;
           i {
-            font-size: 20px!important;
+            font-size: 14px!important;
           }
         }
       }
 
       &.x-modal {
+        .modal-body {
+          .x-title {
+            margin-bottom: 24px;
+            .text {
+              white-space: unset;
+              overflow: unset;
+              text-overflow: unset;
+              &__inner {
+                vertical-align: middle;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: inline-block;
+                max-width: 330px;
+              }
+            }
+          }
+        }
         .x-button {
           width: auto;
+        }
+        .modal-footer {
+          &__top {
+            display: block;
+            text-align: left;
+            #test_reachability {
+              padding: 0;
+            }
+          }
+          &__bottom {
+            display: block;
+            padding-top: 5px;
+            border-top: 1px solid rgb(222, 222, 222);
+          }
         }
       }
 
@@ -734,63 +801,6 @@ export default {
       }
     }
 
-    .x-vault-query-input {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1001;
-      display: grid;
-
-      .modal-container {
-        margin: auto;
-        padding: 24px;
-        background-color: $theme-white;
-        border-radius: 2px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
-        z-index: 1001;
-
-        .modal-header {
-          display: flex;
-          border-bottom: 1px solid $grey-2;
-          padding: 0 24px 12px;
-          margin: 0 -24px 24px -24px;
-
-          .title {
-            flex: 1 0 auto;
-            font-weight: 500;
-            font-size: 16px;
-          }
-        }
-
-        .modal-body {
-          padding: 0;
-          margin-bottom: 24px;
-
-          .form-group:last-of-type {
-            margin-bottom: 0;
-          }
-        }
-
-        .modal-footer {
-          border: 0;
-          padding: 0;
-          text-align: right;
-        }
-      }
-
-      .modal-overlay {
-        position: fixed;
-        z-index: 1000;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, .5);
-        transition: opacity .3s ease;
-      }
-    }
 
     #connectionLabel.error-border {
       border: 1px solid $indicator-error;

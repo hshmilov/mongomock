@@ -196,7 +196,7 @@ class TestEntityCustomData(TestBase):
                 self.adapters_page.click_new_server()
                 linux_client_details_2 = copy.copy(linux_client_details)
                 self.adapters_page.fill_creds(**linux_client_details_2)
-                self.adapters_page.click_save()
+                self.adapters_page.click_save_and_fetch()
                 self.adapters_page.wait_for_server_green()
                 self.base_page.run_discovery()
                 self.devices_page.switch_to_page()

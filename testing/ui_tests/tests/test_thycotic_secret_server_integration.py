@@ -29,8 +29,8 @@ class TestThycoticIntegration(TestBase):
         if is_negative_test:
             self.adapters_page.click_cancel()
         else:
-            self.adapters_page.wait_for_element_present_by_text(self.adapters_page.SAVE_AND_CONNECT_BUTTON)
-            self.adapters_page.click_save()
+            self.adapters_page.wait_for_element_present_by_text(self.adapters_page.SAVE_AND_FETCH_BUTTON)
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_data_collection_toaster_start()
             self.adapters_page.wait_for_data_collection_toaster_absent()
 
@@ -65,7 +65,7 @@ class TestThycoticIntegration(TestBase):
             self.adapters_page.click_adapter(CSV_NAME)
             self.adapters_page.open_add_edit_server(CSV_NAME)
             self.adapters_page.fill_upload_csv_form_with_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_data_collection_toaster_start()
             self.adapters_page.wait_for_data_collection_toaster_absent()
             # Check successful device fetch.

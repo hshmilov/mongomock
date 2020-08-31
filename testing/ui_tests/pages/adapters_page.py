@@ -31,7 +31,7 @@ class AdaptersPage(EntitiesPage):
     SEARCH_TEXTBOX_CSS = 'div.x-search-input > input.input-value'
     TABLE_ROW_CLASS = 'table-row'
     TABLE_CLASS = '.table'
-    TEST_CONNECTIVITY = 'Test Reachability'
+    TEST_CONNECTIVITY = 'Check Network Connectivity'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
     CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=enabled]+div'
     CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS = '.item_connection_discovery [for=enabled]+div'
@@ -84,6 +84,10 @@ class AdaptersPage(EntitiesPage):
     ADAPTER_INDICATOR_SUCCESS = 'success'
     ADAPTER_INDICATOR_ERROR = 'error'
 
+    SAVE_AND_FETCH_BUTTON = 'Save and Fetch'
+    CLOSE_ADAPTER_MODAL_CSS = '.config-server__close-icon-container'
+    HELP_ICON_ADAPTER_MODAL_CSS = '.config-server .help-link'
+
     @property
     def url(self):
         return f'{self.base_url}/adapters'
@@ -120,15 +124,15 @@ class AdaptersPage(EntitiesPage):
                           scroll_into_view_container='.adapters-table')
         self.wait_for_table_to_load()
 
-    def click_save(self):
-        self.get_enabled_button(self.SAVE_AND_CONNECT_BUTTON).click()
+    def click_save_and_fetch(self):
+        self.get_enabled_button(self.SAVE_AND_FETCH_BUTTON).click()
 
     def is_save_button_disabled(self):
-        return self.is_element_disabled(self.get_button(self.SAVE_AND_CONNECT_BUTTON))
+        return self.is_element_disabled(self.get_button(self.SAVE_AND_FETCH_BUTTON))
 
     def click_cancel(self):
         context_element = self.wait_for_element_present_by_css('.x-modal.config-server')
-        self.click_button(self.CANCEL_BUTTON, context=context_element)
+        self.driver.find_element_by_css_selector(self.CLOSE_ADAPTER_MODAL_CSS).click()
 
     def click_test_connectivity(self):
         self.click_button(self.TEST_CONNECTIVITY)
@@ -343,7 +347,7 @@ class AdaptersPage(EntitiesPage):
         self.fill_creds(**dict_)
         if instance:
             self.select_instance(instance)
-        self.click_save()
+        self.click_save_and_fetch()
 
     def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):
         for _ in range(retries):
@@ -359,7 +363,7 @@ class AdaptersPage(EntitiesPage):
 
     def find_help_link(self):
         try:
-            return self.get_button('Help')
+            return self.driver.find_element_by_css_selector(self.HELP_ICON_ADAPTER_MODAL_CSS)
         except NoSuchElementException:
             return None
 
@@ -428,7 +432,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_table_to_load()
         self.click_new_server()
         self.fill_creds(**adapter_input)
-        self.click_save()
+        self.click_save_and_fetch()
 
     def get_instances_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS_SELECTED).text
@@ -469,12 +473,12 @@ class AdaptersPage(EntitiesPage):
         self.click_edit_server()
         self.wait_for_element_present_by_id(element_id='connectionLabel', retries=3)
         self.fill_creds(connectionLabel=connection_label)
-        self.click_save()
+        self.click_save_and_fetch()
 
     def upload_csv(self, csv_file_name, csv_data, is_user_file=False, wait_for_toaster=False):
         self.open_add_edit_server(CSV_NAME)
         self.fill_upload_csv_form_with_csv(csv_file_name, csv_data, is_user_file)
-        self.click_save()
+        self.click_save_and_fetch()
         if wait_for_toaster:
             self.wait_for_data_collection_toaster_start()
             self.wait_for_data_collection_toaster_absent()
@@ -533,7 +537,7 @@ class AdaptersPage(EntitiesPage):
         if vault_field:
             self.fill_text_field_by_element_id('field', vault_field)
         self.click_button('Fetch')
-
+        time.sleep(1)
         if is_negative_test:
             wait_until(self.check_vault_passsword_failure_status, check_return_value=True, total_timeout=30)
         else:
@@ -552,7 +556,7 @@ class AdaptersPage(EntitiesPage):
         self.click_specific_row_by_field_value(field_name=field_name, field_value=field_value)
         self.wait_for_element_present_by_id(element_id='connectionLabel', retries=5)
         self.fill_creds(connectionLabel=update_label)
-        self.click_save()
+        self.click_save_and_fetch()
         self.wait_for_data_collection_toaster_start()
         self.wait_for_data_collection_toaster_absent()
 
@@ -619,4 +623,4 @@ class AdaptersPage(EntitiesPage):
             self.fill_schedule_date(self.set_discovery_time(2))
             self.change_custom_discovery_interval(1)
 
-        self.click_save()
+        self.click_save_and_fetch()

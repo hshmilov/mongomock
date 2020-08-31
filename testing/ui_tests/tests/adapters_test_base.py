@@ -19,7 +19,7 @@ class AdapterTestBase(TestBase):
         # add new client - should fail to connect
         self.adapters_page.click_new_server()
         self.fill_ad_creds_with_junk(dc_name=dc_name)
-        self.adapters_page.click_save()
+        self.adapters_page.click_save_and_fetch()
         self.adapters_page.wait_for_element_absent_by_css(self.adapters_page.MODAL_OVERLAY_CSS)
         self.adapters_page.wait_for_element_present_by_text(dc_name)
         self.adapters_page.wait_for_problem_connecting_try_again()

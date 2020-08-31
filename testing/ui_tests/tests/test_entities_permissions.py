@@ -347,6 +347,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.fill_filter('cb')
         entities_page.enter_search()
         queries_page.switch_to_page()
+        queries_page.wait_for_table_to_be_responsive()
         queries_page.is_row_checkbox_absent()
         queries_page.click_query_row_by_name(query_name)
         queries_page.assert_run_query_disabled()

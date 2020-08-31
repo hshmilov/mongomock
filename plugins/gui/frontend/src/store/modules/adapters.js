@@ -303,6 +303,7 @@ export const adapters = {
               instance_prev_name: !isNewClient && oldAssociatedInstance
                 ? oldAssociatedInstance.node_name : undefined,
               is_instances_mode: isInstanceMode,
+              save_and_fetch: payload.fetchData,
             },
           });
 

@@ -47,7 +47,7 @@ class TestCleanDB(AdapterTestBase):
             self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
             self.adapters_page.click_new_server()
             self.fill_ad_creds_with_junk()
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_server_red()
             self.adapters_page.wait_for_data_collection_failed_toaster_absent()
             update_result = self.axonius_system.get_devices_db().update_many(
@@ -77,7 +77,7 @@ class TestCleanDB(AdapterTestBase):
             details = copy.copy(ad_client1_details)
             details.pop('use_ssl')
             self.adapters_page.fill_creds(**details)
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_server_green()
             self._set_last_seen('')
             self.dashboard_page.switch_to_page()

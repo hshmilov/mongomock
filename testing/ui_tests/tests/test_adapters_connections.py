@@ -32,7 +32,7 @@ class TestAdapters(TestBase):
                     for i in range(30):
                         self.adapters_page.click_new_server()
                         self.adapters_page.fill_creds(host=f'asdf{i}', community='asdf')
-                        self.adapters_page.click_save()
+                        self.adapters_page.click_save_and_fetch()
 
                         # this sleeps makes the mechanism more reliable
                         # https://axonius.atlassian.net/browse/AX-4553

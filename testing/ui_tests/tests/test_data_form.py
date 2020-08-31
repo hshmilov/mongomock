@@ -37,7 +37,7 @@ class TestDataForm(TestBase):
 
     def verify_adapter_connection_and_save(self, kwargs):
         self.verify_adapter_connection(kwargs)
-        self.adapters_page.click_save()
+        self.adapters_page.click_save_and_fetch()
 
     def verify_adapter_connection_and_cancel(self, kwargs):
         self.verify_adapter_connection(kwargs)
@@ -86,7 +86,7 @@ class TestDataForm(TestBase):
             self.verify_connection_changes({self.S3_SECRET_FIELD_ID: '1234567'})
             self.adapters_page.click_row()
             self.adapters_page.fill_text_by_element(self.driver.find_element_by_id(self.S3_SECRET_FIELD_ID), '')
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_data_collection_toaster_start()
             self.adapters_page.wait_for_data_collection_toaster_absent()
             self.adapters_page.switch_to_page()

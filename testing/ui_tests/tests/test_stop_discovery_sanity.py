@@ -33,7 +33,7 @@ class TestStopDiscoverySanity(TestBase):
         self.adapters_page.remove_server(ad_client2_details, expected_left=1)
         time.sleep(5)
         self.adapters_page.click_row()
-        self.adapters_page.click_save()
+        self.adapters_page.click_save_and_fetch()
         self.adapters_page.wait_for_server_green(retries=400)
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.wait_for_data_collection_toaster_absent()

@@ -81,7 +81,7 @@ class TestCyberarkIntegration(TestBase):
             print('Waiting for vault fetch.')
             assert self.adapters_page.check_vault_passsword_success_status()
             # Check successful device fetch.
-            self._wait_until_click_intercepted(self.adapters_page.click_save)
+            self._wait_until_click_intercepted(self.adapters_page.click_save_and_fetch)
             self.adapters_page.wait_for_table_to_load()
             print('Running discovery.')
             self._wait_until_click_intercepted(self.base_page.run_discovery)
@@ -126,7 +126,7 @@ class TestCyberarkIntegration(TestBase):
             self.adapters_page.fill_upload_csv_form_with_csv(self.adapters_page.CSV_FILE_NAME, csv_client_details)
 
             # Check successful device fetch.
-            self._wait_until_click_intercepted(self.adapters_page.click_save)
+            self._wait_until_click_intercepted(self.adapters_page.click_save_and_fetch)
             self.adapters_page.wait_for_table_to_load()
             print('Running discovery.')
 
@@ -183,7 +183,7 @@ class TestCyberarkIntegration(TestBase):
                 print('waiting for check fetch')
                 assert self.adapters_page.check_vault_passsword_success_status()
                 # Check successful device fetch.
-                self.adapters_page.click_save()
+                self.adapters_page.click_save_and_fetch()
                 self.adapters_page.wait_for_table_to_load()
                 print('Running discovery.')
                 self.base_page.run_discovery()

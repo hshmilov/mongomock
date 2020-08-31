@@ -24,7 +24,7 @@ class TestHyperlinks(TestBase):
                 'device_count': 1,
                 'name': 'asd'
             })
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_spinner_to_end()
 
             self.settings_page.switch_to_page()
@@ -82,7 +82,7 @@ class TestHyperlinks(TestBase):
                     'device_count': 1,
                     'name': 'testing default value'
                 })
-                self.adapters_page.click_save()
+                self.adapters_page.click_save_and_fetch()
                 self.adapters_page.wait_for_spinner_to_end()
                 for position in (1, 2):
                     self.adapters_page.wait_for_server_green(position=position, retries=700)
@@ -115,7 +115,7 @@ class TestHyperlinks(TestBase):
                     'name': 'lol lol lol',
                     'default': 10
                 })
-                self.adapters_page.click_save()
+                self.adapters_page.click_save_and_fetch()
                 self.adapters_page.wait_for_spinner_to_end()
                 time.sleep(3)
                 clients = clients_db.find({}, limit=3)

@@ -126,7 +126,6 @@ class Page:
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
     CANCEL_BUTTON = 'Cancel'
     SAVE_BUTTON = 'Save'
-    SAVE_AND_CONNECT_BUTTON = 'Save and Connect'
     SAVE_AS_BUTTON = 'Save As'
     OK_BUTTON = 'OK'
     REMOVE_BUTTON = 'Remove'

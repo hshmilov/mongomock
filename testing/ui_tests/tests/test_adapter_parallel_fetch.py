@@ -34,7 +34,7 @@ class TestAdaptersParallelFetch(TestBase):
             self.adapters_page.wait_for_table_to_be_responsive()
             self.adapters_page.click_new_server()
             self.adapters_page.fill_creds(**cisco_creds)
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_spinner_to_end()
 
             self.base_page.run_discovery()
@@ -56,7 +56,7 @@ class TestAdaptersParallelFetch(TestBase):
             self.adapters_page.wait_for_table_to_be_responsive()
             self.adapters_page.click_new_server()
             self.adapters_page.fill_creds(**esx_client_details[0][0])
-            self.adapters_page.click_save()
+            self.adapters_page.click_save_and_fetch()
             self.adapters_page.wait_for_spinner_to_end()
 
             self.base_page.run_discovery()

@@ -84,7 +84,7 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         self.adapters_page.wait_for_table_to_load()
         self.adapters_page.click_row()
         self.adapters_page.select_instance(node_destination)
-        self.adapters_page.click_save()
+        self.adapters_page.click_save_and_fetch()
         self.adapters_page.wait_for_server_green(position=position)
         self.adapters_page.wait_for_data_collection_toaster_absent()
         assert node_destination in self.adapters_page.get_column_data_inline('Instance Name')[0]

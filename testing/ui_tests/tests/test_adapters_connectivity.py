@@ -85,7 +85,7 @@ class TestAdaptersConnectivity(AdapterTestBase):
 
         self.adapters_page.click_new_server()
         self.fill_ad_creds_with_junk()
-        self.adapters_page.click_save()
+        self.adapters_page.click_save_and_fetch()
         self.adapters_page.wait_for_server_red()
 
         ad_log_tester = AdService().log_tester
