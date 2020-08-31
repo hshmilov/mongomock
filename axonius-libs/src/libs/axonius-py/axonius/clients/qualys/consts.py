@@ -24,6 +24,7 @@ HOST_URL_PREFIX = 'api/2.0/fo/asset/host'
 REPORT_URL_PREFIX = 'api/2.0/fo/report'
 SCANS_URL_PREFIX = 'api/2.0/fo/'
 ALL_HOSTS_URL = 'asset/host/'
+ASSET_GROUP_URL = 'api/2.0/fo/asset/group'
 ALL_HOSTS_PARAMS = f'action=list&details=All&truncation_limit={DEVICES_PER_PAGE}&id_min=0&show_tags=1'
 ALL_HOSTS_OUTPUT = 'HOST_LIST_OUTPUT'
 

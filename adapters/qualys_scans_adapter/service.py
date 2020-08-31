@@ -79,6 +79,32 @@ class QualysTicket(SmartJsonClass):
     cve_id_list = ListField(str, 'Vulnerability CVE IDs')
 
 
+class QualysAssetGroup(SmartJsonClass):
+    id = Field(str, 'ID')
+    title = Field(str, 'Title')
+    owner_user_id = Field(str, 'Owner User ID')
+    owner_username = Field(str, 'Owner User Name')
+    owner_unit_id = Field(str, 'Owner Unit ID')
+    network_ids = ListField(str, 'Network IDs')
+    last_update = Field(str, 'Last Update')
+    business_impact = Field(str, 'Business Impact')
+    cvss_enviro_cdp = Field(str, 'CVSS Enviro CDP')
+    cvss_enviro_td = Field(str, 'CVSS Enviro TD')
+    cvss_enviro_cr = Field(str, 'CVSS Enviro CR')
+    cvss_enviro_ir = Field(str, 'CVSS Enviro IR')
+    cvss_enviro_ar = Field(str, 'CVSS Enviro AR')
+    default_appliance_id = Field(str, 'Default Appliance ID')
+    appliance_ids = ListField(str, 'Appliance IDs')
+    ip_set = ListField(str, 'IP Set')
+    domain_list = ListField(str, 'Domain List')
+    dns_list = ListField(str, 'Dns List')
+    netbios_list = ListField(str, 'NetBios List')
+    ec2_ids = ListField(str, 'EC2 IDs')
+    assigned_user_ids = ListField(str, 'Assigned User IDs')
+    assigned_unit_ids = ListField(str, 'Assigned Unit IDs')
+    comments = ListField(str, 'Comments')
+
+
 class QualysHost(SmartJsonClass):
     last_vm_scan_duration = Field(int, 'Last VM Scan Duration (sec)')
     last_vm_auth_scanned_date = Field(datetime.datetime, 'Last VM Auth Scanned Date')
@@ -87,7 +113,8 @@ class QualysHost(SmartJsonClass):
     last_vulm_scan_datetime = Field(datetime.datetime, 'Last Vuln Scan Date')
     last_compliance_scan_date = Field(datetime.datetime, 'Last Compliance Scan Date')
     last_scap_scan_date = Field(datetime.datetime, 'Last Scap Scan Date')
-    asset_group_ids = ListField(str, 'Asset Group IDs')
+    asset_groups = ListField(QualysAssetGroup, 'Asset Groups')
+    asset_groups_ids = ListField(str, 'Asset Groups IDS')
 
 
 class QualysScansAdapter(ScannerAdapterBase, Configurable):
@@ -197,11 +224,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
     # pylint: enable=too-many-function-args
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         client_data, qualys_tags_white_list = client_data
         with client_data:
-            for device_raw in client_data.get_device_list():
+            for device_raw in client_data.get_device_list(fetch_asset_groups=self.__fetch_asset_groups):
                 yield (device_raw, qualys_tags_white_list)
 
     @staticmethod
@@ -710,12 +736,90 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             host.last_vulm_scan_datetime = parse_date(extra_host.get('LAST_VULN_SCAN_DATETIME'))
                             host.last_compliance_scan_date = parse_date(extra_host.get('LAST_COMPLIANCE_SCAN_DATETIME'))
                             host.last_scap_scan_date = parse_date(extra_host.get('LAST_SCAP_SCAN_DATETIME'))
+                            if isinstance(extra_host.get('ASSET_GROUP_IDS'), str):
+                                host.asset_groups_ids = [extra_host.get('ASSET_GROUP_IDS')]
+                            elif isinstance(extra_host.get('ASSET_GROUP_IDS'), list):
+                                host.asset_groups_ids = extra_host.get('ASSET_GROUP_IDS')
 
-                            asset_group_ids = extra_host.get('ASSET_GROUP_IDS')
-                            if isinstance(asset_group_ids, str):
-                                asset_group_ids = [asset_group_ids]
-                            if isinstance(asset_group_ids, list):
-                                host.asset_group_ids = asset_group_ids
+                            asset_groups = extra_host.get('extra_asset_groups')
+                            host.asset_groups = []
+                            for asset_group_raw in asset_groups:
+                                asset_group = QualysAssetGroup()
+                                asset_group.id = asset_group_raw.get('ID')
+                                asset_group.title = asset_group_raw.get('TITLE')
+                                asset_group.owner_user_id = asset_group_raw.get('OWNER_USER_ID')
+                                asset_group.owner_unit_id = asset_group_raw.get('OWNER_UNIT_ID')
+                                asset_group.last_update = asset_group_raw.get('LAST_UPDATE')
+                                asset_group.business_impact = asset_group_raw.get('BUSINESS_IMPACT')
+                                asset_group.cvss_enviro_cdp = asset_group_raw.get('CVSS_ENVIRO_CDP')
+                                asset_group.cvss_enviro_td = asset_group_raw.get('CVSS_ENVIRO_TD')
+                                asset_group.cvss_enviro_cr = asset_group_raw.get('CVSS_ENVIRO_CR')
+                                asset_group.cvss_enviro_ir = asset_group_raw.get('CVSS_ENVIRO_IR')
+                                asset_group.cvss_enviro_ar = asset_group_raw.get('CVSS_ENVIRO_AR')
+                                asset_group.default_appliance_id = asset_group_raw.get('DEFAULT_APPLIANCE_ID')
+                                asset_group.owner_username = asset_group_raw.get('OWNER_USER_NAME')
+
+                                if isinstance(asset_group_raw.get('APPLIANCE_IDS'), list):
+                                    asset_group.appliance_ids = asset_group_raw.get('APPLIANCE_IDS')
+                                elif isinstance(asset_group_raw.get('APPLIANCE_IDS'), str):
+                                    asset_group.appliance_ids = [asset_group_raw.get('APPLIANCE_IDS')]
+
+                                asset_group.ip_set = []
+                                if isinstance(asset_group_raw.get('IP_SET'), dict):
+                                    if isinstance(asset_group_raw.get('IP_SET').get('IP'), list):
+                                        asset_group.ip_set.extend(asset_group_raw.get('IP_SET').get('IP'))
+                                    if isinstance(asset_group_raw.get('IP_SET').get('IP'), str):
+                                        asset_group.ip_set.append(asset_group_raw.get('IP_SET').get('IP'))
+
+                                    if isinstance(asset_group_raw.get('IP_SET').get('IP_RANGE'), list):
+                                        asset_group.ip_set.extend(asset_group_raw.get('IP_SET').get('IP_RANGE'))
+                                    if isinstance(asset_group_raw.get('IP_SET').get('IP_RANGE'), str):
+                                        asset_group.ip_set.append(asset_group_raw.get('IP_SET').get('IP_RANGE'))
+
+                                if isinstance(asset_group_raw.get('DOMAIN_LIST'), list):
+                                    asset_group.domain_list = asset_group_raw.get('DOMAIN_LIST')
+                                elif isinstance(asset_group_raw.get('DOMAIN_LIST'), str):
+                                    asset_group.domain_list = [asset_group_raw.get('DOMAIN_LIST')]
+
+                                if isinstance(asset_group_raw.get('DNS_LIST'), dict):
+                                    if isinstance(asset_group_raw.get('DNS_LIST').get('DNS'), list):
+                                        asset_group.dns_list = asset_group_raw.get('DNS_LIST').get('DNS')
+                                    elif isinstance(asset_group_raw.get('DNS_LIST').get('DNS'), str):
+                                        asset_group.dns_list = [asset_group_raw.get('DNS_LIST').get('DNS')]
+
+                                if isinstance(asset_group_raw.get('NETBIOS_LIST'), dict):
+                                    if isinstance(asset_group_raw.get('NETBIOS_LIST').get('NETBIOS'), list):
+                                        asset_group.netbios_list = asset_group_raw.get(
+                                            'NETBIOS_LIST').get('NETBIOS')
+                                    elif isinstance(asset_group_raw.get('NETBIOS_LIST').get('NETBIOS'), str):
+                                        asset_group.netbios_list = [
+                                            asset_group_raw.get('NETBIOS_LIST').get('NETBIOS')]
+
+                                if isinstance(asset_group_raw.get('EC2_IDS'), list):
+                                    asset_group.ec2_ids = asset_group_raw.get('EC2_IDS')
+                                elif isinstance(asset_group_raw.get('EC2_IDS'), str):
+                                    asset_group.ec2_ids = [asset_group_raw.get('EC2_IDS')]
+
+                                if isinstance(asset_group_raw.get('ASSIGNED_USER_IDS'), list):
+                                    asset_group.assigned_user_ids = asset_group_raw.get('ASSIGNED_USER_IDS')
+                                elif isinstance(asset_group_raw.get('ASSIGNED_USER_IDS'), str):
+                                    asset_group.assigned_user_ids = [asset_group_raw.get('ASSIGNED_USER_IDS')]
+
+                                if isinstance(asset_group_raw.get('ASSIGNED_UNIT_IDS'), list):
+                                    asset_group.assigned_unit_ids = asset_group_raw.get('ASSIGNED_UNIT_IDS')
+                                elif isinstance(asset_group_raw.get('ASSIGNED_UNIT_IDS'), str):
+                                    asset_group.assigned_unit_ids = [asset_group_raw.get('ASSIGNED_UNIT_IDS')]
+
+                                if isinstance(asset_group_raw.get('COMMENTS'), list):
+                                    asset_group.comments = asset_group_raw.get('COMMENTS')
+                                if isinstance(asset_group_raw.get('COMMENTS'), str):
+                                    asset_group.comments = [asset_group_raw.get('COMMENTS')]
+
+                                if isinstance(asset_group_raw.get('NETWORK_IDS'), list):
+                                    asset_group.network_ids = asset_group_raw.get('NETWORK_ID')
+                                elif isinstance(asset_group_raw.get('NETWORK_ID'), str):
+                                    asset_group.network_ids = [asset_group_raw.get('NETWORK_IDS')]
+                                host.asset_groups.append(asset_group)
 
                             hosts.append(host)
                     device.hosts = hosts
@@ -861,6 +965,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_unscanned_ips',
                     'type': 'bool',
                     'title': 'Fetch unscanned IP addresses'
+                },
+                {
+                    'name': 'fetch_asset_groups',
+                    'type': 'bool',
+                    'title': 'Fetch Asset Groups'
                 }
             ],
             'required': [
@@ -873,7 +982,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'fetch_from_inventory', 'use_dns_host_as_hostname',
                 'fetch_report',
                 'fetch_tickets',
-                'fetch_unscanned_ips'
+                'fetch_unscanned_ips',
+                'fetch_asset_groups'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -892,7 +1002,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'use_dns_host_as_hostname': False,
             'fetch_unscanned_ips': False,
             'fetch_report': False,
-            'fetch_tickets': False
+            'fetch_tickets': False,
+            'fetch_asset_groups': False
         }
 
     @add_rule('add_tag_to_ids', methods=['POST'])
@@ -928,6 +1039,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_report = config.get('fetch_report', False)
         self.__fetch_tickets = config.get('fetch_tickets', False)
         self.__fetch_unscanned_ips = config.get('fetch_unscanned_ips', False)
+        self.__fetch_asset_groups = parse_bool_from_raw(config.get('fetch_asset_groups')) or False
 
     @classmethod
     def adapter_properties(cls):

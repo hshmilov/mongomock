@@ -13,7 +13,7 @@ from funcy import chunks as chunkinate  # Renamed because `chunks` is used as a 
 
 from axonius.clients.qualys import consts, xmltodict
 from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES, INVENTORY_TYPE, \
-    UNSCANNED_IP_TYPE, HOST_ASSET_TYPE, REPORT_URL_PREFIX, HOST_URL_PREFIX, UNSCANNED_IP_URL_PREFIX
+    UNSCANNED_IP_TYPE, HOST_ASSET_TYPE, REPORT_URL_PREFIX, HOST_URL_PREFIX, UNSCANNED_IP_URL_PREFIX, ASSET_GROUP_URL
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.exception import RESTException
@@ -303,7 +303,8 @@ class QualysScansConnection(RESTConnection):
             except Exception:
                 logger.exception(f'{request_id} - Failed to deliver: {response}')
 
-    def _get_hostassets(self):
+    # pylint: disable=too-many-branches, too-many-nested-blocks
+    def _get_hostassets(self, fetch_asset_groups=False):
         logger.info('Starting to fetch')
         count = self._get_device_count()
         self._yielded_devices_count = IteratorCounter(f'Got {{count}} devices so far out of {count}', threshold=100)
@@ -328,13 +329,36 @@ class QualysScansConnection(RESTConnection):
         for i in range(1, consts.FETCH_EXCEPTION_THRESHOLD + 1):
             logger.info(f'Aync round number {i}, sending {len(requests)} requests')
             success_indices = []
+            asset_group_by_id = self._get_asset_group_by_id()
             for index, devices in self._get_hostassets_by_requests(requests):
                 for device in devices:
                     if isinstance(device, dict) and isinstance(device.get('HostAsset'), dict) and \
                             device.get('HostAsset').get('address'):
                         ip = device.get('HostAsset').get('address')
-                        if hosts.get(ip):
-                            device['HostAsset']['extra_host'] = hosts.get(ip)
+                        host_ips = hosts.get(ip)
+                        if host_ips:
+                            if fetch_asset_groups:
+                                device['HostAsset']['extra_host'] = []
+                                if isinstance(host_ips, list):
+                                    for host in host_ips:
+                                        if not isinstance(host, dict):
+                                            continue
+                                        asset_group_ids = host.get('ASSET_GROUP_IDS')
+                                        host['extra_asset_groups'] = []
+                                        if isinstance(asset_group_ids, str):
+                                            asset_group_ids = [asset_group_ids]
+
+                                        if not isinstance(asset_group_ids, list):
+                                            continue
+
+                                        for asset_group_id in asset_group_ids:
+                                            if not asset_group_by_id.get(asset_group_id):
+                                                continue
+                                            host['extra_asset_groups'].append(asset_group_by_id.get(asset_group_id))
+                                        device['HostAsset']['extra_host'].append(host)
+                            else:
+                                device['HostAsset']['extra_host'] = host_ips
+
                         if tickets.get(ip):
                             device['HostAsset']['extra_tickets'] = tickets.get(ip)
                         if report.get(ip):
@@ -349,7 +373,8 @@ class QualysScansConnection(RESTConnection):
         else:
             logger.error(f'Lost {len(requests) * self._devices_per_page} devices')
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_asset_groups=False):
         try:
             if self._fetch_unscanned_ips:
                 yield from self._get_unscanned_ips()
@@ -360,7 +385,7 @@ class QualysScansConnection(RESTConnection):
             if self._fetch_from_inventory:
                 yield from self._paginated_inventory_get()
             else:
-                for device_raw in self._get_hostassets():
+                for device_raw in self._get_hostassets(fetch_asset_groups):
                     yield device_raw, HOST_ASSET_TYPE
         except Exception:
             logger.exception(f'Problem getting hostassets')
@@ -670,6 +695,48 @@ class QualysScansConnection(RESTConnection):
         except Exception as e:
             logger.debug(f'Failed with {e}')
             return None
+
+    def _get_asset_group_by_id(self):
+        asset_group_by_id = {}
+        try:
+            url_params = {
+                'action': 'list'
+            }
+            response = self._get(ASSET_GROUP_URL,
+                                 url_params=url_params,
+                                 do_basic_auth=True,
+                                 use_json_in_body=False,
+                                 use_json_in_response=False)
+            response = xmltodict.parse(response)
+
+            if not (isinstance(response.get('ASSET_GROUP_LIST_OUTPUT'), dict)
+                    and isinstance(response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE'), dict)
+                    and isinstance(response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST'),
+                                   dict)
+                    and isinstance(
+                        response.get('ASSET_GROUP_LIST_OUTPUT').get(
+                            'RESPONSE').get('ASSET_GROUP_LIST').get('ASSET_GROUP'),
+                        list)):
+                logger.error(f'response is not in the correct format {response}')
+                return asset_group_by_id
+
+            asset_groups = response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get(
+                'ASSET_GROUP')
+
+            number_of_asset_groups = 0
+
+            for asset_group in asset_groups:
+                if not asset_group.get('ID'):
+                    logger.warning(f'asset group not in the correct format: {asset_group}')
+                    continue
+                asset_group_by_id[asset_group.get('ID')] = asset_group
+                number_of_asset_groups += 1
+
+            logger.info(f'Collected {number_of_asset_groups} asset groups successfully')
+        except Exception as e:
+            logger.exception(f'Error happened while getting asset groups: {e}')
+
+        return asset_group_by_id
 
     def delete_group(self, id_):
         try:
