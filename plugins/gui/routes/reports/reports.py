@@ -397,9 +397,9 @@ class Reports:
                                    generator_params,
                                    'gui/templates/report/',
                                    host=server_name).render_html(generated_date)
-        except Exception as e:
-            logging.exception(e)
-        return None
+        except Exception:
+            logger.exception(f'Failed to generate report {report.get("name", "")}')
+            return None, None
 
     def _get_adapter_data(self, adapters):
         """
