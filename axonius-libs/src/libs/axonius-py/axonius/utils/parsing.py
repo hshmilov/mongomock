@@ -286,8 +286,8 @@ def figure_out_os(s):
         # Probably not CPE string
         pass
 
-    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'Win64']
-    makes_32bit = ['32-bit', 'x86', 'x32']
+    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'win64']
+    makes_32bit = ['32-bit', 'x86', 'x32', '32 bit']
 
     is_windows_server = False
     bitness = None

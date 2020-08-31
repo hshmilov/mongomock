@@ -4,11 +4,13 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.devices.device_adapter import AGENT_NAMES
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_bool_from_raw
 from symantec_edr_adapter.connection import SymantecEdrConnection
 from symantec_edr_adapter.client_id import get_client_id
+from symantec_edr_adapter.consts import DISPOSITION_MAP
 from symantec_edr_adapter.structures import SymantecEdrDeviceInstance
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -21,14 +23,6 @@ class SymantecEdrAdapter(AdapterBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-
-        # This will be used to map disposition code to value.
-        SymantecEdrAdapter.disposition_map = {
-            0: 'Good',
-            1: 'Unknown',
-            2: 'Suspicious',
-            3: 'Bad'
-        }
 
     @staticmethod
     def _get_client_id(client_config):
@@ -48,7 +42,7 @@ class SymantecEdrAdapter(AdapterBase):
                                            proxy_username=client_config.get('proxy_username'),
                                            proxy_password=client_config.get('proxy_password'),
                                            username=client_config.get('username'),
-                                           password=client_config('password'))
+                                           password=client_config.get('password'))
         with connection:
             pass  # check that the connection credentials are valid
         return connection
@@ -147,22 +141,14 @@ class SymantecEdrAdapter(AdapterBase):
     @staticmethod
     def _fill_symantec_edr_device_fields(device_raw: dict, device: MyDeviceAdapter):
         try:
-            device.ip_address = device_raw.get('device_ip')
-            device.agent_version = device_raw.get('agent_version')
-            device.domain_or_workgroup = device_raw.get('domain_or_workgroup')
             device.managed_sepm_ip = device_raw.get('managed_sepm_ip')
             device.managed_sepm_version = device_raw.get('managed_sepm_version')
 
-            operating_system = device_raw.get('operating_system')
             disposition_endpoint = device_raw.get('disposition_endpoint')
             sep_group_summary = device_raw.get('sep_group_summary')
 
-            if isinstance(operating_system, dict):
-                is_64_arch = parse_bool_from_raw(operating_system.get('is_64_bit'))
-                device.os_architecture = '64' if is_64_arch else '32'
-
             if disposition_endpoint:
-                device.disposition_endpoint = SymantecEdrAdapter.disposition_map.get(disposition_endpoint)
+                device.disposition_endpoint = DISPOSITION_MAP.get(disposition_endpoint)
 
             if isinstance(sep_group_summary, dict):
                 device.sep_group_name = sep_group_summary.get('name')
@@ -172,6 +158,7 @@ class SymantecEdrAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
+    # pylint: disable=R0912,R0915
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('device_uid')
@@ -181,21 +168,52 @@ class SymantecEdrAdapter(AdapterBase):
 
             device.id = device_id
             device.name = device_raw.get('device_name')
-            device.pc_type = device_raw.get('type')
+            device.domain = device_raw.get('domain_or_workgroup')
             device.current_logged_user = device_raw.get('user_name')
-            device.first_seen = parse_date(device_raw.get('firstSeen'))
-            device.last_seen = parse_date(device_raw.get('lastSeen'))
+            device.first_seen = parse_date(device_raw.get('first_seen'))
+            device.last_seen = parse_date(device_raw.get('last_seen'))
+
+            agent_version = device_raw.get('agent_version')
+            device_ip = device_raw.get('device_ip')
+            ip_addresses = device_raw.get('ip_addresses')
+            mac_addresses = device_raw.get('mac_addresses')
             operating_system = device_raw.get('operating_system')
 
-            if isinstance(operating_system, dict):
-                device.os = operating_system.get('osfullname')
-            device.add_ips_and_macs(
-                ips=device_raw.get('ip_addresses'),
-                macs=device_raw.get('mac_addresses')
-            )
+            try:
+                if isinstance(operating_system, dict):
+                    is_64_arch = parse_bool_from_raw(operating_system.get('is_64_bit'))
+                    os_name = operating_system.get('osfullname')
+                    os_arch = '64 bit' if is_64_arch else '32 bit'
+                    device.figure_os(f'{os_name} {os_arch}')
+                else:
+                    logger.warning(f'Unexpected os object, expected to get a dict: {str(operating_system)}')
+            except Exception:
+                logger.warning(f'Failed to figure out os: {os_name} {os_arch}')
 
-            if not device.first_seen or not device.last_seen:
-                logger.exception(f'Could not parse first and last seen dates for {device_raw}')
+            try:
+                device.add_agent_version(agent=AGENT_NAMES.symantec_edr, version=agent_version)
+            except Exception:
+                logger.warning(f'Could not add agent with version: {device.name} , {agent_version}')
+
+            try:
+                if isinstance(ip_addresses, str):
+                    ip_addresses = [ip_addresses]  # Wrap a single string to list.
+                if not isinstance(ip_addresses, list):
+                    logger.warning(f'IP addresses field is neither list nor string!  {str(ip_addresses)}')
+                    ip_addresses = []
+
+                if device_ip not in ip_addresses:
+                    ip_addresses.append(device_ip)
+
+                if isinstance(mac_addresses, list):
+                    device.add_ips_and_macs(ips=ip_addresses, macs=mac_addresses)
+                elif isinstance(mac_addresses, str):
+                    device.add_nic(mac=mac_addresses, ips=ip_addresses)
+                else:
+                    logger.warning(f'MAC addresses field is neither list nor string!  {mac_addresses}')
+                    device.add_ips_and_macs(ips=ip_addresses)
+            except Exception as ex:
+                logger.warning(f'Could not add ip/mac addresses, Error:{str(ex)}  , Raw Device:{device_raw}')
 
             self._fill_symantec_edr_device_fields(device_raw, device)
             device.set_raw(device_raw)

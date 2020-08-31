@@ -41,9 +41,10 @@ AGENTS = namedtuple('Agents', (
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
     'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium', 'malwarebytes_cloud', 'infinipoint',
-    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'ivanti_sc', 'tenable_io',
+    'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io',
     'tripwire', 'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason', 'sysaid',
-    'twistlock', 'webroot', 'aqua', 'iboss', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus', 'microfocus_sa', 'contrast',
+    'symantec_edr', 'ivanti_sc', 'twistlock', 'webroot', 'aqua', 'iboss', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus',
+    'microfocus_sa', 'contrast',
 ))
 
 AGENT_NAMES = AGENTS(
@@ -69,7 +70,7 @@ AGENT_NAMES = AGENTS(
     webroot='Webroot Agent', symantec_12='Symantec SEP 12 Agent', wazuh='Wazuh Agent',
     aqua='Aqua Enforcer', iboss='IBoss Agent', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
     deep_security='DeepSecurity Agent', wsus='WSUS Client', microfocus_sa='Microfocus Server Automation',
-    contrast='Contrast Security Agent',
+    contrast='Contrast Security Agent', symantec_edr='Symantec EDR Agent'
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
