@@ -54,7 +54,7 @@ class GuardicoreConnection(RESTConnection):
                     logger.exception(f'Problem with incident raw {incident_raw}')
         except Exception:
             logger.exception(f'Problem getting incidents')
-        for device_raw in self._get_api_endpoint('assets'):
+        for device_raw in self._get_api_endpoint('assets', status='on'):
             yield device_raw, incidents_dict
 
     def get_user_list(self):
@@ -63,9 +63,9 @@ class GuardicoreConnection(RESTConnection):
         except Exception:
             logger.exception(f'Problem fetching users data')
 
-    def _get_api_endpoint(self, endpoint, to_time=None, from_time=None):
+    def _get_api_endpoint(self, endpoint, to_time=None, from_time=None, status=None):
         offset = 0
-        response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset,
+        response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset, 'status': status,
                                                    'to_time': to_time, 'from_time': from_time})
         yield from response.get('objects')
         total_count = response.get('total_count')
@@ -73,7 +73,7 @@ class GuardicoreConnection(RESTConnection):
         number_exception = 0
         while offset < min(MAX_NUMBER_OF_DEVICES, total_count):
             try:
-                response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset,
+                response = self._get(endpoint, url_params={'limit': DEVICE_PER_PAGE, 'offset': offset, 'status': status,
                                                            'to_time': to_time, 'from_time': from_time})
                 if not response.get('objects'):
                     break

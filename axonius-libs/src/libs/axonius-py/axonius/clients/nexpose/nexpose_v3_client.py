@@ -242,7 +242,13 @@ class NexposeV3Client(NexposeClient):
         site_name = rapid7_dict.get('site_name')
         site_id = self.get_site_id(site_name)
         ips_list = set(rapid7_dict.get('ips'))
-        ips_list.union(self._send_get_request(f'sites/{site_id}/included_targets')['addresses'])
+        try:
+            site_raw = self._send_get_request(f'sites/{site_id}/included_targets')
+            if site_raw.get('addresses'):
+                ips_list = ips_list.union(site_raw['addresses'])
+        except Exception:
+            logger.exception(f'Problem adding site raw')
+            raise
         ips_list = list(ips_list)
         self._send_put_request(f'sites/{site_id}/included_targets', json=ips_list)
         return True
