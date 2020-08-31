@@ -1318,6 +1318,11 @@
     "link": "https://docs.axonius.com/docs/chef",
     "description": "Chef provides continuous automation for building, deploying, and managing infrastructure, compliance, and applications in legacy and hybrid environments."
   },
+  "illumio_adapter": {
+    "title": "Illumio Adaptive Security Platform (ASP) - BETA",
+    "link": "https://docs.axonius.com/docs/illumio-asp",
+    "description": "Illumio Adaptive Security Platform (ASP) is a software solution that secures computing platforms in cloud, on-prem or hybrid environments without any dependency on the underlying network."
+  },
   "cisco_prime_adapter": {
     "title": "Cisco Prime",
     "link": "https://docs.axonius.com/docs/cisco-prime",
