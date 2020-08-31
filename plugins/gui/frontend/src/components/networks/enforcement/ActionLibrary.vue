@@ -6,12 +6,13 @@
     />
     <MdList
       class="actions-container"
-      :md-expand-single="true"
+      :md-expand-single="false"
     >
       <MdListItem
         v-for="category in processedCategories"
         :key="category.name"
         :md-expand="true"
+        :md-expanded="searchValue.length"
       >
         <XTitle :logo="`actions/${category.name}`">{{ category.title }}</XTitle>
         <MdList

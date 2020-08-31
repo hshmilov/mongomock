@@ -254,7 +254,7 @@ export default {
     actionPosition() {
       this.isSavedDisabled = true;
       this.$emit('update:is-editing-mode', this.isActionUndefined);
-      this.$nextTick().then(() => {
+      this.$nextTick(() => {
         const enforcementActionConfig = this.$refs.enforcement_action_config;
         if (enforcementActionConfig) {
           enforcementActionConfig.initConfigValidations();

@@ -236,7 +236,7 @@ export default {
     },
     setFocusOnEnforcementName() {
       if (!this.isExistingEnforcement && this.focusOnEnforcementName) {
-        this.$nextTick().then(() => {
+        this.$nextTick(() => {
           this.$refs.enforcement_name_input.focus();
         });
       }

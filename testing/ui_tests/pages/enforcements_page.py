@@ -361,7 +361,6 @@ class EnforcementsPage(EntitiesPage):
         time.sleep(0.2)
 
     def get_action_category_items(self, category_name):
-        self.open_action_category(category_name)
         return [
             el.text.strip()
             for el in self.find_elements_by_xpath(self.CATEGORY_ACTIONS_XPATH.format(category=category_name))
