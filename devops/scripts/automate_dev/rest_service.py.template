@@ -33,17 +33,16 @@ class {capital_adapter_name}Adapter(AdapterBase):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     @staticmethod
     def get_connection(client_config):
-        # AUTOADAPTER
-        connection = {capital_adapter_name}Connection(domain=client_config['domain'],
-                                         verify_ssl=client_config['verify_ssl'],
+        connection = {capital_adapter_name}Connection(domain=client_config.get('domain'),
+                                         verify_ssl=client_config.get('verify_ssl'),
                                          https_proxy=client_config.get('https_proxy'),
                                          proxy_username=client_config.get('proxy_username'),
                                          proxy_password=client_config.get('proxy_password'),
-                                         username=client_config['username'],
-                                         password=client_config['password'])
+                                         username=client_config.get('username'),
+                                         password=client_config.get('password'))
         with connection:
             pass  # check that the connection credentials are valid
         return connection
@@ -140,18 +139,16 @@ class {capital_adapter_name}Adapter(AdapterBase):
             'type': 'array'
         }}
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     @staticmethod
     def _fill_{adapter_name}_device_fields(device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
             pass
         except Exception:
             logger.exception(f'Failed creating instance for device {{device_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
             device_id = device_raw.get('')
             if device_id is None:
@@ -184,18 +181,16 @@ class {capital_adapter_name}Adapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     @staticmethod
     def _fill_{adapter_name}_user_fields(user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
         try:
             pass
         except Exception:
             logger.exception(f'Failed creating instance for user {{user_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _create_user(self, user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
         try:
             user_id = user_raw.get('')
             if user_id is None:
@@ -229,8 +224,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
 
-    # TODO: Modify
+    # TODO: Modify, check if you need to add other properties
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]

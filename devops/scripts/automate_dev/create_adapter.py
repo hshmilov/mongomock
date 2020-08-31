@@ -206,12 +206,13 @@ def service_action(filename: str, adapter_name: str, adapter_type: str):
 
 
 def connection_action(filename: str, adapter_name: str, adapter_type: str):
-    """ Create service.py file for the adapter """
+    """ Create connection.py file for the adapter """
 
     if adapter_type == AdapterTypes.REST.value:
         template = open(os.path.join(get_cortex_dir(), 'devops/scripts/automate_dev/connection.py.template'),
                         'r', encoding='utf-8').read()
-        template = template.format(capital_adapter_name=capitalize_adapter_name(adapter_name))
+        template = template.format(adapter_name=adapter_name,
+                                   capital_adapter_name=capitalize_adapter_name(adapter_name))
         with open(filename, 'w') as file_:
             file_.write(template)
 
@@ -226,14 +227,12 @@ from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 from axonius.devices.device_adapter import DeviceAdapter
 
-# TODO: implement
+# TODO: AUTOADAPTER - implement
 class {capital_adapter_name}DeviceInstance(DeviceAdapter):
-    # AUTOADAPTER
     pass
 
-# TODO: implement
+# TODO: AUTOADAPTER - implement
 class {capital_adapter_name}UserInstance(UserAdapter):
-    # AUTOADAPTER
     pass
 '''
     with open(filename, 'w') as file_:
@@ -242,10 +241,16 @@ class {capital_adapter_name}UserInstance(UserAdapter):
 
 def client_id_action(filename: str, *args):
     template = \
-        '''# TODO: implement
+        '''# TODO: AUTOADAPTER - implement
+import hashlib
+
+
 def get_client_id(client_config):
-    # AUTOADAPTER
-    return client_config['domain']
+    token_md5 = hashlib.md5(client_config.get('token').encode('utf-8')).hexdigest()
+    return f'{client_config.get("domain")}_{token_md5}'
+
+def get_client_id(client_config):
+    return f'{client_config.get("domain")}_{client_config.get("username")}'
 '''
     with open(filename, 'w') as file_:
         file_.write(template)
@@ -263,7 +268,9 @@ DEFAULT_{capital_adapter_name}_PORT = 1433
 {capital_adapter_name}_DATABASE = 'database'
 DEFAULT_{capital_adapter_name}_DATABASE = 'CIS_CMDB'
 DRIVER = 'driver'
-DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+
+DEVICES_FETCHED_AT_A_TIME_NUMBER = 1000
+DEVICES_FETCHED_AT_A_TIME = 'devices_fetched_at_a_time'
 
 # TODO: Must insert specific columns fields in the query, Its forbidden to query *
 {capital_adapter_name}_QUERY = 'Select (AUTOADAPTER) from Computers'

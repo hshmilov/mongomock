@@ -35,17 +35,16 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('server'),
                                                 port=client_config.get('port'))
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def get_connection(self, client_config):
-        # AUTOADAPTER
         connection = MSSQLConnection(database=client_config.get(consts.{only_capital_adapter_name}_DATABASE,
                                                                 consts.DEFAULT_{only_capital_adapter_name}_DATABASE),
-                                     server=client_config[consts.{only_capital_adapter_name}_HOST],
+                                     server=client_config.get(consts.{only_capital_adapter_name}_HOST),
                                      port=client_config.get(consts.{only_capital_adapter_name}_PORT,
                                                             consts.DEFAULT_{only_capital_adapter_name}_PORT),
                                      devices_paging=self.__devices_fetched_at_a_time)
-        connection.set_credentials(username=client_config[consts.USER],
-                                   password=client_config[consts.PASSWORD])
+        connection.set_credentials(username=client_config.get(consts.USER),
+                                   password=client_config.get(consts.PASSWORD))
         with connection:
             pass  # check that the connection credentials are valid
         return connection
@@ -60,6 +59,7 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
+    # TODO: implement _query_devices_by_client
     def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
         """
         Get all devices from a specific domain
@@ -69,7 +69,6 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the Server
         """
-        # AUTOADAPTER - implement _query_devices_by_client
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
             # TODO: We want to make SQL connection as short as possible, therefore query should get all the info in one time
@@ -141,18 +140,16 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
             'type': 'array'
         }}
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     @staticmethod
     def _fill_{adapter_name}_device_fields(device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
             pass
         except Exception:
             logger.exception(f'Failed creating instance for device {{device_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
             device_id = device_raw.get('')
             if device_id is None:
@@ -185,18 +182,16 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem with fetching {capital_adapter_name} Device for {{device_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     @staticmethod
     def _fill_{adapter_name}_user_fields(user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
         try:
             pass
         except Exception:
             logger.exception(f'Failed creating instance for user {{user_raw}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _create_user(self, user_raw: dict, user: MyUserAdapter):
-        # AUTOADAPTER
         try:
             user_id = user_raw.get('')
             if user_id is None:
@@ -230,10 +225,9 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem with fetching {capital_adapter_name} User for {{user_raw}}')
 
-    # TODO: Modify
+    # TODO: Modify, check if you need to add other properties
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]
 
     @classmethod
@@ -241,12 +235,12 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
         return {{
             'items': [
                 {{
-                    'name': 'devices_fetched_at_a_time',
+                    'name': consts.DEVICES_FETCHED_AT_A_TIME,
                     'type': 'integer',
                     'title': 'SQL pagination'
                 }}
             ],
-            'required': ['devices_fetched_at_a_time'],
+            'required': [consts.DEVICES_FETCHED_AT_A_TIME],
             'pretty_name': '{capital_adapter_name} Configuration',
             'type': 'array'
         }}
@@ -254,8 +248,8 @@ class {capital_adapter_name}Adapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {{
-            'devices_fetched_at_a_time': 1000
+            consts.DEVICES_FETCHED_AT_A_TIME: consts.DEVICES_FETCHED_AT_A_TIME_NUMBER
         }}
 
     def _on_config_update(self, config):
-        self.__devices_fetched_at_a_time = config['devices_fetched_at_a_time']
+        self.__devices_fetched_at_a_time = config[consts.DEVICES_FETCHED_AT_A_TIME]

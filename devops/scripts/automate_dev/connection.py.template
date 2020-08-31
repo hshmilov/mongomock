@@ -1,7 +1,9 @@
 import logging
+import datetime
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.clients.{adapter_name}.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES
 
 logger = logging.getLogger(f'axonius.{{__name__}}')
 
@@ -16,17 +18,16 @@ class {capital_adapter_name}Connection(RESTConnection):
                          **kwargs)
         self._session_refresh = None
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _refresh_token(self):
-        # AUTOADAPTER
         if self._session_refresh and self._session_refresh > datetime.datetime.now():
             return
-        # Make request 
 
-    # TODO: implement
+        # Make refresh token request
+
+    # TODO: AUTOADAPTER - implement
     def _connect(self):
-        # AUTOADAPTER
-        if not self._username or not self._password:
+        if not (self._username and self._password):
             raise RESTException('No username or password')
 
         try:
@@ -34,38 +35,48 @@ class {capital_adapter_name}Connection(RESTConnection):
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {{str(e)}}')
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _paginated_device_get(self):
-        # AUTOADAPTER
         try:
-            pass
+            total_fetched_devices = 0
+
+            response = self._get()
+            if not response:
+                logger.warning(f'Received invalid response for devices: {{response}}')
+                return
+
+            logger.info(f'Got total of {{total_fetched_devices}} devices')
         except Exception:
             logger.exception(f'Invalid request made while paginating devices')
             raise
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def get_device_list(self):
         # This function must exist even if the adapter doesnt fetch devices
         # Just do pass
-        # AUTOADAPTER
         try:
             yield from self._paginated_device_get()
         except RESTException as err:
             logger.exception(str(err))
             raise
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def _paginated_user_get(self):
-        # AUTOADAPTER
         try:
-            pass
+            total_fetched_users = 0
+
+            response = self._get()
+            if not response:
+                logger.warning(f'Received invalid response for users: {{response}}')
+                return
+
+            logger.info(f'Got total of {{total_fetched_users}} users')
         except Exception as err:
             logger.exception(f'Invalid request made while paginating users {{str(err)}}')
             raise
 
-    # TODO: implement
+    # TODO: AUTOADAPTER - implement
     def get_user_list(self):
-        # AUTOADAPTER
         try:
             yield from self._paginated_user_get()
         except RESTException as err:
