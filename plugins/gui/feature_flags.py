@@ -133,6 +133,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.DoNotPopulateHeavyFields,
+                    'title': 'Do not populate software heavy fields',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -310,6 +315,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.QueryTimelineRange: False,
             FeatureFlagsNames.EnforcementCenter: True,
             FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField: False,
+            FeatureFlagsNames.DoNotPopulateHeavyFields: False,
             DashboardControlNames.root_key: {
                 DashboardControlNames.present_call_limit: 10,
                 DashboardControlNames.historical_call_limit: 5

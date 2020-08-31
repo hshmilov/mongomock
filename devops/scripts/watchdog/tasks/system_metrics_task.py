@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import psutil
@@ -25,6 +26,7 @@ class SystemMetricsTask(WatchdogTask):
             self.report_swap()
             self.report_docker_stats()
             self.report_collection_stats()
+            self.report_unfinished_triggerables()
             time.sleep(SLEEP_SECONDS)
 
     def report_disk_space(self):
@@ -101,10 +103,34 @@ class SystemMetricsTask(WatchdogTask):
                 self.report_metric(metric_name + '.indexes', bytes_to_gb(storage['totalIndexSize']))
                 self.report_metric(metric_name + '.total',
                                    bytes_to_gb(storage['storageSize'] + storage['totalIndexSize']))
-                self.report_metric(metric_name + '.in-memory', bytes_to_gb(storage['size']))
+                self.report_metric(metric_name + '.in_memory', bytes_to_gb(storage['size']))
 
+                wired_tiger = storage.get('wiredTiger') or {}
+                available_for_reuse = (wired_tiger.get('block-manager') or {}).get('file bytes available for reuse')
+                self.report_metric(metric_name + '.available_for_reuse', bytes_to_gb(available_for_reuse))
         except Exception as e:
             self.report_error(f'Failed reporting collection stats - {e}')
+
+    def report_unfinished_triggerables(self):
+        try:
+            ax = AxoniusService()
+            for config in ax.db.client['core']['configs'].find(
+                    {
+                        'plugin_type': 'Adapter',
+                        'status': 'up'
+                    }
+            ):
+                pun = config['plugin_unique_name']
+                for triggerable in ax.db.client[pun]['triggerable_history'].find({
+                    'job_completed_state': 'Running'
+                }):
+                    triggerable_started_at_utc = triggerable['started_at'].replace(tzinfo=None)
+                    triggerable_already_running = datetime.datetime.utcnow() - triggerable_started_at_utc
+                    triggerable_key_prefix = f'{SystemMetric.TRIGGERABLE_RUNNING}.{pun}.{triggerable["job_name"]}'
+                    self.report_metric(f'{triggerable_key_prefix}.start_time_utc', triggerable_started_at_utc)
+                    self.report_metric(f'{triggerable_key_prefix}.run_time', triggerable_already_running)
+        except Exception as e:
+            self.report_error(f'Failed reporting triggerables: {str(e)}')
 
 
 if __name__ == '__main__':

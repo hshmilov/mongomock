@@ -1,5 +1,6 @@
 import logging
 
+from axonius.devices.device_adapter import get_settings_cached
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -189,28 +190,30 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
                         rapid_vulnerability.vulnerability_id = vulnerability.get('vulnerability_id')
                         rapid_vulnerability.nexpose_id = vulnerability.get('nexpose_id')
                         rapid_vulnerability.title = vulnerability.get('title')
-                        rapid_vulnerability.date_published = parse_date(vulnerability.get('date_published'))
-                        rapid_vulnerability.date_added = parse_date(vulnerability.get('date_added'))
-                        rapid_vulnerability.date_modified = parse_date(vulnerability.get('date_modified'))
-                        rapid_vulnerability.severity_score = vulnerability.get('severity_score')
                         rapid_vulnerability.severity = vulnerability.get('severity')
-                        rapid_vulnerability.critical = vulnerability.get('critical')
-                        rapid_vulnerability.severe = vulnerability.get('severe')
-                        rapid_vulnerability.moderate = vulnerability.get('moderate')
-                        rapid_vulnerability.pci_severity_score = vulnerability.get('pci_severity_score')
-                        rapid_vulnerability.pci_status = vulnerability.get('pci_status')
-                        rapid_vulnerability.pci_failures = vulnerability.get('pci_failures')
-                        rapid_vulnerability.risk_score = _parse_float(vulnerability.get('risk_score'))
-                        rapid_vulnerability.cvss_vector = vulnerability.get('cvss_vector')
-                        rapid_vulnerability.cvss_score = _parse_float(vulnerability.get('cvss_score'))
-                        rapid_vulnerability.pci_adjusted_cvss_score = _parse_float(
-                            vulnerability.get('pci_adjusted_cvss_score'))
-                        rapid_vulnerability.denial_of_service = vulnerability.get('denial_of_service')
-                        rapid_vulnerability.exploits = vulnerability.get('exploits')
-                        rapid_vulnerability.malware_kits = vulnerability.get('malware_kits')
-                        rapid_vulnerability.malware_popularity = vulnerability.get('malware_popularity')
-                        rapid_vulnerability.cvss_v3_vector = vulnerability.get('cvss_v3_vector')
-                        rapid_vulnerability.cvss_v3_score = _parse_float(vulnerability.get('cvss_v3_score'))
+
+                        if get_settings_cached()['should_populate_heavy_fields']:
+                            rapid_vulnerability.date_published = parse_date(vulnerability.get('date_published'))
+                            rapid_vulnerability.date_added = parse_date(vulnerability.get('date_added'))
+                            rapid_vulnerability.date_modified = parse_date(vulnerability.get('date_modified'))
+                            rapid_vulnerability.severity_score = vulnerability.get('severity_score')
+                            rapid_vulnerability.critical = vulnerability.get('critical')
+                            rapid_vulnerability.severe = vulnerability.get('severe')
+                            rapid_vulnerability.moderate = vulnerability.get('moderate')
+                            rapid_vulnerability.pci_severity_score = vulnerability.get('pci_severity_score')
+                            rapid_vulnerability.pci_status = vulnerability.get('pci_status')
+                            rapid_vulnerability.pci_failures = vulnerability.get('pci_failures')
+                            rapid_vulnerability.risk_score = _parse_float(vulnerability.get('risk_score'))
+                            rapid_vulnerability.cvss_vector = vulnerability.get('cvss_vector')
+                            rapid_vulnerability.cvss_score = _parse_float(vulnerability.get('cvss_score'))
+                            rapid_vulnerability.pci_adjusted_cvss_score = _parse_float(
+                                vulnerability.get('pci_adjusted_cvss_score'))
+                            rapid_vulnerability.denial_of_service = vulnerability.get('denial_of_service')
+                            rapid_vulnerability.exploits = vulnerability.get('exploits')
+                            rapid_vulnerability.malware_kits = vulnerability.get('malware_kits')
+                            rapid_vulnerability.malware_popularity = vulnerability.get('malware_popularity')
+                            rapid_vulnerability.cvss_v3_vector = vulnerability.get('cvss_v3_vector')
+                            rapid_vulnerability.cvss_v3_score = _parse_float(vulnerability.get('cvss_v3_score'))
 
                         rapid_vulnerabilities.append(rapid_vulnerability)
             device.rapid_vulnerabilities = rapid_vulnerabilities

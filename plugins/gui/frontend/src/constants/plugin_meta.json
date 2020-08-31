@@ -1373,7 +1373,7 @@
     "link": "https://docs.axonius.com/docs/cisco-meraki",
     "description": "Cisco Meraki solutions include wireless, switching, security, EMM, communications, and security cameras, all centrally managed from the web."
   },
-    "checkmarx_adapter": {
+  "checkmarx_adapter": {
     "title": "Checkmarx SAST",
     "link": "https://docs.axonius.com/docs/checkmarx-sast",
     "description": "Checkmarx SAST (CxSAST) is a static application security testing solution used to identify security vulnerabilities in custom code. It is used by development, DevOps, and security teams to scan source code early in the SDLC, identify vulnerabilities, and provide actionable insights to remediate them."
@@ -1497,5 +1497,9 @@
     "title": "Rancher",
     "link": "https://docs.axonius.com/docs/rancher",
     "description": "Rancher is an open-source multi-cluster orchestration platform that enables operations teams to deploy, manage and secure enterprise Kubernetes."
+  },
+  "firebom_adapter": {
+    "title": "Firebom",
+    "description": "Firebom"
   }
 }

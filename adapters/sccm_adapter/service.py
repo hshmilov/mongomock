@@ -4,7 +4,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_entity import ADEntity
-from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES, get_settings_cached
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import is_domain_valid
@@ -672,12 +672,20 @@ class SccmAdapter(AdapterBase, Configurable):
                                         path = None
                                 except Exception:
                                     logger.warning(f'Problem with file data {new_asset_data}', exc_info=True)
+
+                                if get_settings_cached()['should_populate_heavy_fields']:
+                                    source_ais = 'SCCM SoftwareProduct Table'
+                                    path_ais = path
+                                else:
+                                    source_ais = None
+                                    path_ais = None
+
                                 device.add_installed_software(
                                     name=new_asset_data.get('ProductName'),
                                     version=new_asset_data.get('ProductVersion'),
                                     vendor=new_asset_data.get('CompanyName'),
-                                    source='SCCM SoftwareProduct Table',
-                                    path=path
+                                    source=source_ais,
+                                    path=path_ais
                                 )
                             except Exception:
                                 logger.exception(f'Problem adding new sw asset {new_asset_data}')
@@ -689,9 +697,15 @@ class SccmAdapter(AdapterBase, Configurable):
                         for asset_data in device_raw['asset_software_data']:
                             try:
                                 if asset_data.get('ProductName0'):
+
+                                    if get_settings_cached()['should_populate_heavy_fields']:
+                                        source_ais = 'SCCM INSTALLED_SOFTWARE Table'
+                                    else:
+                                        source_ais = None
+
                                     device.add_installed_software(
                                         name=asset_data.get('ProductName0'), version=asset_data.get('ProductVersion0'),
-                                        source='SCCM INSTALLED_SOFTWARE Table'
+                                        source=source_ais
                                     )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')
@@ -703,9 +717,15 @@ class SccmAdapter(AdapterBase, Configurable):
                         for asset_data in device_raw['asset_program_data']:
                             try:
                                 if asset_data.get('DisplayName0'):
+
+                                    if get_settings_cached()['should_populate_heavy_fields']:
+                                        source_ais = 'SCCM ADD_REMOVE_PROGRAMS Table'
+                                    else:
+                                        source_ais = None
+
                                     device.add_installed_software(
                                         name=asset_data.get('DisplayName0'), version=asset_data.get('Version0'),
-                                        source='SCCM ADD_REMOVE_PROGRAMS Table'
+                                        source=source_ais
                                     )
                             except Exception:
                                 logger.exception(f'Problem adding asset {asset_data}')

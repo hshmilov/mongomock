@@ -12,7 +12,7 @@ from testing.services.plugins.mongo_service import MongoService
 def usage():
     print(f'''Usage:
 {sys.argv[0]} show [plugin_name]
-{sys.argv[0]} swap [first plugin_unique_name] [second plugin_unique_name]
+{sys.argv[0]} update [first plugin_unique_name] [second plugin_unique_name]
     '''.strip())
 
 
@@ -31,7 +31,7 @@ def main():
         for i, plugin in enumerate(all_plugins):
             node = nodes_by_id[plugin['node_id']]
             print(f'{i}. {plugin["plugin_unique_name"]} | '
-                  f'on {node["node_id"]!r} ({node["node_name"]!r} / {",".join(node["ips"])})')
+                  f'on {node["node_id"]!r} ({node["node_name"]!r} / {",".join(node["metrics"]["ips"])})')
     elif action == 'update':
         pun_1 = sys.argv[2]
         pun_2 = sys.argv[3]

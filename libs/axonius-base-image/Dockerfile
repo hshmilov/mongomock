@@ -18,7 +18,9 @@ RUN apt-get update && \
     apt-get install -y ssh git libxmlsec1-dev apt-transport-https ca-certificates \
     supervisor software-properties-common python-software-properties odbc-postgresql freetds-dev freetds-bin unixodbc-dev tdsodbc && \
     add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 xenial main" && \
+    add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-postgresql xenial-pgdg main" && \
     curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add - && \
+    curl -sSk https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
     apt-get update && \
     apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \

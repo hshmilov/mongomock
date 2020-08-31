@@ -84,18 +84,23 @@ logger = logging.getLogger(f'axonius.{__name__}')
 def get_settings_cached() -> dict:
     # Default values
     should_populate_name_and_version = True
+    should_populate_heavy_fields = True
 
     try:
         plugins = AxoniusPlugins()
         feature_flags = plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG]
 
-        if feature_flags and feature_flags[FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField] is True:
-            should_populate_name_and_version = False
+        if feature_flags:
+            if feature_flags.get(FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField) is True:
+                should_populate_name_and_version = False
+            if feature_flags.get(FeatureFlagsNames.DoNotPopulateHeavyFields) is True:
+                should_populate_heavy_fields = False
     except Exception:
         logger.warning(f'Warning white trying to reload system settings for device_adapter', exc_info=True)
 
     return {
-        'should_populate_name_and_version': should_populate_name_and_version
+        'should_populate_name_and_version': should_populate_name_and_version,
+        'should_populate_heavy_fields': should_populate_heavy_fields
     }
 
 

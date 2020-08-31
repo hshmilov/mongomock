@@ -26,7 +26,8 @@
       "riskiq_csv",
       "pingaccess",
       "service_now_sql",
-      "esentire_json"
+      "esentire_json",
+      "firebom"
     ],
     "remove-from-exclude": []
   }

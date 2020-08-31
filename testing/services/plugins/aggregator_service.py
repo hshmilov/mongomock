@@ -1665,6 +1665,49 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
         )
         print(f'Migrate complete')
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_47(self):
+        print('Update to schema 47 - Convert Service Now device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            service_now_name = data.get('name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{service_now_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{service_now_name}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'service_now_adapter',
+            {
+                'adapters.data.name': 1,
+            },
+            new_id_func)
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'service_now_sql_adapter',
+            {
+                'adapters.data.name': 1,
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_48(self):
+        print('Update to schema 48 - Convert Nexpose Adapter')
+
+        def nexpose_adapter_new_client_id(client_config):
+            return client_config['host'] + '_' + (client_config.get('username') or '')
+
+        self._upgrade_adapter_client_id('nexpose_adapter', nexpose_adapter_new_client_id)
+
     def _migrate_entity_id_generic(
             self,
             entity_type: EntityType,

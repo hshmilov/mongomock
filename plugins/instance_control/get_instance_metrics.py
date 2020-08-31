@@ -43,7 +43,8 @@ def main():
     except Exception as e:
         result['errors'].append({'command': 'main', 'error': str(e)})
 
-    print(json.dumps(result, indent=4, sort_keys=True))
+    # pylint: disable=unnecessary-lambda
+    print(json.dumps(result, indent=4, sort_keys=True, default=lambda o: str(o)))
 
 
 def bytes_to_kb(value):

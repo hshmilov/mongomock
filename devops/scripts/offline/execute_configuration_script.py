@@ -9,7 +9,7 @@ import sys
 
 def main():
     file_name = sys.argv[1] if len(sys.argv) > 1 else 'configuration_script.tar'
-    working_dir = Path().home()
+    working_dir = '/home/ubuntu'
     file_path = Path(working_dir, 'cortex/uploaded_files/', file_name)
     new_file_path = Path(working_dir, file_name)
     try:

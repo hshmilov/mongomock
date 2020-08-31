@@ -4,7 +4,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, get_settings_cached
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import figure_out_os
 from axonius.fields import Field, ListField, JsonStringFormat
@@ -365,7 +365,8 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
             kwargs = dict(days_since_last_used=days_since_last_used, description=description, executable=executable)
             if not tanium.tools.is_empty_vals(value=kwargs):
                 try:
-                    device.application_last_used_time.append(LastUsedTime(**kwargs))
+                    if get_settings_cached()['should_populate_heavy_fields']:
+                        device.application_last_used_time.append(LastUsedTime(**kwargs))
                 except Exception:
                     logger.exception(f'ERROR appending with kwargs {kwargs!r}')
 

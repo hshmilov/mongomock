@@ -83,6 +83,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         cs_agent_version = Field(str, 'CrowdStrike Agent Version')
         system_product_name = Field(str, 'System Product Name')
         full_osx_version = Field(str, 'Full OS X Version')
+        cs_cid = Field(str, 'CID')
         spotlight_vulnerabilities = ListField(SpotlightVulnerability, 'Device Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
@@ -290,6 +291,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 device_id = device_raw.get('device_id')
                 if not device_id:
                     continue
+                device.cs_cid = device_raw.get('cid')
                 device.id = device_id + '_' + (device_raw.get('hostname') or '')
                 device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'),
                                          status=device_raw.get('status'))

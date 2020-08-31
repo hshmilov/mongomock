@@ -232,7 +232,7 @@ class NexposeAdapter(ScannerAdapterBase):
                 yield device_raw, nexpose_hostname, client_config
 
     def _get_client_id(self, client_config):
-        return client_config[NEXPOSE_HOST]
+        return client_config[NEXPOSE_HOST] + '_' + client_config[USER]
 
     def _connect_client(self, client_config):
         num_of_simultaneous_devices = client_config.get('num_of_simultaneous_devices') or 50

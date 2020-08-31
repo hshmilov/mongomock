@@ -9,6 +9,7 @@ from typing import Optional
 from aws_adapter.connection.aws_cis import append_aws_cis_data_to_device, \
     append_aws_cis_data_to_user
 from aws_adapter.connection.aws_connections import connect_client_by_source
+from aws_adapter.connection.aws_custom_enrichments import get_firebom_data, append_firebom
 from aws_adapter.connection.aws_devices import query_devices_for_one_account
 from aws_adapter.connection.aws_ec2_eks_ecs_elb import parse_raw_data_inner_regular
 from aws_adapter.connection.aws_elasticsearch import parse_raw_data_inner_elasticsearch
@@ -785,6 +786,11 @@ class AwsAdapter(AdapterBase, Configurable):
         entity.aws_source = aws_source
 
     def _parse_raw_data(self, *args, **kwargs):
+        try:
+            firebom_data = get_firebom_data(self)
+        except Exception:
+            firebom_data = None
+
         for device in self.__parse_raw_data(*args, **kwargs):
             try:
                 device.aws_cis_incompliant = []     # delete old rules which might be irrelevant now
@@ -792,14 +798,34 @@ class AwsAdapter(AdapterBase, Configurable):
                     append_aws_cis_data_to_device(device)
             except Exception as e:
                 logger.debug(f'Failed adding cis device to data: {str(e)}')
+
+            try:
+                # Custom enrichments
+                if firebom_data:
+                    append_firebom(device, firebom_data)
+            except Exception:
+                pass
             yield device
 
     def _parse_users_raw_data(self, *args, **kwargs):
+        # custom enrichments
+        try:
+            firebom_data = get_firebom_data(self)
+        except Exception:
+            firebom_data = None
+
         for user in self.__parse_users_raw_data(*args, **kwargs):
             try:
                 user.aws_cis_incompliant = []       # delete old rules which might be irrelevant now
                 if self.should_cloud_compliance_run():
                     append_aws_cis_data_to_user(user)
+            except Exception:
+                pass
+
+            try:
+                # Custom enrichments
+                if firebom_data:
+                    append_firebom(user, firebom_data)
             except Exception:
                 pass
             yield user

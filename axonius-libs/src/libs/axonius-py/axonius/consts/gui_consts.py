@@ -256,6 +256,7 @@ class FeatureFlagsNames:
     DisableRSA = 'disable_rsa'
     HigherCiphers = 'higher_ciphers'
     DoNotUseSoftwareNameAndVersionField = 'do_not_use_software_name_and_version_field'
+    DoNotPopulateHeavyFields = 'do_not_populate_heavy_fields'
     QueryTimelineRange = 'query_timeline_range'
     EnforcementCenter = 'enforcement_center'
 
