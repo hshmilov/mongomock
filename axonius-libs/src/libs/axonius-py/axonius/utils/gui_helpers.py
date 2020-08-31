@@ -948,7 +948,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
     field_to_value = {}
     specific_adapters_values = []
     specific_adapter_name = ''
-
+    excluded_adapters = excluded_adapters or {}
     for field_path in fields:
         if field_path in PREFERRED_FIELDS:
             continue
