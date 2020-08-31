@@ -139,7 +139,6 @@ export default {
         this.saveReorderedPanels({
           panels_order: newPanels.map((panel) => panel.uuid),
           spaceId: this.currentSpace,
-          private: this.ignorePermissions ? true : undefined,
         });
       },
     },
@@ -158,12 +157,9 @@ export default {
         && ![0, 1].includes(chart.data[0].portion)) || !chart.hide_empty);
     },
     allowAddCard() {
-      if (this.ignorePermissions) {
-        return true;
-      }
       return this.$can(this.$permissionConsts.categories.Dashboard,
         this.$permissionConsts.actions.Add,
-        this.$permissionConsts.categories.Charts);
+        this.$permissionConsts.categories.Charts) || this.ignorePermissions;
     },
   },
   methods: {
@@ -193,7 +189,6 @@ export default {
       this.removePanel({
         panelId: this.removed,
         spaceId: this.currentSpace,
-        private: this.ignorePermissions ? true : null,
       });
       this.removed = null;
     },

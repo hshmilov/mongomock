@@ -108,16 +108,17 @@ class Charts:
         :param no_access: this endpoint called by user with no permissions if true
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
-        if no_access and not request.get_json().get('private'):
+        source_space_id = ObjectId(space_id)
+
+        if no_access and not self._is_personal_space(source_space_id):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         dashboard_data = dict(self.get_request_data_as_object())
-        dashboard_data.pop('private', None)
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        source_space_id = ObjectId(space_id)
+
         if self.restrict_space_action_by_user_role(source_space_id):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
         dashboard_data['space'] = source_space_id
@@ -231,19 +232,18 @@ class Charts:
         :param no_access: this endpoint called by user with no permissions if true
         :return: chart name / dashboard name
         """
-        if no_access and not request.get_json().get('private'):
-            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
-
         panel_id = ObjectId(panel_id)
-
-        dashboard_data = dict(self.get_request_data_as_object())
-        dashboard_data.pop('private', None)
-
         old_chart = self._dashboard_collection.find_one({
             '_id': panel_id
         }, {
             'space': 1, 'config': 1
         })
+
+        if no_access and not self._is_personal_space(old_chart.get('space')):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        dashboard_data = dict(self.get_request_data_as_object())
+
         if self.restrict_space_action_by_user_role(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
@@ -301,12 +301,12 @@ class Charts:
         :param no_access: this endpoint called by user with no permissions if true
         :return: ObjectId of the Panel to delete
         """
-        if no_access and not request.get_json().get('private'):
+        panel_id = ObjectId(panel_id)
+        old_chart = self._dashboard_collection.find_one(filter={'_id': panel_id}, projection={'space': 1})
+
+        if no_access and not self._is_personal_space(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
-        panel_id = ObjectId(panel_id)
-
-        old_chart = self._dashboard_collection.find_one(filter={'_id': panel_id}, projection={'space': 1})
         if self.restrict_space_action_by_user_role(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 

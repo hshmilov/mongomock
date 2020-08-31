@@ -4,7 +4,7 @@ from typing import Dict
 
 import pymongo
 from bson import ObjectId
-from flask import jsonify, request
+from flask import jsonify
 
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
@@ -39,6 +39,12 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=no-member,invalid-name,inconsistent-return-statements,no-self-use
 @gui_category_add_rules('dashboard')
 class Dashboard(Charts, Notifications):
+
+    def _is_personal_space(self, space_id: ObjectId) -> bool:
+        space = self._dashboard_spaces_collection.find_one({
+            '_id': space_id
+        }, projection={'type': 1})
+        return space and space.get('type') == DASHBOARD_SPACE_TYPE_PERSONAL
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data,
                                 hide_empty=False, space_id=None):
@@ -523,15 +529,9 @@ class Dashboard(Charts, Notifications):
                                                                  PermissionCategory.Charts),
                          activity_params=[SPACE_NAME], proceed_and_set_access=True)
     def reorder_dashboard_space_panels(self, space_id, no_access):
-        if no_access and not request.get_json().get('private'):
-            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
-        if no_access:
-            space = self._dashboard_spaces_collection.find_one({
-                '_id': ObjectId(space_id)
-            }, projection={'type': 1})
-            if not space or space.get('type') != DASHBOARD_SPACE_TYPE_PERSONAL:
-                return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+        if no_access and not self._is_personal_space(ObjectId(space_id)):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         panels_order = self.get_request_data_as_object().get('panels_order')
         space = self._dashboard_spaces_collection.find_one_and_update({
