@@ -230,6 +230,7 @@ DOCKER_PORTS = {
     'g-naapi-adapter':                  9912,
     'avamar-adapter':                   9930,
     'riskiq-csv-adapter':               9931,
+    'ivanti-endpoint-security-adapter': 9932,
     'ivanti-sm-adapter':                9940,
     'spiceworks-adapter':               9941,
     'sensu-adapter':                    9942,
