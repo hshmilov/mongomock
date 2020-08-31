@@ -1338,6 +1338,10 @@
     "link": "https://docs.axonius.com/docs/cisco-prime",
     "description": "Cisco Prime offers a suite of tools to automate the management of wired and wireless Cisco networks."
   },
+  "ud_csv_adapter": {
+    "title": "UD",
+    "description": "UD"
+  },
   "auvik_adapter": {
     "title": "Auvik",
     "description": "Auvik is an IT asset and network monitoring solution for managing entire network infrastructures, including physical servers, data centers, workstations and more.",
@@ -1353,7 +1357,7 @@
     "link": "https://docs.axonius.com/docs/blackberry-unified-endpoint-management-uem",
     "description": "BlackBerry Unified Endpoint Management (UEM) delivers endpoint management and policy control for devices and apps on-premise or in the cloud."
   },
-    "onelogin_adapter": {
+  "onelogin_adapter": {
     "title": "OneLogin",
     "link": "https://docs.axonius.com/docs/onelogin",
     "description": "OneLogin's unified access management platform centralizes access across on-prem and cloud environments to give full control, management, and security for data, devices, and users."

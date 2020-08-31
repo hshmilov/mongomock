@@ -178,6 +178,7 @@ DOCKER_PORTS = {
     'onelogin-adapter':                 6061,
     'sonic-wall-adapter':               6064,
     'netskope-adapter':                 6065,
+    'ud-csv-adapter':                   6066,
     'guardium-adapter':                 6070,
     'landesk-adapter':                  6076,
     'pivotal-cloud-foundry-adapter':    6078,
