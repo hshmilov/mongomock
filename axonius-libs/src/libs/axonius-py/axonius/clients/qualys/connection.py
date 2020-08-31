@@ -9,6 +9,7 @@ import re
 from collections import defaultdict
 from typing import List, Dict, Optional, Iterable, Generator, Union, Tuple, Set
 from urllib.parse import urljoin
+from funcy import chunks as chunkinate  # Renamed because `chunks` is used as a variable
 
 from axonius.clients.qualys import consts, xmltodict
 from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES, INVENTORY_TYPE, \
@@ -813,8 +814,33 @@ class QualysScansConnection(RESTConnection):
                 tags = [tags]
             yield host_dict['id'], tags
 
-    def add_host_existing_tags(self, host_id_list: Iterable[str], tag_ids_to_add: Iterable[str]):
-        """Permissions: see _update_hostasset"""
+    @staticmethod
+    def _chunkify_items(list_items, chunk_size=50):
+        """ Wrap funcy.chunks to make it obvious what we're doing """
+        return chunkinate(chunk_size, list_items)
+
+    def add_host_existing_tags(self, host_id_list: Iterable[str], tag_ids_to_add: Iterable[str], reverse_paginate=True):
+        """Permissions: see _update_hostasset
+        Set ``reverse_paginate`` to True to chunkify / reverse-paginate the request for performance.
+        Chunk size is a hardcoded 50
+        ``host_id_list`` - some sort of iterator of host_ids.
+        Does NOT suppress any exceptions (this is to allow reverts easily)
+        """
+        # Check if paginate is True and if the object can be chunked
+        if reverse_paginate:
+            if not hasattr(host_id_list, '__getitem__'):  # Left this check here just in case.
+                logger.debug(f'Can not chunk add_tags: host_id_list is not chunkable. '
+                             f'Attempting standard method.')
+                logger.info(f'Adding existing tags {tag_ids_to_add} to hosts {host_id_list}')
+                return self._update_hostasset_tags(host_id_list, 'add', tag_ids_to_add)
+            result = list()  # list of service responses
+            chunks = list(self._chunkify_items(host_id_list))
+            for i, chunk in enumerate(chunks):
+                logger.info(f'Adding existing tags (page {i}/{len(chunks)}): {tag_ids_to_add} to hosts {chunk}')
+                result.append(self._update_hostasset_tags(chunk, 'add', tag_ids_to_add))
+            logger.info(f'Finished processing chunks')
+            return result
+        # If no chunking, just do the normal thing...
         logger.info(f'Adding existing tags {tag_ids_to_add} to hosts {host_id_list}')
         return self._update_hostasset_tags(host_id_list, 'add', tag_ids_to_add)
 
