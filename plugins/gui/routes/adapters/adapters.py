@@ -434,7 +434,7 @@ class Adapters(Connections):
         Get a specific config on a specific plugin
         """
         plugin_name = self._get_plugin_name(plugin_name)
-        config, schema = self._get_plugin_configs(config_name, plugin_name)
+        config, schema = self._get_adapter_configs(config_name, plugin_name)
 
         return jsonify({
             'config': config,
@@ -466,7 +466,7 @@ class Adapters(Connections):
 
         return jsonify(clients_label)
 
-    def _get_plugin_configs(self, config_name, plugin_name):
+    def _get_adapter_configs(self, config_name, plugin_name):
         plugin_name = self._get_plugin_name(plugin_name)
         schema = self.plugins.get_plugin_settings(plugin_name).config_schemas[config_name]
         config = clear_passwords_fields(

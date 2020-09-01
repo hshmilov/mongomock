@@ -24,14 +24,14 @@ def clear_passwords_fields(data, schema):
     if schema['type'] == 'array':
         items = schema['items']
         if isinstance(items, list):
-            for item in schema['items']:
+            for item in items:
                 if item['name'] in data:
                     data[item['name']] = clear_passwords_fields(data[item['name']], item)
-        elif isinstance(items, dict):
-            for index, date_item in enumerate(data):
-                data[index] = clear_passwords_fields(data[index], items)
+        elif isinstance(items, dict) and isinstance(data, list):
+            for index, data_item in enumerate(data):
+                data[index] = clear_passwords_fields(data_item, items)
         else:
-            raise TypeError('Weird schema')
+            raise TypeError(f'Schema array expects {type(items)} but data is {type(data)}')
         return data
     return data
 
