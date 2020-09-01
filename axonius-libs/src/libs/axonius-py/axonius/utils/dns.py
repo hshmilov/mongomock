@@ -2,29 +2,14 @@ import asyncio
 import socket
 from inspect import isawaitable
 from typing import List, Tuple, Union
-import aiodns
+
+import aiodnsresolver
 import dns.resolver
 from dns.exception import DNSException
+
 from axonius.adapter_exceptions import NoIpFoundError
 
-
-async def async_query_dns(loop: asyncio.AbstractEventLoop, hostname: str,
-                          nameservers: List[str], timeout: float):
-    """
-    Dns query using aiodns
-    :param loop: asyncio event loop
-    :param hostname: hostname to resolve
-    :param nameservers: dns nameservers to query
-                        if nameserver item is none: query the default nameserver
-    :param timeout: dns request timeout
-    :return: dns response
-    """
-    if nameservers == [None]:
-        nameservers = None
-    resolver = aiodns.DNSResolver(loop=loop, timeout=timeout, nameservers=nameservers)
-    # aiodns timeout bug https://github.com/saghul/aiodns/pull/64
-    response = await asyncio.wait_for(resolver.query(hostname, 'A'), timeout)
-    return response
+DNS_PORT = 53
 
 
 # pylint: disable =R0912
@@ -45,32 +30,47 @@ async def query_dns_servers(loop: asyncio.AbstractEventLoop, hostname: Union[str
     :return: list of dns results tuple -> (resolved_ip, resolving_nameserver)
     """
 
+    async def get_nameservers(*args, **kargs):
+        for dns_server in nameservers:
+            yield timeout, (dns_server, DNS_PORT)
+
     if isinstance(hostname, list):
         hostnames = hostname
     else:
         hostnames = [str(hostname)]
 
     results = []
+    # if greedy, try to resolve ips from all the given nameservers
     if greedy:
         for host in hostnames:
             for server in nameservers:
+                async def get_server(parsed_nameservers, fqdn, *args, dns_server=server, **kargs):
+                    yield timeout, (dns_server, DNS_PORT)
                 try:
-                    response = await async_query_dns(loop, host, [server, ], timeout)
-                    results.append((response[0].host, [server, ]))
+                    resolve, clear_cache = aiodnsresolver.Resolver(get_nameservers=get_server)
+                    response = await resolve(host, aiodnsresolver.TYPES.A)
+                    results.append((str(response[0]), [server, ]))
+                    await clear_cache()
                 except Exception:
-                    continue
+                    pass
     else:
         try:
+            resolve, clear_cache = aiodnsresolver.Resolver(get_nameservers=get_nameservers)
             for host in hostnames:
-                response = await async_query_dns(loop, host, nameservers, timeout)
-                results.append((response[0].host, nameservers))
+                response = await resolve(host, aiodnsresolver.TYPES.A)
+                results.append((str(response[0]), nameservers))
+            await clear_cache()
         except Exception:
             pass
 
+    # fallback to default dns servers
     if fallback_to_default and not results:
         try:
-            response = await async_query_dns(loop, hostname, None, timeout)
-            results.append((response[0].host, [None, ]))
+            resolve, clear_cache = aiodnsresolver.Resolver()
+            for host in hostnames:
+                response = await resolve(host, aiodnsresolver.TYPES.A)
+                results.append((str(response[0]), [None, ]))
+            await clear_cache()
         except Exception:
             pass
 
