@@ -225,6 +225,9 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     # We don't care about deactivated nodes
                     continue
                 node.pop(NODE_USER_PASSWORD, None)
+                if not node.get('last_seen'):
+                    logger.warning(f'error getting last seen for node: node {str(node)}')
+                    continue
                 parse = parser()
                 last_seen_obj = parse.parse(node['last_seen'])
                 diff = (now_obj - last_seen_obj).total_seconds()

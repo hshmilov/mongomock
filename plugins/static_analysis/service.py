@@ -228,7 +228,12 @@ class StaticAnalysisService(Triggerable, PluginBase):
             device_adapter = self._new_device_adapter()
             device_adapter.virtual_host = is_virtual
 
-            device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+            try:
+                device_object = list(self.devices.get(internal_axon_id=device.get('internal_axon_id')))[0]
+            except IndexError:
+                logger.error(f'Error, Couldn\'t get the original device from '
+                             f'mongo db {device.get("internal_axon_id")}')
+                return
 
             device_object.add_adapterdata(device_adapter.to_dict(),
                                           action_if_exists='update',
