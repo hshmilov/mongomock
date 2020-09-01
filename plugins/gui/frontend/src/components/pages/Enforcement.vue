@@ -306,7 +306,10 @@ export default {
       this.actionPanelVisible = true;
     },
     async run() {
-      await this.runEnforcement(this.enforcementId);
+      await this.runEnforcement({
+        enforcementId: this.enforcementId,
+        isRunFromEnforcementPage: true,
+      });
       this.displayMessage('Enforcement Task is in progress');
       await this.milestoneCompleted({ milestoneName: ENFORCEMENT_EXECUTED });
     },

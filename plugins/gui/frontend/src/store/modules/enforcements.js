@@ -255,10 +255,17 @@ export const enforcements = {
         type: UPDATE_SAVED_ACTIONS,
       });
     },
-    [RUN_ENFORCEMENT]({ dispatch }, enforcementId) {
+    [RUN_ENFORCEMENT]({ dispatch }, payload) {
+      const {
+        enforcementId, isRunFromEnforcementPage,
+      } = payload;
+      const data = {
+        ec_page_run: isRunFromEnforcementPage,
+      };
       return dispatch(REQUEST_API, {
         rule: `enforcements/${enforcementId}/trigger`,
         method: 'POST',
+        data,
       });
     },
   },

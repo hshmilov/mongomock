@@ -303,11 +303,16 @@ class Enforcements(Tasks):
 
         return Response(response.text, response.status_code, mimetype='application/json')
 
-    @gui_route_logged_in('<enforcement_id>/trigger', methods=['POST'])
-    def trigger_enforcement_by_id(self, enforcement_id):
+    @gui_route_logged_in('<enforcement_id>/trigger', methods=['POST'], proceed_and_set_access=True)
+    def trigger_enforcement_by_id(self, enforcement_id, no_access):
         """
         Triggers a job for the requested enforcement with its first trigger
         """
+
+        # If there are no permissions, also check that the request doesn't relate to the enforcement page run
+        # Only then we report error and exit
+        if no_access and not request.get_json().get('ec_page_run'):
+            return return_error('You are lacking some permissions for this request', 401)
 
         enforcement = self.enforcements_collection.find_one({
             '_id': ObjectId(enforcement_id)
