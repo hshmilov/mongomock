@@ -31,6 +31,7 @@ DOCKER_PORTS = {
     'core':                             5050,
     'wazuh-adapter':                    5053,
     'gigamon-fm-adapter':               5055,
+    'uptycs-adapter':                   5089,
     'softlayer-adapter':                5090,
     'sophos-adapter':                   5092,
     'blackberry-uem-adapter':           5101,

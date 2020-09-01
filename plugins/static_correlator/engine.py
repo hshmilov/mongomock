@@ -115,6 +115,7 @@ def is_only_host_adapter(adapter_device):
                                               'checkmarx_adapter',
                                               'iboss_cloud_adapter',
                                               'druva_adapter',
+                                              'uptycs_adapter',
                                               'ibm_qradar_adapter']):
         return True
     try:

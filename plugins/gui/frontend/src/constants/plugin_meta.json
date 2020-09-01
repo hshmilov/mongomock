@@ -1163,6 +1163,11 @@
     "link": "https://docs.axonius.com/docs/tenable-nessus",
     "description": "Tenable Nessus is a vulnerability scanning platform for auditors and security analysts."
   },
+  "uptycs_adapter": {
+    "title": "Uptycs",
+    "link": "https://docs.axonius.com/docs/uptycs",
+    "description": "Uptycs is an osquery-powered security analytics platform pairs universal agent with an analytics platform for fleet visibility, intrusion detection, incident investigation, vulnerability management & compliance across Linux, macOS, Windows, containers, and cloud workloads."
+  },
   "tenable_io_adapter": {
     "title": "Tenable.io",
     "link": "https://docs.axonius.com/docs/tenableio",
@@ -1173,7 +1178,7 @@
     "link": "https://docs.axonius.com/docs/tenable-nessus-csv-file",
     "description": "Tenable Nessus CSV File Adapter imports device information from vulnerability scan data."
   },
-    "gigamon_fm_adapter": {
+  "gigamon_fm_adapter": {
     "title": "Gigamon GigaVUE-FM (Fabric Manager) - BETA",
     "link": "https://docs.axonius.com/docs/gigamon",
     "description": "Gigamon GigaVUE-FM (Fabric Manager) delivers management and monitoring of all physical and virtual nodes across your on-premises, virtual and public-cloud deployments."
@@ -1502,7 +1507,7 @@
     "link": "https://docs.axonius.com/docs/okta",
     "description": "Okta provides cloud software that helps companies manage their employees' passwords, by providing a “single sign-on” experience."
   },
-    "beyond_trust_adapter": {
+  "beyond_trust_adapter": {
     "title": "BeyondTrust Privilege Management for Windows",
     "link": "https://docs.axonius.com/docs/beyondtrust-privilege-management-for-windows",
     "description": "BeyondTrust Privilege Management for Windows delivers privilege management and application control, allowing organizations to eliminate admin rights across the entire business and enforce least privilege."
