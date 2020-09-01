@@ -344,6 +344,7 @@ DOCKER_PORTS = {
     'privx-adapter':                    14333,
     'symantec-edr-adapter':             14334,
     'firebom-adapter':                  14345,
+    'beyond-trust-adapter':             14368,
     'mongo':                            27017,
     'mockingbird-db':                   28017
 }

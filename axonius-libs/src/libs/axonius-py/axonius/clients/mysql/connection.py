@@ -1,5 +1,6 @@
 # pylint: disable=import-error
 import logging
+from typing import Iterator
 
 import mysql.connector
 
@@ -106,6 +107,25 @@ class MySQLConnection(AbstractSQLConnection):
                 cursor.close()
             except Exception:
                 pass
+
+    # Equivalent to SQL left join.
+    @staticmethod
+    def left_join_tables(left_table: Iterator[dict],
+                         right_table: Iterator[dict],
+                         left_comparison_field: str,
+                         right_comparison_field: str
+                         ):
+        # Convert the right table to dict (for fast lookup purpose)
+        right_table = {row.get(right_comparison_field): row for row in right_table}
+
+        for row in left_table:
+            field_value = row.get(left_comparison_field)
+            right_object = right_table.get(field_value) or {}
+
+            for field in right_object:
+                row[field] = right_object.get(field)
+
+            yield row
 
     def __enter__(self):
         self.connect()

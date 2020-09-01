@@ -1497,6 +1497,11 @@
     "link": "https://docs.axonius.com/docs/okta",
     "description": "Okta provides cloud software that helps companies manage their employees' passwords, by providing a “single sign-on” experience."
   },
+    "beyond_trust_adapter": {
+    "title": "BeyondTrust Privilege Management for Windows",
+    "link": "https://docs.axonius.com/docs/beyondtrust-privilege-management-for-windows",
+    "description": "BeyondTrust Privilege Management for Windows delivers privilege management and application control, allowing organizations to eliminate admin rights across the entire business and enforce least privilege."
+  },
   "alibaba_adapter": {
     "title": "Alibaba Cloud",
     "link": "https://docs.axonius.com/docs/alibaba-cloud",
