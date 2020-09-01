@@ -252,7 +252,10 @@ def figure_out_windows_dist(s):
 
 
 def parse_cpe_string(cpe):
-    return figure_out_os(f'{cpe.get_product()} {cpe.get_vendor()} {cpe.get_target_hardware()}')
+    product = cpe.get_product()
+    if product:
+        product = [name.replace('_', ' ') for name in product if name]
+    return figure_out_os(f'{cpe.get_vendor()} {product} {cpe.get_target_hardware()}')
 
 
 def figure_out_os(s):
@@ -326,7 +329,7 @@ def figure_out_os(s):
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
         linux_distributions = [ubuntu_full, 'Ubuntu', 'Red Hat', 'Debian', 'Fedora', 'RHEL', 'Gentoo',
-                               'Arch', 'Oracle', 'SuSe', 'Centos']
+                               'Arch', 'Oracle', 'SuSe', 'Centos', 'Redhat']
         for dist in linux_distributions:
             if isinstance(dist, str):
                 if dist.lower() in s:
