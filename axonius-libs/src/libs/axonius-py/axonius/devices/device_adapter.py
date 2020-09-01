@@ -39,7 +39,7 @@ AGENTS = namedtuple('Agents', (
     'cisco_firepower_management_center', 'cisco_umbrella', 'cloudpassage', 'code42', 'counter_act', 'crowd_strike',
     'cylance', 'datadog', 'desktop_central', 'dropbox', 'druva', 'endgame', 'ensilo', 'epo', 'fireeye_hx',
     'forcepoint_csv', 'imperva_dam', 'jumpcloud', 'kaseya', 'lansweeper', 'minerva', 'mobi_control', 'mobileiron',
-    'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
+    'nasuni', 'observeit', 'opswat', 'paloalto_cortex', 'qualys_scans', 'quest_kace', 'redcloak', 'sccm',
     'secdo', 'sentinelone', 'signalsciences', 'traps', 'eclypsium', 'malwarebytes_cloud', 'infinipoint',
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io',
     'tripwire', 'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason', 'sysaid',
@@ -59,8 +59,8 @@ AGENT_NAMES = AGENTS(
     ensilo='enSilo Agent', epo='McAfee EPO Agent', fireeye_hx='FireEye HX Agent', forcepoint_csv='Forcepoint Client',
     imperva_dam='Imperva DAM Agent', jumpcloud='JumpCloud Agent', kaseya='Kaseya Agent', lansweeper='Lansweeper Agent',
     minerva='Minerva Labs Agent', mobi_control='MobiControl Agent', mobileiron='MobileIron Client',
-    observeit='ObserveIT Client', opswat='OPSWAT Agent', paloalto_cortex='Palo Alto Networks Cortex Agent',
-    sccm='Microsoft SCCM Client', eclypsium='Eclypsium Agent',
+    nasuni='Nasuni Agent', observeit='ObserveIT Client', opswat='OPSWAT Agent',
+    paloalto_cortex='Palo Alto Networks Cortex Agent', sccm='Microsoft SCCM Client', eclypsium='Eclypsium Agent',
     qualys_scans='Qualys Agent', quest_kace='Quest Client', redcloak='Redcloak Agent', secdo='Secdo Agent',
     sentinelone='SentinelOne Agent', signalsciences='Signalsciences Agent',
     sophos='Sophos Agent', symantec='Symantec SEP 14 Agent', illusive='Illusive Agent',
@@ -74,7 +74,6 @@ AGENT_NAMES = AGENTS(
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
@@ -588,7 +587,7 @@ class NessusInstance(SmartJsonClass):
     max_checks = Field(int, 'Max Checks')
     receive_timeout = Field(int, 'Receive Timeout')
     scan_start_date = Field(datetime.datetime, 'Scan Start Date')
-    scan_duration = Field(int, 'Scan Duration (sec)',)
+    scan_duration = Field(int, 'Scan Duration (sec)', )
     credentialed_check = Field(str, 'Credentialed Check')
 
 
@@ -628,7 +627,7 @@ class FirewallRule(SmartJsonClass):
     source = Field(str, 'Source')
     type = Field(str, 'Allow / Deny', enum=['Allow', 'Deny'])
     direction = Field(str, 'Direction', enum=['INGRESS', 'EGRESS'])
-    target = Field(str, 'Target')   # Target. This could be ip rage / security group / service account / tag / ...
+    target = Field(str, 'Target')  # Target. This could be ip rage / security group / service account / tag / ...
     protocol = Field(str, 'Protocol')
     from_port = Field(int, 'From port')
     to_port = Field(int, 'To port')
@@ -919,7 +918,7 @@ class DeviceAdapter(SmartJsonClass):
         try:
             for connected_device in self.connected_devices:
                 if (hasattr(connected_device, 'connection_type') and
-                        connected_device.connection_type == ConnectionType.Direct.name) or \
+                    connected_device.connection_type == ConnectionType.Direct.name) or \
                         (isinstance(connected_device, dict) and 'connection_type' in connected_device and
                          connected_device['connection_type'] == ConnectionType.Direct.name):
                     self.direct_connected_devices.append(connected_device)
@@ -1118,19 +1117,19 @@ class DeviceAdapter(SmartJsonClass):
                 logger.warning(f'Failed to add ip {ip}', exc_info=True)
 
     def add_nic(
-        self,
-        mac=None,
-        ips=None,
-        subnets=None,
-        name=None,
-        speed=None,
-        mtu=None,
-        operational_status=None,
-        admin_status=None,
-        vlans=None,
-        port_type=None,
-        gateway=None,
-        port=None,
+            self,
+            mac=None,
+            ips=None,
+            subnets=None,
+            name=None,
+            speed=None,
+            mtu=None,
+            operational_status=None,
+            admin_status=None,
+            vlans=None,
+            port_type=None,
+            gateway=None,
+            port=None,
     ):
         """
         Add a new network interface card to this device.
