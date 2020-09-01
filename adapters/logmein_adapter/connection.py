@@ -37,14 +37,13 @@ class LogmeinConnection(RESTConnection):
                 logger.warning(message)
                 raise RESTException(message)
 
-            self._get(URL_DEVICES_SUFFIX)
-            self._get(URL_USERS_SUFFIX)
-
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
     def _get_devices(self):
         try:
+            self._session_headers['Authorization'] = json.dumps(
+                {'companyId': self._company_id, 'psk': self._pre_shared_key})
             total_devices = 0
             response = self._get(URL_DEVICES_SUFFIX)
             hosts = response.get('hosts')
@@ -96,6 +95,8 @@ class LogmeinConnection(RESTConnection):
 
     def _get_users(self):
         try:
+            self._session_headers['Authorization'] = json.dumps(
+                {'companyId': self._company_id, 'psk': self._pre_shared_key})
             total_users = 0
             response = self._get(URL_USERS_SUFFIX)
             master_account_holder_user = response.get('mahData')

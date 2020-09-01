@@ -151,9 +151,8 @@ class LogmeinAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = str(device_id) + '_' + (device_raw.get('description', ''))
-
-            device.description = device_raw.get('description')
+            device.id = str(device_id) + '_' + (device_raw.get('description') or '')
+            device.hostname = self._get_extra_details('computer', device_raw).get('lastOnline')
             device.last_seen = parse_date(self._get_extra_details('computer', device_raw).get('lastOnline'))
 
             hardware_details = self._get_extra_details('hardware', device_raw)
@@ -219,7 +218,7 @@ class LogmeinAdapter(AdapterBase):
             if user_id is None:
                 logger.warning(f'Bad user with no ID {user_raw}')
                 return None
-            user.id = str(user_id) + '_' + (user_raw.get('firstName', ''))
+            user.id = str(user_id) + '_' + (user_raw.get('firstName') or '')
 
             user.mail = user_raw.get('email')
             user.first_name = user_raw.get('firstName')
