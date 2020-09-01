@@ -204,7 +204,7 @@ class Connections:
                                                   instance_id)
 
             self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'post', {
-                'adapter': adapter_name,
+                'adapter_name': adapter_name,
                 CLIENT_ID: self._audit_get_client_with_node_name(client_id, is_instance_mode,
                                                                  instance_prev_name or instance_name),
                 'current_client_info': json.dumps(current_client_info) or '',
@@ -386,7 +386,7 @@ class Connections:
         """
         try:
             self.log_activity_user_default(AuditCategory.AdaptersConnections.value, action, {
-                'adapter': adapter_name,
+                'adapter_name': adapter_name,
                 CLIENT_ID: self._audit_get_client_with_node_name(client_id, is_instance_mode, instance_name)
             })
         except Exception:
