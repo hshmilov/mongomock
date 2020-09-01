@@ -1376,6 +1376,25 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                     }
                 })
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_44(self):
+        print('Upgrade to schema 44')
+        self.db.gui_dashboard_collection.update_many({
+            'data': {
+                '$exists': True
+            }
+        }, {
+            '$unset': {
+                'data': '',
+                'data_tail': '',
+                'count': '',
+                'date_fetched': '',
+                'uuid': '',
+                'updated': '',
+                'selectedSort': ''
+            }
+        })
+
     def _update_default_locked_actions_legacy(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of

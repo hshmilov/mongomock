@@ -521,23 +521,28 @@ export const dashboard = {
     async [MOVE_PANEL]({ dispatch, commit, state }, payload) {
       // no need to move panel to the same space
       if (state.currentSpace === payload.space) return;
-      const currentPanelUuid = state.currentPanel.uuid;
+      const panelUuid = state.currentPanel.uuid;
       await dispatch(REQUEST_API, {
-        rule: `dashboard/charts/move/${state.currentPanel.uuid}`,
+        rule: `dashboard/charts/move/${panelUuid}`,
         method: 'PUT',
         data: { destinationSpace: payload.space },
       });
       await commit(CHANGE_PANEL_SPACE, {
-        panelUuid: currentPanelUuid,
+        panelUuid,
         sourceSpaceUuid: state.currentSpace,
         destinationSpaceUuid: payload.space,
       });
     },
     [COPY_PANEL]({ dispatch, state }, payload) {
+      const {
+        name, metric, view, config,
+      } = state.currentPanel;
       dispatch(SAVE_DASHBOARD_PANEL, {
         data: {
-          ...state.currentPanel,
-          name: `Copy - ${state.currentPanel.name}`,
+          name: `Copy - ${name}`,
+          metric,
+          view,
+          config,
         },
         space: payload.space,
       });
