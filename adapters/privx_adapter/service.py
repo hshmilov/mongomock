@@ -2,13 +2,15 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.connection import RESTException
+from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from privx_adapter.connection import PrivxConnection
+from axonius.utils.parsing import int_or_none, parse_bool_from_raw
 from privx_adapter.client_id import get_client_id
-from privx_adapter.structures import PrivxDeviceInstance, PrivxUserInstance
+from privx_adapter.connection import PrivxConnection
+from privx_adapter.structures import (Principal, PrivxDeviceInstance,
+                                      PrivxSupportedService,
+                                      PrivxUserInstance, Role)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -145,8 +147,35 @@ class PrivxAdapter(AdapterBase):
     @staticmethod
     def _fill_privx_device_fields(device_raw: dict, device: PrivxDeviceInstance):
         try:
-            if isinstance(device_raw.get('addresses'), list):
-                device.addresses = device_raw.get('addresses')
+            device.cloud_provider_region = device_raw.get('cloud_provider_region')
+            device.audit_enabled = parse_bool_from_raw(device_raw.get('audit_enabled'))
+            device.contact_address = device_raw.get('contact_address')
+            device.deployable = parse_bool_from_raw(device_raw.get('deployable'))
+            device.distinguished_name = device_raw.get('distinguished_name')
+            device.external_id = device_raw.get('external_id')
+            device.host_classification = device_raw.get('host_classification')
+            device.host_type = device_raw.get('host_type')
+            device.instance_id = device_raw.get('instance_id')
+            device.organization = device_raw.get('organization')
+            device.privx_configured = device_raw.get('privx_configured')
+            device.source_id = device_raw.get('source_id')
+            device.tofu = parse_bool_from_raw(device_raw.get('tofu'))
+            device.updated_by = device_raw.get('updated_by')
+            device.zone = device_raw.get('zone')
+
+            principals = device_raw.get('principals')
+            services = device_raw.get('services')
+
+            if isinstance(services, list):
+                device.supported_services = PrivxAdapter._parse_services_field(services)
+            else:
+                logger.warning(f'Unexpected type of services field, Raw Device: {str(device_raw)}')
+
+            if isinstance(principals, list):
+                device.principals = PrivxAdapter._parse_principals_field(principals)
+            else:
+                logger.warning(f'Unexpected type of principals field, Raw Device: {str(device_raw)}')
+
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -156,15 +185,25 @@ class PrivxAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('hostname') or '')
+            device.id = device_id + '_' + (device_raw.get('common_name') or '')
             device.hostname = device_raw.get('common_name')
             device.description = device_raw.get('comment')
+            device.cloud_provider = device_raw.get('cloud_provider')
+            device.first_seen = parse_date(device_raw.get('created'))
+            device.last_seen = parse_date(device_raw.get('updated'))
+
+            organizational_unit = device_raw.get('organizational_unit')
             addresses = device_raw.get('addresses')
-            if isinstance(device_raw.get('addresses'), list):
+
+            if isinstance(addresses, list):
                 try:
                     device.add_ips_and_macs(ips=addresses)
                 except Exception as e:
                     logger.warning(f'Failed to add ips information for device {device_raw}: {str(e)}')
+
+            if organizational_unit and isinstance(organizational_unit, str):
+                device.organizational_unit = [organizational_unit]
+
             self._fill_privx_device_fields(device_raw, device)
             device.set_raw(device_raw)
 
@@ -186,6 +225,7 @@ class PrivxAdapter(AdapterBase):
                 continue
             try:
                 # noinspection PyTypeChecker
+                device_raw = PrivxAdapter._remove_sensitive_fields(device_raw)
                 device = self._create_device(device_raw, self._new_device_adapter())
                 if device:
                     yield device
@@ -193,16 +233,8 @@ class PrivxAdapter(AdapterBase):
                 logger.exception(f'Problem with fetching Privx Device for {device_raw}')
 
     @staticmethod
-    def _parse_bool(value):
-        if isinstance(value, (bool, int)):
-            return bool(value)
-        if isinstance(value, str):
-            return value.lower() in ['yes', 'true']
-        return None
-
-    @staticmethod
     def _fill_privx_user_fields(user_raw: dict, user: PrivxUserInstance):
-        user.password_change_required = PrivxAdapter._parse_bool(user_raw.get('password_change_required'))
+        user.password_change_required = parse_bool_from_raw(user_raw.get('password_change_required'))
         user.user_update_time = parse_date(user_raw.get('updated'))
         user.windows_account = user_raw.get('windows_account')
         user.unix_account = user_raw.get('unix_account')
@@ -221,7 +253,6 @@ class PrivxAdapter(AdapterBase):
             self._fill_privx_user_fields(user_raw, user)
 
             user.set_raw(user_raw)
-
             return user
         except Exception:
             logger.exception(f'Problem with fetching Privx User for {user_raw}')
@@ -248,3 +279,96 @@ class PrivxAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]
+
+    @staticmethod
+    def _parse_principals_field(raw_principals: list):
+        principals = []
+
+        try:
+            if not isinstance(raw_principals, list):
+                logger.warning(f'Unexpected type of raw principals: {str(raw_principals)}')
+                return principals
+
+            for raw_principal in raw_principals:
+                if not isinstance(raw_principal, dict):
+                    logger.warning(f'Unexpected type of raw principal: {str(raw_principal)}')
+                    continue
+
+                roles = []
+                raw_roles = raw_principal.get('roles')
+
+                if not isinstance(raw_roles, list):
+                    logger.warning(f'Unexpected type of raw roles: {str(raw_roles)}')
+                    continue
+
+                for raw_role in raw_roles:
+                    if not isinstance(raw_role, dict):
+                        logger.warning(f'Unexpected type of raw role: {str(raw_role)}')
+                        continue
+
+                    role = Role(
+                        id=raw_role.get('id'),
+                        name=raw_role.get('name')
+                    )
+                    roles.append(role)
+
+                principal = Principal(
+                    name=raw_principal.get('principal'),
+                    source=raw_principal.get('source'),
+                    use_user_account=parse_bool_from_raw(raw_principal.get('use_user_account')),
+                    roles=roles
+                )
+                principals.append(principal)
+        except Exception as ex:
+            logger.warning(f'Error occurred while parsing principals, Error:{str(ex)} , '
+                           f'Raw Principals:{str(raw_principals)}')
+
+        return principals
+
+    @staticmethod
+    def _parse_services_field(raw_services: list):
+        services = []
+        try:
+            if not isinstance(raw_services, list):
+                logger.warning(f'Unexpected type of raw services: {str(raw_services)}')
+                return services
+
+            for raw_service in raw_services:
+                if not isinstance(raw_service, dict):
+                    logger.warning(f'Unexpected type of raw service: {str(raw_service)}')
+                    continue
+
+                service = PrivxSupportedService(
+                    service_name=raw_service.get('service'),
+                    address=raw_service.get('address'),
+                    auth_type=raw_service.get('auth_type'),
+                    login_page_url=raw_service.get('login_page_url'),
+                    login_request_password_property=raw_service.get('login_request_password_property'),
+                    login_request_url=raw_service.get('login_request_url'),
+                    password_field_name=raw_service.get('password_field_name'),
+                    port=int_or_none(raw_service.get('port')),
+                    source=raw_service.get('source'),
+                    status=raw_service.get('status'),
+                    status_updated=raw_service.get('status_updated'),
+                    username_field_name=raw_service.get('username_field_name')
+                )
+                services.append(service)
+        except Exception as ex:
+            logger.warning(f'Error occurred while parsing services, Error:{str(ex)} , '
+                           f'Raw Services:{str(raw_services)}')
+        return services
+
+    @staticmethod
+    def _remove_sensitive_fields(raw_device: dict):
+        # Remove "passphrase" field
+        if isinstance(raw_device, dict):
+            principals = raw_device.get('principals')
+            if isinstance(principals, list):
+                for principal in principals:
+                    if isinstance(principal, dict):
+                        try:
+                            principal.pop('passphrase')
+                        except Exception:
+                            pass
+
+        return raw_device
