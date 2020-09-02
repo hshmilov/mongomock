@@ -12,13 +12,13 @@
         <stop
           :key="n"
           :class="`pie-stop-${(n % 2) ? 2 : 3}`"
-          :style="(n % 2) ? secondIntersectionStyle : firstIntersectionStyle"
+          :style="(n % 2) ? firstIntersectionStyle : secondIntersectionStyle"
           :offset="`${n}0%`"
         />
         <stop
           :key="n * 10"
           :class="`pie-stop-${(n % 2) ? 3 : 2}`"
-          :style="(n % 2) ? firstIntersectionStyle : secondIntersectionStyle"
+          :style="(n % 2) ? secondIntersectionStyle : firstIntersectionStyle"
           :offset="`${n}0%`"
         />
       </template>
