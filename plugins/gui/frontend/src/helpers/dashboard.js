@@ -1,4 +1,4 @@
-import { ChartTypesEnum } from '@constants/dashboard';
+import _isNil from 'lodash/isNil';
 
 export const getRegularEntryColouringClass = (index) => {
   // there are only 10 possible colors
@@ -17,27 +17,21 @@ export const getIntersectingEntryColouringClass = (index) => {
 /**
  * we apply legend colors based on indices.
  * dataItems order might changed based on sorting and few other reasons.
- * @returns {number} if n < 0, user the index of the current itteration
+ * @returns {number} index from server, if exists, or the index of the current iteration
  */
-export function getItemIndex(item, chartMetric) {
-  let n = -1;
-  if (chartMetric === ChartTypesEnum.compare) {
-    n = item.index_in_config;
-  } else if (chartMetric === ChartTypesEnum.intersect) {
-    const allEntriesNamesBesidesIntersecting = this.data.filter((entry) => !entry.intersection).map((entry) => entry.name);
-    n = allEntriesNamesBesidesIntersecting.indexOf(item.name);
-  }
-  return n;
+export function getItemIndex(index, item) {
+  return _isNil(item.index_in_config) ? index : item.index_in_config;
 }
 
 export function getLegendItemColorClass(index, item) {
+  const configIndex = getItemIndex(index, item);
   let classname;
-  if (this.data.length === 2 && index === 1 && this.data[0].remainder) {
+  if (this.data.length === 2 && configIndex === 1 && this.data[0].remainder) {
     classname = getDynamicEntryColouringClass(item.portion);
   } else if (item.intersection) {
-    classname = getIntersectingEntryColouringClass(index);
+    classname = getIntersectingEntryColouringClass(configIndex);
   } else {
-    classname = getRegularEntryColouringClass(index);
+    classname = getRegularEntryColouringClass(configIndex);
   }
   return classname;
 }

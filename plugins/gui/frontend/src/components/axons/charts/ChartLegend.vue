@@ -92,14 +92,17 @@ export default {
     columnValues() {
       const result = [];
       return this.pageData.reduce((columnValues, legendItem, index) => {
-        const { portion, remainder, value, name } = legendItem;
-        let legendItemColorIndex = this.getItemIndex(legendItem, this.chartMetric);
-        legendItemColorIndex = legendItemColorIndex < 0 ? index : legendItemColorIndex;
-        const colorClassname = this.getLegendItemColorClass(legendItemColorIndex, legendItem);
+        const {
+          portion, remainder, value, name,
+        } = legendItem;
+        const colorClassname = this.getLegendItemColorClass(index, legendItem);
+        const style = this.getLegentItemColorStyle({
+          chartColor: legendItem.chart_color, colorClassname,
+        });
         columnValues.push({
           value: '',
           class: ['column-color', colorClassname],
-          style: this.getLegentItemColorStyle({ chartColor: legendItem.chart_color, colorClassname }),
+          style,
           onClick: () => {},
         });
         columnValues.push({

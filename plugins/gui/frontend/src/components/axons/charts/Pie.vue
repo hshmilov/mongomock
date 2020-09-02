@@ -116,9 +116,7 @@ export default {
       const processData = this.data.map((item, index) => {
         const { portion, remainder, chart_color: chartColor } = item;
 
-        let pieSliceColorIndex = this.getItemIndex(item, this.metric);
-        pieSliceColorIndex = pieSliceColorIndex < 0 ? index : pieSliceColorIndex;
-        const colorClassname = this.getLegendItemColorClass(pieSliceColorIndex, item);
+        const colorClassname = this.getLegendItemColorClass(index, item);
         const sliceColorStyle = this.getPieSliceStyleObject(colorClassname, chartColor);
 
         return {
@@ -173,10 +171,9 @@ export default {
       }
 
       const styleObject = this.getPieSliceStyleObject(colorClass, chartColor);
-      let pieSliceColorIndex = this.getItemIndex(hoveredItem, this.metric);
-      pieSliceColorIndex = pieSliceColorIndex < 0 ? this.inHover : pieSliceColorIndex;
-
-      styleObject.color = getVisibleTextColor(chartColor || styleObject.fill || defaultChartsColors.pieColors[pieSliceColorIndex % 10]);
+      const pieSliceColorIndex = this.getItemIndex(this.inHover, hoveredItem);
+      styleObject.color = getVisibleTextColor(chartColor || styleObject.fill
+              || defaultChartsColors.pieColors[pieSliceColorIndex % 10]);
 
       return {
         ...tooltip,

@@ -212,7 +212,8 @@ def fetch_chart_intersect(
             'portion': 0,
             'remainder': True,
             'view': {**base_view, 'query': {'filter': base_view['query']['filter']}},
-            'module': entity.value
+            'module': entity.value,
+            'index_in_config': 0
         }]
 
     child1_from_db = find_view_by_id(entity, intersecting[0])
@@ -240,7 +241,9 @@ def fetch_chart_intersect(
             'view': child1_view,
             'module': entity.value,
             'value': numeric_value,
-            'portion': numeric_value / total})
+            'portion': numeric_value / total,
+            'index_in_config': 1
+        })
     else:
         child2_from_db = find_view_by_id(entity, intersecting[1])
         if not child2_from_db or not child2_from_db.get('view', {}).get('query'):
@@ -277,7 +280,8 @@ def fetch_chart_intersect(
             'value': numeric_value,
             'portion': numeric_value / total,
             'module': entity.value,
-            'view': child1_view
+            'view': child1_view,
+            'index_in_config': 1
         })
 
         # Intersection
@@ -329,7 +333,8 @@ def fetch_chart_intersect(
             'value': numeric_value,
             'portion': numeric_value / total,
             'module': entity.value,
-            'view': child2_view
+            'view': child2_view,
+            'index_in_config': 2
         })
 
     remainder = 1 - sum([x['portion'] for x in data])
@@ -343,7 +348,8 @@ def fetch_chart_intersect(
         'view': {
             **base_view, 'query': {'filter': f'{base_filter}not (({child1_filter}){child2_or})'}
         },
-        'module': entity.value
+        'module': entity.value,
+        'index_in_config': 0
     }, *data]
 
 

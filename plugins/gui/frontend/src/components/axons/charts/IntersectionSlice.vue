@@ -4,8 +4,8 @@
       :id="intersectingColors.length ? `defined-colors-${chartId}` : 'intersection-2-3'"
     >
       <stop
-        class="pie-stop-3"
-        :style="secondIntersectionStyle"
+        class="pie-stop-2"
+        :style="firstIntersectionStyle"
         offset="0%"
       />
       <template v-for="n in 9">
@@ -23,8 +23,8 @@
         />
       </template>
       <stop
-        class="pie-stop-2"
-        :style="firstIntersectionStyle"
+        class="pie-stop-3"
+        :style="secondIntersectionStyle"
         offset="100%"
       />
     </linearGradient>
