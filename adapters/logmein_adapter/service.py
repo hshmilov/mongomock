@@ -9,7 +9,7 @@ from axonius.utils.parsing import parse_bool_from_raw
 from logmein_adapter.client_id import get_client_id
 from logmein_adapter.connection import LogmeinConnection
 from logmein_adapter.structures import LogmeinDeviceInstance, LogmeinUserInstance
-from logmein_adapter.consts import EXTRA_DETAILS_NAME
+from logmein_adapter.consts import EXTRA_DETAILS_NAME, PAREN_RE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -152,7 +152,17 @@ class LogmeinAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('description') or '')
-            device.hostname = self._get_extra_details('computer', device_raw).get('lastOnline')
+            hostname = self._get_extra_details('computer', device_raw).get('computerDescription')
+            if (isinstance(hostname, str) and
+                    (('(' in hostname) or (')' in hostname))):
+                # remove parentheses from hostname
+                try:
+                    hostname = PAREN_RE.sub('', hostname).strip()
+                except Exception:
+                    logger.exception(f'Failed removing parenthases from hostname {hostname}')
+
+            device.hostname = hostname
+            device.description = device_raw.get('description')
             device.last_seen = parse_date(self._get_extra_details('computer', device_raw).get('lastOnline'))
 
             hardware_details = self._get_extra_details('hardware', device_raw)
