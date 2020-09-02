@@ -1,108 +1,106 @@
 <template>
   <div class="x-trigger-config">
-    <div class="main">
-      <h4 class="main-trigger-title">
-        Saved Query
-      </h4>
-      <div>Select the Saved Query for the Enforcement Set to act on:</div>
-      <div class="config">
-        <div class="config-base">
-          <div class="base-query">
-            <XSelectSymbol
-              v-model="viewEntity"
-              :options="entityOptions"
-              type="icon"
-              placeholder="mod"
-              :read-only="readOnly || entityOptions.length === 0"
-              minimal
-            />
-            <XSelect
-              v-model="config.view.id"
-              :options="currentViewOptions"
-              searchable
-              placeholder="query name"
-              :read-only="readOnly || entityOptions.length === 0 || !views[viewEntity]"
-              class="query-name"
-            />
-          </div>
+    <h4 class="main-trigger-title">
+      Saved Query
+    </h4>
+    <div>Select the Saved Query for the Enforcement Set to act on:</div>
+    <div class="config">
+      <div class="config-base">
+        <div class="base-query">
+          <XSelectSymbol
+            v-model="viewEntity"
+            :options="entityOptions"
+            type="icon"
+            placeholder="mod"
+            :read-only="readOnly || entityOptions.length === 0"
+            minimal
+          />
+          <XSelect
+            v-model="config.view.id"
+            :options="currentViewOptions"
+            searchable
+            placeholder="query name"
+            :read-only="readOnly || entityOptions.length === 0 || !views[viewEntity]"
+            class="query-name"
+          />
         </div>
-        <XCheckbox
-          v-model="runOn"
-          class="added-entities"
-          value="AddedEntities"
-          :read-only="readOnly"
-          label="Run on added entities only"
-        />
       </div>
-      <h4 class="trigger-title">Custom Scheduling</h4>
-      <XSwitch
-        :checked="showScheduling"
-        label="Enable custom scheduling"
+      <XCheckbox
+        v-model="runOn"
+        class="added-entities"
+        value="AddedEntities"
         :read-only="readOnly"
-        @change="showScheduling = !showScheduling"
+        label="Run on added entities only"
       />
-      <template v-if="showScheduling">
-        <h5 class="trigger-subtitle">Custom Schedule Settings</h5>
-        <XForm
-          v-model="periodData"
-          :schema="periodSchema"
-          :read-only="readOnly"
-          @validate="onPeriodValidate"
-        />
-        <h5 class="trigger-subtitle">Additional Conditions</h5>
-        <XSwitch
-          :checked="showConditions"
-          label="Apply additional enforcement execution conditions"
-          :read-only="readOnly"
-          @change="toggleConditions"
-        />
-        <div
-          v-if="showConditions"
-          class="config"
-        >
-          <XCheckbox
-            v-model="conditions.new_entities"
-            label="Only when assets have been added since the last execution"
-            :read-only="readOnly"
-          />
-          <XCheckbox
-            v-model="conditions.previous_entities"
-            label="Only when assets have been removed since the last execution"
-            :read-only="readOnly"
-          />
-          <div class="config-item">
-            <XCheckbox
-              v-model="showAbove"
-              label="Only when the number of assets is above N"
-              :read-only="readOnly"
-            />
-            <input
-              v-if="showAbove"
-              v-model="above"
-              type="number"
-              :disabled="readOnly"
-              class="above"
-              @keypress="validateInteger"
-            >
-          </div>
-          <div class="config-item">
-            <XCheckbox
-              v-model="showBelow"
-              label="Only when the number of assets is below N"
-              :read-only="readOnly"
-            />
-            <input
-              v-if="showBelow"
-              v-model="below"
-              type="number"
-              :disabled="readOnly"
-              class="below"
-              @keypress="validateInteger"
-            >
-          </div>
-        </div>
-      </template>
     </div>
+    <h4 class="trigger-title">Custom Scheduling</h4>
+    <XSwitch
+      :checked="showScheduling"
+      label="Enable custom scheduling"
+      :read-only="readOnly"
+      @change="showScheduling = !showScheduling"
+    />
+    <template v-if="showScheduling">
+      <h5 class="trigger-subtitle">Custom Schedule Settings</h5>
+      <XForm
+        v-model="periodData"
+        :schema="periodSchema"
+        :read-only="readOnly"
+        @validate="onPeriodValidate"
+      />
+      <h5 class="trigger-subtitle">Additional Conditions</h5>
+      <XSwitch
+        :checked="showConditions"
+        label="Apply additional enforcement execution conditions"
+        :read-only="readOnly"
+        @change="toggleConditions"
+      />
+      <div
+        v-if="showConditions"
+        class="config"
+      >
+        <XCheckbox
+          v-model="conditions.new_entities"
+          label="Only when assets have been added since the last execution"
+          :read-only="readOnly"
+        />
+        <XCheckbox
+          v-model="conditions.previous_entities"
+          label="Only when assets have been removed since the last execution"
+          :read-only="readOnly"
+        />
+        <div class="config-item">
+          <XCheckbox
+            v-model="showAbove"
+            label="Only when the number of assets is above N"
+            :read-only="readOnly"
+          />
+          <input
+            v-if="showAbove"
+            v-model="above"
+            type="number"
+            :disabled="readOnly"
+            class="above"
+            @keypress="validateInteger"
+          >
+        </div>
+        <div class="config-item">
+          <XCheckbox
+            v-model="showBelow"
+            label="Only when the number of assets is below N"
+            :read-only="readOnly"
+          />
+          <input
+            v-if="showBelow"
+            v-model="below"
+            type="number"
+            :disabled="readOnly"
+            class="below"
+            @keypress="validateInteger"
+          >
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -376,87 +374,77 @@ export default {
 
 <style lang="scss">
   .x-trigger-config {
-    display: grid;
-    grid-template-rows: calc(100% - 30px) 30px;
-    align-items: flex-start;
-    height: 100%;
 
-    .main {
-      @include  y-scrollbar;
-      overflow: auto;
-      height: calc(100% - 20px);
+    .main-trigger-title {
+      margin: 10px 0 4px 0;
+    }
 
-      .main-trigger-title {
-        margin: 10px 0 4px 0;
+    .trigger-title {
+      margin: 24px 0 4px 0;
+    }
+
+    .trigger-subtitle {
+      margin: 16px 0 4px 0;
+    }
+
+    .config {
+      margin: 8px 0;
+
+      .added-entities {
+        margin-top: 8px;
       }
 
-      .trigger-title {
-        margin: 24px 0 4px 0;
-      }
+      .config-base {
+        display: flex;
+        align-items: center;
 
-      .trigger-subtitle {
-        margin: 16px 0 4px 0;
-      }
-
-      .config {
-        margin: 8px 0;
-
-        .added-entities {
-          margin-top: 8px;
-        }
-
-        .config-base {
+        .base-query {
+          flex: 1 0 auto;
           display: flex;
-          align-items: center;
 
-          .base-query {
+          .x-select-symbol {
+            width: 60px;
+          }
+
+          .query-name {
             flex: 1 0 auto;
-            display: flex;
-
-            .x-select-symbol {
-              width: 60px;
-            }
-
-            .query-name {
-              flex: 1 0 auto;
-            }
           }
         }
+      }
+
+      .x-checkbox {
+        line-height: 24px;
+      }
+
+      .config-item {
+        display: flex;
+        align-items: center;
+        line-height: 24px;
 
         .x-checkbox {
-          line-height: 24px;
+          margin-right: 12px;
         }
 
-        .config-item {
-          display: flex;
-          align-items: center;
-          line-height: 24px;
-
-          .x-checkbox {
-            margin-right: 12px;
-          }
-
-          .above, .below {
-            flex: 1 0 auto;
-          }
+        .above, .below {
+          flex: 1 0 auto;
         }
       }
+    }
 
-      .x-form {
-        > .x-array-edit .list {
-          grid-template-columns: 1fr;
+    .x-form {
+      > .x-array-edit .list {
+        grid-template-columns: 1fr;
 
-          .item_period_recurrence input {
-            width: 200px;
-          }
-
-          .ant-form-item .period_recurrence_select {
-            width: 400px;
-          }
+        .item_period_recurrence input {
+          width: 200px;
         }
-        .form-error {
-          margin-top: 0;
+
+        .ant-form-item .period_recurrence_select {
+          width: 400px;
         }
+      }
+      .form-error {
+        margin-top: 0;
       }
     }
   }

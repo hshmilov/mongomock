@@ -42,7 +42,7 @@
         type="link"
         @click="onCancel"
       >
-        Cancel
+        {{ cancelButtonText }}
       </XButton>
       <XButton
         type="primary"
@@ -136,6 +136,9 @@ export default {
     deletedToastMessage() {
       return deletedToastMessages.trigger;
     },
+    cancelButtonText() {
+      return this.isTriggerUndefined ? 'Clear' : 'Cancel';
+    },
   },
   watch: {
     visible(isVisible) {
@@ -209,9 +212,10 @@ export default {
     .ant-drawer-body {
       padding-top: 12px;
       &__content {
+        height: calc(100% - 52px);
         overflow-x: hidden;
         padding-top: 0;
-        height: 100%;
+        padding-bottom: 0;
         .loading-spinner {
           position: absolute;
           left: 50%;
@@ -220,12 +224,6 @@ export default {
           transform: translate(-50%, -50%);
           margin: auto;
           color: $theme-orange;
-        }
-        .x-trigger-config {
-          grid-template-rows: calc(100% + 58px) 30px;
-          > .main {
-            height: 100%;
-            }
         }
       }
       &__footer {

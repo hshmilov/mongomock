@@ -12,7 +12,7 @@
         v-for="category in processedCategories"
         :key="category.name"
         :md-expand="true"
-        :md-expanded="searchValue.length"
+        :md-expanded="searchValue.length > 0"
       >
         <XTitle :logo="`actions/${category.name}`">{{ category.title }}</XTitle>
         <MdList
@@ -122,6 +122,9 @@ export default {
       this.checkEmptySettings(action.name);
       if (this.anyEmptySettings) return;
       this.$emit('select', action.name);
+    },
+    clearSearchValue() {
+      this.searchValue = '';
     },
   },
 };

@@ -18,7 +18,7 @@
     <template #panelContent>
       <XEnforcementActionConfig
         v-if="!actionInSavingProcess"
-        ref="enforcement_action_config"
+        ref="enforcementActionConfig"
         v-model="actionDefinition"
         :enforcement-name.sync="enforcementNameValue"
         :selected-action-library-type="selectedActionLibraryType"
@@ -56,7 +56,7 @@
           type="link"
           @click="onCancel"
         >
-          Cancel
+          {{ cancelButtonText }}
         </XButton>
         <XButton
           type="primary"
@@ -249,13 +249,16 @@ export default {
     isMainActionDeleted() {
       return this.isExistingEnforcement && this.actions[mainCondition] === null;
     },
+    cancelButtonText() {
+      return this.isActionUndefined ? 'Clear' : 'Cancel';
+    },
   },
   watch: {
     actionPosition() {
       this.isSavedDisabled = true;
       this.$emit('update:is-editing-mode', this.isActionUndefined);
       this.$nextTick(() => {
-        const enforcementActionConfig = this.$refs.enforcement_action_config;
+        const { enforcementActionConfig } = this.$refs;
         if (enforcementActionConfig) {
           enforcementActionConfig.initConfigValidations();
         }
@@ -306,7 +309,7 @@ export default {
       if (!this.isActionUndefined) {
         this.toggleEditMode();
       } else {
-        this.$refs.enforcement_action_config.cancelConfig();
+        this.$refs.enforcementActionConfig.cancelConfig();
       }
       if (this.mainActionSelected) {
         this.$emit('select-main-action');

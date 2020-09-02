@@ -285,9 +285,6 @@ export default {
     }
   },
   mounted() {
-    if (this.$refs.name) {
-      this.$refs.name.focus();
-    }
     if (!this.enforcementNames || !this.enforcementNames.length) {
       this.fetchSavedEnforcements();
     }

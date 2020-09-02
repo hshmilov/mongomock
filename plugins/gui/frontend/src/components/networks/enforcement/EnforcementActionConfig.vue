@@ -13,7 +13,7 @@
         </span>
         <AInput
           id="enforcement_name"
-          ref="enforcement_name_input"
+          ref="enforcementNameInput"
           v-model="enforcementNameValue"
           placeholder="Enter Enforcement Set name"
           @focusout.stop="enforcementNameFocusedOut = true"
@@ -45,6 +45,7 @@
       transparent
     >
       <XActionLibrary
+        ref="actionLibrary"
         :categories="actionCategories"
         @select="$emit('select-action-type', $event)"
       />
@@ -212,6 +213,12 @@ export default {
         this.enforcementNameFocusedOut = false;
         this.enforcementNameValue = '';
       }
+      if (this.isActionUndefined) {
+        const { actionLibrary } = this.$refs;
+        if (actionLibrary) {
+          actionLibrary.clearSearchValue();
+        }
+      }
     },
     resetActionConfig() {
       this.resetActionValidations();
@@ -237,7 +244,7 @@ export default {
     setFocusOnEnforcementName() {
       if (!this.isExistingEnforcement && this.focusOnEnforcementName) {
         this.$nextTick(() => {
-          this.$refs.enforcement_name_input.focus();
+          this.$refs.enforcementNameInput.focus();
         });
       }
     },
