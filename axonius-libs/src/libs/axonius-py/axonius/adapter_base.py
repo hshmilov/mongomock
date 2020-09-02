@@ -1655,7 +1655,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 if ip_locations:
                     for ip_location in ip_locations:
                         # Handle basic fields
-                        del ip_location['subnet']
+                        if 'subnet' in ip_location:
+                            del ip_location['subnet']
                         locations = []
                         if 'location' in ip_location and ip_location['location'].strip():
                             locations.append(ip_location['location'].strip())
