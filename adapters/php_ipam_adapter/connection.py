@@ -34,9 +34,9 @@ class PhpIpamConnection(RESTConnection):
 
     def _get_token(self):
         try:
-            response = self._post('user', do_basic_auth=True)
+            response = self._post('user/', do_basic_auth=True)
             if not (isinstance(response, dict) and
-                    isinstance(response.get('data'). dict) and
+                    isinstance(response.get('data'), dict) and
                     response.get('data').get('token')):
                 raise RESTException(f'Failed fetching access token, received invalid response: {response}')
 
@@ -56,7 +56,7 @@ class PhpIpamConnection(RESTConnection):
             raise RESTException('No username or password')
         try:
             self._get_token()
-            self._get('devices')
+            self._get('devices/')
 
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
@@ -85,7 +85,7 @@ class PhpIpamConnection(RESTConnection):
         try:
             extra_subnets = self._get_subnets()
 
-            response = self._get('devices')
+            response = self._get('devices/')
             if not (isinstance(response, dict) and isinstance(response.get('data'), list)):
                 logger.warning(f'Received invalid response for devices. {response}')
                 return
@@ -115,12 +115,11 @@ class PhpIpamConnection(RESTConnection):
     def _get_users(self):
         try:
             # TBD, after testing check values and add
-            response = self._get('user/all')
+            response = self._get('user/all/')
             if not (isinstance(response, dict) and isinstance(response.get('data'), list)):
                 logger.warning(f'Received invalid response for regular users. {response}')
                 return {}
 
-            logger.info(f'Regular user result: {response.get("data")}')
             # TBD - Test on field and implement
             # user/all request is not documented, therefor we first log the response and after we will be able to
             # fetch the correct data and build User Structure
@@ -136,12 +135,11 @@ class PhpIpamConnection(RESTConnection):
     def _get_admins(self):
         try:
             # TBD, after testing check values and add
-            response = self._get('user/admins')
+            response = self._get('user/admins/')
             if not (isinstance(response, dict) and isinstance(response.get('data'), dict)):
                 logger.warning(f'Received invalid response for admin users. {response}')
                 return {}
 
-            logger.info(f'Admin user result: {response.get("data")}')
             # TBD - Test on field and implement
             # user/admins request is not documented, therefor we first log the response and after we will be able to
             # fetch the correct data and build Admin User Structure
