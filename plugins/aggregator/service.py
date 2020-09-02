@@ -209,7 +209,6 @@ class AggregatorService(Triggerable, PluginBase):
                         if adapter_plugin_name:
                             adapter_plugin_settings = self.plugins.get_plugin_settings(adapter_plugin_name)
                             adapter_plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS] = True
-
                             self._request_reload_uwsgi(adapter)
                 except Exception:
                     logger.exception(f'Could not request uwsgi reload for {adapter!r}')

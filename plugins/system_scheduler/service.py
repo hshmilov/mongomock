@@ -1109,7 +1109,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: Returns the amount of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION]\
-            .find({}, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1})
+            .find({}, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1, '_id': 1})
 
     def __check_adapter_clients_status(self):
         """
@@ -1198,10 +1198,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             _custom_discovery = kwargs.get('connection_custom_discovery')
             if _custom_discovery:
                 logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
-                             f'client: {_client_id} after custom discovery trigger.')
+                             f' client: {_client_id} after custom discovery trigger.')
             else:
                 logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
-                             f'client: {_client_id}')
+                             f' client: {_client_id}')
 
         def _specific_adapter_reject_callback(err, **kwargs):
             _client_id = kwargs.get('client_id', {})
@@ -1209,7 +1209,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         def _trigger_client(resolve, _):
             try:
-                self._async_trigger_remote_plugin(_adapter[PLUGIN_UNIQUE_NAME], 'insert_to_db', data={
+                job_name = f'insert_to_db_{_client["_id"]}'
+                self._async_trigger_remote_plugin(_adapter[PLUGIN_UNIQUE_NAME], job_name, data={
                     'client_name': _client['client_id'],
                     'connection_custom_discovery': custom_discovery
                 }).then(did_fulfill=self.__promise_callback_wrapper(_specific_adapter_resolve_callback,

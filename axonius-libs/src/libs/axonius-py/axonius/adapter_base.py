@@ -133,6 +133,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self.existential_wondering.start()
         self.__has_a_reason_to_live = False
 
+        # This lock is used to prevent of clean running along with fetch.
+        self._adapter_fetch_lock = RLock()
+
     @property
     def __last_fetch_time(self) -> Optional[datetime]:
         return self.plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
@@ -534,83 +537,86 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         self.__has_a_reason_to_live = True
         # pylint: disable=too-many-nested-blocks
-        if job_name == 'insert_to_db':
-            client_name = post_json and post_json.get('client_name')
-            connection_custom_discovery = post_json and post_json.get('connection_custom_discovery')
-            connection_saved = post_json and post_json.get('connection_saved', False)
-            if self._connect_via_tunnel:
-                res = self._trigger_remote_plugin(
-                    INSTANCE_CONTROL_PLUGIN_NAME,
-                    job_name='execute_shell',
-                    data={'cmd': self.PING_TUNNEL_CLIENT_CMD.format(ip=self.DEFAULT_TUNNEL_CLIENT_IP)},
-                    timeout=30,
-                    stop_on_timeout=True,
-                    priority=True
-                )
-                res.raise_for_status()
-                if self.PING_CMD_EXPECTED_RESULT not in res.text:
-                    self.log_activity(AuditCategory.Adapters, AuditAction.Skip, {
-                        'adapter': self.plugin_name,
-                        'client_id': client_name
-                    })
-                    self._update_client_status(client_name, 'error')
-                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_down', blocking=False)
-                    return to_json({'devices_count': 0, 'users_count': 0})
-                self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
+        if job_name.startswith('insert_to_db'):
+            with self._adapter_fetch_lock:
+                client_name = post_json and post_json.get('client_name')
+                connection_custom_discovery = post_json and post_json.get('connection_custom_discovery')
+                connection_saved = post_json and post_json.get('connection_saved', False)
+                if self._connect_via_tunnel:
+                    res = self._trigger_remote_plugin(
+                        INSTANCE_CONTROL_PLUGIN_NAME,
+                        job_name='execute_shell',
+                        data={'cmd': self.PING_TUNNEL_CLIENT_CMD.format(ip=self.DEFAULT_TUNNEL_CLIENT_IP)},
+                        timeout=30,
+                        stop_on_timeout=True,
+                        priority=True
+                    )
+                    res.raise_for_status()
+                    if self.PING_CMD_EXPECTED_RESULT not in res.text:
+                        self.log_activity(AuditCategory.Adapters, AuditAction.Skip, {
+                            'adapter': self.plugin_name,
+                            'client_id': client_name
+                        })
+                        self._update_client_status(client_name, 'error')
+                        self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_down', blocking=False)
+                        return to_json({'devices_count': 0, 'users_count': 0})
+                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
 
-            check_fetch_time = False
-            if post_json and post_json.get('check_fetch_time'):
-                check_fetch_time = post_json.get('check_fetch_time')
-            log_fetch = True
-            if post_json:
-                log_fetch = post_json.get('log_fetch', True)
-            parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(ParallelSearch.enabled,
-                                                                                              False)
-            try:
+                check_fetch_time = False
+                if post_json and post_json.get('check_fetch_time'):
+                    check_fetch_time = post_json.get('check_fetch_time')
+                log_fetch = True
+                if post_json:
+                    log_fetch = post_json.get('log_fetch', True)
+                parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(
+                    ParallelSearch.enabled,
+                    False)
                 try:
-                    if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:
-                        res = {'devices_count': 0,
-                               'users_count': 0
-                               }
-                        fetch_start_time = datetime.utcnow()
-                        for client, result in self._handle_insert_to_db_async(
-                                client_name, check_fetch_time, log_fetch=log_fetch,
-                                connection_custom_discovery=connection_custom_discovery,
-                                connection_saved=connection_saved):
-                            if result != '':
-                                result = json.loads(result)
-                                res['devices_count'] += result['devices_count']
-                                res['users_count'] += result['users_count']
-                                if log_fetch:
-                                    self._log_activity_adapter_client_fetch_summary(client,
-                                                                                    fetch_start_time,
-                                                                                    result['users_count'],
-                                                                                    result['devices_count'])
-                            logger.info(f'Received from {client}: {result}')
+                    try:
+                        if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:
+                            res = {'devices_count': 0,
+                                   'users_count': 0
+                                   }
+                            fetch_start_time = datetime.utcnow()
+                            for client, result in self._handle_insert_to_db_async(
+                                    client_name, check_fetch_time, log_fetch=log_fetch,
+                                    connection_custom_discovery=connection_custom_discovery,
+                                    connection_saved=connection_saved):
+                                if result != '':
+                                    result = json.loads(result)
+                                    res['devices_count'] += result['devices_count']
+                                    res['users_count'] += result['users_count']
+                                    if log_fetch:
+                                        self._log_activity_adapter_client_fetch_summary(client,
+                                                                                        fetch_start_time,
+                                                                                        result['users_count'],
+                                                                                        result['devices_count'])
+                                logger.info(f'Received from {client}: {result}')
 
-                        res = to_json(res)
-                    else:
-                        res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
-                                                     log_fetch=log_fetch,
-                                                     connection_custom_discovery=connection_custom_discovery,
-                                                     connection_saved=connection_saved)
-                except adapter_exceptions.AdapterException:
-                    logger.warning(f'Failed inserting data for client '
-                                   f'{str(client_name)}', exc_info=True)
-                    return ''
-                for entity_type in EntityType:
-                    if json.loads(res)[f'{entity_type.value.lower()}_count']:
-                        self._save_field_names_to_db(entity_type)
-                return res
+                            res = to_json(res)
+                        else:
+                            res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
+                                                         log_fetch=log_fetch,
+                                                         connection_custom_discovery=connection_custom_discovery,
+                                                         connection_saved=connection_saved)
+                    except adapter_exceptions.AdapterException:
+                        logger.warning(f'Failed inserting data for client '
+                                       f'{str(client_name)}', exc_info=True)
+                        return ''
+                    for entity_type in EntityType:
+                        if json.loads(res)[f'{entity_type.value.lower()}_count']:
+                            self._save_field_names_to_db(entity_type)
+                    return res
 
-            except BaseException:
-                delayed_trigger_gc()
-                raise
+                except BaseException:
+                    delayed_trigger_gc()
+                    raise
         elif job_name == 'clean_devices':
-            do_not_look_at_last_cycle = False
-            if post_json and post_json.get('do_not_look_at_last_cycle') is True:
-                do_not_look_at_last_cycle = True
-            return to_json(self.clean_db(do_not_look_at_last_cycle))
+            with self._adapter_fetch_lock:
+                do_not_look_at_last_cycle = False
+                if post_json and post_json.get('do_not_look_at_last_cycle') is True:
+                    do_not_look_at_last_cycle = True
+                return to_json(self.clean_db(do_not_look_at_last_cycle))
         elif job_name == 'update_clients_status':
             return self._update_clients_status()
         elif job_name == 'refetch_device':
