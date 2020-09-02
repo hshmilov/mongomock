@@ -117,6 +117,22 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                 local_groups_dict[asset_id].append(local_admin_data)
         except Exception:
             logger.warning(f'Problem getting local admins dict', exc_info=True)
+        if not local_groups_dict:
+            try:
+                for local_admin_data \
+                        in client_data.query(_wrap_query_with_resource_id(consts.LOCAL_ADMIN_QUERY_2, device_id)):
+                    asset_id = local_admin_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if local_admin_data.get('name0') == 'Administrators':
+                        if asset_id not in local_admins_dict:
+                            local_admins_dict[asset_id] = []
+                        local_admins_dict[asset_id].append(local_admin_data)
+                    if asset_id not in local_groups_dict:
+                        local_groups_dict[asset_id] = []
+                    local_groups_dict[asset_id].append(local_admin_data)
+            except Exception:
+                logger.warning(f'Problem getting local admins dict', exc_info=True)
 
         ram_dict = dict()
         try:

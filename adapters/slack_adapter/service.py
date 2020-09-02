@@ -146,6 +146,12 @@ class SlackAdapter(AdapterBase, Configurable):
     def _fill_slack_user_fields(self, user_raw: dict, user: MyUserAdapter):
         try:
             user.always_active = parse_bool_from_raw(user_raw.get('always_active'))
+            try:
+                billing_active = (user_raw.get('billable_info') or {}).get('billing_active')
+                if isinstance(billing_active, bool):
+                    user.billing_active = billing_active
+            except Exception:
+                logger.exception(f'Problem with billing')
             user.color = user_raw.get('color')
             user.deleted = parse_bool_from_raw(user_raw.get('deleted'))
             user.has_2fa = parse_bool_from_raw(user_raw.get('has_2fa'))

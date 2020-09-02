@@ -24,6 +24,7 @@ class EnterpriseGridUser(SmartJsonClass):
 
 class SlackUserInstance(UserAdapter):
     always_active = Field(bool, 'Always Active')
+    billing_active = Field(bool, 'Billing Active')
     color = Field(str, 'Username Color')
     deleted = Field(bool, 'Deleted')
     enterprise_user = Field(EnterpriseGridUser, 'Enterprise Grid')

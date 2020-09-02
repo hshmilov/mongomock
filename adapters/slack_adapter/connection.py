@@ -5,7 +5,7 @@ from typing import Optional
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from slack_adapter.consts import USER_PER_PAGE, TEAM_ID_PER_PAGE, API_PREFIX, URL_ADMIN_TEAM_LIST, \
-    URL_ADMIN_USER_LIST, URL_USER_INFO, URL_USER_LIST, MAX_NUMBER_OF_USERS, MAX_NUMBER_OF_TEAM_IDS
+    URL_ADMIN_USER_LIST, URL_USER_INFO, URL_USER_LIST, MAX_NUMBER_OF_USERS, MAX_NUMBER_OF_TEAM_IDS, URL_BILLING
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -144,6 +144,14 @@ class SlackConnection(RESTConnection):
             raise
 
     def _paginated_user_get_non_enterprise(self):
+        billing_info = dict()
+        try:
+            billing_info_raw = self._get(URL_BILLING)
+            billing_info = billing_info_raw.get('billable_info')
+        except Exception:
+            logger.exception(f'Problem with billing: {billing_info}')
+        if not isinstance(billing_info, dict):
+            billing_info = dict()
         try:
             user_counter = 0
             url_params = {
@@ -156,6 +164,10 @@ class SlackConnection(RESTConnection):
                     if users and isinstance(users, list):
                         for user in users:
                             if isinstance(user, dict):
+                                try:
+                                    user['billing_info'] = billing_info.get(user['id'])
+                                except Exception:
+                                    pass
                                 yield user
                                 user_counter += 1
                     next_cursor = self._move_cursor(response)
