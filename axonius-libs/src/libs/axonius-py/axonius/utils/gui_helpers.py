@@ -35,7 +35,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities, PREFERRED_SUFFIX
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
-from axonius.utils.dict_utils import is_filter_in_value
+from axonius.utils.dict_utils import is_filter_in_value, make_hash
 from axonius.utils import serial_csv
 from axonius.plugin_exceptions import SessionInvalid
 
@@ -830,10 +830,11 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
     if len(entity_data) == 1:
         details = find_entity_field(entity_data[0], field_path)
         if details and add_assoc_adapter:
-            return details, [entity_data[0].get('plugin_name')]
+            return [{**detail, 'adapters': [entity_data[0].get('plugin_name')]} for detail in details]
         return details
 
     children = []
+    children_map = {}
     for item in entity_data:
         # Continue recursively for current element of the list
         child_value = find_entity_field(item, field_path)
@@ -880,16 +881,13 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                     return True
                 return True
 
-            def merge_with_adapter(current_list, additional_list, adapter):
-                children_without_adapters = [current_item[0] for current_item in current_list]
-                for additional_item in additional_list:
-                    if additional_item in children_without_adapters:
-                        index = children_without_adapters.index(additional_item)
-                        current_list[index] = (current_list[index][0],
-                                               list(set(current_list[index][1]).union([adapter])))
+            def merge_with_adapter(additional_list: list, adapter: str):
+                for item_dict in additional_list:
+                    hash_dict = make_hash(item_dict)
+                    if children_map.get(hash_dict):
+                        children_map[hash_dict]['adapters'].add(adapter)
                     else:
-                        current_list = current_list + [(additional_item, [adapter])]
-                return current_list
+                        children_map[hash_dict] = {**item_dict, 'adapters': set([adapter])}
 
             adapter = item.get('plugin_name')
             if isinstance(child_value, list):
@@ -897,17 +895,19 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
                 add = list(filter(new_instance, child_value))
                 if add:
                     if add_assoc_adapter:
-                        children = merge_with_adapter(children, add, adapter)
+                        merge_with_adapter(add, adapter)
                     else:
                         children = children + add
 
             elif new_instance(child_value):
                 # Check if value found can be added to children
                 if add_assoc_adapter:
-                    children = merge_with_adapter(children, add, adapter)
+                    merge_with_adapter([child_value], adapter)
                 else:
                     children.append(child_value)
 
+    if add_assoc_adapter:
+        return [{**item, 'adapters': list(item['adapters'])} for item in children_map.values()]
     return children
 
 
@@ -966,12 +966,6 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
         else:
             val = find_entity_field(entity_data, field_path, add_assoc_adapter=add_assoc_adapter)
         specific_adapter_name = extract_adapter_name(field_path)
-
-        if add_assoc_adapter and val:
-            if isinstance(val, tuple):
-                val = [{**item, 'adapters': val[1]} for item in val[0]]
-            elif isinstance(val, list):
-                val = [{**item[0], 'adapters': item[1]} for item in val]
 
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):

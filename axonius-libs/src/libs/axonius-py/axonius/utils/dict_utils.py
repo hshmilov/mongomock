@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Mapping
 
 
@@ -37,3 +38,23 @@ def is_filter_in_value(value, filters):
     if isinstance(value, dict):
         return any(is_filter_in_value(item, filters) for key, item in value.items())
     return False
+
+
+def make_hash(obj):
+    """
+    Makes a hash from a dictionary, list, tuple or set to any level, that contains
+    only other hashable types (including any lists, tuples, sets, and
+    dictionaries).
+    """
+
+    if isinstance(obj, (set, tuple, list)):
+        return tuple([make_hash(e) for e in obj])
+    if not isinstance(obj, dict):
+        return hash(obj)
+
+    new_o = copy.deepcopy(obj)
+    for k, v in new_o.items():
+        new_o[k] = make_hash(v)
+
+    obj_sorted = sorted(new_o.items(), key=lambda x: str(x[0]) if isinstance(x[0], int) else x[0])
+    return hash(tuple(frozenset(obj_sorted)))
