@@ -1,4 +1,5 @@
 import logging
+import json
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -9,6 +10,7 @@ from axonius.clients.postgres.connection import PostgresConnection
 from axonius.clients.sql.sql_generic import _sql_parse_raw_data
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
+from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.sql import SQLServers, MySqlAdapter, MySqlUserAdapter
 from axonius.utils.dynamic_device_mixin import DynamicDeviceMixin
@@ -213,7 +215,16 @@ class MssqlAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
             user.server_tag = client_config.get('server_tag')
 
             self.fill_dynamic_user(user, user_raw)
-            user.set_raw(user_raw)
+
+            try:
+                # some fields might not be basic types (Decimal, datetime)
+                # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
+                # will pass a JSON encode later by mongo
+                user.set_raw(json.loads(json.dumps(
+                    user_raw, cls=IgnoreErrorJSONEncoder)))
+            except Exception:
+                logger.exception(f'Can\'t set raw for {user_raw}')
+
             return user
         except Exception:
             logger.exception(f'Problem with fetching User for {user_raw}')

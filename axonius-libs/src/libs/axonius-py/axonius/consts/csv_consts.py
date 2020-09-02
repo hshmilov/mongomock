@@ -1,7 +1,7 @@
 # These are ordered by what we prefer if there are multiple columns (e.g. id > identifier)
 
 IDENTIFIERS = {
-    'id': ['id', 'identifier', 'serialnumber', 'assetid', 'resourceid'],
+    'id': ['id', 'identifier', 'serialnumber', 'assetid', 'resourceid', 'dwid'],
     'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename', 'samaccountname',
              'endpointname'],
     'hostname': ['host', 'fqdn', 'fullyqualifieddomainname', 'hostname', 'compname', 'computername', 'servername',
@@ -19,7 +19,7 @@ IDENTIFIERS = {
     'total_physical_memory_gb': ['memorygb', 'totalmemorygb'],
     'cpu_speed': ['cpuspeedraw'],
     'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen', 'endpointlfdt'],
-    'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork'],
+    'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork', 'companyemail'],
     'domain': ['domain', 'domainname', 'endpointdomain'],
     'username': ['username', 'samaccountname'],
     'first_name': ['firstname', 'givenname'],

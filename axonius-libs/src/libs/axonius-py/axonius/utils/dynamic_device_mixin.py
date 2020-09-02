@@ -87,7 +87,7 @@ class DynamicDeviceMixin:
     def fill_dynamic_user(self, user: UserAdapter, user_raw: dict):
         # Normalized fields are the keys of csv_consts.IDENTIFIERS
         filler_to_normalized_fields = {
-            self._fill_user_id: ['id', 'username', 'name'],
+            self._fill_user_id: ['id', 'username', 'name', 'mail'],
             self._fill_domain: ['domain'],
             self._fill_first_name: ['first_name'],
             self._fill_last_name: ['last_name'],
@@ -182,9 +182,10 @@ class DynamicDeviceMixin:
     def _fill_user_id(self, device: UserAdapter, **kwargs):
         username = self._parse_username(**kwargs)
         name = self._parse_name(**kwargs)
+        mail = self._parse_mail(**kwargs)
 
         user_id = self._parse_id(**kwargs)
-        user_id = '_'.join(str(field) for field in [user_id, username, name] if field)
+        user_id = '_'.join(str(field) for field in [user_id, username, name, mail] if field)
         if not user_id:
             raise DynamicParsingCannotProceedError('Bad device with no ID')
         device.id = user_id
