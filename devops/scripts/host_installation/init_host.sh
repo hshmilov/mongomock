@@ -131,7 +131,9 @@ _wait_for_apt install -yq zip unzip
 echo "Installing python 3.6..."
 # unixodbc-dev https://github.com/mkleehammer/pyodbc/issues/276 is needed for pyodbc
 _wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip htpdate unixodbc-dev
-curl https://bootstrap.pypa.io/get-pip.py pip==19.3.1 | python3.6
+curl -o /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py
+python3.6 /tmp/get-pip.py pip==19.3.1 setuptools==49.6.0
+rm -f /tmp/get-ip.py
 # The following is a horrible hack we are doing to make python3.6 the default on ubuntu 16.04.
 # By default, ubuntu 16.04 does not support python3.6 being the default python because many of its apps are written
 # in python3.5 which also uses binary shared-objects. so changing /usr/bin/python3 will result in making the whole
