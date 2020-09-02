@@ -557,6 +557,7 @@ class RegistryInfomation(SmartJsonClass):
 class ServiceData(SmartJsonClass):
     name = Field(str, 'Name')
     display_name = Field(str, 'Display Name')
+    state = Field(str, 'State')
     status = Field(str, 'Status')
     start_name = Field(str, 'Start Name')
     start_mode = Field(str, 'Start Mode')
