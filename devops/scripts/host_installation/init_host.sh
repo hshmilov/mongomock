@@ -144,7 +144,6 @@ ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
 cp ./uploads/pip.conf /etc/pip.conf
 python2 -m pip install --upgrade pip
-python3 -m pip install --upgrade pip
 echo "Installing virtualenv and setuptools..."
 pip2 install virtualenv
 pip3 install virtualenv
