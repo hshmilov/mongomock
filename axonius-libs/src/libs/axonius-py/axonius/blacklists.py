@@ -13,7 +13,7 @@ JUNIPER_NON_UNIQUE_MACS = [
 # https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA10g000000CmAOCA0
 
 FROM_FIELDS_BLACK_LIST = ['02:50:41:00:01:01', '02:50:41:00:00:01', 'EE:EE:EE:EE:EE:EE', '02:50:56:3F:00:00',
-                          '02:00:4C:4F:4F:50', '00:15:5D:BA:6B:B6', '00:E0:4C:68:2D:3D',
+                          '02:00:4C:4F:4F:50', '00:15:5D:BA:6B:B6', '00:E0:4C:68:2D:3D', 'A0:CE:C8:37:F5:92',
                           '56:84:7A:FE:97:99', '00:A0:C6:00:00:00', '00:AB:00:00:00:00']
 
 FROM_FIELDS_BLACK_LIST_REG = ['00090F**0001', 'F0D5BF******', '****20524153', '0A00270000**',

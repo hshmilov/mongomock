@@ -227,6 +227,16 @@ def get_customer(adapter_device):
     return adapter_device['data'].get('customer')
 
 
+def hostnames_do_not_contradict_or_tenable_io(adapter_device1, adapter_device2):
+    # pylint: disable=line-too-long
+    if hostnames_do_not_contradict(adapter_device1, adapter_device2):
+        return True
+    if adapter_device1.get('plugin_name') == 'tenable_io_adapter' and \
+            adapter_device2.get('plugin_name') == 'tenable_io_adapter':
+        return True
+    return False
+
+
 def compare_agent_uuids(adapter_device1, adapter_device2):
     if not get_agent_uuid(adapter_device1) or not get_agent_uuid(adapter_device2):
         return False
@@ -1481,7 +1491,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_agent_uuid],
                                       [compare_agent_uuids],
                                       [],
-                                      [],
+                                      [hostnames_do_not_contradict_or_tenable_io],
                                       {'Reason': 'They have the same Agent UUID'},
                                       CorrelationReason.StaticAnalysis)
 

@@ -22,7 +22,7 @@ class SecdoConnection(RESTConnection):
                     self._post("publicapi/agentmgmt/get/agents/", body_params=self.__connection_dict)
                     api_version = "v1"
                 except Exception as e1:
-                    raise RESTException(f"Error connecting to server: v2 - {str(e2), v1 - {str(e1)}}")
+                    raise RESTException(f"Error connecting to server: v2 - {str(e2)}, v1 - {str(e1)}")
             self._api_version = api_version
 
         else:

@@ -244,7 +244,7 @@ class AbsoluteAdapter(AdapterBase):
                         else:
                             if mac.startswith('0x'):
                                 mac = mac[2:]
-                        if ips and mac:
+                        if ips or mac:
                             device.add_nic(mac, ips, speed=str(nic_raw.get('speed')) if nic_raw.get('speed') else None)
                         elif mac:
                             device.macs_no_ip.append(mac)
