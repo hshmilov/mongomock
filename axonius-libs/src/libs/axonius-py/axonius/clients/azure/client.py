@@ -220,7 +220,7 @@ class AzureCloudConnection(RESTConnection):
 
         if response.status_code == 429:
             self.handle_sync_429_default(response)
-            return self._rm_request(*args, **kwargs)
+            return self._rm_request(method, url, *args, **kwargs)
 
         return self._handle_response(
             response, raise_for_status=True, use_json_in_response=True, return_response_raw=False
