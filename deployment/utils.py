@@ -72,13 +72,6 @@ def chown_folder(path: str, sudo: bool = False):
     cmd += f'chown -R ubuntu:ubuntu {path}'
     run_cmd(cmd.split())
 
-    # Remove permissions of "other"
-    cmd = ''
-    if sudo:
-        cmd = 'sudo '
-    cmd += f'chmod -R o-w {path}'
-    run_cmd(cmd.split())
-
 
 def verify_storage_requirements():
     try:
