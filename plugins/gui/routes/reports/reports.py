@@ -33,6 +33,7 @@ from axonius.utils.datetime import next_weekday
 from axonius.utils.gui_helpers import (get_connected_user_id,
                                        find_filter_by_name, paginated,
                                        filtered, sorted_endpoint)
+from axonius.utils.permissions_helper import PermissionValue, PermissionAction, PermissionCategory
 from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.filter_utils import filter_archived
@@ -442,7 +443,8 @@ class Reports:
 
         return list(get_adapters_data())
 
-    @gui_route_logged_in('send_email', methods=['POST'])
+    @gui_route_logged_in('send_email', methods=['POST'], required_permission=PermissionValue.get(
+        PermissionAction.View, PermissionCategory.Reports))
     def test_exec_report(self):
         try:
             report = self.get_request_data_as_object()
