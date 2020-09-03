@@ -226,6 +226,11 @@ class OktaAdapter(AdapterBase, Configurable):
         return {
             'items': [
                 {
+                    'name': 'email_domain_whitelist',
+                    'type': 'string',
+                    'title': 'Email domain whitelist'
+                },
+                {
                     'name': 'fetch_apps',
                     'title': 'Fetch users apps',
                     'type': 'bool'
