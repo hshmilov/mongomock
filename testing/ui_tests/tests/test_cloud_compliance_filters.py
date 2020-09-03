@@ -20,18 +20,17 @@ class TestCloudComplianceFilters(TestBase):
     AZURE_CATEGORY_FILTER = 'Networking'
     AZURE_EMPTY_RULE_FILTER = '1.3 Ensure that there are no guest users'
 
-    @pytest.mark.skip('AX_8855')
     def test_compliance_filters(self):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
 
-        with AwsService().contextmanager(take_ownership=True), \
-                ComplianceService().contextmanager(take_ownership=True):
+        with AwsService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
             self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
 
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
+
             self.compliance_page.switch_to_page()
 
             self.compliance_page.open_rule_filter_dropdown()
@@ -123,8 +122,7 @@ class TestCloudComplianceFilters(TestBase):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
 
-        with AwsService().contextmanager(take_ownership=True), \
-                ComplianceService().contextmanager(take_ownership=True):
+        with AwsService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
             self.adapters_page.connect_adapter(AWS_ADAPTER_NAME, aws_client_details[0][0])
 
@@ -152,8 +150,7 @@ class TestCloudComplianceFilters(TestBase):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
 
-        with AzureService().contextmanager(take_ownership=True), \
-                ComplianceService().contextmanager(take_ownership=True):
+        with AzureService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AZURE_ADAPTER_NAME)
             self.adapters_page.create_new_adapter_connection(AZURE_ADAPTER_NAME, azure_client_details)
 

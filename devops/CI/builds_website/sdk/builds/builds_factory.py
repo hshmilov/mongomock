@@ -174,6 +174,12 @@ class BuildsInstance(BuildsAPI):
         assert rc == 0 or 'Removing leading' in output, f'Error in compressing remote folder: {output}'
         return self.get_file('/tmp/tmp.tar')
 
+    def get_file_as_gz(self, remote_file_path) -> bytes:
+        assert self.initialized, 'Instance is not initialized, please use wait_for_ssh'
+        rc, output = self.ssh(f'gzip -9 -c {remote_file_path} > /tmp/tmp.gz')
+        assert rc == 0
+        return self.get_file('/tmp/tmp.gz')
+
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def terminate(self, async_=False):
         self.post(f'instances/{self.cloud}/{self.id}/delete' + '?async=true' if async_ else '')

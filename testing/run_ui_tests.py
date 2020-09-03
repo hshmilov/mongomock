@@ -11,6 +11,7 @@ from devops.scripts.automate_dev import credentials_inputer
 from services.adapters.ad_service import AdService
 from services.adapters.json_file_service import JsonFileService
 from services.axonius_service import get_service
+from services.plugins.compliance_service import ComplianceService
 from services.standalone_services.selenium_service import SeleniumService
 
 TIMEOUT_EXIT_CODE = 1000    # This has to be a large integer. [1-6] are valid pytest exit codes.
@@ -95,6 +96,7 @@ def main():
     axonius_system = get_service()
     ad_service = AdService()
     json_service = JsonFileService()
+    compliance_service = ComplianceService()
     if should_use_local_selenium:
         selenium_service = SeleniumService()
 
@@ -111,6 +113,9 @@ def main():
         if should_use_local_selenium:
             selenium_service.take_process_ownership()
             selenium_service.start_and_wait()
+
+        compliance_service.take_process_ownership()
+        compliance_service.start_and_wait()
 
         ad_service.take_process_ownership()
         ad_service.start_and_wait()

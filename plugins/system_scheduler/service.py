@@ -1422,15 +1422,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                             blocking=blocking,
                                             timeout=timeout, stop_on_timeout=True)
-            except ConnectionError:
-                # DNS record is missing, let dns watchdog time to reset all the dns records
+            except Exception:
+                # DNS record is probably missing, let dns watchdog time to reset all the dns records
                 logger.warning(f'Failed triggering {plugin[PLUGIN_NAME]} retrying in 80 seconds')
                 time.sleep(80)
                 try:
                     self._trigger_remote_plugin(plugin[PLUGIN_UNIQUE_NAME],
                                                 blocking=blocking,
                                                 timeout=timeout, stop_on_timeout=True)
-                except ConnectionError:
+                except Exception:
                     logger.critical(f'Failed triggering {plugin[PLUGIN_NAME]} probably '
                                     f'container is down for some reason')
 

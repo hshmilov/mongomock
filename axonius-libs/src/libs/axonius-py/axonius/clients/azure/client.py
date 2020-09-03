@@ -5,6 +5,7 @@ from collections import namedtuple
 from typing import Dict, NamedTuple
 
 import adal
+from requests import HTTPError
 
 from axonius.clients.azure.ad import AzureADConnection
 from axonius.clients.azure.app_service import AzureAppServiceConnection
@@ -238,6 +239,9 @@ class AzureCloudConnection(RESTConnection):
                     break
                 force_full_url = True
                 page += 1
+            except HTTPError as err:
+                logger.error(f'Azure request to url {err.request} return status code {err.response.status_code}')
+                return ''
             except Exception:
                 logger.exception(f'Failed fetching page {page} with url {url}')
                 raise

@@ -1,21 +1,16 @@
-import pytest
-
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AWS_ADAPTER_NAME, AWS_ADAPTER
 from services.adapters.aws_service import AwsService
-from services.plugins.compliance_service import ComplianceService
 
 
 class TestCloudComplianceScore(TestBase):
-    @pytest.mark.skip('AX-8855')
     def test_compliance_score(self):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
 
-        with AwsService().contextmanager(take_ownership=True), \
-                ComplianceService().contextmanager(take_ownership=True):
+        with AwsService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
             self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
 

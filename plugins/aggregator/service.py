@@ -15,7 +15,7 @@ from aggregator.historical import create_retrospective_historic_collections, MIN
 from axonius.db_migrations import db_migration
 from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
-from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
+from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, NON_THREAD_SAFE_CLEAN_DB_ADAPTERS
 from axonius.consts.gui_consts import ParallelSearch
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
@@ -460,10 +460,14 @@ class AggregatorService(Triggerable, PluginBase):
             futures_for_adapter = {}
             adapters_name_to_unique = dict()
             num_of_adapters_to_fetch = len(current_adapters)
+            synchronic_requests = []
             for adapter in current_adapters:
                 if not adapter.get('plugin_type') or not is_plugin_adapter(adapter['plugin_type']):
                     # This is not an adapter, not running
                     num_of_adapters_to_fetch -= 1
+                    continue
+                if adapter[PLUGIN_NAME] in NON_THREAD_SAFE_CLEAN_DB_ADAPTERS:
+                    synchronic_requests.append(adapter[PLUGIN_UNIQUE_NAME])
                     continue
                 if adapter[PLUGIN_NAME] not in adapters_name_to_unique:
                     adapters_name_to_unique[adapter[PLUGIN_NAME]] = []
@@ -478,10 +482,14 @@ class AggregatorService(Triggerable, PluginBase):
                     try:
                         num_of_adapters_to_fetch -= 1
                         future.result()
-                        logger.info(f'Finished adapter number {num_of_adapters_to_fetch}')
-                    except Exception as err:
+                        logger.info(f'Finished adapter number {num_of_adapters_to_fetch} - '
+                                    f'{futures_for_adapter[future]}')
+                    except Exception:
                         logger.exception('An exception was raised while trying to get a result.')
-
+            if synchronic_requests:
+                for unique_adapter in synchronic_requests:
+                    self._request_clean_db_from_adapter(unique_adapter)
+                    logger.info(f'Finished with synchronic adapter: {unique_adapter}')
             logger.info('Finished cleaning all device data.')
 
         except Exception as e:

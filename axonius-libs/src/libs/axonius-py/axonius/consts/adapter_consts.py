@@ -26,6 +26,8 @@ CLIENT_ID = 'client_id'
 
 DEFAULT_PARALLEL_COUNT = 5
 
+NON_THREAD_SAFE_CLEAN_DB_ADAPTERS = ['aws_adapter']
+
 # Enterprise Password Mgr
 VAULT_PROVIDER = 'vault_provider'
 LEGACY_VAULT_PROVIDER = 'cyberark_vault'
