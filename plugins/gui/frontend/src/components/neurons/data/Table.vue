@@ -383,24 +383,28 @@ export default {
     },
     filteredData() {
       if (!this.searchValue) return this.sortedData;
-      return this.sortedData.filter((item) => Object.keys(item).find((key) => {
-        let val = item[key];
-        if (!this.schemaFieldsByName[key]) {
-          return false;
-        }
-        const fieldType = this.schemaFieldsByName[key].type;
-        if (fieldType === 'number' && typeof val === 'number') {
-          val = val.toFixed(2);
-        }
-        if (fieldType === 'bool') {
-          if (val === true) {
-            val = 'Yes';
-          } else if (val === false) {
-            val = 'No';
+      return this.sortedData.filter((item) => {
+        const { adapters, ...rest } = item;
+        const searchableKeys = Object.keys(rest);
+        return searchableKeys.find((key) => {
+          let val = item[key];
+          if (!this.schemaFieldsByName[key]) {
+            return false;
           }
-        }
-        return val.toString().toLowerCase().includes(this.searchValueLower);
-      }));
+          const fieldType = this.schemaFieldsByName[key].type;
+          if (fieldType === 'number' && typeof val === 'number') {
+            val = val.toFixed(2);
+          }
+          if (fieldType === 'bool') {
+            if (val === true) {
+              val = 'Yes';
+            } else if (val === false) {
+              val = 'No';
+            }
+          }
+          return val.toString().toLowerCase().includes(this.searchValueLower);
+        });
+      });
     },
     sortable() {
       return (this.staticData && this.staticSort) || this.view.sort;
