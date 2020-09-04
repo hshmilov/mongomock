@@ -472,7 +472,10 @@ class IgarAdapter(AdapterBase):
                 device.igar_server_id = str(server_id)
                 device.has_ip_duplication = False
                 device.name = device_raw.get('ServerName')
-                device.hostname = device_raw.get('ServerFQDN')
+                if device_raw.get('ServerFQDN') and str(device_raw.get('ServerFQDN')).strip().upper() != 'N/A':
+                    device.hostname = device_raw.get('ServerFQDN')
+                else:
+                    device.hostname = device_raw.get('ServerName')
                 server_ip_raw = device_raw.get('ServerIP') or device_raw.get('IP')
                 ips = list()
                 if isinstance(server_ip_raw, str) and server_ip_raw:
