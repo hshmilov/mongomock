@@ -19,6 +19,7 @@ from services.axon_service import TimeoutException
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
 # pylint: disable=too-many-lines,no-member
+from ui_tests.tests.ui_consts import ScheduleTriggers
 
 
 class SettingsPage(Page):
@@ -153,9 +154,9 @@ class SettingsPage(Page):
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
     DISCOVERY_SCHEDULE_REPEAT_INPUT = 'system_research_date_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
-    DISCOVERY_SCHEDULE_INTERVAL_TEXT = 'Every x hours'
-    DISCOVERY_SCHEDULE_SCHEDULED_TEXT = 'Every x days'
-    DISCOVERY_SCHEDULE_WEEKDAYS_TEXT = 'Days of week'
+    DISCOVERY_SCHEDULE_INTERVAL_TEXT = ScheduleTriggers.every_x_hours
+    DISCOVERY_SCHEDULE_SCHEDULED_TEXT = ScheduleTriggers.every_x_days
+    DISCOVERY_SCHEDULE_WEEKDAYS_TEXT = ScheduleTriggers.every_week_days
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
     HISTORY_ENABLED_CHECKBOX = '//*[contains(text(),\'Enable scheduled historical snapshot\')]'
 

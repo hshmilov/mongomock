@@ -34,6 +34,7 @@ from test_credentials.test_gui_credentials import DEFAULT_USER, AXONIUS_AWS_TEST
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
 from ui_tests.pages.administration_page import AdministrationPage
+from ui_tests.pages.audit_page import AuditPage
 from ui_tests.pages.base_page import BasePage
 from ui_tests.pages.compliance_page import CompliancePage
 from ui_tests.pages.dashboard_page import DashboardPage
@@ -433,6 +434,7 @@ class TestBase:
         self.signup_page = SignupPage(**params)
         self.compliance_page = CompliancePage(**params)
         self.administration_page = AdministrationPage(**params)
+        self.audit_page = AuditPage(**params)
 
     def register_components(self):
         params = dict(driver=self.driver,

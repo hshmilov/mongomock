@@ -17,7 +17,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
-                                      CSV_NAME)
+                                      CSV_NAME, ScheduleTriggers)
 
 
 # NamedTuple doesn't need to be uppercase
@@ -55,7 +55,9 @@ class AdaptersPage(EntitiesPage):
     TYPE_ICON_CSS = '.x-icon.icon-{status_type}'
     WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
+    SAVE_CONNECTION_TOASTER = 'Connecting to Server...'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
+    SERVER_CONNECTION_ESTABLISH_TOASTER = 'Connection successfully established'
     TEXT_PROBLEM_CONNECTING_TRY_AGAIN = 'Problem connecting. Review error and try again.'
     SERVER_ERROR_TEXT_CLASS = '.server-error .error-text'
 
@@ -126,6 +128,9 @@ class AdaptersPage(EntitiesPage):
 
     def click_save_and_fetch(self):
         self.get_enabled_button(self.SAVE_AND_FETCH_BUTTON).click()
+
+    def click_save_without_fetch(self):
+        self.get_enabled_button(self.SAVE_BUTTON).click()
 
     def is_save_button_disabled(self):
         return self.is_element_disabled(self.get_button(self.SAVE_AND_FETCH_BUTTON))
@@ -320,14 +325,17 @@ class AdaptersPage(EntitiesPage):
             else:
                 assert False
 
-    def wait_for_data_collection_toaster_absent(self):
-        self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries=1200)
+    def wait_for_data_collection_toaster_absent(self, retries=1200):
+        self.wait_for_toaster_to_end(self.DATA_COLLECTION_TOASTER, retries)
 
     def wait_for_data_collection_toaster_start(self, retries=1200):
         self.wait_for_toaster(self.DATA_COLLECTION_TOASTER, retries)
 
-    def wait_for_data_collection_failed_toaster_absent(self):
-        self.wait_for_toaster_to_end(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN, retries=1200)
+    def wait_for_data_collection_failed_toaster_absent(self, retries=1200):
+        self.wait_for_toaster_to_end(self.TEXT_PROBLEM_CONNECTING_TRY_AGAIN, retries)
+
+    def wait_for_connection_saved_toaster_start(self, retries=1200):
+        self.wait_for_toaster(self.SERVER_CONNECTION_ESTABLISH_TOASTER, retries)
 
     def select_instance(self, instance):
         self.select_option_without_search(self.INSTANCE_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, instance)
@@ -604,8 +612,9 @@ class AdaptersPage(EntitiesPage):
         time.sleep(1)
         self.save_advanced_settings()
 
-    def toggle_adapter_client_connection_discovery(self, adapter_name, client_position, discovery_time,
-                                                   discovery_interval):
+    def toggle_adapter_client_connection_discovery(self, adapter_name, client_position=0, discovery_time=None,
+                                                   discovery_interval=None, do_fetch=True,
+                                                   discovery_trigger=ScheduleTriggers.every_x_days):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
@@ -619,8 +628,15 @@ class AdaptersPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.CLIENT_DISCOVERY_ENABLED_CSS).click()
         time.sleep(1)
 
-        if discovery_time and discovery_interval:
-            self.fill_schedule_date(self.set_discovery_time(2))
-            self.change_custom_discovery_interval(1)
+        self.select_schedule_trigger(discovery_trigger)
+        if discovery_trigger == ScheduleTriggers.every_x_days and discovery_time and discovery_interval:
+            self.fill_schedule_date(self.set_discovery_time(discovery_time))
+            self.change_custom_discovery_interval(discovery_interval)
 
-        self.click_save_and_fetch()
+        if discovery_trigger == ScheduleTriggers.every_x_hours and discovery_time:
+            self.fill_text_field_by_element_id('system_research_rate', discovery_time)
+
+        if do_fetch:
+            self.click_save_and_fetch()
+        else:
+            self.click_save_without_fetch()
