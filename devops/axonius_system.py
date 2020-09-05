@@ -252,7 +252,7 @@ def system_entry_point(args):
         if failed_quick_register_adapters:
             # Fallback for failed quick register adapters
             axonius_system.start_plugins(adapter_names=list(failed_quick_register_adapters),
-                                         plugin_names=args.services,
+                                         plugin_names=[],
                                          standalone_services_names=standalone_services,
                                          mode=mode,
                                          allow_restart=args.restart,
