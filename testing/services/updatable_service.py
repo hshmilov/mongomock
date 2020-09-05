@@ -15,11 +15,14 @@ class UpdatablePluginMixin:
     This must be a mixin that also inherits from PluginService
     """
 
-    def _upgrade_adapter_client_id(self, plugin_name: str, new_client_id_func: Callable):
+    def _upgrade_adapter_client_id(self, plugin_name: str, new_client_id_func: Callable, use_encryption=True):
         """
         Takes a plugin_name like 'symantec_adapter'. Then, for each plugin_unique_name of this adapter, and
         for each client in every plugin_unique_name, calls new_client_id_func with 'client_config'. Then sets the
         return value as the new client id.
+
+        Do not specify 'use_encryption=False'. This is intended for older versions of Axonius where credentials were
+        not encrypted.
         :return:
         """
         all_plugin_instances = list(self.db.client['core']['configs'].find({'plugin_name': plugin_name}))
@@ -37,7 +40,11 @@ class UpdatablePluginMixin:
                     print(f'Error - no client config for plugin, bypassing: {client}')
                     continue
 
-                new_client_id = new_client_id_func(client['client_config'])
+                client_config = client['client_config'].copy()
+                if use_encryption:
+                    self.decrypt_dict(client_config)
+
+                new_client_id = new_client_id_func(client_config)
                 clients_db.update(
                     {
                         'client_id': client['client_id']

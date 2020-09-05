@@ -596,7 +596,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             return client_config['domain'] + '_' + client_config['username'] + '_' + \
                 (client_config.get('username_domain') or '')
 
-        self._upgrade_adapter_client_id('symantec_adapter', new_symantec_client_id)
+        self._upgrade_adapter_client_id('symantec_adapter', new_symantec_client_id, use_encryption=False)
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_14(self):
@@ -605,7 +605,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
         def hyper_v_new_client_id(client_config):
             return client_config['host'] + '_' + client_config.get('username')
 
-        self._upgrade_adapter_client_id('hyper_v_adapter', hyper_v_new_client_id)
+        self._upgrade_adapter_client_id('hyper_v_adapter', hyper_v_new_client_id, use_encryption=False)
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_15(self):
