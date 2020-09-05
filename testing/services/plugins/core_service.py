@@ -637,7 +637,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             print(f'Migrating {i + 1} / {len(tanium_asset_adapter_creds)} Tanium asset adapter')
             creds_client_config = creds['client_config']
             creds['client_id'] = f'{creds_client_config.get("domain")}_' \
-                f'{creds_client_config.get("username")}_{creds_client_config.get("asset_dvc")}'
+                                 f'{creds_client_config.get("username")}_{creds_client_config.get("asset_dvc")}'
             self.encrypt_dict('tanium_asset_adapter_0', creds['client_config'])
             self.db.client['tanium_asset_adapter_0']['clients'].insert_one(creds)
 
@@ -652,7 +652,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             print(f'Migrating {i + 1} / {len(tanium_sq_adapter_creds)} Tanium sq adapter')
             creds_client_config = creds['client_config']
             creds['client_id'] = f'{creds_client_config.get("domain")}_{creds_client_config.get("username")}' \
-                f'_{creds_client_config.get("sq_name")}'
+                                 f'_{creds_client_config.get("sq_name")}'
             self.encrypt_dict('tanium_sq_adapter_0', creds['client_config'])
             self.db.client['tanium_sq_adapter_0']['clients'].insert_one(creds)
 
@@ -1122,6 +1122,22 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 }
                 self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = \
                     new_config
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_30(self):
+        print(f'Updating to schema version 30')
+        configs_to_fix = self.db.client[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].find(
+            {
+                'config_name': DISCOVERY_CONFIG_NAME,
+            })
+        for discovery_config in configs_to_fix:
+            config = discovery_config.get('config', {})
+            plugin_name = discovery_config.get(PLUGIN_NAME)
+            repeat_on = config.get(ADAPTER_DISCOVERY, {}).get(DISCOVERY_REPEAT_ON_WEEKDAYS, {}).get(DISCOVERY_REPEAT_ON)
+            if isinstance(repeat_on, dict):
+                fixed_repeat_on = [day[0] for day in repeat_on.items() if day[1]]
+                config[ADAPTER_DISCOVERY][DISCOVERY_REPEAT_ON_WEEKDAYS][DISCOVERY_REPEAT_ON] = fixed_repeat_on
+                self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = config
 
     def migrate_adapter_advanced_settings_to_connection(
             self,
