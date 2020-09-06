@@ -96,10 +96,15 @@ class PluginService(WeaveService):
         }
 
     def __ask_core_to_raise_adapter(self, plugin_unique_name: str):
-        print(f'asking core to raise {plugin_unique_name}')
         if 'adapter' not in plugin_unique_name:
             # Only adapters can be down like this
             return
+        print(f'asking core to raise {plugin_unique_name}')
+        try:
+            self.signal_uwsgi_to_wakeup()
+        except Exception:
+            # plugin is probably down
+            pass
         self.core.trigger(job_name=f'start:{plugin_unique_name}', blocking=True, reschedulable=False)
 
     def feature_flags_config(self) -> dict:
