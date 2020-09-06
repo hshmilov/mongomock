@@ -6,6 +6,14 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.devices.device_adapter import DeviceAdapter
 
 
+class SubnetPermission(SmartJsonClass):
+    group_id = Field(int, 'Group ID')
+    permissions = Field(str, 'Permission')
+    name = Field(str, 'Name')
+    description = Field(str, 'Description')
+    members = ListField(str, 'Members')
+
+
 # pylint: disable=too-many-instance-attributes
 class Subnet(SmartJsonClass):
     id = Field(str, 'ID')
@@ -20,7 +28,7 @@ class Subnet(SmartJsonClass):
     master_subnet_id = Field(str, 'Master Subnet ID')
     name_server_id = Field(str, 'Name Server ID')
     show_name = Field(str, 'Show Name')
-    permissions = Field(str, 'Permissions')
+    permissions = ListField(SubnetPermission, 'Permissions')
     resolve_dns = Field(str, 'Resolve DNS')
     dns_recursive = Field(str, 'DNS Recursive')
     dns_records = Field(str, 'DNS Recoreds')

@@ -2,3 +2,11 @@ DEVICE_PER_PAGE = 200
 MAX_NUMBER_OF_DEVICES = 2000000
 
 API_PREFIX = 'api'
+API_URL_SUBNETS_SUFFIX = 'subnets/all/'
+API_URL_ADDRESSES_SUFFIX = 'addresses/all/'
+API_URL_DEVICES_SUFFIX = 'devices/'
+
+ADDRESS_TYPE = 'Address'
+DEVICE_TYPE = 'Device'
+
+EXTRA_SUBNETS = 'extra_subnets'
