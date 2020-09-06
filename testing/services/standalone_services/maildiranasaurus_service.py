@@ -1,27 +1,13 @@
+import email
+import glob
 import os
 import mailbox
-import errno
+
+from distutils.dir_util import copy_tree
+from distutils.errors import DistutilsFileError
 
 from axonius.utils.wait import wait_until
 from services.standalone_services.smtp_service import SmtpService
-
-
-def create_maildir_folders():
-    try:
-        os.makedirs('/tmp/mail_dir/new/')
-    except OSError as exc:  # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
-    try:
-        os.makedirs('/tmp/mail_dir/cur/')
-    except OSError as exc:  # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
-    try:
-        os.makedirs('/tmp/mail_dir/tmp/')
-    except OSError as exc:  # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
 
 
 class MaildiranasaurusService(SmtpService):
@@ -47,23 +33,15 @@ class MaildiranasaurusService(SmtpService):
 
            COPY goguerrilla ./
 
+           VOLUME ["/opt/logs"]
+
            CMD ["/go/src/github.com/flashmob/maildiranasaurus/maildiranasaurus", "serve"]
            '''[1:]
 
     def get_mail_folder(self):
-        mail_name, _, _ = self.get_folder_content_from_container('/tmp/mail_dir/new')
-        file_name = mail_name.decode('utf-8').split('\n')[:-1][0]
-        out, _, _ = self.get_file_contents_from_container(f'/tmp/mail_dir/new/{file_name}')
-        assert out
-
-        create_maildir_folders()
-
-        local_file_name = f'/tmp/mail_dir/new/{file_name}'
-
-        with open(local_file_name, 'wb') as file:
-            file.write(out)
-
-        return mailbox.Maildir('/tmp/mail_dir')
+        mail_dir = os.path.join(self.log_dir, 'mail_dir')
+        os.system(f'sudo chown -R ubuntu:ubuntu {mail_dir}')
+        return mailbox.Maildir(mail_dir)
 
     def get_mail_message(self, recipient):
         """
@@ -71,6 +49,12 @@ class MaildiranasaurusService(SmtpService):
         :return:
         """
         m = self.get_mail_folder()
+        try:
+            # Hack, copy tmp content to new folder in case our mail mistakenly got there
+            copy_tree(os.path.join(self.log_dir, 'mail_dir', 'tmp'), os.path.join(self.log_dir, 'mail_dir', 'new'))
+        except DistutilsFileError:
+            # if folder not exists yet we are fine with it
+            pass
         payload = None
         for key in m.iterkeys():
             message = m.get_message(key)
@@ -80,22 +64,39 @@ class MaildiranasaurusService(SmtpService):
             break
         return payload
 
+    @property
+    def volumes(self):
+        return [f'{self.log_dir}:/opt/logs']
+
     def get_email_subject(self, recipient):
         message = self.get_mail_message(recipient)
         return message['subject']
 
     def wait_for_email_first_csv_content(self, recipient):
-        return wait_until(self.get_email_first_csv_content,
-                          check_return_value=True,
-                          total_timeout=60 * 5,
-                          recipient=recipient)
+        try:
+            return wait_until(self.get_email_first_csv_content,
+                              check_return_value=True,
+                              total_timeout=60 * 5,
+                              recipient=recipient)
+        except TimeoutError:
+            # In case MailBox library fails...
+            for email_file in glob.glob(f'{os.path.join(self.log_dir, "mail_dir")}/*/*'):
+                with open(email_file, 'r') as fh:
+                    try:
+                        email_parsed = email.message_from_string(fh.read())
+                    except Exception:
+                        continue
+                    if email_parsed.get('To') == recipient:
+                        return self.get_email_first_csv_content(recipient, email_parsed)
+            raise
 
-    def get_email_first_csv_content(self, recipient):
+    def get_email_first_csv_content(self, recipient, message=None):
         """
         Get the first csv attachment content of the mail that was sent
         :return:
         """
-        message = self.get_mail_message(recipient)
+        if message is None:
+            message = self.get_mail_message(recipient)
         if message:
             for attachment in message.get_payload():
                 if attachment.get_content_type() == 'text/csv':
