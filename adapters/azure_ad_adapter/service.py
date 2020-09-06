@@ -620,6 +620,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 'allow_beta_api',
                 'allow_fetch_mfa',
                 'do_not_fail_on_intune',
+                'email_activity_period',
             ],
             'pretty_name': 'Azure AD Configuration',
             'type': 'array'

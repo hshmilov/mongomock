@@ -31,7 +31,7 @@ class FreshServiceIncidentAction(ActionTypeAlert):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use stored credentials from the Fresh Service adapter',
+                    'title': 'Use stored credentials from the Freshservice adapter',
                     'type': 'bool'
                 },
                 {

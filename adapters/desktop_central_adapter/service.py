@@ -96,11 +96,6 @@ class DesktopCentralAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'username',
-                    'title': 'User Name',
-                    'type': 'string'
-                },
-                {
                     'name': 'port',
                     'title': 'Port',
                     'default': consts.DEFAULT_PORT,
@@ -110,6 +105,11 @@ class DesktopCentralAdapter(AdapterBase):
                 {
                     'name': 'username_domain',
                     'title': 'User Name Domain',
+                    'type': 'string'
+                },
+                {
+                    'name': 'username',
+                    'title': 'User Name',
                     'type': 'string'
                 },
                 {

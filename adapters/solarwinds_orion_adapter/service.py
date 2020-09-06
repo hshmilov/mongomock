@@ -436,7 +436,7 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                 'fetch_ipam',
                 'fetch_mac_ipam'
             ],
-            'pretty_name': 'Solarwinds Configuration',
+            'pretty_name': 'SolarWinds Configuration',
             'type': 'array'
         }
 

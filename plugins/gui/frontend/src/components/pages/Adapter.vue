@@ -580,7 +580,7 @@ export default {
       this.toggleServerModal();
     },
     testServer() {
-      this.message = 'Testing server connection...';
+      this.message = 'Checking network connectivity...';
       this.testAdapter({
         adapterId: this.adapterId,
         serverData: this.serverModal.serverData,
