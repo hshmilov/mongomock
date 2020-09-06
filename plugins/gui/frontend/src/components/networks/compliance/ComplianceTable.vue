@@ -31,14 +31,24 @@
         <XButton
           type="link"
           class="compliance-action-button export-csv"
-          :loading="exporting"
           :disabled="lockComplianceActions"
           @click.stop.prevent="exportCSV"
         >
-          <VIcon
-            size="18"
-          >$vuetify.icons.entityExport</VIcon>
-          <span class="export-csv-title">Export CSV</span>
+          <div v-if="exporting">
+            <VProgressCircular
+              indeterminate
+              color="primary"
+              :width="2"
+              :size="16"
+            />
+            Exporting...
+          </div>
+          <div v-else>
+            <VIcon
+              size="18"
+            >$vuetify.icons.entityExport</VIcon>
+            <span class="export-csv-title">Export CSV</span>
+          </div>
         </XButton>
       </template>
     </XTable>
