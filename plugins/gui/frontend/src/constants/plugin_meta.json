@@ -734,7 +734,7 @@
     "description": "Secureworks Red Cloak is an Endpoint Detection and Response technology that continuously monitors endpoints for signs of adversary activity."
   },
   "php_ipam_adapter": {
-    "title": "phpIPAM - BETA",
+    "title": "phpIPAM",
     "link": "https://docs.axonius.com/docs/phpipam",
     "description": "phpIPAM is an open-source web IP address management application (IPAM)."
   },
