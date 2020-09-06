@@ -236,9 +236,13 @@ export default {
       return this.colExcludedAdapters[fieldName] || [];
     },
     hasFilter(fieldName) {
-      return Boolean(this.getFilters(fieldName)
+      try {
+        return Boolean(this.getFilters(fieldName)
         .some((filter) => !(filter.term.trim() === '' && filter.include))
         || this.getExcludeAdapters(fieldName).length);
+      } catch (e) {
+        return false;
+      }
     },
     sortable(field) {
       return (this.onClickCol !== undefined);
