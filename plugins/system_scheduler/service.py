@@ -973,7 +973,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             if today in discovery_type_config.get(DISCOVERY_REPEAT_ON, []):
                 if not last_discovery:
                     return True
-                if time_diff(current_time, last_discovery.time()).seconds > CUSTOM_DISCOVERY_THRESHOLD:
+                if time_diff(current_time, last_discovery.time()).seconds > RUN_ENFORCEMENT_CHECK_INTERVAL:
                     return True
 
         # Check for day diff

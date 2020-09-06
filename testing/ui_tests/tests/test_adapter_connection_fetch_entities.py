@@ -1,7 +1,7 @@
 import pytest
 
 from axonius.utils.wait import wait_until
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, ScheduleTriggers
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -14,10 +14,12 @@ class TestAdapterConnectionFetchEntities(TestBase):
         # since we depends on the first_fetch flag to be false (every connection have this flag),
         # to make the device fetch trigger after any save
         self.adapters_page.toggle_adapters_connection_discovery(AD_ADAPTER_NAME)
-        self.adapters_page.toggle_adapter_client_connection_discovery(adapter_name=AD_ADAPTER_NAME,
-                                                                      client_position=0,
-                                                                      do_fetch=False,
-                                                                      discovery_trigger=ScheduleTriggers.every_x_hours)
+        self.adapters_page.toggle_adapter_client_connection_discovery(
+            adapter_name=AD_ADAPTER_NAME,
+            client_position=0,
+            mode=self.adapters_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
+            value=1,
+            do_fetch=False)
         self.adapters_page.wait_for_connection_saved_toaster_start()
 
         self.devices_page.switch_to_page()

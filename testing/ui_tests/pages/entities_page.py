@@ -15,7 +15,7 @@ from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from axonius.utils.serial_csv.constants import (MAX_ROWS_LEN, CELL_JOIN_DEFAULT)
 from ui_tests.pages.page import Page, TableRow
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, ScheduleTriggers
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
 
 TABLE_COUNT_CSS = '.table-header .table-title .count'
 CSV_TIMEOUT = 60 * 60
@@ -1876,10 +1876,6 @@ class EntitiesPage(Page):
     def close_actions_dropdown(self):
         el = self.driver.find_element_by_css_selector(self.ENTITIES_ACTIONS_DROPDOWN_CSS)
         ActionChains(self.driver).move_to_element_with_offset(el, 250, 100).click().perform()
-
-    def select_schedule_trigger(self, trigger: ScheduleTriggers = ScheduleTriggers.every_x_days):
-        self.select_option_without_search(self.SCHEDULE_TRIGGER_DROPDOWN_CSS,
-                                          self.SCHEDULE_TRIGGER_DROPDOWN_OPTIONS_CSS, trigger)
 
     @staticmethod
     def wait_for_csv_to_update_cache():

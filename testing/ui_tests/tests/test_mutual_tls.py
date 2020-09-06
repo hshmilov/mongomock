@@ -126,7 +126,7 @@ class TestMutualTLS(TestBase):
         gs = GuiService()
         gs.take_process_ownership()
         gs.restart()
-        time.sleep(10)
+        time.sleep(20)
         # Make sure everything got back to normal
         resp = requests.get('https://127.0.0.1/login', verify=False)
         assert resp.status_code == 200

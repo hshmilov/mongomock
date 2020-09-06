@@ -17,7 +17,7 @@ from ui_tests.pages.entities_page import EntitiesPage
 from ui_tests.pages.page import PAGE_BODY, SLEEP_INTERVAL, RETRY_WAIT_FOR_ELEMENT
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       JSON_ADAPTER_NAME,
-                                      CSV_NAME, ScheduleTriggers)
+                                      CSV_NAME)
 
 
 # NamedTuple doesn't need to be uppercase
@@ -38,10 +38,12 @@ class AdaptersPage(EntitiesPage):
     REPEAT_DAYS = 'repeat_every'
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
-    ADVANCED_SETTINGS_SAVE_BUTTON_CSS = '.x-tab.active .configuration>.x-button'
     ADVANCED_SETTINGS_BUTTON_TEXT = 'Advanced Settings'
+    ADVANCED_SETTINGS_SAVED = 'Adapter configuration saved'
+    ADVANCED_SETTINGS_SAVE_BUTTON = 'Save Config'
 
-    CUSTOM_DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
+    CONNECTION_DISCOVERY_SCHEDULE_PREFIX = '.discovery-configuration'
+    ADAPTER_DISCOVERY_SCHEDULE_PREFIX = '.advanced-settings-tab'
 
     TEST_CONNECTIVITY_CONNECTION_IS_VALID = 'Connection is valid.'
     TEST_CONNECTIVITY_NOT_SUPPORTED = 'Test reachability is not supported for this adapter.'
@@ -132,6 +134,11 @@ class AdaptersPage(EntitiesPage):
     def click_save_without_fetch(self):
         self.get_enabled_button(self.SAVE_BUTTON).click()
 
+    def save_advanced_settings(self):
+        self.click_button(self.ADVANCED_SETTINGS_SAVE_BUTTON, scroll_into_view_container=PAGE_BODY)
+        self.wait_for_advanced_settings_saved_toaster_present()
+        time.sleep(3)  # waiting for vuex store to update.
+
     def is_save_button_disabled(self):
         return self.is_element_disabled(self.get_button(self.SAVE_AND_FETCH_BUTTON))
 
@@ -188,9 +195,6 @@ class AdaptersPage(EntitiesPage):
         self.find_element_by_text('AWS Configuration').click()
         time.sleep(1.5)
 
-    def fill_schedule_date(self, text):
-        self.fill_text_field_by_css_selector(self.CUSTOM_DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
-
     def check_custom_discovery_schedule(self):
         self.driver.find_element_by_css_selector(self.CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
 
@@ -199,9 +203,6 @@ class AdaptersPage(EntitiesPage):
 
     def change_custom_discovery_interval(self, days):
         self.fill_text_field_by_element_id(self.REPEAT_DAYS, days)
-
-    def save_advanced_settings(self):
-        self.driver.find_element_by_css_selector(self.ADVANCED_SETTINGS_SAVE_BUTTON_CSS).click()
 
     def check_rt_adapter(self):
         self.driver.find_element_by_css_selector(self.RT_CHECKBOX_CSS).click()
@@ -336,6 +337,9 @@ class AdaptersPage(EntitiesPage):
 
     def wait_for_connection_saved_toaster_start(self, retries=1200):
         self.wait_for_toaster(self.SERVER_CONNECTION_ESTABLISH_TOASTER, retries)
+
+    def wait_for_advanced_settings_saved_toaster_present(self):
+        self.wait_for_toaster_to_end(self.ADVANCED_SETTINGS_SAVED, retries=1200)
 
     def select_instance(self, instance):
         self.select_option_without_search(self.INSTANCE_DROPDOWN_CSS, self.DROPDOWN_SELECTED_OPTION_CSS, instance)
@@ -580,41 +584,43 @@ class AdaptersPage(EntitiesPage):
         timepicker_input = current_utc + timedelta(minutes=minutes)
         return timepicker_input.time().strftime('%I:%M%p').lower()
 
-    def toggle_adapters_discovery_configurations(self, adapter_name, discovery_time=None, discovery_interval=None,
-                                                 toggle_connection=False):
+    # pylint: disable=dangerous-default-value
+    def _set_discovery_schedule_settings(self, mode=None, value=None, weekdays=[], scheduling_wrapping_class=''):
+        self.set_discovery_schedule_settings(mode, time_value=value,
+                                             weekdays=weekdays,
+                                             scheduling_wrapping_class=scheduling_wrapping_class,
+                                             scheduling_repeat_selector=self.REPEAT_DAYS)
+
+    def toggle_adapters_discovery_configurations(self, adapter_name, mode=None, value=None, toggle_connection=False):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
-        self.wait_for_spinner_to_end()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_advanced_settings()
         time.sleep(1.5)
         self.click_discovery_configuration()
         self.check_custom_discovery_schedule()
         if toggle_connection:
             self.check_custom_connection_discovery_schedule()
-
-        if discovery_time and discovery_interval:
-            self.fill_schedule_date(self.set_discovery_time(2))
-            self.change_custom_discovery_interval(1)
+        if mode:
+            self._set_discovery_schedule_settings(mode, value,
+                                                  scheduling_wrapping_class=self.ADAPTER_DISCOVERY_SCHEDULE_PREFIX)
         self.save_advanced_settings()
 
     def toggle_adapters_connection_discovery(self, adapter_name):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
-        self.wait_for_spinner_to_end()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_advanced_settings()
         time.sleep(1.5)
         self.click_discovery_configuration()
         self.check_custom_connection_discovery_schedule()
-        time.sleep(1)
         self.save_advanced_settings()
 
-    def toggle_adapter_client_connection_discovery(self, adapter_name, client_position=0, discovery_time=None,
-                                                   discovery_interval=None, do_fetch=True,
-                                                   discovery_trigger=ScheduleTriggers.every_x_days):
+    # pylint: disable=dangerous-default-value
+    def toggle_adapter_client_connection_discovery(self, adapter_name, client_position, mode=None,
+                                                   value=None, weekdays=[], do_fetch=True):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
@@ -624,19 +630,14 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_element_present_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB)
         self.driver.find_element_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB).click()
         self.wait_for_element_present_by_css(self.CLIENT_DISCOVERY_CONFIGURATIONS_FORM_CSS)
-        time.sleep(1)
         self.driver.find_element_by_css_selector(self.CLIENT_DISCOVERY_ENABLED_CSS).click()
-        time.sleep(1)
+        time.sleep(2)
 
-        self.select_schedule_trigger(discovery_trigger)
-        if discovery_trigger == ScheduleTriggers.every_x_days and discovery_time and discovery_interval:
-            self.fill_schedule_date(self.set_discovery_time(discovery_time))
-            self.change_custom_discovery_interval(discovery_interval)
-
-        if discovery_trigger == ScheduleTriggers.every_x_hours and discovery_time:
-            self.fill_text_field_by_element_id('system_research_rate', discovery_time)
-
+        if mode:
+            self._set_discovery_schedule_settings(mode, value, weekdays=weekdays,
+                                                  scheduling_wrapping_class=self.CONNECTION_DISCOVERY_SCHEDULE_PREFIX)
         if do_fetch:
             self.click_save_and_fetch()
+            self.wait_for_data_collection_toaster_start()
         else:
             self.click_save_without_fetch()

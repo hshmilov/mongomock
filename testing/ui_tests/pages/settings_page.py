@@ -8,7 +8,6 @@ import requests
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, \
     ElementNotInteractableException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -150,9 +149,8 @@ class SettingsPage(Page):
 
     CA_CERT_DELETE_BUTTON = f'{CA_CERTS_FILES} > button'
 
-    DISCOVERY_SCHEDULE_MODE_DDL = '.x-settings .x-select .x-select-trigger'
-    DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
-    DISCOVERY_SCHEDULE_REPEAT_INPUT = 'system_research_date_recurrence'
+    DISCOVERY_SCHEDULE_MODE_DDL_CSS = '.x-settings .x-select .x-select-trigger'
+    DISCOVERY_SCHEDULE_REPEAT_INPUT_ID = 'system_research_date_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     DISCOVERY_SCHEDULE_INTERVAL_TEXT = ScheduleTriggers.every_x_hours
     DISCOVERY_SCHEDULE_SCHEDULED_TEXT = ScheduleTriggers.every_x_days
@@ -279,7 +277,6 @@ class SettingsPage(Page):
 
     CSV_DELIMITER_ID = 'cell_joiner'
 
-    LOCKED_FEATURES_INPUT_CSS = '.v-select__selections > input'
     CLEAR_FEATURES_BUTTON_CSS = '.v-input__icon--clear'
     ENFORCEMENTS_FEATURE_TAG_TITLE = 'Enable Enforcement Center'
     ROLE_ASSIGNMENT_RULES_ROW = '.draggable > .item:nth-child({row_index})'
@@ -739,11 +736,6 @@ class SettingsPage(Page):
 
     def fill_schedule_rate(self, text):
         self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS, text)
-
-    def fill_schedule_date(self, text, repeat=True):
-        self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
-        if repeat:
-            self.fill_text_field_by_element_id(self.DISCOVERY_SCHEDULE_REPEAT_INPUT, 1)
 
     def get_schedule_rate_value(self):
         return self.driver.find_element_by_css_selector(self.SCHEDULE_RATE_CSS).get_attribute('value')
@@ -1404,32 +1396,16 @@ class SettingsPage(Page):
         self.wait_for_saved_successfully_toaster()
 
     def get_selected_discovery_mode(self):
-        return self.find_discovery_mode_dropdown().text
-
-    def find_discovery_mode_dropdown(self):
-        self.wait_for_element_present_by_css(self.DISCOVERY_SCHEDULE_MODE_DDL)
-        return self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL)
+        return self._find_discovery_mode_dropdown(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS).text
 
     def get_discovery_mode_selected_item(self):
-        return self.find_discovery_mode_dropdown().text
-
-    def set_discovery_mode_dropdown_to_date(self):
-        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
-            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
-                                              self.SELECT_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT)
+        return self._find_discovery_mode_dropdown(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS).text
 
     def set_discovery_mode_dropdown_to_interval(self):
         if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
-            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
+            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS,
                                               self.SELECT_OPTION_CSS,
                                               self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
-
-    def set_discovery_mode_dropdown_to_weekdays(self):
-        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT:
-            self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL,
-                                              self.SELECT_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT)
 
     def set_discovery__to_interval_value(self, interval=0, negative_flow=False):
         self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
@@ -1474,48 +1450,15 @@ class SettingsPage(Page):
     # pylint: disable=dangerous-default-value
     def _set_discovery_schedule_settings(self, mode='', time_value=0, negative_flow=False, weekdays: list = []):
         self.switch_to_page()
-
-        if mode == self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
-            self.set_discovery_mode_dropdown_to_interval()
-            self.set_discovery_mode_to_rate_value(time_value)
-
-        elif mode == self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
-            self.set_discovery_mode_dropdown_to_date()
-            self.set_discovery_mode_to_date_value(time_value)
-
-        elif mode == self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT and weekdays:
-            self.set_discovery_mode_dropdown_to_weekdays()
-            self.set_discovery_mode_to_date_value(time_value, repeat=False)
-            self.clear_lifecycle_weekdays()
-            try:
-                self.assert_select_option_is_empty(dropdown_css_selector=self.LIFECYCLE_WEEKDAYS_SELECT_ID,
-                                                   selected_options_css_selector=self.ANT_SELECTED_MENU_ITEM_CSS,
-                                                   index=0)
-                self.find_elements_by_css(self.LIFECYCLE_WEEKDAYS_SELECT_ID)[0].send_keys(Keys.ENTER)
-            except AssertionError:
-                # Sometimes its too fast for selenium
-                self.clear_lifecycle_weekdays()
-            self.verify_multiple_select_dropdown_close(self.LIFECYCLE_WEEKDAYS_SELECT_ID)
-
-            self.select_multiple_option_without_search(self.LIFECYCLE_WEEKDAYS_SELECT_ID,
-                                                       self.ANT_SELECT_MENU_ITEM_CSS,
-                                                       values=weekdays)
-
-        else:
-            raise RuntimeError('Invalid discovery schedule mode ')
-
+        self.set_discovery_schedule_settings(mode=mode, time_value=time_value, weekdays=weekdays,
+                                             scheduling_wrapping_class='.x-settings',
+                                             scheduling_repeat_selector=self.DISCOVERY_SCHEDULE_REPEAT_INPUT_ID)
         if negative_flow:
             # click to get error message display
             self.click_save_button()
             assert self.is_save_button_disabled()
         else:
             self.save_and_wait_for_toaster()
-
-    def set_discovery_mode_to_rate_value(self, rate_hour_value):
-        self.fill_schedule_rate(rate_hour_value)
-
-    def set_discovery_mode_to_date_value(self, time_of_day_value, repeat=True):
-        self.fill_schedule_date(time_of_day_value, repeat=repeat)
 
     def get_connection_label_required_value(self):
         self.switch_to_page()
@@ -1557,7 +1500,7 @@ class SettingsPage(Page):
         return result
 
     def open_discovery_mode_options(self):
-        self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL).click()
+        self.driver.find_element_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS).click()
 
     def find_discovery_mode_options(self):
         return self.driver.find_elements_by_css_selector(self.DISCOVERY_SCHEDULE_MODE_OPTIONS)
