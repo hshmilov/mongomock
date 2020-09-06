@@ -66,6 +66,7 @@ class TestUserPermissions(PermissionsTestBase):
     def test_new_user_validation(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
+        self.settings_page.wait_for_table_to_be_responsive()
         self.settings_page.click_new_user()
         self.settings_page.click_create_user()
         self.settings_page.assert_create_user_disabled()
