@@ -1,6 +1,6 @@
 # pylint: disable=too-many-lines
 import logging
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, Hashable
 from datetime import date, datetime, timedelta
 from functools import wraps
 from multiprocessing import cpu_count
@@ -605,7 +605,9 @@ def _get_counted_results(aggregate_results, reduced_filters):
             counted_results['No Value'] += 1
         elif _match_result_item_to_filters(extra_data, reduced_filters):
             result_name = item.get('_id', {}).get('name', 'No Value')
-            counted_results[str(result_name)] += 1
+            if not isinstance(result_name, Hashable):
+                continue
+            counted_results[result_name] += 1
     return counted_results
 
 
