@@ -504,11 +504,14 @@ def get_list_of_tests_in_path(path, extra_args):
     # 5 means that no tests were collected (documented pytest feature.)
     output, _ = execute(f'pytest --collect-only {extra_args} -q', cwd=path, allowed_return_codes={0, 5})
 
+    def is_parametrized(test_name):
+        return 'test_code_pylint' in test_name or 'test_api_rest_in_parallel' in test_name
+
     # Each line is a test case, in pytest format.
     modules_raw = {line.split('::')[0] for line in output.splitlines() if '::' in line and
-                   'test_code_pylint' not in line}
+                   not is_parametrized(line)}
 
-    functions_raw = {line for line in output.splitlines() if 'test_code_pylint' in line}
+    functions_raw = {line for line in output.splitlines() if is_parametrized(line)}
 
     return list(modules_raw) + list(functions_raw)
 
@@ -590,7 +593,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'integ_' + file_name.split('.py')[0]:
+                    'integ_' + file_name.replace('.py', '').replace('::', '_'):
                         f'python3 -u '
                         f'./testing/run_pytest.py {all_extra_pytest_args} {os.path.join(DIR_MAP["integ"], file_name)}'
                     for file_name in integ_tests
@@ -679,6 +682,8 @@ def main():
                 'ui_test_instances_upgrade',
                 'Unit Tests',
                 'ui_test_instances_after_join',
+                'ui_test_dashboard',
+                'ui_test_devices_query_advanced_cases',
                 'ui_test_report_generation',
                 'ui_test_devices_query_advanced_more_cases',
                 'ui_test_enforcement_actions',

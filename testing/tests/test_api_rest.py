@@ -5,11 +5,12 @@
 import time
 import logging
 import traceback
-from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import Pool
 
+import numpy
 import pytest
 
-from examples.api_usage import RESTExample
+from api.examples.api_usage import RESTExample
 from axonius.utils.wait import wait_until
 from axoniussdk.client import RESTClient
 from services.adapters.ad_service import ad_fixture
@@ -57,35 +58,30 @@ def _test_api(axonius_system):
         logger.info('\n\n')
 
 
-def test_api_in_parallel(axonius_system):
+def _run_specific_configuration(name):
     client = RESTExample('https://127.0.0.1',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
 
-    def run_specific_configuration(client, name):
-        try:
-            global ERROR
-            if ERROR:
-                # we don't need to run more tests since we already failed
-                return
-            logger.info(f'Calling api function "{name}"')
-            start_time = time.time()
-            callback = getattr(client, name)
-            callback()
-            logger.info(f'Finished calling function "{name}" in "{time.time() - start_time}" seconds.')
-            logger.info('\n\n')
-        except Exception:
-            ERROR = True
-            logger.exception(None)
-            print(f'Error in in test_api for name {name}: \n {traceback.format_exc()}')
-            PROBLEMS.append(name)
-            raise
+    start_time = time.time()
+    logger.info(f'Calling api function "{name}"')
+    callback = getattr(client, name)
+    callback()
+    logger.info(f'Finished calling function "{name}" in "{time.time() - start_time}" seconds.')
+    logger.info('\n\n')
 
-    to_run = ((client, name)
-              for name in client.get_examples())
 
-    with ThreadPool(50) as pool:
-        pool.starmap_async(run_specific_configuration, to_run).wait(timeout=60 * 60 * 3)
+_NUMBER_OF_PAGES = 7
 
-    global ERROR
-    assert not ERROR, PROBLEMS
+
+@pytest.mark.parametrize('page', range(_NUMBER_OF_PAGES))
+def test_api_rest_in_parallel(axonius_system, page):
+    client = RESTExample('https://127.0.0.1',
+                         auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
+                         verify=False)
+
+    all_examples = client.get_examples()
+    examples = numpy.array_split(list(all_examples), _NUMBER_OF_PAGES)[page]
+    with Pool(15) as pool:
+        # If an exception is thrown, `get` will throw.
+        pool.map_async(_run_specific_configuration, examples).get(timeout=60 * 60 * 3)
