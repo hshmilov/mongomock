@@ -9,13 +9,14 @@ from flask import (jsonify,
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
 from axonius.consts.plugin_consts import (REPORTS_PLUGIN_NAME, DEVICE_CONTROL_PLUGIN_NAME)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
+                                          ACTION_TYPE_FIELD,
                                           ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
                                           LAST_TRIGGERED_FIELD,
                                           TIMES_TRIGGERED_FIELD,
                                           TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD, TRIGGER_VIEW_NAME_FIELD,
-                                          TRIGGER_RESULT_VIEW_NAME_FIELD)
+                                          TRIGGER_RESULT_VIEW_NAME_FIELD, TRIGGER_PERIOD_FIELD)
 
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
@@ -48,12 +49,17 @@ class Enforcements(Tasks):
             if trigger:
                 trigger_view = trigger['view']
                 trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+
+            main_action_type = self._get_action_type(actions[ACTIONS_MAIN_FIELD])
+
             return beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
+                f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}.{ACTION_TYPE_FIELD}': main_action_type,
                 TRIGGER_VIEW_NAME_FIELD: trigger_view_name,
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': trigger.get(LAST_TRIGGERED_FIELD, '') if trigger else '',
                 f'{TRIGGERS_FIELD}.{TIMES_TRIGGERED_FIELD}': trigger.get(TIMES_TRIGGERED_FIELD) if trigger else None,
+                f'{TRIGGERS_FIELD}.{TRIGGER_PERIOD_FIELD}': trigger.get(TRIGGER_PERIOD_FIELD) if trigger else None,
                 LAST_UPDATED_FIELD: enforcement.get(LAST_UPDATED_FIELD),
                 UPDATED_BY_FIELD: enforcement.get(UPDATED_BY_FIELD)
             })

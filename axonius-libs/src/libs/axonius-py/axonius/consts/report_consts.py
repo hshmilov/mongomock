@@ -57,7 +57,10 @@ LOGOS_PATH = '/home/axonius/libs/axonius-py/axonius/assets'
 # FIELDS #
 ##########
 
+ACTION_NAME = 'name'
 ACTION_FIELD = 'action'
+ACTION_TYPE_FIELD = 'type'
+ACTION_NAME_FIELD = 'action_name'
 ACTIONS_FIELD = 'actions'
 ACTION_CONFIG_FIELD = 'config'
 ACTIONS_MAIN_FIELD = 'main'
@@ -67,10 +70,13 @@ ACTIONS_POST_FIELD = 'post'
 LAST_TRIGGERED_FIELD = 'last_triggered'
 LAST_GENERATED_FIELD = 'last_generated'
 TIMES_TRIGGERED_FIELD = 'times_triggered'
+TRIGGER_PERIOD_FIELD = 'period'
 LAST_UPDATE_FIELD = 'last_updated'
 TRIGGERS_FIELD = 'triggers'
 TRIGGER_VIEW_NAME_FIELD = f'{TRIGGERS_FIELD}.view.name'
 TRIGGER_RESULT_VIEW_NAME_FIELD = 'result.metadata.trigger.view.name'
-
+TRIGGER_RESULT_PERIOD_FIELD = 'result.metadata.trigger.condition'
+ACTION_TYPE_DB_FIELD = f'{ACTION_FIELD}.{ACTION_NAME_FIELD}'
+STARTED_AT_FIELD = 'started_at'
 
 NOT_RAN_STATE = 'Not ran'

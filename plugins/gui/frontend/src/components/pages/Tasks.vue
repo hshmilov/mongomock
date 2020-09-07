@@ -22,6 +22,7 @@
 <script>
 import { mapMutations, mapActions, mapState } from 'vuex';
 
+import { actionsMeta } from '@constants/enforcement';
 import XPage from '../axons/layout/Page.vue';
 import XSearch from '../neurons/inputs/SearchInput.vue';
 import XTable from '../neurons/data/Table.vue';
@@ -56,21 +57,56 @@ export default {
       ];
     },
     fields() {
-      return [{
-        name: 'status', title: 'Status', type: 'string',
-      }, {
-        name: 'result.metadata.success_rate', title: 'Successful / Total', type: 'string',
-      }, {
-        name: 'post_json.report_name', title: 'Name', type: 'string',
-      }, {
-        name: 'result.main.name', title: 'Main Action', type: 'string',
-      }, {
-        name: 'result.metadata.trigger.view.name', title: 'Trigger Query Name', type: 'string',
-      }, {
-        name: 'started_at', title: 'Started', type: 'string', format: 'date-time',
-      }, {
-        name: 'finished_at', title: 'Completed', type: 'string', format: 'date-time',
-      }];
+      return [
+        {
+          name: 'status',
+          title: 'Status',
+          type: 'string',
+        },
+        {
+          name: 'result.metadata.success_rate',
+          title: 'Successful / Total',
+          type: 'string',
+        },
+        {
+          name: 'post_json.report_name',
+          title: 'Name',
+          type: 'string',
+        },
+        {
+          name: 'result.main.name',
+          title: 'Main Action Name',
+          type: 'string',
+        },
+        {
+          name: 'result.main.type',
+          title: 'Main Action Type',
+          type: 'string',
+          cellRenderer: (mainActionType) => (actionsMeta[mainActionType].title),
+        },
+        {
+          name: 'result.metadata.trigger.view.name',
+          title: 'Trigger Query Name',
+          type: 'string',
+        },
+        {
+          name: 'result.metadata.trigger.condition',
+          title: 'Triggered Conditions',
+          type: 'string',
+        },
+        {
+          name: 'started_at',
+          title: 'Started',
+          type: 'string',
+          format: 'date-time',
+        },
+        {
+          name: 'finished_at',
+          title: 'Completed',
+          type: 'string',
+          format: 'date-time',
+        },
+      ];
     },
     searchFilter() {
       const textFilter = this.fields.map((field) => `${field.name} == regex("${this.searchValue}", "i")`).join(' or ');

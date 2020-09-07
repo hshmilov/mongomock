@@ -142,6 +142,10 @@ class EnforcementsPage(EntitiesPage):
     RUN_CMD_ENFORCEMENT_NAME = 'Run Cmd Enforcement'
     DUMMY_ENFORCEMENT_NAME = 'Dummy Enforcement'
 
+    SPECIAL_ENFORCEMENT_NAME = 'Special enforcement name'
+    FIELD_MAIN_ACTION_NAME = 'Main Action Name'
+    FIELD_MAIN_ACTION_TYPE = 'Main Action Type'
+
     @property
     def url(self):
         return f'{self.base_url}/enforcements'

@@ -10,7 +10,7 @@ from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
-from ui_tests.pages.enforcements_page import ActionCategory, Action
+from ui_tests.pages.enforcements_page import ActionCategory, Action, Period
 
 ENFORCEMENT_NAME = 'Special enforcement name'
 ENFORCEMENT_CHANGE_NAME = 'test_enforcement_change'
@@ -28,6 +28,7 @@ FIELD_TIMES_TRIGGERED = 'Times Triggered'
 FIELD_NAME = 'Name'
 FIELD_QUERY_NAME = 'Trigger Query Name'
 FIELD_LAST_TRIGGERED = 'Last Triggered'
+FIELD_TRIGGER_SCHEDULE = 'Trigger Schedule'
 
 
 class TestEnforcementNoQuery(TestBase):
@@ -147,6 +148,12 @@ class TestEnforcementNoQuery(TestBase):
         assert MANAGED_DEVICES_QUERY_NAME in self.enforcements_page.get_column_data_inline(FIELD_QUERY_NAME)
         assert not self.enforcements_page.get_column_data_inline(FIELD_LAST_TRIGGERED)
         assert '0' in self.enforcements_page.get_column_data_inline(FIELD_TIMES_TRIGGERED)
+        assert Period.EveryDiscovery \
+            in self.enforcements_page.get_column_data_inline(FIELD_TRIGGER_SCHEDULE)
+        assert self.enforcements_page.SPECIAL_ENFORCEMENT_NAME \
+            in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_MAIN_ACTION_NAME)
+        assert Action.create_notification.value \
+            in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_MAIN_ACTION_TYPE)
 
         self.base_page.run_discovery()
         self.enforcements_page.refresh()

@@ -6,7 +6,10 @@ from flask import (jsonify)
 
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
-                                          NOT_RAN_STATE, TRIGGER_RESULT_VIEW_NAME_FIELD)
+                                          NOT_RAN_STATE, TRIGGER_RESULT_VIEW_NAME_FIELD,
+                                          ACTION_TYPE_DB_FIELD, ACTION_NAME, ACTION_NAME_FIELD,
+                                          ACTION_FIELD, STARTED_AT_FIELD,
+                                          TRIGGER_RESULT_PERIOD_FIELD)
 from axonius.plugin_base import EntityType
 from axonius.consts.report_consts import (ACTIONS_MAIN_FIELD)
 from axonius.utils.gui_helpers import (paginated, filtered,
@@ -65,6 +68,13 @@ class Tasks:
             '$and': query_segments
         }
 
+    def _get_action_type(self, action_name):
+        return self.enforcements_saved_actions_collection.find_one({
+            ACTION_NAME: action_name
+        }, {
+            ACTION_TYPE_DB_FIELD: 1
+        }).get(ACTION_FIELD, {}).get(ACTION_NAME_FIELD, '')
+
     @paginated()
     @filtered()
     @sorted_endpoint()
@@ -82,7 +92,7 @@ class Tasks:
             sorted_tasks = sorted(beautiful_tasks, key=lambda e: e[TRIGGER_RESULT_VIEW_NAME_FIELD],
                                   reverse=mongo_sort[TRIGGER_RESULT_VIEW_NAME_FIELD] == pymongo.DESCENDING)
             return jsonify(sorted_tasks[skip: (skip + limit)])
-        sort = [('finished_at', pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
+        sort = [(STARTED_AT_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())
         return jsonify([self.beautify_task_entry(x) for x in tasks.sort(sort).skip(skip).limit(limit)])
 
     @filtered()
@@ -152,7 +162,7 @@ class Tasks:
                 'view': trigger_view_name,
                 'period': trigger.get('period', ''),
                 'condition': task_metadata.get('triggered_reason', ''),
-                'started': task['started_at'],
+                'started': task[STARTED_AT_FIELD],
                 'finished': task['finished_at'],
                 'result': result,
                 'task_name': get_task_full_name(task.get('post_json', {}).get('report_name', ''),
@@ -185,10 +195,14 @@ class Tasks:
                 status = 'Completed'
 
             trigger_view_name = ''
-            trigger = result.get('metadata', {}).get('trigger')
+            task_metadata = result.get('metadata', {})
+            trigger = task_metadata.get('trigger', {})
             if trigger:
                 trigger_view = trigger['view']
                 trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+
+            main_action_name = result.get('main', {}).get('name', '')
+            main_action_type = self._get_action_type(main_action_name)
 
             return beautify_db_entry({
                 '_id': task.get('_id'),
@@ -197,9 +211,11 @@ class Tasks:
                     get_task_full_name(task.get('post_json', {}).get('report_name', ''),
                                        result.get('metadata', {}).get('pretty_id', '')),
                 'status': status,
-                f'result.{ACTIONS_MAIN_FIELD}.name': result.get('main', {}).get('name', ''),
+                f'result.{ACTIONS_MAIN_FIELD}.name': main_action_name,
+                f'result.{ACTIONS_MAIN_FIELD}.type': main_action_type,
                 TRIGGER_RESULT_VIEW_NAME_FIELD: trigger_view_name,
-                'started_at': task.get('started_at', ''),
+                TRIGGER_RESULT_PERIOD_FIELD: task_metadata.get('triggered_reason', ''),
+                STARTED_AT_FIELD: task.get(STARTED_AT_FIELD, ''),
                 'finished_at': task.get('finished_at', '')
             })
         except Exception:

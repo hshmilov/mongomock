@@ -5,6 +5,7 @@ from selenium.common.exceptions import ElementNotInteractableException, StaleEle
 
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
+from axonius.consts.gui_consts import Action
 from services.adapters.carbonblack_response_service import \
     CarbonblackResponseService
 from services.adapters.wmi_service import WmiService
@@ -30,17 +31,25 @@ ACTION_NAME = 'TestAction'
 
 class TestTasks(TestBase):
 
-    FIELD_MAIN_ACTION = 'Main Action'
     FIELD_QUERY_NAME = 'Trigger Query Name'
+    FIELD_TRIGGERED_CONDITIONS = 'Triggered Conditions'
+    TRIGGERED_CONDITIONS_VALUE = 'Any results'
 
     def _check_enforcement_data(self):
         # Check Enforcement's Task details in table
         assert f'{ENFORCEMENT_NAME} - Task 1'\
                in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_NAME)
-        assert ENFORCEMENT_NAME in self.enforcements_page.get_column_data_inline(self.FIELD_MAIN_ACTION)
+        assert ENFORCEMENT_NAME \
+            in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_MAIN_ACTION_NAME)
         assert ENFORCEMENT_QUERY in self.enforcements_page.get_column_data_inline(self.FIELD_QUERY_NAME)
         assert datetime.now().strftime('%Y-%m-%d') in normalize_timezone_date(
             self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_COMPLETED)[0])
+        assert self.enforcements_page.SPECIAL_ENFORCEMENT_NAME \
+            in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_MAIN_ACTION_NAME)
+        assert Action.run_windows_shell_command.value \
+            in self.enforcements_page.get_column_data_inline(self.enforcements_page.FIELD_MAIN_ACTION_TYPE)
+        assert self.TRIGGERED_CONDITIONS_VALUE \
+            in self.enforcements_page.get_column_data_inline(self.FIELD_TRIGGERED_CONDITIONS)
 
     def test_tasks_table_content(self):
         with CarbonblackResponseService().contextmanager(take_ownership=True):

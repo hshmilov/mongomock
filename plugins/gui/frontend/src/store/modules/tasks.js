@@ -16,7 +16,7 @@ export const tasks = {
         filter: '', expressions: [],
       },
       sort: {
-        field: '', desc: true,
+        field: 'started_at', desc: true,
       },
     },
 

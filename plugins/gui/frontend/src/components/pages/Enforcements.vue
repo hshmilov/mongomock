@@ -42,7 +42,7 @@
           </template>
         </XTable>
         <XEnforcementsFeatureLockTip
-           :enabled="enforcementsLocked"
+          :enabled="enforcementsLocked"
         />
       </XPage>
     </template>
@@ -59,7 +59,7 @@ import XPage from '@axons/layout/Page.vue';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
 import XButton from '@axons/inputs/Button.vue';
-
+import { actionsMeta } from '@constants/enforcement';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { REMOVE_ENFORCEMENTS, SET_ENFORCEMENT } from '@store/modules/enforcements';
 
@@ -82,26 +82,66 @@ export default {
       enforcementsLocked(state) {
         return !_get(state, 'settings.configurable.gui.FeatureFlags.config.enforcement_center', true);
       },
+      triggerPeriods(state) {
+        return _get(state, 'constants.constants.trigger_periods', []);
+      },
     }),
     name() {
       return 'enforcements';
     },
     fields() {
-      return [{
-        name: 'name', title: 'Name', type: 'string',
-      }, {
-        name: 'actions.main', title: 'Main Action', type: 'string',
-      }, {
-        name: 'triggers.view.name', title: 'Trigger Query Name', type: 'string',
-      }, {
-        name: 'triggers.last_triggered', title: 'Last Triggered', type: 'string', format: 'date-time',
-      }, {
-        name: 'triggers.times_triggered', title: 'Times Triggered', type: 'integer',
-      }, {
-        name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
-      }, {
-        name: 'updated_by', title: 'Updated By', type: 'string', format: 'user',
-      }];
+      return [
+        {
+          name: 'name',
+          title: 'Name',
+          type: 'string',
+        },
+        {
+          name: 'actions.main',
+          title: 'Main Action Name',
+          type: 'string',
+        },
+        {
+          name: 'actions.main.type',
+          title: 'Main Action Type',
+          type: 'string',
+          cellRenderer: (mainActionType) => (actionsMeta[mainActionType].title),
+        },
+        {
+          name: 'triggers.view.name',
+          title: 'Trigger Query Name',
+          type: 'string',
+        },
+        {
+          name: 'triggers.period',
+          title: 'Trigger Schedule',
+          type: 'string',
+          cellRenderer: (period) => (this.getPeriodDescription(period)),
+        },
+        {
+          name: 'triggers.last_triggered',
+          title: 'Last Triggered',
+          type: 'string',
+          format: 'date-time',
+        },
+        {
+          name: 'triggers.times_triggered',
+          title: 'Times Triggered',
+          type: 'integer',
+        },
+        {
+          name: 'last_updated',
+          title: 'Last Updated',
+          type: 'string',
+          format: 'date-time',
+        },
+        {
+          name: 'updated_by',
+          title: 'Updated By',
+          type: 'string',
+          format: 'user',
+        },
+      ];
     },
     hasSelection() {
       return (this.selection.ids && this.selection.ids.length) || this.selection.include === false;
@@ -181,6 +221,13 @@ export default {
         },
       });
       this.$refs.table.fetchContentPages(true);
+    },
+    getPeriodDescription(period) {
+      const relevantPeriod = this.triggerPeriods.find((x) => x[period]);
+      if (relevantPeriod) {
+        return relevantPeriod[period];
+      }
+      return period;
     },
   },
 };

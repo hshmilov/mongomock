@@ -62,7 +62,7 @@ export const enforcements = {
         filter: '', expressions: [],
       },
       sort: {
-        field: '', desc: true,
+        field: 'last_updated', desc: true,
       },
     },
 
