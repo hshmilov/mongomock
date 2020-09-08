@@ -43,7 +43,7 @@ export default {
   },
   methods: {
     isDateUnavailable(date) {
-      const isDateOutOfRange = date && date >= dayjs().startOf('day');
+      const isDateOutOfRange = date && date > dayjs().endOf('day');
       const isDateNotAllowed = date && !this.allowedDates[date.format(DEFAULT_DATE_FORMAT)];
       return isDateOutOfRange || !!isDateNotAllowed;
     },

@@ -37,6 +37,7 @@
       <template v-if="isRangeAbsolute">
         <ARangePicker
           v-model="range"
+          :format="dateFormat"
           :disabled-date="disabledDate"
           :allow-clear="false"
         />
@@ -72,6 +73,7 @@ import XSelect from '@axons/inputs/select/Select.vue';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import minMax from 'dayjs/plugin/minMax';
+import { DATE_FORMAT } from '@store/getters';
 
 dayjs.extend(isBetween);
 dayjs.extend(minMax);
@@ -96,6 +98,9 @@ export default {
     };
   },
   computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
     ...mapState({
       ...mapGetters({
         featureFlags: 'featureFlags',
