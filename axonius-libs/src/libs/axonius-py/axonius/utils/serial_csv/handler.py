@@ -87,7 +87,7 @@ def process_entity(entity: dict, selected_map: dict, cell_joiner: str) -> dict:
             continue
 
         field = selected_map[field_name]
-        if not field.get('header') or not field.get('process'):
+        if not field or not field.get('header') or not field.get('process'):
             continue
         header = field['header']
         processor = field['process']
