@@ -15,7 +15,6 @@ def _check_history_of_entity(page: EntitiesPage):
         page.fill_datepicker_date(datepicker_date)
         page.wait_for_table_to_load(retries=450)
         assert page.count_entities() >= History.entities_per_day
-        page.close_datepicker()
         # We sleep so the 'X' button will react properly
         time.sleep(1)
         page.clear_existing_date(allow_failures=False)

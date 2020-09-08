@@ -1,46 +1,34 @@
 <template>
-  <MdField v-if="readOnly">
-    <MdInput
-      type="text"
-      disabled
-    />
-  </MdField>
   <div
-    v-else
     class="x-date-edit"
-    :class="{labeled: label}"
   >
-    <MdDatepicker
-      v-show="!hide || datepickerActive"
-      ref="date"
+    <ADatePicker
+      v-show="!hide"
       v-model="selectedDate"
-      :md-disabled-dates="checkDisabled"
-      :md-immediately="true"
-      :md-debounce="500"
-      :class="{'no-icon': minimal, 'no-clear': !clearable}"
-    >
-      <label v-if="label">{{ label }}</label>
-    </MdDatepicker>
-    <XButton
-      v-if="value && clearable"
-      type="link"
-      @click="onClear"
-    >X</XButton>
+      :allow-clear="clearable"
+      :disabled-date="checkDisabled"
+      :placeholder="label"
+      :format="dateFormat"
+      :disabled="readOnly"
+      :show-today="false"
+      :default-picker-value="defaultPickerValue"
+      v-on="$listeners"
+    />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
-import _get from 'lodash/get';
+
 import dayjs from 'dayjs';
-import XButton from '../../../../axons/inputs/Button.vue';
-import { DATE_FORMAT } from '../../../../../store/getters';
-import { DEFAULT_DATE_FORMAT } from '../../../../../store/modules/constants';
+import { DatePicker } from 'ant-design-vue';
+import { DATE_FORMAT } from '@store/getters';
+import { DEFAULT_DATE_FORMAT } from '@store/modules/constants';
 
 export default {
   name: 'XDateEdit',
   components: {
-    XButton,
+    ADatePicker: DatePicker,
   },
   props: {
     value: {
@@ -53,24 +41,27 @@ export default {
     clearable: {
       type: Boolean, default: true,
     },
-    minimal: {
-      type: Boolean, default: false,
-    },
     checkDisabled: {
       type: Function,
       default: () => false,
     },
     label: {
       type: String,
-      default: '',
+      default: 'Select Date',
     },
     hide: {
       type: Boolean,
       default: false,
     },
+    formatResponse: {
+      type: Boolean,
+      default: true,
+    },
   },
-  created() {
-    this.$material.locale.dateFormat = this.dateFormat;
+  data() {
+    return {
+      defaultPickerValue: dayjs().subtract(1, 'day'),
+    };
   },
   computed: {
     ...mapGetters({
@@ -78,14 +69,17 @@ export default {
     }),
     selectedDate: {
       get() {
-        return this.value;
+        if (this.value) {
+          return dayjs(this.value);
+        }
+        return null;
       },
       set(value) {
-        let selectedDate = value;
-        if (selectedDate && typeof selectedDate !== 'string') {
-          selectedDate = dayjs(selectedDate).format(DEFAULT_DATE_FORMAT);
-        } else if (!selectedDate) {
-          this.$refs.date.modelDate = '';
+        let selectedDate;
+        if (value) {
+          selectedDate = this.formatResponse ? value.format(DEFAULT_DATE_FORMAT) : value;
+        } else {
+          selectedDate = '';
         }
         if (this.value === selectedDate) {
           return;
@@ -93,37 +87,15 @@ export default {
         this.$emit('input', selectedDate);
       },
     },
-    datepickerActive() {
-      if (!this.$refs.date) return false;
-      return this.$refs.date.showDialog;
-    },
   },
   methods: {
-    onClear() {
-      this.selectedDate = (typeof this.value === 'string') ? '' : null;
+    handlePanelChange(value) {
+      this.$emit('openChange', value);
     },
   },
 };
 </script>
 
 <style lang="scss">
-    .x-date-edit {
-        display: flex;
-        .md-datepicker.md-clearable {
-            .md-input-action {
-                visibility: hidden;
-            }
-        }
-        &:not(.labeled) .md-datepicker.md-field {
-            width: auto;
-            padding-top: 0;
-            min-height: auto;
-            margin-bottom: 0;
-        }
-        .x-button.ant-btn-link {
-            margin-left: -16px;
-            margin-bottom: 0;
-            z-index: 100;
-        }
-    }
+
 </style>

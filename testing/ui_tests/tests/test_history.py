@@ -25,7 +25,6 @@ class TestHistory(TestBase):
             assert self.users_page.count_entities() == day_to_user_count[day - 1]
             for user_name in self.users_page.get_column_data_slicer(self.users_page.FIELD_USERNAME_TITLE):
                 assert int(user_name.split('\n')[0].split(' ')[-1]) == day
-            self.users_page.close_datepicker()
             self.users_page.clear_existing_date()
             wait_until(lambda: tester.is_metric_in_log(Query.QUERY_HISTORY, '.*'))
 
@@ -39,7 +38,6 @@ class TestHistory(TestBase):
         tester = self.axonius_system.gui.log_tester
         for day in range(1, 30):
             self.devices_page.fill_datepicker_date(datetime.now() - timedelta(day))
-            self.devices_page.close_datepicker()
             self.devices_page.wait_for_table_to_load()
             assert self.devices_page.count_entities() == day_to_device_count[day - 1]
             for host_name in self.users_page.get_column_data_slicer(self.devices_page.FIELD_HOSTNAME_TITLE):
@@ -59,7 +57,6 @@ class TestHistory(TestBase):
         self.devices_page.switch_to_page()
         for day in range(1, 5):
             self.devices_page.fill_datepicker_date(datetime.now() - timedelta(day))
-            self.devices_page.close_datepicker()
             self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
             self.devices_page.enter_search()
             if day_to_device_count[day - 1] > 0:
@@ -79,7 +76,6 @@ class TestHistory(TestBase):
         self.devices_page.switch_to_page()
         for day in range(1, 5):
             self.devices_page.fill_datepicker_date(datetime.now() - timedelta(day))
-            self.devices_page.close_datepicker()
             self.devices_page.fill_filter(self.SEARCH_TEXT_TESTDOMAIN)
             self.devices_page.enter_search()
             if day_to_device_count[day - 1] > 0:

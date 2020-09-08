@@ -110,7 +110,6 @@ class TestEntityNotes(TestBase):
         for day in range(1, 30):
             entities_page.fill_datepicker_date(datetime.now() - timedelta(day))
             entities_page.wait_for_table_to_load()
-            entities_page.close_datepicker()
             if entities_page.get_all_data():
                 entities_page.click_row()
                 entities_page.wait_for_table_to_load(retries=60 * 5, interval=1)
@@ -119,7 +118,6 @@ class TestEntityNotes(TestBase):
                 entities_page.switch_to_page()
             entities_page.clear_existing_date()
 
-        entities_page.close_datepicker()
         # Check the original note actually has the edited value
         entities_page.wait_for_table_to_load()
         entities_page.click_row()

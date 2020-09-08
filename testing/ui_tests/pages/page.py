@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from datetime import datetime
 from enum import Enum
 import urllib.parse
 from tempfile import NamedTemporaryFile
@@ -17,7 +18,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
-from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from axonius.adapter_base import WEEKDAYS
 from services.axon_service import TimeoutException
@@ -121,6 +121,13 @@ class Page:
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
     MODAL_OVERLAY_CSS = '.modal-overlay'
     ANTD_MODAL_OVERLAY_CSS = '.ant-drawer-open .ant-drawer-content-wrapper'
+    DATE_PICKER_DEFAULT_WRAPPER = '.x-date-edit'
+    ANTD_DATE_PICKER_INPUT_CSS = '.ant-calendar-picker .ant-input'
+    ANTD_DATE_PICKER_POPUP_INPUT = '.ant-calendar-picker-container .ant-calendar-input'
+    ANTD_DATE_PICKER_CLOSE_BUTTON = '.ant-calendar-picker .ant-calendar-picker-clear'
+    ANTD_RANGE_PICKER_INPUT_CSS = '.ant-calendar-picker-input'
+    ANTD_RANGE_PICKER_POPUP_FROM_INPUT_CSS = '.ant-calendar-range-left .ant-calendar-input'
+    ANTD_RANGE_PICKER_POPUP_TO_INPUT_CSS = '.ant-calendar-range-right .ant-calendar-input '
     DIALOG_OVERLAY_CSS = '.v-dialog'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\')' \
                                    ' and .//text()[normalize-space()=\'{message}\']]'
@@ -150,8 +157,6 @@ class Page:
     TABLE_COUNTER = 'div.count'
     UPLOADING_FILE_CSS = '//div[@class=\'name-placeholder\' and text()=\'Uploading...\']'
     CUSTOM_ADAPTER_NAME = 'Custom Data'
-    DATEPICKER_INPUT_CSS = '.md-datepicker .md-input'
-    DATEPICKER_OVERLAY_CSS = '.md-datepicker-overlay'
     CHIPS_WITH_LABEL_XPATH = '//div[label[text()=\'{label_text}\']]' \
                              '/div[contains(@class, \'md-chips\')]//input[@type=\'text\']'
 
@@ -1012,28 +1017,50 @@ class Page:
     def close_modal_overlay(self):
         self.find_elements_by_css(self.MODAL_OVERLAY_CSS).click()
 
-    def fill_datepicker_date(self, date_to_fill, context=None):
-        self.fill_text_field_by_css_selector(self.DATEPICKER_INPUT_CSS,
-                                             normalize_timezone_date(date_to_fill.date().isoformat()),
-                                             context=context)
+    def _find_and_click_picker(self, parent, css_selector):
+        picker = parent.find_element_by_css_selector(css_selector)
+        self.hover_over_element(picker)
+        picker.click()
+
+    def _fill_picker_input(self, css_selector, date_to_fill):
+        date_input = self.driver.find_element_by_css_selector(css_selector)
+        self.fill_text_by_element(date_input, date_to_fill.date().isoformat())
+        date_input.send_keys(Keys.ENTER)
+
+    def fill_range_picker_date(self, from_date_to_fill: datetime, to_date_to_fill: datetime, parent=None):
+        if not parent:
+            parent = self.driver
+        self._find_and_click_picker(parent, self.ANTD_RANGE_PICKER_INPUT_CSS)
+        # Sleep through the time it takes the date picker to open and finish animation
+        time.sleep(0.3)
+        self._fill_picker_input(self.ANTD_RANGE_PICKER_POPUP_FROM_INPUT_CSS, from_date_to_fill)
+        self._fill_picker_input(self.ANTD_RANGE_PICKER_POPUP_TO_INPUT_CSS, to_date_to_fill)
         # Sleep through the time it takes the date picker to react to the filled date
         time.sleep(0.6)
 
-    def close_datepicker(self):
-        try:
-            el = self.driver.find_element_by_css_selector(self.DATEPICKER_OVERLAY_CSS)
-            ActionChains(self.driver).move_to_element_with_offset(el, 1, 1).click().perform()
-            self.wait_for_element_absent_by_css(self.DATEPICKER_OVERLAY_CSS)
-        except NoSuchElementException:
-            # Already closed
-            pass
+    def fill_datepicker_date(self, date_to_fill: datetime, parent=None):
+        if not parent:
+            parent = self.driver.find_element_by_css_selector(self.DATE_PICKER_DEFAULT_WRAPPER)
+        self._find_and_click_picker(parent, self.ANTD_DATE_PICKER_INPUT_CSS)
+        # Sleep through the time it takes the date picker to open and finish animation
+        time.sleep(0.3)
+        self._fill_picker_input(self.ANTD_DATE_PICKER_POPUP_INPUT, date_to_fill)
+        # Sleep through the time it takes the date picker to react to the filled date
+        time.sleep(0.6)
 
     def click_remove_sign(self, context=None):
         self.click_button('X', should_scroll_into_view=False, context=context)
 
+    def click_remove_date(self, parent=None):
+        if not parent:
+            parent = self.driver
+        close_button = parent.find_element_by_css_selector(self.ANTD_DATE_PICKER_CLOSE_BUTTON)
+        self.hover_over_element(close_button)
+        close_button.click()
+
     def clear_existing_date(self, context=None, allow_failures=False):
         try:
-            self.click_remove_sign(context=context)
+            self.click_remove_date(parent=context)
             # Make sure it is removed
             time.sleep(0.5)
         except NoSuchElementException:
@@ -1041,7 +1068,7 @@ class Page:
                 raise
 
     def find_existing_date(self):
-        return self.wait_for_element_present_by_css('.md-datepicker .md-clear')
+        return self.wait_for_element_present_by_css(self.ANTD_DATE_PICKER_CLOSE_BUTTON)
 
     def find_checkbox_by_label(self, text, element=None):
         if not element:

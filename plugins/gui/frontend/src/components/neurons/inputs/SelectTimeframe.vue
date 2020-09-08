@@ -35,19 +35,10 @@
       >
       <label for="range_absolute">Show results in date range</label>
       <template v-if="isRangeAbsolute">
-        <XDateEdit
-          v-model="from"
-          :check-disabled="checkDateAvailabilityFrom"
-          :format="false"
-          :clearable="false"
-          label="From"
-        />
-        <XDateEdit
-          v-model="to"
-          :check-disabled="checkDateAvailabilityTo"
-          :format="false"
-          :clearable="false"
-          label="To"
+        <ARangePicker
+          v-model="range"
+          :disabled-date="disabledDate"
+          :allow-clear="false"
         />
       </template>
       <div
@@ -72,17 +63,23 @@
 
 <script>
 import { mapState, mapGetters } from 'vuex';
+import { DatePicker } from 'ant-design-vue';
 import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
+import { validateNumber } from '@constants/validations';
 import { FeatureFlagsEnum } from '@constants/feature_flags';
-import XSelect from '../../axons/inputs/select/Select.vue';
-import XDateEdit from '../schema/types/string/DateEdit.vue';
-import { validateNumber } from '../../../constants/validations';
+import { DEFAULT_DATE_FORMAT } from '@store/modules/constants';
+import XSelect from '@axons/inputs/select/Select.vue';
+import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import minMax from 'dayjs/plugin/minMax';
 
+dayjs.extend(isBetween);
+dayjs.extend(minMax);
 
 export default {
   name: 'XSelectTimeframe',
   components: {
-    XSelect, XDateEdit,
+    XSelect, ARangePicker: DatePicker.RangePicker,
   },
   props: {
     value: {
@@ -104,9 +101,8 @@ export default {
         featureFlags: 'featureFlags',
       }),
       firstHistoricalDate(state) {
-        return Object.values(state.constants.firstHistoricalDate)
-          .map((dateStr) => new Date(dateStr))
-          .reduce((a, b) => ((a < b) ? a : b), new Date());
+        return dayjs.min(Object.values(state.constants.firstHistoricalDate)
+          .map((date) => dayjs(date)));
       },
       isUnlimitedHistory() {
         return this.featureFlags[FeatureFlagsEnum.query_timeline_range];
@@ -124,20 +120,19 @@ export default {
         });
       },
     },
-    to: {
+    range: {
       get() {
-        return this.value.to;
+        if (this.value.from && this.value.to) {
+          return [dayjs(this.value.from), dayjs(this.value.to)];
+        }
+        return [];
       },
-      set(to) {
-        this.$emit('input', { ...this.value, to });
-      },
-    },
-    from: {
-      get() {
-        return this.value.from;
-      },
-      set(from) {
-        this.$emit('input', { ...this.value, from });
+      set(values) {
+        this.$emit('input', {
+          ...this.value,
+          from: values[0].format(DEFAULT_DATE_FORMAT),
+          to: values[1].format(DEFAULT_DATE_FORMAT),
+        });
       },
     },
     unit: {
@@ -174,22 +169,13 @@ export default {
       ];
     },
     isValid() {
-      return (this.from != null && this.to !== null) || (this.count > 0 && this.unit);
+      return (this.value.from != null && this.value.to !== null) || (this.count > 0 && this.unit);
     },
   },
   methods: {
     validateNumber,
-    checkDateAvailabilityFrom(date) {
-      // return true if date is unavailable, return false if date is available
-      const firstDay = this.firstHistoricalDate;
-      const lastDay = this.to ? new Date(this.to) : new Date();
-      return date < firstDay || date > lastDay;
-    },
-    checkDateAvailabilityTo(date) {
-      // return true if date is unavailable, return false if date is available
-      const firstDay = this.from ? new Date(this.from) : this.firstHistoricalDate;
-      const lastDay = new Date();
-      return date < firstDay || date > lastDay;
+    disabledDate(date) {
+      return date && !(date.isBetween(this.firstHistoricalDate, dayjs(), 'days', '[]'));
     },
   },
 };
@@ -209,6 +195,9 @@ export default {
         .x-select-trigger {
             line-height: 24px;
             height: 24px;
+        }
+        .ant-calendar-picker {
+          width: 100%;
         }
       }
       .x-select-timeframe_config--limited {

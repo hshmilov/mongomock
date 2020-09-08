@@ -5,7 +5,7 @@ import { createVuetifyConfigObject } from '../src/plugins/vuetify'
 
 import ProgressGauge from '../src/components/axons/visuals/ProgressGauge.vue';
 import {
-  MdSwitch, MdDatepicker, MdField, MdIcon,
+  MdSwitch, MdField, MdIcon,
   MdDialog, MdCard, MdList, MdChips,
   MdProgress,MdDrawer
 } from 'vue-material/dist/components'
@@ -13,7 +13,6 @@ import {
 Vue.use(Vuex)
 
 Vue.use(MdSwitch)
-Vue.use(MdDatepicker)
 Vue.use(MdField)
 Vue.use(MdIcon)
 Vue.use(MdDialog)

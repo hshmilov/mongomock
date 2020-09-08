@@ -1234,8 +1234,7 @@ class SettingsPage(Page):
         except NoSuchElementException:
             pass
         if days_remaining is not None:
-            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), context=element)
-            self.close_datepicker()
+            self.fill_datepicker_date(datetime.now() + timedelta(days_remaining), parent=element)
 
     def fill_contract_expiration_by_remainder(self, days_remaining=None, server_time=None):
         elements = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))
@@ -1247,8 +1246,7 @@ class SettingsPage(Page):
         if days_remaining is not None:
             self.fill_datepicker_date((datetime.now() + timedelta(days_remaining))
                                       if server_time is None else server_time + timedelta(days_remaining),
-                                      context=elements[1])
-            self.close_datepicker()
+                                      parent=elements[1])
 
     def fill_compliance_expiration_by_remainder(self, days_remaining=None, server_time=None):
         element = self.find_elements_by_xpath(self.XPATH_BY_CLASS_NAME.format(name=self.DATEPICKER_CLASS_NAME))[2]
@@ -1259,8 +1257,7 @@ class SettingsPage(Page):
         if days_remaining is not None:
             self.fill_datepicker_date((datetime.now() + timedelta(days_remaining))
                                       if server_time is None else server_time + timedelta(days_remaining),
-                                      context=element)
-            self.close_datepicker()
+                                      parent=element)
 
     def add_email_server(self, host, port):
         self.switch_to_page()

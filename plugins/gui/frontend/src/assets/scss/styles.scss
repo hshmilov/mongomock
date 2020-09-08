@@ -452,61 +452,6 @@ table {
 
 /* Material Components */
 
-.md-datepicker {
-  .md-date-icon {
-    fill: $grey-4;
-  }
-  &.md-focused .md-date-icon {
-    fill: $theme-orange;
-  }
-  .md-input {
-    border-bottom: 1px solid $grey-4;
-  }
-  &.md-field {
-    label {
-      font-size: 14px;
-    }
-    .md-input-action {
-      top: 0;
-    }
-  }
-  &.md-clearable.no-clear {
-    .md-input {
-      padding-right: 0;
-    }
-    .md-input-action {
-      display: none;
-    }
-  }
-  &.no-icon {
-    .md-date-icon {
-      display: none;
-    }
-    .md-input {
-      margin-left: 0;
-    }
-  }
-}
-.md-datepicker-overlay {
-  z-index: 2000;
-}
-.md-datepicker-dialog {
-  z-index: 2001;
-  background-color: $theme-white;
-
-  .md-datepicker-header, .md-datepicker-selected {
-    background: $theme-orange;
-  }
-  .md-datepicker-today:not(.md-datepicker-selected) {
-    color: $theme-orange;
-  }
-  .md-input {
-    border-bottom: 1px solid $grey-4;
-  }
-  .md-datepicker-days .md-datepicker-day:not(.md-datepicker-selected)  .md-datepicker-disabled {
-    color: $grey-2;
-  }
-}
 .md-field {
   &.md-focused:before {
     background-color: $theme-blue;

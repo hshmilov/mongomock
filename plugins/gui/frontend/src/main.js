@@ -5,7 +5,6 @@ import VueCookies from 'vue-cookies';
 import Vuelidate from 'vuelidate';
 import {
   MdSwitch,
-  MdDatepicker,
   MdField,
   MdButton,
   MdDialog,
@@ -30,7 +29,6 @@ import store from './store/index';
 Vue.use(antInputDirective);
 Vue.use(Vuelidate);
 Vue.use(MdSwitch);
-Vue.use(MdDatepicker);
 Vue.use(MdField);
 Vue.use(MdDialog);
 Vue.use(MdCard);

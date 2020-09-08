@@ -20,7 +20,7 @@ class TestDevicesSimpleQuery(TestBase):
     SEARCH_TEXT_CB_FIRST = 'CB First'
     SEARCH_TEXT_TESTDOMAIN = 'TestDomain'
     CUSTOM_QUERY = 'Clear_query_test'
-    QUERY_WIZARD_DATE_PICKER_VALUE = '2019-01-02 02:13:24.485Z'
+    QUERY_WIZARD_DATE_PICKER_VALUE = '02-01-2019 02:13:24.485Z'
 
     def test_bad_subnet(self):
         self.dashboard_page.switch_to_page()
@@ -189,7 +189,6 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[0])
         self.devices_page.select_query_comp_op('>', parent=expressions[0])
         self.devices_page.fill_query_wizard_date_picker(self.QUERY_WIZARD_DATE_PICKER_VALUE, parent=expressions[0])
-        self.devices_page.close_datepicker()
         self.devices_page.wait_for_table_to_be_responsive()
         query_filter = self.devices_page.find_search_value()
         results_count = len(self.devices_page.get_all_data())

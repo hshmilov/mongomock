@@ -59,6 +59,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.assert_summary_text_data(card, ['23'])
         self._test_summary_chart_edit(card)
         self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
+        card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_timeline_svg_exist(card)
         self._test_timeline_chart_edit(card)
 
@@ -177,10 +178,9 @@ class TestDashboardActions(TestBase):
         with self.dashboard_page.edit_and_assert_chart(card, None, self.dashboard_page.TIMELINE_CHART_TYPE):
             self.dashboard_page.toggle_comparison_intersection_switch()
             self.dashboard_page.select_chart_result_range_date()
-            self.dashboard_page.select_chart_wizard_datepicker(2, datetime.datetime.now() + datetime.timedelta(-30))
-            self.dashboard_page.close_datepicker()
-            self.dashboard_page.select_chart_wizard_datepicker(3, datetime.datetime.now())
-            self.dashboard_page.close_datepicker()
+            self.dashboard_page.select_chart_wizard_range_picker(
+                date_from=datetime.datetime.now() + datetime.timedelta(-30),
+                date_to=datetime.datetime.now())
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])

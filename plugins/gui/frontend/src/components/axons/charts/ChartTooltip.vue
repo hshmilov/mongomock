@@ -111,6 +111,9 @@ export default {
   },
   methods: {
     showTooltip(e) {
+      if (!this.$refs.tooltip) {
+        return;
+      }
       this.$refs.tooltip.$el.style.top = `${e.clientY + 10}px`;
 
       const rect = this.$refs.tooltip.$el.getBoundingClientRect();

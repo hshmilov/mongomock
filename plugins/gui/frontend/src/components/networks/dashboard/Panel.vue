@@ -3,8 +3,8 @@
     class="card-container-outer"
     :name="chart.name"
     :class="{ 'double-card': !!attachedCardData }"
-    @mouseenter="showHistory = true"
-    @mouseleave="showHistory = false"
+    @mouseenter="toggleShowHistory(true)"
+    @mouseleave="toggleShowHistory(false)"
   >
     <div class="card-container-inner">
       <XCard
@@ -65,6 +65,7 @@
                 :value="chart.historical"
                 :allowed-dates="allowedDates"
                 :class="{hidden: !showHistory && !chart.historical}"
+                @openChange="onHistoricalPickerOpenChange"
                 @input="(selectedDate) => confirmPickDate(chart, selectedDate)"
               />
               <XSearchInput
@@ -236,6 +237,7 @@ export default {
       toggleIconHover: false,
       chartDataFull: false,
       chartDataFullFetching: false,
+      historicalDatePickerOpen: false,
     };
   },
   computed: {
@@ -491,6 +493,18 @@ export default {
     },
     getPastDateFromTimeframe() {
       return Date.now() - this.chart.config.timeframe.count * 1000 * 60 * 60 * 24;
+    },
+    toggleShowHistory(value) {
+      // in case the date-picker is open, we dont want to hide the date input.
+      // if we do so, the ant-d date-picker dropdown will lose his parent
+      // and jump to the corner of the screen
+      if (this.historicalDatePickerOpen && !value) {
+        return;
+      }
+      this.showHistory = value;
+    },
+    onHistoricalPickerOpenChange(value) {
+      this.historicalDatePickerOpen = value;
     },
   },
 };

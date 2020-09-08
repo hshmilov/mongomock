@@ -29,7 +29,7 @@ class DashboardPage(BasePage):
     USER_DISCOVERY = 'User Discovery'
     QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
     SEARCH_INSIGHTS_CSS = '.x-search-insights'
-    CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard .x-date-edit.labeled:nth-of-type({child_index}) input'
+    CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard'
     CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .md-switch-container + label'
     PIE_SLICE_CSS = 'g[class^="slice-"]'
     PIE_SLICE_TEXT_BY_POSITION = 'svg > g.slice-{index} > text'
@@ -389,11 +389,9 @@ class DashboardPage(BasePage):
         wizard_field_picker = self.driver.find_element_by_css_selector(self.CHART_FIELD_DROP_DOWN_CSS)
         return wizard_field_picker.find_element_by_css_selector(self.CHART_DROPDOWN_FIELD_VALUE_CSS).text
 
-    def select_chart_wizard_datepicker(self, child_index=2, date_value=datetime.datetime.now(), parent=None):
-        self.fill_text_field_by_css_selector(self.CHART_WIZARD_DATEPICKER_CSS.format(child_index=child_index),
-                                             date_value.isoformat(), context=parent)
-        # Sleep through the time it takes the date picker to react to the filled date
-        time.sleep(0.5)
+    def select_chart_wizard_range_picker(self, date_from: datetime, date_to: datetime):
+        chart_wizard = self.driver.find_element_by_css_selector(self.CHART_WIZARD_DATEPICKER_CSS)
+        self.fill_range_picker_date(date_from, date_to, chart_wizard)
 
     def select_chart_wizard_adapter(self, prop, partial_text=True):
         self.select_option(self.CHART_ADAPTER_DROP_DOWN_CSS,

@@ -43,7 +43,7 @@ class EntitiesPage(Page):
     QUERY_CONDITIONS_OPTIONS_CSS = '.x-select-options'
     QUERY_ADAPTER_DROPDOWN_CSS = '.x-select-typed-field .x-dropdown.x-select.x-select-symbol'
     QUERY_COMP_OP_DROPDOWN_CSS = 'div.x-select.expression-comp'
-    QUERY_DATE_PICKER_CSS = '.x-condition-function .argument .md-datepicker .md-input'
+    QUERY_DATE_PICKER_CONTAINER_CSS = '.x-condition-function .x-date-edit'
     QUERY_VALUE_COMPONENT_INPUT_CSS = '.x-condition-function .argument input'
     QUERY_VALUE_COMPONENT_CSS = '.x-condition-function .argument'
     QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS = '.x-condition-function-field-comparison .argument'
@@ -416,8 +416,10 @@ class EntitiesPage(Page):
                                                       parent=parent))
 
     def fill_query_wizard_date_picker(self, date_value, parent=None):
-        self.fill_text_field_by_css_selector(self.QUERY_DATE_PICKER_CSS,
-                                             parse_date(date_value).date().isoformat(), context=parent)
+        if not parent:
+            parent = self.driver
+        date_picker = parent.find_element_by_css_selector(self.QUERY_DATE_PICKER_CONTAINER_CSS)
+        self.fill_datepicker_date(parse_date(date_value), date_picker)
         # Sleep through the time it takes the date picker to react to the filled date
         time.sleep(0.5)
 

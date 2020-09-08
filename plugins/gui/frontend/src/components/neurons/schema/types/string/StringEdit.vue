@@ -4,7 +4,6 @@
     v-if="isDate"
     v-model="data"
     :read-only="readOnly"
-    :minimal="true"
     :clearable="clearable"
     @input="input"
   />

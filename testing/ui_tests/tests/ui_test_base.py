@@ -479,7 +479,7 @@ class TestBase:
             self.base_page.run_discovery()
             return []
         day_to_entity_count = []
-        for day in range(1, days_to_fill):
+        for day in range(1, days_to_fill + 1):
             # Randomly select a chunk of entities to be added as history for `day` back
             entity_limit = entity_count
             entities = list(history_db.find(limit=entity_limit))
@@ -495,6 +495,7 @@ class TestBase:
             # Save the count for testing the expected amount for the day is presented
             day_to_entity_count.append(len(insert_many_result.inserted_ids))
         self.base_page.run_discovery()
+        self.base_page.hard_refresh()
         return day_to_entity_count
 
     def _update_and_create_history(self, entity_type: EntityType):

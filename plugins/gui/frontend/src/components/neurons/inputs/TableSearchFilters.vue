@@ -117,7 +117,7 @@ export default {
       this.$emit('search');
     },
     disabledDate(current) {
-      // Can not select days before today and today
+      // Can not select days after today
       return current && current > dayjs().endOf('day');
     },
     rangePickerChange(values) {
