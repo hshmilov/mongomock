@@ -5,10 +5,14 @@ from typing import Tuple
 import urllib
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request
+from io import BytesIO
+from ftplib import FTP, FTP_TLS
+import os
 import requests
 import requests.utils
 import requests.auth
 import chardet
+import paramiko
 
 
 from axonius.adapter_exceptions import ClientConnectionException
@@ -16,7 +20,7 @@ from axonius.clients.aws.utils import get_s3_object
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.consts.remote_file_consts import (AWS_ENDPOINT_FOR_REACHABILITY_TEST,
-                                               RESOURCE_PATH_DESCRIPTION)
+                                               RESOURCE_PATH_DESCRIPTION, FTP_SCHEMES_ALL, FTP_SCHEMES_FTP)
 from axonius.plugin_base import PluginBase
 from axonius.utils.json import from_json
 from axonius.utils.remote_file_smb_handler import get_smb_handler
@@ -111,7 +115,96 @@ def load_from_url(client_config) -> bytes:
         raise ClientConnectionException(message)
 
 
+def _ftp_port_from_scheme(scheme):
+    if scheme == 'sftp':
+        return 22
+    if scheme == 'ftp':
+        return 21
+    if scheme == 'ftps':
+        return 990
+    return 21  # default ftp port
+
+
 def load_from_ftp(client_config, test_only=False) -> bytes:
+    """
+    Support SFTP, FTP and FTPS
+    :param client_config:
+    :param test_only:
+    :return:
+    """
+    full_path = client_config.get('resource_path')
+    try:
+        url_parsed = urlparse(full_path)
+        host = url_parsed.hostname
+        scheme = url_parsed.scheme
+        port = url_parsed.port or _ftp_port_from_scheme(scheme)
+        filepath = url_parsed.path
+        filepath = os.path.normpath(filepath).strip('/')  # remove heading and training slashes
+    except Exception as e:
+        message = f'Error - Failed to parse url from {full_path}: {str(e)}'
+        logger.exception(message)
+        raise ClientConnectionException(message)
+    if not (host and filepath):
+        message = f'Hostname or path could not be parsed from {full_path}.'
+        logger.error(message)
+        raise ClientConnectionException(message)
+    # parse username and password from cfg or from url
+    # url strings override config strings as url is easier to UNSET
+    username = client_config.get('username')
+    password = client_config.get('password')
+    if url_parsed.username:
+        if username:
+            logger.warning(f'Username specified both in config and in url! Using url.')
+        username = url_parsed.username
+    if url_parsed.password:
+        password = url_parsed.password
+    username = username or 'anonymous'
+    password = password or ''
+    try:
+        if scheme in FTP_SCHEMES_FTP:
+            # Do FTP and FTPS
+            return _read_ftp(host, filepath, username, password, test_only)
+        # Else we are doing SFTP so go to SFTP
+        return _read_sftp(host, filepath, port=port, user=username, passwd=password, test_only=test_only)
+    except Exception as e:
+        message = f'Failed to get resource from URL {full_path}: {str(e)}'
+        logger.exception(message)
+        raise ClientConnectionException(message)
+
+
+def _read_sftp(host, filepath, port=None, user='anonymous', passwd='', test_only=False):
+    host_param = host if not port else (host, port)
+    transport = paramiko.Transport(host_param)
+    transport.connect(username=user, password=passwd)
+    with paramiko.SFTPClient.from_transport(transport) as sftp:
+        with sftp.file(filepath) as remote_file:
+            if test_only:
+                return bytes(True)
+            return remote_file.read()
+
+
+def _read_ftp(host, filepath, user=None, passwd=None, test_only=False):
+    buff = BytesIO()
+    try:
+        ftp = FTP_TLS(host, user=user, passwd=passwd, timeout=get_default_timeout()[1])
+        ftp.prot_p()
+    except Exception:
+        logger.debug(f'Failed to establish secure FTP (FTPS) connection to {host}. '
+                     f'Attempting fallback FTP connection.')
+        ftp = FTP(host, user=user, passwd=passwd, timeout=get_default_timeout()[1])
+    with ftp:
+        response = ftp.retrbinary(f'RETR {filepath}', buff.write)
+        # Response code handling is done by ftplib, and response codes
+        # are not standard HTTP status codes.
+        # If needed, see https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes
+        if test_only:
+            return bytes(True)
+        logger.debug(f'FTP response code: {response}')
+    with buff:
+        return buff.getvalue()
+
+
+def old_load_from_ftp(client_config, test_only=False) -> bytes:
     url = client_config.get('resource_path')
     headers = {}
     raw_additional_headers = client_config.get('request_headers')
@@ -213,9 +306,10 @@ def load_remote_binary_data(client_config) -> bytes:
     if client_config.get('resource_path'):
         # May raise AttributeError, this is intentional.
         resource_path = client_config.get('resource_path').lower()
+        scheme = urlparse(resource_path).scheme
         if resource_path.startswith('http'):
             data_bytes = load_from_url(client_config)
-        elif resource_path.startswith('ftp://'):
+        elif scheme in FTP_SCHEMES_ALL:
             data_bytes = load_from_ftp(client_config)
         elif resource_path.startswith('\\\\'):
             data_bytes = load_from_smb(client_config)
@@ -283,7 +377,8 @@ def _test_resource_reachability(client_config):
                                                 port=port,
                                                 https_proxy=https_proxy,
                                                 http_proxy=http_proxy)
-    if resource_path.startswith('ftp://'):
+    scheme = urlparse(resource_path).scheme
+    if scheme in FTP_SCHEMES_ALL:
         try:
             # This method may raise exceptions, while the others not so much
             return bool(load_from_ftp(client_config, test_only=True))
