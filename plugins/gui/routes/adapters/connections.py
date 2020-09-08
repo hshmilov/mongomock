@@ -86,15 +86,14 @@ class Connections:
             return return_error('Adapter name and connection data are required', 400)
         is_instance_mode = request_data.pop(IS_INSTANCES_MODE, False)
         instance_name = request_data.pop(INSTANCE_NAME, '')
-        instance_id_prev = None
+        instance_id = request_data.pop('instance') if request_data.get('instance')\
+            else request_data.pop('instanceName', self.node_id)
+        instance_prev_name = request_data.pop(INSTANCE_PREV_NAME) if request_data.get(INSTANCE_PREV_NAME)\
+            else request_data.pop('oldInstanceName', None)
+        instance_id_prev = request_data.pop('instance_prev', None)
         if request_data.get('connection'):
-            instance_id = request_data.pop('instance', self.node_id)
-            instance_prev_name = request_data.pop(INSTANCE_PREV_NAME, None)
-            instance_id_prev = request_data.pop('instance_prev', None)
             connection_data = request_data
         else:
-            instance_id = request_data.pop('instanceName', self.node_id)
-            instance_prev_name = request_data.pop('oldInstanceName', None)
             connection_label = request_data.pop('connection_label', None)
             connection_data = {
                 'connection': request_data,
