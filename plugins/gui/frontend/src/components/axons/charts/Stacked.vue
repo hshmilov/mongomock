@@ -26,7 +26,7 @@
                 :style="getSliceStyle(intersection)"
                 :class="getSliceClass(intersection.intersectionIndex)"
                 class="intersection-slice"
-                @click="onClick(intersection.originalIndex)"
+                @click="onClick(groupIndex, intersection.originalIndex % 3)"
               >
                 <div
                   class="tooltip-invoker"
@@ -50,43 +50,29 @@
             </div>
           </div>
         </div>
-        <div>
-          <div class="separator" />
-          <div class="stacked-total">
-            Total {{ totalValue }}
-          </div>
-          <XPaginator
-            :from.sync="dataFrom"
-            :to.sync="dataTo"
-            :limit="limit"
-            :count="dataLength"
-          />
-        </div>
       </div>
     </XChartTooltip>
   </div>
 </template>
 
 <script>
-import _get from 'lodash/get';
-
 import { formatPercentage } from '@constants/utils';
-import XPaginator from '../layout/Paginator.vue';
+import _get from 'lodash/get';
 import XChartTooltip from './ChartTooltip.vue';
 import defaultChartsColors from '../../../constants/colors';
 import { getVisibleTextColor } from '@/helpers/colors';
 
 export default {
   name: 'XStacked',
-  components: { XPaginator, XChartTooltip },
+  components: { XChartTooltip },
   props: {
     data: {
       type: Array,
       required: true,
     },
-    limit: {
-      type: Number,
-      default: 5,
+    pageData: {
+      type: Array,
+      default: () => [],
     },
     chartConfig: {
       type: Object,
@@ -101,50 +87,12 @@ export default {
         intersection: null,
         group: null,
       },
-      dataFrom: 1,
-      dataTo: this.limit,
       defaultChartsColors,
     };
   },
   computed: {
-    dataLength() {
-      return this.intersectionGroups.length;
-    },
-    pageData() {
-      return this.intersectionGroups.slice(this.dataFrom - 1, this.dataTo);
-    },
-    totalValue() {
-      if (!this.data.length) {
-        return 0;
-      }
-      const [{ portion, value }] = this.data;
-      return portion === 1 ? value : Math.round(1 / (portion / value));
-    },
-    intersectionGroups() {
-      let currentBaseIndex = -1;
-      return this.data.reduce((groupArray, currentIntersection, originalIndex) => {
-        if (!currentIntersection.numericValue) {
-          return groupArray;
-        }
-        if (currentIntersection.baseIndex !== currentBaseIndex) {
-          groupArray.push({
-            name: currentIntersection.name,
-            intersections: [],
-            value: currentIntersection.value,
-          });
-          currentBaseIndex = currentIntersection.baseIndex;
-        }
-        groupArray[groupArray.length - 1].intersections.push({
-          name: currentIntersection.intersectionName,
-          intersectionIndex: currentIntersection.intersectionIndex,
-          value: currentIntersection.numericValue,
-          originalIndex,
-        });
-        return groupArray;
-      }, []);
-    },
     maxGroupValue() {
-      return this.intersectionGroups.reduce((maxValue, currentGroup) => (
+      return this.pageData.reduce((maxValue, currentGroup) => (
         currentGroup.value > maxValue ? currentGroup.value : maxValue), 0);
     },
 
@@ -195,8 +143,8 @@ export default {
         group: null,
       };
     },
-    onClick(index) {
-      this.$emit('click-one', index);
+    onClick(groupIndex, intersectionIndex) {
+      this.$emit('click-one', { groupIndex, intersectionIndex });
     },
     getColorClass(intersectionIndex) {
       return `pie-fill-${this.pieFillArray[intersectionIndex]}`;

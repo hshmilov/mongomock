@@ -2,8 +2,7 @@
   <div>
     <ADropdown
       :trigger="['click']"
-      placement="bottomRight"
-      :get-popup-container="getPopupContainer"
+      placement="bottomCenter"
     >
       <XButton
         class="action-trigger"
@@ -12,14 +11,16 @@
         <XIcon
           family="symbol"
           type="verticalDots"
-        /></XButton>
+        />
+      </XButton>
       <AMenu
         slot="overlay"
+        :style="{minWidth: '80px'}"
       >
         <AMenuItem
           v-if="editable"
           id="edit_space"
-          key="0"
+          key="1"
           @click="$emit('edit')"
         >
           Edit
@@ -27,7 +28,7 @@
         <AMenuItem
           v-if="removable"
           id="remove_space"
-          key="1"
+          key="2"
           @click="$emit('remove')"
         >
           Delete
@@ -52,25 +53,17 @@ export default {
     XIcon,
   },
   props: {
-    editable: {
-      type: Boolean,
-      default: false,
-    },
-    removable: {
-      type: Boolean,
-      default: false,
-    },
-    parentSelector: {
-      type: String,
-      default: '',
+    supportedActions: {
+      type: Array,
+      default: () => [],
     },
   },
-  methods: {
-    getPopupContainer() {
-      if (this.parentSelector) {
-        return document.querySelector(`.x-spaces .x-tabs ${this.parentSelector}`);
-      }
-      return undefined;
+  computed: {
+    removable() {
+      return this.supportedActions.includes('remove');
+    },
+    editable() {
+      return this.supportedActions.includes('edit');
     },
   },
 };
@@ -80,8 +73,11 @@ export default {
 .action-trigger {
   cursor: pointer;
   color: $theme-black;
-  padding: 0;
-  height: auto;
+  width: auto;
+  padding-right: 0;
+  .x-icon {
+    font-size: 16px;
+  }
   svg {
     stroke: $theme-black;
   }

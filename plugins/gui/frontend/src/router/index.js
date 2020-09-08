@@ -7,7 +7,7 @@ import { adminGuard, enforcementsFeatureTagGuard } from './guards';
 const Account = () => import('../components/pages/Account.vue');
 const Adapter = () => import('../components/pages/Adapter.vue');
 const Adapters = () => import('../components/pages/Adapters.vue');
-const Dashboard = () => import('../components/pages/Dashboard.vue');
+const Dashboard = () => import('../components/pages/dashboards/Dashboard.vue');
 const DashboardExplorer = () => import('../components/pages/DashboardExplorer.vue');
 const Device = () => import('../components/pages/Device.vue');
 const Devices = () => import('../components/pages/Devices.vue');
@@ -33,11 +33,6 @@ const xUsersSavedQueries = () => import('../components/pages/UsersSavedQueries')
 Vue.use(Router);
 
 const routes = [
-  {
-    path: '/',
-    name: 'Dashboard',
-    component: Dashboard,
-  },
   {
     path: '/login',
     name: 'login',
@@ -173,6 +168,11 @@ const routes = [
     component: Administration,
     name: 'Administration',
     beforeEnter: multiguard([adminGuard]),
+  },
+  {
+    path: '/:spaceId?',
+    name: 'Dashboard',
+    component: Dashboard,
   },
 ];
 

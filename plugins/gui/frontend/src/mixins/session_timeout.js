@@ -1,3 +1,4 @@
+import _get from 'lodash/get';
 import { mapState, mapActions } from 'vuex';
 import ifvisible from 'ifvisible';
 import { LOGOUT } from '../store/modules/auth';
@@ -20,7 +21,7 @@ export default {
   computed: {
     ...mapState({
       timeout(state) {
-        return state.auth.currentUser.data.timeout;
+        return _get(state, 'auth.currentUser.data.timeout');
       },
     }),
   },

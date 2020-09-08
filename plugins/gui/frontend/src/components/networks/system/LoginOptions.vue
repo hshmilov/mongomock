@@ -30,7 +30,7 @@
         <XForm
           v-model="ldapData.credentials"
           :schema="ldapSchema"
-          :error="prettyUserError"
+          :error="userError"
           @validate="onValidateLDAP"
           @submit="onLdapLogin"
         />
@@ -51,11 +51,10 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import { mapState, mapActions } from 'vuex';
 import XForm from '../../neurons/schema/Form.vue';
 import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
-import userErrorMixin from '../../../mixins/user_error';
 
 import { LDAP_LOGIN } from '../../../store/modules/auth';
 
@@ -64,7 +63,6 @@ export default {
   components: {
     XForm, XButton, XModal,
   },
-  mixins: [userErrorMixin],
   props: {
     settings: {
       type: Object,
@@ -91,6 +89,11 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      userError(state) {
+        return state.auth.currentUser.error;
+      },
+    }),
     ldapSchema() {
       return {
         type: 'array',

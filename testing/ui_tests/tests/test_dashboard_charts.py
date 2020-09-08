@@ -90,23 +90,6 @@ class TestDashboardCharts(TestDashboardChartBase):
         assert self.dashboard_page.find_no_data_label()
         self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)
 
-    def test_dashboard_chart_refresh(self):
-        self.base_page.run_discovery()
-        self.dashboard_page.switch_to_page()
-        self.dashboard_page.wait_for_card_spinner_to_end()
-        self.dashboard_page.add_summary_card('Devices', 'Host Name', 'Count', self.TEST_SUMMARY_TITLE_DEVICES)
-        self.dashboard_page.wait_for_spinner_to_end()
-        self.dashboard_page.verify_card_config_reset_summary_chart(self.TEST_SUMMARY_TITLE_DEVICES)
-        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
-        result_count = int(summary_chart.text)
-        self.devices_page.switch_to_page()
-        self.devices_page.delete_devices()
-        self.dashboard_page.switch_to_page()
-        summary_chart = self.dashboard_page.get_summary_card_text(self.TEST_SUMMARY_TITLE_DEVICES)
-        assert int(summary_chart.text) == result_count
-        self.dashboard_page.refresh_card(self.TEST_SUMMARY_TITLE_DEVICES)
-        assert self.dashboard_page.find_no_data_label()
-
     def test_dashboard_edit_module(self):
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()

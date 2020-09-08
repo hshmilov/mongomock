@@ -615,6 +615,7 @@ def _get_reduced_filters(field_name, value_filter):
     if not value_filter:
         value_filter = []
     # backward compatibility: old filters used to be strings
+    # backward compatibility: old filters used to be strings
     if isinstance(value_filter, str):
         value_filter = [
             {'name': field_name, 'value': value_filter}
@@ -1268,11 +1269,33 @@ def fetch_chart_matrix(
         return None
 
     total = sum(total_values.values())
-    for intersection in data:
-        intersection['value'] = total_values[intersection['baseIndex']]
-        intersection['portion'] = intersection['value'] / total
+    intersected_data = {}
 
-    return _sort_dashboard_data(data, selected_sort_by, selected_sort_order, sort)
+    for data_entry in data:
+        data_entry['value'] = total_values[data_entry['baseIndex']]
+        data_entry['portion'] = data_entry['value'] / total
+
+        index = data.index(data_entry)
+        if not data_entry.get('numericValue'):
+            continue
+
+        current_base_query_index = data_entry.get('baseIndex')
+        if not intersected_data.get(current_base_query_index):
+            intersected_data[current_base_query_index] = {
+                'name': data_entry.get('name'),
+                'intersections': [],
+                'value': data_entry.get('value')
+            }
+        intersected_data[current_base_query_index].get('intersections').append({
+            'name': data_entry.get('intersectionName'),
+            'intersectionIndex': data_entry.get('intersectionIndex'),
+            'value': data_entry.get('numericValue'),
+            'view': data_entry.get('view'),
+            'module': data_entry.get('module'),
+            'originalIndex': index,
+        })
+
+    return _sort_dashboard_data(intersected_data.values(), selected_sort_by, selected_sort_order, sort)
 
 
 def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, selected_view, sort,
@@ -1550,5 +1573,6 @@ def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_ch
                                          if default_chart_sort else SortOrder.DESC.value)
     should_reverse = sort_order == SortOrder.DESC.value
 
-    return sorted(data, key=lambda x: x[value_field], reverse=should_reverse) if sort_by == SortType.VALUE.value \
+    return sorted(data, key=lambda x: (x[value_field], str(x[name_field]).upper()), reverse=should_reverse) \
+        if sort_by == SortType.VALUE.value \
         else sorted(data, key=lambda x: str(x[name_field]).upper(), reverse=should_reverse)

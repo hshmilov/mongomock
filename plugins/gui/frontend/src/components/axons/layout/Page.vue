@@ -53,8 +53,14 @@ import { GET_FOOTER_MESSAGE } from '../../../store/getters';
 export default {
   name: 'XPage',
   props: {
-    title: String,
-    breadcrumbs: Array,
+    title: {
+      type: String,
+      default: undefined,
+    },
+    breadcrumbs: {
+      type: Array,
+      default: undefined,
+    },
     beta: {
       type: Boolean,
       default: false,

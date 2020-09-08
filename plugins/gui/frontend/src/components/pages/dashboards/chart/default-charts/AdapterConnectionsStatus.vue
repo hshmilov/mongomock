@@ -1,15 +1,13 @@
 <template>
   <div
-    class="x-card adapter-connections-status"
+    class="x-chart x-dashboard-card adapter-connections-status"
     :class="{double}"
   >
     <div class="header">
-      <div class="header__title">
-        <div
-          class="card-title"
-          title="Adapter Connections Status"
-        >Adapter Connections Status</div>
-      </div>
+      <h3
+        class="chart-title"
+        title="Adapter Connections Status"
+      >Adapter Connections Status</h3>
     </div>
 
     <div class="body">
@@ -74,18 +72,21 @@
           </div>
         </div>
       </XChartTooltip>
-
-      <template v-if="dataLength">
-        <div class="separator" />
-        <XPaginator
-          :from.sync="dataFrom"
-          :to.sync="dataTo"
-          :limit="limit"
-          :count="dataLength"
+    </div>
+    <div class="footer">
+      <div
+        v-if="dataLength"
+        class="footer__paginator"
+      >
+        <APagination
+          v-model="page"
+          size="small"
+          :show-total="totalResults"
+          :total="dataLength"
+          :page-size="limit"
+          :default-current="1"
         />
-      </template>
-
-
+      </div>
       <div class="summaries">
         <div class="summary-row">
           <div class="summary-title">
@@ -95,8 +96,6 @@
             {{ getConfiguredAdapters.length }}
           </div>
         </div>
-
-
         <div class="summary-row">
           <div class="summary-title">
             Adapters with Errors
@@ -106,34 +105,28 @@
           </div>
         </div>
       </div>
-
     </div>
-
-
   </div>
 </template>
 
 <script>
 import XIcon from '@axons/icons/Icon';
+import { Pagination as APagination } from 'ant-design-vue';
 import _orderBy from 'lodash/orderBy';
-import XPaginator from '@axons/layout/Paginator.vue';
 import XChartTooltip from '@axons/charts/ChartTooltip.vue';
 import { mapGetters, mapActions } from 'vuex';
 import { FETCH_ADAPTERS } from '@store/modules/adapters';
+import { FETCH_DISCOVERY_DATA } from '@store/modules/dashboard';
+import { getTotalResultsTitle } from '@/helpers/dashboard';
+
 
 export default {
   name: 'XAdapterConnectionsStatus',
-  components: { XPaginator, XChartTooltip, XIcon },
-  props: {
-    data: {
-      type: Object,
-      required: true,
-    },
-  },
+  components: { XChartTooltip, XIcon, APagination },
   data() {
     return {
-      dataFrom: 1,
-      dataTo: 1,
+      data: {},
+      page: 1,
       limit: 10,
       hoveredItem: null,
     };
@@ -146,7 +139,7 @@ export default {
       return this.dataLength >= this.limit;
     },
     double() {
-      return this.dataLength > 6;
+      return this.dataLength > 5;
     },
     sortedAdapters() {
       const adapters = this.getConfiguredAdapters.map((adapter) => {
@@ -161,7 +154,10 @@ export default {
       return _orderBy(adapters, ['connectionOrder', 'errorClients', 'title'], ['asc', 'desc', 'asc']);
     },
     pageData() {
-      return this.sortedAdapters.slice(this.dataFrom - 1, this.dataTo);
+      const from = (this.page - 1) * this.limit;
+      const to = from + this.limit;
+      const pageData = this.sortedAdapters.slice(from, to);
+      return pageData;
     },
     dataLength() {
       return this.sortedAdapters.length;
@@ -182,15 +178,20 @@ export default {
       };
     },
   },
-  created() {
+  async created() {
     this.fetchAdapters();
+    const res = await this.fetchDiscoveryData({ module: 'users' });
+    this.data = res.data;
   },
   methods: {
-    ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
+    ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchDiscoveryData: FETCH_DISCOVERY_DATA }),
     getAdapterRoute(adapterId) {
       return {
         path: `adapters/${adapterId}`,
       };
+    },
+    totalResults(total, range) {
+      return getTotalResultsTitle(total, range, 'adapters');
     },
   },
 };
@@ -200,7 +201,6 @@ export default {
   .adapter-connections-status {
     --adapter-row-height: 30px;
     --adapter-row-margin-bottom: 20px;
-    grid-column: 3;
     grid-row: 1;
     &.double {
       grid-row: 1 / span 2;
@@ -218,14 +218,12 @@ export default {
         align-items: center;
         .x-icon {
           margin: 0px 6px 0px 0px;
+          font-size: 20px;
+          margin-right: 8px;
         }
         .quantity {
           font-weight: 400;
           font-size: 16px;
-        }
-        .icon-error svg, .icon-success {
-          font-size: 20px;
-          margin-right: 4px;
         }
       }
     }
@@ -236,9 +234,8 @@ export default {
       margin: 12px 0;
     }
 
-
     .summaries {
-      border-top: 2px dashed #DEDEDE;
+      border-top: 1px dashed #DEDEDE;
       padding-top: 12px;
 
       .summary-row {
@@ -257,6 +254,10 @@ export default {
               text-align: center;
           }
       }
+    }
+
+    &.x-dashboard-card .footer {
+      height: 150px;
     }
 
   }

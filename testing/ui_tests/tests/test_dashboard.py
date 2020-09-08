@@ -99,12 +99,14 @@ class TestDashboard(TestBase):
         """
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
-        histograms_chart = self.dashboard_page.create_and_get_paginator_segmentation_card(
+        generated_chart = self._create_get_paginator_segmentation_card(
             run_discovery=False,
             module='Devices',
             field='Host Name',
             title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
             view_name='')
+
+        histograms_chart = generated_chart.get('histogram')
         # create reference to the histogram within the card
         value = self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart)[0]
         self.dashboard_page.get_histogram_line_from_histogram(histograms_chart, 1).click()
@@ -170,7 +172,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.assert_cycle_start_and_finish_dates(sl_card)
 
         nc_card = self.dashboard_page.find_new_chart_card()
-        assert self.dashboard_page.get_title_from_card(nc_card) == self.dashboard_page.NEW_CHART
+        assert nc_card.get_attribute('name') == 'New Chart'
         self.dashboard_page.assert_plus_button_in_card(nc_card)
 
         dd_card = self.dashboard_page.find_device_discovery_card()
@@ -189,6 +191,24 @@ class TestDashboard(TestBase):
         quantities = self.dashboard_page.find_quantity_in_card_int(ud_card)
         assert quantities[0][0] + quantities[1][0] == quantities[2][0]
         assert quantities[2][0] >= quantities[3][0]
+
+    def _create_get_paginator_segmentation_card(self, run_discovery, module, field, title, view_name, sort=None):
+        self.dashboard_page.switch_to_page()
+        if run_discovery:
+            self.base_page.run_discovery()
+        self.dashboard_page.add_segmentation_card(module=module,
+                                                  field=field,
+                                                  title=title,
+                                                  view_name=view_name,
+                                                  partial_text=False,
+                                                  sort_config=sort)
+        # create reference to the segmentation card with title
+        segmentation_card = self.dashboard_page.get_card(title)
+        # create reference to the histogram within the card
+        return {
+            'histogram': self.dashboard_page.get_histogram_chart_from_card(segmentation_card),
+            'chart': segmentation_card
+        }
 
     def _test_paginator_state_first_page(self, histograms_chart, page_number, to_val):
         assert not self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
@@ -280,32 +300,34 @@ class TestDashboard(TestBase):
         self.users_page.wait_for_table_to_load()
         second_result_count = self.users_page.count_entities()
         assert second_result_count == first_result_count - 3
-        histograms_chart = \
-            self.dashboard_page.create_and_get_paginator_segmentation_card(
-                run_discovery=False,
-                module='Users',
-                field='User Name',
-                title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
-                view_name=self.SEGMENTATION_QUERY_USER_AD)
+        generated_chart = \
+            self._create_get_paginator_segmentation_card(run_discovery=False,
+                                                         module='Users',
+                                                         field='User Name',
+                                                         title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS,
+                                                         view_name=self.SEGMENTATION_QUERY_USER_AD)
+        histogram_card = generated_chart.get('chart')
         # verify reset chart
         self.dashboard_page.verify_card_config_reset_segmentation_chart(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
 
-        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
+        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histogram_card))
         assert total_num_of_items == second_result_count
         self.base_page.run_discovery()
         wait_until(lambda: int(
-            self.dashboard_page.get_paginator_total_num_of_items(
-                self.dashboard_page.get_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS))) == first_result_count)
+            self.dashboard_page.get_paginator_total_num_of_items(self.dashboard_page.find_dashboard_card(
+                title=self.TEST_PAGINATOR_ON_SEGMENTATION_USERS))) == first_result_count)
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_ON_SEGMENTATION_USERS)
 
     def test_multi_page_histogram_linked_to_correct_filter(self):
-        histograms_chart = \
-            self.dashboard_page.create_and_get_paginator_segmentation_card(
-                run_discovery=True,
-                module='Devices',
-                field='Host Name',
-                title=self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER,
-                view_name='')
+        generated_chart = \
+            self._create_get_paginator_segmentation_card(run_discovery=True,
+                                                         module='Devices',
+                                                         field='Host Name',
+                                                         title=self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER,
+                                                         view_name='')
+
+        histograms_chart = generated_chart.get('histogram')
+
         # on First Page
         selected_item_bart_title = self.dashboard_page.get_histogram_bar_item_title(histograms_chart, 1)
         self.dashboard_page.click_on_histogram_item(histograms_chart, 1)
@@ -315,10 +337,10 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         # create reference to the histogram within the card
         segmentation_card = self.dashboard_page.get_card(self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER)
+        # Got to Last Page
+        self.dashboard_page.click_to_last_page(segmentation_card)
         # set focus back on the histogram chart (after switching page)
         histograms_chart = self.dashboard_page.get_histogram_chart_from_card(segmentation_card)
-        # Got to Last Page
-        self.dashboard_page.click_to_last_page(histograms_chart)
         selected_item_bart_title = self.dashboard_page.get_histogram_bar_item_title(histograms_chart, 1)
         self.dashboard_page.click_on_histogram_item(histograms_chart, 1)
         # assert that the query is correct
@@ -327,23 +349,26 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.remove_card(self.TEST_PAGINATOR_LINKED_TO_CORRECT_FILTER)
 
-    def test_paginator_on_segmentation_chart(self):
+    def _test_paginator_on_segmentation_chart(self):
         histogram_items_title = []
-        histograms_chart = self.dashboard_page.create_and_get_paginator_segmentation_card(
+        chart = self.dashboard_page.create_and_get_paginator_segmentation_card(
             run_discovery=True,
             module='Devices',
             field='Host Name',
             title=self.TEST_PAGINATOR_ON_SEGMENTATION_HISTOGRAM,
             view_name='')
-        assert not self.dashboard_page.is_missing_paginator_navigation(histograms_chart)
-        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
+
+        histogram_card = chart.get('card')
+        histograms_chart = chart.get('histogram')
+        assert not self.dashboard_page.is_missing_paginator_navigation(histogram_card)
+        limit = int(self.dashboard_page.get_paginator_num_of_items(histogram_card))
         total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
         # calculate the total number of pages in Paginator
         # by this wat we ensure to have the exact num of pages and cover all the cases even if the
         # total_num_of_items % limit has a remainder ((round up the result)
-        num_of_pages = ceil(total_num_of_items / limit)
+        num_of_pages = self.dashboard_page.get_last_page_button_in_paginator(histograms_chart)
         # iterate incrementaly on all the pages (next)
-        for page_number in range(1, num_of_pages + 1):
+        for page_number in range(1, num_of_pages):
             num_of_histogram_lines, num_of_items, to_val, from_val = \
                 self._gather_paginator_iteration_data(histograms_chart, page_number, num_of_pages,
                                                       total_num_of_items, limit)
@@ -587,10 +612,10 @@ class TestDashboard(TestBase):
         self.dashboard_page.add_comparison_card(
             module_query_list, title='multi page query comparison', chart_type='histogram')
         last_card = self.dashboard_page.get_last_card_created()
-        assert self.dashboard_page.get_card_pagination_text(last_card) == 'Top 5 of 8'
+        assert self.dashboard_page.get_card_pagination_text(last_card) == '1 - 5 of 8 items'
         assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 5
         self.dashboard_page.click_to_next_page(last_card)
-        assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8'
+        assert self.dashboard_page.get_card_pagination_text(last_card) == '6 - 8 of 8 items'
         assert self.dashboard_page.get_count_histogram_lines_from_histogram(last_card) == 3
         assert all(quantity != '0' for quantity in self.dashboard_page.find_quantity_in_card_string(last_card))
 
@@ -605,7 +630,7 @@ class TestDashboard(TestBase):
             field='Host Name',
             title=self.TEST_CHART_SORT,
             view_name='',
-            sort=sort)
+            sort=sort).get('histogram')
 
     def _test_dashboard_segmentation_default_sort_by_value(self):
         histograms_chart = self._create_segmentation_chart_with_sort()
@@ -640,6 +665,7 @@ class TestDashboard(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         histograms_chart = self._create_segmentation_chart_with_sort()
+
         chart_items = list(self.dashboard_page.get_histogram_items_quantities_on_pagination(histograms_chart))
         assert_desc_sort_by_value(chart_items)
 

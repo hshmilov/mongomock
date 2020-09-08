@@ -18,7 +18,7 @@
 
 import _cond from 'lodash/cond';
 import _stubTrue from 'lodash/stubTrue';
-
+import _get from 'lodash/get';
 import { mapState, mapActions } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XBox from '../axons/layout/Box.vue';
@@ -35,7 +35,7 @@ export default {
         return state.notifications;
       },
       isReadOnly(state) {
-        const user = state.auth.currentUser.data;
+        const user = _get(state, 'auth.currentUser.data');
         if (!user || !user.permissions) return true;
         return user.permissions.Dashboard === 'ReadOnly';
       },

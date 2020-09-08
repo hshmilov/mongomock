@@ -118,14 +118,27 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      False)
         self.dashboard_page.switch_to_page()
         assert not self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
-        self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
+        self.dashboard_page.click_space_by_name(DASHBOARD_SPACE_PERSONAL)
         assert not self.dashboard_page.is_new_chart_card_missing()
+
+        # assert all protected actions are enabled on personal space
+        chart_title_personal = 'chart personal space'
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.click_space_by_name(DASHBOARD_SPACE_PERSONAL)
+        self.dashboard_page.add_segmentation_card(module='Devices',
+                                                  field=ui_consts.OS_TYPE_OPTION_NAME,
+                                                  title=chart_title_personal,
+                                                  view_name=self.OSX_OPERATING_SYSTEM_NAME)
+        assert self.dashboard_page.is_remove_card_button_present(chart_title_personal)
+        assert self.dashboard_page.is_edit_card_button_present(chart_title_personal)
+        self.dashboard_page.remove_card(chart_title_personal)
+
         self.dashboard_page.switch_to_page()
         self.dashboard_page.add_segmentation_card(module='Devices',
                                                   field=ui_consts.OS_TYPE_OPTION_NAME,
                                                   title=self.TEST_EMPTY_TITLE,
                                                   view_name=self.OSX_OPERATING_SYSTEM_NAME)
-        assert self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
+        assert not self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
         self._add_action_to_role_and_login_with_user(settings_permissions,
                                                      'dashboard',
                                                      'Delete chart',
@@ -134,7 +147,6 @@ class TestDashboardPermissions(PermissionsTestBase):
                                                      ui_consts.NEW_PASSWORD,
                                                      False)
         self.dashboard_page.switch_to_page()
-        self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
         assert self.dashboard_page.is_remove_card_button_present(self.TEST_EMPTY_TITLE)
         assert self.dashboard_page.is_edit_card_button_present(self.TEST_EMPTY_TITLE)
         self.dashboard_page.remove_card(self.TEST_EMPTY_TITLE)

@@ -109,6 +109,7 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
 import { mapActions, mapMutations, mapState } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
@@ -145,10 +146,12 @@ export default {
   computed: {
     ...mapState({
       userName(state) {
-        return state.auth.currentUser.data.user_name;
+        const user = _get(state, 'auth.currentUser.data') || {};
+        return user.user_name;
       },
       userSource(state) {
-        return state.auth.currentUser.data.source;
+        const user = _get(state, 'auth.currentUser.data') || {};
+        return user.source;
       },
     }),
     passwordFormSchema() {

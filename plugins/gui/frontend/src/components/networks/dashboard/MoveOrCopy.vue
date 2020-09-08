@@ -55,7 +55,7 @@
 
 <script>
 import {
-  mapMutations, mapActions, mapState, mapGetters,
+  mapActions, mapState, mapGetters,
 } from 'vuex';
 import _find from 'lodash/find';
 import { Modal, Checkbox, Select } from 'ant-design-vue';
@@ -64,7 +64,7 @@ import _flow from 'lodash/flow';
 import _get from 'lodash/get';
 import XButton from '../../axons/inputs/Button.vue';
 import viewsMixin from '../../../mixins/views';
-import { MOVE_OR_COPY_TOGGLE, MOVE_PANEL, COPY_PANEL } from '../../../store/modules/dashboard';
+import { MOVE_PANEL, COPY_PANEL } from '../../../store/modules/dashboard';
 import { ChartViewGetter } from '../../../constants/utils';
 import { SpaceTypesEnum } from '../../../constants/dashboard';
 
@@ -78,6 +78,16 @@ export default {
     XButton,
   },
   mixins: [viewsMixin],
+  props: {
+    currentPanel: {
+      type: Object,
+      required: true,
+    },
+    currentSpace: {
+      type: String,
+      required: true,
+    },
+  },
   data() {
     return {
       copy: true,
@@ -94,22 +104,17 @@ export default {
         const chartHasPrivateQuery = (chart) => _some(ChartViewGetter(chart),
           (query) => isQueryPrivate(query));
 
+        const spacesData = _get(state, 'dashboard.spaces.data', []);
         return _flow([
           (spaces) => (this.cannotCopy
             ? spaces.filter((space) => space.type !== SpaceTypesEnum.personal) : spaces),
-          (spaces) => (chartHasPrivateQuery(state.dashboard.currentPanel)
+          (spaces) => (chartHasPrivateQuery(this.currentPanel)
             ? spaces.filter((space) => space.uuid === this.currentSpace) : spaces),
-        ])(_get(state, 'dashboard.spaces.data', []));
-      },
-      currentSpace(state) {
-        return state.dashboard.currentSpace;
+        ])(spacesData);
       },
       personalSpace(state) {
         return _find(state.dashboard.spaces.data,
           (space) => space.type === SpaceTypesEnum.personal);
-      },
-      currentPanel(state) {
-        return state.dashboard.currentPanel;
       },
     }),
     ...mapGetters({
@@ -130,9 +135,6 @@ export default {
     }
   },
   methods: {
-    ...mapMutations({
-      moveOrCopyToggle: MOVE_OR_COPY_TOGGLE,
-    }),
     ...mapActions({
       movePanel: MOVE_PANEL,
       copyPanel: COPY_PANEL,
@@ -146,16 +148,23 @@ export default {
         this.copy = true;
       }
     },
-    handleApprove() {
+    async handleApprove() {
       if (this.copy) {
-        this.copyPanel({ space: this.space });
+        const res = await this.copyPanel({ space: this.space, chart: { ...this.currentPanel, name: `COPY - ${this.currentPanel.name}` } });
+        if (this.space === this.currentSpace) {
+          this.$emit('duplicate', res.data);
+        }
       } else {
-        this.movePanel({ space: this.space });
+        const moveToCurrentSpace = (this.space === this.currentSpace) && !this.copy;
+        if (moveToCurrentSpace) return;
+        const { uuid } = this.currentPanel;
+        await this.movePanel({ space: this.space, uuid });
+        this.$emit('moved', uuid);
       }
       this.handleDismiss();
     },
     handleDismiss() {
-      this.moveOrCopyToggle({ active: false });
+      this.$emit('close');
     },
   },
 };

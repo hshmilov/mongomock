@@ -83,6 +83,7 @@ WINDOWS_QUERY_NAME = 'Windows Operating System'
 LINUX_QUERY_NAME = 'Linux Operating System'
 AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
 MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
+UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
 MANAGED_DEVICES_QUERY = '(specific_data.data.adapter_properties == "Agent") ' \
                         'or (specific_data.data.adapter_properties == "Manager")'
 UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'

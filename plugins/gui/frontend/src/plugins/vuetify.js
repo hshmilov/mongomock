@@ -14,7 +14,6 @@ import EntityAction from '@axons/icons/axoniusIcons/entityAction.vue';
 import EntityColumn from '@axons/icons/axoniusIcons/entityColumn.vue';
 import EntityExport from '@axons/icons/axoniusIcons/entityExport.vue';
 import ResetPassword from '@axons/icons/axoniusIcons/resetPassword.vue';
-import Toggle from '@axons/icons/axoniusIcons/toggle.vue';
 import Filterable from '@axons/icons/axoniusIcons/filterable.vue';
 import Funnel from '@axons/icons/axoniusIcons/funnel.vue';
 import defaultTheme from '../assets/themes/default.json';
@@ -56,42 +55,6 @@ const axoniusIcons = {
   },
   entityExport: {
     component: EntityExport,
-  },
-  legendOpen: {
-    component: Toggle,
-    props: {
-      leftFill: '#0076FF',
-      leftStroke: '#0076FF',
-      rightFill: 'Transparent',
-      rightStroke: '#0076FF',
-    },
-  },
-  legendClosed: {
-    component: Toggle,
-    props: {
-      leftFill: 'Transparent',
-      leftStroke: '#0076FF',
-      rightFill: '#0076FF',
-      rightStroke: '#0076FF',
-    },
-  },
-  legendOpenDarker: {
-    component: Toggle,
-    props: {
-      leftFill: '#2994ff',
-      leftStroke: '#2994ff',
-      rightFill: 'Transparent',
-      rightStroke: '#2994ff',
-    },
-  },
-  legendClosedDarker: {
-    component: Toggle,
-    props: {
-      leftFill: 'Transparent',
-      leftStroke: '#2994ff',
-      rightFill: '#2994ff',
-      rightStroke: '#2994ff',
-    },
   },
   resetPassword: {
     component: ResetPassword,

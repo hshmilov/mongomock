@@ -64,7 +64,7 @@ class TestDashboardChartsMore(TestDashboardChartBase):
         wait_until(lambda: self.dashboard_page.is_missing_panel(card_title))
         self.dashboard_page.find_space_header(3).click()
         last_card = self.dashboard_page.get_last_card_created()
-        assert self.dashboard_page.get_title_from_card(last_card) == card_title.title()
+        assert self.dashboard_page.get_title_from_card(last_card) == card_title
         self.dashboard_page.remove_card(card_title)
 
     def test_dashboard_coverage_chart(self):
@@ -150,7 +150,7 @@ class TestDashboardChartsMore(TestDashboardChartBase):
         self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.check_chart_segment_include_empty()
         self.dashboard_page.click_card_save()
-        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        filtered_chart = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '1'
 
         # Change to host and add filter 'domain' - expected to filter out the JSON device
@@ -160,14 +160,14 @@ class TestDashboardChartsMore(TestDashboardChartBase):
         self.dashboard_page.select_chart_wizard_field('Host Name')
         self.dashboard_page.fill_chart_segment_filter('Host Name', 'domain')
         self.dashboard_page.click_card_save()
-        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        filtered_chart = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '24'
 
         # Remove the filter - expected to generate as many bars as devices
         self.dashboard_page.edit_card(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         self.dashboard_page.remove_chart_segment_filter()
         self.dashboard_page.click_card_save()
-        filtered_chart = self.dashboard_page.get_histogram_chart_by_title(self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
+        filtered_chart = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_HISTOGRAM_TITLE)
         assert self.dashboard_page.get_paginator_total_num_of_items(filtered_chart) == '25'
 
     def test_dashboard_summary_chart(self):

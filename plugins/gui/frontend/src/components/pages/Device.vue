@@ -13,6 +13,7 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
 import { mapState } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XEntityView from '../networks/entities/view/Layout.vue';
@@ -41,7 +42,7 @@ export default {
         }
       },
       isReadOnly(state) {
-        const user = state.auth.currentUser.data;
+        const user = _get(state, 'auth.currentUser.data');
         if (!user || !user.permissions) return true;
         return user.permissions.Devices === 'ReadOnly';
       },

@@ -54,6 +54,10 @@ export default {
       type: Number,
       default: 10,
     },
+    valueLense: {
+      type: String,
+      default: 'value',
+    },
     chartId: {
       type: String,
       required: true,
@@ -86,7 +90,7 @@ export default {
     },
     numberColumnWidth() {
       return this.pageData.reduce(
-        (maxWidth, legendItem) => Math.max(maxWidth, legendItem.value), 10,
+        (maxWidth, legendItem) => Math.max(maxWidth, legendItem[this.valueLense]), 10,
       );
     },
     columnValues() {
@@ -228,7 +232,6 @@ export default {
     .x-paginator {
       flex-grow: 1;
       align-items: flex-end;
-      margin-bottom: -14px;
     }
   }
 

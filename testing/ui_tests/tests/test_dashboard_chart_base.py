@@ -11,9 +11,11 @@ class TestDashboardChartBase(TestBase):
     CUSTOM_SPACE_PANEL_NAME = 'Segment OS'
 
     def _download_and_get_csv(self, card_title):
-        self.dashboard_page.export_card(card_title)
-        time.sleep(1)  # wait for the file to be downloaded
-        csv_file_name = f'axonius-chart-{card_title}'
-        downloaded_csv = self.get_downloaded_file_content(csv_file_name, 'csv')
-        all_csv_rows = downloaded_csv.decode('utf-8').split('\r\n')
+        file = None
+        while not file:
+            self.dashboard_page.export_card(card_title)
+            time.sleep(1)  # wait for the file to be downloaded
+            csv_file_name = f'axonius-chart-{card_title}'
+            file = self.get_downloaded_file_content(csv_file_name, 'csv')
+        all_csv_rows = file.decode('utf-8').split('\r\n')
         return [x.split(',') for x in all_csv_rows[1:-1]]

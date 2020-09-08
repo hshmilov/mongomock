@@ -6,7 +6,8 @@ from decimal import Decimal, getcontext
 import pytest
 from retrying import retry
 from selenium.common.exceptions import (ElementClickInterceptedException,
-                                        NoSuchElementException)
+                                        NoSuchElementException,
+                                        ElementNotInteractableException)
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.color import Color
 
@@ -27,7 +28,7 @@ class DashboardPage(BasePage):
     NEW_CHART = 'New Chart'
     DEVICE_DISCOVERY = 'Device Discovery'
     USER_DISCOVERY = 'User Discovery'
-    QUERY_SEARCH_INPUT_CSS = 'div:nth-child(1) > div > div > input'
+    QUERY_SEARCH_INPUT_CSS = '.x-search-insights input'
     SEARCH_INSIGHTS_CSS = '.x-search-insights'
     CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard'
     CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .md-switch-container + label'
@@ -38,7 +39,9 @@ class DashboardPage(BasePage):
     INTERSECTION_PIE_INTERSECTION_SLICE_CSS = 'svg > g.slice-2 > text'
     SYMMETRIC_DIFFERENCE_FROM_BASE_QUERY_SLICE_CSS = 'svg > g.slice-0 > text'
     SYMMETRIC_DIFFERENCE_FROM_FIRST_QUERY_SLICE_CSS = 'svg > g.slice-1 > text'
-    NEW_CARD_WIZARD_CSS = '.x-tab.active .x-card.chart-new .x-button'
+    NEW_CARD_CHART_CSS = '.x-chart.x-chart__new'
+    ADD_NEW_CARD_BUTTON_CSS = '.x-icon.add-button'
+    NEW_CARD_BUTTON_CSS = f'.ant-tabs-tabpane-active {NEW_CARD_CHART_CSS} {ADD_NEW_CARD_BUTTON_CSS}'
     NEW_CARD_WIZARD_OVERLAY_CSS = '.x-modal .x-chart-wizard'
     CHART_METRIC_DROP_DOWN_CSS = '#metric > div'
     INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS = 'div#intersectingFirst'
@@ -66,7 +69,6 @@ class DashboardPage(BasePage):
     MATRIX_GROUP_NAME_CSS = '.group-name'
     MATRIX_GROUP_TOTAL_CSS = '.group-total'
     MATRIX_GROUP_SLICES = '.intersection-slice'
-    MATRIX_TOTAL_COUNT_CSS = '.stacked-total'
     SEGMENTATION_FILTER_INPUT_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) input'
     SEGMENTATION_FILTER_DELETE_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index}) button'
     SEGMENTATION_FILTER_DROP_DOWN_CSS = '.x-filter-contains .x-filter-expression-contains:nth-child({index})' \
@@ -80,37 +82,40 @@ class DashboardPage(BasePage):
     CARD_EDIT_BTN_TEXT = 'Edit Chart'
     SPACE_DELETE_BTN_TEXT = 'Delete Space'
     CARD_EXPORT_TO_CSV_BTN_CSS = '.actions > .export'
-    CARD_SEARCH_INPUT_CSS = '.x-search-input > input'
+    FILTERS_CONTAINER_CSS = '.main__filters-layer'
+    FILTERS_TOGGLE_ICON_CSS = '.x-chart__header__filter-icon'
+    CARD_SEARCH_INPUT_CSS = '.filter-item.search-input > input'
+    CARD_FILTERS_APPLY_TEXT = 'Show Results'
+    CARD_FILTERS_CLEAR_TEXT = 'Clear Filters'
     BANNER_BY_TEXT_XPATH = '//div[contains(@class, \'x-banner\') and .//text() = \'{banner_text}\']'
     BANNER_BY_CSS = '.x-banner'
     BANNER_NO_CONTRACT_CLASS = '.x-contract-banner'
-    SPACES_XPATH = '//div[@class=\'x-spaces\']'
-    ACTIVE_SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[@class=\'header-tab active\']'
-    SPACE_HEADERS_XPATH = f'{SPACES_XPATH}//li[contains(@class, \'header-tab\')]'
-    SPACE_HEADERS_TITLE_CSS = '.x-spaces .x-tabs .header-tab > div[title=\"{title}\"]'
-    SPACE_HEADER_CSS = '.x-spaces .x-tabs .header-tab:nth-child({tab_index})'
-    NEW_SPACE_BUTTON_XPATH = f'{SPACES_XPATH}//li[@class=\'add-tab\']'
+    SPACE_HEADERS_TITLE_CSS = '.x-spaces__tab > span[title=\"{title}\"]'
+    ACTIVE_SPACE_HEADERS_CSS = '.x-spaces .ant-tabs-tab-active .x-spaces__tab span'
+    SPACE_HEADERS_BY_NAME = '//div[contains(@class, \'x-spaces\')]//div[contains(@class,\'x-spaces__tab\')]' \
+                            '//span[text() = \'{space_name}\']'
+    SPACE_HEADERS_CSS = 'div.ant-tabs-tab'
+    NEW_SPACE_BUTTON_CSS = '#new_space_btn'
     RENAME_SPACE_INPUT_ID = 'rename_space'
     EDIT_SPACE_MENU_ITEM_ID = 'edit_space'
     REMOVE_SPACE_MENU_ITEM_ID = 'remove_space'
     SPACE_ACCESS_RADIO_BUTTON_ID = 'roles_space_access'
     SPACE_ROLES_SELECT_ID = '#select_space'
     SPACE_ROLES_DROPDOWN_CSS = '.x-multiple-select-dropdown'
-    SPACE_ACTION_MENU_CSS = '.x-spaces .x-tabs .header .action-trigger'
-    PANEL_BY_NAME_XPATH = '//div[contains(@class, \'x-tab active\')]//div[contains(@class, \'x-card\') ' \
-                          'and .//text()=\'{panel_name}\']'
+    SPACE_ACTION_MENU_CSS = '.edit-space-menu button'
     NO_DATA_FOUND_TEXT = 'No data found'
-    PAGINATOR_CLASS = '.x-paginator'
+    PAGINATOR_CLASS = '.footer__pagination'
     PAGINATOR_LIMIT = '.num-of-items'
     PAGINATOR_TO = ' .to-item'
-    PAGINATOR_BUTTON = f'{PAGINATOR_CLASS} .x-button'
-    PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.first'
-    PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.previous'
-    PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.next'
-    PAGINATOR_LAST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-btn-link.last'
+    PAGINATOR_BUTTON = f'{PAGINATOR_CLASS} li'
+    PAGINATOR_ACTIVE_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-item-active'
+    PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-item-1'
+    PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-prev'
+    PAGINATOR_NEXT_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-next'
+    PAGINATOR_PAGES_BUTTONS = f'{PAGINATOR_BUTTON}.ant-pagination-item'
     HISTOGRAM_ITEMS = '.histogram-container .histogram-item'
     PAGINATOR_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} {PAGINATOR_LIMIT}'
-    PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .total-num-of-items'
+    PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .ant-pagination-total-text'
     PAGINATOR_FROM_VALUE = f'{PAGINATOR_CLASS} .from-item'
     PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
     CHART_QUERY_DEFAULT = 'QUERY...'
@@ -121,10 +126,10 @@ class DashboardPage(BasePage):
     COMPARISON_CARD_2ND_CHILD_MODULE_CSS = 'div:nth-child(2) > div.x-dropdown.x-select.x-select-symbol'
     COMPARISON_CARD_1ST_QUERY_CSS = '.view:nth-child(1) .view-name'
     COMPARISON_CARD_2ND_QUERY_CSS = '.view:nth-child(2) .view-name'
-    CARD_SPINNER_CSS = '.chart-spinner'
-    NO_DATA_FOUND_SPINNER_CSS = '.no-data-found'
-    LIFECYCLE_TOOLTIP_CSS = '.cycle-wrapper .x-tooltip'
-    LIFECYCLE_TABLE_CSS = '.cycle-wrapper .table'
+    CARD_SPINNER_CSS = 'x-chart .main__body--loading'
+    NO_DATA_FOUND_SPINNER_CSS = 'x-chart .main__body--empty'
+    LIFECYCLE_TOOLTIP_CSS = '.cycle__tooltip'
+    LIFECYCLE_TABLE_CSS = '.cycle__tooltip .table'
     WIZARD_SORT_BY = '#sort_by_{sort_by}'
     WIZARD_SORT_ORDER = '#sort_order_{sort_order}'
     WIZARD_SORT_CONTAINER_CSS = '.sort-container'
@@ -132,14 +137,14 @@ class DashboardPage(BasePage):
     CHART_PANEL_SORT_BY_ID = 'chart_sort_by_{sort_by}'
     CHART_PANEL_SORT_ORDER_ID = 'chart_sort_order_{sort_by}_{sort_order}'
 
-    TOGGLE_LEGEND_CSS = '.toggle-legend'
+    TOGGLE_LEGEND_CSS = '.footer__bottom__actions .x-button.legend'
+    CLOSE_CHART_DRAWER = '.footer__bottom__actions .x-button.close-drawer'
     CHART_LEGEND_CSS = '.x-chart-legend'
 
     COLOR_DANGEROUS = '#FA6400'
     COLOR_VERYDANGEROUS = '#D0021C'
     COLOR_INFO = '#3498DB'
 
-    NEW_CARD_CHART_CSS = '.x-tab.active .x-card.chart-new'
     EXPLORER_RESULTS_CSS = '.explorer-results'
     TRIAL_BANNER_CSS = '.x-trial-banner'
 
@@ -155,11 +160,11 @@ class DashboardPage(BasePage):
     SUMMARY_CHART_TYPE = 'summary'
     TIMELINE_CHART_TYPE = 'timeline'
 
-    TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2) path'
-    CHART_WARNING_CSS = '.chart-warning'
+    TEST_TIMELINE_SVG_CSS = 'svg[aria-label="A chart."] g:nth-child(4) g:nth-child(2) g:nth-child(2)'
+    CHART_WARNING_CSS = '.partial-warning'
     TIMELINE_CARD_DATA_TABLE_CSS = '.x-line svg + div table tbody'
 
-    PIE_TOTAL_ITEMS_CSS = '.pie-total'
+    CHART_TOTAL_ITEMS_CSS = '.x-chart__footer .footer__total span'
 
     @property
     def root_page_css(self):
@@ -180,12 +185,10 @@ class DashboardPage(BasePage):
             self.CONGRATULATIONS).text
 
     def find_managed_device_coverage_card(self):
-        return self.driver.find_element_by_xpath(
-            self.PANEL_BY_NAME_XPATH.format(panel_name=self.MANAGED_DEVICE_COVERAGE))
+        return self.get_card(card_title=self.MANAGED_DEVICE_COVERAGE)
 
     def find_dashboard_card(self, title):
-        return self.driver.find_element_by_xpath(
-            self.PANEL_BY_NAME_XPATH.format(panel_name=title))
+        return self.get_card(card_title=title)
 
     def get_dashboard_card_id(self, title):
         card = self.get_card(title)
@@ -281,7 +284,7 @@ class DashboardPage(BasePage):
                 lst[i + 1].lstrip().startswith(('System', 'Last', 'Next'))}
 
     def find_system_lifecycle_card(self):
-        return self.driver.find_element_by_css_selector('div.x-card.chart-lifecycle.print-exclude')
+        return self.driver.find_element_by_css_selector('div.x-chart.chart-lifecycle.print-exclude')
 
     def find_new_chart_card(self):
         return self.driver.find_element_by_css_selector(self.NEW_CARD_CHART_CSS)
@@ -289,11 +292,14 @@ class DashboardPage(BasePage):
     def is_new_chart_card_missing(self):
         return len(self.driver.find_elements_by_css_selector(self.NEW_CARD_CHART_CSS)) == 0
 
+    def is_new_chart(self, card):
+        return card.find_element_by_css_selector(self.ADD_NEW_CARD_BUTTON_CSS)
+
     def find_device_discovery_card(self):
-        return self.driver.find_elements_by_css_selector('div.x-card.x-discovery-card')[0]
+        return self.driver.find_element_by_css_selector('div.x-discovery-card.device-discovery.x-chart')
 
     def find_user_discovery_card(self):
-        return self.driver.find_elements_by_css_selector('div.x-card.x-discovery-card')[1]
+        return self.driver.find_element_by_css_selector('div.x-discovery-card.user-discovery.x-chart')
 
     def fill_query_value(self, text, parent=None):
         self.fill_text_field_by_css_selector(self.QUERY_SEARCH_INPUT_CSS, text, context=parent)
@@ -315,7 +321,9 @@ class DashboardPage(BasePage):
         :return:
         """
         wait_until(func=self.do_open_card_wizard,
-                   tolerated_exceptions_list=[NoSuchElementException, ElementClickInterceptedException])
+                   tolerated_exceptions_list=[NoSuchElementException,
+                                              ElementClickInterceptedException,
+                                              ElementNotInteractableException])
 
     def do_open_card_wizard(self):
         """
@@ -324,7 +332,7 @@ class DashboardPage(BasePage):
         this function designed to run in wait_until loop, witch expecting the NoSuchElementException exception
         :return: the overlay element of the desired wizard
         """
-        new_chart_button = self.wait_for_element_present_by_css(self.NEW_CARD_WIZARD_CSS)
+        new_chart_button = self.wait_for_element_present_by_css(self.NEW_CARD_BUTTON_CSS)
         new_chart_button.click()
         return self.driver.find_element_by_css_selector(self.NEW_CARD_WIZARD_OVERLAY_CSS)
 
@@ -519,6 +527,7 @@ class DashboardPage(BasePage):
         self.select_chart_wizard_module(module)
         self.select_chart_view_name(view)
         self.click_card_save()
+        self.wait_for_element_present_by_css(self.TEST_TIMELINE_SVG_CSS)
 
     def add_matrix_card(self, module, title, base_queries, intersecting_queries, sort_by='value', sort_order='desc'):
         self.switch_to_page()
@@ -568,7 +577,7 @@ class DashboardPage(BasePage):
         return group.find_elements_by_css_selector(self.MATRIX_GROUP_SLICES)
 
     def get_matrix_chart_total_value(self, card):
-        return card.find_element_by_css_selector(self.MATRIX_TOTAL_COUNT_CSS).text
+        return card.find_element_by_css_selector(self.CHART_TOTAL_ITEMS_CSS).text
 
     def click_card_save(self):
         self.get_enabled_button('Save').click()
@@ -629,24 +638,26 @@ class DashboardPage(BasePage):
         # create reference to the segmentation card with title
         segmentation_card = self.get_card(title)
         # create reference to the histogram within the card
-        return self.get_histogram_chart_from_card(segmentation_card)
+        segmentation_histogram = self.get_histogram_chart_from_card(segmentation_card)
+
+        return {'histogram': segmentation_histogram, 'card': segmentation_card}
 
     def get_summary_card_text(self, card_title):
-        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS,
-                                                    element=self.driver.find_element_by_xpath(
-                                                        self.PANEL_BY_NAME_XPATH.format(panel_name=card_title)))
+        card = self.get_card(card_title=card_title)
+        self.wait_for_card_spinner_to_end()
+        return self.wait_for_element_present_by_css(self.SUMMARY_CARD_TEXT_CSS, element=card)
 
     def get_card(self, card_title):
-        return self.wait_for_element_present_by_css(f'.card-container-outer[name="{card_title}"]')
+        return self.wait_for_element_present_by_css(f'.x-chart[name="{card_title}"]')
 
     def get_card_id(self, card_title):
         return self.get_card(card_title).get_attribute('id')
 
     def get_all_cards(self):
-        return self.driver.find_elements_by_css_selector('.x-tab.active div.x-card')
+        return self.driver.find_elements_by_css_selector('.ant-tabs-tabpane-active .x-chart')
 
     def get_last_card_created(self):
-        return self.driver.find_elements_by_css_selector('.x-card.card__item')[-1]
+        return self.driver.find_elements_by_css_selector('.x-chart.draggable')[-1]
 
     def click_segmentation_pie_card(self, card_title):
         card = self.get_card(card_title)
@@ -662,7 +673,7 @@ class DashboardPage(BasePage):
             return False
 
     def is_edit_card_button_present(self, card_title):
-        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
+        panel = self.get_card(card_title=card_title)
         if len(panel.find_elements_by_css_selector(self.CARD_MENU_BTN_CSS)) == 0:
             return False
         self.open_close_card_menu(panel)
@@ -688,30 +699,36 @@ class DashboardPage(BasePage):
         self.wait_for_card_spinner_to_end()
 
     def is_remove_card_button_present(self, card_title):
-        panel = self.wait_for_element_present_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=card_title))
-        if len(panel.find_elements_by_css_selector(self.CARD_MENU_BTN_CSS)) == 0:
+        panel = self.get_card(card_title=card_title)
+        chart_id = panel.get_attribute('id')
+        try:
+            panel.find_element_by_css_selector(self.CARD_MENU_BTN_CSS)
+        except NoSuchElementException:
             return False
+
         self.open_close_card_menu(panel)
-        remove_buttons = self.driver.find_elements_by_id(self.CARD_CLOSE_BTN_ID)
-        result = False
-        for button in remove_buttons:
-            if button.is_displayed():
-                result = True
+        try:
+            self.driver.find_element_by_css_selector(f'.chart-menu-{chart_id} #remove_chart')
+        except NoSuchElementException:
+            self.open_close_card_menu(panel)
+            return False
+
         self.open_close_card_menu(panel)
-        return result
+        return True
 
     def remove_card(self, card_title):
         panel = self.get_card(card_title)
         self.open_close_card_menu(panel)
         self.driver.find_element_by_id(self.CARD_CLOSE_BTN_ID).click()
-        self.wait_for_element_present_by_css(self.MODAL_OVERLAY_CSS)
+        self.wait_for_element_present_by_css(self.SAFEGUARD_OVERLAY_CSS)
         self.click_button(self.CARD_CLOSE_BTN_TEXT)
         wait_until(lambda: self.is_missing_panel(card_title))
 
     def export_card(self, card_title):
         panel = self.get_card(card_title)
+        panel_id = panel.get_attribute('id')
         self.open_close_card_menu(panel)
-        self.driver.find_element_by_id('export_chart').click()
+        self.driver.find_element_by_css_selector(f'.chart-menu-{panel_id} #export_chart').click()
 
     def refresh_card(self, card_title):
         panel = self.get_card(card_title)
@@ -841,7 +858,7 @@ class DashboardPage(BasePage):
 
     @staticmethod
     def get_title_from_card(card):
-        return card.find_element_by_css_selector('div.header div.card-title').text.title()
+        return card.find_element_by_css_selector('h3.chart-title').text
 
     @staticmethod
     def get_pie_chart_from_card(card):
@@ -856,7 +873,7 @@ class DashboardPage(BasePage):
 
     @staticmethod
     def get_card_pagination_text(card):
-        return card.find_element_by_css_selector('.paginator-text').text
+        return card.find_element_by_css_selector('.x-chart__footer .ant-pagination-total-text').text
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):
@@ -877,6 +894,10 @@ class DashboardPage(BasePage):
         return histogram.find_elements_by_css_selector(self.HISTOGRAM_ITEMS)
 
     def get_histogram_current_page_item_titles(self, histogram):
+        # wait for chart loading ends
+        self.wait_for_element_absent_by_css('.main__body--loading')
+        # wait for histogram bars animation ends
+        time.sleep(0.3)
         histogram_items_title = []
         histogram_items = self.get_histogram_items_on_pagination(histogram)
         for line_item in histogram_items:
@@ -910,14 +931,19 @@ class DashboardPage(BasePage):
             rows_data.append(row_data)
         return rows_data
 
-    def get_paginator_num_of_items(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
+    def get_paginator_num_of_items(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
 
-    def get_paginator_total_num_of_items(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_TOTAL_NUM_OF_ITEMS).text
+    def get_paginator_active_page(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_ACTIVE_PAGE_BUTTON).text
 
-    def get_paginator_from_item_number(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_FROM_VALUE).text
+    def get_paginator_total_num_of_items(self, card):
+        total_text = card.find_element_by_css_selector(self.PAGINATOR_TOTAL_NUM_OF_ITEMS).text
+        num_of_total_items = re.findall(r'of (\d+)', total_text)
+        return num_of_total_items[0]
+
+    def get_paginator_from_item_number(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_FROM_VALUE).text
 
     def get_paginator_to_item_number(self, histogram, page_number):
         if page_number == 1:
@@ -938,29 +964,31 @@ class DashboardPage(BasePage):
             return num_of_items
         return min(page_number * limit, num_of_items)
 
-    def get_first_page_button_in_paginator(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_FIRST_PAGE_BUTTON)
+    def get_first_page_button_in_paginator(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_FIRST_PAGE_BUTTON)
 
-    def get_previous_page_button_in_paginator(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_PREVIOUS_PAGE_BUTTON)
+    def get_previous_page_button_in_paginator(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_PREVIOUS_PAGE_BUTTON)
 
-    def get_next_page_button_in_paginator(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_NEXT_PAGE_BUTTON)
+    def get_next_page_button_in_paginator(self, card):
+        return card.find_element_by_css_selector(self.PAGINATOR_NEXT_PAGE_BUTTON)
 
-    def get_last_page_button_in_paginator(self, histogram):
-        return histogram.find_element_by_css_selector(self.PAGINATOR_LAST_PAGE_BUTTON)
+    def get_last_page_button_in_paginator(self, card):
+        page = self.find_elements_by_css(self.PAGINATOR_PAGES_BUTTONS, element=card)[-1].text
+        return int(page)
 
-    def click_to_next_page(self, histogram):
-        self.get_next_page_button_in_paginator(histogram).click()
+    def click_to_next_page(self, card):
+        self.get_next_page_button_in_paginator(card).click()
 
-    def click_to_previous_page(self, histogram):
-        self.get_previous_page_button_in_paginator(histogram).click()
+    def click_to_previous_page(self, card):
+        self.get_previous_page_button_in_paginator(card).click()
 
-    def click_to_first_page(self, histogram):
-        self.get_first_page_button_in_paginator(histogram).click()
+    def click_to_first_page(self, card):
+        self.get_first_page_button_in_paginator(card).click()
 
-    def click_to_last_page(self, histogram):
-        self.get_last_page_button_in_paginator(histogram).click()
+    def click_to_last_page(self, card):
+        page_btn = self.find_elements_by_css(self.PAGINATOR_PAGES_BUTTONS, element=card)[-1]
+        page_btn.click()
 
     def click_on_histogram_item(self, histogram, item_number):
         histogram.find_element_by_css_selector(f'{self.HISTOGRAM_ITEMS}:nth-child({item_number})').click()
@@ -1037,7 +1065,7 @@ class DashboardPage(BasePage):
 
     @staticmethod
     def assert_plus_button_in_card(card):
-        assert card.find_element_by_css_selector('.x-button.ant-btn-link').text == '+'
+        assert card.find_element_by_css_selector('.x-icon.add-button')
 
     @staticmethod
     def assert_plus_button_disabled_in_card(card):
@@ -1106,19 +1134,19 @@ class DashboardPage(BasePage):
             startswith('Your Axonius subscription has expired')
 
     def find_active_space_header_title(self):
-        return self.driver.find_element_by_xpath(self.ACTIVE_SPACE_HEADERS_XPATH).text
+        return self.driver.find_element_by_css_selector(self.ACTIVE_SPACE_HEADERS_CSS).text
 
     def open_space_action_menu(self):
         self.driver.find_element_by_css_selector(self.SPACE_ACTION_MENU_CSS).click()
 
     def find_space_header(self, index=1):
-        return self.find_elements_by_xpath(self.SPACE_HEADERS_XPATH)[index - 1]
+        return self.find_elements_by_css(self.SPACE_HEADERS_CSS)[index - 1]
 
     def find_space_header_by_title(self, title=''):
         return self.driver.find_element_by_css_selector(self.SPACE_HEADERS_TITLE_CSS.format(title=title))
 
     def find_space_header_title(self, index=1):
-        return self.find_space_header(index).find_element_by_tag_name('div').text
+        return self.find_space_header(index).find_element_by_css_selector('.x-spaces__tab > span').text
 
     def save_space_name(self, space_name, space_roles=None):
         name_input = self.wait_for_element_present_by_id(self.RENAME_SPACE_INPUT_ID)
@@ -1133,10 +1161,10 @@ class DashboardPage(BasePage):
         self.wait_for_modal_close()
 
     def find_add_space(self):
-        return self.driver.find_element_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
+        return self.driver.find_element_by_css_selector(self.NEW_SPACE_BUTTON_CSS)
 
     def wait_add_space(self):
-        return self.wait_for_element_present_by_xpath(self.NEW_SPACE_BUTTON_XPATH)
+        return self.find_add_space()
 
     def add_new_space(self, space_name, space_roles=None):
         self.wait_add_space().click()
@@ -1151,7 +1179,8 @@ class DashboardPage(BasePage):
         return False
 
     def get_space_id(self, index=0):
-        space_header = self.find_space_header(index)
+        space_tab = self.find_space_header(index)
+        space_header = space_tab.find_element_by_css_selector('.x-spaces__tab')
         return space_header.get_attribute('id')
 
     def select_space_by_name(self, space_name):
@@ -1162,7 +1191,7 @@ class DashboardPage(BasePage):
         space_header = self.find_space_header(index)
         space_header.click()
         # make sure space loaded
-        self.wait_for_element_absent_by_css('.x-card .chart-new')
+        self.wait_for_element_present_by_css(self.NEW_CARD_CHART_CSS)
         return space_header
 
     def edit_space(self, space_name, space_roles=None, index=2, ):
@@ -1204,8 +1233,8 @@ class DashboardPage(BasePage):
 
     def is_missing_panel(self, panel_name):
         try:
-            self.driver.find_element_by_xpath(self.PANEL_BY_NAME_XPATH.format(panel_name=panel_name))
-        except NoSuchElementException:
+            self.get_card(card_title=panel_name)
+        except (NoSuchElementException, TimeoutException):
             # Good, it is missing
             return True
         return False
@@ -1230,7 +1259,7 @@ class DashboardPage(BasePage):
         self.wait_for_element_absent_by_css(self.CARD_SPINNER_CSS)
 
     def click_card_cancel(self):
-        self.click_button('Cancel')
+        self.click_button('Cancel', context=self.driver.find_element_by_css_selector('.x-modal'))
         self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
 
     def toggle_chart_wizard_module(self, selector_element_css=CHART_MODULE_DROP_DOWN_CSS,
@@ -1327,22 +1356,48 @@ class DashboardPage(BasePage):
         finally:
             self.click_card_cancel()
 
+    def toggle_card_filters(self, card):
+        card.find_element_by_css_selector(self.FILTERS_TOGGLE_ICON_CSS).click()
+
     def fill_card_search_input(self, card, text):
+        self.toggle_card_filters(card)
+        self.wait_for_element_present_by_css(self.FILTERS_CONTAINER_CSS, element=card)
         self.fill_text_field_by_css_selector(self.CARD_SEARCH_INPUT_CSS, text, card)
+        self.click_button(self.CARD_FILTERS_APPLY_TEXT, scroll_into_view_container='.x-spaces__content')
+        self.wait_for_element_absent_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        # wait till animation over
+        time.sleep(0.1)
+
+    def clear_card_search(self, card):
+        self.toggle_card_filters(card)
+        self.wait_for_element_present_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        self.click_button(self.CARD_FILTERS_CLEAR_TEXT, scroll_into_view_container='.x-spaces__content')
+        self.wait_for_element_absent_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        # wait till animation over
+        time.sleep(0.1)
 
     def get_card_search_input_text(self, card):
-        return card.find_element_by_css_selector(self.CARD_SEARCH_INPUT_CSS).text
+        self.toggle_card_filters(card)
+        self.wait_for_element_present_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        text = card.find_element_by_css_selector(self.CARD_SEARCH_INPUT_CSS).text
+        self.toggle_card_filters(card)
+        self.wait_for_element_absent_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        return text
 
     def click_legend_toggle(self, card):
-        return card.find_element_by_css_selector(self.TOGGLE_LEGEND_CSS).click()
+        card.find_element_by_css_selector(self.TOGGLE_LEGEND_CSS).click()
+        time.sleep(0.3)
+
+    def close_chart_drawer(self, card):
+        return card.find_element_by_css_selector(self.CLOSE_CHART_DRAWER).click()
 
     def verify_legend_toggle_absent(self, card):
         card_id = card.get_attribute('id')
-        self.assert_element_absent_by_css_selector(f'#{card_id} {self.TOGGLE_LEGEND_CSS}')
+        self.assert_element_absent_by_css_selector(f'.x-chart-{card_id} {self.TOGGLE_LEGEND_CSS}')
 
     def verify_legend_absent(self, card):
         card_id = card.get_attribute('id')
-        self.assert_element_absent_by_css_selector(f'#{card_id} {self.CHART_LEGEND_CSS}')
+        self.assert_element_absent_by_css_selector(f'.x-chart-{card_id} {self.CHART_LEGEND_CSS}')
 
     def get_legend(self, card):
         card.find_elements_by_css_selector(self.CHART_LEGEND_CSS)
@@ -1386,9 +1441,12 @@ class DashboardPage(BasePage):
 
     @contextmanager
     def edit_and_assert_chart(self, card, assert_data, chart_type=PIE_CHART_TYPE):
+        card_title = self.get_title_from_card(card)
         self.open_edit_card(card)
         yield
         self.click_card_save()
+        # after save the current reference is pointing to a stale card element
+        card = self.find_dashboard_card(card_title)
         if chart_type == self.PIE_CHART_TYPE:
             self.assert_pie_slices_data(card, assert_data)
         if chart_type == self.HISTOGRAM_CHART_TYPE:
@@ -1424,8 +1482,14 @@ class DashboardPage(BasePage):
         return round(100 / (slice_percentage / slice_value))
 
     def get_pie_chart_footer_total_value(self, pie):
-        return int(pie.find_element_by_css_selector(self.PIE_TOTAL_ITEMS_CSS).text.lstrip('Total '))
+        return int(pie.find_element_by_css_selector(self.CHART_TOTAL_ITEMS_CSS).text.lstrip('Total '))
 
     def move_to_space_and_assert_title(self, space_index, title):
         self.select_space(space_index)
         assert self.find_space_header_title(space_index) == title
+
+    def click_space_by_name(self, space_name):
+        self.find_element_by_xpath(self.SPACE_HEADERS_BY_NAME.format(space_name=space_name)).click()
+
+    def assert_is_add_new_chart_card(self, card):
+        assert card.find_element_by_css_selector(self.ADD_NEW_CARD_BUTTON_CSS)

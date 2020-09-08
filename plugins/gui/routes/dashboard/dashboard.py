@@ -85,6 +85,22 @@ class Dashboard(Charts, Notifications):
         """
         return jsonify(self._is_system_first_use)
 
+    @gui_route_logged_in('is_system_empty', methods=['GET'], enforce_trial=False)
+    def dashboard_is_empty(self):
+        """
+        :return: Whether this is the first use of the system
+        """
+
+        try:
+            is_users_seen = adapter_data(EntityType.Users).get('seen', False)
+            is_devices_seen = adapter_data(EntityType.Devices).get('seen', False)
+        except Exception:
+            error = f'Could not get adapter data'
+            logger.exception(error)
+            return return_error(error, 400)
+        entities_not_seen = (not is_devices_seen) and (not is_users_seen)
+        return jsonify(self._is_system_first_use and entities_not_seen)
+
     @gui_route_logged_in('first_historical_date', methods=['GET'], enforce_permissions=False)
     def get_first_historical_date(self):
         return jsonify(first_historical_date())
@@ -129,14 +145,64 @@ class Dashboard(Charts, Notifications):
             'name': space['name'],
             'roles': space.get('roles', []),
             'public': space.get('public', True),
-            'panels_order': space.get('panels_order', []),
             'type': space['type']
         } for space in self._dashboard_spaces_collection.find(spaces_filter)]
 
-        panels = self._get_dashboard(generate_data=False)
         return jsonify({
-            'spaces': spaces,
-            'panels': panels
+            'spaces': spaces
+        })
+
+    @gui_route_logged_in('<space_id>', methods=['GET'], activity_params=[SPACE_NAME])
+    def get_space_by_id(self, space_id):
+
+        if not space_id:
+            return_error('space id is required', 400)
+        space_filter = filter_archived({
+            '_id': ObjectId(space_id)
+        })
+        space = self._dashboard_spaces_collection.find_one(space_filter)
+
+        charts_filter = filter_archived({
+            'space': ObjectId(space_id),
+            'is_linked_dashboard': {'$ne': True}
+        })
+
+        def check_visible(chart):
+            """
+            Filter out chart with hide_empty flag, when they have no data
+            :param chart:
+            :return: Boolean
+            """
+            if not chart.get('hide_empty'):
+                return True
+            chart_sort_config = chart.get('config', {}).get('sort', {})
+            chart_data = generate_dashboard(
+                chart['_id'],
+                sort_by=chart_sort_config.get('sort_by', None),
+                sort_order=chart_sort_config.get('sort_order', None))
+            has_data = chart_data.get('data') and chart_data['data'][0].get('portion', 0) not in [0, 1]
+            return has_data
+        charts = [{
+            'uuid': str(chart.get('_id')),
+            'config': chart.get('config', {}),
+            'metric': chart.get('metric'),
+            'name': chart.get('name'),
+            'space': str(chart.get('space')),
+            'user_id': str(chart.get('user_id')),
+            'view': chart.get('view'),
+            'linked_dashboard': str(chart.get('linked_dashboard', ''))
+        } for chart in self._dashboard_collection.find(charts_filter) if check_visible(chart)]
+
+        if not space:
+            return_error('Internal Server Error', 500)
+        return jsonify({
+            'uuid': str(space['_id']),
+            'name': space['name'],
+            'roles': space.get('roles', []),
+            'public': space.get('public', True),
+            'panels_order': space.get('panels_order', []),
+            'type': space['type'],
+            'charts': charts
         })
 
     @gui_route_logged_in('<space_id>', methods=['PUT'],
@@ -378,7 +444,7 @@ class Dashboard(Charts, Notifications):
                         'uuid': str(dashboard['_id']),
                         'name': dashboard['name'],
                         'is_linked_dashboard': dashboard.get('is_linked_dashboard', False),
-                        'linked_dashboard': dashboard.get('linked_dashboard', None),
+                        'linked_dashboard': str(dashboard.get('linked_dashboard', None)),
                         'data': [],
                         'loading': True,
                         'hide_empty': dashboard.get('hide_empty', False)

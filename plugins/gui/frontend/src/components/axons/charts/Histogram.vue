@@ -57,44 +57,24 @@
           >{{ item.name }}</div>
         </div>
       </div>
-      <template v-if="dataLength">
-        <div class="separator" />
-        <slot name="footer" />
-        <div
-          v-if="!condensed"
-          class="histogram-total"
-        >Total {{ totalValue }}</div>
-        <XPaginator
-          :from.sync="dataFrom"
-          :to.sync="dataTo"
-          :limit="limit"
-          :count="dataLength"
-          @change="onChangePage"
-        />
-      </template>
     </div>
   </XChartTooltip>
 </template>
 
 <script>
 import { pluginMeta } from '@constants/plugin_meta';
-import XPaginator from '../layout/Paginator.vue';
-import { ChartTypesEnum } from '../../../constants/dashboard';
+import { formatPercentage } from '@constants/utils';
+import { ChartTypesEnum } from '@constants/dashboard';
 import XChartTooltip from './ChartTooltip.vue';
 import { getVisibleTextColor } from '@/helpers/colors';
-import { formatPercentage } from '@constants/utils';
 
 export default {
   name: 'XHistogram',
-  components: { XPaginator, XChartTooltip },
+  components: { XChartTooltip },
   props: {
     data: {
       type: Array,
       required: true,
-    },
-    limit: {
-      type: Number,
-      default: 5,
     },
     condensed: {
       type: Boolean,
@@ -103,6 +83,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    pageData: {
+      type: Array,
+      required: true,
     },
     chartConfig: {
       type: Object,
@@ -115,8 +99,6 @@ export default {
   },
   data() {
     return {
-      dataFrom: 1,
-      dataTo: 0,
       hoveredItem: null,
     };
   },
@@ -136,21 +118,6 @@ export default {
         }
       });
       return max;
-    },
-    dataLength() {
-      return this.data.length;
-    },
-    nextFetchFrom() {
-      return this.dataTo + this.limit;
-    },
-    prevFetchFrom() {
-      return this.dataFrom - 1 - this.limit;
-    },
-    pageData() {
-      if (!this.data[this.dataFrom - 1]) {
-        return [];
-      }
-      return this.data.slice(this.dataFrom - 1, this.dataTo);
     },
     segmentColor() {
       return this.chartConfig.chart_color || undefined;
@@ -193,28 +160,13 @@ export default {
         styleObject,
       };
     },
-    totalValue() {
-      if (!this.data.length) {
-        return 0;
-      }
-      const [{ value, portion }] = this.data;
-      return portion === 1 ? value : Math.round(1 / (portion / value));
-    },
   },
   methods: {
     calculateBarWidth(quantity) {
       return (this.maxWidth * quantity) / this.maxQuantity;
     },
     onClick(pageIndex) {
-      this.$emit('click-one', this.dataFrom + pageIndex - 1);
-    },
-    onChangePage() {
-      if (this.nextFetchFrom < this.dataLength && !this.data[this.nextFetchFrom]) {
-        this.$emit('fetch', this.nextFetchFrom);
-      }
-      if (this.prevFetchFrom >= 0 && !this.data[this.prevFetchFrom]) {
-        this.$emit('fetch', Math.max(1, this.prevFetchFrom - 100 + this.limit));
-      }
+      this.$emit('click-one', pageIndex);
     },
     getBarStyle(item) {
       // design for Query Segmentation
@@ -245,7 +197,8 @@ export default {
       display: flex;
       flex-direction: column;
       flex: 1 0 auto;
-      min-height: 240px
+      min-height: 240px;
+      width: 100%;
     }
 
     .histogram-item {

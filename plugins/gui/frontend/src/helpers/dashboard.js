@@ -42,3 +42,7 @@ export function getRemainderSliceLabel(item) {
   }
   return `Remainder of: ${item.name}`;
 }
+
+export function getTotalResultsTitle(total, range, name) {
+  return `${range[0]} - ${range[1]} of ${total} ${name}`;
+}

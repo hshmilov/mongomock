@@ -143,13 +143,10 @@ export default {
         false,
       ),
       fetchedLoginStatus(state) {
-        return (
-          Object.keys(state.auth.currentUser.data).length > 0
-          || state.auth.currentUser.error
-        );
+        return state.auth.currentUser.data || state.auth.currentUser.error;
       },
       userName(state) {
-        return state.auth.currentUser.data.user_name;
+        return _get(state, 'auth.currentUser.data.user_name', '');
       },
       toastData(state) {
         return state.toast;

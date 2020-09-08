@@ -7,7 +7,6 @@ import { REQUEST_API } from '../actions';
 import { RESET_DEVICES_STATE } from './devices';
 import { RESET_USERS_STATE } from './users';
 import {
-  RESET_DASHBOARD_STATE,
   RESET_TUNNEL_CONNECTION_CHECKING,
 } from '@store/modules/dashboard';
 import { getPermissionsStructure } from '@constants/permissions';
@@ -24,7 +23,6 @@ export const LDAP_LOGIN = 'LDAP_LOGIN';
 export const SET_USER = 'SET_USER';
 export const SET_LOGIN_OPTIONS = 'SET_LOGIN_OPTIONS';
 export const INIT_USER = 'INIT_USER';
-export const INIT_ERROR = 'INIT_ERROR';
 export const SET_USER_ERROR = 'SET_USER_ERROR';
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS';
 export const GET_ALL_USERS = 'GET_ALL_USERS';
@@ -59,7 +57,7 @@ export const NOT_LOGGED_IN = 'Not logged in';
 
 export const auth = {
   state: {
-    currentUser: { fetching: false, data: {}, error: '' },
+    currentUser: { fetching: false, data: null, error: '' },
     loginOptions: { fetching: false, data: null, error: '' },
     allUsers: {
       content: { data: [], fetching: false, error: '' },
@@ -131,7 +129,7 @@ export const auth = {
         state.currentUser.data = { ...payload.data };
       } else if (payload.userTimedOut) {
         state.currentUser.userTimedOut = true;
-        state.currentUser.data = {};
+        state.currentUser.data = null;
         state.currentUser.error = 'Session timed out';
       }
     },
@@ -143,14 +141,14 @@ export const auth = {
       }
     },
     [INIT_USER](state, payload) {
-      state.currentUser.fetching = payload.fetching;
-      state.currentUser.error = payload.error;
+      const { fetching, error } = payload;
+      state.currentUser.fetching = fetching;
+      if (error !== NOT_LOGGED_IN) {
+        state.currentUser.error = error;
+      }
       if (!state.currentUser.fetching) {
         state.currentUser.data = {};
       }
-    },
-    [INIT_ERROR](state) {
-      state.currentUser.error = '';
     },
     [SET_USER_ERROR](state, payload) {
       state.currentUser.error = payload.error;
@@ -350,9 +348,9 @@ export const auth = {
       }).then(() => {
         commit(RESET_DEVICES_STATE);
         commit(RESET_USERS_STATE);
-        commit(RESET_DASHBOARD_STATE);
         if (payload) {
           payload.fetching = false;
+          payload.data = null;
           return commit(SET_USER, payload);
         }
       });

@@ -1,15 +1,15 @@
 <template>
   <AModal
-    v-if="spaceForm"
     class="edit-space-modal"
     :visible="true"
     :centered="true"
     :closable="false"
     :width="null"
     :cancel-button-props="{ props: { type: 'link' } }"
+    :ok-button-props="{ props: { disabled: !formValid }}"
     :mask-closable="false"
     ok-text="Save"
-    title="Edit Space"
+    :title="formTitle"
     @ok="submitEdit"
     @cancel="$emit('cancel')"
   >
@@ -21,6 +21,7 @@
       >
         <AInput
           id="rename_space"
+          ref="nameInput"
           v-model="spaceForm.name"
           @pressEnter="submitEdit"
         />
@@ -80,6 +81,7 @@ import {
   Modal, Input, Radio, Form, Select,
 } from 'ant-design-vue';
 import _pick from 'lodash/pick';
+import _isEmpty from 'lodash/isEmpty';
 import { fetchAssignableRolesList } from '@api/roles';
 import { SpaceTypesEnum } from '@constants/dashboard';
 
@@ -113,8 +115,17 @@ export default {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.GetUsersAndRoles);
     },
+    isNewSpace() {
+      return _isEmpty(this.space);
+    },
     allowRoleSelection() {
-      return this.space.type === SpaceTypesEnum.custom;
+      return this.space.type === SpaceTypesEnum.custom || this.isNewSpace;
+    },
+    formTitle() {
+      return this.isNewSpace ? 'New Space' : 'Edit Space';
+    },
+    formValid() {
+      return this.spaceForm.name;
     },
   },
   async created() {
@@ -123,6 +134,9 @@ export default {
       this.rolesOptions = allRoles.filter((option) => option.text !== 'Admin');
     }
     this.fillDataFromSpace(this.space);
+  },
+  mounted() {
+    this.focusInput();
   },
   methods: {
     fillDataFromSpace(space) {
@@ -135,7 +149,12 @@ export default {
       };
     },
     submitEdit() {
+      if (!this.spaceForm.name) return;
       this.$emit('confirm', this.spaceForm);
+    },
+    focusInput() {
+      const ref = this.$refs.nameInput;
+      ref.focus();
     },
   },
 };

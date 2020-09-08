@@ -1,7 +1,6 @@
 <template>
   <div
     class="x-pie"
-    :class="{disabled: readOnly}"
   >
 
     <div
@@ -52,10 +51,6 @@
         </g>
       </svg>
     </XChartTooltip>
-    <div
-      v-if="!tooManyValues"
-      class="pie-total"
-    >Total {{ totalValue }}</div>
   </div>
 </template>
 
@@ -64,10 +59,10 @@ import _sumBy from 'lodash/sumBy';
 import _get from 'lodash/get';
 import { formatPercentage } from '@constants/utils';
 import defaultChartsColors from '@constants/colors';
+import { ChartTypesEnum } from '@constants/dashboard';
 import XChartTooltip from './ChartTooltip.vue';
 import XIntersectionSlice from './IntersectionSlice.vue';
 import { getVisibleTextColor } from '@/helpers/colors';
-import { ChartTypesEnum } from '../../../constants/dashboard';
 import { getItemIndex, getLegendItemColorClass, getRemainderSliceLabel } from '@/helpers/dashboard';
 
 export default {
@@ -81,13 +76,9 @@ export default {
       type: Array,
       required: true,
     },
-    forceText: {
-      type: Boolean,
-      default: false,
-    },
-    readOnly: {
-      type: Boolean,
-      default: false,
+    count: {
+      type: Number,
+      required: true,
     },
     metric: {
       type: String,
@@ -110,7 +101,9 @@ export default {
   },
   computed: {
     tooManyValues() {
-      return this.data.length > 100;
+      const tooManyValues = this.count > 100;
+      this.$emit('on-too-many-values', tooManyValues);
+      return tooManyValues;
     },
     processedData() {
       const processData = this.data.map((item, index) => {
@@ -289,10 +282,9 @@ export default {
       return [Math.cos(2 * Math.PI * portion), Math.sin(2 * Math.PI * portion)];
     },
     showPercentageText(val) {
-      return (this.forceText && val > 0) || val > 0.04;
+      return val > 0.04;
     },
     onClick(index) {
-      if (this.readOnly) return;
       this.$emit('click-one', index);
     },
     getTextColor(slice) {

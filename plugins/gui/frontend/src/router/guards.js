@@ -3,13 +3,16 @@ import { LOGOUT } from '@store/modules/auth';
 import _get from 'lodash/get';
 
 export const adminGuard = (to, from, next) => {
+  const user = _get(store, 'state.auth.currentUser.data') || {};
+
   let unWatch = null;
   const proceed = () => {
+    const { role_name: userRole, admin: isAdmin } = _get(store, 'state.auth.currentUser.data') || {};
     if (unWatch) {
       unWatch();
     }
-    if (store.state.auth.currentUser.data.admin
-      || store.state.auth.currentUser.data.role_name === 'Admin') {
+    if (isAdmin
+      || userRole === 'Admin') {
       next();
     } else {
       store.dispatch(LOGOUT)
@@ -20,9 +23,12 @@ export const adminGuard = (to, from, next) => {
   // currently there is no way to know if the store load the current user data
   // and got all the info
   // we set a watch on the user_name property and wait for the value
-  if (!store.state.auth.currentUser.data.user_name) {
+  if (!user.user_name) {
     unWatch = store.watch(
-      (state) => state.auth.currentUser.data.user_name,
+      (state) => {
+        const currentUser = _get(state, 'auth.currentUser.data') || {};
+        return currentUser.user_name;
+      },
       (userName) => {
         if (userName) {
           proceed();

@@ -1,17 +1,14 @@
 <template>
   <div>
     <div class="x-search-insights">
-      <XSearchInput
+      <AInputSearch
         v-model="searchValue"
         placeholder="Search by Host Name, User Name, Manufacturer Serial, MAC or IP..."
         :disabled="!canViewAnyEntity"
+        enter-button="Search"
+        @search="onSearch"
         @keydown.enter.native="onSearch"
       />
-      <XButton
-        type="right"
-        :disabled="!canViewAnyEntity"
-        @click="onSearch"
-      >Search</XButton>
     </div>
     <XAccessModal v-model="blockedComponent" />
   </div>
@@ -19,8 +16,7 @@
 
 <script>
 import { mapState, mapMutations } from 'vuex';
-import XButton from '../../axons/inputs/Button.vue';
-import XSearchInput from './SearchInput.vue';
+import { Input } from 'ant-design-vue';
 import XAccessModal from '../popover/AccessModal.vue';
 
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
@@ -28,7 +24,7 @@ import { entities } from '../../../constants/entities';
 
 export default {
   name: 'XSearchInsights',
-  components: { XButton, XSearchInput, XAccessModal },
+  components: { XAccessModal, AInputSearch: Input.Search },
   data() {
     return {
       blockedComponent: '',
@@ -82,18 +78,13 @@ export default {
         width: 60vw;
         margin: auto auto 12px;
 
-        .x-search-input {
-            flex: 1 0 auto;
-            border-radius: 16px 0 0 16px;
-
-            &.focus {
-                border-color: $theme-orange;
-            }
-        }
-
-        .x-button {
-            border-radius: 0 16px 16px 0;
-            color: $theme-white;
+        .ant-btn {
+          background-color: $theme-orange;
+          border-color: $theme-orange;
+          &:hover {
+            background-color: rgba($color: $theme-orange, $alpha: 0.85);
+            border-color: rgba($color: $theme-orange, $alpha: 0.85);
+          }
         }
     }
 </style>

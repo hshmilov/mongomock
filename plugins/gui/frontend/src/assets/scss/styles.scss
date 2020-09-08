@@ -549,29 +549,82 @@ table {
 }
 
 
-@media print {
-  @page {
-    margin: 0.5cm 1cm;
+/* styling a dashboard card */
+.x-dashboard-card.x-chart {
+
+  &.position-1 {
+    grid-column: 1;
   }
-  .print-exclude, .print-exclude * {
-    display: none !important;
+  &.position-2 {
+    grid-column: 2;
   }
-  .x-page, .x-page.collapse {
+  &.position-3 {
+    grid-column: 3;
+  }
+  &.position-4 {
+    grid-column: 4;
+  }
+  // size
+  width: 100%;
+  height: 100%;
+  // layout
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  //box model
+  padding: 8px;
+  border-radius: 2px;
+  border: 2px solid transparent;
+  //style
+  background-color: $theme-white;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,.2);
+  .header {
+    height: 30px;
+
+    .chart-title {
+      margin: 0;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 16px;
+
+    }
+  }
+
+  .body {
     padding: 0;
-    >.header {
-      display: block;
-    }
-    > .body {
-      height: auto;
-      flex: 1 0 auto;
-    }
+    flex: 1;
+    overflow-y: auto;
   }
-  .dashboard-charts {
-    display: block;
-    .x-card {
-      page-break-inside: avoid;
-      display: inline-flex;
-      margin: 12px 12px 0 0;
+  .footer {
+    display: flex;
+    flex-direction: column;
+    height: 150px;
+    justify-content: flex-end;
+
+    &__paginator {
+      text-align: center;
+      margin-bottom: 32px;
+      position: relative;
+
+      .ant-pagination-item a {
+        // delete after vuetify will be removed from project (link style override)
+        margin: 0 4px;
+        color: rgba(0, 0, 0, 0.65);
+        text-decoration: none;
+        transition: none;
+      }
+
+      .ant-pagination-total-text {
+        display: block;
+        margin-bottom: 8px;
+        position: absolute;
+        top: 30px;
+        width: 100%;
+      }
     }
   }
 }

@@ -12,7 +12,8 @@ class TestNewChartStress(TestDashboardChartBase):
             self.dashboard_page.wait_for_spinner_to_end()
             self.dashboard_page.get_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{i}')
         last_card = self.dashboard_page.get_all_cards()[-1]
-        assert self.dashboard_page.get_title_from_card(last_card) == 'New Chart'
+        self.dashboard_page.assert_is_add_new_chart_card(card=last_card)
+        assert self.dashboard_page.is_new_chart(last_card)
         for j in range(10):
             self.dashboard_page.remove_card(f'{self.TEST_SUMMARY_TITLE_DEVICES}{j}')
             self.dashboard_page.wait_for_spinner_to_end()

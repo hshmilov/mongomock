@@ -4,6 +4,8 @@ import search from './search';
 import start from './start';
 import stop from './stop';
 import close from './close';
+import legendOpen from './legend-open';
+import legendClosed from './legend-close';
 import edit from './edit';
 import remove from './remove';
 
@@ -14,6 +16,8 @@ export default {
   start,
   stop,
   close,
+  legendOpen,
+  legendClosed,
   edit,
   remove,
 };

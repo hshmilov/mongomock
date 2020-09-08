@@ -1,5 +1,3 @@
-from math import ceil
-
 from ui_tests.tests.test_dashboard_chart_base import TestDashboardChartBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME)
 
@@ -22,28 +20,35 @@ class TestDashboardSegmentationChart(TestDashboardChartBase):
 
     def test_check_segmentation_csv(self):
         histogram_items_title = []
-        histograms_chart = \
+        chart = \
             self.dashboard_page.create_and_get_paginator_segmentation_card(
                 run_discovery=True,
                 module='Devices',
                 field='Host Name',
                 title=self.TEST_SEGMENTATION_TITLE,
                 view_name='')
-        limit = int(self.dashboard_page.get_paginator_num_of_items(histograms_chart))
-        total_num_of_items = int(self.dashboard_page.get_paginator_total_num_of_items(histograms_chart))
-        # calculate the total number of pages in Paginator
-        # by this wat we ensure to have the exact num of pages and cover all the cases even if the
-        # total_num_of_items % limit has a remainder (round up the result)
-        num_of_pages = ceil(total_num_of_items / limit)
+        histogram_card = chart.get('card')
+
+        num_of_pages = self.dashboard_page.get_last_page_button_in_paginator(histogram_card)
+
+        histogram_card = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_TITLE)
+        histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card=histogram_card)
+        histogram_items_title.append(self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart))
+        self.dashboard_page.click_to_next_page(histogram_card)
+        self.dashboard_page.wait_for_card_spinner_to_end()
+
         # iterate incrementaly on all the pages (next)
-        for page_number in range(1, num_of_pages + 1):
+        for page_number in range(1, num_of_pages):
+            histogram_card = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_TITLE)
+            histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card=histogram_card)
             histogram_items_title.append(self.dashboard_page.get_histogram_current_page_item_titles(histograms_chart))
-            if page_number == 1:
-                self.dashboard_page.click_to_next_page(histograms_chart)
-            elif page_number == num_of_pages:
+
+            if page_number == num_of_pages:
                 break
             else:
-                self.dashboard_page.click_to_next_page(histograms_chart)
+                self.dashboard_page.click_to_next_page(histogram_card)
+                self.dashboard_page.wait_for_card_spinner_to_end()
+
         # flatten list
         histogram_titles_list = [item for sublist in histogram_items_title for item in sublist]
         csv_data = self._download_and_get_csv(self.TEST_SEGMENTATION_TITLE)

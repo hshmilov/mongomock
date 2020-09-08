@@ -150,6 +150,7 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
 import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
@@ -189,7 +190,8 @@ export default {
         return state.dashboard.lifecycle.data.status;
       },
       userPermissions(state) {
-        return state.auth.currentUser.data.permissions;
+        const user = _get(state, 'auth.currentUser.data') || {};
+        return user.permissions;
       },
     }),
     ...mapGetters({

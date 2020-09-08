@@ -80,13 +80,15 @@ export default {
         return _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
       },
       userDetails(state) {
+        const user = _get(state, 'auth.currentUser.data') || {};
         return {
-          name: `${state.auth.currentUser.data.first_name} ${state.auth.currentUser.data.last_name}`,
-          pic: state.auth.currentUser.data.pic_name,
+          name: `${user.first_name} ${user.last_name}`,
+          pic: user.pic_name,
         };
       },
       userPermissions(state) {
-        return state.auth.currentUser.data.permissions;
+        const user = _get(state, 'auth.currentUser.data') || {};
+        return user.permissions;
       },
       collapseSidebar(state) {
         return state.interaction.collapseSidebar;

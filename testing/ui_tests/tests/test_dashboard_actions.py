@@ -23,7 +23,6 @@ class TestDashboardActions(TestBase):
     AD_BAD_CONFIG_QUERY_NAME = 'AD enabled users with bad configurations'
     AD_NO_PASSWORD_EXPIRATION_OPTION = 'AD Enabled Users Whose Password Does Not Expire'
     AD_CRITICAL_USERS_OPTION_NAME = 'AD Enabled Critical Users'
-    SEARCH_ICON_CSS = '.actions__search'
 
     def test_dashboard_chart_edit(self):
 
@@ -48,18 +47,17 @@ class TestDashboardActions(TestBase):
                                                   title=self.TEST_EDIT_CARD_TITLE)
         card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_pie_slices_data(card, ['92'])
-        self._test_intersection_chart_edit(card)
-        self._change_card_to_comparison(self.TEST_EDIT_CARD_TITLE)
+        self._test_intersection_chart_edit(self.TEST_EDIT_CARD_TITLE)
+        card = self._change_card_to_comparison(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_pie_slices_data(card, ['77', '23'])
-        self._test_comparison_chart_edit(card)
-        self._change_card_to_segmentation(self.TEST_EDIT_CARD_TITLE)
+        self._test_comparison_chart_edit(self.TEST_EDIT_CARD_TITLE)
+        card = self._change_card_to_segmentation(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_histogram_lines_data(card, ['2', '1'])
         self._test_segmentation_chart_edit(card)
-        self._change_card_to_summary(self.TEST_EDIT_CARD_TITLE)
+        card = self._change_card_to_summary(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_summary_text_data(card, ['23'])
         self._test_summary_chart_edit(card)
-        self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
-        card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
+        card = self._change_card_to_timeline(self.TEST_EDIT_CARD_TITLE)
         self.dashboard_page.assert_timeline_svg_exist(card)
         self._test_timeline_chart_edit(card)
 
@@ -74,6 +72,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])
         self.dashboard_page.select_chart_view_name(HOSTNAME_DC_QUERY_NAME, views_list[1])
         self.dashboard_page.click_card_save()
+        return self.dashboard_page.get_card(card_title=title)
 
     def _change_card_to_segmentation(self, title):
         self.dashboard_page.edit_card(title)
@@ -84,6 +83,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.select_chart_view_name(WINDOWS_QUERY_NAME)
         self.dashboard_page.select_chart_wizard_field(OS_SERVICE_PACK_OPTION_NAME)
         self.dashboard_page.click_card_save()
+        return self.dashboard_page.get_card(card_title=title)
 
     def _change_card_to_summary(self, title):
         self.dashboard_page.edit_card(title)
@@ -93,6 +93,7 @@ class TestDashboardActions(TestBase):
         self.dashboard_page.select_chart_wizard_field(OS_TYPE_OPTION_NAME)
         self.dashboard_page.select_chart_summary_function(COUNT_OPTION_NAME)
         self.dashboard_page.click_card_save()
+        return self.dashboard_page.get_card(card_title=title)
 
     def _change_card_to_timeline(self, title):
         self._create_history(EntityType.Devices)
@@ -105,36 +106,45 @@ class TestDashboardActions(TestBase):
 
         self.dashboard_page.select_chart_result_range_last()
         self.dashboard_page.click_card_save()
+        return self.dashboard_page.get_card(card_title=title)
 
-    def _test_intersection_chart_edit(self, card):
-        with self.dashboard_page.edit_and_assert_chart(card, ['28', '68'], self.dashboard_page.PIE_CHART_TYPE):
+    def _test_intersection_chart_edit(self, title):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.get_card(title),
+                                                       ['28', '68'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(HOSTNAME_DC_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['8', '28', '64'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.get_card(title),
+                                                       ['8', '28', '64'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(WINDOWS_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['61', '39'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.get_card(title),
+                                                       ['61', '39'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE)
             self.dashboard_page.select_intersection_chart_first_query(self.NON_LOCAL_USERS_QUERY_NAME)
             self.dashboard_page.click_add_view()
             self.dashboard_page.select_intersection_chart_second_query(self.AD_ADMINS_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['50', '50'], self.dashboard_page.PIE_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.get_card(title),
+                                                       ['50', '50'], self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_second_query(self.AD_BAD_CONFIG_QUERY_NAME)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['28', '22', '17', '33'],
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.get_card(title),
+                                                       ['28', '22', '17', '33'],
                                                        self.dashboard_page.PIE_CHART_TYPE):
             self.dashboard_page.select_intersection_chart_first_query(self.AD_ADMINS_QUERY_NAME)
 
-    def _test_comparison_chart_edit(self, card):
-        with self.dashboard_page.edit_and_assert_chart(card, ['51', '49'], self.dashboard_page.PIE_CHART_TYPE):
+    def _test_comparison_chart_edit(self, card_title):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.find_dashboard_card(title=card_title),
+                                                       ['51', '49'], self.dashboard_page.PIE_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_view_name(MANAGED_DEVICES_QUERY_NAME, views_list[1])
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['24', '23'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.find_dashboard_card(title=card_title),
+                                                       ['24', '23'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             self.dashboard_page.change_chart_type(self.dashboard_page.HISTOGRAM_CHART_TYPE)
 
-        with self.dashboard_page.edit_and_assert_chart(card, ['23', '18'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
+        with self.dashboard_page.edit_and_assert_chart(self.dashboard_page.find_dashboard_card(title=card_title),
+                                                       ['23', '18'], self.dashboard_page.HISTOGRAM_CHART_TYPE):
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(USERS_MODULE, views_list[1])
             self.dashboard_page.select_chart_view_name(self.NON_LOCAL_USERS_QUERY_NAME, views_list[1])
@@ -224,25 +234,14 @@ class TestDashboardActions(TestBase):
         if do_remove:
             self.dashboard_page.remove_chart_segment_filter(filter_position)
 
-    def assert_current_page_and_total_items_histogram_chart(self, card, assert_data, first=True):
-        histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-        total_items = self.dashboard_page.get_paginator_total_num_of_items(histogram_chart)
-        if first:
-            current_page_number = self.dashboard_page.get_paginator_num_of_items(histogram_chart)
-        else:
-            current_page_number = '-'.join([self.dashboard_page.get_paginator_from_item_number(histogram_chart),
-                                            self.dashboard_page.get_paginator_to_item_number(histogram_chart,
-                                                                                             total_items)])
+    def assert_current_page_and_total_items_histogram_chart(self, card, assert_data):
+        total = self.dashboard_page.get_paginator_total_num_of_items(card)
 
-        assert assert_data == [current_page_number, total_items]
-
-    def toggle_card_search(self, card):
-        card.find_element_by_css_selector(self.SEARCH_ICON_CSS).click()
+        page = self.dashboard_page.get_paginator_active_page(card)
+        assert assert_data == [page, total]
 
     def fill_card_search(self, card, text):
         self.dashboard_page.fill_card_search_input(card, text)
-        # wait for animation to finish
-        time.sleep(1)
 
     def test_segmentation_chart_search_in_histogram(self):
         stress = stresstest_service.StresstestService()
@@ -259,23 +258,21 @@ class TestDashboardActions(TestBase):
                                                       title=self.TEST_EDIT_CARD_TITLE)
             self.dashboard_page.wait_for_spinner_to_end()
             card = self.dashboard_page.find_dashboard_card(self.TEST_EDIT_CARD_TITLE)
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
-            self.toggle_card_search(card)
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '625'])
             self.fill_card_search(card, '10')
 
             # check search worked
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '17'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '17'])
             self.fill_card_search(card, 'avigdor')
 
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '600'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '600'])
             for _ in range(12):
-                histogram_chart = self.dashboard_page.get_histogram_chart_from_card(card)
-                self.dashboard_page.click_to_next_page(histogram_chart)
+                self.dashboard_page.click_to_next_page(card)
             # check for total number wont change after fetch more data
-            self.assert_current_page_and_total_items_histogram_chart(card, ['61-65', '600'], False)
-            self.fill_card_search(card, '')
+            self.assert_current_page_and_total_items_histogram_chart(card, ['13', '600'])
+            self.dashboard_page.clear_card_search(card=card)
             # check if get back to page one
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '625'])
             self.fill_card_search(card, '100')
             self.assert_current_page_and_total_items_histogram_chart(card, ['1', '1'])
             self.dashboard_page.edit_card(self.TEST_EDIT_CARD_TITLE)
@@ -283,7 +280,7 @@ class TestDashboardActions(TestBase):
             # wait for animation to finish
             time.sleep(1)
             # check if filter reset
-            self.assert_current_page_and_total_items_histogram_chart(card, ['5', '625'])
+            self.assert_current_page_and_total_items_histogram_chart(card, ['1', '1'])
             assert self.dashboard_page.get_card_search_input_text(card) == ''
             self.adapters_page.clean_adapter_servers(STRESSTEST_ADAPTER_NAME)
         self.wait_for_adapter_down(STRESSTEST_ADAPTER)

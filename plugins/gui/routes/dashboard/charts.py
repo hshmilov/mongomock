@@ -102,7 +102,7 @@ class Charts:
                          activity_params=[CHART_TYPE, SPACE_NAME, CHART_NAME], proceed_and_set_access=True)
     def add_dashboard_space_panel(self, space_id, no_access):
         """
-        POST a new Dashboard Panel configuration, attached to requested space
+        POST a new Dashboard chart configuration, attached to requested space
 
         :param space_id: The ObjectId of the space for adding the panel to
         :param no_access: this endpoint called by user with no permissions if true
@@ -113,56 +113,94 @@ class Charts:
         if no_access and not self._is_personal_space(source_space_id):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
-        dashboard_data = dict(self.get_request_data_as_object())
-        if not dashboard_data.get('name'):
+        chart_data = dict(self.get_request_data_as_object())
+        if not chart_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
-        if not dashboard_data.get('config'):
+        if not chart_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
 
         if self.restrict_space_action_by_user_role(source_space_id):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
-        dashboard_data['space'] = source_space_id
-        dashboard_data['user_id'] = get_connected_user_id()
-        dashboard_data[LAST_UPDATED_FIELD] = datetime.now()
-        insert_result = self._dashboard_collection.insert_one(dashboard_data)
+        chart_data['space'] = source_space_id
+        chart_data['user_id'] = get_connected_user_id()
+        chart_data[LAST_UPDATED_FIELD] = datetime.now()
+        insert_result = self._dashboard_collection.insert_one(chart_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
-        self._link_dashboard(dashboard_data, insert_result.inserted_id, space_id)
+        trend_chart_id = self._trend_chart_handler(chart_data, insert_result.inserted_id, space_id)
         # Adding to the 'panels_order' attribute the newly panelId created through the wizard
-        dashboard_space = self._dashboard_spaces_collection.find_one_and_update({
+        space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(space_id)
         }, {
             '$push': {
                 'panels_order': str(insert_result.inserted_id)
             }
         })
+        chart_name = chart_data.get('name', '')
+        chart_metric = chart_data.get('metric')
         return jsonify({
-            SPACE_NAME: dashboard_space.get('name', ''),
-            CHART_NAME: dashboard_data.get('name', ''),
-            CHART_TYPE: ChartTitle.from_name(dashboard_data.get('metric'))
+            'uuid': str(insert_result.inserted_id),
+            'config': chart_data.get('config', {}),
+            'metric': chart_metric,
+            'name': chart_name,
+            'space': str(space_id),
+            'user_id': str(chart_data.get('user_id')),
+            'view': chart_data.get('view'),
+            'linked_dashboard': str(trend_chart_id),
+            SPACE_NAME: space.get('name', ''),
+            CHART_NAME: chart_name,
+            CHART_TYPE: chart_metric
         })
 
-    def _link_dashboard(self, dashboard_data, dashboard_id, space_id):
-        if dashboard_data.get('config').get('show_timeline'):
-            config = dashboard_data.get('config')
-            hidden_dashboard_data = {'metric': 'segment_timeline',
-                                     'name': dashboard_data.get('name'), 'view': 'line',
-                                     'space': ObjectId(space_id), 'user_id': get_connected_user_id(),
-                                     'is_linked_dashboard': True, 'hide_empty': True,
-                                     'config': {'entity': config['entity'], 'view': config['view'],
-                                                'field': config['field'], 'value_filter': config['value_filter'],
-                                                'include_empty': config.get('include_empty', False),
-                                                'timeframe': config['timeframe']}, LAST_UPDATED_FIELD: datetime.now()}
-            insert_result = self._dashboard_collection.insert_one(hidden_dashboard_data)
-            if insert_result and insert_result.inserted_id:
-                # link original dashboard to hidden dashboard
-                hidden_dashboard_id = str(insert_result.inserted_id)
-                self._dashboard_collection.find_one_and_update({
-                    '_id': ObjectId(dashboard_id)
-                }, {
-                    '$set': {'linked_dashboard': hidden_dashboard_id}
-                })
-                return hidden_dashboard_id
+    def _trend_chart_handler(self, chart_data, chart_id, space_id):
+        if chart_data.get('config').get('show_timeline'):
+            generated_id = self._link_trend_chart(chart_data, chart_id, space_id)
+            return generated_id
+        if chart_data.get('linked_dashboard', None):
+            self._unlink_trend_chart(chart_data.get('linked_dashboard'), chart_id)
+        return None
+
+    def _unlink_trend_chart(self, trend_chart_id, chart_id):
+        self._dashboard_collection.find_one_and_delete({'_id': ObjectId(trend_chart_id)})
+        self._dashboard_collection.find_one_and_update({
+            '_id': ObjectId(chart_id)
+        }, {
+            '$unset': {'linked_dashboard': 1}
+        })
+
+    def _link_trend_chart(self, chart_data, chart_id, space_id):
+        config = chart_data.get('config')
+        trend_chart_data = {'metric': 'segment_timeline',
+                            'name': chart_data.get('name'), 'view': 'line',
+                            'space': ObjectId(space_id), 'user_id': get_connected_user_id(),
+                            'is_linked_dashboard': True, 'hide_empty': True,
+                            'config': {
+                                'entity': config['entity'], 'view': config['view'],
+                                'field': config['field'], 'value_filter': config['value_filter'],
+                                'include_empty': config.get('include_empty', False),
+                                'timeframe': config['timeframe']}, LAST_UPDATED_FIELD: datetime.now()}
+
+        insert_result = self._dashboard_collection.find_one_and_update(
+            {'_id': ObjectId(chart_data.get('linked_dashboard'))},
+            {'$set': trend_chart_data},
+            upsert=True,
+            return_document=ReturnDocument.AFTER
+        )
+        if insert_result and insert_result.get('_id'):
+            # link trend chart to the original chart
+            trend_chart_id = str(insert_result.get('_id'))
+            self._dashboard_collection.find_one_and_update({
+                '_id': ObjectId(chart_id)
+            }, {
+                '$set': {'linked_dashboard': ObjectId(trend_chart_id)}
+            })
+
+            if chart_data.get('linked_dashboard'):
+                # clean cache if chart was updated
+                generate_dashboard.clean_cache([trend_chart_id, None, None])
+                generate_dashboard_historical.clean_cache([trend_chart_id, WILDCARD_ARG, WILDCARD_ARG])
+            return trend_chart_id
+
         return None
 
     @paginated()
@@ -242,10 +280,10 @@ class Charts:
         if no_access and not self._is_personal_space(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
-        dashboard_data = dict(self.get_request_data_as_object())
-
         if self.restrict_space_action_by_user_role(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        dashboard_data = dict(self.get_request_data_as_object())
 
         update_data = {
             **dashboard_data,
@@ -255,34 +293,28 @@ class Charts:
         new_chart = self._dashboard_collection.find_one_and_update(
             filter={'_id': panel_id},
             update={'$set': update_data},
-            projection={'name': 1, 'space': 1, 'config.sort': 1, 'linked_dashboard': 1},
             return_document=ReturnDocument.AFTER)
 
         if not new_chart:
             return return_error(f'No dashboard by the id {str(panel_id)} found or updated', 400)
         space = self._dashboard_spaces_collection.find_one({'_id': new_chart.get('space')}, {'name': 1})
         # if required by config, recreate and link a linked dashboard
-        new_linked_dashboard = self._link_dashboard(update_data, panel_id, space['_id'])
-        # config changes require linked dashboard recalculation
-        old_linked_dashboard = new_chart.get('linked_dashboard', None)
-        if old_linked_dashboard:
-            # delete linked dashboard
-            self.delete_dashboard_panel(old_linked_dashboard, no_access=False)
-            generate_dashboard.clean_cache([old_linked_dashboard, None, None])
-            generate_dashboard_historical.clean_cache([old_linked_dashboard, WILDCARD_ARG, WILDCARD_ARG])
-            # if no new linked dashboard, clear link field
-            if not new_linked_dashboard:
-                self._dashboard_collection.find_one_and_update({
-                    '_id': ObjectId(panel_id)
-                }, {
-                    '$unset': {'linked_dashboard': 1}
-                })
+        trend_chart_id = self._trend_chart_handler(update_data, panel_id, space['_id'])
+
         # we clean the cache of the updated config, in the next request the chart data will be refreshed
         if new_chart['config'] != old_chart['config']:
             generate_dashboard.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
             generate_dashboard_historical.clean_cache([panel_id, WILDCARD_ARG, WILDCARD_ARG])
 
         return jsonify({
+            'uuid': str(panel_id),
+            'config': new_chart.get('config', {}),
+            'metric': new_chart.get('metric'),
+            'name': new_chart.get('name'),
+            'space': str(space['_id']),
+            'user_id': str(new_chart.get('user_id')),
+            'view': new_chart.get('view'),
+            'linked_dashboard': str(trend_chart_id),
             SPACE_NAME: space.get('name', ''),
             CHART_NAME: new_chart.get('name', '')
         })
@@ -308,6 +340,9 @@ class Charts:
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         if self.restrict_space_action_by_user_role(old_chart.get('space')):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        if no_access and not self._is_personal_space(old_chart.get('space')):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         update_data = {

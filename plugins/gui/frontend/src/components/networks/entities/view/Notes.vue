@@ -62,6 +62,7 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
 import { mapState, mapActions } from 'vuex';
 import { getEntityPermissionCategory } from '@constants/entities';
 import XSearchInput from '../../../neurons/inputs/SearchInput.vue';
@@ -117,9 +118,10 @@ export default {
   computed: {
     ...mapState({
       currentUser(state) {
+        const user = _get(state, 'auth.currentUser.data') || {};
         return {
-          uuid: state.auth.currentUser.data.uuid,
-          admin: state.auth.currentUser.data.admin || state.auth.currentUser.data.role_name === 'Admin',
+          uuid: user.uuid,
+          admin: user.admin || user.role_name === 'Admin',
         };
       },
     }),

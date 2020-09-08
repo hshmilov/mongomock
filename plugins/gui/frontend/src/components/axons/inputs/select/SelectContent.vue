@@ -367,7 +367,7 @@ export default {
 
       &.x-footer-option {
         margin: 0;
-        border-top: 1px solid $grey-2;;
+        border-top: 1px solid $grey-2;
       }
 
     }

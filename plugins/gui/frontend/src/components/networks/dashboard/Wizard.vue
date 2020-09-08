@@ -7,7 +7,7 @@
     @change="finishNewDashboard"
   >
     <h3 v-if="editMode">
-      Edit Dashboard Chart - "{{ panel.data.name }}"
+      Edit Dashboard Chart - "{{ dashboard.name }}"
     </h3>
     <h3 v-else>
       Create a Dashboard Chart
@@ -61,7 +61,7 @@
           ref="dashboardRef"
           v-model="dashboard.config"
           :entities="entityOptions"
-          :view-options="viewSelectOptionsGetter(!isPersonalDashboardSpaceId)"
+          :view-options="viewSelectOptionsGetter(!isPersonalSpace)"
           :chart-view="dashboard.view"
           class="grid-span2"
           @validate="configValid = $event"
@@ -86,7 +86,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 import XIcon from '@axons/icons/Icon';
 import { formatDate, getTimeZoneDiff } from '@constants/utils';
 
@@ -110,13 +110,10 @@ import { LAZY_FETCH_DATA_FIELDS } from '../../../store/actions';
 import { DATE_FORMAT } from '../../../store/getters';
 import {
   ChartViewEnum,
-  ChartTypesEnum, SpaceTypesEnum, ChartWizardComponentByMetricEnum,
+  ChartTypesEnum, ChartWizardComponentByMetricEnum,
   ChartIconByViewEnum,
 } from '../../../constants/dashboard';
 
-const dashboard = {
-  metric: '', view: '', name: '', config: null,
-};
 export default {
   name: 'XChartWizard',
   components: {
@@ -137,24 +134,28 @@ export default {
       type: String,
       required: true,
     },
+    isPersonalSpace: {
+      type: Boolean,
+      default: false,
+    },
     panel: {
       type: Object,
-      default: () => {},
+      default: () => ({
+        metric: '', view: '', name: '', config: null,
+      }),
+    },
+    editMode: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
     return {
-      dashboard: { ...dashboard },
+      dashboard: { ...this.panel },
       configValid: false,
     };
   },
   computed: {
-    ...mapState({
-      isPersonalDashboardSpaceId(state) {
-        return state.dashboard.spaces.data
-          .find((space) => space.type === SpaceTypesEnum.personal).uuid === this.space;
-      },
-    }),
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
@@ -165,9 +166,6 @@ export default {
       set(value) {
         this.dashboard.view = value;
       },
-    },
-    editMode() {
-      return this.panel !== undefined && this.panel !== null && this.panel.data !== undefined;
     },
     metricOptions() {
       return [
@@ -224,7 +222,7 @@ export default {
       return ChartWizardComponentByMetricEnum[this.dashboard.metric];
     },
     dashboardData() {
-      return this.isPersonalDashboardSpaceId
+      return this.isPersonalSpace
         ? { ...this.dashboard, private: true }
         : this.dashboard;
     },
@@ -232,7 +230,6 @@ export default {
   async created() {
     this.entityOptions.forEach((entity) => this.fetchDataFields({ module: entity.name }));
     if (this.editMode) {
-      this.dashboard = { ...this.panel.data };
       this.configValid = true;
     }
   },
@@ -256,18 +253,20 @@ export default {
     },
     saveNewDashboard() {
       if (this.panel && this.panel.uuid) {
-        this.$emit('update', this.panel.uuid);
         return this.changeDashboard({
           panelId: this.panel.uuid,
           spaceId: this.space,
           data: this.dashboardData,
+        }).then(({ data }) => {
+          this.$emit('update', { ...this.dashboardData, ...data });
         });
       }
       return this.saveDashboard({
         data: this.dashboardData,
         space: this.space,
-      }).then(() => {
+      }).then(({ data }) => {
         // complete milestone here
+        this.$emit('add', data);
         this.completeMilestone({ milestoneName: DASHBOARD_CREATED });
       });
     },

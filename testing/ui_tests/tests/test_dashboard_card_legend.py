@@ -3,7 +3,8 @@ import math
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, HOSTNAME_DC_QUERY, HOSTNAME_DC_QUERY_NAME,
                                       IPS_192_168_QUERY, IPS_192_168_QUERY_NAME,
-                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY)
+                                      DEVICES_MODULE, MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY,
+                                      UNMANAGED_DEVICES_QUERY_NAME)
 
 
 class TestDashboardCardLegend(TestBase):
@@ -51,13 +52,15 @@ class TestDashboardCardLegend(TestBase):
         self.dashboard_page.get_legend(card)
 
         # verify that 2nd click hides legend
-        self.dashboard_page.click_legend_toggle(card)
+        self.dashboard_page.close_chart_drawer(card)
         self.dashboard_page.verify_legend_absent(card)
 
         # verify that menu click closes legend
         self.dashboard_page.click_legend_toggle(card)
         self.dashboard_page.get_legend(card)
         self.dashboard_page.edit_card(self.TEST_COMPARISON_TITLE)
+        self.dashboard_page.select_chart_view_name(UNMANAGED_DEVICES_QUERY_NAME)
+        self.dashboard_page.click_card_save()
         self.dashboard_page.verify_legend_absent(card)
 
     def test_comparison_pie_chart_legend(self):

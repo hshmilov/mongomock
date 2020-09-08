@@ -115,7 +115,10 @@ export const requireConnectionLabel = (state) => {
 };
 
 export const IS_EXPIRED = 'IS_EXPIRED';
-export const isExpired = (state) => state.expired.data && state.auth.currentUser.data.user_name !== '_axonius';
+export const isExpired = (state) => {
+  const username = _get(state, 'auth.currentUser.data.user_name');
+  return state.expired.data && username !== '_axonius';
+};
 
 export const DATE_FORMAT = 'DATE_FORMAT';
 export const dateFormat = (state) => {

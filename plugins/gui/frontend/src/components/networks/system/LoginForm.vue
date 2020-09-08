@@ -6,7 +6,7 @@
     <XForm
       v-model="credentials"
       :schema="schema"
-      :error="prettyUserError"
+      :error="userError"
       @validate="onValidate"
       @submit="onLogin"
     />
@@ -19,21 +19,19 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import { mapState, mapActions } from 'vuex';
+import { Modal } from 'ant-design-vue'
 import XForm from '../../neurons/schema/Form.vue';
 import XButton from '../../axons/inputs/Button.vue';
-import userErrorMixin from '../../../mixins/user_error';
 import { GettingStartedPubSub } from '../../App.vue';
 
 import { LOGIN } from '../../../store/modules/auth';
-import { Modal } from 'ant-design-vue'
 
 export default {
   name: 'XLoginForm',
   components: {
     XForm, XButton,
   },
-  mixins: [userErrorMixin],
   props: {
     settings: {
       type: Object,
@@ -61,6 +59,11 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      userError(state) {
+        return state.auth.currentUser.error;
+      },
+    }),
     schema() {
       return {
         type: 'array',

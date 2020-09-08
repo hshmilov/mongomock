@@ -45,7 +45,7 @@ class TestDashboardSpaces(TestDashboardChartBase):
                               wait_for_getting_started=False)
         self.dashboard_page.switch_to_page()
         assert not self.dashboard_page.is_missing_space(DASHBOARD_SPACE_PERSONAL)
-        self.dashboard_page.click_tab(DASHBOARD_SPACE_PERSONAL)
+        self.dashboard_page.click_space_by_name(DASHBOARD_SPACE_PERSONAL)
         assert not self.dashboard_page.is_element_disabled(self.dashboard_page.find_new_chart_card())
 
     def test_dashboard_spaces(self):
