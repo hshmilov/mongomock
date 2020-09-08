@@ -7,7 +7,9 @@ import zipfile
 from pathlib import Path
 
 import distro
+from retrying import retry
 
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, MONGO_UNIQUE_NAME
 from axonius.consts.system_consts import PYRUN_PATH_HOST, NODE_MARKER_PATH
 from axonius.utils.network.docker_network import read_weave_network_range
 from conf_tools import get_customer_conf_json
@@ -29,6 +31,7 @@ from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import get_weave_subnet_ip_range
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
 from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes
+from services.plugins.httpd_service import HttpdService
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from sysctl_editor import set_sysctl_value
@@ -54,7 +57,6 @@ def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
 def after_venv_activation(first_time, no_research, master_only, installer_path):
     print(f'installing on top of customer_conf: {get_customer_conf_json()}')
     node_instances = None
-    nodes_upgraded = False
     # If this is a master and it should upgrade the entire master
     if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Upgrading entire cluster')
@@ -64,13 +66,19 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
                               if instance['node_id'] != cluster_data['my_entity']['node_id']]
             print_state('Shutting down adapters on nodes')
             shutdown_adapters(node_instances)
-            # if we use remote mongo, upgrade the node before master
+            # if we use remote mongo, upgrade the mongo node before master
             if get_instance_mode() == InstancesModes.remote_mongo.value:
                 print_state('Downloading upgrader on remote mongo node')
-                download_upgrader_on_nodes(node_instances, installer_path)
+                remote_mongo_node_id = find_mongo_instance(node_instances)
+                print_state(f'remote mongo node id: {remote_mongo_node_id.get("node_id")}')
+                download_upgrader_on_nodes([remote_mongo_node_id, ], installer_path)
                 print_state('Upgrading remote mongo node')
+                httpd_service = HttpdService()
+                httpd_service.take_process_ownership()
+                httpd_service.start(allow_restart=True, show_print=False, mode='prod')
                 upgrade_nodes(node_instances)
-                nodes_upgraded = True
+                node_instances = [node for node in node_instances
+                                  if node.get('node_id') != remote_mongo_node_id.get('node_id')]
 
     if not first_time:
         stop_old()
@@ -97,11 +105,35 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
-    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances and not nodes_upgraded:
+    if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances:
         print_state('Downloading upgrader on nodes')
         download_upgrader_on_nodes(node_instances, installer_path)
         print_state('Upgrading nodes')
         upgrade_nodes(node_instances)
+
+
+@retry(stop_max_attempt_number=3, wait_fixed=1000)
+def find_mongo_instance(node_instances):
+    try:
+        report = subprocess.check_output(f'/usr/local/bin/weave report'.split())
+        report = json.loads(report)
+        # get master instance mac address
+        master_mac = report['Router']['Peers'][0]['Name']
+        dns_entries = report['DNS']['Entries']
+        # list weave dns entries
+        # weave have 2 dns records for mongo, one for the master proxy and one for the real mongo
+        mongo_instance = [x for x in dns_entries
+                          if x['Hostname'].startswith(MONGO_UNIQUE_NAME) and master_mac not in x['Origin']][0]
+        remote_mongo_instance_control_instance = \
+            [x for x in dns_entries if x['Hostname'].startswith('instance_control') and
+             mongo_instance['Origin'] == x['Origin']][0]
+        for node in node_instances:
+            if remote_mongo_instance_control_instance.get('Hostname', '').startswith(node.get(PLUGIN_UNIQUE_NAME)):
+                return node
+        return None
+    except Exception:
+        print('Error while finding remote mongo instance')
+        raise
 
 
 def reset_weave_network_on_bad_ip_allocation():

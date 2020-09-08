@@ -1,11 +1,14 @@
 import shlex
 import subprocess
+import time
 
 from axonius.consts.plugin_consts import MONGO_UNIQUE_NAME
 from axonius.consts.system_consts import DOCKERHUB_URL
 from services.ports import DOCKER_PORTS
 from services.system_service import SystemService
 from services.weave_service import WeaveService
+
+REMOTE_MONGO_WAIT_TIMEOUT = 20 * 60
 
 
 class RemoteMongoProxyService(SystemService, WeaveService):
@@ -23,6 +26,21 @@ class RemoteMongoProxyService(SystemService, WeaveService):
     def exposed_ports(self):
         return [(DOCKER_PORTS[MONGO_UNIQUE_NAME], DOCKER_PORTS[MONGO_UNIQUE_NAME])]
 
+    def wait_for_remote_mongo(self, timeout: float = REMOTE_MONGO_WAIT_TIMEOUT) -> str:
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                weave_dns_lookup_command = shlex.split(f'weave dns-lookup {self.fqdn}')
+                dns_lookup_result = subprocess.check_output(weave_dns_lookup_command).decode('utf-8')
+                if not dns_lookup_result:
+                    continue
+                mongo_ip = dns_lookup_result.splitlines()[0]
+                return mongo_ip
+            except Exception as e:
+                print(f'error while waiting for mongo: {e}')
+            time.sleep(5)
+        return ''
+
     @property
     def _additional_parameters(self):
         """
@@ -31,9 +49,7 @@ class RemoteMongoProxyService(SystemService, WeaveService):
         :return:
         """
         mongo_port = DOCKER_PORTS[MONGO_UNIQUE_NAME]
-        weave_dns_lookup_command = shlex.split(f'weave dns-lookup {self.fqdn}')
-        dns_lookup_result = subprocess.check_output(weave_dns_lookup_command).decode('utf-8')
-        mongo_ip = dns_lookup_result.splitlines()[0]
+        mongo_ip = self.wait_for_remote_mongo()
         return shlex.split(f'tcp-listen:{mongo_port},reuseaddr,fork,'
                            f'forever tcp:{mongo_ip}:{mongo_port}')
 
