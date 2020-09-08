@@ -1105,7 +1105,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                                 val = val.upper().split('.')[0]
 
                 # Third priority is the latest seen Assets adapter
-                if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
+                if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and isinstance(last_seen, datetime) and
                         (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
                         (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
                     if last_seen is None:
