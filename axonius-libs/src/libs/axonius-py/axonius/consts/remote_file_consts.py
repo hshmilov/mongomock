@@ -2,10 +2,10 @@
 RESOURCE_PATH_DESCRIPTION = '''Path can be either an HTTP(S) URL, FTP URL, or an SMB share path.
 When specifying an HTTP(S) URL, the endpoint must support the HTTP GET method.
 All Non-FTP urls must start with HTTP:// or HTTPS:// .
-FTP urls must start with FTP:// .
-The optional username and password will be used for BASIC authentication, if provided.
+FTP urls must start with either FTP://, FTPS:// or SFTP://.
+The optional username and password will be used for authentication, if provided.
 When specifying an SMB Share path, the path must start with double-backslashes ("\\\\").
-Username and password, if provided for an SMB path, will be used to authentication.'''
+Username and password, if provided for an SMB path, will be used for authentication.'''
 
 AWS_ENDPOINT_FOR_REACHABILITY_TEST = f'https://apigateway.us-east-2.amazonaws.com/'   # endpoint for us-east-2
 
@@ -107,3 +107,7 @@ FILE_SCHEMA_REQUIRED = [
     's3_use_ec2_attached_instance_profile',
     'suppress_netbios'
 ]
+
+FTP_SCHEMES_FTP = ['ftp', 'ftps']
+FTP_SCHEMES_SFTP = ['sftp']
+FTP_SCHEMES_ALL = [*FTP_SCHEMES_FTP, *FTP_SCHEMES_SFTP]
