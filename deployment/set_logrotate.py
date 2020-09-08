@@ -44,7 +44,7 @@ def set_logrotate(args):
 
     log_paths = ['/var/log/chef*.log',
                  '/var/log/teleport.log',
-                 '/var/log/chisel.log']
+                 '/var/log/chisel-*.log']
     formatted = '\n'.join(log_paths)
 
     Path('/etc/logrotate.d/axonius_var_log').write_text(f'''{formatted} {{
