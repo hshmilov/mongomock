@@ -1,5 +1,3 @@
-import pytest
-
 from ui_tests.tests.ui_test_base import TestBase
 from services.standalone_services.smtp_service import generate_random_valid_email
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
@@ -41,7 +39,6 @@ class TestEmailEnforce(TestBase):
             self.devices_page.reset_query()
         self.settings_page.remove_email_server()
 
-    @pytest.mark.skip('AX-8509')
     def test_email_enforce_with_filtered_columns(self):
         self._test_email_enforce(dict(
             query=self.devices_page.VALUE_OS_WINDOWS,
