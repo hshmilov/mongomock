@@ -129,7 +129,7 @@ export default {
       this.ldapLogin(this.ldapData.credentials);
     },
     onSamlLogin() {
-      window.location.href = '/api/login/saml';
+      window.location.href = `/api/login/saml?path=${this.$route.path}`;
     },
     toggleLdapLogin() {
       this.ldapData.active = !this.ldapData.active;

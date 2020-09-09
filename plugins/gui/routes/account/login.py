@@ -534,6 +534,10 @@ class Login:
 
         auth = self.__get_saml_auth_object(request, saml_settings, True)
 
+        # set path to redirect to once user has successfully logged in
+        if not session.get('target_path'):
+            session['target_path'] = request.args.get('path', '/')
+
         if 'acs' in request.args:
             auth.process_response()
             errors = auth.get_errors()
@@ -578,7 +582,7 @@ class Login:
                                                  rules_data=attributes)
 
                 logger.info(f'SAML Login success with name id {name_id}')
-                redirect_response = redirect('/', code=302)
+                redirect_response = redirect(session['target_path'], code=302)
                 self._add_expiration_timeout_cookie(redirect_response)
                 return redirect_response
             else:

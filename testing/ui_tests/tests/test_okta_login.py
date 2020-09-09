@@ -12,10 +12,9 @@ class TestOktaLogin(PermissionsTestBase):
                                     OKTA_LOGIN_DETAILS['meta_data_url'],
                                     '',
                                     PREDEFINED_ROLE_VIEWER)
-
+        self.dashboard_page.switch_to_page()
         hosts_file_modifier.HostsFileModifier.add_url_if_not_exist('127.0.0.1',
                                                                    self.login_page.OKTA_URL)
-
         self.change_base_url(f'https://{self.login_page.OKTA_URL}:{self.port}')
         self.login_page.wait_for_login_page_to_load()
         self.login_page.login_with_okta_server(OKTA_CLIENT_LOGIN_DETAILS)

@@ -99,12 +99,16 @@ class TestSaml(PermissionsTestBase):
 
     def test_saml_user_added(self):
         with create_saml_server(self.base_url) as saml_server:
-            self.settings_page.set_saml(saml_server.name, saml_server.metadata_url, '', PREDEFINED_ROLE_RESTRICTED)
-
+            self.settings_page.set_saml(saml_server.name, saml_server.metadata_url, '', PREDEFINED_ROLE_VIEWER)
             self.login_page.logout()
             self.login_page.wait_for_login_page_to_load()
+
+            # Set the devices page path in the url
+            self.driver.get(self.devices_page.url)
             self.login_page.login_with_saml_server(saml_server)
 
+            # Make sure that after logging in, we are redirected to the devices page
+            assert self.driver.current_url == self.devices_page.url
             self.login_page.logout()
 
             self.login()

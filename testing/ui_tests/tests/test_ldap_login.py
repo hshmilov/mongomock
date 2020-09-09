@@ -3,6 +3,7 @@ from ui_tests.tests.permissions_test_base import PermissionsTestBase
 from axonius.consts.gui_consts import PREDEFINED_ROLE_RESTRICTED, LDAP_GROUP, PREDEFINED_ROLE_ADMIN, EMAIL_ADDRESS, \
     EMAIL_DOMAIN, PREDEFINED_ROLE_VIEWER
 from test_credentials.test_ad_credentials import ad_client1_details, GROUPS_USERS, ad_client1_mail
+from test_credentials.test_gui_credentials import DEFAULT_USER
 
 
 def _get_domain_and_username(client_details):
@@ -11,21 +12,34 @@ def _get_domain_and_username(client_details):
 
 class TestLDAPLogin(PermissionsTestBase):
     def test_ldap_login(self):
-        self._set_ldap(ad_client1_details['dc_name'], role_name=PREDEFINED_ROLE_RESTRICTED)
+        self._set_ldap(ad_client1_details['dc_name'], role_name=PREDEFINED_ROLE_VIEWER)
         domain, username = _get_domain_and_username(ad_client1_details)
         self._logout_and_login_with_ldap(username + 'bad',
                                          ad_client1_details['password'],
-                                         domain)
+                                         domain,
+                                         self.devices_page.url)
         assert self.login_page.find_failed_ad_login_msg()
-
         self.login_page.fill_ldap_login_details(username=username,
                                                 password=ad_client1_details['password'],
                                                 domain=domain)
         self.login_page.click_login_button()
 
+        # Make sure that after logging in, we are redirected to the devices page
+        assert self.driver.current_url == self.devices_page.url
+
         # Making sure we are indeed logged in
         self.account_page.switch_to_page()
 
+        # Change the ldap user role to be restricted
+        self.login_page.logout()
+        self.login_page.login(username=DEFAULT_USER['user_name'], password=DEFAULT_USER['password'])
+        self.settings_page.switch_to_page()
+        self.settings_page.click_manage_users_settings()
+        self.settings_page.edit_user_wait_done(username,
+                                               role_name=self.settings_page.RESTRICTED_ROLE)
+        self._logout_and_login_with_ldap(username,
+                                         ad_client1_details['password'],
+                                         domain)
         for screen in self.get_all_screens():
             screen.assert_screen_is_restricted()
 
@@ -180,9 +194,12 @@ class TestLDAPLogin(PermissionsTestBase):
         self.settings_page.click_save_identity_providers_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
-    def _logout_and_login_with_ldap(self, username, password, domain):
+    def _logout_and_login_with_ldap(self, username, password, domain, target_url=None):
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
+        # Set the target url if provided
+        if target_url:
+            self.driver.get(target_url)
         self.login_page.click_login_with_ldap()
         self.login_page.wait_for_spinner_to_end()
         self.login_page.fill_ldap_login_details(username=username,
