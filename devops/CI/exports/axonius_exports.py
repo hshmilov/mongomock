@@ -12,6 +12,7 @@ import subprocess
 
 import boto3
 import requests
+from botocore.exceptions import ClientError
 
 from CI.exports.version_passwords import VersionPasswords
 
@@ -50,6 +51,12 @@ def main():
     s3_upload_parser.add_argument('--zip', type=pathlib.Path, default=None)
     s3_upload_parser.add_argument('--vhdx', type=pathlib.Path, default=None)
     s3_upload_parser.set_defaults(entrypoint=s3_upload)
+
+    s3_copy_parser = s3_subparsers.add_parser('copy')
+
+    s3_copy_parser.add_argument('--dest-key', type=str, default='nightly_latest/nightly_latest.py')
+    s3_copy_parser.add_argument('--name', type=str, required=True)
+    s3_copy_parser.set_defaults(entrypoint=s3_copy)
 
     installer_parser = subparsers.add_parser('installer')
     git_arguments = installer_parser.add_argument_group('git')
@@ -244,6 +251,30 @@ def try_upload_to_s3(s3_client, local_path, bucket, key):
         raise ExportFileAlreadyExists()
 
     s3_client.upload_file(Filename=str(local_path), Bucket=bucket, Key=key)
+
+
+def s3_copy(args, notify):
+    bucket = args.s3_bucket
+
+    s3_resource = boto3.resource('s3')
+
+    source_key = f'{args.name}/axonius_{args.name}.py'
+    dest_key = args.dest_key
+    try_copy_s3_objects_between_buckets(s3_resource, source_key, bucket, dest_key)
+
+
+def try_copy_s3_objects_between_buckets(s3_resource, source_key, bucket, dest_key):
+    try:
+        s3_resource.Object(bucket, source_key).load()
+    except ClientError:
+        raise FileNotFoundError()
+
+    copy_source = {
+        'Bucket': bucket,
+        'Key': source_key
+    }
+
+    s3_resource.meta.client.copy(copy_source, bucket, dest_key)
 
 
 def create_notify(args):
