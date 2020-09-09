@@ -653,7 +653,7 @@ def main():
 
                 return {
                     'ui_' + test_module.split('.py')[0]:
-                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py'
+                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py '
                         f'{all_extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
