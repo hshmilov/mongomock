@@ -47,7 +47,8 @@ from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPha
                                              CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD,
                                              RUN_ENFORCEMENT_CHECK_INTERVAL,
                                              RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID,
-                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME)
+                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
+                                             RUN_ENFORCEMENT_CHECK_THRESHOLD)
 from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
@@ -1321,9 +1322,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         current_time = current_date.time()
         scheduled_run_time = datetime.strptime(trigger.period_time, '%H:%M').time()
 
-        # check if time matches the scheduled time
+        # check if time matches the scheduled time, within 3 min threshold
         if (current_time < scheduled_run_time or
-                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_CHECK_INTERVAL):
+                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_CHECK_THRESHOLD):
+            return False
+
+        # check if triggered within the 3 min. threshold
+        if (trigger.last_triggered and
+                days_diff(current_date, trigger.last_triggered) == 0 and
+                time_diff(current_time, trigger.last_triggered.time()).seconds < RUN_ENFORCEMENT_CHECK_THRESHOLD):
             return False
 
         if trigger.period == TriggerPeriod.daily:
