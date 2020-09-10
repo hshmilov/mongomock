@@ -969,7 +969,7 @@ def _parse_range_timeline(timeframe):
             logger.error(f'Unexpected timeframe unit {timeframe["unit"]} for reltaive chart')
             return None, None
         date_from = date_to - timedelta(days=timeframe['count'] * RANGE_UNIT_DAYS[range_unit])
-    return date_from, date_to
+    return date_from.replace(tzinfo=None), date_to.replace(tzinfo=None)
 
 
 def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, date]]:
