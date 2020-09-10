@@ -223,8 +223,10 @@ class Charts:
         :param sort_by: sort for specific charts like segmentation. sort by value or segment.
         :param sort_order desc/asc
         """
+        is_refresh = request.args.get('refresh', False) == 'true'
+        is_blocking = request.args.get('blocking', False) == 'true'
         panel_id = ObjectId(panel_id)
-        if request.args.get('refresh', False):
+        if is_refresh:
             generate_dashboard.clean_cache([panel_id, sort_by, sort_order])
             generate_dashboard_historical.clean_cache([panel_id, sort_by, sort_order, WILDCARD_ARG, WILDCARD_ARG])
 
@@ -233,7 +235,7 @@ class Charts:
                                                                 sort_by=sort_by, sort_order=sort_order)
         else:
             try:
-                if request.args.get('refresh', False) or request.args.get('blocking', False):
+                if is_refresh or is_blocking:
                     # we want to wait for a fresh data
                     generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
                                                                             sort_order=sort_order,

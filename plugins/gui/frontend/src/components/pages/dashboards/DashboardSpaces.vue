@@ -225,6 +225,7 @@ export default {
     }),
     repeatedlyFetchSpaces() {
       this.fetchSpacesInterval = setTimeout(async () => {
+        if (this._isDestroyed) return;
         await this.fetchDashboardSpaces();
         this.repeatedlyFetchSpaces();
       }, 30000);
@@ -241,6 +242,7 @@ export default {
       }
 
       this.fetchAcativeSpaceInterval = setTimeout(async () => {
+        if (this._isDestroyed) return;
         await this.fetchActiveSpaceData(spaceId, true);
         this.repeatedlyFetchActiveSpace(spaceId, false);
       }, 30000);
@@ -253,16 +255,12 @@ export default {
     },
     // space actions
     async fetchActiveSpaceData(spaceId, hideSpinner = false) {
-      try {
-        if (!hideSpinner) {
-          this.spacesLoading = true;
-          this.activeSpaceData = null;
-        }
-        const res = await getCurrentSpaceData(spaceId);
-        this.activeSpaceData = res;
-      } catch (ex) {
-        this.goToDefaulDashAndRefetchSpaces();
+      if (!hideSpinner) {
+        this.spacesLoading = true;
+        this.activeSpaceData = null;
       }
+      const res = await getCurrentSpaceData(spaceId);
+      this.activeSpaceData = res;
       this.spacesLoading = false;
     },
     onEditActiveSpace() {
@@ -308,10 +306,6 @@ export default {
       } else {
         this.$router.push({ name: 'Dashboard', params: { spaceId: targetSpaceUuid } });
       }
-    },
-    goToDefaulDashAndRefetchSpaces() {
-      this.$router.push({ path: '/' });
-      this.fetchDashboardSpaces();
     },
     getSpaceActionsDescriptor(canAdd, canDelete) {
       const features = [];

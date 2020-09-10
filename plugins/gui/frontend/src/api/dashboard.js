@@ -27,7 +27,7 @@ export const getCurrentSpaceData = async (spaceId) => {
 
 export const fetchChartData = async (params) => {
   const {
-    uuid, historical, skip, limit, search, refresh, sortBy, sortOrder,
+    uuid, historical, skip, limit, search, refresh, sortBy, sortOrder, blocking,
   } = params;
 
   const uri = `/dashboard/charts/${uuid}`;
@@ -38,6 +38,7 @@ export const fetchChartData = async (params) => {
     limit,
     search,
     refresh,
+    blocking,
     sort_by: sortBy,
     sort_order: sortOrder,
   };

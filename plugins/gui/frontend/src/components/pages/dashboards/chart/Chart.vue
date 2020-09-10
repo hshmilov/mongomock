@@ -302,7 +302,8 @@ export default {
     },
   },
   created() {
-    this.fetchData();
+    // we make the first call with blocking = true to ensure we wait for new chart's data
+    this.fetchData({ blocking: true });
     if (this.trend) {
       this.fetchTrendChartData();
     }
@@ -361,6 +362,7 @@ export default {
       const {
         skip = (this.currentPage - 1) * this.pageLimit,
         refresh = false,
+        blocking = false,
       } = params;
 
       // show loading indication
@@ -378,14 +380,17 @@ export default {
           search: this.chartFilters.search,
           sortBy: type,
           sortOrder: order,
-          refresh,
+          refresh: refresh ? true : null,
+          blocking: blocking ? true : null,
         });
 
         if (status !== 200) {
           throw new Error();
         }
 
-        const { data: head, data_tail: tail, count } = data;
+        const {
+          data: head, data_tail: tail, count,
+        } = data;
         let chartData = {};
         if (this.pagination) {
           chartData = this.getPaginatedDataObject(head, tail, count, this.currentPage, this.chartData.content);

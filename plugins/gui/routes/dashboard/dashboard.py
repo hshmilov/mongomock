@@ -176,11 +176,14 @@ class Dashboard(Charts, Notifications):
             if not chart.get('hide_empty'):
                 return True
             chart_sort_config = chart.get('config', {}).get('sort', {})
-            chart_data = generate_dashboard(
-                chart['_id'],
-                sort_by=chart_sort_config.get('sort_by', None),
-                sort_order=chart_sort_config.get('sort_order', None))
-            has_data = chart_data.get('data') and chart_data['data'][0].get('portion', 0) not in [0, 1]
+            try:
+                chart_data = generate_dashboard(
+                    chart['_id'],
+                    sort_by=chart_sort_config.get('sort_by', None),
+                    sort_order=chart_sort_config.get('sort_order', None))
+                has_data = chart_data.get('data') and chart_data['data'][0].get('portion', 0) not in [0, 1]
+            except NoCacheException:
+                return False
             return has_data
         charts = [{
             'uuid': str(chart.get('_id')),
