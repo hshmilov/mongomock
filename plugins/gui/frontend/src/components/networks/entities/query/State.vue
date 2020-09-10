@@ -46,7 +46,7 @@
           v-else-if="!selectedView || !isEdited"
           id="query_save"
           type="link"
-          :disabled="disabled"
+          :disabled="!valid"
           @click="openSaveView"
         >Save As</XButton>
         <ADropDown
@@ -57,7 +57,7 @@
           <div>
             <XButton
               type="link"
-              :disabled="disabled"
+              :disabled="!valid"
               @click.stop="openSaveView"
             >Save As</XButton>
             <XIcon
@@ -69,7 +69,7 @@
             <AMenuItem
               key="0"
               id="saveChanges"
-              :disabled="disabled || selectedView.predefined || !canUpdate"
+              :disabled="!valid || selectedView.predefined || !canUpdate"
               @click="onSaveClicked"
             >Save
             </AMenuItem>
@@ -170,9 +170,6 @@ export default {
     enforcement() {
       return this.view.enforcement;
     },
-    disabled() {
-      return !this.valid || this.isDefaultView;
-    },
     historical: {
       get() {
         if (!this.view.historical) return '';
@@ -196,13 +193,6 @@ export default {
         return this.selectedView.name;
       }
       return 'New Query';
-    },
-    isDefaultView() {
-      return this.view.query.filter === ''
-                && _isEqual(this.view.fields, this.userFieldsGroups.default)
-                && this.view.sort.field === ''
-                && !this.hasColFilters()
-                && !this.hasColExcludedAdapters();
     },
     isEdited() {
       if (!this.selectedView || !this.selectedView.view) {
@@ -279,12 +269,6 @@ export default {
         view: { ...this.selectedView.view },
       });
       this.$emit('done');
-    },
-    hasColFilters() {
-      return Object.values(this.view.colFilters).some((cf) => cf.some((f) => !f.include || f.term.trim() !== ''));
-    },
-    hasColExcludedAdapters() {
-      return Object.values(this.view.colExcludedAdapters).length;
     },
     onSaveClicked() {
       this.$safeguard.show({
