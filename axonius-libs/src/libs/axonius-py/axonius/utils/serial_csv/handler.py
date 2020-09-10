@@ -70,6 +70,9 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
 
         row = process_entity(entity, selected_map, cell_joiner)
         if row:
+            # Delete fields that dont exists in csv header
+            # pylint: disable=expression-not-assigned
+            [row.pop(field) for field in row.keys() if field not in headers]
             yield writer.writerow(row)
         # yield writer.writerow(process_entity(entity, selected_map, cell_joiner))
 
