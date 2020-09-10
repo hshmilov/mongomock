@@ -539,7 +539,7 @@ class EntitiesPage(Page):
         :return:
         """
         time.sleep(2)
-        wait_until(lambda: 'loading' not in self.get_raw_count_entities(table_count_css))
+        wait_until(lambda: 'Loading' not in self.get_raw_count_entities(table_count_css))
         match_count = re.search(r'\((\d+)\)', self.get_raw_count_entities(table_count_css))
         assert match_count and len(match_count.groups()) == 1
         return int(match_count.group(1))
