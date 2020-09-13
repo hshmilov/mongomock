@@ -56,12 +56,14 @@ import { mapState } from 'vuex';
 import _get from 'lodash/get';
 import { XInstancesSelect } from '@axons/inputs/dynamicSelects';
 import XForm from '@neurons/schema/Form.vue';
+import XIcon from '@axons/icons/Icon';
 
 export default {
   name: 'XAdapterClientConnection',
   components: {
     XInstancesSelect,
     XForm,
+    XIcon,
   },
   props: {
     value: {
