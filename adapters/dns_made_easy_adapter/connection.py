@@ -85,6 +85,9 @@ class DnsMadeEasyConnection(RESTConnection):
         NOT 1.1.1.1@example.com
         """
         try:
+            # the authentication headers are very short-lived. regen them for each call
+            self._set_authentication_headers()
+
             # pull basic domain data
             # all_domains_url = f'http://{self._domain}/{API_VERSION}/{ALL_DOMAINS_ENDPOINT}/'
             response = self._get(ALL_DOMAINS_ENDPOINT)
@@ -171,6 +174,9 @@ class DnsMadeEasyConnection(RESTConnection):
         :return domain_info: A dictionary of enriched domain data
         """
         try:
+            # the authentication headers are very short-lived. regen them for each call
+            self._set_authentication_headers()
+
             # enriched_data_url = f'https://{self._domain}/{API_VERSION}/{ALL_DOMAINS_ENDPOINT}/{domain_id}'
             response = self._get(f'{ALL_DOMAINS_ENDPOINT}/{domain_id}')
             if not isinstance(response, dict):
@@ -203,6 +209,9 @@ class DnsMadeEasyConnection(RESTConnection):
         :returns: A list of data about the given domain_id
         """
         try:
+            # the authentication headers are very short-lived. regen them for each call
+            self._set_authentication_headers()
+
             # single_domain_url = f'https://{self._domain}/{API_VERSION}/{ALL_DOMAINS_ENDPOINT}/{domain_id}/records'
             response = self._get(f'{ALL_DOMAINS_ENDPOINT}/{domain_id}/records')
             if not isinstance(response, dict):

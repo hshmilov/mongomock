@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import int_or_none, parse_bool_from_raw
@@ -17,7 +18,7 @@ from dns_made_easy_adapter.structures import DnsMadeEasyDeviceInstance, \
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class DnsMadeEasyAdapter(AdapterBase):
+class DnsMadeEasyAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DnsMadeEasyDeviceInstance):
         pass
 
@@ -36,10 +37,10 @@ class DnsMadeEasyAdapter(AdapterBase):
     @staticmethod
     def get_connection(client_config):
         connection = DnsMadeEasyConnection(
-            domain=client_config['domain'],
-            apikey=client_config['api_key'],
-            secret_key=client_config['secret_key'],
-            verify_ssl=client_config['verify_ssl'],
+            domain=client_config.get('domain'),
+            apikey=client_config.get('api_key'),
+            secret_key=client_config.get('secret_key'),
+            verify_ssl=client_config.get('verify_ssl'),
             https_proxy=client_config.get('https_proxy'),
             proxy_username=client_config.get('proxy_username'),
             proxy_password=client_config.get('proxy_password')
@@ -165,7 +166,7 @@ class DnsMadeEasyAdapter(AdapterBase):
 
         return nameservers
 
-    # pylint: disable=invalid-triple-quote
+    # pylint: disable=invalid-triple-quote, too-many-branches
     def _parse_enriched_domain_data(self,
                                     enriched_data: dict,
                                     domain_object: DnsMadeEasyDomain):
@@ -185,14 +186,31 @@ class DnsMadeEasyAdapter(AdapterBase):
         domain_object.soa_id = int_or_none(enriched_data.get('soaID'))
         domain_object.template_id = int_or_none(enriched_data.get('templateId'))
         domain_object.transfer_acl_id = int_or_none(enriched_data.get('transferAclId'))
-        domain_object.axfr_servers = enriched_data.get('axfrServer')
+
+        # populate axfr server
+        try:
+            axfr_server = enriched_data.get('axfrServer')
+            # the docs say this should be a list, but the logs show a dict
+            if isinstance(axfr_server, dict):
+                axfr_server = [axfr_server]
+
+            if isinstance(axfr_server, list):
+                domain_object.axfr_servers = self._parse_nameservers(nameservers_raw=axfr_server)
+            elif axfr_server is not None:
+                logger.warning(f'Malformed domain nameservers. Expected '
+                               f'a list, got {type(axfr_server)}:'
+                               f'{str(axfr_server)}')
+        except Exception:
+            logger.exception(
+                f'Unable to create AXFR server for domain {domain_object.dnsme_id}: '
+                f'{str(enriched_data.get("axfrServer"))}')
 
         # populate domain nameservers
         try:
             domain_ns = enriched_data.get('nameServers')
             if isinstance(domain_ns, list):
                 domain_object.nameservers = self._parse_nameservers(nameservers_raw=domain_ns)
-            else:
+            elif domain_ns is not None:
                 logger.warning(f'Malformed domain nameservers. Expected '
                                f'a list, got {type(domain_ns)}:'
                                f'{str(domain_ns)}')
@@ -209,11 +227,10 @@ class DnsMadeEasyAdapter(AdapterBase):
             if isinstance(delegate_ns, list):
                 domain_object.delegate_nameservers = self._parse_nameservers(
                     nameservers_raw=delegate_ns)
-            else:
-                if delegate_ns is not None:
-                    logger.warning(f'Malformed delegate nameservers. Expected '
-                                   f'a list, got {type(delegate_ns)}: '
-                                   f'{str(delegate_ns)}')
+            elif delegate_ns is not None:
+                logger.warning(f'Malformed delegate nameservers. Expected '
+                               f'a list, got {type(delegate_ns)}: '
+                               f'{str(delegate_ns)}')
         except Exception:
             logger.exception(
                 f'Unable to create delegated nameservers for {domain_object.dnsme_id}: '
@@ -225,12 +242,10 @@ class DnsMadeEasyAdapter(AdapterBase):
             if isinstance(vanity_ns, list):
                 domain_object.vanity_nameservers = self._parse_nameservers(
                     nameservers_raw=vanity_ns)
-            else:
-                if vanity_ns is not None:
-                    logger.warning(
-                        f'Malformed vanity nameservers. Expected '
-                        f'a list, got {type(vanity_ns)}: '
-                        f'{str(vanity_ns)}')
+            elif vanity_ns is not None:
+                logger.warning(f'Malformed vanity nameservers. Expected '
+                               f'a list, got {type(vanity_ns)}: '
+                               f'{str(vanity_ns)}')
         except Exception:
             logger.exception(
                 f'Unable to create vanity nameservers for {domain_object.dnsme_id}: '
@@ -325,6 +340,17 @@ class DnsMadeEasyAdapter(AdapterBase):
         :param device_raw: A dict representing the full domain data (subdomains/domains/etc)
         :param device: A MyDeviceAdapter object to populate.
         """
+        record_type = record.get('type')
+        if not isinstance(record_type, str):
+            message = f'Malformed record type. Expected a string, got ' \
+                      f'{type(record_type)}: {str(record_type)}'
+            logger.warning(message)
+            raise ValueError(message)
+
+        # pull in the adapter configuration
+        if record_type != 'A' and not self.__fetch_all_record_types:
+            return None
+
         try:
             device_id = int_or_none(record.get('id'))
             if device_id is None:
@@ -335,10 +361,8 @@ class DnsMadeEasyAdapter(AdapterBase):
             device.hostname = f'{str(record.get("name"))}.{device_raw.get("name")}'
             device.name = record.get('name')
 
-            record_type = record.get('type')
-            if isinstance(record_type, str):
-                if record_type == 'A':
-                    device.add_ips_and_macs(ips=record.get('value'))
+            if record_type == 'A':
+                device.add_ips_and_macs(ips=record.get('value'))
 
             try:
                 self._fill_dns_made_easy_device_fields(record, device_raw, device)
@@ -347,18 +371,15 @@ class DnsMadeEasyAdapter(AdapterBase):
                                  f'{str(err)}')
 
             device.set_raw(record)
-
             return device
         except Exception as err:
             logger.exception(
                 f'Problem with fetching DnsMadeEasy Device for {record}: '
                 f'{str(err)}')
-
             return None
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw_data in devices_raw_data:
-            logger.debug(f'DNS device_raw_data: {str(device_raw_data)}')
             if not device_raw_data:
                 continue
 
@@ -377,6 +398,33 @@ class DnsMadeEasyAdapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem fetching DNSMadeEasy Device in '
                                  f'{device_raw_data}')
+
+    def _on_config_update(self, config):
+        logger.info(f'Loading DNS Made Easy config: {config}')
+        self.__fetch_all_record_types = config.get('fetch_all_record_types') or False
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_all_record_types',
+                    'title': 'Fetch all record types',
+                    'type': 'bool'
+                },
+            ],
+            'required': [
+                'fetch_all_record_types'
+            ],
+            'pretty_name': 'DNS Made Easy Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_all_record_types': False,
+        }
 
     @classmethod
     def adapter_properties(cls):

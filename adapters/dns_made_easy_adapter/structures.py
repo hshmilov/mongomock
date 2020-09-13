@@ -33,7 +33,7 @@ class DnsMadeEasyDomain(SmartJsonClass):
     soa_id = Field(int, 'SOA Record ID')
     template_id = Field(int, 'Template ID')
     transfer_acl_id = Field(int, 'Applied Transfer ACL ID')
-    axfr_servers = ListField(str, 'Applied AXFR ACL Servers')
+    axfr_servers = ListField(DnsMadeEasyNameServer, 'Applied AXFR ACL Servers')
 
 
 # This "device" is a domain record describing a subdomain
