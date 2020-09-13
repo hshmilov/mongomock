@@ -216,6 +216,7 @@ class ServiceNowAdapterBase(AdapterBase):
                            snow_model_dict=None,
                            snow_logicalci_dict=None,
                            operational_status_dict=None,
+                           u_division_dict=None,
                            snow_compliance_exception_ids_dict=None,
                            snow_compliance_exception_data_dict=None):
         got_nic = False
@@ -258,6 +259,8 @@ class ServiceNowAdapterBase(AdapterBase):
             snow_model_dict = dict()
         if snow_logicalci_dict is None:
             snow_logicalci_dict = dict()
+        if u_division_dict is None:
+            u_division_dict = dict()
         if snow_compliance_exception_ids_dict is None:
             snow_compliance_exception_ids_dict = dict()
         if snow_compliance_exception_data_dict is None:
@@ -866,6 +869,13 @@ class ServiceNowAdapterBase(AdapterBase):
                 device.ci_comm_type = device_raw.get('type')
             except Exception:
                 logger.exception(f'failed parsing cmdb_ci_comm fields')
+            try:
+                device.u_it_owner_organization = self._parse_optional_reference_value(
+                    device_raw, 'u_it_owner_organization', u_division_dict, 'name')
+                device.u_managed_by_vendor = self._parse_optional_reference_value(
+                    device_raw, 'u_managed_by_vendor', companies_table_dict, 'name')
+            except Exception:
+                logger.exception(f'failed parsing it_owner_org / managed_by_vendor')
             device.domain = device_raw.get('dns_domain') or device_raw.get('os_domain')
             device.used_for = device_raw.get('used_for')
             device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
@@ -1171,6 +1181,7 @@ class ServiceNowAdapterBase(AdapterBase):
             software_product_dict = table_devices_data.get(consts.SOFTWARE_PRODUCT_TABLE)
             model_dict = table_devices_data.get(consts.MODEL_TABLE)
             snow_logicalci_dict = table_devices_data.get(consts.LOGICALCI_TABLE)
+            u_division_dict = table_devices_data.get(consts.U_DIVISION_TABLE)
             snow_compliance_exc_ids_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE)
             snow_compliance_exc_data_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_DATA_TABLE)
 
@@ -1197,6 +1208,7 @@ class ServiceNowAdapterBase(AdapterBase):
                                                  snow_model_dict=model_dict,
                                                  snow_logicalci_dict=snow_logicalci_dict,
                                                  operational_status_dict=operational_status_dict,
+                                                 u_division_dict=u_division_dict,
                                                  snow_compliance_exception_ids_dict=snow_compliance_exc_ids_dict,
                                                  snow_compliance_exception_data_dict=snow_compliance_exc_data_dict)
                 if device:
