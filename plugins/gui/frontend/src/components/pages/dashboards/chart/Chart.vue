@@ -297,7 +297,7 @@ export default {
       }
     },
     discoveryStatus: {
-      handler: 'manageDataFetchingCycle',
+      handler: 'fetchDataWhenDiscoveryDone',
       immediate: true,
     },
   },
@@ -308,27 +308,15 @@ export default {
       this.fetchTrendChartData();
     }
   },
-  destroyed() {
-    clearTimeout(this.timer);
-  },
   methods: {
     ...mapActions({
       removeChart: REMOVE_DASHBOARD_PANEL,
       downloadAsCsv: FETCH_CHART_CSV,
     }),
-    manageDataFetchingCycle(status, prevStatus) {
-      if (status === DiscoveryStatusEnum.running) {
-        this.initiateDataFetchingInterval();
-      } else if (status === DiscoveryStatusEnum.done) {
-        clearTimeout(this.timer);
-        if (prevStatus === DiscoveryStatusEnum.running) {
-          this.fetchData({ refresh: true });
-        }
+    async fetchDataWhenDiscoveryDone(status, prevStatus) {
+      if (status === DiscoveryStatusEnum.done && prevStatus === DiscoveryStatusEnum.running) {
+        this.fetchData({ blocking: true });
       }
-    },
-    initiateDataFetchingInterval() {
-      this.fetchData({ refresh: true });
-      this.timer = setTimeout(this.initiateDataFetchingInterval, 30000);
     },
     // header events callbacks
     onFiltersChanged(filters) {

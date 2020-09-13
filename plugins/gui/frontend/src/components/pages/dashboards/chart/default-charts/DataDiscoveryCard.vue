@@ -149,7 +149,7 @@ export default {
   },
   watch: {
     discoveryStatus: {
-      handler: 'manageDataFetchingCycle',
+      handler: 'fetchDataWhenDiscoveryDone',
       immediate: true,
     },
   },
@@ -200,28 +200,15 @@ export default {
         value: item.value,
       };
     },
-    async manageDataFetchingCycle(status, prevStatus) {
-      if (status === DiscoveryStatusEnum.running) {
-        this.initiateDataFetchingInterval();
-      } else if (status === DiscoveryStatusEnum.done) {
-        clearTimeout(this.timer);
-        if (prevStatus === DiscoveryStatusEnum.running) {
-          const res = await this.fetchDiscoveryData({ module: this.entity });
-          this.data = res.data;
-        }
-      }
-    },
-    initiateDataFetchingInterval() {
-      const fetchData = async () => {
+    async fetchDataWhenDiscoveryDone(status, prevStatus) {
+      if (status === DiscoveryStatusEnum.done && prevStatus === DiscoveryStatusEnum.running) {
         const res = await this.fetchDiscoveryData({ module: this.entity });
         this.data = res.data;
-      };
-      fetchData();
-      this.timer = setTimeout(this.initiateDataFetchingInterval, 30000);
+      }
     },
     totalResults(total, range) {
       return getTotalResultsTitle(total, range, 'adapters');
-    }
+    },
   },
 };
 </script>
