@@ -226,6 +226,8 @@ class SnowDeviceAdapter(DeviceAdapter):
     u_work_notes = Field(str, 'Work Notes')
     phone_number = Field(str, 'Phone Number')
     ci_comm_type = Field(str, 'Type')
+    u_it_owner_organization = Field(str, 'IT Owner Organization')
+    u_managed_by_vendor = Field(str, 'Managed By Vendor')
     compliance_exceptions = ListField(SnowComplianceException, 'Compliance Exceptions')
     # you should keep these last
     upstream = ListField(RelativeInformationNode1, 'Upstream')
