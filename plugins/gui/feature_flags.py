@@ -138,6 +138,11 @@ class FeatureFlags(Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': FeatureFlagsNames.PopulateMajorMinorVersionFields,
+                    'title': 'Populate major/minor version fields',
+                    'type': 'bool'
+                },
+                {
                     'name': FeatureFlagsNames.LockedActions,
                     'title': 'Actions Locked for Client',
                     'type': 'array',
@@ -316,6 +321,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.EnforcementCenter: True,
             FeatureFlagsNames.DoNotUseSoftwareNameAndVersionField: False,
             FeatureFlagsNames.DoNotPopulateHeavyFields: False,
+            FeatureFlagsNames.PopulateMajorMinorVersionFields: False,
             DashboardControlNames.root_key: {
                 DashboardControlNames.present_call_limit: 10,
                 DashboardControlNames.historical_call_limit: 5

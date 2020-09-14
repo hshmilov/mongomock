@@ -29,8 +29,10 @@ from axonius.utils.parsing import (
     replace_large_ints,
     parse_versions_raw,
     is_valid_ipv6,
-    is_valid_ipv4
+    is_valid_ipv4,
+    parse_major_minor_version
 )
+
 
 MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
 
@@ -85,6 +87,7 @@ def get_settings_cached() -> dict:
     # Default values
     should_populate_name_and_version = True
     should_populate_heavy_fields = True
+    should_populate_major_minor_versions = False
 
     try:
         plugins = AxoniusPlugins()
@@ -95,12 +98,15 @@ def get_settings_cached() -> dict:
                 should_populate_name_and_version = False
             if feature_flags.get(FeatureFlagsNames.DoNotPopulateHeavyFields) is True:
                 should_populate_heavy_fields = False
+            if feature_flags.get(FeatureFlagsNames.PopulateMajorMinorVersionFields) is True:
+                should_populate_major_minor_versions = True
     except Exception:
-        logger.warning(f'Warning white trying to reload system settings for device_adapter', exc_info=True)
+        logger.warning(f'Warning while trying to reload system settings for device_adapter', exc_info=True)
 
     return {
         'should_populate_name_and_version': should_populate_name_and_version,
-        'should_populate_heavy_fields': should_populate_heavy_fields
+        'should_populate_heavy_fields': should_populate_heavy_fields,
+        'should_populate_major_minor_versions': should_populate_major_minor_versions
     }
 
 
@@ -418,6 +424,8 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     name = Field(str, "Software Name")
     version = Field(str, "Software Version", json_format=JsonStringFormat.version)
     name_version = Field(str, 'Software Name and Version')
+    major_version = Field(str, 'Major Software Version')
+    major_minor_version = Field(str, 'Major/Minor Software Version')
     architecture = Field(
         str, "Software Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64", "all", 'i686']
     )
@@ -1311,6 +1319,7 @@ class DeviceAdapter(SmartJsonClass):
 
         version_raw = ''
         version = kwargs.get('version')
+        major, major_minor = None, None
         name = kwargs.get('name')
         if version:
             version = version.strip()
@@ -1320,8 +1329,21 @@ class DeviceAdapter(SmartJsonClass):
         if name and version and get_settings_cached()['should_populate_name_and_version']:
             name_version = f'{name}-{version}'
 
-        self.installed_software.append(DeviceAdapterInstalledSoftware(
-            version_raw=version_raw, name_version=name_version, **kwargs))
+        try:
+            if version and get_settings_cached()['should_populate_major_minor_versions']:
+                major, major_minor = parse_major_minor_version(version)
+        except Exception:
+            pass
+
+        self.installed_software.append(
+            DeviceAdapterInstalledSoftware(
+                version_raw=version_raw,
+                name_version=name_version,
+                major_version=major,
+                major_minor_version=major_minor,
+                **kwargs
+            )
+        )
 
     def add_vulnerable_software(self, cvss=None, **kwargs):
         cvss_str = None

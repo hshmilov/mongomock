@@ -677,6 +677,20 @@ def parse_versions_raw(version):
         return ''
 
 
+def parse_major_minor_version(version):
+    version = version or ''
+    version = version.strip()
+
+    if str.isdigit(version):
+        version = f'{version}.0'
+
+    match = re.search(r"^[0-9]+\.[0-9]+", version)
+    major_minor = match.group() if match else ''
+    major = major_minor.split('.')[0] if major_minor else ''
+
+    return major, major_minor
+
+
 def extend_to_n_digits(value, n_chars_to_extend):
     try:
         extended_value = ''.join(['0' for _ in range(n_chars_to_extend - len(value))])
