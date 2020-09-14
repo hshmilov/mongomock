@@ -11,7 +11,6 @@
       :format="dateFormat"
       :disabled="readOnly"
       :show-today="false"
-      :default-picker-value="defaultPickerValue"
       v-on="$listeners"
     />
   </div>
@@ -57,11 +56,6 @@ export default {
       type: Boolean,
       default: true,
     },
-  },
-  data() {
-    return {
-      defaultPickerValue: dayjs().subtract(1, 'day'),
-    };
   },
   computed: {
     ...mapGetters({
