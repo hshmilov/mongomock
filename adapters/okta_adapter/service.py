@@ -113,7 +113,7 @@ class OktaAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem with groups for {user_raw}')
                 user.account_disabled = user_raw.get('status') not in ('PROVISIONED', 'ACTIVE')
                 user.user_status = user_raw.get('status')
-                user.last_seen = parse_date(user_raw.get('last_login'))
+                user.last_seen = parse_date(user_raw.get('lastLogin'))
                 user.last_password_change = parse_date(user_raw.get('passwordChanged'))
                 user.user_created = parse_date(user_raw.get('created'))
                 mail = profile.get('email')
