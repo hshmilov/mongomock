@@ -759,6 +759,7 @@ class QualysAgentVuln(SmartJsonClass):
     modified = Field(datetime.datetime, 'Modified')
     published = Field(datetime.datetime, 'Published')
     vuln_type = Field(str, 'Vulnerability Type', enum=QUALYS_VULN_TYPES)
+    pci_flag = Field(bool, 'PCI Flag')
 
 
 class DeviceAdapter(SmartJsonClass):

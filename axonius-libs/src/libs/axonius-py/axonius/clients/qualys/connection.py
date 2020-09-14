@@ -13,7 +13,8 @@ from funcy import chunks as chunkinate  # Renamed because `chunks` is used as a 
 
 from axonius.clients.qualys import consts, xmltodict
 from axonius.clients.qualys.consts import JWT_TOKEN_REFRESH, INVENTORY_AUTH_API, MAX_DEVICES, INVENTORY_TYPE, \
-    UNSCANNED_IP_TYPE, HOST_ASSET_TYPE, REPORT_URL_PREFIX, HOST_URL_PREFIX, UNSCANNED_IP_URL_PREFIX, ASSET_GROUP_URL
+    UNSCANNED_IP_TYPE, HOST_ASSET_TYPE, REPORT_URL_PREFIX, HOST_URL_PREFIX, UNSCANNED_IP_URL_PREFIX, ASSET_GROUP_URL, \
+    VULN_URL
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.exception import RESTException
@@ -26,7 +27,7 @@ For the sake of the user - if the next api request is allowed within the next 30
 '''
 
 
-# pylint: disable=logging-format-interpolation
+# pylint: disable=logging-format-interpolation, too-many-lines
 
 
 class IteratorCounter:
@@ -303,8 +304,49 @@ class QualysScansConnection(RESTConnection):
             except Exception:
                 logger.exception(f'{request_id} - Failed to deliver: {response}')
 
-    # pylint: disable=too-many-branches, too-many-nested-blocks
-    def _get_hostassets(self, fetch_asset_groups=False):
+    def _get_pci_flag_by_qid(self):
+        pci_flag_by_qid = {}
+        try:
+            url_params = {
+                'action': 'list'
+            }
+            response = self._get(VULN_URL,
+                                 url_params=url_params,
+                                 do_basic_auth=True,
+                                 use_json_in_body=False,
+                                 use_json_in_response=False)
+            response = xmltodict.parse(response)
+
+            if not (isinstance(response.get('KNOWLEDGE_BASE_VULN_LIST_OUTPUT'), dict)
+                    and isinstance(response.get('KNOWLEDGE_BASE_VULN_LIST_OUTPUT').get('RESPONSE'), dict)
+                    and isinstance(response.get('KNOWLEDGE_BASE_VULN_LIST_OUTPUT').get('RESPONSE').get('VULN_LIST'),
+                                   dict)
+                    and isinstance(
+                        response.get('KNOWLEDGE_BASE_VULN_LIST_OUTPUT').get(
+                            'RESPONSE').get('VULN_LIST').get('VULN'), list)):
+                logger.error(f'response is not in the correct format {response}')
+                return pci_flag_by_qid
+
+            vulnerabilities = response.get('KNOWLEDGE_BASE_VULN_LIST_OUTPUT').get('RESPONSE').get('VULN_LIST').get(
+                'VULN')
+
+            number_of_vulnerabilities = 0
+
+            for vulnerability in vulnerabilities:
+                if not vulnerability.get('QID'):
+                    logger.warning(f'vulnerability not in the correct format: {vulnerability}')
+                    continue
+                pci_flag_by_qid[vulnerability.get('QID')] = vulnerability.get('PCI_FLAG')
+                number_of_vulnerabilities += 1
+
+            logger.info(f'Collected {number_of_vulnerabilities} vulnerabilities successfully')
+        except Exception as e:
+            logger.exception(f'Error happened while getting asset groups: {e}')
+
+        return pci_flag_by_qid
+
+    # pylint: disable=too-many-branches, too-many-nested-blocks, too-many-locals, too-many-statements
+    def _get_hostassets(self, fetch_asset_groups=False, fetch_pci_flag=False):
         logger.info('Starting to fetch')
         count = self._get_device_count()
         self._yielded_devices_count = IteratorCounter(f'Got {{count}} devices so far out of {count}', threshold=100)
@@ -317,10 +359,13 @@ class QualysScansConnection(RESTConnection):
 
         report = {}
         tickets = {}
+        pci_flag_by_qid = {}
         if self._fetch_report:
             report = self._get_report()
         if self._fetch_tickets:
             tickets = self._get_tickets()
+        if fetch_pci_flag:
+            pci_flag_by_qid = self._get_pci_flag_by_qid()
 
         # we try to fetch each page max exception threshold.
         # if we got data back we remove it from the next round
@@ -332,9 +377,27 @@ class QualysScansConnection(RESTConnection):
             asset_group_by_id = self._get_asset_group_by_id()
             for index, devices in self._get_hostassets_by_requests(requests):
                 for device in devices:
+                    if fetch_pci_flag:
+                        if isinstance(device, dict) and isinstance(device.get('HostAsset'), dict) and \
+                                isinstance(device.get('HostAsset').get('vuln'), dict) and \
+                                isinstance(device.get('HostAsset').get('vuln').get('list'), list):
+                            vulnerabilities = device.get('HostAsset').get('vuln').get('list')
+                            new_vulnerabilities = []
+                            for vulnerability in vulnerabilities:
+                                if not (isinstance(vulnerability, dict) and isinstance(
+                                        vulnerability.get('HostAssetVuln'),
+                                        dict)):
+                                    continue
+                                qid = vulnerability.get('HostAssetVuln').get('qid')
+                                vulnerability['HostAssetVuln']['extra_pci_flag'] = pci_flag_by_qid.get(str(qid))
+                                new_vulnerabilities.append(vulnerability)
+
+                            device['HostAsset']['vuln']['list'] = new_vulnerabilities
+
                     if isinstance(device, dict) and isinstance(device.get('HostAsset'), dict) and \
                             device.get('HostAsset').get('address'):
                         ip = device.get('HostAsset').get('address')
+
                         host_ips = hosts.get(ip)
                         if host_ips:
                             if fetch_asset_groups:
@@ -374,7 +437,7 @@ class QualysScansConnection(RESTConnection):
             logger.error(f'Lost {len(requests) * self._devices_per_page} devices')
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_asset_groups=False):
+    def get_device_list(self, fetch_asset_groups=False, fetch_pci_flag=False):
         try:
             if self._fetch_unscanned_ips:
                 yield from self._get_unscanned_ips()
@@ -385,7 +448,7 @@ class QualysScansConnection(RESTConnection):
             if self._fetch_from_inventory:
                 yield from self._paginated_inventory_get()
             else:
-                for device_raw in self._get_hostassets(fetch_asset_groups):
+                for device_raw in self._get_hostassets(fetch_asset_groups, fetch_pci_flag):
                     yield device_raw, HOST_ASSET_TYPE
         except Exception:
             logger.exception(f'Problem getting hostassets')

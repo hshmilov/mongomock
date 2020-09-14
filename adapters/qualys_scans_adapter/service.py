@@ -227,7 +227,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         client_data, qualys_tags_white_list = client_data
         with client_data:
-            for device_raw in client_data.get_device_list(fetch_asset_groups=self.__fetch_asset_groups):
+            for device_raw in client_data.get_device_list(fetch_asset_groups=self.__fetch_asset_groups,
+                                                          fetch_pci_flag=self.__fetch_pci_flag):
                 yield (device_raw, qualys_tags_white_list)
 
     @staticmethod
@@ -685,6 +686,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                             bugtraq_id=qid_info_entry.get('Bugtraq ID'),
                             modified=qid_info_entry.get('Modified'),
                             published=qid_info_entry.get('Published'),
+                            pci_flag=parse_bool_from_raw((vuln_raw.get('HostAssetVuln') or {}).get('extra_pci_flag'))
                         )
                     except Exception:
                         logger.exception(f'Problem with vuln {vuln_raw}')
@@ -970,7 +972,13 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_asset_groups',
                     'type': 'bool',
                     'title': 'Fetch Asset Groups'
+                },
+                {
+                    'name': 'fetch_pci_flag',
+                    'type': 'bool',
+                    'title': 'Fetch PCI Flag'
                 }
+
             ],
             'required': [
                 'request_timeout',
@@ -983,7 +991,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'fetch_report',
                 'fetch_tickets',
                 'fetch_unscanned_ips',
-                'fetch_asset_groups'
+                'fetch_asset_groups',
+                'fetch_pci_flag'
             ],
             'pretty_name': 'Qualys Configuration',
             'type': 'array'
@@ -1003,7 +1012,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'fetch_unscanned_ips': False,
             'fetch_report': False,
             'fetch_tickets': False,
-            'fetch_asset_groups': False
+            'fetch_asset_groups': False,
+            'fetch_pci_flag': False
         }
 
     @add_rule('add_tag_to_ids', methods=['POST'])
@@ -1040,6 +1050,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_tickets = config.get('fetch_tickets', False)
         self.__fetch_unscanned_ips = config.get('fetch_unscanned_ips', False)
         self.__fetch_asset_groups = parse_bool_from_raw(config.get('fetch_asset_groups')) or False
+        self.__fetch_pci_flag = parse_bool_from_raw(config.get('fetch_pci_flag')) or False
 
     @classmethod
     def adapter_properties(cls):
