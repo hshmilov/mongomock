@@ -103,7 +103,7 @@ from axonius.consts.plugin_consts import (
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
     ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS,
-    PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION)
+    PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -3309,6 +3309,8 @@ class PluginBase(Configurable, Feature, ABC):
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
         self._update_adapters_clients_periodically = config[AGGREGATION_SETTINGS].get(UPDATE_CLIENTS_STATUS, False)
         self._uppercase_hostnames = config[AGGREGATION_SETTINGS].get(UPPERCASE_HOSTNAMES) or False
+        self._remove_domain_from_preferred_hostname = config[AGGREGATION_SETTINGS].get(
+            REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME) or False
         try:
             socket_read_timeout = int(config[AGGREGATION_SETTINGS].get(SOCKET_READ_TIMEOUT))
             if socket_read_timeout > 0:
@@ -4262,6 +4264,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'bool'
                         },
                         {
+                            'name': REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME,
+                            'title': 'Remove domain from preferred hostname',
+                            'type': 'bool'
+                        },
+                        {
                             'name': UPDATE_CLIENTS_STATUS,
                             'title': 'Update adapters connections status periodically (every 1:30 hours)',
                             'type': 'bool'
@@ -4270,7 +4277,10 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': AGGREGATION_SETTINGS,
                     'title': 'Aggregation Settings',
                     'type': 'array',
-                    'required': [MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES, UPDATE_CLIENTS_STATUS]
+                    'required': [
+                        MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME,
+                        UPDATE_CLIENTS_STATUS
+                    ]
                 },
                 {
                     'items': [
@@ -4614,6 +4624,7 @@ class PluginBase(Configurable, Feature, ABC):
                 MAX_WORKERS: 20,
                 SOCKET_READ_TIMEOUT: 5,
                 UPPERCASE_HOSTNAMES: False,
+                REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME: False,
                 UPDATE_CLIENTS_STATUS: False
             },
             'getting_started_checklist': {

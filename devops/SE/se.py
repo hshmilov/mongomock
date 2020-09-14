@@ -2,6 +2,7 @@
 System engineering common tasks.
 """
 # pylint: disable=too-many-locals, too-many-return-statements, protected-access
+import datetime
 import importlib
 import json
 import sys
@@ -14,7 +15,9 @@ from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint, greenprint, blueprint
 from axonius.entities import EntityType
+from axonius.utils.host_utils import PYTHON_LOCKS_DIR, WATCHDOGS_ARE_DISABLED_FILE
 from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
+from scripts.watchdog import watchdog_main
 from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
 from services.plugins.reports_service import ReportsService
@@ -82,7 +85,9 @@ def usage():
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     {name} ru [container-name] - Recover uwsgi
-    {name} kill [adapters / wd] - kill all adapters / kill all watchdogs
+    {name} kill [adapters] - kill all adapters
+    {name} wd [kill/restart] - kill all watchdogs / restart all watchdogs
+    {name} wd disable [x] - disable watchdogs for x minutes
     {name} tc [run/stop] Run tunnel (mongo & core) to core 
     '''
 
@@ -559,11 +564,42 @@ def main():
             subprocess.check_call(
                 kill_command, shell=True, cwd=ROOT_DIR
             )
-        elif what_to_kill == 'wd':
-            kill_command = 'kill -9 `ps aux | grep python | grep watchdog | awk \'{print $2}\'`'
-            subprocess.check_call(
-                kill_command, shell=True, cwd=ROOT_DIR
+        else:
+            print(usage())
+            return -1
+
+    elif component == 'wd':
+        def kill_wd():
+            wd_pids = subprocess.check_output(
+                'ps aux | grep python | grep watchdog | grep -v "ps aux" | awk \'{print $2}\'',
+                shell=True, cwd=ROOT_DIR
             )
+            wd_pids = wd_pids.decode("utf-8").strip().replace("\n", " ")
+            if wd_pids:
+                kill_command = f'kill -9 {wd_pids}'
+                subprocess.check_call(
+                    kill_command, shell=True, cwd=ROOT_DIR
+                )
+                print(f'Killed watchdogs {wd_pids}')
+            else:
+                print(f'No watchdogs are currently running')
+        if action == 'kill':
+            kill_wd()
+        elif action == 'restart':
+            kill_wd()
+            watchdog_main.run_tasks('restart')
+        elif action == 'disable':
+            try:
+                time_to_disable = int(sys.argv[3])
+            except Exception:
+                redprint(f'did not get number of minutes to disable')
+                print(usage())
+                return -1
+
+            time_to_disable = datetime.datetime.utcnow() + datetime.timedelta(minutes=time_to_disable)
+            PYTHON_LOCKS_DIR.mkdir(parents=True, exist_ok=True)
+            WATCHDOGS_ARE_DISABLED_FILE.write_text(str(time_to_disable))
+            print(f'Disabled until {time_to_disable}')
         else:
             print(usage())
             return -1

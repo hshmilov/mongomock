@@ -8,7 +8,7 @@ import pytz
 
 from axonius.consts.system_consts import NODE_MARKER_PATH, CORTEX_PATH
 from axonius.utils.host_utils import check_installer_locks, check_watchdog_action_in_progress, \
-    MONGOALIVE_WATCHDOG_IN_PROGRESS, create_lock_file
+    MONGOALIVE_WATCHDOG_IN_PROGRESS, create_lock_file, check_if_non_readonly_watchdogs_are_disabled
 from scripts.instances.instances_modes import InstancesModes, get_instance_mode
 from scripts.watchdog.watchdog_task import WatchdogTask
 import docker
@@ -45,6 +45,10 @@ class MongoAliveTask(WatchdogTask):
 
                 if instance_mode == InstancesModes.remote_mongo.value:
                     self.report_info(REMOTE_MONGO_MSG)
+                    continue
+
+                if check_if_non_readonly_watchdogs_are_disabled():
+                    self.report_info(f'Watchdogs are disabled')
                     continue
 
                 if check_installer_locks():

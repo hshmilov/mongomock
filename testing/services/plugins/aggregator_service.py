@@ -1708,6 +1708,41 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
 
         self._upgrade_adapter_client_id('nexpose_adapter', nexpose_adapter_new_client_id)
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_49(self):
+        print('Update to schema 49 - Convert Chef Adapter')
+
+        def chef_adapter_new_client_id(client_config):
+            return client_config['domain'] + '_' + (client_config.get('organization') or '')
+
+        self._upgrade_adapter_client_id('chef_adapter', chef_adapter_new_client_id)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_50(self):
+        print('Update to schema 50 - Convert Desktop central device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            desktop_central_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{desktop_central_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{desktop_central_hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'desktop_central_adapter',
+            {
+                'adapters.data.hostname': 1
+            },
+            new_id_func)
+
     def _migrate_entity_id_generic(
             self,
             entity_type: EntityType,

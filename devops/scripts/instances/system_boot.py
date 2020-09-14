@@ -15,7 +15,7 @@ def wait_until_machine_is_ready():
         try:
             docker_ps_output = subprocess.check_output(['docker', 'ps']).decode('utf-8')
             ready = 'CONTAINER ID' in docker_ps_output
-            time.sleep(60)  # Just in case
+            time.sleep(10)  # Just in case
         except subprocess.CalledProcessError:
             print('Not ready')
             time.sleep(10)

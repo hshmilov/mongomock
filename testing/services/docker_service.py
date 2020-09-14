@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable, Optional
 
+import psutil
 from retrying import retry
 
 from scripts.instances.instances_consts import GENERATED_RESOLV_CONF_PATH
@@ -17,8 +18,8 @@ from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           DB_KEY_ENV_VAR_NAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           WEAVE_NETWORK, LOGS_PATH_HOST, DB_KEY_PATH)
-from axonius.utils.debug import COLOR
-from conf_tools import get_tunneled_dockers
+from axonius.utils.debug import COLOR, magentaprint
+from conf_tools import get_tunneled_dockers, get_customer_conf_json
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
@@ -140,11 +141,36 @@ class DockerService(AxonService):
         return ['REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt']
 
     @property
-    def max_allowed_memory(self) -> int:
+    def default_max_allowed_memory(self):
+        """
+        must return 0 < x <= 1. 1 means no limit (100%), 0.5 means that RAM usage can be only 50% of the memory.
+        :return:
+        """
+        return 1
+
+    @property
+    def max_allowed_memory(self) -> Optional[int]:
         """
         Max allowed memory in megabytes
         """
-        return None
+        customer_conf = get_customer_conf_json()
+        max_allowed_memory_config = (customer_conf.get('docker_max_allowed_memory_percent') or {}).get(
+            self.container_name
+        )
+        if max_allowed_memory_config:
+            magentaprint(f'Custom container ram limitation: {max_allowed_memory_config}')
+        else:
+            max_allowed_memory_config = self.default_max_allowed_memory
+
+        if max_allowed_memory_config == 1:
+            return None
+
+        if not isinstance(max_allowed_memory_config, (float, int)) or not 0 < max_allowed_memory_config <= 1:
+            raise ValueError(f'Invalid max_allowed_memory_config: {max_allowed_memory_config}')
+
+        total_memory = psutil.virtual_memory().total / (1024 ** 2)  # total memory, in mb
+        total_memory = int(total_memory * max_allowed_memory_config)
+        return total_memory
 
     @property
     def memory_swappiness(self) -> Optional[int]:
@@ -202,8 +228,7 @@ class DockerService(AxonService):
         allowed_memory = []
         max_allowed_memory = self.max_allowed_memory
         if max_allowed_memory:
-            allowed_memory = [f'--memory={max_allowed_memory}m',
-                              '--oom-kill-disable']  # don't kill my container
+            allowed_memory = [f'--memory={max_allowed_memory}m']
             print(f'Memory constraint: {max_allowed_memory}MB')
         if self.memory_swappiness is not None:
             allowed_memory.append(f'--memory-swappiness={self.memory_swappiness}')

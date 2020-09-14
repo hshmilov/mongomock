@@ -28,11 +28,18 @@ class SystemMetric:
     HOST_DOCKER_STATS_KEY = 'host.docker_stats'
     MONGO_AGGREGATOR_KEY = 'mongo.aggregator'
     TRIGGERABLE_RUNNING = 'triggerable.running'
+    PROCESSES = 'processes'
     CYCLE_FINISHED = 'cycle_finished'
     TRIAL_EXPIRED_STATE = 'trial_expired_state'
     CONTRACT_EXPIRED_STATE = 'contract_expired_state'
     LOGIN_MARKER = 'LOGIN_MARKER'
     NEW_NODE_CONNECTED = 'new_node_connected'
+
+
+class HeavySystemMetric:
+    ENTITIES_FIELDS_SIZE_KEY = 'entities.adapters_parsed_fields_size'
+    ENTITIES_ADAPTERS_SIZE_KEY = 'entities.adapters_parsed_data_size'
+    ENTITIES_RAW_ADAPTERS_SIZE_KEY = 'entities.adapters_raw_data_size'
 
 
 class ApiMetric:

@@ -1,6 +1,9 @@
 import shutil
 import time
 from pathlib import Path
+from datetime import timezone
+
+import dateutil.parser
 
 PYTHON_LOCKS_DIR = Path('/tmp/ax-locks/')
 PYTHON_INSTALLER_LOCK_FILE = PYTHON_LOCKS_DIR / 'python_installer.lock'
@@ -8,6 +11,7 @@ PYTHON_UPGRADE_LOCK_FILE = PYTHON_LOCKS_DIR / 'upgrade.lock'
 GUIALIVE_WATCHDOG_IN_PROGRESS = PYTHON_LOCKS_DIR / 'guialive_watchdog_in_progress.lock'
 MONGOALIVE_WATCHDOG_IN_PROGRESS = PYTHON_LOCKS_DIR / 'mongoalive_watchdog_in_progress.lock'
 WEAVE_WATCHDOG_IN_PROGRESS = PYTHON_LOCKS_DIR / 'weave_watchdog_in_progress.lock'
+WATCHDOGS_ARE_DISABLED_FILE = PYTHON_LOCKS_DIR / 'watchdogs_are_disabled.lock'
 LOCK_TOO_OLD_THRESH = 5 * 60 * 60
 
 
@@ -40,6 +44,18 @@ def check_watchdog_action_in_progress():
         WEAVE_WATCHDOG_IN_PROGRESS
     ]
     return any(check_lock_file(lockfile) for lockfile in lockfiles)
+
+
+def check_if_non_readonly_watchdogs_are_disabled():
+    try:
+        datetime_to_parse = WATCHDOGS_ARE_DISABLED_FILE.read_text().strip()
+        date = dateutil.parser.parse(datetime_to_parse).astimezone(timezone.utc)
+        if date.utcnow().astimezone(timezone.utc) < date:
+            return True
+    except Exception:
+        pass
+
+    return False
 
 
 def create_lock_file(lock_filename: Path):

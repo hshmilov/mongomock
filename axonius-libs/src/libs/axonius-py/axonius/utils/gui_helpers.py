@@ -926,6 +926,12 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
     :param add_assoc_adapter: whether to return the associated adapter
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
+    try:
+        # pylint: disable=protected-access
+        remove_domain_from_preferred_hostname = PluginBase.Instance._remove_domain_from_preferred_hostname or False
+        # pylint: enable=protected-access
+    except Exception:
+        pass
 
     def _extract_name(field_path):
         """
@@ -1102,6 +1108,8 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                         if val_changed_by_ad:
                             last_seen = datetime.now()
                             if preferred_field == 'specific_data.data.hostname_preferred' and val:
+                                # This is happening regardless of remove_domain_from_preferred_hostname. we remove
+                                # the domain in case of AD always.
                                 val = val.upper().split('.')[0]
 
                 # Third priority is the latest seen Assets adapter
@@ -1158,6 +1166,12 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                 val = [item for item in val if is_filter_in_value(item, field_filters[preferred_field])]
 
             field_to_value[preferred_field] = val
+
+            if remove_domain_from_preferred_hostname:
+                if preferred_field == 'specific_data.data.hostname_preferred' and field_to_value[preferred_field]:
+                    field_to_value[preferred_field] = [
+                        str(x).upper().split('.')[0] for x in field_to_value[preferred_field]
+                    ]
 
         except Exception as e:
             logger.exception(f'Problem in merging preferred fields: {e}')

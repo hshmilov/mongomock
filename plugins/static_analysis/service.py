@@ -585,12 +585,10 @@ class StaticAnalysisService(Triggerable, PluginBase):
         logger.info(f'Built Indexes')
         return users_by_id, users_by_username, users_by_username_and_domain, users_by_mail, users_by_full_name
 
-    def __get_users_by_identifier(self, username, is_domain_required=False) -> List[str]:
+    def __get_users_by_identifier(self, username) -> List[str]:
         """
         Gets a username. tries to find it by id, then by username/domain if possible, then only by username.
         :param username:
-        :param is_domain_required: if True, domain has to be part of the search query. otherwise, username only is ok.
-                                   This is important when dealing with local users. guest@PC-1 != guest@PC-2
         :return:
         """
 
@@ -617,11 +615,11 @@ class StaticAnalysisService(Triggerable, PluginBase):
         if not users:
             users = users_by_mail.get(username)
 
-        if not users and is_domain_required:
-            users = users_by_username.get(username)
-
         if not users:
             users = users_by_full_name.get(username)
+
+        if not users:
+            users = users_by_username.get(username)
 
         return list(users or [])
 

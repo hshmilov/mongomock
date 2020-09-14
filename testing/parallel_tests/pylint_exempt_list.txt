@@ -199,7 +199,6 @@ adapters/splunk_adapter/external/splunklib/searchcommands/streaming_command.py
 adapters/splunk_adapter/external/splunklib/searchcommands/validators.py
 adapters/stresstest_adapter/service.py
 adapters/stresstest_scanner_adapter/service.py
-adapters/tenable_io_adapter/service.py
 adapters/tenable_security_center_adapter/utils/mock_server.py
 adapters/traiana_lab_machines_adapter/service.py
 adapters/wmi_adapter/parsers/basic_computer_info.py

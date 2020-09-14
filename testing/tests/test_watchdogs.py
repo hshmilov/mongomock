@@ -11,7 +11,7 @@ from test_helpers.log_tester import LogTester
 def test_watchdog_logs():
     shutil.rmtree(WATCHDOG_LOGS_DIR, ignore_errors=True)
     system_main('system up --restart'.split())
-    system_main('service gui down'.split())
+    system_main('service mongo down'.split())
 
     gui_alive_tester = LogTester(WATCHDOG_LOGS_DIR / 'guialivetask.watchdog.log')
     wait_until(gui_alive_tester.is_str_in_log,

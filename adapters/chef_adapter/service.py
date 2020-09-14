@@ -51,7 +51,7 @@ class ChefAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config[CHEF_DOMAIN]
+        return client_config[CHEF_DOMAIN] + '_' + client_config[ORGANIZATION]
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(client_config.get(CHEF_DOMAIN))

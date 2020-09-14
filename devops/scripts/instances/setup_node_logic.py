@@ -2,7 +2,10 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 
+from axonius.utils.debug import redprint
+from axonius.utils.networking import check_if_tcp_port_is_open
 from scripts.instances.instances_modes import InstancesModes, get_instance_mode
 from scripts.instances.network_utils import connect_to_master, update_weave_connection_params, update_db_enc_key
 from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
@@ -79,6 +82,14 @@ def setup_node(connection_string):
     master_ip = master_ip.strip()
     weave_pass = weave_pass.strip()
     init_name = init_name.strip()
+
+    # Check if TCP port is open. UDP is harder to check, so we will not parse it here.
+    if not check_if_tcp_port_is_open(master_ip, 6783):
+        raise ValueError(
+            f'Error - Can not connect to port 6783 on {master_ip}'
+            f'Please make sure this machine can reach TCP/6783, UDP/6783, UDP/6784 on {master_ip}'
+        )
+
     shut_down_system()
     update_weave_connection_params(weave_pass, master_ip)
     USING_WEAVE_PATH.touch()
@@ -101,7 +112,12 @@ def logic_main():
             print('Bad connection string! Please do not use spaces in any of the parameters.')
             sys.exit(1)
         else:
-            setup_node(connection_string)
+            try:
+                setup_node(connection_string)
+            except Exception as e:
+                redprint(str(e))
+                time.sleep(15)
+                sys.exit(-1)
             print('Node successfully joined Axonius cluster.')
             sys.exit(0)
     else:

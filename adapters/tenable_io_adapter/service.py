@@ -1,3 +1,5 @@
+# pylint: disable=too-many-instance-attributes,too-many-locals,too-many-nested-blocks,
+# pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
 import datetime
 import logging
 
@@ -31,7 +33,6 @@ class ScanData(SmartJsonClass):
 
 
 class TenableIoAdapter(ScannerAdapterBase, Configurable):
-
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, 'Has Agent')
         status = Field(str, 'Status')
@@ -171,7 +172,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    def _query_devices_by_client(self, client_name, client_data):
+    # pylint:disable=arguments-differ
+    def _query_devices_by_client(self, client_name, client_data: TenableIoConnection):
         """
         Get all devices from a specific  domain
 
@@ -184,7 +186,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             logger.info(f'Getting scans id to uuid')
             uuid_to_id_scans_dict = client_data.get_uuid_to_id_scans_dict()
             logger.info('Getting all assets')
-            devices_list = client_data.get_device_list()
+            devices_list = client_data.get_device_list(should_cancel_old_exports_jobs=self.__cancel_old_export_jobs)
             yield devices_list, ASSET_TYPE, client_data, uuid_to_id_scans_dict
             if self.__fetch_agent_data:
                 logger.info('Getting all agent')
@@ -485,11 +487,17 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_agent_data',
                     'title': 'Fetch agent data',
                     'type': 'bool'
+                },
+                {
+                    'name': 'cancel_old_export_jobs',
+                    'title': 'Cancel old export jobs',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'exclude_no_last_scan',
-                'fetch_agent_data'
+                'fetch_agent_data',
+                'cancel_old_export_jobs'
             ],
             'pretty_name': 'Tenable.io Configuration',
             'type': 'array'
@@ -500,7 +508,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         return {
             'exclude_no_last_scan': False,
             'scan_id_white_list': None,
-            'fetch_agent_data': True
+            'fetch_agent_data': True,
+            'cancel_old_export_jobs': False
         }
 
     def _on_config_update(self, config):
@@ -508,6 +517,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
             if config.get('scan_id_white_list') else None
         self.__fetch_agent_data = config['fetch_agent_data'] if 'fetch_agent_data' in config else True
+        self.__cancel_old_export_jobs = config.get('cancel_old_export_jobs')
 
     def outside_reason_to_live(self) -> bool:
         """

@@ -62,6 +62,7 @@ class TenableIoConnection(RESTConnection):
         self._post('import/assets',
                    body_params={'assets': [tenable_io_dict],
                                 'source': 'Axonius'})
+        return True
 
     def add_ips_to_scans(self, tenable_io_dict):
         scan_name = tenable_io_dict.get('scan_name')
@@ -193,7 +194,24 @@ class TenableIoConnection(RESTConnection):
                                 f' Did you grant the user an Administrator Role?')
 
     # pylint: disable=W0221, too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
-    def get_device_list(self):
+    def get_device_list(self, should_cancel_old_exports_jobs=False):
+        if should_cancel_old_exports_jobs:
+            for export_type in ['assets', 'vulns']:
+                try:
+                    assets_exports = self._get(f'{export_type}/export/status').get('exports') or []
+                    for asset_export in assets_exports:
+                        if asset_export.get('uuid'):
+                            export_uuid = asset_export['uuid']
+                            export_status = asset_export.get('status') or ''
+                            if export_status.upper() in ['QUEUED', 'PROCESSING']:
+                                try:
+                                    self._post(f'{export_type}/export/{export_uuid}/cancel')
+                                except Exception as e:
+                                    logger.warning(f'Failed canceling export type {export_type} - '
+                                                   f'{export_uuid}: {str(e)}')
+                except Exception:
+                    logger.exception(f'Problem with cancelling export type: {export_type}')
+
         result = (yield from concurrent_multiprocess_yield(
             [
                 (
