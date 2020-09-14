@@ -78,14 +78,25 @@
         v-if="dataLength"
         class="footer__paginator"
       >
-        <APagination
-          v-model="page"
-          size="small"
-          :show-total="totalResults"
+        <PaginatorFastNavWrapper
+          :page="page"
           :total="dataLength"
-          :page-size="limit"
-          :default-current="1"
-        />
+          :limit="10"
+          @first="page = 1"
+          @last="$event => page = $event"
+        >
+          <APagination
+            v-model="page"
+            size="small"
+            simple
+            :total="dataLength"
+            :page-size="limit"
+            :default-current="1"
+          />
+        </PaginatorFastNavWrapper>
+        <p class="pagination__text">
+          {{ totalResults }}
+        </p>
       </div>
       <div class="summaries">
         <div class="summary-row">
@@ -110,7 +121,7 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
+import PaginatorFastNavWrapper from '@axons/layout/PaginatorFastNavWrapper.vue';
 import { Pagination as APagination } from 'ant-design-vue';
 import _orderBy from 'lodash/orderBy';
 import XChartTooltip from '@axons/charts/ChartTooltip.vue';
@@ -122,7 +133,7 @@ import { getTotalResultsTitle } from '@/helpers/dashboard';
 
 export default {
   name: 'XAdapterConnectionsStatus',
-  components: { XChartTooltip, XIcon, APagination },
+  components: { XChartTooltip, PaginatorFastNavWrapper, APagination },
   data() {
     return {
       data: {},
@@ -177,6 +188,11 @@ export default {
         },
       };
     },
+    totalResults() {
+      const rangeFrom = ((this.page * this.limit) - this.limit) + 1;
+      const rangeTo = this.page * this.limit;
+      return getTotalResultsTitle(this.dataLength, [rangeFrom, rangeTo], 'adapters');
+    },
   },
   async created() {
     this.fetchAdapters();
@@ -189,9 +205,6 @@ export default {
       return {
         path: `adapters/${adapterId}`,
       };
-    },
-    totalResults(total, range) {
-      return getTotalResultsTitle(total, range, 'adapters');
     },
   },
 };

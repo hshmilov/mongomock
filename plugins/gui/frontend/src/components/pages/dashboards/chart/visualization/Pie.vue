@@ -3,7 +3,7 @@
     :legend="!isTooManyValues"
     history
     draggable
-    display-count
+    :display-count="!isTooManyValues"
     :search="false"
     :active-space-id="activeSpaceId"
     :trend="isTrendChartLinked && !isTooManyValues"

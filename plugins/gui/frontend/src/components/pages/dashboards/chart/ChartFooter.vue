@@ -11,15 +11,25 @@
       v-if="pagination && !showLess"
       class="footer__pagination"
     >
-      <APagination
-        size="small"
-        :show-total="totalResults"
-        :current="page"
+      <PaginatorFastNavWrapper
+        :page="page"
         :total="count"
-        :page-size="limit"
-        :default-current="1"
-        @change="$event => $emit('on-page-changed', $event)"
-      />
+        @first="$emit('on-page-changed', 1)"
+        @last="$event => $emit('on-page-changed', $event)"
+      >
+        <APagination
+          size="small"
+          simple
+          :current="page"
+          :total="count"
+          :page-size="limit"
+          :default-current="1"
+          @change="$event => $emit('on-page-changed', $event)"
+        />
+      </PaginatorFastNavWrapper>
+      <p class="pagination__text">
+        {{ totalResults }}
+      </p>
     </div>
     <div
       v-if="trend || legend || draggable"
@@ -77,7 +87,7 @@
 <script>
 import { Pagination } from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
+import PaginatorFastNavWrapper from '@axons/layout/PaginatorFastNavWrapper.vue';
 import { getTotalResultsTitle } from '@/helpers/dashboard';
 
 export default {
@@ -85,7 +95,7 @@ export default {
   components: {
     APagination: Pagination,
     XIcon,
-    XButton,
+    PaginatorFastNavWrapper,
   },
   props: {
     // pagination props
@@ -109,10 +119,6 @@ export default {
     displayCount: {
       type: Boolean,
       default: false,
-    },
-    totalItemsName: {
-      type: String,
-      default: 'items',
     },
     // chart bottom footer props
     draggable: {
@@ -155,10 +161,11 @@ export default {
       }
       return `Total ${this.count}`;
     },
-  },
-  methods: {
-    totalResults(total, range) {
-      return getTotalResultsTitle(total, range, this.totalItemsName);
+    totalResults() {
+      if (!this.pagination) return '';
+      const rangeFrom = ((this.page * this.limit) - this.limit) + 1;
+      const rangeTo = this.page * this.limit;
+      return getTotalResultsTitle(this.count, [rangeFrom, rangeTo], 'items');
     },
   },
 };
@@ -181,32 +188,19 @@ export default {
     font-weight: bold;
     margin: 4px;
     &--w-pagination {
-      margin: 4px 4px 16px 4px;
+      margin-bottom: 8px;
     }
   }
   .footer__pagination {
     width: 100%;
     text-align: center;
-
-    .ant-pagination-total-text {
-      display: block;
-      margin-bottom: 8px;
-      position: absolute;
-      top: 45px;
-      width: 100%;
-    }
-    .ant-pagination-item a {
-      margin: 0 4px;
-      // delete after vuetify will be removed from project (link style override)
-      color: rgba(0, 0, 0, 0.65);
-      text-decoration: none;
-      transition: none;
-    }
-    .ant-pagination.mini {
-      position: relative;
-      .ant-pagination-prev, .ant-pagination-next {
-        min-width: 10px;
+    .ant-pagination {
+      .ant-pagination-simple-pager {
+        display: inline-flex;
       }
+    }
+    & > .pagination__text {
+      margin: 0;
     }
   }
   .footer__bottom {
@@ -219,7 +213,7 @@ export default {
     align-items: flex-end;
 
     &--w-pagination {
-      margin-top: 40px;
+      margin-top: 20px;
     }
 
     &__actions {

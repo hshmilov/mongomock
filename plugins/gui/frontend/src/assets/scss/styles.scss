@@ -564,6 +564,7 @@ table {
   &.position-4 {
     grid-column: 4;
   }
+  
   // size
   width: 100%;
   height: 100%;
@@ -578,7 +579,6 @@ table {
   border: 2px solid transparent;
   //style
   background-color: $theme-white;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,.2);
   .header {
     height: 30px;
 
@@ -607,23 +607,13 @@ table {
 
     &__paginator {
       text-align: center;
-      margin-bottom: 32px;
-      position: relative;
-
-      .ant-pagination-item a {
-        // delete after vuetify will be removed from project (link style override)
-        margin: 0 4px;
-        color: rgba(0, 0, 0, 0.65);
-        text-decoration: none;
-        transition: none;
+      .ant-pagination {
+        .ant-pagination-simple-pager {
+          display: inline-flex;
+        }
       }
-
-      .ant-pagination-total-text {
-        display: block;
-        margin-bottom: 8px;
-        position: absolute;
-        top: 30px;
-        width: 100%;
+      & > .pagination__text {
+        margin: 0;
       }
     }
   }

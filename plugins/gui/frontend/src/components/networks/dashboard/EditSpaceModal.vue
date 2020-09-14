@@ -82,6 +82,7 @@ import {
 } from 'ant-design-vue';
 import _pick from 'lodash/pick';
 import _isEmpty from 'lodash/isEmpty';
+import _get from 'lodash/get';
 import { fetchAssignableRolesList } from '@api/roles';
 import { SpaceTypesEnum } from '@constants/dashboard';
 
@@ -107,7 +108,7 @@ export default {
     return {
       rolesOptions: [],
       error: '',
-      spaceForm: false,
+      spaceForm: {},
     };
   },
   computed: {
@@ -129,10 +130,17 @@ export default {
     },
   },
   async created() {
+    // fill form with static data to abvoid rendering glitch that (might) caused by network latency.
+    this.spaceForm = {
+      id: this.space.uuid,
+      name: this.space.name || '',
+      public: _get(this.space, 'public', true),
+    };
     if (this.canViewUsersAndRoles) {
       const allRoles = await fetchAssignableRolesList();
       this.rolesOptions = allRoles.filter((option) => option.text !== 'Admin');
     }
+    // fill the rest of the fields
     this.fillDataFromSpace(this.space);
   },
   mounted() {
@@ -141,11 +149,8 @@ export default {
   methods: {
     fillDataFromSpace(space) {
       this.spaceForm = {
-        id: space.uuid,
-        name: '',
-        roles: [],
-        public: true,
-        ..._pick(space, ['name', 'roles', 'public']),
+        ...this.spaceForm,
+        roles: _get(space, 'roles', []),
       };
     },
     submitEdit() {

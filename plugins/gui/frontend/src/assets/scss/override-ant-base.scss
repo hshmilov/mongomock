@@ -11,6 +11,17 @@ input[type='text'], input[type='password'], input[type='number'] {
   border: 1px solid $grey-2;
 }
 
+.v-application a {
+  color: unset;
+}
+/* override ant-design-vue reset css [end]*/
+
+
+/****************************************************/
+// Global ant-design-vue Components Styles -- START //
+/****************************************************/
+
+// AModal
 .ant-modal-root {
   .ant-modal-mask {
     z-index: 1001;
@@ -50,10 +61,13 @@ input[type='text'], input[type='password'], input[type='number'] {
   }
 }
 
+// ADropdown
 .ant-dropdown .ant-dropdown-menu-item,
 .ant-dropdown .ant-dropdown-menu-submenu-title {
   font-weight: 300;
 }
+
+// ABtn
 .ant-btn > .anticon + span {
   margin-left: 3px;
 }
@@ -67,6 +81,7 @@ input[type='text'], input[type='password'], input[type='number'] {
   }
 }
 
+// APopover
 .ant-popover {
   z-index: 200 !important;
   .ant-popover-arrow {
@@ -89,10 +104,12 @@ input[type='text'], input[type='password'], input[type='number'] {
   }
 }
 
+// ATabs
 .ant-tabs {
   color: unset;
 }
 
+// ADatePicker
 .ant-calendar-picker-container {
   .ant-calendar-range {
     .ant-calendar-time-picker-btn {
@@ -103,14 +120,11 @@ input[type='text'], input[type='password'], input[type='number'] {
     }
   }
 }
-/* override ant-design-vue reset css [end]*/
 
-
-
-
-/****************************************************/
-// Global ant-design-vue Components Styles -- START //
-/****************************************************/
+// APagination
+.v-application ul.ant-pagination-simple {
+  padding-left: 0px;
+}
 
 /****************************************************/
 // Global ant-design-vue Components Styles -- END //

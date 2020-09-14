@@ -78,6 +78,14 @@ export default {
         width: 60vw;
         margin: auto auto 12px;
 
+        .ant-input:hover {
+          border-color: $theme-orange;
+        }
+        .ant-input:focus {
+          border-color: $theme-orange;
+          box-shadow: none;
+        }
+
         .ant-btn {
           background-color: $theme-orange;
           border-color: $theme-orange;

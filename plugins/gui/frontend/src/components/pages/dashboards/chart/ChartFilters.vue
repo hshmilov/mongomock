@@ -1,6 +1,8 @@
 <template>
   <div
-    class="main__filters-layer"
+    :class="['main__filters-layer', classname]"
+    tabindex="0"
+    @keydown.esc="onEsc"
   >
     <AInputSearch
       v-if="search"
@@ -8,6 +10,7 @@
       class="filter-item search-input"
       placeholder="Search name"
       @keypress.enter="onApplyFilters"
+      @keydown.esc="onEsc"
     />
     <ADatePicker
       v-if="history"
@@ -65,6 +68,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    chartId: {
+      type: String,
+      required: true,
+    },
   },
   data() {
     return {
@@ -91,6 +98,13 @@ export default {
     applyEnabled() {
       return Boolean(this.data.search || this.data.history);
     },
+    classname() {
+      return `filters-layer-${this.chartId}`;
+    },
+  },
+  mounted() {
+    const element = document.querySelector(`.${this.classname}`);
+    element.focus();
   },
   methods: {
     onDateSelected(date) {
@@ -109,6 +123,9 @@ export default {
     },
     isDateDisabled(date) {
       return !this.allowedDates.has(dayjs(date).format('YYYY-MM-DD'));
+    },
+    onEsc() {
+      this.$emit('esc');
     },
   },
 };

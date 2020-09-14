@@ -215,13 +215,13 @@ class TestDashboard(TestBase):
         assert self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
         assert self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
         assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
-        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, True, True, False, False)
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, True, False)
 
     def _test_paginator_state_middle_page(self, histograms_chart, page_number, to_val, from_val):
         assert self.dashboard_page.is_missing_paginator_num_of_items(histograms_chart)
         assert not self.dashboard_page.is_missing_paginator_from_item(histograms_chart)
         assert not self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
-        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, False, False, False)
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, False)
         assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
         assert int(self.dashboard_page.get_paginator_from_item_number(histograms_chart)) == from_val
 
@@ -233,7 +233,7 @@ class TestDashboard(TestBase):
         assert not self.dashboard_page.is_missing_paginator_to_item(histograms_chart)
         assert int(self.dashboard_page.get_paginator_to_item_number(histograms_chart, page_number)) == to_val
         assert int(self.dashboard_page.get_paginator_from_item_number(histograms_chart)) == from_val
-        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, False, True, True)
+        assert self.dashboard_page.check_paginator_buttons_state(histograms_chart, False, True)
 
     @staticmethod
     def _check_num_of_histograms_items_fit_paginator_number(page_number, num_of_pages, num_of_histogram_lines,
@@ -366,7 +366,7 @@ class TestDashboard(TestBase):
         # calculate the total number of pages in Paginator
         # by this wat we ensure to have the exact num of pages and cover all the cases even if the
         # total_num_of_items % limit has a remainder ((round up the result)
-        num_of_pages = self.dashboard_page.get_last_page_button_in_paginator(histograms_chart)
+        num_of_pages = self.dashboard_page.get_num_of_pages_paginator(histograms_chart)
         # iterate incrementaly on all the pages (next)
         for page_number in range(1, num_of_pages):
             num_of_histogram_lines, num_of_items, to_val, from_val = \

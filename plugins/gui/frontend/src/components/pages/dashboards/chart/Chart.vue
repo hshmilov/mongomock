@@ -36,7 +36,9 @@
         :search="search"
         :history="history"
         :filters="chartFilters"
+        :chart-id="chart.uuid"
         @change="onFiltersChanged"
+        @esc="filtersLayerVisible = false"
       />
       <XChartContent
         v-else
@@ -58,7 +60,6 @@
         :page="currentPage"
         :chart-data="chartData"
         :display-count="displayCount"
-        :total-items-name="totalItemsName"
         :draggable="draggable && canDragCard"
         :legend="legend"
         :trend="trend"
@@ -157,10 +158,6 @@ export default {
     displayCount: {
       type: Boolean,
       default: false,
-    },
-    totalItemsName: {
-      type: String,
-      default: undefined,
     },
     pagination: {
       type: Boolean,
@@ -515,7 +512,6 @@ export default {
     border: 2px solid transparent;
     //style
     background-color: $theme-white;
-    box-shadow: 0 2px 12px 0 rgba(0,0,0,.2);
 
     &--expand-active {
       //chart layout growth

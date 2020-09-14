@@ -10,6 +10,7 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         ElementNotInteractableException)
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.color import Color
+from selenium.webdriver.common.keys import Keys
 
 from axonius.utils.wait import wait_until
 from services.axon_service import TimeoutException
@@ -75,7 +76,7 @@ class DashboardPage(BasePage):
                                         ' .x-dropdown'
     SEGMENTATION_ADD_FILTER_BUTTON_CSS = '.x-filter-contains > button'
     SUMMARY_CARD_TEXT_CSS = 'div.x-summary > div.summary'
-    CARD_MENU_BTN_CSS = '.card_menu'
+    CARD_MENU_BTN_CSS = '.chart-actions  .card_menu'
     CARD_CLOSE_BTN_ID = 'remove_chart'
     CARD_CLOSE_BTN_TEXT = 'Delete Chart'
     CARD_EDIT_BTN_ID = 'edit_chart'
@@ -108,6 +109,7 @@ class DashboardPage(BasePage):
     PAGINATOR_LIMIT = '.num-of-items'
     PAGINATOR_TO = ' .to-item'
     PAGINATOR_BUTTON = f'{PAGINATOR_CLASS} li'
+    PAGINATOR_PAGE_INPUT_CSS = '.ant-pagination-simple-pager input'
     PAGINATOR_ACTIVE_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-item-active'
     PAGINATOR_FIRST_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-item-1'
     PAGINATOR_PREVIOUS_PAGE_BUTTON = f'{PAGINATOR_BUTTON}.ant-pagination-prev'
@@ -115,7 +117,7 @@ class DashboardPage(BasePage):
     PAGINATOR_PAGES_BUTTONS = f'{PAGINATOR_BUTTON}.ant-pagination-item'
     HISTOGRAM_ITEMS = '.histogram-container .histogram-item'
     PAGINATOR_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} {PAGINATOR_LIMIT}'
-    PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .ant-pagination-total-text'
+    PAGINATOR_TOTAL_NUM_OF_ITEMS = f'{PAGINATOR_CLASS} .pagination__text'
     PAGINATOR_FROM_VALUE = f'{PAGINATOR_CLASS} .from-item'
     PAGINATOR_TO_VALUE = f'{PAGINATOR_CLASS} {PAGINATOR_TO}'
     CHART_QUERY_DEFAULT = 'QUERY...'
@@ -873,7 +875,7 @@ class DashboardPage(BasePage):
 
     @staticmethod
     def get_card_pagination_text(card):
-        return card.find_element_by_css_selector('.x-chart__footer .ant-pagination-total-text').text
+        return card.find_element_by_css_selector('.x-chart__footer .pagination__text').text
 
     @staticmethod
     def get_histogram_line_from_histogram(histogram, number):
@@ -935,7 +937,7 @@ class DashboardPage(BasePage):
         return card.find_element_by_css_selector(self.PAGINATOR_NUM_OF_ITEMS).text
 
     def get_paginator_active_page(self, card):
-        return card.find_element_by_css_selector(self.PAGINATOR_ACTIVE_PAGE_BUTTON).text
+        return card.find_element_by_css_selector(self.PAGINATOR_PAGE_INPUT_CSS).get_attribute('value')
 
     def get_paginator_total_num_of_items(self, card):
         total_text = card.find_element_by_css_selector(self.PAGINATOR_TOTAL_NUM_OF_ITEMS).text
@@ -964,17 +966,16 @@ class DashboardPage(BasePage):
             return num_of_items
         return min(page_number * limit, num_of_items)
 
-    def get_first_page_button_in_paginator(self, card):
-        return card.find_element_by_css_selector(self.PAGINATOR_FIRST_PAGE_BUTTON)
-
     def get_previous_page_button_in_paginator(self, card):
         return card.find_element_by_css_selector(self.PAGINATOR_PREVIOUS_PAGE_BUTTON)
 
     def get_next_page_button_in_paginator(self, card):
         return card.find_element_by_css_selector(self.PAGINATOR_NEXT_PAGE_BUTTON)
 
-    def get_last_page_button_in_paginator(self, card):
-        page = self.find_elements_by_css(self.PAGINATOR_PAGES_BUTTONS, element=card)[-1].text
+    @staticmethod
+    def get_num_of_pages_paginator(card):
+        inner_text = card.find_element_by_css_selector('.ant-pagination-simple-pager').text
+        page = re.findall(r'\d+', inner_text)[0]
         return int(page)
 
     def click_to_next_page(self, card):
@@ -983,12 +984,17 @@ class DashboardPage(BasePage):
     def click_to_previous_page(self, card):
         self.get_previous_page_button_in_paginator(card).click()
 
+    def paginator_go_to_page(self, page='1', card=None):
+        paginator_input = card.find_element_by_css_selector(self.PAGINATOR_PAGE_INPUT_CSS)
+        paginator_input.send_keys(page)
+        paginator_input.send_keys(Keys.ENTER)
+
     def click_to_first_page(self, card):
-        self.get_first_page_button_in_paginator(card).click()
+        self.paginator_go_to_page(card=card)
 
     def click_to_last_page(self, card):
-        page_btn = self.find_elements_by_css(self.PAGINATOR_PAGES_BUTTONS, element=card)[-1]
-        page_btn.click()
+        last_page = self.get_num_of_pages_paginator(card)
+        self.paginator_go_to_page(str(last_page), card)
 
     def click_on_histogram_item(self, histogram, item_number):
         histogram.find_element_by_css_selector(f'{self.HISTOGRAM_ITEMS}:nth-child({item_number})').click()
@@ -997,14 +1003,12 @@ class DashboardPage(BasePage):
         return histogram.find_element_by_css_selector(
             f'{self.HISTOGRAM_ITEMS}:nth-child({item_number}) div.item-title').text
 
-    def check_paginator_buttons_state(self, histogram, first, previous, next_r, last):
+    def check_paginator_buttons_state(self, histogram, previous, next_r):
         paginator_current_buttons_state = [
-            self.is_element_disabled(self.get_first_page_button_in_paginator(histogram)),
             self.is_element_disabled(self.get_previous_page_button_in_paginator(histogram)),
             self.is_element_disabled(self.get_next_page_button_in_paginator(histogram)),
-            self.is_element_disabled(self.get_last_page_button_in_paginator(histogram)),
         ]
-        paginator_state_buttons_to_validate = [first, previous, next_r, last]
+        paginator_state_buttons_to_validate = [previous, next_r]
         return paginator_current_buttons_state == paginator_state_buttons_to_validate
 
     def is_missing_paginator_navigation(self, histogram):

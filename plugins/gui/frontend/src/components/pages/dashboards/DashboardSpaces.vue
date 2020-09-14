@@ -42,7 +42,7 @@
                 class="edit-space-menu"
               >
                 <XSpaceOptionsMenu
-                  v-if="(canAdd || canDelete) && space.key === activeSpace && space.key !== personalSpace.uuid"
+                  v-if="getSpaceActionsDescriptor(canAdd, canDelete).supported && space.key === activeSpace"
                   :supported-actions="getSpaceActionsDescriptor(canAdd, canDelete).features"
                   @edit="onEditActiveSpace"
                   @remove="onRemoveActiveSpace"
@@ -190,6 +190,7 @@ export default {
       set(value) {
         const spaceChartsOrderById = value.map((c) => c.uuid);
         this.reorderSpaceCharts({ panels_order: spaceChartsOrderById, spaceId: this.activeSpace });
+
         this.activeSpaceData = {
           ...this.activeSpaceData,
           panels_order: spaceChartsOrderById,
@@ -311,14 +312,15 @@ export default {
       const features = [];
       switch (this.activeSpace) {
         case this.personalSpaceUuid:
-          return { supported: false, features };
+          return { supported: false };
         case this.defaultSpaceUuid:
-          return { supported: canAdd, features: [...features, 'edit'] };
+          if (canAdd) features.push('edit');
+          return { supported: canAdd, features };
         default:
           if (canAdd) features.push('edit');
           if (canDelete) features.push('remove');
 
-          return { supported: features.length, features };
+          return { supported: canAdd || canDelete, features };
       }
     },
     // charts events callbacks
@@ -338,10 +340,7 @@ export default {
       }
     },
     onChartRemoved(chartId) {
-      const updatedChartIndex = this.activeSpaceData.charts.findIndex((c) => c.uuid === chartId);
-
-      this.activeSpaceData.charts.splice(updatedChartIndex, 1);
-      this.activeSpaceData.panels_order.splice(updatedChartIndex, 1);
+      this.activeSpaceData.panels_order = this.activeSpaceData.panels_order.filter((uuid) => uuid !== chartId);
     },
   },
 };

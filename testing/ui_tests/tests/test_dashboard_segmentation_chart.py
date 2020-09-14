@@ -29,7 +29,7 @@ class TestDashboardSegmentationChart(TestDashboardChartBase):
                 view_name='')
         histogram_card = chart.get('card')
 
-        num_of_pages = self.dashboard_page.get_last_page_button_in_paginator(histogram_card)
+        num_of_pages = self.dashboard_page.get_num_of_pages_paginator(histogram_card)
 
         histogram_card = self.dashboard_page.get_card(card_title=self.TEST_SEGMENTATION_TITLE)
         histograms_chart = self.dashboard_page.get_histogram_chart_from_card(card=histogram_card)

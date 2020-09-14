@@ -23,14 +23,25 @@
     </div>
     <div class="footer">
       <div class="footer__paginator">
-        <APagination
-          v-model="page"
-          size="small"
-          :show-total="totalResults"
+        <PaginatorFastNavWrapper
+          :page="page"
           :total="count"
-          :page-size="limit"
-          :default-current="1"
-        />
+          :limit="20"
+          @first="page = 1"
+          @last="$event => page = $event"
+        >
+          <APagination
+            v-model="page"
+            size="small"
+            simple
+            :total="count"
+            :page-size="limit"
+            :default-current="1"
+          />
+        </PaginatorFastNavWrapper>
+        <p class="pagination__text">
+          {{ totalResults }}
+        </p>
       </div>
       <div class="discovery-summary">
         <div class="summary-row">
@@ -79,11 +90,14 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import XIcon from '@axons/icons/Icon';
 import XHistogram from '@axons/charts/Histogram.vue';
 import { Pagination as APagination } from 'ant-design-vue';
-import { getTotalResultsTitle } from '@/helpers/dashboard'
+import PaginatorFastNavWrapper from '@axons/layout/PaginatorFastNavWrapper.vue';
+import { getTotalResultsTitle } from '@/helpers/dashboard';
 
 export default {
   name: 'XDiscoveryCard',
-  components: { XHistogram, XIcon, APagination },
+  components: {
+    XHistogram, XIcon, APagination, PaginatorFastNavWrapper,
+  },
   props: {
     entity: {
       type: String,
@@ -146,6 +160,11 @@ export default {
     dataUnique() {
       return Math.min(this.data.unique || 0, this.data.seen || 0);
     },
+    totalResults() {
+      const rangeFrom = ((this.page * this.limit) - this.limit) + 1;
+      const rangeTo = this.page * this.limit;
+      return getTotalResultsTitle(this.count, [rangeFrom, rangeTo], 'adapters');
+    },
   },
   watch: {
     discoveryStatus: {
@@ -205,9 +224,6 @@ export default {
         const res = await this.fetchDiscoveryData({ module: this.entity });
         this.data = res.data;
       }
-    },
-    totalResults(total, range) {
-      return getTotalResultsTitle(total, range, 'adapters');
     },
   },
 };

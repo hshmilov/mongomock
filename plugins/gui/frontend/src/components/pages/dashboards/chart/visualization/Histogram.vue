@@ -124,6 +124,9 @@ export default {
         return 0;
       }
       const [{ value, portion }] = data.content;
+      if (!portion || !value) {
+        return 0;
+      }
       const count = portion === 1 ? value : Math.round(1 / (portion / value));
       return `Total ${count}`;
     },
