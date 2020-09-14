@@ -16,7 +16,7 @@
       />
     </XTab>
     <XTab
-      v-for="(item, i) in advancedSorted"
+      v-for="(item, i) in advanced"
       :id="item.schema.name"
       :key="item.schema.name"
       :title="item.schema.title"
@@ -34,7 +34,6 @@
 </template>
 
 <script>
-import _sortBy from 'lodash/sortBy';
 import { mapState } from 'vuex';
 import XTabs from '../../../axons/tabs/Tabs.vue';
 import XTab from '../../../axons/tabs/Tab.vue';
@@ -83,9 +82,6 @@ export default {
         return eval(hyperlinks.aggregator);
       },
     }),
-    advancedSorted() {
-      return _sortBy(this.advanced, (item) => item.schema.name);
-    },
     schemaGenericFields() {
       return this.fields.generic.filter(
         (item) => !this.excludedFields.includes(item.name),
