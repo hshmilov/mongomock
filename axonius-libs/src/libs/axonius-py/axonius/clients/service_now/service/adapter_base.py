@@ -10,7 +10,7 @@ from axonius.clients.service_now import consts
 from axonius.clients.service_now.service.structures import RelativeInformationNode1, RelativeInformationLeaf, \
     MaintenanceSchedule, CiIpData, SnowComplianceException
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import make_dict_from_csv
+from axonius.utils.parsing import make_dict_from_csv, float_or_none
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -124,6 +124,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'type': 'bool',
             'title': 'Do not fetch devices or users marked as excluded'
         },
+        {
+            'name': 'is_ram_in_gb',
+            'type': 'bool',
+            'title': 'RAM from source in GB'
+        },
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
@@ -139,6 +144,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'when_no_hostname_fallback_to_name',
         'fetch_compliance_exceptions',
         'use_exclusion_field',
+        'is_ram_in_gb',
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
@@ -157,6 +163,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'when_no_hostname_fallback_to_name': False,
         'fetch_compliance_exceptions': False,
         'use_exclusion_field': False,
+        'is_ram_in_gb': False,
     }
 
     @abstractmethod
@@ -500,9 +507,9 @@ class ServiceNowAdapterBase(AdapterBase):
                 logger.warning(f'Problem getting serial at {device_raw}', exc_info=True)
             # pylint: disable=R1714
             try:
-                ram_mb = device_raw.get('ram', '')
-                if ram_mb != '' and ram_mb != '-1' and ram_mb != -1:
-                    device.total_physical_memory = int(ram_mb) / 1024.0
+                ram_raw = float_or_none(device_raw.get('ram'))
+                if ram_raw and ram_raw != -1:
+                    device.total_physical_memory = ram_raw if self._is_ram_in_gb else ram_raw / 1024.0
             except Exception:
                 logger.warning(f'Problem getting ram at {device_raw}', exc_info=True)
             try:
@@ -1246,5 +1253,6 @@ class ServiceNowAdapterBase(AdapterBase):
         self.__when_no_hostname_fallback_to_name = config.get('when_no_hostname_fallback_to_name') or False
         self._fetch_compliance_exceptions = config['fetch_compliance_exceptions']
         self._use_exclusion_field = config['use_exclusion_field']
+        self._is_ram_in_gb = config.get('is_ram_in_gb') or False
 
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE
