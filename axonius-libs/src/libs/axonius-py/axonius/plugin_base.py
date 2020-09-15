@@ -766,35 +766,9 @@ class PluginBase(Configurable, Feature, ABC):
         common_db_indexes(self._historical_entity_views_db_map[entity_type])
         historic_indexes(self._historical_entity_views_db_map[entity_type])
 
-    # pylint: disable=no-self-use, import-error
-    @add_rule('reload_uwsgi')
-    def _reload_uwsgi(self):
-        # We import here because this can not be imported from within the host, and the host uses plugin_base.py
-        import uwsgi
-        logger.info(f'Reloading uwsgi...')
-        uwsgi.reload()
-
     @property
     def is_in_mock_mode(self):
         return self.__is_in_mock_mode
-
-    # pylint: enable=no-self-use
-    def _request_reload_uwsgi(self, plugin_unique_name: str):
-        self.request_remote_plugin('reload_uwsgi', plugin_unique_name)
-        time_passed = 0
-        while time_passed < 280:
-            time.sleep(5)
-            time_passed += 5
-            try:
-                self.request_remote_plugin('version', plugin_unique_name, fail_on_plugin_down=True, timeout=(5, 5))
-                break
-            except Exception:
-                pass
-        else:
-            logger.exception('Adapter did not reload successfully from uwsgi')
-            raise ValueError(f'Adapter did not reload successfully from uwsgi')
-
-        time.sleep(5)
 
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)

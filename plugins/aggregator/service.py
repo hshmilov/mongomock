@@ -36,8 +36,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 '''
 
-RESET_BEFORE_CLIENT_FETCH_ADAPTERS = ['cisco_adapter']
-
 
 class AdapterStatuses(Enum):
     Pending = auto()
@@ -200,19 +198,6 @@ class AggregatorService(Triggerable, PluginBase):
         check_fetch_time = True
         for client_name in clients:
             try:
-                try:
-                    if any(x in adapter for x in RESET_BEFORE_CLIENT_FETCH_ADAPTERS):
-                        logger.info(f'Requesting adapter reload before fetch: {adapter}')
-                        # Make this adapter not re-evaluate the clients on the next run.
-                        adapter_plugin_name = '_'.join(adapter.split('_')[:-1])  # strip the number
-
-                        if adapter_plugin_name:
-                            adapter_plugin_settings = self.plugins.get_plugin_settings(adapter_plugin_name)
-                            adapter_plugin_settings.plugin_settings_keyval[SHOULD_NOT_REFRESH_CLIENTS] = True
-                            self._request_reload_uwsgi(adapter)
-                except Exception:
-                    logger.exception(f'Could not request uwsgi reload for {adapter!r}')
-
                 data = self._trigger_remote_plugin(adapter, 'insert_to_db', data={
                     'client_name': client_name,
                     'check_fetch_time': check_fetch_time
